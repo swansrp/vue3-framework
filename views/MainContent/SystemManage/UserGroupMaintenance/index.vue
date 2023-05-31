@@ -117,7 +117,7 @@ import {
   getUserGroupType,
   unbindAllUserGroupList,
   unbindUserGroupList, updateUserGroupNodeOrder, updateUserGroupNodePId
-} from "@/framework/apis/user/userGroup"
+} from "@/framework/apis/admin/userGroup"
 import {IdName, IdNameArray, ValueLabel, ValueLabelArray} from "@/framework/utils/type"
 import {Ref} from "vue"
 import * as _ from "lodash"
@@ -128,7 +128,7 @@ import 'ant-design-vue/lib/message/style/index.css'
 import {WarningFilled} from "@ant-design/icons-vue"
 import AddAndEditUserGroup from './addAndEditUserGroup/index.vue'
 import EditUserPermission from './editUserPermission/index.vue'
-import {getDictList} from "@/framework/apis/common"
+import {getDictList} from "@/framework/apis/common/common"
 import {AntTreeNodeDropEvent} from "ant-design-vue/es/tree"
 import {getDroppedData} from "@/framework/hooks/antTreeDropSort"
 import {getAllParentNodes, getBrotherNodes} from "@/framework/utils/common"

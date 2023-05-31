@@ -1,6 +1,6 @@
 import router from "@/framework/router"
 import {defineStore} from 'pinia'
-import {getRouteTree} from "@/framework/apis/user/route"
+import {getRouteTree} from "@/framework/apis/nav/route"
 import {clearNoNameNode, travelRouteTree} from "@/framework/network/utils"
 import _ from "lodash"
 import {MAIN_CONTENT} from "@/framework/utils/constant";

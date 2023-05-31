@@ -26,11 +26,11 @@
 <script setup lang="ts">
 import {Ref} from "vue"
 import * as _ from "lodash"
-import {getTreeList} from "@/framework/apis/common"
+import {getTreeList} from "@/framework/apis/common/common"
 import {CascaderProps} from "ant-design-vue"
 import {ValueLabelArray} from "@/framework/utils/type"
 import {QUERY_INTERVAL} from "@/framework/utils/constant"
-import {getUserList} from "@/framework/apis/user/userGroup"
+import {getUserList} from "@/framework/apis/admin/userGroup"
 import {getCascaderList} from "@/framework/hooks/weekBusinessReport"
 
 let areaListOption = ref<CascaderProps['options']>()

@@ -40,7 +40,7 @@
 </template>
 
 <script lang="ts" setup>
-import {reLogin} from "@/framework/apis/user/login"
+import {reLogin} from "@/framework/apis/login/login"
 import {useUserStore} from "@/framework/store/user"
 import {localStorageMethods} from "@/framework/utils/common"
 import {title as projectName} from '../../../../../package.json'

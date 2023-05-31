@@ -19,7 +19,7 @@
 <script lang="ts" setup>
 import {clearFromField} from "@/framework/utils/common";
 import {Ref} from "vue"
-import {getDictList} from "@/framework/apis/common";
+import {getDictList} from "@/framework/apis/common/common";
 import {ValueLabelArray} from "@/framework/utils/type";
 
 let formRef = ref()

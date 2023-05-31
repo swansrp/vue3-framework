@@ -14,7 +14,7 @@ const apiType: any = {
     roleUser: '/admin/role/user',
     userRole: '/admin/user/role',
     userGroup: '/group/user',
-    version: '/version',
+    week: '/week',
     auth: ''
 }
 

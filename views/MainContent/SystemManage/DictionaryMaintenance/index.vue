@@ -130,7 +130,7 @@ import 'ant-design-vue/lib/message/style/index.css' // 需要单独引入message
 import {PlusOutlined, CheckOutlined, EditOutlined} from "@ant-design/icons-vue"
 import {DictDateType, DictConfigItemType, DataItem} from "./types"
 import { deleteDictItem, getDictItemByName, getDictNameList, updateDictItem, updateDictItemSetDefault,
-  updateDictItemOrder, addDictItem, addDict, deleteDict } from "@/framework/apis/user/dict"
+  updateDictItemOrder, addDictItem, addDict, deleteDict } from "@/framework/apis/dict/dict"
 import {QUERY_INTERVAL} from "@/framework/utils/constant";
 import {DataNode} from "ant-design-vue/es/vc-tree/interface";
 

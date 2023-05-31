@@ -32,7 +32,7 @@
 
 <script lang="ts" setup>
 import type { Dayjs } from "dayjs";
-import { getSelectNameList, getCascadeAreaList } from "@/framework/apis/user/nav";
+import { getSelectNameList, getCascadeAreaList } from "@/framework/apis/nav/nav";
 import type { SelectProps, CascaderProps } from "ant-design-vue";
 
 import { SearchOutlined } from "@ant-design/icons-vue";

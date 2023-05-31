@@ -4,11 +4,11 @@ import qs from "qs"
 import pinia from "@/framework/store";
 import {useUserStore} from "@/framework/store/user"
 import {useCommonStore} from "@/framework/store/common";
-import {checkServerLive, getUserInfo, login, verifyToken,} from "@/framework/apis/user/login";
+import {checkServerLive, getUserInfo, login, verifyToken,} from "@/framework/apis/login/login";
 import {AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant";
 import {useRouteStore} from "@/framework/store/route";
 import dayjs from "dayjs";
-import {getWeekByDate} from "@/framework/apis/user/version";
+import {getWeekByDate} from "@/framework/apis/common/week";
 
 const userStore = useUserStore(pinia)
 const commonStore = useCommonStore(pinia)
