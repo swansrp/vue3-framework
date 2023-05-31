@@ -8,9 +8,10 @@ declare global {
     }
 
     interface ApiType {
+        baseDomain: string,
         url: string
         method: Method,
-        version: string
+        version: string,
     }
 
     interface configDataType {

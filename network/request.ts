@@ -19,7 +19,7 @@ const errCode = {
     SUCCESS: 0,
     SESSION_TIME_OUT: 401
 }
-const axiosInstance = axios.create({ baseURL: import.meta.env.VITE_baseURL + import.meta.env.VITE_baseDomain })
+const axiosInstance = axios.create({})
 const createLoadingInstance = () => ElLoading.service({ fullscreen: true, text: '加载中，请稍后……', background: 'rgba(0, 0, 0, 0.7)'})
 
 axiosInstance.interceptors.request.use(
@@ -88,6 +88,7 @@ function request(apiType: ApiType,
                  showErr = true) {
     if (import.meta.env.VITE_notNeedNetwork) return new Promise(() => {})
     return axiosInstance({
+        baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {
