@@ -103,7 +103,7 @@ const isMultiple = computed(() => props.isMultiple || props.isMultiple === undef
 let departmentList: Array<string> = []
 let departmentListValue = ref<Array<string>>([])
 let departmentListOption = ref<ValueLabelArray>()
-getDepartmentTree().then(res => departmentListOption.value = res.payload[0].children)
+getDepartmentTree().then(res => departmentListOption.value = res.payload)
 const selectDepartment = () => {
   emit('update:departmentListValue', departmentListValue.value)
   departmentList = getCascaderList(departmentListValue, departmentListOption).map(item => item.value)
