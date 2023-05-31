@@ -264,7 +264,8 @@ const handleChangePermission = (user: any) => {
 }
 
 const handleEditUserPermission = (dataScope: string) =>
-  editUserPermission(dataScope, currentUserGroupInfo.value.id, currentUserInfo.value.id).then(renderBindUser)
+  editUserPermission(dataScope, currentUserGroupInfo.value.id, currentUserInfo.value.id)
+      .then(renderBindUser).then(() => editUserPermissionVisible.value =false)
 
 
 const onDrop = (info: AntTreeNodeDropEvent) => {

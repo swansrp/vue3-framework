@@ -168,14 +168,14 @@ const checkRoleTreeNode = (_: string, e:{checked: boolean, node: DataNode}) => {
 const handleDeleteRole = (id: string) => deleteRole(id).then(initAndUpdateRoleList)
 
 const handleAddRole = (roleData: RoleDataType) => addRole(roleData.roleName)
-  .then(() => addRoleBoxVisible.value = false).then(initAndUpdateRoleList)
+  .then(() => addRoleBoxVisible.value = false).then(initAndUpdateRoleList).then(() => addRoleBoxVisible.value = false)
 
 const onEditRole = (roleData: RoleDataType) => {
   currentRoleDate.value = roleData
   editRoleBoxVisible.value = true
 }
 
-const handleEditRole = (role: RoleDataType) => editRole(role).then(initAndUpdateRoleList)
+const handleEditRole = (role: RoleDataType) => editRole(role).then(initAndUpdateRoleList).then(() => editRoleBoxVisible.value = false)
 
 const tabChange = (key:string) => {
   if (key === VIEW) renderRolePermissionTree()
