@@ -1,0 +1,42 @@
+.wrapper {
+    height: calc(100% - 90px);
+}
+
+.user-group-category-list-wrapper, .user-group-list-wrapper {
+    background-color: #fff;
+    height: 100%;
+}
+
+.user-group-list-wrapper {
+    padding-top: 10px;
+    box-sizing: border-box;
+    overflow: auto;
+}
+
+.user-group-category-list {
+    width: 250px;
+    height: calc(100% - 15px);
+    box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+    margin: 10px 15px;
+}
+
+.user-group-category-list .ant-spin-container{
+    max-height: 680px;
+    overflow: auto;
+    cursor: pointer;
+}
+
+.user-group-category-list .ant-spin-container li:hover{
+    background-color: #e6f7ff;
+    border-right: 3px solid #1890ff;
+}
+
+.activate-item {
+    background-color: #e6f7ff;
+    border-right: 3px solid #1890ff;
+}
+
+.user-name-wrapper {
+    padding: 20px;
+    box-sizing: border-box;
+}

@@ -1,0 +1,82 @@
+<template>
+  <a-modal
+    v-model:visible="visible"
+    :width="width"
+    :footer="null"
+    destroyOnClose
+    :mask-closable="maskClosable"
+    :body-style="{overflow: 'auto'}"
+    @cancel="$emit('update:visible', false)"
+    :wrap-class-name="isFull ? 'full-modal' : 'box-modal'">
+    <slot></slot>
+    <template #title v-if="title">
+      <div class="title">
+        <img :src="iconPath" v-if="iconPath" class="icon-img" />
+        {{ title }}
+      </div>
+    </template>
+  </a-modal>
+</template>
+<script lang="ts" setup>
+
+let visible = ref(false)
+let title = ref('具体内容')
+let isFull = ref(false)
+let iconPath = ref('')
+let width = ref<string|number|undefined>('100%')
+let maskClosable = ref(false)
+
+const props = defineProps<{
+  title:string,
+  visible: boolean,
+  isFull?: boolean,
+  iconPath?: string,
+  width?: number | undefined
+  maskClosable?: boolean
+}>();
+
+defineEmits(['update:visible'])
+
+watch(() => props.isFull, value => isFull.value = value, {immediate: true})
+watch(() => props.visible, value => visible.value = value)
+watch(() => props.title, value => title.value = value || '', {immediate: true})
+watch(() => props.iconPath, value => iconPath.value = value || '', {immediate: true})
+watch(() => props.maskClosable, value => maskClosable.value = !!value, {immediate: true})
+
+onMounted(() => {
+  if (!isFull.value && width.value) width.value = props.width
+})
+
+</script>
+<style lang="less">
+.full-modal {
+  .ant-modal {
+    max-width: 100%;
+    top: 0;
+    padding-bottom: 0;
+    margin: 0;
+  }
+  .ant-modal-content {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh);
+  }
+  .ant-modal-body {
+    flex: 1;
+  }
+}
+.box-modal {
+  margin: 0 auto;
+}
+.title {
+  display: flex;
+  align-items: center;
+}
+.icon-img {
+  width: 25px;
+  height: 25px;
+  margin-right: 5px;
+}
+
+</style>
+

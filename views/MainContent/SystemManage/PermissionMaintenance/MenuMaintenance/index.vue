@@ -1,0 +1,330 @@
+<template>
+  <div class="menu-config">
+    <!--展示树状结构的样式-->
+    <div class="menu-tree">
+      <div class="menu-category">{{ menuName }}</div>
+      <!--如果treeData的length为0，说明没有数据，展示提示信息-->
+      <div v-if="!treeData || !treeData.length" class="no-data">暂无数据</div>
+      <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
+      <a-tree
+        :key="treeData" v-model:selectedKeys="treeSelectKey" :defaultExpandAll="true" :show-line="true" :tree-data="treeData"
+        draggable @drop="onDrop" @select="selectTreeNode">
+        <!--使用title插槽自定义a-tree的图标-->
+        <template #title="{ dataRef }"><Icon :icon="dataRef.icon" />{{ dataRef.title }}</template>
+      </a-tree>
+      <!--底部按钮列表-->
+      <div class="nav-switch-btn-list">
+        <a-button type="primary" @click="addRootMenu">
+          <template #icon><file-add-filled /></template>新增节点
+        </a-button>
+        <a-button v-show="menuNameListIndex === 1" type="primary" @click="backToMainMenu">
+          <template #icon><left-outlined /></template>返回主菜单
+        </a-button>
+        <a-button v-show="menuNameListIndex === 0" type="primary" @click="enterSubMenu" :disabled="!canEnterSubMenuFlag">
+          <template #icon><right-outlined /></template>进入子菜单
+        </a-button>
+      </div>
+    </div>
+    <!--节点信息配置区域-->
+    <div class="menu-config-space">
+      <!--为左侧导航的编辑提供一个标题，以展示该左侧导航菜单属于哪一个横向导航菜单-->
+      <div class="sub-menu-title" v-if="menuTitle">
+        {{ menuTitle }}
+        <span v-if="menuNameListIndex">{{ subMenuCurrentPath }}</span></div>
+      <a-tabs
+        v-if="menuConfigItem === 'currentConfig'" v-model:activeKey="tabActiveKey" type="card"
+        @change="tabsChange">
+        <a-tab-pane key="editNode" tab="编辑节点">
+          <tree-edit-form :formState="editMenuFormState" :grandId="grandId" :menuId="menuId" type="edit" />
+        </a-tab-pane>
+        <a-tab-pane key="addSubNode" tab="增加子节点" v-if="menuNameListIndex === 1">
+          <tree-edit-form :formState="addSubMenuFormState" :grandId="grandId" :menuId="menuId" type="add" />
+        </a-tab-pane>
+        <a-tab-pane key="deleteNode" tab="删除节点">
+          <a-alert message="警告" show-icon type="error">
+            <template #icon><Icon icon="WarningFilled" /></template>
+            <template #description>确认删除当前节点？<br /><b>说明：只有当前接节点不含有子节点时才允许删除该节点</b></template>
+          </a-alert>
+          <a-button :disabled="disableDeleteBtn" class="delete-btn" danger type="primary" @click="deleteNode">确认删除
+          </a-button>
+        </a-tab-pane>
+      </a-tabs>
+      <div v-if="menuConfigItem === 'addRootMenu'" class="add-root-menu">
+        <div class="add-root-menu-title">新增根节点</div>
+        <tree-edit-form :formState="addRootMenuFormState" :grandId="grandId" type="add" />
+      </div>
+      <div v-if="!menuConfigItem" class="config-warning">顶部导航和左侧导航的叶子节点必须要配置“路由路径”和“组件地址”<br />非叶子节点请不要填写，否则会出现路由错误！</div>
+    </div>
+  </div>
+</template>
+
+<script lang="ts" setup>
+import {message} from "ant-design-vue"
+import 'ant-design-vue/lib/message/style/index.css'
+import {Key} from "ant-design-vue/es/_util/type"
+import {FormState} from "@/framework/components/common/treeEditForm/type"
+import {changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder} from "@/framework/apis/admin/navEdit"
+import {FileAddFilled, LeftOutlined, RightOutlined} from "@ant-design/icons-vue"
+import {AntTreeNodeDropEvent} from "ant-design-vue/es/tree"
+import {getAllParentNodes, getBrotherNodes, setField} from "@/framework/utils/common"
+import {getDroppedData} from "@/framework/hooks/antTreeDropSort"
+import {Ref} from "vue"
+import {DataNode} from "ant-design-vue/es/vc-tree/interface"
+import TreeEditForm from "@/framework/components/common/treeEditForm/TreeEditForm.vue";
+
+const _initFormState: FormState = {
+  title: '',
+  icon: '',
+  isCache: false,
+  isFrame: false,
+  path: '',
+  query: '',
+  pid: undefined,
+  grandId: undefined,
+  menuId: undefined,
+  component: ''
+}
+
+let menuId: Ref<number | undefined> = ref(undefined)
+let grandId: Ref<number | undefined> = ref(undefined)
+let menuTitle: Ref<string> = ref('')
+let subMenuCurrentPath: Ref<string> = ref('')
+let tabActiveKey = ref('editNode')
+let treeSelectKey: Ref<TreeKeyType> = ref<TreeKeyType>([])
+let treeData: Ref<Array<DataNode>> = ref([])
+let menuConfigItem = ref<MenuConfigItem>('')
+let editMenuFormState: FormState = reactive<FormState>({..._initFormState})
+let addSubMenuFormState: FormState = reactive<FormState>({..._initFormState})
+const addRootMenuFormState: FormState = reactive<FormState>({..._initFormState})
+let canEnterSubMenuFlag:Ref<boolean> = ref(false)
+
+type TreeKeyType = string[] | number[]
+type MenuConfigItem = 'addRootMenu' | 'currentConfig' | ''
+
+const selectTreeKey = () => {
+  if (menuId.value === undefined && treeData.value && treeData.value!.length) {
+    treeSelectKey.value = [treeData.value[0].menuId]
+  } else if (menuId.value !== undefined) {
+    treeSelectKey.value = [menuId.value]
+  }
+}
+
+// 为了避免多次重写这两坨代码，将其写到一个函数中
+const updateMainTree = (needSelectKey = true) => {
+  getMainMenu().then(res => {
+    treeData.value = res.payload
+    needSelectKey && selectTreeKey()
+  })
+}
+const updateSubTree = () => {
+  const data = {menuId: grandId.value}
+  getSubMenu(data).then(res => {
+    treeData.value = res.payload
+    selectTreeKey()
+  })
+
+}
+
+// 向子组件提供a-tree的更新函数
+provide('updateMainTree', updateMainTree)
+provide('updateSubTree', updateSubTree)
+
+// 默认渲染出 a-tree
+updateMainTree(false)
+
+const menuNameList = ['顶部导航菜单', '左侧导航菜单']
+let menuNameListIndex = ref(0)
+let menuName = ref(menuNameList[menuNameListIndex.value])
+let disableDeleteBtn = ref(false)
+
+const selectTreeNode = (_: string, info: any) => {
+  canEnterSubMenuFlag.value = true
+  const {node} = info // 获取当前的节点信息
+  menuId.value = node.menuId
+  if (menuNameListIndex.value === 0) menuTitle.value = node.title
+  else if (menuNameListIndex.value === 1) {
+    if (node.parent)
+      subMenuCurrentPath.value = '-' + node.parent.nodes.map((node: any) => node.title).join('-') + '-' + node.title
+    else
+      subMenuCurrentPath.value = '-' + node.title
+  }
+  // 将当前的节点信息拷贝到editMenuFormState中(只拷贝editMenuFormState中已有的属性的值)
+  Object.keys(editMenuFormState).forEach(key => setField(editMenuFormState, key as keyof FormState, node[key]))
+  // 判断当前节点是否为叶子节点
+  if (node.children && node.children.length) {
+    // 如果不是叶子节点,无法从该节点直接进入到对应的Sub Menu,也不可以进行删除
+    disableDeleteBtn.value = true
+    // disableEnterSubMenu.value = true
+  } else {
+    // 如果是叶子节点,接触上述限制
+    disableDeleteBtn.value = false
+    // disableEnterSubMenu.value = false
+  }
+  // 只要点击了tree的节点,就应该展示menu-config-space的配置面板
+  menuConfigItem.value = 'currentConfig'
+  // 每次点击tree的节点后,默认展示编辑tab
+  tabActiveKey.value = 'editNode'
+}
+
+
+// 点击返回Main Menu tree的按钮后的操作
+const backToMainMenu = () => {
+  grandId.value = undefined
+  updateMainTree()
+  menuNameListIndex.value = 0
+  menuName.value = menuNameList[menuNameListIndex.value]
+}
+// 点击进入Sub Menu tree的按钮后的操作
+const enterSubMenu = () => {
+  // 从当前节点进入，则当前Main Menu菜单节点是它对应Sub Menu的所有节点的祖先节点
+  grandId.value = menuId.value
+  updateSubTree()
+  menuNameListIndex.value = 1
+  menuName.value = menuNameList[menuNameListIndex.value]
+  // 刚进入Sub Menu tree时,不显示menu-config-space的配置面板
+  menuConfigItem.value = ''
+}
+
+// 增加Main Menu和Sub Menu根节点的方法,通过menuConfigItem控制对应form的展示
+const addRootMenu = () => {
+  menuConfigItem.value = 'addRootMenu'
+}
+
+// 处理menu-config-space中tab的切换事件
+const tabsChange = (activeKey: Key) => {
+  if (activeKey === 'editNode') {
+    // menuConfigItem.value = 'currentConfig'
+  } else if (activeKey === 'addSubNode') {
+    // 当前节点的menuId将为子节点的parentId，即pid
+    addSubMenuFormState.pid = menuId.value
+  }
+}
+// 删除菜单节点的方法
+const deleteNode = () => {
+  // 删除Main Menu 和Sub Menu的方法都是一样的，所以只是根据menuNameListIndex的选择情况判断需要使用哪个方法更新a-tree
+  deleteMainMenu({id: menuId.value}).then(() => {
+    if (menuNameListIndex.value === 0) updateMainTree()
+    else if (menuNameListIndex.value === 1) updateSubTree()
+    // 删除节点后,不显示menu-config-space的配置面板
+    menuConfigItem.value = ''
+  })
+}
+
+const onDrop = (info: AntTreeNodeDropEvent) => {
+  const dragKey = info.dragNode.key
+  treeData.value = getDroppedData(info, treeData)
+  const brotherNodes = getBrotherNodes(treeData.value, dragKey, 'key')
+  const parentNodes = getAllParentNodes(treeData.value, dragKey, 'key')
+  const updatePIdData = {
+    pid: parentNodes.length ? parentNodes[0].menuId : null,
+    id: dragKey
+  }
+  if (menuNameListIndex.value === 0 && info.dragNode.pid !== updatePIdData.pid){
+      message.error({ content: () => '顶部导航不能存在子节点！'})
+      updateMainTree()
+      return
+  }
+  let updateOrderData: any = []
+  brotherNodes.forEach((node: FormState, index: number) => {
+    updateOrderData.push({id: node.menuId, showOrder: index})
+  })
+
+  let changeOrderPromise = updateMenuOrder(updateOrderData)
+  changeOrderPromise.then(() => changePID(updatePIdData)).then(() => {
+    if (grandId && grandId.value) updateSubTree()
+    else updateMainTree()
+  })
+}
+
+</script>
+
+<style scoped>
+
+.menu-config {
+  display: flex;
+}
+
+.no-data {
+  width: 100%;
+  font-size: 17px;
+  font-weight: bold;
+  text-align: center;
+  color: #8e8e8e;
+  padding-top: 20px;
+}
+
+.menu-tree {
+  width: 280px;
+  height: 700px;
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  margin: 15px 15px;
+  position: relative;
+}
+
+.menu-category {
+  font-size: 23px;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.sub-menu-title {
+  font-size: 18px;
+  padding: 10px 0;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  border-bottom: 1px solid #e8e8e8;
+  margin-bottom: 10px;
+}
+
+.nav-switch-btn-list {
+  width: 100%;
+  display: flex;
+  justify-content: space-evenly;
+  position: absolute;
+  bottom: 20px;
+  right: 0;
+}
+
+.menu-config-space {
+  width: 700px;
+  margin: 15px 5px;
+  padding: 0 10px;
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+}
+
+.menu-config-space .ant-alert-with-description {
+  height: 200px;
+}
+
+.menu-config-space .delete-btn {
+  float: right;
+  margin-top: 10px;
+}
+
+.add-root-menu-title {
+  font-size: 24px;
+  height: 60px;
+  line-height: 60px;
+  font-weight: bold;
+  text-align: center;
+}
+.config-warning {
+  height: 100%;
+  width: 100%;
+  font-size: 20px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  display: flex;
+  font-weight: bold;
+  line-height: 50px;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  color: #f5222d;
+}
+</style>
+
+
+
