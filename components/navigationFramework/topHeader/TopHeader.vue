@@ -18,15 +18,7 @@
             <a-menu @click="handleMenuClick">
               <a-menu-item key="1">
                 <RedoOutlined />
-                免密重新登录
-              </a-menu-item>
-              <a-menu-item key="2">
-                <UserOutlined />
-                2nd
-              </a-menu-item>
-              <a-menu-item key="3">
-                <UserOutlined />
-                3rd item
+                重新登录
               </a-menu-item>
             </a-menu>
           </template>
