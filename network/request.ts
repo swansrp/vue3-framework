@@ -86,7 +86,6 @@ function request(apiType: ApiType,
                  showSuccess = false,
                  showLoading = true,
                  showErr = true) {
-    if (import.meta.env.VITE_notNeedNetwork) return new Promise(() => {})
     return axiosInstance({
         baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain,
         method: apiType.method,

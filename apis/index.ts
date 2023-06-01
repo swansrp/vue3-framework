@@ -1,6 +1,6 @@
 import {Method} from "axios"
-
-const baseDomain = import.meta.env.VITE_baseDomain
+import {name} from "@/../package.json"
+const baseDomain = '/' + name
 const apiType: any = {
     navEdit: '/admin/menu',
     permit: '/permit',

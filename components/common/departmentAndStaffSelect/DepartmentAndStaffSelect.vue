@@ -62,7 +62,7 @@ import _ from "lodash"
 import {getDepartmentTree, geStaffList} from "./api"
 import {ShowSearchType} from "ant-design-vue/es/vc-cascader"
 import {StaffBaseSelectArrayType, ValueLabel, ValueLabelArray} from "@/framework/utils/type"
-import {getCascaderList} from "@/framework/hooks/weekBusinessReport"
+import {getCascaderList} from "@/hooks/weekBusinessReport"
 import {QUERY_INTERVAL} from "@/framework/utils/constant"
 import getImgUrl from "@/framework/assets/imgs/getImgUrl"
 

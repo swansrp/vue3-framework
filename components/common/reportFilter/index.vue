@@ -31,7 +31,7 @@ import {CascaderProps} from "ant-design-vue"
 import {ValueLabelArray} from "@/framework/utils/type"
 import {QUERY_INTERVAL} from "@/framework/utils/constant"
 import {getUserList} from "@/framework/apis/admin/userGroup"
-import {getCascaderList} from "@/framework/hooks/weekBusinessReport"
+import {getCascaderList} from "@/hooks/weekBusinessReport"
 
 let areaListOption = ref<CascaderProps['options']>()
 let areaListValue = ref([])
