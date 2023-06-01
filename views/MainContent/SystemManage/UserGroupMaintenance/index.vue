@@ -257,7 +257,7 @@ const handleUnbindAllUser = () => {
 const renderUserGroupTree = () => getUserGroupById(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
 
 const handleChangePermission = (user: any) => {
-  currentUserInfo.value.id = user.value
+  currentUserInfo.value.id = user.userId
   currentUserInfo.value.name = user.label
   currentUserInfo.value.dataScope = user.dataScope
   editUserPermissionVisible.value = true
