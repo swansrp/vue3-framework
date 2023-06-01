@@ -44,7 +44,6 @@ import {AUTO} from "@/framework/utils/constant"
 import {localStorageMethods} from '@/framework/utils/common'
 import {updateColumns} from '@/framework/hooks/updateSurelyTableColumns'
 import {STable, STablePaginationConfig, STableSummaryCell, STableSummaryRow} from '@surely-vue/table'
-import {DragColumnEventInfo, DragRowEventInfo} from '@surely-vue/table/dist/src/components/interface'
 import {Ref} from "vue"
 
 const props = defineProps<{
@@ -80,8 +79,8 @@ const initPagination = () => {
   } else pagination!.value = false
 }
 const expandedRowsChange = (expandedRows: any) => emit('expandedRowsChange', expandedRows)
-const rowDragEnd = (info: DragRowEventInfo) => nextTick(() => emit('onRowDrag', dataSource.value, info))
-const columnDragEnd = (_info: DragColumnEventInfo) => {
+const rowDragEnd = (info: any) => nextTick(() => emit('onRowDrag', dataSource.value, info))
+const columnDragEnd = (_info: any) => {
   // 定义一个对象，用于存储dataIndex到顺序的映射关系，不建议使用Map，因为它不能直接转化为字符串
   const columnsOrder: { [key: string]: number } = {}
   // 在@column-drag-end事件中，并不会立刻更新table对应的column，需要在下一次更新中才能获取
