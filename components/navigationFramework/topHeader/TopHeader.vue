@@ -1,7 +1,7 @@
 <template>
   <div id="top">
     <div class="top_title">
-      <img src="icon.png" alt="公司标志" />
+      <img src="../../../../../public/icon.png" alt="公司标志" />
       {{ projectName }}
     </div>
     <top-nav class="top_nav" />
