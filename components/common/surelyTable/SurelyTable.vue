@@ -1,6 +1,5 @@
 <template>
   <s-table
-    stripe
     bordered
     summary-fixed
     v-if="updatedColumns.length"
@@ -118,10 +117,11 @@ watch(() => props.tableHeight, value => value && (tableHeight.value = value), {i
 }
 :deep(.surely-table-header-cell){
   font-weight: bold;
-    background-color: #e0e0e0;
 }
-:deep(.surely-table.surely-table-stripe .surely-table-body .surely-table-row-odd:not(.surely-table-row-selected)){
-    background-color: #e0e0e0;
+:deep(.surely-table-body .surely-table-row-odd:not(.surely-table-row-selected):hover){
+    background-color: #f5f7fa;
 }
-
+:deep(.surely-table-body .surely-table-row-even:not(.surely-table-row-selected):hover){
+    background-color: #f5f7fa;
+}
 </style>
