@@ -118,5 +118,10 @@ watch(() => props.tableHeight, value => value && (tableHeight.value = value), {i
 }
 :deep(.surely-table-header-cell){
   font-weight: bold;
+    background-color: #e0e0e0;
 }
+:deep(.surely-table.surely-table-stripe .surely-table-body .surely-table-row-odd:not(.surely-table-row-selected)){
+    background-color: #e0e0e0;
+}
+
 </style>
