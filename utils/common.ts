@@ -113,6 +113,13 @@ const addPublicAttrs = (column: Array<Object>) => {
     })
 }
 
+const batchAddPublicAttrs = (column_list: Array<Object>[]) => {
+    column_list.forEach((column:any) => column.forEach((item: any) => {
+        item.align = 'center'
+        item.resizable = true
+    }))
+}
+
 const customTableRowDblClickEvent = (projectId: string, lastExpandedRowKeys: Ref, expandedRowKeys: Ref): boolean => {
     if (lastExpandedRowKeys.value === projectId) {
         expandedRowKeys.value = []
@@ -145,7 +152,7 @@ const clearFromField = (form: any, formRef: Ref) => {
     formRef.value && formRef.value.resetFields()
     Object.keys(form).forEach(key => {
         if (key === 'version' || key === 'id' || key === 'type') return
-        else if (key === 'partnerList' || key === 'competitorList') form[key] = []
+        else if (key === 'partnerList' || key === 'competitorList' || key === 'financingMode') form[key] = []
         else form[key] = ''
     })
 }
@@ -161,6 +168,7 @@ export {
     setField,
     getLastWeekOrder,
     addPublicAttrs,
+    batchAddPublicAttrs,
     customTableRowDblClickEvent,
     updateTableSize,
     _getWeekStartEndDay,
