@@ -83,7 +83,7 @@
               v-for="user in userList" :key="user.value"
               closable color="blue" style="margin-top: 5px; cursor: pointer;"
               @click="handleChangePermission(user)"
-              @close="handleUnbindUser(user.value)">
+              @close="handleUnbindUser(user.userId)">
               {{ user.label }}-{{ user.dataScopeDisplay }}
             </a-tag>
           </div>
@@ -158,7 +158,8 @@ let popConfirmVisible:Ref<boolean> = ref(false)
 
 interface UserDataType extends ValueLabel {
   dataScopeDisplay: string
-  dataScope: string
+  dataScope: string,
+  userId: string
 }
 
 const userList: Ref<UserDataType[]> = ref([])
@@ -250,7 +251,7 @@ const handleUnbindUser = (attachId: string) => {
 
 const handleUnbindAllUser = () => {
   const entityId = currentUserGroupInfo.value.id
-  const userIdList = userList.value.map(user => user.value)
+  const userIdList = userList.value.map(user => user.userId)
   unbindAllUserGroupList(entityId, userIdList).then(renderBindUser)
 }
 
