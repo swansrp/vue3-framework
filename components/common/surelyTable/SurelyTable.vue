@@ -11,6 +11,7 @@
     :style="{width: String(tableWidth) === 'auto' ? '100%' : tableWidth + 'px'}"
     @row-drag-end="rowDragEnd"
     @expanded-rows-change="expandedRowsChange"
+    @change="change"
     @column-drag-end="columnDragEnd">
     <template v-if="needTitle" #title>
       <slot name="title"></slot>
@@ -35,6 +36,31 @@
     <template #bodyCell="{column, record}">
       <slot :column="column" :record="record" name="bodyCell"></slot>
     </template>
+    <template #customFilterDropdown="{setSelectedKeys, selectedKeys, confirm, clearFilters, column}">
+      <div style="padding: 8px">
+        <a-input
+          ref="searchInput"
+          v-if="column.filterComponentType === FILTER_COMPONENT_TYPE.INPUT"
+          :placeholder="`搜索${column.title}`"
+          :value="selectedKeys[0]"
+          style="width: 188px; margin-bottom: 8px; display: block"
+          @change="e => inputOnChange(column, e, setSelectedKeys)"
+          @press-enter="handleSearch"
+        />
+        <a-button size="small" style="width: 90px;margin-right: 8px" type="primary" @click="handleSearch">
+          <template #icon><search-outlined /></template>搜索
+        </a-button>
+        <a-button size="small" style="width: 90px" @click="handleReset(column, clearFilters)">清空</a-button>
+      </div>
+      <slot
+        name="customFilterDropdown"
+        :setSelectedKeys="setSelectedKeys" :selectedKeys="selectedKeys"
+        :confirm="confirm" :clearFilters="clearFilters" :column="column">
+      </slot>
+    </template>
+    <template #customFilterIcon="{ filtered }">
+      <slot :filtered="filtered" name="customFilterIcon"></slot>
+    </template>
   </s-table>
 </template>
 
@@ -44,6 +70,9 @@ import {localStorageMethods} from '@/framework/utils/common'
 import {updateColumns} from '@/framework/hooks/updateSurelyTableColumns'
 import {STable, STablePaginationConfig, STableSummaryCell, STableSummaryRow} from '@surely-vue/table'
 import {Ref} from "vue"
+import {SearchOutlined} from "@ant-design/icons-vue";
+import {TableColumnType} from "ant-design-vue";
+import {FILTER_COMPONENT_TYPE, QueryConditionType} from "./contant";
 
 const props = defineProps<{
   tableId: string,
@@ -59,14 +88,25 @@ const props = defineProps<{
 const slots = useSlots();
 let needTitle = ref(slots['title'])
 let needExpandedRowRender = ref(slots['expandedRowRender'])
-const emit = defineEmits(['onRowDrag', 'pageChange', 'expandedRowsChange'])
+const emit = defineEmits(['onRowDrag', 'pageChange', 'expandedRowsChange', 'handleSearch', 'handleReset', 'change'])
 
 let updatedColumns:Ref<any[]> = ref([])
 let tableHeight = ref<number | undefined>()
 let tableWidth = ref<number | undefined>()
 let pagination = ref(props.pagination)
 let {tableId, columns, dataSource, rowClassName} = toRefs(props)
+let queryCondition: QueryConditionType | {[key: string]: string} = {}
 
+const inputOnChange = (column: any, e: any, setSelectedKeys: Function) => {
+  const property = column.dataIndex as string
+  const value = e.target.value ? [e.target.value] : []
+  queryCondition[property] = {
+    property,
+    value,
+    relation: column.filterType
+  }
+  setSelectedKeys(value)
+}
 const initPagination = () => {
   if (pagination && pagination.value) {
     pagination = ref<STablePaginationConfig>({
@@ -78,6 +118,14 @@ const initPagination = () => {
   } else pagination!.value = false
 }
 const expandedRowsChange = (expandedRows: any) => emit('expandedRowsChange', expandedRows)
+const handleSearch = () => emit('handleSearch', queryCondition)
+const handleReset = (column: TableColumnType, clearFilters: Function) => {
+  clearFilters()
+  delete queryCondition[column.dataIndex as string]
+  emit('handleReset', queryCondition)
+}
+const change = (pagination: any, filters: any, sorter: any, currentDataSource : any ) =>
+  emit('change', pagination, filters, sorter, currentDataSource )
 const rowDragEnd = (info: any) => nextTick(() => emit('onRowDrag', dataSource.value, info))
 const columnDragEnd = (_info: any) => {
   // 定义一个对象，用于存储dataIndex到顺序的映射关系，不建议使用Map，因为它不能直接转化为字符串
@@ -91,6 +139,7 @@ const columnDragEnd = (_info: any) => {
     localStorageMethods.setLocalStorage(tableId.value, JSON.stringify(columnsOrder))
   })
 }
+
 const getTableWidth = () => {
   if (tableWidth.value === undefined) return AUTO
   return tableWidth.value - 20

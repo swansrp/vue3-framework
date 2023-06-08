@@ -8,7 +8,6 @@ const apiType: any = {
     nav: '/api',
     common: '',
     menu: '/menu',
-    messageEdit: '/admin/sms',
     account: '/account',
     rolePermission: '/admin/role/menu',
     roleUser: '/admin/role/user',
