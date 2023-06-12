@@ -42,10 +42,10 @@ watch(() => props.visible, value => visible.value = value)
 watch(() => props.title, value => title.value = value || '', {immediate: true})
 watch(() => props.iconPath, value => iconPath.value = value || '', {immediate: true})
 watch(() => props.maskClosable, value => maskClosable.value = !!value, {immediate: true})
+watch(() => props.width, value => {
+  if(!isFull.value && width.value)  width.value = value
+}, {immediate: true})
 
-onMounted(() => {
-  if (!isFull.value && width.value) width.value = props.width
-})
 
 </script>
 <style lang="less">

@@ -82,10 +82,6 @@ function getAllParentNodes(list: any, id: any, key: any) {
   }
 }
 
-function crackSurelyTable(tableRef: Ref) {
-  tableRef.value && tableRef.value.crackSurelyTable && tableRef.value.crackSurelyTable()
-}
-
 const structureUrl = (url: string, id: string) => {
   return url + id;
 }
@@ -165,7 +161,6 @@ export {
   isNotEmpty,
   getBrotherNodes,
   getAllParentNodes,
-  crackSurelyTable,
   structureUrl,
   setField,
   getLastWeekOrder,

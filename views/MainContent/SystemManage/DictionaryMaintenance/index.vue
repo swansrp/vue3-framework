@@ -124,7 +124,6 @@
 <script lang="ts" setup>
 import * as _ from 'lodash'
 import {Ref, UnwrapRef} from "vue"
-import {crackSurelyTable} from "@/framework/utils/common"
 import {message} from "ant-design-vue"
 import 'ant-design-vue/lib/message/style/index.css' // 需要单独引入message的样式，否则message的样式异常
 import {PlusOutlined, CheckOutlined, EditOutlined} from "@ant-design/icons-vue"
@@ -246,7 +245,7 @@ const onRowDrag = (updatedTableData : Array<object>) => {
 }
 
 getDictList() //初始化字典列表
-onUpdated(()=> crackSurelyTable(dictEditTable))
+
 watch(inputDictionaryName, _.debounce(() => { getDictList() }, QUERY_INTERVAL))
 
 const updateContentWidth = () => {

@@ -131,7 +131,9 @@ function download(
     fileName: string,
     params: object,
     body: object) {
+    ElMessage.success({message: '开始下载……'})
     return axiosInstance({
+        baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain,
         method: apiType.method,
         url: apiType.url,
         data: body,
@@ -145,6 +147,7 @@ function download(
             response: resp
         }
     }, err => {
+        ElMessage.error({message: '下载失败，请检查网络后重试，或联系系统管理员！'})
         console.log(err)
         return err
     })
