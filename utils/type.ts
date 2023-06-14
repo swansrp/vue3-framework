@@ -50,7 +50,7 @@ export interface IdName {
 }
 export type IdNameArray = Array<IdName>
 
-interface CompanyIdName {
+export interface CompanyIdName {
     companyId: string
     companyName: string
 }
