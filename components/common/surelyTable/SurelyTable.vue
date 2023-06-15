@@ -6,6 +6,7 @@
     v-model:pagination="pagination"
     :columns="updatedColumns"
     :data-source="dataSource"
+    :animate-rows="false"
     :rowClassName="rowClassName"
     :scroll="{x: getTableWidth(), y: getTableHeight()}"
     :style="{width: String(tableWidth) === 'auto' ? '100%' : tableWidth + 'px'}"
