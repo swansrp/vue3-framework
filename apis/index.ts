@@ -49,45 +49,45 @@ const buildApi = (
 const buildGetApiByType = (
     url: string,
     type: string,
-    version = "1.0",
     domain: string = baseDomain,
+    version = "1.0",
 ) => buildApi(domain, url, requestMethod.GET, version, type)
 
 const buildPostApiByType = (
     url: string,
     type: string,
-    version = "1.0",
     domain: string = baseDomain,
+    version = "1.0",
 ) => buildApi(domain, url, requestMethod.POST, version, type)
 
 const getByIdApi = (
     type: string,
-    version = "1.0",
     domain: string = baseDomain,
+    version = "1.0",
 ) => buildApi(domain, commonUrl.GET_BY_ID, requestMethod.GET, version, type)
 
 const generalQueryApi = (
     type: string,
-    version = "1.0",
     domain: string = baseDomain,
+    version = "1.0",
 ) => buildApi(domain, commonUrl.GENERAL_QUERY, requestMethod.POST, version, type)
 
 const addApi = (
     type: string,
-    version = "1.0",
     domain: string = baseDomain,
+    version = "1.0",
 ) => buildApi(domain, commonUrl.ADD, requestMethod.POST, version, type)
 
 const updateApi = (
     type: string,
-    version = "1.0",
     domain: string = baseDomain,
+    version = "1.0",
 ) => buildApi(domain, commonUrl.UPDATE, requestMethod.POST, version, type)
 
 const deleteApi = (
     type: string,
-    version = "1.0",
     domain: string = baseDomain,
+    version = "1.0",
 ) => buildApi(domain, commonUrl.DELETE, requestMethod.POST, version, type)
 
 const addRequest = (
