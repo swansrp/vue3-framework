@@ -93,23 +93,26 @@ const deleteApi = (
 const addRequest = (
     type: string,
     data: object,
+    domain: string = baseDomain,
     showSuccess = true,
-    showLoading = true
-) => request(addApi(type), {}, data, showSuccess, showLoading) as Promise<any>
+    showLoading = true,
+) => request(addApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
 const deleteRequest = (
     type: string,
     id: string,
+    domain: string = baseDomain,
     showSuccess = true,
-    showLoading = true
-) => request(deleteApi(type), {}, {id}, showSuccess, showLoading) as Promise<any>
+    showLoading = true,
+) => request(deleteApi(type, domain), {}, {id}, showSuccess, showLoading) as Promise<any>
 
 const updateRequest = (
     type: string,
     data: object,
+    domain: string = baseDomain,
     showSuccess = true,
-    showLoading = true
-) => request(updateApi(type), {}, data, showSuccess, showLoading) as Promise<any>
+    showLoading = true,
+) => request(updateApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
 const generalQueryRequest = (
     type: string,
@@ -117,9 +120,10 @@ const generalQueryRequest = (
     sortList: Array<any>,
     pageSize: number,
     currentPage: number,
+    domain: string = baseDomain,
     showSuccess = false,
-    showLoading = true
-) => request(generalQueryApi(type), {}, {
+    showLoading = true,
+) => request(generalQueryApi(type, domain), {}, {
     conditionList,
     sortList,
     pageSize,
@@ -129,9 +133,10 @@ const generalQueryRequest = (
 const getByIdRequest = (
     type: string,
     id: string,
+    domain: string = baseDomain,
     showSuccess = false,
-    showLoading = true
-) => request(getByIdApi(type), {id}, {}, showSuccess, showLoading) as Promise<any>
+    showLoading = true,
+) => request(getByIdApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
 
 export {
     baseDomain,
