@@ -6,7 +6,9 @@
     <template #title>{{ subNavList.title }}</template>
     <template v-for="item in subNavList.children">
       <template v-if="!item.children">
-        <a-menu-item :key="item.path || item.title" :id="item.key.toString()" :title="item.title">
+        <a-menu-item
+          :id="item.key.toString()" :key="item.path || item.title" :path="item.path"
+          :query="item.query" :title="item.title">
           <template #icon>
             <Icon :icon="item.icon" />
           </template>
@@ -14,7 +16,7 @@
         </a-menu-item>
       </template>
       <template v-else>
-        <sub-nav :key="item.path || item.title" :id="item.key.toString()" :subNavList="item" />
+        <sub-nav :id="item.key.toString()" :key="item.path || item.title" :subNavList="item" />
       </template>
     </template>
   </a-sub-menu>
@@ -26,7 +28,9 @@ import {NavListType} from "../type"
 const subNavList = ref<NavListType>()
 const props = defineProps<{ subNavList: NavListType }>()
 
-watch(() => props.subNavList, () => { subNavList.value= props.subNavList }, {immediate: true})
+watch(() => props.subNavList, () => {
+  subNavList.value = props.subNavList
+}, {immediate: true})
 
 </script>
 

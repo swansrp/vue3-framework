@@ -39,23 +39,12 @@ export const genAntdMenuFirstSelectObject = (node: NavListType, selectLeftNav: F
         goBackTo(`/${MAIN_CONTENT}/${HOME}`, 3500, true)
         return
     }
-    let id = node.key
-    const keyPath = []
-    let title = node.title
-    let defaultKey = node.path
+    let defaultNode = {}
     while (node) {
-        id = node.key
-        title = node.title
-        defaultKey = node.path
-        keyPath.push(node.path)
+        defaultNode = node
         if (node.children) node = node.children[0]
         else break
     }
-    const obj = {
-        key: defaultKey,
-        keyPath: keyPath,
-        item: {id: id, title: title}
-    }
-    selectLeftNav(obj)
+    selectLeftNav({item:defaultNode})
 }
 export  {getTitlePathByKey}

@@ -3,13 +3,15 @@
     v-if="tabStore.isNeedLeftNav"
     v-model:openKeys="keys.openKeys"
     v-model:selectedKeys="keys.selectedKeys"
-    mode="inline"
     class="left-menu"
+    mode="inline"
     theme="dark"
     @select="selectLeftNav">
     <template v-for="item in navList">
       <template v-if="!item.children">
-        <a-menu-item :id="item.key.toString()" :key="item.path || item.title" :title="item.title">
+        <a-menu-item
+          :id="item.key.toString()" :key="item.path || item.title" :path="item.path" :query="item.query"
+          :title="item.title">
           <template #icon>
             <Icon :icon="item.icon" />
           </template>
@@ -25,7 +27,7 @@
 
 <script lang="ts" setup>
 import mitt from "@/framework/utils/mitt"
-import {useRouter} from "vue-router"
+import {LocationQueryRaw, useRouter} from "vue-router"
 import {NavListType} from "../type"
 import {useTabStore} from "@/framework/store/nav"
 import {useRouteStore} from "@/framework/store/route"
@@ -33,6 +35,7 @@ import 'ant-design-vue/lib/message/style/index.css'
 import {CHANGE_TAB, HOME, MAIN_CONTENT} from "@/framework/utils/constant"
 import {genAntdMenuFirstSelectObject, getTitlePathByKey} from "@/framework/hooks/initKeysAndRouteInNav"
 import SubNav from "@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue"
+import {getQueryObject} from "@/framework/network/utils";
 
 const router = useRouter()
 const tabStore = useTabStore()
@@ -55,23 +58,28 @@ const initCurrentRouteAndVar = () => {
   }
 }
 
-const selectLeftNav = (obj: any, targetPath?: string) => {
-  let path = obj.key
-  router.push(`/${MAIN_CONTENT}/${topNavPath}/${path}`).then(() => {
+const selectLeftNav = (obj: any) => {
+  let path = obj.item.path
+  const fullPath = `/${MAIN_CONTENT}/${topNavPath}/${path}`
+  const query = (obj.item.query ? getQueryObject(obj.item.query) : {}) as LocationQueryRaw
+  router.push({
+    path: fullPath,
+    query
+  }).then(() => {
     keys.selectedKeys = [path]
     const {titlePath, keyPath} = getTitlePathByKey(navList.value, path)
     keys.openKeys = keyPath
     // 选中左侧菜单后， 为面包屑提供数据
     tabStore.setTitlePath(titlePath)
     // 选中左侧菜单后，增加对应的tab信息
-    const tabName = titlePath[titlePath.length - 1]
-    if (targetPath) tabStore.addHistoryTab({key: path, tabName}, targetPath)
-    else tabStore.addHistoryTab({key: path, tabName}, router.currentRoute.value.fullPath)
+    // const tabName = titlePath[titlePath.length - 1]
+    tabStore.addHistoryTab(obj.item, fullPath)
   })
 }
 
-const getObjectByLeftNavPath = (currentLeftNav: string, targetPath?: string) =>
-  selectLeftNav({key: currentLeftNav}, targetPath)
+const getObjectByLeftNavPath = (currentNode: NavListType) => {
+  selectLeftNav({item: currentNode})
+}
 
 
 const initLeftNavList = () => {
@@ -90,12 +98,16 @@ const initLeftNavList = () => {
       // 如果地址栏中的fullPath存在关于左侧导航菜单的相关路径，则根据这个路径初始化左侧菜单的选中情况
       if (currentLeftNav) {
         if (tabStore.updateLeftNav) {
-          const targetPath = `/${MAIN_CONTENT}/${tabStore.topNavPath}/${tabStore.tabActivateKey}`
-          getObjectByLeftNavPath('' + currentLeftNav, targetPath)
-        } else getObjectByLeftNavPath('' + currentLeftNav)
+          // const targetPath = `/${MAIN_CONTENT}/${tabStore.topNavPath}/${tabStore.tabActivateKey}`
+          genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
+        } else {
+          getObjectByLeftNavPath(routeStore.dynamicRouteMap[currentLeftNav])
+        }
       }
       // 否则，默认选中第一个叶子节点
-      else genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
+      else {
+        genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
+      }
       break
     }
   }
@@ -124,15 +136,16 @@ onMounted(() => {
 
 <style scoped>
 * {
-    user-select: none;
+  user-select: none;
 }
 
 :deep(.ant-menu) {
-    height: 100%;
+  height: 100%;
 }
+
 .left-menu {
   width: 250px;
-  box-shadow: 5px 0 5px 0 rgba(0,0,0,0.5);
+  box-shadow: 5px 0 5px 0 rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 999;
 }

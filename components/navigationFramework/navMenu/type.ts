@@ -1,10 +1,18 @@
-interface NavListType {
+import {Key} from "ant-design-vue/es/_util/type";
+
+interface NavListType extends NavNodeType {
+    children: Array<NavListType>,
+}
+
+interface NavNodeType {
+    id: Key,
+    pid: Key,
     title: string,
     key: string,
     icon: string,
-    path: string
-    children: Array<NavListType>,
+    path: string,
+    query: string,
     component: any
 }
 
-export type {NavListType}
+export type {NavNodeType, NavListType}

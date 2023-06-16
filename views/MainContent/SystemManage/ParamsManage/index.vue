@@ -49,6 +49,7 @@
 <script lang="ts" setup>
 import {Ref} from "vue";
 import * as _ from "lodash";
+// import {baseDomain} from "@/framework/apis";
 import {deleteParams, queryParams, refreshParams, updateParams} from "@/framework/apis/params";
 import surelyTableColumns from "./constant";
 import {SearchOutlined} from "@ant-design/icons-vue";
@@ -58,8 +59,12 @@ import {QueryConditionType, SORT_TYPE, SortObjType} from "@/framework/components
 import SurelyTable from "@/framework/components/common/surelyTable/SurelyTable.vue";
 import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
 import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
+import {useRouter} from 'vue-router'
 
+const { currentRoute } = useRouter();
+const route = currentRoute.value;
 
+const baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : undefined : undefined
 let currentPage = ref(1)
 let pageSize = ref(10)
 let totalPageNumber = ref(0)
@@ -94,10 +99,10 @@ const paginationChange = (page: number, size: number) => {
   getParamsTableData()
 }
 
-const refresh = () => refreshParams().then(getParamsTableData)
+const refresh = () => refreshParams(baseDomain).then(getParamsTableData)
 
 const handleDeleteParams = (record: any) =>
-  deleteParams(record.configId).then(getParamsTableData).then(() => paramsBoxVisible.value = false)
+  deleteParams(record.configId, baseDomain).then(getParamsTableData).then(() => paramsBoxVisible.value = false)
 
 const handleEditParams = (record: any) => {
   paramsForm.configId = record.configId
@@ -106,7 +111,7 @@ const handleEditParams = (record: any) => {
 }
 
 const editParams = () =>
-  updateParams(paramsForm).then(getParamsTableData).then(() => paramsBoxVisible.value = false)
+  updateParams(paramsForm, baseDomain).then(getParamsTableData).then(() => paramsBoxVisible.value = false)
 
 
 const handleSearch = (queryCondition: QueryConditionType) => {
@@ -121,7 +126,7 @@ const handleReset = (queryCondition: QueryConditionType) => {
 
 const getParamsTableData = () => {
   const queryList = Object.values(myQueryCondition)
-  queryParams(queryList, sortList, pageSize.value, currentPage.value).then((res: any) => {
+  queryParams(queryList, sortList, pageSize.value, currentPage.value, baseDomain).then((res: any) => {
     surelyTableData.value = res.payload.records
     totalPageNumber.value = res.payload.total
     surelyTableData.value.forEach((item: any, index: number) => {

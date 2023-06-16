@@ -8,18 +8,18 @@
       @change="changeActivateKey"
       @edit="removeTab">
       <a-tab-pane :key="homePageKey" :closable="false" tab="首页" />
-      <a-tab-pane v-for="item in tabs" :key="item.key" :tab="item.tabName" />
+      <a-tab-pane v-for="item in tabs" :key="String(item.key || item.id)" :tab="item.title" />
     </a-tabs>
   </div>
 </template>
 
 <script lang="ts" setup>
 import router from "@/framework/router"
-import {TabType} from './type'
 import mitt from '@/framework/utils/mitt'
 import {useTabStore} from '@/framework/store/nav'
 import {CHANGE_TAB, HOME} from '@/framework/utils/constant'
 import {Key} from 'ant-design-vue/es/table/interface'
+import {TabType} from "@/framework/components/navigationFramework/historyTab/type";
 
 const store = useTabStore()
 // 这个key要和路由中的path一致
@@ -75,7 +75,7 @@ const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
 const changeActivateKey = (key: Key) => {
   // 不要更换这两句话的顺序，否则会产生bug
   // 保存用户最后选择的openKeys和tab
-  router.push(store._key2HistoryHrefFullPath[key]).then(() => {
+  router.push(store.getRouterTarget(key)).then(() => {
     // 修改tabStore中的相关状态
     store.changeTab(key)
     saveHistoryRoute(key)

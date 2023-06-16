@@ -3,7 +3,7 @@
   <a-config-provider :locale="zhCN">
     <navigation-framework>
       <template #router-view>
-        <router-view />
+        <router-view :key="$route.path" />
       </template>
     </navigation-framework>
   </a-config-provider>

@@ -1,7 +1,9 @@
 import {defineStore} from "pinia"
-import {HOME, MAIN_CONTENT} from "@/framework/utils/constant"
 import {Key} from 'ant-design-vue/lib/table/interface'
-import {TabType} from "@/framework/components/navigationFramework/historyTab/type"
+import {TabType} from "@/framework/components/navigationFramework/historyTab/type";
+import {HOME, MAIN_CONTENT} from "@/framework/utils/constant";
+import {getQueryObject} from "@/framework/network/utils";
+import {LocationQueryRaw} from "vue-router";
 
 export const useTabStore = defineStore('tabStore', {
   state: () => {
@@ -14,8 +16,6 @@ export const useTabStore = defineStore('tabStore', {
       _historyTabArray: [] as Array<TabType>,
       // 记录历史tab选项，使用key可以快速找到对应的tab
       _key2HistoryTabMap: {} as { [key: string]: TabType },
-      //记录key所对应的地址栏地址的fullPath部分，变更tab时可以切换到对应的内容
-      _key2HistoryHrefFullPath: {[HOME]: `/${MAIN_CONTENT}/${HOME}`} as { [key: string]: string },
       // 只记录顶部导航菜单的path
       topNavPath: '',
       // 记录左侧导航的中文名称路径，用于在面包屑中展示
@@ -30,24 +30,23 @@ export const useTabStore = defineStore('tabStore', {
   },
   actions: {
     addHistoryTab(tab: TabType, hrefFullPath: string) {
-      const key = tab.key
+      const key = String(tab.id || tab.key)
       if (!this._historyTabSet.has(key)) {
         this._historyTabSet.add(key)
         this._historyTabArray.push(tab)
       }
       this._key2HistoryTabMap[key] = tab
-      this._key2HistoryHrefFullPath[key] = hrefFullPath
+      this._key2HistoryTabMap[key].fullPath = hrefFullPath
       this.tabActivateKey = key
     },
     deleteHistoryTab(key: Key) {
       this._historyTabArray = this._historyTabArray.filter(tab => tab.key !== key)
       this._historyTabSet.delete(key)
       delete this._key2HistoryTabMap[key]
-      delete this._key2HistoryHrefFullPath[key]
     },
     // 保存用户最后选择的openKeys和tab
     changeTab(key: Key) {
-      const fullPath = this._key2HistoryHrefFullPath[key]
+      const fullPath = this._key2HistoryTabMap[key].fullPath
       const fullPathArray = fullPath.split('/').filter(item => item).slice(1)
       // 通知topNav选中对应的菜单项
       this.topNavPath = fullPathArray[0]
@@ -57,6 +56,23 @@ export const useTabStore = defineStore('tabStore', {
     },
     setTopNavPath(path: string) {
       this.topNavPath = path
+    },
+    getRouterTarget(key: Key) {
+      if(this._key2HistoryTabMap[key]) {
+        const path = `${this._key2HistoryTabMap[key].fullPath}`
+        let query = undefined
+        if(this._key2HistoryTabMap[key].query) {
+          query = getQueryObject(`${this._key2HistoryTabMap[key].query}`) as LocationQueryRaw
+        }
+        return {
+          path,
+          query
+        }
+      } else {
+        return {
+          path: `/${MAIN_CONTENT}/${HOME}`
+        }
+      }
     }
   }
 })
