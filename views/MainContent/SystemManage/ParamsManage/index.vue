@@ -49,7 +49,6 @@
 <script lang="ts" setup>
 import {Ref} from "vue";
 import * as _ from "lodash";
-// import {baseDomain} from "@/framework/apis";
 import {deleteParams, queryParams, refreshParams, updateParams} from "@/framework/apis/params";
 import surelyTableColumns from "./constant";
 import {SearchOutlined} from "@ant-design/icons-vue";
@@ -60,6 +59,7 @@ import SurelyTable from "@/framework/components/common/surelyTable/SurelyTable.v
 import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
 import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
 import {useRouter} from 'vue-router'
+import {updateTableSize} from "@/framework/utils/common";
 
 const { currentRoute } = useRouter();
 const route = currentRoute.value;
@@ -139,13 +139,8 @@ const getParamsTableData = () => {
 const paramsConfigSpace: Ref = ref()
 let tableWidth: Ref<number> = ref(0)
 let tableHeight: Ref<number> = ref(0)
-const updateTableWidthAndHeight = () => {
-  if (paramsConfigSpace && paramsConfigSpace.value) {
-    tableWidth.value = paramsConfigSpace.value.offsetWidth - 40
-    tableHeight.value = paramsConfigSpace.value.offsetHeight - 150
-  }
-}
 
+const updateTableWidthAndHeight = () => updateTableSize(paramsConfigSpace,tableWidth, 40, tableHeight, 150)
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 50))
 onBeforeMount(getParamsTableData)
 onMounted(updateTableWidthAndHeight)

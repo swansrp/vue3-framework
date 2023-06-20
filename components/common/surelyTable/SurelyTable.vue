@@ -76,7 +76,7 @@ import {TableColumnType} from "ant-design-vue";
 import {FILTER_COMPONENT_TYPE, QueryConditionType} from "./contant";
 
 const props = defineProps<{
-  tableId: string,
+  tableId?: string,
   columns: any,
   dataSource: Array<object>,
   tableHeight?: number,
@@ -137,7 +137,10 @@ const columnDragEnd = (_info: any) => {
       // 记录更新后的dataIndex与顺序的映射关系
       columnsOrder[(column as any).dataIndex] = index
     })
-    localStorageMethods.setLocalStorage(tableId.value, JSON.stringify(columnsOrder))
+    if (tableId === undefined)
+      throw new Error('请先为 surely table 设置 tableId 后在使用其表头拖拽功能')
+    else
+    localStorageMethods.setLocalStorage(tableId.value as string, JSON.stringify(columnsOrder))
   })
 }
 
