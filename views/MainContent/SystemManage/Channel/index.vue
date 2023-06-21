@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import {Ref} from "vue"
-import surelyTableColumns from "@/views/MainContent/ConfigManage/channel"
+import surelyTableColumns from "@/framework/views/MainContent/SystemManage/Channel/channel"
 import LeftListRightTable from '@/framework/components/common/leftListRightTable/index.vue'
 import {
   getSequenceChannelList,
@@ -38,7 +38,7 @@ import {
   addSequenceChannelTable,
   deleteSequenceChannelTable,
   editSequenceChannelTable
-} from "@/apis/channel"
+} from "@/framework/apis/channel"
 import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
 import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
 import {useRouter} from "vue-router";
