@@ -1,7 +1,7 @@
 import { request } from "@/framework/network/request"
-import {apiType, buildGetApiByType} from "@/framework/apis"
+import {apiType, buildGetApiByType, baseDomain} from "@/framework/apis"
 
-const buildGetApi = (url: string) => buildGetApiByType(url, apiType.common)
+const buildGetApi = (url: string, domain=baseDomain) => buildGetApiByType(url, apiType.common, domain)
 
-export const getDictList = (dictName: string) => request(buildGetApi("/dict"), {dictName},{},false,false) as Promise<any>
-export const getTreeList = (dictName: string) => request(buildGetApi("/tree"), {dictName},{},false,false) as Promise<any>
+export const getDictList = (dictName: string, domain=baseDomain) => request(buildGetApi("/dict", domain), {dictName},{},false,false) as Promise<any>
+export const getTreeList = (dictName: string,  domain=baseDomain) => request(buildGetApi("/tree", domain), {dictName},{},false,false) as Promise<any>
