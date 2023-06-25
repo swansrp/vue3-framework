@@ -8,6 +8,9 @@
         <template #prefix v-if="formState['icon'].length">
           <Icon :icon="formState['icon']" />
         </template>
+        <template #suffix>
+          <a-button type="primary" size="small" @click="onSearch">手动输入</a-button>
+        </template>
       </a-input>
     </a-form-item>
     <a-form-item label="是否缓存" required>
@@ -33,6 +36,18 @@
     </a-form-item>
   </a-form>
   <icon-modal v-model:visible="visible" v-model:icon="formState['icon']" />
+  <dialog-box v-model:visible="inputIconBoxVisible" title="参数修改" :width="500">
+    <a-form :model="iconForm" @finish="inputIconForm" labelAlign="right">
+      <a-form-item
+        label="图标" name="icon" required
+        :rules="[{required: true, message: '请输入图标字符串!'}]">
+        <a-input v-model:value="iconForm['icon']" placeholder="请输入图标对应的字符串" />
+      </a-form-item>
+      <a-form-item>
+        <a-button html-type="submit" type="primary" block>确定</a-button>
+      </a-form-item>
+    </a-form>
+  </dialog-box>
 </template>
 
 <script lang="ts" setup>
@@ -40,10 +55,13 @@ import {Ref} from "vue"
 import {FormState, FormType} from "@/framework/components/common/treeEditForm/type"
 import {addMainMenu, addSubMenu, updateMainMenu, updateSubMenu} from "@/framework/apis/admin/navEdit"
 import {FormInstance} from "ant-design-vue"
+import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue"
 
 const iconInput = ref()
 const formRef = ref<FormInstance>()
 let visible:Ref<boolean> = ref(false) //控制图标选择对话框的弹出
+let inputIconBoxVisible: Ref<boolean> = ref(false)
+let iconForm:Ref<{icon: string}> = ref({icon: ''})
 
 // formState：默认表单数据，因为编辑的时候需要展示已有信息， type：用于区别是目前表单应为编辑表单还是新增表单
 // menuId: 菜单项Id，用于编辑Sub Menu和Main Menu菜单项和新增Sub Menu菜单项
@@ -75,6 +93,13 @@ const onFinish = () => {
     if (grandId && grandId.value) addSubMenu(data).then(() => updateSubTree())
     else addMainMenu(data).then(() => updateMainTree())
   }
+}
+
+const onSearch = () => inputIconBoxVisible.value = true
+
+const inputIconForm = () => {
+  formState.value.icon = iconForm.value.icon
+  inputIconBoxVisible.value = false
 }
 
 // 清空表单内容
