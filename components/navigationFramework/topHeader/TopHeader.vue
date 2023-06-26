@@ -1,7 +1,7 @@
 <template>
   <div id="top">
-    <div class="top_title">
-      <img src="../../../../../public/icon.png" alt="公司标志" />
+    <div class="top_title" :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'">
+      <img src="../../../../../public/icon.png" alt="公司标志" v-if="tabStore.isNeedLeftNav" />
       {{ projectName }}
     </div>
     <top-nav class="top_nav" />
@@ -39,7 +39,10 @@ import {title as projectName} from '../../../../../package.json'
 import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
 import { UserOutlined, SettingOutlined, RedoOutlined } from "@ant-design/icons-vue"
 import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
+import {useTabStore} from "@/framework/store/nav";
+
 const userStore = useUserStore()
+const tabStore = useTabStore()
 
 const handleMenuClick = (e:any) => {
   if (e.key === '1'){
@@ -77,9 +80,16 @@ const handleMenuClick = (e:any) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 5px 0 5px 0 rgba(0,0,0,0.5);
   position: relative;
   z-index: 999;
+}
+.show-left-nav {
+  background-color: rgb(0,21,41);
+  box-shadow: 5px 0 5px 0 rgba(0,0,0,0.5);
+}
+.hide-left-nav {
+  background-color: #1890ff;
+  box-shadow: none;
 }
 .top_title img {
   height: 20px;
