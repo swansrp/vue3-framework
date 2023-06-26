@@ -117,5 +117,7 @@ const handleMenuClick = (e:any) => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
+:deep(.top_user_setting .ant-btn-circle) {
+  margin-right: 2px;
+}
 </style>
