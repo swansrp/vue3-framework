@@ -35,10 +35,10 @@ export const SORT = {
 }
 
 export const DATA_FORMAT = {
-  YYYY: 'yyyy',
-  YYYY_MM: 'yyyy-MM',
-  YYYY_MM_DD: 'yyyy-MM-dd',
-  YYYY_MM_DD_HH_MM_SS: 'yyyy-MM-dd HH:mm:ss'
+  YYYY: 'YYYY',
+  YYYY_MM: 'YYYY-MM',
+  YYYY_MM_DD: 'YYYY-MM-DD',
+  YYYY_MM_DD_HH_MM_SS: 'YYYY-MM-DD HH:mm:ss'
 }
 
 export interface QueryConditionType {
