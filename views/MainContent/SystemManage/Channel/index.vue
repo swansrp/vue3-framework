@@ -45,7 +45,7 @@ import {useRouter} from "vue-router";
 
 const { currentRoute } = useRouter();
 const route = currentRoute.value;
-const baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : '' : ''
+let baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : '' : ''
 
 let updateTableFlag: Ref<number> = ref(0)
 const currentItemValue: Ref<string> = ref('')
@@ -55,7 +55,11 @@ let addTableItemFinishedVisible: Ref<boolean> = ref(false)
 let currentTableItemId: Ref<string> = ref('')
 let newTableItemInfo: Ref<{appKey: string, appSecret: string}> = ref({appKey: '', appSecret: ''})
 
-const getLeftItemList = async (name: string, cb: Function) => cb(await getSequenceChannelList(baseDomain, name))
+const getLeftItemList = async (name: string, cb: Function) => {
+  while (!baseDomain)
+    baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : '' : ''
+  cb(await getSequenceChannelList(baseDomain, name))
+}
 const getTableByItem = async (requestData: any, cb: Function) => cb(await getSequenceChannelTable(baseDomain, requestData))
 const addTableItem = () => addSequenceChannelTable(baseDomain, currentItemValue.value).then((res) => {
   newTableItemInfo.value.appKey = res.payload.appKey

@@ -65,7 +65,7 @@ const { currentRoute } = useRouter();
 const route = currentRoute.value;
 
 const baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : undefined : undefined
-console.log(baseDomain)
+
 let currentPage = ref(1)
 let pageSize = ref(10)
 let totalPageNumber = ref(0)
