@@ -10,6 +10,7 @@ export const useUserStore = defineStore('userStore', {
             self: {},
             role: {},
             name: '游客',
+            customerNumber: '',
             avatar: '',
             roles: []
         }
