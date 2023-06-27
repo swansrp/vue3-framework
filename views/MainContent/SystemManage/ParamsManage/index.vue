@@ -65,6 +65,7 @@ const { currentRoute } = useRouter();
 const route = currentRoute.value;
 
 const baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : undefined : undefined
+
 let currentPage = ref(1)
 let pageSize = ref(10)
 let totalPageNumber = ref(0)
@@ -142,8 +143,10 @@ let tableHeight: Ref<number> = ref(0)
 
 const updateTableWidthAndHeight = () => updateTableSize(paramsConfigSpace,tableWidth, 40, tableHeight, 150)
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 50))
-onBeforeMount(getParamsTableData)
-onMounted(updateTableWidthAndHeight)
+onMounted(() => {
+  getParamsTableData()
+  updateTableWidthAndHeight()
+})
 
 </script>
 
