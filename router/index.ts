@@ -2,7 +2,9 @@ import pinia from "@/framework/store"
 import {useTabStore} from "@/framework/store/nav"
 import {enterFirstDynamicRoute} from "@/framework/router/utils"
 import {HOME, I_MAIN_CONTENT, MAIN_CONTENT} from "@/framework/utils/constant"
-import {createRouter, createWebHashHistory, RouteRecordRaw} from "vue-router"
+import {createRouter, createWebHashHistory, LocationQueryRaw, RouteRecordRaw} from "vue-router"
+import {useRouteStore} from "@/framework/store/route";
+import {getQueryObject} from "@/framework/network/utils";
 
 const tabStore = useTabStore(pinia)
 const NotFound = () => import('@/framework/views/NotFound/index.vue')
@@ -52,7 +54,9 @@ router.beforeEach((to) => {
   // 设定MainContent组件的默认路由为第一个动态路由
   if (to.path === '/' || to.path === I_MAIN_CONTENT || to.path === `${I_MAIN_CONTENT}/`) {
     const leftNavPath = enterFirstDynamicRoute()
-    return {name: leftNavPath}
+    const queryStr = useRouteStore().dynamicRouteMap[leftNavPath] ? useRouteStore().dynamicRouteMap[leftNavPath].query : null
+    const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
+    return {name: leftNavPath, query}
   }
 })
 
