@@ -56,38 +56,7 @@
         </div>
       </a-layout-sider>
       <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper">
-        <department-and-staff-select
-          v-model:staffListValue="staffListValue" :is-multiple="true" :width="300"
-          layout-mode="vertical" />
-        <a-button
-          style="width: 200px;margin-bottom: 10px;margin-left: 70px;" type="primary"
-          @click="handleAddUser">绑定
-        </a-button>
-        <a-card size="small" title="已绑定用户">
-          <template #extra>
-            <a-select v-model:value="selectPermission" style="width: 200px" placeholder="请选择权限">
-              <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </a-select-option>
-            </a-select>
-            <a-input-search
-              v-model:value="searchUserName" enter-button placeholder="请输入职工名"
-              style="width: 200px;margin-right: 10px;" @search="handleSearchUser" />
-            <delete-pop-confirm
-              btn-content="解绑所有用户" pop-content="确认解绑全部用户吗？该操作不可恢复！"
-              size="middle" @delete-event="handleUnbindAllUser" />
-          </template>
-          <a-empty v-if="!userList.length" />
-          <div v-else class="tag-box">
-            <a-tag
-              v-for="user in userList" :key="user.value"
-              closable color="blue" style="margin-top: 5px; cursor: pointer;"
-              @click="handleChangePermission(user)"
-              @close="handleUnbindUser(user.userId)">
-              {{ user.label }}-{{ user.dataScopeDisplay }}
-            </a-tag>
-          </div>
-        </a-card>
+        <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag" />
       </a-layout-content>
     </a-layout>
     <dialog-box v-model:visible="addUserGroupNodeVisible" title="新增用户组">
@@ -96,11 +65,6 @@
     <dialog-box v-model:visible="editUserGroupNodeVisible" title="编辑用户组">
       <add-and-edit-user-group :name="currentUserGroupInfo.name" @callback="handleEditUserGroupTreeNode" />
     </dialog-box>
-    <dialog-box v-model:visible="editUserPermissionVisible" :title="`为${currentUserInfo.name}配置权限`">
-      <EditUserPermission
-        :data-scope="currentUserInfo.dataScope" :permission-list="permissionList"
-        @callback="handleEditUserPermission" />
-    </dialog-box>
   </div>
 </template>
 
@@ -108,17 +72,14 @@
 import '@/framework/assets/css/userGroup.css'
 import {
   addUserGroupNode,
-  bindUserGroupList,
   deleteUserGroupNode,
   editUserGroupNode,
-  editUserPermission,
-  getBindUser,
   getUserGroupById,
   getUserGroupType,
-  unbindAllUserGroupList,
-  unbindUserGroupList, updateUserGroupNodeOrder, updateUserGroupNodePId
+  updateUserGroupNodeOrder,
+  updateUserGroupNodePId
 } from "@/framework/apis/admin/userGroup"
-import {IdName, IdNameArray, ValueLabel, ValueLabelArray} from "@/framework/utils/type"
+import {IdName, IdNameArray} from "@/framework/utils/type"
 import {Ref} from "vue"
 import * as _ from "lodash"
 import {QUERY_INTERVAL} from "@/framework/utils/constant"
@@ -127,16 +88,11 @@ import {message} from "ant-design-vue"
 import 'ant-design-vue/lib/message/style/index.css'
 import {WarningFilled} from "@ant-design/icons-vue"
 import AddAndEditUserGroup from './addAndEditUserGroup/index.vue'
-import EditUserPermission from './editUserPermission/index.vue'
-import {getDictList} from "@/framework/apis/common/common"
 import {AntTreeNodeDropEvent} from "ant-design-vue/es/tree"
 import {getDroppedData} from "@/framework/hooks/antTreeDropSort"
 import {getAllParentNodes, getBrotherNodes} from "@/framework/utils/common"
-import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
 import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
-import DepartmentAndStaffSelect
-  from "@/framework/components/common/departmentAndStaffSelect/DepartmentAndStaffSelect.vue";
-
+import UserPermission from '@/framework/components/common/userPermission/index.vue'
 
 
 let activateDictItem: Ref<number> = ref(-1)
@@ -152,33 +108,13 @@ let editUserGroupNodeVisible: Ref<boolean> = ref(false)
 
 let currentUserGroupInfo: Ref<IdName> = ref({name: '', id: ''})
 
-const staffListValue: Ref<ValueLabelArray> = ref([])
-
 let popConfirmVisible:Ref<boolean> = ref(false)
-
-interface UserDataType extends ValueLabel {
-  dataScopeDisplay: string
-  dataScope: string,
-  userId: string
-}
-
-const userList: Ref<UserDataType[]> = ref([])
-let selectPermission: Ref<string | undefined> = ref(undefined)
-let searchUserName: Ref<string> = ref('')
 
 let hasSelectUserGroup: Ref<boolean> = ref(false)
 let hasSelectUserGroupCategory: Ref<boolean> = ref(false)
 
-let currentUserInfo: Ref<{ id: string, name: string, dataScope: string }> = ref({
-  id: '',
-  name: '',
-  dataScope: ''
-})
+let renderBindUserFlag: Ref<number> = ref(0)
 
-let editUserPermissionVisible: Ref<boolean> = ref(false)
-let permissionList: Ref<ValueLabelArray> = ref([])
-
-getDictList('DATA_PERMIT_SCOPE_DICT').then(res => permissionList.value = res.payload)
 
 const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
 
@@ -225,49 +161,10 @@ const selectUserGroup = (_: string, info: any) => {
   currentUserGroupInfo.value.name = name
   currentUserGroupInfo.value.id = id
   hasSelectUserGroup.value = true
-  renderBindUser()
-}
-
-const renderBindUser = () =>
-  getBindUser(currentUserGroupInfo.value.id, searchUserName.value, selectPermission.value)
-    .then(res => userList.value = res.payload)
-
-const handleAddUser = () => {
-  if (staffListValue.value.length === 0) {
-    message.error({content: () => '请选择用户后再执行添加操作', style: {marginTop: '10vh'}})
-    return
-  }
-  const entityId = currentUserGroupInfo.value.id
-  const userIdList = staffListValue.value.map(item => item.value)
-  bindUserGroupList(entityId, userIdList).then(renderBindUser)
-}
-
-const handleSearchUser = () => userList.value = userList.value.filter(user => user.label.indexOf(searchUserName.value) > -1)
-
-const handleUnbindUser = (attachId: string) => {
-  const entityId = currentUserGroupInfo.value.id
-  unbindUserGroupList(entityId, attachId).then(renderBindUser)
-}
-
-const handleUnbindAllUser = () => {
-  const entityId = currentUserGroupInfo.value.id
-  const userIdList = userList.value.map(user => user.userId)
-  unbindAllUserGroupList(entityId, userIdList).then(renderBindUser)
+  renderBindUserFlag.value += 1
 }
 
 const renderUserGroupTree = () => getUserGroupById(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
-
-const handleChangePermission = (user: any) => {
-  currentUserInfo.value.id = user.userId
-  currentUserInfo.value.name = user.label
-  currentUserInfo.value.dataScope = user.dataScope
-  editUserPermissionVisible.value = true
-}
-
-const handleEditUserPermission = (dataScope: string) =>
-  editUserPermission(dataScope, currentUserGroupInfo.value.id, currentUserInfo.value.id)
-      .then(renderBindUser).then(() => editUserPermissionVisible.value =false)
-
 
 const onDrop = (info: AntTreeNodeDropEvent) => {
   const dragKey = info.dragNode.key
@@ -287,12 +184,6 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
 
 onMounted(renderUserGroupType)
 
-watch(searchUserName, renderBindUser)
-watch(selectPermission, renderBindUser)
 watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL))
 
 </script>
-
-<style scoped>
-
-</style>
