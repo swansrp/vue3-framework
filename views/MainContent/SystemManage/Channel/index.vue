@@ -45,7 +45,7 @@ import {useRouter} from "vue-router";
 
 const { currentRoute } = useRouter();
 const route = currentRoute.value;
-let baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : '' : ''
+const baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : undefined : undefined
 
 let updateTableFlag: Ref<number> = ref(0)
 const currentItemValue: Ref<string> = ref('')
@@ -55,13 +55,9 @@ let addTableItemFinishedVisible: Ref<boolean> = ref(false)
 let currentTableItemId: Ref<string> = ref('')
 let newTableItemInfo: Ref<{appKey: string, appSecret: string}> = ref({appKey: '', appSecret: ''})
 
-const getLeftItemList = async (name: string, cb: Function) => {
-  while (!baseDomain)
-    baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : '' : ''
-  cb(await getSequenceChannelList(baseDomain, name))
-}
-const getTableByItem = async (requestData: any, cb: Function) => cb(await getSequenceChannelTable(baseDomain, requestData))
-const addTableItem = () => addSequenceChannelTable(baseDomain, currentItemValue.value).then((res) => {
+const getLeftItemList = async (name: string, cb: Function) => cb(await getSequenceChannelList(name, 'MDM_PLATFORM_DICT', baseDomain))
+const getTableByItem = async (requestData: any, cb: Function) => cb(await getSequenceChannelTable(requestData, baseDomain))
+const addTableItem = () => addSequenceChannelTable(currentItemValue.value, baseDomain).then((res) => {
   newTableItemInfo.value.appKey = res.payload.appKey
   newTableItemInfo.value.appSecret = res.payload.appSecret
   addTableItemFinishedVisible.value = true
@@ -77,9 +73,9 @@ const handleEditTable = (record: any) => {
 const submitEdit = () => {
   const id = currentTableItemId.value
   const status = Number(tableDataItemDisabled.value)
-  editSequenceChannelTable(baseDomain,{id, status}).then(updateTableData).then(() => editTableItemBoxVisible.value = false)
+  editSequenceChannelTable({id, status}, baseDomain).then(updateTableData).then(() => editTableItemBoxVisible.value = false)
 }
-const handleDeleteTable = (record: any) => deleteSequenceChannelTable(baseDomain, record.id).then(updateTableData)
+const handleDeleteTable = (record: any) => deleteSequenceChannelTable(record.id, baseDomain).then(updateTableData)
 
 </script>
 
