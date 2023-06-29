@@ -19,19 +19,17 @@
 <script lang="ts" setup>
 import {clearFromField} from "@/framework/utils/common";
 import {Ref} from "vue"
-import {getDictList} from "@/framework/apis/common/common";
+import {getDictListByDictName} from "@/framework/apis/common/common";
 import {ValueLabelArray} from "@/framework/utils/type";
 
 let formRef = ref()
 const emit = defineEmits(['callback'])
 const props = defineProps<{ dataScope: string, permissionList: ValueLabelArray }>()
-
-getDictList('DATA_PERMIT_SCOPE_DICT').then(res => permissionList.value = res.payload)
-
-interface permissionFormType {
-  dataScope: string
-}
 const permissionList = ref(props.permissionList)
+
+getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList)
+interface permissionFormType { dataScope: string}
+
 const permissionForm:Ref<permissionFormType> = ref({dataScope: props.dataScope})
 const onEditFinish = () => emit('callback', permissionForm.value.dataScope)
 const resetForm = () => clearFromField(permissionForm, formRef)

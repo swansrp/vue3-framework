@@ -56,13 +56,13 @@ import {IdName, ValueLabel, ValueLabelArray} from "@/framework/utils/type";
 import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
 import EditUserPermission
   from "@/framework/views/MainContent/SystemManage/UserGroupMaintenance/editUserPermission/index.vue";
-import {getDictList} from "@/framework/apis/common/common";
+import {getDictListByDictName} from "@/framework/apis/common/common";
 
 const props = defineProps<{currentUserGroupInfo: IdName, renderBindUserFlag: number}>()
 const {currentUserGroupInfo, renderBindUserFlag} = toRefs(props)
 
 let permissionList: Ref<ValueLabelArray> = ref([])
-getDictList('DATA_PERMIT_SCOPE_DICT').then(res => permissionList.value = res.payload)
+getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList)
 
 let searchUserName: Ref<string> = ref('')
 const userList: Ref<UserDataType[]> = ref([])
