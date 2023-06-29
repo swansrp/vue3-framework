@@ -123,6 +123,6 @@ const renderBindUser = () =>
 
 watch(searchUserName, renderBindUser)
 watch(selectPermission, renderBindUser)
-watch(renderBindUserFlag, renderBindUser)
+watch(renderBindUserFlag, renderBindUser, {immediate: true})
 
 </script>

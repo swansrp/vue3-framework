@@ -7,6 +7,7 @@ export const ADD = 'add'
 export const EDIT = 'edit'
 export const LINK = 'link'
 export const VIEW = 'view'
+export const USER = 'user'
 export const DEFAULT_PAGE_SIZE = 20
 export const DEFAULT_CURRENT_PAGE = 1
 export const DEFAULT_PAGE_SIZE_OPTION = ['10', '20', '30', '40', '50']
