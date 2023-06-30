@@ -7,7 +7,7 @@
       type="editable-card"
       @change="changeActivateKey"
       @edit="removeTab">
-      <a-tab-pane :key="homePageKey" :closable="false" tab="首页" />
+      <a-tab-pane :key="homePageKey" :closable="false" :disabled="true" tab="首页" />
       <a-tab-pane v-for="item in tabs" :key="String(item.key || item.id)" :tab="item.title" />
     </a-tabs>
   </div>
