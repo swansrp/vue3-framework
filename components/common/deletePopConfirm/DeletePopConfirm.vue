@@ -9,7 +9,7 @@
     <template #title>
       <div class="pop-confirm-title">{{ popContent }}</div>
     </template>
-    <a-button class="item-delete-btn" :size="size" type="primary" danger>{{ btnContent }}</a-button>
+    <a-button :class="type ? '' : 'item-delete-btn'" :size="size" :type="type" danger>{{ btnContent }}</a-button>
   </a-popconfirm>
 </template>
 
@@ -17,10 +17,11 @@
 import {WarningFilled} from "@ant-design/icons-vue"
 import {Ref} from "vue"
 
-const props = defineProps<{size?: string, btnContent?: string, popContent?: string}>()
+const props = defineProps<{size?: string, btnContent?: string, popContent?: string, type?: string}>()
 const size: Ref<string> = ref(props.size || 'small')
 const btnContent: Ref<string> = ref(props.btnContent || '删除')
 const popContent: Ref<string> = ref(props.popContent || '确定要删除这条数据吗？')
+const type: Ref<string> = ref(props.type || 'primary')
 const emit = defineEmits(['deleteEvent'])
 const handleDeleteEvent = () => emit('deleteEvent')
 </script>
