@@ -2,8 +2,15 @@
   <department-and-staff-select
     v-model:staffListValue="staffListValue" :is-multiple="true" :width="300"
     layout-mode="vertical" />
+  <a-form-item label="用户权限" v-if="needDefaultPermissionSelect">
+    <a-select v-model:value="currentPermission" placeholder="请选择权限">
+      <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
+        {{ item.label }}
+      </a-select-option>
+    </a-select>
+  </a-form-item>
   <a-button
-    style="width: 200px;margin-bottom: 10px;margin-left: 70px;" type="primary"
+    style="width: 200px;margin-bottom: 10px;margin-left: 70px;display: block;" type="primary"
     @click="handleAddUser">绑定
   </a-button>
   <a-card size="small" title="已绑定用户">
@@ -58,17 +65,18 @@ import EditUserPermission
   from "@/framework/views/MainContent/SystemManage/UserGroupMaintenance/editUserPermission/index.vue";
 import {getDictListByDictName} from "@/framework/apis/common/common";
 
-const props = defineProps<{currentUserGroupInfo: IdName, renderBindUserFlag: number}>()
-const {currentUserGroupInfo, renderBindUserFlag} = toRefs(props)
+const props = defineProps<{currentUserGroupInfo: IdName, renderBindUserFlag: number, needDefaultPermissionSelect?: boolean}>()
+const {currentUserGroupInfo, renderBindUserFlag, needDefaultPermissionSelect} = toRefs(props)
 
 let permissionList: Ref<ValueLabelArray> = ref([])
-getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList)
+getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList).then(() => currentPermission.value = permissionList.value[0].value)
 
 let searchUserName: Ref<string> = ref('')
 const userList: Ref<UserDataType[]> = ref([])
 const staffListValue: Ref<ValueLabelArray> = ref([])
 let editUserPermissionVisible: Ref<boolean> = ref(false)
 let selectPermission: Ref<string | undefined> = ref(undefined)
+let currentPermission: Ref<string> = ref('')
 
 interface UserDataType extends ValueLabel {
   dataScopeDisplay: string
@@ -89,7 +97,7 @@ const handleAddUser = () => {
   }
   const entityId = currentUserGroupInfo.value.id
   const userIdList = staffListValue.value.map(item => item.value)
-  bindUserGroupList(entityId, userIdList).then(renderBindUser)
+  bindUserGroupList(entityId, userIdList, currentPermission.value).then(renderBindUser)
 }
 
 const handleSearchUser = () => userList.value = userList.value.filter(user => user.label.indexOf(searchUserName.value) > -1)

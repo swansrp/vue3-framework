@@ -56,7 +56,7 @@
         </div>
       </a-layout-sider>
       <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper">
-        <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag" />
+        <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag" :need-default-permission-select="true" />
       </a-layout-content>
     </a-layout>
     <dialog-box v-model:visible="addUserGroupNodeVisible" title="新增用户组">
