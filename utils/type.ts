@@ -39,7 +39,8 @@ export interface ValueLabel {
 export type ValueLabelArray = Array<ValueLabel>
 
 export interface StaffBaseSelectType extends ValueLabel {
-    pictureLink?: string
+    pictureLink?: string,
+    deptName?: string
 }
 
 export type StaffBaseSelectArrayType = Array<StaffBaseSelectType>

@@ -31,7 +31,7 @@
         ref="selectUserRef"
         @blur="handleBlur">
         <template #option="{label, value}">
-          <img v-lazy="staffAvatar(staffId2AvatarMAp[value])" alt="头像" class="avatar" />
+          <img v-lazy="staffAvatar(staffId2AvatarMap[value])" alt="头像" class="avatar" />
           {{ label }}
         </template>
         <template #dropdownRender="{ menuNode: menu }" v-if="isMultiple">
@@ -59,7 +59,7 @@ export default defineComponent({
 
 <script lang="ts" setup>
 import _ from "lodash"
-import {getDepartmentTree, geStaffList} from "./api"
+import {getDepartmentTree, getStaffList} from "./api"
 import {ShowSearchType} from "ant-design-vue/es/vc-cascader"
 import {StaffBaseSelectArrayType, ValueLabel, ValueLabelArray} from "@/framework/utils/type"
 import {getCascaderList} from "../utils"
@@ -118,7 +118,7 @@ const cascaderFilter: ShowSearchType['filter'] = (inputValue, path) =>
 let selectUserRef = ref()
 let staffListOption = ref<StaffBaseSelectArrayType>([])
 const staffListValue = ref<ValueLabelArray>([])
-let staffId2AvatarMAp: { [key: string]: string } = {}
+let staffId2AvatarMap: { [key: string]: string } = {}
 // 职工姓名的全选（“全选” 按钮对应的点击事件）
 const selectAllStaff = () => {
   staffListValue.value = staffListOption.value
@@ -137,10 +137,11 @@ const clearAllSelectStaff = () => {
   queryStaffList(departmentList, '')
 }
 const queryStaffList = (deptIdList: Array<string>, name = '') =>
-  geStaffList(deptIdList, name).then(res => {
+  getStaffList(deptIdList, name).then(res => {
     staffListOption.value = res.payload
     staffListOption.value.forEach(option => {
-      staffId2AvatarMAp[option.value] = option.pictureLink || ''
+      option.label = option.label + '(' + option.deptName + ')'
+      staffId2AvatarMap[option.value] = option.pictureLink || ''
     })
   })
 // 监听用户对职工名称的查询输入，以实时获取对应的select的options
