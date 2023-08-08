@@ -1,5 +1,5 @@
 <template>
-  <div :style="{flexDirection}" class="department-staff-form-wrapper">
+  <div :style="{flexDirection, height: wrapperHeight, marginBottom}" class="department-staff-form-wrapper">
     <a-form-item :label="departmentInputLabel" :style="{width: inputWidth}">
       <a-cascader
         v-model:value="departmentListValue"
@@ -78,7 +78,7 @@ const staffAvatar = (imgUrl: string) => {
 type LayoutModeType = 'horizontal' | 'vertical'
 const props = defineProps<{
   width?: number,
-  layoutMode: LayoutModeType,
+  layoutMode?: LayoutModeType,
   staffListValue: ValueLabelArray,
   departmentListValue?: Array<string>,
   isMultiple?: boolean | undefined
@@ -87,8 +87,10 @@ const {layoutMode, width} = toRefs(props)
 const emit = defineEmits(['update:staffListValue', 'update:departmentListValue'])
 
 // 组件的样式配置
-const isHorizontal = layoutMode.value === 'horizontal'
+const isHorizontal = layoutMode && layoutMode.value === 'horizontal'
 const flexDirection = computed(() => isHorizontal ? 'row' : 'column')
+const wrapperHeight = computed(() => isHorizontal ? '44px' : '88px')
+const marginBottom = computed(() => isHorizontal ? '0' : '24px')
 const inputWidth = computed(() => {
   if (!isHorizontal) return '100%'
   if (width) return 'calc(50% - 7px)'
@@ -174,11 +176,11 @@ watch(() => props.departmentListValue, value => departmentListValue && value && 
 
 <style scoped>
 .department-staff-form-wrapper {
-    height: 88px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    margin-bottom: 24px;
+    width: 100%;
+    margin-right: 3px;
 }
 
 .staff-select-operation-btn-list {
