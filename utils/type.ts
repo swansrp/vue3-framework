@@ -34,13 +34,15 @@ declare global {
 
 export interface ValueLabel {
     value: string
-    label: string
+    label: string,
+    option: any
 }
 export type ValueLabelArray = Array<ValueLabel>
 
 export interface StaffBaseSelectType extends ValueLabel {
     pictureLink?: string,
-    deptName?: string
+    deptName?: string,
+    customerNumber?: string
 }
 
 export type StaffBaseSelectArrayType = Array<StaffBaseSelectType>
