@@ -1,5 +1,5 @@
 <template>
-<h1>这是一个临时文件，删除并不会影响使用</h1>
+  <h1>这是一个临时文件，删除并不会影响使用</h1>
   <welcome-home @get-content="getContent" />
   <a-button type="primary" @click="submitInfo">提交信息</a-button>
   <a-button type="primary" @click="getInfo">获取信息</a-button>
