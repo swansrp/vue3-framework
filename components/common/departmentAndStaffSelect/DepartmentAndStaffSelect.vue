@@ -111,7 +111,9 @@ const staffInputLabel = computed(() => (isHorizontal ? '' : '职工姓名') as a
 let departmentList: Array<string> = []
 let departmentListValue = ref<Array<string>>([])
 let departmentListOption = ref<ValueLabelArray>()
-getDepartmentTree().then(res => departmentListOption.value = res.payload)
+
+showDept && showDept.value && getDepartmentTree().then(res => departmentListOption.value = res.payload)
+
 const selectDepartment = () => {
   emit('update:departmentListValue', departmentListValue.value)
   departmentList = getCascaderList(departmentListValue, departmentListOption).map(item => item.value)
