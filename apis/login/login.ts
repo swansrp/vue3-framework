@@ -8,6 +8,8 @@ const buildPostApi = (url: string) => buildPostApiByType(url, apiType.auth)
 export const checkServerLive = () => request(buildGetApi("/token")) as Promise<any>
 export const login = (id_token: string) => request(buildPostApi("/auth/login"), {id_token}, {}, true, false) as Promise<any>
 
+export const logoff = () => request(buildPostApi("/logoff"), {}, {}, false, false) as Promise<any>
+
 export const verifyToken = (token: string) => request(buildPostApi("/token"), {}, {token}, true, false) as Promise<any>
 export const reLogin = (token: string) => request(buildPostApi("/login/refresh"), {}, {token}, true, false) as Promise<any>
 export const getUserInfo = () => request(buildGetApi("/user/info"), {}, {}, false, false) as Promise<any>

@@ -20,6 +20,10 @@
                 <RedoOutlined />
                 重新登录
               </a-menu-item>
+              <a-menu-item key="2">
+                <PoweroffOutlined />
+                注销
+              </a-menu-item>
             </a-menu>
           </template>
           <a-button type="text" shape="circle" size="large">
@@ -32,12 +36,12 @@
 </template>
 
 <script lang="ts" setup>
-import {reLogin} from "@/framework/apis/login/login"
+import {reLogin, logoff} from "@/framework/apis/login/login"
 import {useUserStore} from "@/framework/store/user"
 import {localStorageMethods} from "@/framework/utils/common"
 import {title as projectName} from '../../../../../package.json'
 import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
-import { UserOutlined, SettingOutlined, RedoOutlined } from "@ant-design/icons-vue"
+import { UserOutlined, SettingOutlined, RedoOutlined, PoweroffOutlined } from "@ant-design/icons-vue"
 import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
 import {useTabStore} from "@/framework/store/nav";
 
@@ -45,13 +49,15 @@ const userStore = useUserStore()
 const tabStore = useTabStore()
 
 const handleMenuClick = (e:any) => {
-  if (e.key === '1'){
+  if (e.key === '1') {
     const refreshToken = localStorageMethods.getLocalStorage(REFRESH_TOKEN)
     reLogin(refreshToken).then(res => {
       localStorageMethods.setLocalStorage(REFRESH_TOKEN, res.payload[REFRESH_TOKEN])
       localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.accessToken)
       window.location.reload()
     })
+  } else if (e.key === '2') {
+    logoff()
   }
 }
 </script>
