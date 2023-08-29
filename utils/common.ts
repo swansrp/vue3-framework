@@ -105,7 +105,7 @@ const getLastWeekOrder = (currentWeekOrder: string) => {
 
 const addPublicAttrs = (column: Array<Object>) => {
   column.forEach((item: any) => {
-    item.align = 'center'
+    item.align = item.align || 'center'
     item.resizable = true
   })
 }
