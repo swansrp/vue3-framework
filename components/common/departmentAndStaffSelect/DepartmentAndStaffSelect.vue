@@ -61,12 +61,12 @@ export default defineComponent({
 
 <script lang="ts" setup>
 import _ from "lodash"
-import {getDepartmentTree, getStaffList} from "./api"
-import {ShowSearchType} from "ant-design-vue/es/vc-cascader"
-import {StaffBaseSelectArrayType, ValueLabelArray} from "@/framework/utils/type"
 import {getCascaderList} from "../utils"
+import {getDepartmentTree, getStaffList} from "./api"
 import {QUERY_INTERVAL} from "@/framework/utils/constant"
 import getImgUrl from "@/framework/assets/imgs/getImgUrl"
+import {ShowSearchType} from "ant-design-vue/es/vc-cascader"
+import {StaffBaseSelectArrayType, ValueLabelArray} from "@/framework/utils/type"
 
 
 const defaultAvatar = getImgUrl('defaultAvatar.png')
@@ -101,6 +101,7 @@ const marginBottom = computed(() => isHorizontal ? '0' : '24px')
 const inputWidth = computed(() => {
   if (!isHorizontal) return '100%'
   if (width && showDept.value) return 'calc(50% - 7px)'
+  if (width && width.value) return width.value + 'px'
   return '200px'
 })
 
@@ -155,9 +156,19 @@ const queryStaffList = (deptIdList: Array<string>, name = '') =>
     })
 // 监听用户对职工名称的查询输入，以实时获取对应的select的options
 const handleInputChange = _.debounce((value: string) => queryStaffList(departmentList, value), QUERY_INTERVAL)
+
+// 使用一个变量，存储曾经选择过的职工
+// 之所以需要这样，是因为antd select 开启多选后，只会将最后一次选择的职工的option信息带出来
+// 比如，我输入了孟，选择了某个姓孟的人，然后输入王，选择了一个姓王的人，那么我获取到的staffListValue，只能获取到姓王的人的option中的信息
+const staffKey2StaffNumberMap:{[key: string]: string | number} = {}
 // 当职工名称对应的select发生改变，向外部更新staffListValue
 const handleStaffChange = (option?: any[]) => {
-  if (isMultiple.value) emit('update:staffListValue', staffListValue.value)
+  if (isMultiple.value) {
+    staffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
+    let copyData = _.cloneDeep(staffListValue.value)
+    copyData.forEach((item: any) => !item.option && (item.option = staffKey2StaffNumberMap[item.key || item.value]))
+    emit('update:staffListValue', copyData)
+  }
   else if (option && Array.isArray(option)) {
     if (option.length === 0) staffListValue.value = []
     else staffListValue.value = [{...option[option.length - 1]}]
@@ -169,7 +180,6 @@ const handleStaffChange = (option?: any[]) => {
 }
 
 const handleBlur = () => queryStaffList(departmentList, '').then(closeSelectBox)
-
 const closeSelectBox = () => selectUserRef.value.blur()
 
 document.addEventListener("error", function (e: any) {
@@ -177,9 +187,11 @@ document.addEventListener("error", function (e: any) {
   if (elem.tagName.toLowerCase() === 'img') elem.src = defaultAvatar
 }, true /*指定事件处理函数在捕获阶段执行*/)
 
-watch(() => props.staffListValue, value => staffListValue.value = value, {immediate: true})
+watch(() => props.staffListValue, value => {
+  staffListValue.value = value
+  staffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
+}, {immediate: true})
 watch(() => props.departmentListValue, value => departmentListValue && value && (departmentListValue.value = value), {immediate: true})
-
 
 </script>
 
@@ -192,25 +204,21 @@ watch(() => props.departmentListValue, value => departmentListValue && value && 
   width: 100%;
   margin-right: 3px;
 }
-
 .staff-select-operation-btn-list {
   width: 100%;
   display: flex;
   justify-content: space-evenly;
 }
-
 .avatar {
   display: inline-block;
   height: 38px;
   width: 30px;
 }
-
 .confirm-btn {
   color: #fff;
   background-color: #16BAAA;
   border: 1px solid #16BAAA;
 }
-
 .confirm-btn:hover {
   border: 1px solid #16BAAA;
 }

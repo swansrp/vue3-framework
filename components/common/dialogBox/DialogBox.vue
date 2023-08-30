@@ -11,7 +11,7 @@
     <slot></slot>
     <template #title v-if="title">
       <div class="title">
-        <img :src="iconPath" v-if="iconPath" class="icon-img" />
+        <img :src="iconPath" v-if="iconPath" class="icon-img" alt="" />
         {{ title }}
       </div>
     </template>
@@ -48,7 +48,7 @@ watch(() => props.width, value => {
 
 
 </script>
-<style lang="less">
+<style lang="scss">
 .full-modal {
   .ant-modal {
     max-width: 100%;
@@ -67,6 +67,7 @@ watch(() => props.width, value => {
 }
 .box-modal {
   margin: 0 auto;
+  margin-top: -30px;
 }
 .title {
   display: flex;
