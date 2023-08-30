@@ -21,7 +21,7 @@
       <a-select
         ref="selectUserRef"
         v-model:value="staffListValue"
-        :max-tag-count="3"
+        :max-tag-count="staffMaxTagCount"
         :options="staffListOption"
         :virtual="false"
         allowClear
@@ -84,13 +84,15 @@ const props = withDefaults(defineProps<{
   staffListValue: ValueLabelArray,
   departmentListValue?: Array<string>,
   isMultiple?: boolean,
-  showDept?: boolean
+  showDept?: boolean,
+  staffMaxTagCount?: number
 }>(), {
   isMultiple: true,
-  showDept: true
+  showDept: true,
+  staffMaxTagCount: 3
 })
 
-const {layoutMode, width, isMultiple, showDept} = toRefs(props)
+const {layoutMode, width, isMultiple, showDept, staffMaxTagCount} = toRefs(props)
 const emit = defineEmits(['update:staffListValue', 'update:departmentListValue', 'onChange'])
 
 // 组件的样式配置
