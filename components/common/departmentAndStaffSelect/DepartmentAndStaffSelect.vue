@@ -131,13 +131,19 @@ const staffListValue = ref<StaffBaseSelectArrayType>([])
 let staffId2AvatarMap: { [key: string]: string } = {}
 // 职工姓名的全选（“全选” 按钮对应的点击事件）
 const selectAllStaff = () => {
-  staffListValue.value = staffListOption.value
+  staffListValue.value = staffListOption.value.map((item: any) => {
+    item.option = _.cloneDeep(item)
+    return item
+  })
   handleStaffChange()
 }
 // 职工姓名的反向选择（“反选” 按钮对应的点击事件）
 const invertCurrentStaff = () => {
-  const staffListValueSet = new Set(staffListValue.value.map(option => option.value))
-  staffListValue.value = staffListOption.value.filter(option => !staffListValueSet.has(option.value))
+  const staffListValueSet = new Set(staffListValue.value.map(item => item.value))
+  staffListValue.value = staffListOption.value.filter(item => !staffListValueSet.has(item.value)).map((item: any) => {
+    item.option = _.cloneDeep(item)
+    return item
+  })
   handleStaffChange()
 }
 // 职工姓名的清空（“清空” 按钮对应的点击事件）
@@ -164,6 +170,7 @@ const staffKey2StaffNumberMap:{[key: string]: string | number} = {}
 // 当职工名称对应的select发生改变，向外部更新staffListValue
 const handleStaffChange = (option?: any[]) => {
   if (isMultiple.value) {
+    console.log(staffListValue.value)
     staffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
     let copyData = _.cloneDeep(staffListValue.value)
     copyData.forEach((item: any) => !item.option && (item.option = staffKey2StaffNumberMap[item.key || item.value]))
