@@ -172,7 +172,6 @@ const staffKey2StaffNumberMap:{[key: string]: string | number} = {}
 // 当职工名称对应的select发生改变，向外部更新staffListValue
 const handleStaffChange = (option?: any[]) => {
   if (isMultiple.value) {
-    console.log(staffListValue.value)
     staffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
     let copyData = _.cloneDeep(staffListValue.value)
     copyData.forEach((item: any) => !item.option && (item.option = staffKey2StaffNumberMap[item.key || item.value]))

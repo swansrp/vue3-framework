@@ -13,7 +13,6 @@ import axios from "axios";
 let content = ref('')
 let htmlContent:Ref<string> = ref('')
 const submitInfo = () => {
-  console.log(htmlContent.value);
   axios.post('http://10.3.18.44:8080/om-weekly-report/web/test', {id: htmlContent.value}).then(res => console.log(res))
 }
 
