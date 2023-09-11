@@ -10,6 +10,7 @@ export const useUserStore = defineStore('userStore', {
             self: {},
             role: {},
             name: '游客',
+            deptName: '',
             customerNumber: '',
             avatar: '',
             roles: []
@@ -25,9 +26,10 @@ export const useUserStore = defineStore('userStore', {
         }
     },
     getters: {
-        getIdToken:(state)=> {
+        getIdToken:(state) => {
             if (state.token) return state.token
             return localStorageMethods.getLocalStorage(ID_TOKEN)
-        }
+        },
+        getAllAttrs:(state) => state
     }
 })

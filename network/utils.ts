@@ -89,9 +89,14 @@ export const checkLoginState = async () => {
         })
         else return _executeLogin()
     }).then(routeStore.getDynamicRouteAction).then(getUserInfo).then((res) => {
+        const data = res.payload
         const userStore = useUserStore()
-        userStore.name = res.payload.name
-        userStore.customerNumber = res.payload.customerNumber
+        Object.keys(data).forEach((key: string) => {
+            if (data[key]) { // @ts-ignore
+                userStore[key] = data[key]
+            }
+        })
+
     }).then(() => {
         const store = useCommonStore()
         const today = dayjs().format('YYYY-MM-DD')
