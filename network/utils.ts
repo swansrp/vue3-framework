@@ -1,14 +1,15 @@
-import {EmptyObjectType} from "@/framework/utils/type"
-import {isNotEmpty, localStorageMethods} from "@/framework/utils/common";
 import qs from "qs"
-import pinia from "@/framework/store";
+import dayjs from "dayjs"
+import pinia from "@/framework/store"
 import {useUserStore} from "@/framework/store/user"
-import {useCommonStore} from "@/framework/store/common";
-import {checkServerLive, getUserInfo, login, verifyToken,} from "@/framework/apis/login/login";
-import {AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant";
-import {useRouteStore} from "@/framework/store/route";
-import dayjs from "dayjs";
-import {getWeekByDate} from "@/framework/apis/common/week";
+import {useRouteStore} from "@/framework/store/route"
+import {useCommonStore} from "@/framework/store/common"
+import {EmptyObjectType} from "@/framework/utils/type"
+import {getWeekByDate} from "@/framework/apis/common/week"
+import {isNotEmpty, localStorageMethods} from "@/framework/utils/common"
+import {AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
+import {checkServerLive, getUserInfo, login, verifyLogin} from "@/framework/apis/login/login"
+
 
 const userStore = useUserStore(pinia)
 const commonStore = useCommonStore(pinia)
@@ -66,7 +67,11 @@ const _executeLogin = () => login(userStore.getIdToken)
         throw new Error(err)
     })
 
-export const checkLoginState = async () => {
+
+export const checkLoginState = async (isLoginAfter=false) => {
+    if(window.location.hash === '#/login' && !isLoginAfter) {
+        return checkServerLive().then(res => localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.token))
+    }
     const queryObject = getQueryObject(window.location.href)
     if (isNotEmpty(queryObject)) {
         if (isNotEmpty(queryObject.target_url)) {
@@ -82,7 +87,7 @@ export const checkLoginState = async () => {
     const routeStore = useRouteStore(pinia)
     return checkServerLive().then(() => {
         const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
-        if (token) return verifyToken(token).then((res) => {
+        if (token) return verifyLogin(token).then((res) => {
             const result = res.payload
             if (!+result) return _executeLogin()
             commonStore.hasLogin = true
@@ -96,7 +101,6 @@ export const checkLoginState = async () => {
                 userStore[key] = data[key]
             }
         })
-
     }).then(() => {
         const store = useCommonStore()
         const today = dayjs().format('YYYY-MM-DD')

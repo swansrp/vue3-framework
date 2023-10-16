@@ -22,6 +22,11 @@ const staticRoutes: Array<RouteRecordRaw> = [
     path: '/menu',
     component: () => import('@/framework/views/MainContent/SystemManage/PermissionMaintenance/MenuMaintenance/index.vue')
   },
+  // 留了一个登录界面，用于管理员配置用户权限
+  {
+    path: '/login',
+    component: () => import('@/framework/views/Login/index.vue')
+  },
   {
     path: I_MAIN_CONTENT,
     name: MAIN_CONTENT,

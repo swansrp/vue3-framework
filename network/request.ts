@@ -27,7 +27,9 @@ axiosInstance.interceptors.request.use(
         const {data, showLoading} = config.data as configDataType
         if (showLoading) loadingInstance = createLoadingInstance()
         config.data = data
-        if (commonStore.getLoginState) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+        // if (commonStore.getLoginState) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+        const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+        if (token) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
         return config
     }, err => {
         console.log(err)
@@ -101,8 +103,8 @@ function request(apiType: ApiType,
             'client-type': 0
         }
     }).then(resp => {
-        if (resp.data.status.code !== errCode.SUCCESS) {
-            if (resp.data.status.msg && showErr) {
+        if (resp.data.status?.code !== errCode.SUCCESS) {
+            if (resp.data.status?.msg && showErr) {
                 const errTypeMapList = ['info', 'warning', 'error']
                 const errLevel = +resp.data.payload.errLevel
                 const errType = errTypeMapList[errLevel]

@@ -23,6 +23,8 @@ const apiType: any = {
 const web = '/web'
 Object.entries(apiType).forEach(([key, value]) => apiType[key] = web + value)
 
+const baseUrl = import.meta.env.VITE_baseURL + baseDomain + web
+
 const requestMethod = {
     GET: "GET" as Method,
     POST: "POST" as Method,
@@ -139,8 +141,9 @@ const getByIdRequest = (
 ) => request(getByIdApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
 
 export {
-    baseDomain,
+    baseUrl,
     apiType,
+    baseDomain,
     buildGetApiByType,
     buildPostApiByType,
     getByIdRequest,
