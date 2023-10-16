@@ -5,7 +5,7 @@ const buildGetApi = (url: string) => buildGetApiByType(url, apiType.auth)
 const buildPostApi = (url: string) => buildPostApiByType(url, apiType.auth)
 
 
-export const checkServerLive = () => request(buildGetApi("/token")) as Promise<any>
+export const getToken = () => request(buildGetApi("/token")) as Promise<any>
 export const login = (id_token: string) => request(buildPostApi("/auth/login"), {id_token}, {}, true, false) as Promise<any>
 
 export const logoff = () => request(buildPostApi("/logoff"), {}, {}, false, false) as Promise<any>

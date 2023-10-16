@@ -1,18 +1,4 @@
-import qs from "qs"
-import dayjs from "dayjs"
-import pinia from "@/framework/store"
-import {useUserStore} from "@/framework/store/user"
-import {useRouteStore} from "@/framework/store/route"
-import {useCommonStore} from "@/framework/store/common"
 import {EmptyObjectType} from "@/framework/utils/type"
-import {getWeekByDate} from "@/framework/apis/common/week"
-import {isNotEmpty, localStorageMethods} from "@/framework/utils/common"
-import {AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
-import {checkServerLive, getUserInfo, login, verifyLogin} from "@/framework/apis/login/login"
-
-
-const userStore = useUserStore(pinia)
-const commonStore = useCommonStore(pinia)
 
 export const getQueryObject = function (url: string) {
     url = url || window.location.href
@@ -29,7 +15,7 @@ export const getQueryObject = function (url: string) {
     return obj
 }
 
-const _removeURLParameter = function (url: string, parameter: string) {
+export const removeURLParameter = function (url: string, parameter: string) {
     const urlParts = url.split('?')
     if (urlParts.length >= 2) {
         // 参数名前缀
@@ -45,65 +31,4 @@ const _removeURLParameter = function (url: string, parameter: string) {
         return urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : '')
     }
     return url
-}
-
-const _executeLogin = () => login(userStore.getIdToken)
-    .then(res => {
-        const payload = res.payload
-        if (payload && payload.accessToken) {
-            userStore.name = payload.name
-            localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, payload.accessToken)
-            localStorageMethods.setLocalStorage(REFRESH_TOKEN, payload.refreshToken)
-            commonStore.hasLogin = true
-        }
-    }, err => {
-        if (err && err.payload && err.payload.ssoLoginUrl) console.log(err.payload.ssoLoginUrl)
-        else {
-            console.log('token验证失败')
-            throw new Error(err)
-        }
-    }).catch(err => {
-        console.log('服务器状态异常')
-        throw new Error(err)
-    })
-
-
-export const checkLoginState = async (isLoginAfter=false) => {
-    if(window.location.hash === '#/login' && !isLoginAfter) {
-        return checkServerLive().then(res => localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.token))
-    }
-    const queryObject = getQueryObject(window.location.href)
-    if (isNotEmpty(queryObject)) {
-        if (isNotEmpty(queryObject.target_url)) {
-            const targetUrl = queryObject.target_url
-            delete queryObject.target_url
-            window.location.href = targetUrl + '?' + qs.stringify(queryObject, {arrayFormat: 'repeat'})
-        } else if (isNotEmpty(queryObject.id_token)) {
-            userStore.setIdToken(<string>queryObject.id_token).then(() => {
-                window.location.href = _removeURLParameter(window.location.href, ID_TOKEN)
-            })
-        }
-    }
-    const routeStore = useRouteStore(pinia)
-    return checkServerLive().then(() => {
-        const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
-        if (token) return verifyLogin(token).then((res) => {
-            const result = res.payload
-            if (!+result) return _executeLogin()
-            commonStore.hasLogin = true
-        })
-        else return _executeLogin()
-    }).then(routeStore.getDynamicRouteAction).then(getUserInfo).then((res) => {
-        const data = res.payload
-        const userStore = useUserStore()
-        Object.keys(data).forEach((key: string) => {
-            if (data[key]) { // @ts-ignore
-                userStore[key] = data[key]
-            }
-        })
-    }).then(() => {
-        const store = useCommonStore()
-        const today = dayjs().format('YYYY-MM-DD')
-        getWeekByDate(today).then(res => store.version = res.payload.version)
-    })
 }
