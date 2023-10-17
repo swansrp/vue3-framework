@@ -50,13 +50,13 @@ export const checkLoginState = async () => {
         }
     }
 
-    return getToken().then((res) => {
+    return await getToken().then((getTokenRes) => {
         const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
         if (token) {
             return verifyLogin(token).then((res) => {
                 const result = res.payload
                 if (!+result) {
-                    if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.token)
+                    if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
                     else return _executeLogin().then(_afterLogin)
                 } else {
                     commonStore.hasLogin = true
@@ -64,7 +64,7 @@ export const checkLoginState = async () => {
                 }
             })
         } else {
-            if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.token)
+            if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
             else return _executeLogin().then(_afterLogin)
         }
     })
@@ -72,17 +72,17 @@ export const checkLoginState = async () => {
 
 const _afterLogin = async () => {
     const routeStore = useRouteStore(pinia)
-    return routeStore.getDynamicRouteAction().then(getUserInfo).then((res) => {
+    return await routeStore.getDynamicRouteAction().then(getUserInfo).then((res) => {
         const data = res.payload
-        const userStore = useUserStore()
+        const userStore = useUserStore(pinia)
         Object.keys(data).forEach((key: string) => {
             if (data[key]) { // @ts-ignore
                 userStore[key] = data[key]
             }
         })
     }).then(() => {
-        const store = useCommonStore()
+        const store = useCommonStore(pinia)
         const today = dayjs().format('YYYY-MM-DD')
-        getWeekByDate(today).then(res => store.version = res.payload.version)
+        return getWeekByDate(today).then(res => store.version = res.payload.version)
     })
 }

@@ -21,13 +21,14 @@ import {NavListType} from "../type"
 import {useTabStore} from "@/framework/store/nav"
 import {useRouteStore} from "@/framework/store/route"
 import {HOME, MAIN_CONTENT} from "@/framework/utils/constant"
+import pinia from "@/framework/store"
 
 // 本组件中，使用接口返回的path字段作为a-menu组件的key，而不是使用接口返回的key字段作为a-menu组件的key
 // 因为path会被用于leftNav和HistoryTab等组件，用于当前顶部导航的判断
 // 接口返回的key，和其对应的menuId是相同的，没有实际意义
 
-const store = useTabStore()
-const routeStore = useRouteStore()
+const store = useTabStore(pinia)
+const routeStore = useRouteStore(pinia)
 let navList = ref([] as Array<NavListType>)
 const keys = reactive({selectedKeys: [] as Array<string>})
 // 组件的key，用于更新a-menu的样式，因为有的时候，虽然我每次只设置一个selectedKeys，但是有时会出现两个菜单项都选中的现象

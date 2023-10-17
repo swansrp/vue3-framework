@@ -8,14 +8,14 @@
       <a-form-item :rules="[{ required: true, message: '请输入用户名!' }]" name="username">
         <a-input v-model:value="formInline.username" autocomplete="off" placeholder="用户名" size="large">
           <template #prefix>
-            <user-outlined type="user" />
+            <user-outlined />
           </template>
         </a-input>
       </a-form-item>
       <a-form-item :rules="[{ required: true, message: '请输入密码!' }]" name="password">
         <a-input v-model:value="formInline.password" autocomplete="off" placeholder="密码" size="large" type="password">
           <template #prefix>
-            <lock-outlined type="user" />
+            <lock-outlined />
           </template>
         </a-input>
       </a-form-item>
@@ -41,14 +41,14 @@
 <script lang="ts" setup>
 import {Md5} from "ts-md5"
 import {reactive, Ref} from 'vue'
-import {LockOutlined, SafetyOutlined, UserOutlined} from '@ant-design/icons-vue'
 import {message} from 'ant-design-vue'
+import {baseUrl} from "@/framework/apis"
+import 'ant-design-vue/lib/message/style/index.css'
 import {checkLoginState} from "@/framework/network/login"
 import {reserveLogin} from "@/framework/apis/login/login"
 import {localStorageMethods} from "@/framework/utils/common"
 import {AUTHORIZATION_TOKEN} from "@/framework/utils/constant"
-import {baseUrl} from "@/framework/apis";
-import 'ant-design-vue/lib/message/style/index.css'
+import {LockOutlined, SafetyOutlined, UserOutlined} from '@ant-design/icons-vue'
 
 const router = useRouter()
 let captchaUrl: Ref<string> = ref('')
@@ -58,20 +58,22 @@ const formInline = reactive({username: '', password: '', captcha: ''})
 const getCaptchaUrl = (captchaType: string) => baseUrl + '/captcha.jpg?token=' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN) + '&captchaType=' + captchaType
 const updateCaptchaUrl = () => captchaUrl.value = getCaptchaUrl('LOGIN_CAPTCHA') + '&r=' + Math.random()
 
+const recoveryFun = () => {
+  updateCaptchaUrl()
+  message.destroy()
+  loading.value = false
+}
 const handleSubmit = () => {
-  const {username, password, captcha} = formInline;
+  const { username, password, captcha } = formInline;
   message.loading('登录中...', 0)
   loading.value = true
   reserveLogin(captcha, username, Md5.hashStr(password)).then(res => {
-    message.success('登录成功！正在继续转跳，请稍后...')
+    message.destroy()
+    message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
     const {accessToken} = res.payload
     localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
-    checkLoginState().then(() => router.replace('/'))
-  }).finally(() => {
-    updateCaptchaUrl()
-    message.destroy()
-    loading.value = false
-  })
+    checkLoginState().then(() => router.replace('/')).then(recoveryFun)
+  }).catch(recoveryFun)
 }
 
 onBeforeMount(updateCaptchaUrl)
@@ -83,7 +85,7 @@ onBeforeMount(updateCaptchaUrl)
   width: 100vw;
   height: 100vh;
   padding-top: 240px;
-  background: url('../../assets/imgs/login/login.svg');
+  background: #fff url('../../assets/imgs/login/login.svg');
   background-size: 100%;
   flex-direction: column;
   align-items: center;

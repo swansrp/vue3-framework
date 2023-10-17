@@ -20,8 +20,9 @@ import {useTabStore} from '@/framework/store/nav'
 import {CHANGE_TAB, HOME} from '@/framework/utils/constant'
 import {Key} from 'ant-design-vue/es/table/interface'
 import {TabType} from "@/framework/components/navigationFramework/historyTab/type";
+import pinia from "@/framework/store";
 
-const store = useTabStore()
+const store = useTabStore(pinia)
 // 这个key要和路由中的path一致
 const homePageKey = HOME
 // 初始的tabs为空，leftNav组件会根据路由，通过修改store.tabActivateKey，更新tabs

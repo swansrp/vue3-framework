@@ -13,10 +13,10 @@
 <script lang="ts" setup>
 import { useTabStore } from "@/framework/store/nav"
 import {useRouteStore} from "@/framework/store/route"
+import pinia from "@/framework/store";
 
-
-const store = useTabStore()
-const routeStore = useRouteStore()
+const store = useTabStore(pinia)
+const routeStore = useRouteStore(pinia)
 
 // 用于在刷新页面后，面包屑的初始化
 const currentRoutePath = routeStore.currentRoutePath

@@ -44,9 +44,10 @@ import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
 import { UserOutlined, SettingOutlined, RedoOutlined, PoweroffOutlined } from "@ant-design/icons-vue"
 import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
 import {useTabStore} from "@/framework/store/nav";
+import pinia from "@/framework/store";
 
-const userStore = useUserStore()
-const tabStore = useTabStore()
+const userStore = useUserStore(pinia)
+const tabStore = useTabStore(pinia)
 
 const handleMenuClick = (e:any) => {
   if (e.key === '1') {

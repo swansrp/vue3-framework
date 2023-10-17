@@ -55,11 +55,17 @@ const router = createRouter({
 router.beforeEach((to) => {
   // 根据是否进入Home页，判断是否需要展示左侧导航菜单
   // 当然，这样判断是不好的，没有考虑顶部导航没有左侧导航的情况
-  tabStore.isNeedLeftNav = to.path !== `${I_MAIN_CONTENT}/${HOME}`;
+  tabStore.isNeedLeftNav = to.path !== `${I_MAIN_CONTENT}/${HOME}`
+
+  const routeStore = useRouteStore(pinia)
+  const routePath = to.path.replace(I_MAIN_CONTENT + '/', '')
+
+  const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
+  tabStore.isNeedNav = !currentPageIsFrame
   // 设定MainContent组件的默认路由为第一个动态路由
   if (to.path === '/' || to.path === I_MAIN_CONTENT || to.path === `${I_MAIN_CONTENT}/`) {
     const leftNavPath = enterFirstDynamicRoute()
-    const queryStr = useRouteStore().dynamicRouteMap[leftNavPath] ? useRouteStore().dynamicRouteMap[leftNavPath].query : null
+    const queryStr = routeStore.dynamicRouteMap[leftNavPath] ? routeStore.dynamicRouteMap[leftNavPath].query : null
     const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
     return {name: leftNavPath, query}
   }

@@ -12,10 +12,11 @@ export const useRouteStore = defineStore('routeStore', {
         return {
             dynamicRoute: [] as Array<NavListType>,
             dynamicRouteMap: {} as { [key: string]: NavListType },
-            routePath2RouteTitlePathMap: {} as { [key: string]: string }
+            routePath2RouteTitlePathMap: {} as { [key: string]: string },
+            routePathIsFrameMap: {} as { [key: string]: boolean }
         }
     }, actions: {
-        getDynamicRouteAction() {
+         async getDynamicRouteAction() {
             return getRouteTree().then((res) => {
                 const routeTree = res.payload
                 this.dynamicRoute = _.cloneDeep(routeTree)
@@ -30,6 +31,7 @@ export const useRouteStore = defineStore('routeStore', {
             const routeStore = useRouteStore(pinia)
             const modules = import.meta.glob('@/**/*.vue')
             const routePath2RouteTitlePathMap: { [key: string]: string } = {}
+            const routePathIsFrameMap: { [key: string]: boolean } = {}
             const _travelRouteTree = (nodeList: any, parentPathArray: Array<string> = [], parentTitlePathArray: Array<string> = []) => {
                 if (!nodeList || !nodeList.length) return
                 for (let i = 0, len = nodeList.length; i < len; ++i) {
@@ -39,6 +41,7 @@ export const useRouteStore = defineStore('routeStore', {
                     if (currentPathIsNotEmpty) parentPathArray.push(node.path)
                     parentTitlePathArray.push(node.title)
                     setField(routePath2RouteTitlePathMap, parentPathArray.join('/'), parentTitlePathArray.join('/'))
+                    setField(routePathIsFrameMap, parentPathArray.join('/'), !!+node.isFrame)
                     node.component = modules[`/src${node.component}/index.vue`]
                     this.dynamicRouteMap[node.path] = node
                     _travelRouteTree(node.children, parentPathArray, parentTitlePathArray)
@@ -48,7 +51,9 @@ export const useRouteStore = defineStore('routeStore', {
             }
             _travelRouteTree(nodeList)
             routeStore.routePath2RouteTitlePathMap = routePath2RouteTitlePathMap
+            routeStore.routePathIsFrameMap = routePathIsFrameMap
             routeStore.routePath2RouteTitlePathMap['Home'] = '首页'
+            routeStore.routePathIsFrameMap['Home'] = false
         },
         // 因为可能存在某些节点只用于展示menu的title，并不需要放在路由中，所以需要对path为空的节点进行删除
         // 否则，会产生警告

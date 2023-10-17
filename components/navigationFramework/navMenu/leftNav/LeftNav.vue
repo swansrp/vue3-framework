@@ -35,16 +35,17 @@ import 'ant-design-vue/lib/message/style/index.css'
 import {CHANGE_TAB, HOME, MAIN_CONTENT} from "@/framework/utils/constant"
 import {genAntdMenuFirstSelectObject, getTitlePathByKey} from "@/framework/hooks/initKeysAndRouteInNav"
 import SubNav from "@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue"
-import {getQueryObject} from "@/framework/network/utils";
+import {getQueryObject} from "@/framework/network/utils"
+import pinia from "@/framework/store"
+
 
 const router = useRouter()
-const tabStore = useTabStore()
-const routeStore = useRouteStore()
+const tabStore = useTabStore(pinia)
+const routeStore = useRouteStore(pinia)
 
 let {topNavPath} = tabStore
 let navList = ref([] as Array<NavListType>)
 const keys = reactive({openKeys: [] as Array<string>, selectedKeys: [] as Array<string>})
-
 
 const initCurrentRouteAndVar = () => {
   let defaultLeftNavPath = ''

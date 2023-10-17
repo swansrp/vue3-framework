@@ -1,10 +1,10 @@
 <template>
-  <top-header class="top" />
+  <top-header class="top" v-if="isNeedNav" />
   <div class="content" v-if="needLeftNav">
-    <left-nav class="left-nav" />
-    <div class="content-body">
-      <history-tab />
-      <crumb-search />
+    <left-nav class="left-nav" :style="{display: isNeedNav ? 'block' : 'none'}" />
+    <div class="content-body" :style="{ backgroundColor: isNeedNav ? '#fff' : 'transparent'}">
+      <history-tab v-if="isNeedNav" />
+      <crumb-search v-if="isNeedNav" />
       <slot name="router-view"></slot>
     </div>
   </div>
@@ -22,14 +22,15 @@ import HistoryTab from "@/framework/components/navigationFramework/historyTab/Hi
 import TopHeader from "./topHeader/TopHeader.vue"
 import { useWindowStore } from '@/framework/store/window'
 import {useSlots} from "vue"
-
-
+import pinia from "@/framework/store"
+import {useTabStore} from "@/framework/store/nav";
 
 const slots = useSlots()
 // 根据插槽判断是否需要左侧导航及面包屑导航等
 const needLeftNav = !slots.content
-
-const store = useWindowStore()
+const tabStore = useTabStore(pinia)
+const {isNeedNav} = toRefs(tabStore)
+const store = useWindowStore(pinia)
 const getWindowHeight = () => store.updateWindowHeight(window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight)
 
 onMounted(() => {
@@ -43,7 +44,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.top, .bottom {
+.top {
   flex: 0 0 auto;
 }
 .content {

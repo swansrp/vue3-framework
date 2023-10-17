@@ -22,6 +22,7 @@ export const useTabStore = defineStore('tabStore', {
       titlePath: [] as Array<string>,
       // 用于判断是否需要左侧导航，根据左侧导航的数据源 dataSource 是否为空进行判断
       isNeedLeftNav: true,
+      isNeedNav: true,
       //标志位，每次更新就加1，这样就可以强制触发topNavPath的更新操作
       updateTopNav: 0,
       //标志位，变为true就表示需要使用动态路由中的第一个路由
