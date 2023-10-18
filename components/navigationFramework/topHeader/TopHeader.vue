@@ -48,6 +48,7 @@ import pinia from "@/framework/store";
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
+const router = useRouter()
 
 const handleMenuClick = (e:any) => {
   if (e.key === '1') {
@@ -55,7 +56,7 @@ const handleMenuClick = (e:any) => {
     reLogin(refreshToken).then(res => {
       localStorageMethods.setLocalStorage(REFRESH_TOKEN, res.payload[REFRESH_TOKEN])
       localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.accessToken)
-      window.location.reload()
+      router.replace('/')
     })
   } else if (e.key === '2') {
     logoff()

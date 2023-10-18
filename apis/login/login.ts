@@ -13,5 +13,5 @@ export const logoff = () => request(buildPostApi("/logoff"), {}, {}, false, fals
 export const verifyLogin = (token: string) => request(buildPostApi("/token"), {}, {token}, true, false) as Promise<any>
 export const reLogin = (token: string) => request(buildPostApi("/login/refresh"), {}, {token}, true, false) as Promise<any>
 export const getUserInfo = () => request(buildGetApi("/user/info"), {}, {}, false, false) as Promise<any>
-
 export const reserveLogin = (graphCode: string, loginId: string, password: string) => request(buildPostApi("/login"), {graphCode, loginId, password}, {}, true, false) as Promise<any>
+export const switchPermissionLogin = (customerNumber: string) => request(buildPostApi("/admin/ghost/login"), {customerNumber}, {}, true, false) as Promise<any>

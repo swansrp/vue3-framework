@@ -101,7 +101,10 @@ const flexDirection = computed(() => isHorizontal ? 'row' : 'column')
 const wrapperHeight = computed(() => isHorizontal ? '44px' : '88px')
 const marginBottom = computed(() => isHorizontal ? '0' : '24px')
 const inputWidth = computed(() => {
-  if (!isHorizontal) return '100%'
+  if (!isHorizontal) {
+    if (width && width.value) return width.value + 'px'
+      return '100%'
+  }
   if (width && showDept.value) return 'calc(50% - 7px)'
   if (width && width.value) return width.value + 'px'
   return '200px'

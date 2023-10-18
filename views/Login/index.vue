@@ -47,7 +47,7 @@ import 'ant-design-vue/lib/message/style/index.css'
 import {checkLoginState} from "@/framework/network/login"
 import {reserveLogin} from "@/framework/apis/login/login"
 import {localStorageMethods} from "@/framework/utils/common"
-import {AUTHORIZATION_TOKEN} from "@/framework/utils/constant"
+import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
 import {LockOutlined, SafetyOutlined, UserOutlined} from '@ant-design/icons-vue'
 
 const router = useRouter()
@@ -70,8 +70,9 @@ const handleSubmit = () => {
   reserveLogin(captcha, username, Md5.hashStr(password)).then(res => {
     message.destroy()
     message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
-    const {accessToken} = res.payload
+    const {accessToken, refreshToken} = res.payload
     localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
+    localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
     checkLoginState().then(() => router.replace('/')).then(recoveryFun)
   }).catch(recoveryFun)
 }
