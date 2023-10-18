@@ -45,6 +45,7 @@ import { UserOutlined, SettingOutlined, RedoOutlined, PoweroffOutlined } from "@
 import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
 import {useTabStore} from "@/framework/store/nav";
 import pinia from "@/framework/store";
+import {afterLogin} from "@/framework/network/login";
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
@@ -56,7 +57,7 @@ const handleMenuClick = (e:any) => {
     reLogin(refreshToken).then(res => {
       localStorageMethods.setLocalStorage(REFRESH_TOKEN, res.payload[REFRESH_TOKEN])
       localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.accessToken)
-      router.replace('/').then(() => window.location.reload())
+      afterLogin().then(() => router.replace('/')).then(() => window.location.reload())
     })
   } else if (e.key === '2') {
     logoff()

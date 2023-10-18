@@ -1,4 +1,4 @@
-import {getToken, getUserInfo, login, verifyLogin} from "@/framework/apis/login/login";
+import {getToken, getUserInfo, ssoLogin, verifyLogin} from "@/framework/apis/login/login";
 import {isNotEmpty, localStorageMethods} from "@/framework/utils/common";
 import {AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant";
 import qs from "qs";
@@ -13,9 +13,8 @@ import {getQueryObject, removeURLParameter} from "@/framework/network/utils";
 const userStore = useUserStore(pinia)
 const commonStore = useCommonStore(pinia)
 
-const _executeLogin = () => login(userStore.getIdToken)
+const _executeLogin = () => ssoLogin(userStore.getIdToken)
     .then(res => {
-        console.log('_executeLogin_then');
         const payload = res.payload
         if (payload && payload.accessToken) {
             userStore.name = payload.name
@@ -57,20 +56,20 @@ export const checkLoginState = async () => {
                 const result = res.payload
                 if (!+result) {
                     if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
-                    else return _executeLogin().then(_afterLogin)
+                    else return _executeLogin().then(afterLogin)
                 } else {
                     commonStore.hasLogin = true
-                    return _afterLogin()
+                    return afterLogin()
                 }
             })
         } else {
             if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
-            else return _executeLogin().then(_afterLogin)
+            else return _executeLogin().then(afterLogin)
         }
     })
 }
 
-const _afterLogin = async () => {
+export const afterLogin = async () => {
     const routeStore = useRouteStore(pinia)
     return await routeStore.getDynamicRouteAction().then(getUserInfo).then((res) => {
         const data = res.payload

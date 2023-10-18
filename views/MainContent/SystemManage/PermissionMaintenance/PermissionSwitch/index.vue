@@ -12,10 +12,12 @@ import {Ref} from "vue"
 import {message} from "ant-design-vue"
 import 'ant-design-vue/lib/message/style/index.css'
 import {ValueLabelArray} from "@/framework/utils/type"
-import {switchPermissionLogin} from "@/framework/apis/login/login";
+import {ghostLogin} from "@/framework/apis/login/login";
 import {localStorageMethods} from "@/framework/utils/common";
-import {AUTHORIZATION_TOKEN, IS_NEED_REDIRECT, REFRESH_TOKEN} from "@/framework/utils/constant";
+import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant";
+import {afterLogin} from "@/framework/network/login";
 
+const router = useRouter()
 const staffListValue: Ref<ValueLabelArray> = ref([])
 const switchPermission = () => {
   if (staffListValue.value.length === 0) {
@@ -23,11 +25,10 @@ const switchPermission = () => {
     return
   }
   const { customerNumber } = staffListValue.value[0].option
-  switchPermissionLogin(customerNumber).then(res => {
+  ghostLogin(customerNumber).then(res => {
     localStorageMethods.setLocalStorage(REFRESH_TOKEN, res.payload[REFRESH_TOKEN])
     localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.accessToken)
-    localStorageMethods.setLocalStorage(IS_NEED_REDIRECT, '1')
-    location.reload()
+    afterLogin().then(() => router.replace('/')).then(() => window.location.reload())
   })
 }
 

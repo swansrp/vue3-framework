@@ -15,7 +15,6 @@ export const ID_TOKEN = 'id_token'
 export const REFRESH_TOKEN = 'refreshToken'
 export const AUTHORIZATION_TOKEN = 'Authorization_token'
 
-export const IS_NEED_REDIRECT = 'is_need_redirect'
 export const QUERY_INTERVAL = 350
 export const CHANGE_TAB = 'changeTab'
 export const COMPILE_TIME_FILE_PATH='./compileTime.json'

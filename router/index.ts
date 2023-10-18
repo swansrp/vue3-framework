@@ -2,9 +2,8 @@ import pinia from "@/framework/store"
 import {useTabStore} from "@/framework/store/nav"
 import {useRouteStore} from "@/framework/store/route"
 import {getQueryObject} from "@/framework/network/utils"
-import {localStorageMethods} from "@/framework/utils/common"
 import {enterFirstDynamicRoute} from "@/framework/router/utils"
-import {HOME, I_MAIN_CONTENT, IS_NEED_REDIRECT, MAIN_CONTENT} from "@/framework/utils/constant"
+import {HOME, I_MAIN_CONTENT, MAIN_CONTENT} from "@/framework/utils/constant"
 import {createRouter, createWebHashHistory, LocationQueryRaw, RouteRecordRaw} from "vue-router"
 
 const tabStore = useTabStore(pinia)
@@ -62,12 +61,6 @@ router.beforeEach((to) => {
   const routePath = to.path.replace(I_MAIN_CONTENT + '/', '')
   const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
   tabStore.isNeedNav = !currentPageIsFrame
-
-  const isNeedRedirect = localStorageMethods.getLocalStorage(IS_NEED_REDIRECT)
-  if (isNeedRedirect && !!+isNeedRedirect) {
-    to.path = '/'
-    localStorageMethods.setLocalStorage(IS_NEED_REDIRECT, '')
-  }
 
   // 设定MainContent组件的默认路由为第一个动态路由
   if (to.path === '/' || to.path === I_MAIN_CONTENT || to.path === `${I_MAIN_CONTENT}/`) {

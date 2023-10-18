@@ -45,7 +45,7 @@ import {message} from 'ant-design-vue'
 import {baseUrl} from "@/framework/apis"
 import 'ant-design-vue/lib/message/style/index.css'
 import {checkLoginState} from "@/framework/network/login"
-import {reserveLogin} from "@/framework/apis/login/login"
+import {login} from "@/framework/apis/login/login"
 import {localStorageMethods} from "@/framework/utils/common"
 import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
 import {LockOutlined, SafetyOutlined, UserOutlined} from '@ant-design/icons-vue'
@@ -64,10 +64,10 @@ const recoveryFun = () => {
   loading.value = false
 }
 const handleSubmit = () => {
-  const { username, password, captcha } = formInline;
+  const {username, password, captcha} = formInline;
   message.loading('登录中...', 0)
   loading.value = true
-  reserveLogin(captcha, username, Md5.hashStr(password)).then(res => {
+  login(captcha, username, Md5.hashStr(password)).then(res => {
     message.destroy()
     message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
     const {accessToken, refreshToken} = res.payload
