@@ -56,7 +56,7 @@ const handleMenuClick = (e:any) => {
     reLogin(refreshToken).then(res => {
       localStorageMethods.setLocalStorage(REFRESH_TOKEN, res.payload[REFRESH_TOKEN])
       localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, res.payload.accessToken)
-      router.replace('/')
+      router.replace('/').then(() => window.location.reload())
     })
   } else if (e.key === '2') {
     logoff()
