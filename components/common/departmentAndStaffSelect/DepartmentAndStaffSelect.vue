@@ -23,6 +23,7 @@
         v-model:value="staffListValue"
         :max-tag-count="staffMaxTagCount"
         :options="staffListOption"
+        :maxTagTextLength="10"
         :virtual="false"
         allowClear
         labelInValue
@@ -79,13 +80,13 @@ const staffAvatar = (imgUrl: string) => {
 //    LayoutModeType为vertical时，   width为100%
 type LayoutModeType = 'horizontal' | 'vertical'
 const props = withDefaults(defineProps<{
-  width?: number,
-  layoutMode?: LayoutModeType,
-  staffListValue: ValueLabelArray,
-  departmentListValue?: Array<string>,
-  isMultiple?: boolean,
-  showDept?: boolean,
-  staffMaxTagCount?: number
+  width?: number, // 输入框的宽度
+  layoutMode?: LayoutModeType, //布局模式， horizontal 为水平，即横向布局； vertical 为垂直，即纵向布局
+  staffListValue: ValueLabelArray, // 绑定的员工列表，可以绑定到父组件的相关变量
+  departmentListValue?: Array<string>, // 选择的部门列表，可以绑定到父组件的相关变量
+  isMultiple?: boolean, // 是否开启职工的多选模式
+  showDept?: boolean, // 是否展示部门选择框
+  staffMaxTagCount?: number // 职工选择组件的最大展示数量
 }>(), {
   isMultiple: true,
   showDept: true,
@@ -103,11 +104,11 @@ const marginBottom = computed(() => isHorizontal ? '0' : '24px')
 const inputWidth = computed(() => {
   if (!isHorizontal) {
     if (width && width.value) return width.value + 'px'
-      return '100%'
+    else return '100%'
   }
   if (width && showDept.value) return 'calc(50% - 7px)'
   if (width && width.value) return width.value + 'px'
-  return '200px'
+  return '350px'
 })
 
 const departmentInputLabel = computed(() => (isHorizontal ? '' : '公司部门') as any)

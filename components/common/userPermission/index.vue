@@ -1,6 +1,6 @@
 <template>
   <department-and-staff-select
-    v-model:staffListValue="staffListValue" :is-multiple="true" :width="300"
+    v-model:staffListValue="staffListValue" :is-multiple="true" :width="350" :staff-max-tag-count="1"
     layout-mode="vertical" />
   <a-form-item label="用户权限" v-if="needDefaultPermissionSelect">
     <a-select v-model:value="currentPermission" placeholder="请选择权限">
