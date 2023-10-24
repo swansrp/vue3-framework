@@ -50,7 +50,7 @@
           </a-tree>
           <a-empty v-else />
           <a-input
-            v-model:value="inputUserGroupTreeRootNodeName" placeholder="请输出根节点名称"
+            v-model:value="inputUserGroupTreeRootNodeName" placeholder="请输入根节点名称"
             style="width: 285px" />
           <a-button type="primary" @click="addUserGroupTreeRootNode">添加根节点</a-button>
         </div>

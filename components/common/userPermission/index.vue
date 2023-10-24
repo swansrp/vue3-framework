@@ -1,7 +1,7 @@
 <template>
   <department-and-staff-select
-    v-model:staffListValue="staffListValue" :is-multiple="true" :width="350" :staff-max-tag-count="1"
-    layout-mode="vertical" />
+    v-model:staffListValue="staffListValue" v-model:departmentListValue="departmentListValue"
+    is-multiple :width="350" :staff-max-tag-count="1" layout-mode="vertical" />
   <a-form-item label="用户权限" v-if="needDefaultPermissionSelect">
     <a-select v-model:value="currentPermission" placeholder="请选择权限">
       <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
@@ -74,6 +74,7 @@ getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList).then(() => curre
 let searchUserName: Ref<string> = ref('')
 const userList: Ref<UserDataType[]> = ref([])
 const staffListValue: Ref<ValueLabelArray> = ref([])
+const departmentListValue: Ref<string[]> = ref([])
 let editUserPermissionVisible: Ref<boolean> = ref(false)
 let selectPermission: Ref<string | undefined> = ref(undefined)
 let currentPermission: Ref<string> = ref('')
@@ -98,6 +99,10 @@ const handleAddUser = () => {
   const entityId = currentUserGroupInfo.value.id
   const userIdList = staffListValue.value.map(item => item.value)
   bindUserGroupList(entityId, userIdList, currentPermission.value).then(renderBindUser)
+    .then(() => {
+      staffListValue.value = []
+      departmentListValue.value = []
+    })
 }
 
 const handleSearchUser = () => userList.value = userList.value.filter(user => user.label.indexOf(searchUserName.value) > -1)
