@@ -28,17 +28,17 @@
     <!--节点信息配置区域-->
     <div class="menu-config-space">
       <!--为左侧导航的编辑提供一个标题，以展示该左侧导航菜单属于哪一个横向导航菜单-->
-      <div class="sub-menu-title" v-if="menuTitle">
+      <div class="sub-menu-title" v-show="menuTitle">
         {{ menuTitle }}
         <span v-if="menuNameListIndex">{{ subMenuCurrentPath }}</span></div>
       <a-tabs
         v-if="menuConfigItem === 'currentConfig'" v-model:activeKey="tabActiveKey" type="card"
         @change="tabsChange">
         <a-tab-pane key="editNode" tab="编辑节点">
-          <tree-edit-form :formState="editMenuFormState" :grandId="grandId" :menuId="menuId" type="edit" />
+          <tree-edit-form :formState="editMenuFormState" :grandId="grandId" :menuId="menuId" :type="EDIT" />
         </a-tab-pane>
         <a-tab-pane key="addSubNode" tab="增加子节点" v-if="menuNameListIndex === 1">
-          <tree-edit-form :formState="addSubMenuFormState" :grandId="grandId" :menuId="menuId" type="add" />
+          <tree-edit-form :formState="addSubMenuFormState" :grandId="grandId" :menuId="menuId" :type="ADD" />
         </a-tab-pane>
         <a-tab-pane key="deleteNode" tab="删除节点">
           <a-alert message="警告" show-icon type="error">
@@ -59,18 +59,20 @@
 </template>
 
 <script lang="ts" setup>
+import {Ref} from "vue"
 import {message} from "ant-design-vue"
 import 'ant-design-vue/lib/message/style/index.css'
 import {Key} from "ant-design-vue/es/_util/type"
-import {FormState} from "@/framework/components/common/treeEditForm/type"
-import {changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder} from "@/framework/apis/admin/navEdit"
-import {FileAddFilled, LeftOutlined, RightOutlined} from "@ant-design/icons-vue"
+import {ADD, EDIT} from "@/framework/utils/constant"
 import {AntTreeNodeDropEvent} from "ant-design-vue/es/tree"
-import {getAllParentNodes, getBrotherNodes, setField} from "@/framework/utils/common"
-import {getDroppedData} from "@/framework/hooks/antTreeDropSort"
-import {Ref} from "vue"
 import {DataNode} from "ant-design-vue/es/vc-tree/interface"
-import TreeEditForm from "@/framework/components/common/treeEditForm/TreeEditForm.vue";
+import {getDroppedData} from "@/framework/hooks/antTreeDropSort"
+import {FormState} from "@/framework/components/common/treeEditForm/type"
+import {FileAddFilled, LeftOutlined, RightOutlined} from "@ant-design/icons-vue"
+import {getAllParentNodes, getBrotherNodes, setField} from "@/framework/utils/common"
+import TreeEditForm from "@/framework/components/common/treeEditForm/TreeEditForm.vue"
+import {changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder} from "@/framework/apis/admin/navEdit"
+
 
 const _initFormState: FormState = {
   title: '',
@@ -95,7 +97,7 @@ let treeData: Ref<Array<DataNode>> = ref([])
 let menuConfigItem = ref<MenuConfigItem>('')
 let editMenuFormState: FormState = reactive<FormState>({..._initFormState})
 let addSubMenuFormState: FormState = reactive<FormState>({..._initFormState})
-const addRootMenuFormState: FormState = reactive<FormState>({..._initFormState})
+let addRootMenuFormState: FormState = reactive<FormState>({..._initFormState})
 let canEnterSubMenuFlag:Ref<boolean> = ref(false)
 
 type TreeKeyType = string[] | number[]
@@ -129,11 +131,12 @@ const updateSubTree = () => {
 provide('updateMainTree', updateMainTree)
 provide('updateSubTree', updateSubTree)
 
+
 // 默认渲染出 a-tree
 updateMainTree(false)
 
-const menuNameList = ['顶部导航菜单', '左侧导航菜单']
 let menuNameListIndex = ref(0)
+const menuNameList = ['顶部导航菜单', '左侧导航菜单']
 let menuName = ref(menuNameList[menuNameListIndex.value])
 let disableDeleteBtn = ref(false)
 
@@ -188,6 +191,7 @@ const enterSubMenu = () => {
 // 增加Main Menu和Sub Menu根节点的方法,通过menuConfigItem控制对应form的展示
 const addRootMenu = () => {
   menuConfigItem.value = 'addRootMenu'
+  menuTitle.value = ''
 }
 
 // 处理menu-config-space中tab的切换事件
@@ -207,6 +211,7 @@ const deleteNode = () => {
     else if (menuNameListIndex.value === 1) updateSubTree()
     // 删除节点后,不显示menu-config-space的配置面板
     menuConfigItem.value = ''
+    menuTitle.value = ''
   })
 }
 

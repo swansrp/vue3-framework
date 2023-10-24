@@ -1,5 +1,5 @@
 <template>
-  <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 14 }" @finish="onFinish" ref="formRef">
+  <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 14 }" @finish="onFinish" >
     <a-form-item label="菜单名称" name="title" :rules="[{ required: true, message: '请输入菜单名称!' }]">
       <a-input v-model:value="formState['title']" />
     </a-form-item>
@@ -52,13 +52,12 @@
 
 <script lang="ts" setup>
 import {Ref} from "vue"
+import {ADD, EDIT} from "@/framework/utils/constant"
+import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue"
 import {FormState, FormType} from "@/framework/components/common/treeEditForm/type"
 import {addMainMenu, addSubMenu, updateMainMenu, updateSubMenu} from "@/framework/apis/admin/navEdit"
-import {FormInstance} from "ant-design-vue"
-import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue"
 
 const iconInput = ref()
-const formRef = ref<FormInstance>()
 let visible:Ref<boolean> = ref(false) //控制图标选择对话框的弹出
 let inputIconBoxVisible: Ref<boolean> = ref(false)
 let iconForm:Ref<{icon: string}> = ref({icon: ''})
@@ -77,21 +76,21 @@ const selectMenuIcon = () => visible.value = true
 
 // 表单验证成功后的回调函数，整理数据后发送网络请求，并更新父组件中的某些组件
 const onFinish = () => {
-  if (type.value === 'edit' && menuId && typeof menuId.value === 'number') {
+  if (type.value === EDIT && menuId && typeof menuId.value === 'number') {
     const data = {...formState.value, menuId: menuId.value}
     data['isCache'] = +data['isCache']
     data['isFrame'] = +data['isFrame']
     // grandId 有值，说明操作的是SubMenu，则需要更新updateSubTree；否则，需要更新updateMainTree
-    if (grandId && grandId.value) updateSubMenu(data).then(()=> {updateSubTree()})
-    else updateMainMenu(data).then(()=> updateMainTree())
-  } else if (type.value === 'add') {
+    if (grandId && grandId.value) updateSubMenu(data).then(updateSubTree)
+    else updateMainMenu(data).then(updateMainTree)
+  } else if (type.value === ADD) {
     const data = toRaw(formState.value)
     // grandId 有值，说明当前需要新增SubMenu菜单，需要在发送请求的时候带上grandId
     if(grandId && typeof grandId.value === 'number') data['grandId'] = grandId.value
     data['isCache'] = +data['isCache']
     data['isFrame'] = +data['isFrame']
-    if (grandId && grandId.value) addSubMenu(data).then(() => updateSubTree())
-    else addMainMenu(data).then(() => updateMainTree())
+    if (grandId && grandId.value) addSubMenu(data).then(updateSubTree).then(resetForm)
+    else addMainMenu(data).then(updateMainTree).then(resetForm)
   }
 }
 
@@ -103,7 +102,14 @@ const inputIconForm = () => {
 }
 
 // 清空表单内容
-const resetForm = () => formRef.value!.resetFields()
+const resetForm = () => {
+  formState.value.title = ''
+  formState.value.icon = ''
+  formState.value.isCache = false
+  formState.value.isFrame = false
+  formState.value.path = ''
+  formState.value.query = ''
+}
 
 // 手动触发表单验证，只用于处理Icon Input中的图标选择后，更新form的更新状态
 watch(() => formState.value.icon, () => {
@@ -113,11 +119,13 @@ watch(() => formState.value.icon, () => {
   iconInput.value.input.dispatchEvent(changeEvent)
 })
 
+onMounted(() => (type.value === ADD) && resetForm())
+
 
 </script>
 <style>
 
-.icon-input, .icon-input input.ant-input {
+.icon-input, .icon-input input .ant-input {
   cursor: pointer!important;
 }
 .form-button-list {
