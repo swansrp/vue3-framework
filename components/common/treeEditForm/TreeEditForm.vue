@@ -1,5 +1,5 @@
 <template>
-  <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 14 }" @finish="onFinish" >
+  <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 14 }" @finish="onFinish">
     <a-form-item label="菜单名称" name="title" :rules="[{ required: true, message: '请输入菜单名称!' }]">
       <a-input v-model:value="formState['title']" />
     </a-form-item>
