@@ -1,5 +1,5 @@
 import {request} from "@/framework/network/request";
-import {apiType} from "@/apis"
+import {apiType} from "@/framework/apis"
 import {buildGetApiByType, buildPostApiByType} from "@/framework/apis";
 
 // '/sms-manage'

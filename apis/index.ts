@@ -11,6 +11,7 @@ const apiType: any = {
     common: '',
     menu: '/menu',
     account: '/account',
+    channel: '/channel',
     rolePermission: '/admin/role/menu',
     roleUser: '/admin/role/user',
     userRole: '/admin/user/role',
