@@ -1,7 +1,8 @@
 <template>
   <s-table
-    bordered
+    :bordered="bordered"
     summary-fixed
+    :stripe="stripe"
     v-if="updatedColumns.length"
     v-model:pagination="pagination"
     :columns="updatedColumns"
@@ -10,9 +11,12 @@
     :rowClassName="rowClassName"
     :scroll="{x: getTableWidth(), y: getTableHeight()}"
     :style="{width: String(tableWidth) === 'auto' ? '100%' : tableWidth + 'px'}"
+    :customRow="customRow"
+    :customHeaderCell="customHeaderCell"
     @row-drag-end="rowDragEnd"
     @expanded-rows-change="expandedRowsChange"
     @change="change"
+    :row-height="rowHeight"
     @column-drag-end="columnDragEnd">
     <template v-if="needTitle" #title>
       <slot name="title"></slot>
@@ -34,8 +38,8 @@
         </s-table-summary-cell>
       </s-table-summary-row>
     </template>
-    <template #bodyCell="{column, record}">
-      <slot :column="column" :record="record" name="bodyCell"></slot>
+    <template #bodyCell="{column, record, text}">
+      <slot :column="column" :record="record" :text="text" name="bodyCell"></slot>
     </template>
     <template #customFilterDropdown="{setSelectedKeys, selectedKeys, confirm, clearFilters, column}">
       <div style="padding: 8px">
@@ -83,7 +87,12 @@ const props = defineProps<{
   tableWidth?: number,
   summaryList?: Array<any> | undefined,
   pagination?: object | boolean
-  rowClassName?: string
+  rowClassName?: string,
+  bordered?: boolean,
+  stripe?: boolean,
+  customRow?: any
+  customHeaderCell?: any,
+  rowHeight?: any
 }>()
 
 const slots = useSlots();
@@ -95,7 +104,8 @@ let updatedColumns:Ref<any[]> = ref([])
 let tableHeight = ref<number | undefined>()
 let tableWidth = ref<number | undefined>()
 let pagination = ref(props.pagination)
-let {tableId, columns, dataSource, rowClassName} = toRefs(props)
+let {tableId, columns, dataSource, rowClassName, stripe, customRow, customHeaderCell, rowHeight} = toRefs(props)
+let bordered = computed(() => props.bordered === undefined ? true : props.bordered)
 let queryCondition: QueryConditionType | {[key: string]: string} = {}
 
 const inputOnChange = (column: any, e: any, setSelectedKeys: Function) => {
