@@ -76,6 +76,24 @@ const _handleTimeOut = function (data: ResponseDataType) {
     }
 }
 
+function get(apiType: ApiType,
+                 params: object = {},
+                 data: object = {},
+                 showSuccess = false,
+                 showLoading = true,
+                 showErr = true) {
+    return request(apiType, params, data, showSuccess, showLoading, showErr)
+}
+
+function post(apiType: ApiType,
+             params: object = {},
+             data: object = {},
+             showSuccess = true,
+             showLoading = true,
+             showErr = true) {
+    return request(apiType, params, data, showSuccess, showLoading, showErr)
+}
+
 // apiType method/url/version
 // params url的参数
 // data 请求体的数据
@@ -203,5 +221,5 @@ function _download(res: AxiosResponse, fileName: string) {
 }
 
 
-export {request, upload, download}
+export {get, post, request, upload, download}
 

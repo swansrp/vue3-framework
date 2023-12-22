@@ -18,7 +18,8 @@ const apiType: any = {
     userGroup: '/group/user',
     week: '/week',
     auth: '',
-    config: '/config'
+    config: '/config',
+    portal: '/portal'
 }
 
 const web = '/web'
@@ -35,9 +36,11 @@ const requestMethod = {
 
 const commonUrl = {
     GET_BY_ID: "/id",
-    ADD: "/add",
+    ADD: "/insert",
     GENERAL_QUERY: "/general/query",
+    ADVANCED_QUERY: "/advanced/query",
     UPDATE: "/update",
+    UPDATE_LIST: "/update/list",
     DELETE: "/delete"
 }
 
@@ -87,6 +90,12 @@ const updateApi = (
     version = "1.0",
 ) => buildApi(domain, commonUrl.UPDATE, requestMethod.POST, version, type)
 
+const updateListApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = "1.0",
+) => buildApi(domain, commonUrl.UPDATE_LIST, requestMethod.POST, version, type)
+
 const deleteApi = (
     type: string,
     domain: string = baseDomain,
@@ -116,6 +125,14 @@ const updateRequest = (
     showSuccess = true,
     showLoading = true,
 ) => request(updateApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
+
+const updateListRequest = (
+    type: string,
+    data: object,
+    domain: string = baseDomain,
+    showSuccess = true,
+    showLoading = true,
+) => request(updateListApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
 const generalQueryRequest = (
     type: string,
@@ -151,5 +168,6 @@ export {
     generalQueryRequest,
     addRequest,
     updateRequest,
+    updateListRequest,
     deleteRequest
 }

@@ -16,7 +16,17 @@ export const FILTER_TYPE = {
 }
 
 export const FILTER_COMPONENT_TYPE = {
-  INPUT: 'INPUT'
+  DEFAULT: 0,
+  INPUT: 1,
+  SWITCH: 2,
+  NUMBER: 3,
+  SELECT: 4,
+  TREE: 5,
+  DATE: 6,
+  DATETIME: 7,
+  HREF: 8,
+  HTML: 9,
+  TEXT_AREA: 10
 }
 
 export interface SortObjType {

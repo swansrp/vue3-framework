@@ -83,8 +83,8 @@ const handleMenuClick = (e:any) => {
   font-weight: bold;
   text-align: center;
   box-sizing: border-box;
-  color: #fff;
-  background-color: rgb(0,21,41);
+  color: rgb(0,21,41);
+  background-color: #fff;
   flex: 0 0 auto;
   display: flex;
   justify-content: center;
@@ -93,8 +93,7 @@ const handleMenuClick = (e:any) => {
   z-index: 999;
 }
 .show-left-nav {
-  background-color: rgb(0,21,41);
-  box-shadow: 5px 0 5px 0 rgba(0,0,0,0.5);
+  background-color: #fff;
 }
 .hide-left-nav {
   background-color: #1890ff;

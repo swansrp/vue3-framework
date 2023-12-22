@@ -1,28 +1,38 @@
 <template>
-  <a-menu
-    v-if="tabStore.isNeedLeftNav"
-    v-model:openKeys="keys.openKeys"
-    v-model:selectedKeys="keys.selectedKeys"
-    class="left-menu"
-    mode="inline"
-    theme="dark"
-    @select="selectLeftNav">
-    <template v-for="item in navList">
-      <template v-if="!item.children">
-        <a-menu-item
-          :id="item.key.toString()" :key="item.path || item.title" :path="item.path" :query="item.query"
-          :title="item.title">
-          <template #icon>
-            <Icon :icon="item.icon" />
-          </template>
-          {{ item.title }}
-        </a-menu-item>
+  <div>
+    <a-menu
+      v-if="tabStore.isNeedLeftNav"
+      v-model:openKeys="keys.openKeys"
+      v-model:selectedKeys="keys.selectedKeys"
+      class="left-menu"
+      :style="{width: collapsed ? '50px' : '250px'}"
+      mode="inline"
+      theme="dark"
+      :inline-collapsed="collapsed"
+      @select="selectLeftNav">
+      <template v-for="item in navList">
+        <template v-if="!item.children">
+          <a-menu-item
+            :id="item.key.toString()" :key="item.path || item.title" :path="item.path" :query="item.query"
+            :title="item.title">
+            <template #icon>
+              <Icon :icon="item.icon" />
+            </template>
+            <span>{{ item.title }}</span>
+          </a-menu-item>
+        </template>
+        <template v-else>
+          <sub-nav :id="item.key.toString()" :key="item.path || item.title" :subNavList="item" />
+        </template>
       </template>
-      <template v-else>
-        <sub-nav :id="item.key.toString()" :key="item.path || item.title" :subNavList="item" />
-      </template>
-    </template>
-  </a-menu>
+    </a-menu>
+    <a-button v-if="collapsed" type="text" style="position: absolute;left: 20px; bottom: 0; z-index: 1000" @click="toggleCollapsed">
+      <RightOutlined style="color: rgba(255,255,255,0.7)" />
+    </a-button>
+    <a-button v-else type="text" style="position: absolute;left: 215px; bottom: 0; z-index: 1000" @click="toggleCollapsed">
+      <LeftOutlined style="color: rgba(255,255,255,0.7)" />
+    </a-button>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -37,6 +47,10 @@ import {genAntdMenuFirstSelectObject, getTitlePathByKey} from "@/framework/hooks
 import SubNav from "@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue"
 import {getQueryObject} from "@/framework/network/utils"
 import pinia from "@/framework/store"
+import {
+  LeftOutlined,
+  RightOutlined
+} from '@ant-design/icons-vue'
 
 
 const router = useRouter()
@@ -46,7 +60,12 @@ const routeStore = useRouteStore(pinia)
 let {topNavPath} = tabStore
 let navList = ref([] as Array<NavListType>)
 const keys = reactive({openKeys: [] as Array<string>, selectedKeys: [] as Array<string>})
-
+const collapsed = ref(false)
+const toggleCollapsed = () => {
+  collapsed.value = !collapsed.value
+  let resizeEvent = new Event('resize')
+  window.dispatchEvent(resizeEvent)
+}
 const initCurrentRouteAndVar = () => {
   let defaultLeftNavPath = ''
   let defaultTopNavPath = ''
@@ -145,7 +164,6 @@ onMounted(() => {
 }
 
 .left-menu {
-  width: 250px;
   box-shadow: 5px 0 5px 0 rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 999;
