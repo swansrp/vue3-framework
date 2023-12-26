@@ -1,13 +1,17 @@
-import qs from "qs"
-import axios, {AxiosResponse} from "axios"
-import {ElLoading, ElMessage} from "element-plus"
+import qs from 'qs'
+import axios, {AxiosResponse} from 'axios'
+import {ElLoading, ElMessage} from 'element-plus'
 import 'element-plus/es/components/loading/style/css'
 import 'element-plus/es/components/message/style/css'
-import {isNotEmpty, localStorageMethods} from "@/framework/utils/common"
+import {isNotEmpty, localStorageMethods} from '@/framework/utils/common'
 import {LoadingInstance} from 'element-plus/lib/components/loading/src/loading'
-import {AUTHORIZATION_TOKEN} from "@/framework/utils/constant";
-import {useCommonStore} from "@/framework/store/common"
-import pinia from "@/framework/store";
+import {AUTHORIZATION_TOKEN} from '@/framework/utils/constant'
+import {useCommonStore} from '@/framework/store/common'
+import pinia from '@/framework/store'
+import router from '@/framework/router'
+import {getToken} from '@/framework/apis/login/login'
+import {LocationQueryRaw} from 'vue-router'
+import {removeURLParameter} from '@/framework/network/utils'
 
 // 全局的 ElLoading，即使多次创建，也只会存在一个，方便随时关闭
 let loadingInstance: LoadingInstance
@@ -20,7 +24,11 @@ const errCode = {
     SESSION_TIME_OUT: 401
 }
 const axiosInstance = axios.create({})
-const createLoadingInstance = () => ElLoading.service({ fullscreen: true, text: '加载中，请稍后……', background: 'rgba(0, 0, 0, 0.7)'})
+const createLoadingInstance = () => ElLoading.service({
+    fullscreen: true,
+    text: '加载中，请稍后……',
+    background: 'rgba(0, 0, 0, 0.7)'
+})
 
 axiosInstance.interceptors.request.use(
     (config) => {
@@ -60,11 +68,19 @@ axiosInstance.interceptors.response.use(
 const _handleTimeOut = function (data: ResponseDataType) {
     if (data.status != null) {
         if (data.status.code === errCode.SESSION_TIME_OUT) {
-            localStorageMethods.removeLocalStorage('token')
+            localStorageMethods.removeLocalStorage(AUTHORIZATION_TOKEN)
             localStorageMethods.removeLocalStorage('operator')
             let redirectUri
             if (isNotEmpty(import.meta.env.VITE_ssoDomain)) {
                 redirectUri = import.meta.env.VITE_ssoDomain
+                if (redirectUri === 'localhost') {
+                    return getToken().then((token) => {
+                        localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token.payload.token)
+                        const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
+                        const redirect_uri = url === 'login' ? undefined : url
+                        return router.replace({path: ssoLoginUrl, query: {redirect_uri} as LocationQueryRaw})
+                    })
+                }
             } else {
                 const url = window.location.href.split('://')[1]
                 const http = window.location.href.split(url)[0]
@@ -77,20 +93,20 @@ const _handleTimeOut = function (data: ResponseDataType) {
 }
 
 function get(apiType: ApiType,
-                 params: object = {},
-                 data: object = {},
-                 showSuccess = false,
-                 showLoading = true,
-                 showErr = true) {
+             params: object = {},
+             data: object = {},
+             showSuccess = false,
+             showLoading = true,
+             showErr = true) {
     return request(apiType, params, data, showSuccess, showLoading, showErr)
 }
 
 function post(apiType: ApiType,
-             params: object = {},
-             data: object = {},
-             showSuccess = true,
-             showLoading = true,
-             showErr = true) {
+              params: object = {},
+              data: object = {},
+              showSuccess = true,
+              showLoading = true,
+              showErr = true) {
     return request(apiType, params, data, showSuccess, showLoading, showErr)
 }
 
@@ -129,8 +145,7 @@ function request(apiType: ApiType,
                 ElMessage.error({message: resp.data.payload.errMsg, type: errType})
                 throw new Error()
             }
-        }
-        else if (showSuccess){
+        } else if (showSuccess) {
             const message = resp.data.status.details
             if (message) ElMessage.success({message})
         }

@@ -6,21 +6,21 @@
     </div>
     <a-form :model="formInline" layout="horizontal" @finish="handleSubmit">
       <a-form-item :rules="[{ required: true, message: '请输入用户名!' }]" name="username">
-        <a-input v-model:value="formInline.username" autocomplete="off" placeholder="用户名" size="large">
+        <a-input v-model:value="formInline.username" autocomplete="off" placeholder="用户名" size="large" style="height: 55px;">
           <template #prefix>
             <user-outlined />
           </template>
         </a-input>
       </a-form-item>
       <a-form-item :rules="[{ required: true, message: '请输入密码!' }]" name="password">
-        <a-input v-model:value="formInline.password" autocomplete="off" placeholder="密码" size="large" type="password">
+        <a-input v-model:value="formInline.password" autocomplete="off" placeholder="密码" size="large" type="password" style="height: 55px;">
           <template #prefix>
             <lock-outlined />
           </template>
         </a-input>
       </a-form-item>
       <a-form-item :rules="[{ required: true, message: '请输入验证码!' }]" name="captcha">
-        <a-input v-model:value="formInline.captcha" :maxlength="4" placeholder="验证码" size="large">
+        <a-input v-model:value="formInline.captcha" :maxlength="4" placeholder="验证码" size="large" style="height: 55px;">
           <template #prefix>
             <SafetyOutlined />
           </template>
@@ -44,11 +44,12 @@ import {reactive, Ref} from 'vue'
 import {message} from 'ant-design-vue'
 import {baseUrl} from "@/framework/apis"
 import 'ant-design-vue/lib/message/style/index.css'
-import {checkLoginState} from "@/framework/network/login"
+import {checkLoginState} from '@/framework/network/login'
 import {login} from "@/framework/apis/login/login"
 import {localStorageMethods} from "@/framework/utils/common"
 import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
 import {LockOutlined, SafetyOutlined, UserOutlined} from '@ant-design/icons-vue'
+import {useRouter} from 'vue-router'
 
 const router = useRouter()
 let captchaUrl: Ref<string> = ref('')
@@ -63,7 +64,10 @@ const recoveryFun = () => {
   message.destroy()
   loading.value = false
 }
+
 const handleSubmit = () => {
+  const route = router.currentRoute.value;
+  const redirect_uri = route.query ? route.query.redirect_uri ? '/' + route.query.redirect_uri : undefined : undefined
   const {username, password, captcha} = formInline;
   message.loading('登录中...', 0)
   loading.value = true
@@ -73,7 +77,7 @@ const handleSubmit = () => {
     const {accessToken, refreshToken} = res.payload
     localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
     localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
-    checkLoginState().then(() => router.replace('/')).then(recoveryFun)
+    checkLoginState().then(() => router.replace(redirect_uri || '/')).then(recoveryFun)
   }).catch(recoveryFun)
 }
 

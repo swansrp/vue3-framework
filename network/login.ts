@@ -1,40 +1,53 @@
-import {getToken, getUserInfo, ssoLogin, verifyLogin} from "@/framework/apis/login/login";
-import {isNotEmpty, localStorageMethods} from "@/framework/utils/common";
-import {AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant";
-import qs from "qs";
-import {useRouteStore} from "@/framework/store/route";
-import pinia from "@/framework/store";
-import {useUserStore} from "@/framework/store/user";
-import {useCommonStore} from "@/framework/store/common";
-import dayjs from "dayjs";
-import {getWeekByDate} from "@/framework/apis/common/week";
-import {getQueryObject, removeURLParameter} from "@/framework/network/utils";
+import {getToken, getUserInfo, ssoLogin, verifyLogin} from '@/framework/apis/login/login'
+import {isNotEmpty, localStorageMethods} from '@/framework/utils/common'
+import {AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN} from '@/framework/utils/constant'
+import qs from 'qs'
+import {useRouteStore} from '@/framework/store/route'
+import pinia from '@/framework/store'
+import {useUserStore} from '@/framework/store/user'
+import {useCommonStore} from '@/framework/store/common'
+import {getQueryObject, removeURLParameter} from '@/framework/network/utils'
+import router from '@/framework/router'
+import {LocationQueryRaw} from 'vue-router'
 
 const userStore = useUserStore(pinia)
 const commonStore = useCommonStore(pinia)
+let afterLoginHandler: Function
 
-const _executeLogin = () => ssoLogin(userStore.getIdToken)
-    .then(res => {
-        const payload = res.payload
-        if (payload && payload.accessToken) {
-            userStore.name = payload.name
-            localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, payload.accessToken)
-            localStorageMethods.setLocalStorage(REFRESH_TOKEN, payload.refreshToken)
-            commonStore.hasLogin = true
-        }
-        return 1
-    }, err => {
-        if (err && err.payload && err.payload.ssoLoginUrl) console.log(err.payload.ssoLoginUrl)
-        else {
-            console.log('token验证失败')
-            throw new Error(err)
-        }
-    }).catch(err => {
-        console.log('服务器状态异常')
-        throw new Error(err)
-    })
+const _executeLogin = (token: any) => {
+    if (import.meta.env.VITE_ssoDomain === 'localhost') {
+        const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
+        localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
+        const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
+        return router.replace({path: ssoLoginUrl, query: {redirect_uri: url} as LocationQueryRaw})
+    } else {
+        return ssoLogin(userStore.getIdToken)
+            .then(res => {
+                const payload = res.payload
+                if (payload && payload.accessToken) {
+                    userStore.name = payload.name
+                    localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, payload.accessToken)
+                    localStorageMethods.setLocalStorage(REFRESH_TOKEN, payload.refreshToken)
+                    commonStore.hasLogin = true
+                }
+                return 1
+            }, err => {
+                if (err && err.payload && err.payload.ssoLoginUrl) {
+                    console.log(err.payload.ssoLoginUrl)
+                } else {
+                    console.log('token验证失败')
+                    throw new Error(err)
+                }
+            }).catch(err => {
+                console.log('服务器状态异常')
+                throw new Error(err)
+            })
+    }
+}
 
-
+export const setAfterLoginHandler = (loginHandler: Function) => {
+    afterLoginHandler = loginHandler
+}
 export const checkLoginState = async () => {
     const queryObject = getQueryObject(window.location.href)
     if (isNotEmpty(queryObject)) {
@@ -50,21 +63,36 @@ export const checkLoginState = async () => {
     }
 
     return await getToken().then((getTokenRes) => {
-        const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
-        if (token) {
-            return verifyLogin(token).then((res) => {
+        const token = getTokenRes.payload.token
+        const localStorageToken = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+        if (localStorageToken) {
+            return verifyLogin(localStorageToken).then((res) => {
                 const result = res.payload
                 if (!+result) {
-                    if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
-                    else return _executeLogin().then(afterLogin)
+                    if (window.location.hash === '#/login') {
+                        return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
+                    } else {
+                        return _executeLogin(token).then(() => {
+                            if (window.location.hash !== '#/login') {
+                                return afterLogin()
+                            }
+                        })
+                    }
                 } else {
                     commonStore.hasLogin = true
                     return afterLogin()
                 }
             })
         } else {
-            if (window.location.hash === '#/login') return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
-            else return _executeLogin().then(afterLogin)
+            if (window.location.hash === '#/login') {
+                return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
+            } else {
+                return _executeLogin(token).then(() => {
+                    if (window.location.hash !== '#/login') {
+                        return afterLogin()
+                    }
+                })
+            }
         }
     })
 }
@@ -79,9 +107,5 @@ export const afterLogin = async () => {
                 userStore[key] = data[key]
             }
         })
-    }).then(() => {
-        const store = useCommonStore(pinia)
-        const today = dayjs().format('YYYY-MM-DD')
-        return getWeekByDate(today).then(res => store.version = res.payload.version)
-    })
+    }).then(() => afterLoginHandler && afterLoginHandler())
 }
