@@ -1,19 +1,22 @@
 <template>
   <a-modal
     v-model:visible="visible"
-    :width="width"
-    :footer="null"
-    destroyOnClose
-    :mask-closable="maskClosable"
     :body-style="{overflow: 'auto'}"
-    @cancel="$emit('update:visible', false)"
-    :wrap-class-name="isFull ? 'full-modal' : 'box-modal'">
+    :mask-closable="maskClosable"
+    :width="width"
+    :wrap-class-name="isFull ? 'full-modal' : 'box-modal'"
+    destroyOnClose
+    @cancel="$emit('update:visible', false)">
     <slot></slot>
-    <template #title v-if="title">
+    <template v-if="title" #title>
       <div class="title">
-        <img :src="iconPath" v-if="iconPath" class="icon-img" alt="" />
+        <img v-if="iconPath" :src="iconPath" alt="" class="icon-img" />
         {{ title }}
       </div>
+    </template>
+    <template #footer>
+      <slot v-if="props.footer" name="footer"></slot>
+      <div v-else></div>
     </template>
   </a-modal>
 </template>
@@ -23,17 +26,18 @@ let visible = ref(false)
 let title = ref('具体内容')
 let isFull = ref(false)
 let iconPath = ref('')
-let width = ref<string|number|undefined>('100%')
+let width = ref<string | number | undefined>('100%')
 let maskClosable = ref(false)
 
 const props = defineProps<{
-  title:string,
+  title: string,
   visible: boolean,
   isFull?: boolean,
   iconPath?: string,
   width?: number | undefined
-  maskClosable?: boolean
-}>();
+  maskClosable?: boolean,
+  footer?: boolean,
+}>()
 
 defineEmits(['update:visible'])
 
@@ -43,9 +47,8 @@ watch(() => props.title, value => title.value = value || '', {immediate: true})
 watch(() => props.iconPath, value => iconPath.value = value || '', {immediate: true})
 watch(() => props.maskClosable, value => maskClosable.value = !!value, {immediate: true})
 watch(() => props.width, value => {
-  if(!isFull.value && width.value)  width.value = value
+  if (!isFull.value && width.value) width.value = value
 }, {immediate: true})
-
 
 </script>
 <style lang="scss">
@@ -56,23 +59,28 @@ watch(() => props.width, value => {
     padding-bottom: 0;
     margin: 0;
   }
+
   .ant-modal-content {
     display: flex;
     flex-direction: column;
     height: calc(100vh);
   }
+
   .ant-modal-body {
     flex: 1;
   }
 }
+
 .box-modal {
   margin: 0 auto;
   margin-top: -30px;
 }
+
 .title {
   display: flex;
   align-items: center;
 }
+
 .icon-img {
   width: 25px;
   height: 25px;

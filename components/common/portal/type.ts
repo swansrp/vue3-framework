@@ -9,6 +9,8 @@ export type TableConfigType = {
     size: string,
     // 表格中作为id的Column
     rowKey: string,
+    // 表格中作为名字的Column
+    nameKey: string,
     // 表格加载样式
     loading: boolean,
     // 表格渲染图层
@@ -49,6 +51,8 @@ export type ColumnType = {
     dataIndex: string,
     // key
     key: string,
+    // dbField
+    dbField: string,
     // 对齐方式
     align: string,
     // 内容对齐方式
@@ -66,7 +70,8 @@ export type ColumnType = {
     // endregion
     // region 列隐藏/显示
     // 是否不可选择是否显示
-    disabled: boolean, // 是否选中(选择是否显示)
+    disabled: boolean,
+    // 是否选中(选择是否显示)
     checked: boolean
     // endregion
 
@@ -86,16 +91,16 @@ export type ColumnType = {
     // 拖动改变顺序手柄
     rowDrag: boolean, // 编辑单元格
     editable: 'cellEditorSlot' | boolean, // 编辑单元格格式响应
-    // customRender: Function,
     // endregion
 
     // region 后端配置
     // 字段类型
-    fieldType: number, // 相关字典
+    fieldType: string, // 相关字典
     referenceDict: string, // 字典选项
     referenceDictOption: Array<any>, //endregion
 
     // region 内容约束
+    required: boolean,
     // 最小值(长度)
     min: number, // 最大值(长度)
     max: number, // 默认值
@@ -147,17 +152,18 @@ export enum FILTER_TYPE {
 }
 
 export enum FIELD_TYPE {
-    DEFAULT,
-    INPUT,
-    SWITCH,
-    NUMBER,
-    SELECT,
-    TREE,
-    DATE,
-    DATETIME,
-    HREF,
-    HTML,
-    TEXT_AREA
+    DEFAULT = "0",
+    INPUT = "1",
+    SWITCH = "2",
+    NUMBER = "3",
+    SELECT = "4",
+    TREE = "5",
+    DATE = "6",
+    DATETIME = "7",
+    HREF = "8",
+    HTML = "9",
+    TEXT_AREA = "10",
+    ENTITY = "11"
 }
 
 export type QueryConditionType = {

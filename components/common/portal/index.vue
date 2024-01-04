@@ -152,6 +152,14 @@
                   {{ dict.getLabel(column.referenceDict, record[`${column.dataIndex}`]) }}
                 </a-badge-ribbon>
               </template>
+              <template v-else-if="column.dataIndex === 'actionColumn'">
+                <slot
+                  name="action"
+                  :portal-config="config"
+                  :column="columns"
+                  :data="record">
+                </slot>
+              </template>
               <template v-else>
                 <a-badge-ribbon
                   :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
@@ -165,6 +173,7 @@
                     v-html="strLF2HtmlLF(record[`${column.dataIndex}`])"></div>
                 </a-badge-ribbon>
               </template>
+
             </template>
             <!-- endregion -->
             <!-- region 总结栏样式 -->
@@ -526,7 +535,7 @@
         <a-descriptions-item
           v-for="column in columns.filter(item => item.detailShow)"
           :key="column.dataIndex"
-          :label="column.title"
+          :label="column.title + (column.required ? '(*)' : '')"
           :span="column.descriptionSize">
           <template v-if="column.fieldType === FIELD_TYPE.INPUT">
             <a-input
@@ -580,7 +589,7 @@
               :value="dayjs(config.modal.data[column.dataIndex])"
               show-time
               style="width: 100%"
-              @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD') ?? ''"
+              @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
             />
           </template>
           <template
@@ -595,10 +604,25 @@
               @update:value=" v => config.modal.data[column.dataIndex] = v"
             />
           </template>
+          <template
+            v-else-if="column.fieldType === FIELD_TYPE.ENTITY">
+            <a-button type="text" @click="showEntityDialogBox(column)">{{ getEntityDialogBoxLabel(column) }}</a-button>
+          </template>
         </a-descriptions-item>
       </a-descriptions>
     </a-modal>
+    <dialog-box
+      v-model:visible="entityDialogBox.show"
+      :title="'配置 ' + entityDialogBox.column.title"
+      is-full>
+      <portal :table-id="entityDialogBox.column.referenceDict" read-only>
+        <template #action="{ portalConfig, column, data }">
+          <a-button type="text" @click="bind(portalConfig, column, data)">确认</a-button>
+        </template>
+      </portal>
+    </dialog-box>
     <!-- endregion -->
+
   </div>
 
 </template>
@@ -614,6 +638,7 @@ import {
 import {
   getPortalConfig
 } from '@/framework/apis/portal/config'
+import portal from '@/framework/components/common/portal/index.vue'
 import {dictStore} from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
@@ -654,6 +679,7 @@ import {Modal} from 'ant-design-vue'
 
 const props = defineProps<{
   tableId?: string,
+  readOnly?: boolean,
 }>()
 const dict = dictStore()
 // region 调整表格大小
@@ -703,6 +729,7 @@ const config = reactive({
 let dataSource = ref([] as Array<any>)
 let dataSummary = ref({} as any)
 const modifyCellMap = new Map<string, ModifyCellType>()
+const entityDialogBox = reactive({show: false, column: {} as ColumnType} as any)
 /**
  * 表头
  */
@@ -710,6 +737,7 @@ const columnArray = ref([] as Array<ColumnType>)
 const columns = computed(() => {
   return columnArray.value.filter(item => item.checked)
 })
+const dictColumnArray = []
 /**
  * 列显示
  */
@@ -899,6 +927,23 @@ const deleteRow = (args: any) => {
     }
   })
 }
+const showEntityDialogBox = (column: ColumnType) => {
+  console.log(column.title, column.referenceDict)
+  entityDialogBox.column = column
+  entityDialogBox.show = true
+}
+const bind = (portalConfig, column, record) => {
+  config.modal.data[`${entityDialogBox.column.dbField}`] = record[`${portalConfig.rowKey}`]
+  config.modal.data[`${entityDialogBox.column.dataIndex}`] = record[`${portalConfig.nameKey}`]
+  entityDialogBox.show = false
+}
+const getEntityDialogBoxLabel = (column: ColumnType) => {
+  if(config.modal.data[column.dataIndex] == null) {
+    return '点击配置' + column.title
+  } else {
+    return config.modal.data[column.dataIndex]
+  }
+}
 // endregion
 // region 编辑弹框
 // 获取弹框标题
@@ -965,6 +1010,7 @@ const saveAddRow = async () => {
 // 打开编辑详情页
 const editRow = (args: any) => {
   const {id, data} = _buildRowData(args.recordIndexs[0])
+  console.log(id, data)
   if(data.size != 0) {
     data.set(config.rowKey, id)
     config.modal.data = Object.fromEntries(data)
@@ -1073,6 +1119,11 @@ const queryDataAsync = async () => {
     config.total = res.payload.total
     const data = []
     for (let record of res.payload.records) {
+      for(let dictColumn of dictColumnArray) {
+        if(typeof record[`${dictColumn.dataIndex}`] === 'number') {
+          record[`${dictColumn.dataIndex}`] = String(record[`${dictColumn.dataIndex}`])
+        }
+      }
       data.push(record)
     }
     log(config, columns.value)
@@ -1101,10 +1152,12 @@ const refresh = () => {
  * 初始化
  */
 const init = async () => {
+  console.log(props)
   updateTableWidthAndHeight()
   initQueryCondition()
   return await getPortalConfig(config.tableId).then(async res => {
     config.key = config.key + 1
+    dictColumnArray.length = 0
     columnArray.value.length = 0
     const index = _.cloneDeep(indexColumn)
     columnArray.value.push(index)
@@ -1113,7 +1166,11 @@ const init = async () => {
     config.size = tableConfig.size
     config.loading = false
     config.rowKey = tableConfig.idColumn
+    config.nameKey = tableConfig.nameColumn
     config.readOnly = tableConfig.readOnly === '1'
+    if(props.readOnly) {
+      config.readOnly = true
+    }
     config.summary = tableConfig.summary === '1'
     config.treeMode = tableConfig.treeMode === '1'
     config.descriptionCount = tableConfig.descriptionCount
@@ -1122,15 +1179,17 @@ const init = async () => {
         const column = _.cloneDeep(defaultColumn)
         column.title = layout.displayName
         column.dataIndex = layout.property
+        column.dbField = layout.dbField
         column.key = layout.property
         column.width = layout.width !== 0 ? layout.width : 100
         column.fixed = layout.fiex === '1'
         column.fieldType = layout.fieldType
-        column.referenceDict = layout.reference
+        column.referenceDict = layout.reference || layout.entity
         column.contentAlign = layout.align
         column.filterAble = layout.filterAble === '1'
         column.sorter = layout.sortAble === '1'
         column.addShow = layout.addShow === '1'
+        column.checked = layout.detailShow === '1'
         column.detailShow = layout.detailShow === '1'
         column.descriptionSize = layout.descriptionSize
         // 单元格编辑模式
@@ -1141,18 +1200,18 @@ const init = async () => {
         if (layout.tooltip !== '1') {
           column.tooltip = false
         }
+        column.required = layout.required === '1'
         column.min = layout.min
         column.max = layout.max
         column.defaultValue = layout.defaultValue
-        if (isNotEmpty(column.referenceDict)) {
+        if (isNotEmpty(column.referenceDict) && column.fieldType !== FIELD_TYPE.ENTITY) {
+          dictColumnArray.push(column)
           column.referenceDictOption = await dict.getDict(column.referenceDict)
         }
         columnArray.value.push(column)
       }
     }
-    if (!config.readOnly) {
-      columnArray.value.push(actionColumn)
-    }
+    columnArray.value.push(actionColumn)
     // 首列支持拖拽
     columnArray.value[0].rowDrag = tableConfig.orderMode === '1'
     return await queryDataAsync()
@@ -1328,4 +1387,5 @@ watch(() => props.tableId, value => {
 .surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner {
   padding: 1px !important;
 }
+
 </style>

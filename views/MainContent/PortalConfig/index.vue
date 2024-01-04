@@ -4,7 +4,15 @@
     <a-list :data-source="tableList" bordered class="table-list" size="small">
       <template #renderItem="{ item }">
         <a-list-item :class="{'activate-item': tableConfig.name === item.value}" @click="getTableConfigByName(item)">
-          {{ item.label }}
+          <div style="display: flex; justify-content: flex-start">
+            {{ item.label }}
+          </div>
+          <div style="display: flex; justify-content: flex-end">
+            <a-popconfirm title="注意 即将删除该配置" @confirm="deleteConfig(item)">
+              <a-button type="link"><template #icon><MinusCircleOutlined /></template></a-button>
+            </a-popconfirm>
+
+          </div>
         </a-list-item>
       </template>
       <template #header>
@@ -17,7 +25,7 @@
       <!-- region 表格整体配置 -->
       <a-descriptions :column="6" :title="tableConfig.displayName" bordered layout="vertical" size="small">
         <template #extra>
-          <a-button style="margin-right: 10px" type="primary" @click="saveTableConfig">保存</a-button>
+          <a-button style="margin-right: 10px" type="primary" @click="saveTableConfig(false)">保存</a-button>
         </template>
         <a-descriptions-item
           :span="1"
@@ -41,7 +49,10 @@
             :options="tableSizeDict || []"
             :value="tableConfig.size"
             style="width: 150px"
-            @update:value=" v => tableConfig.size = v"
+            @update:value=" v => {
+              tableConfig.size = v
+              saveTableConfig()
+            }"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -52,6 +63,7 @@
             checkedValue="1"
             style="width: 40px;"
             unCheckedValue="0"
+            @change="saveTableConfig"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -62,6 +74,7 @@
             checkedValue="1"
             style="width: 40px;"
             unCheckedValue="0"
+            @change="saveTableConfig"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -73,7 +86,10 @@
             max="16"
             min="1"
             style="width:80px"
-            @update:value=" v => tableConfig.descriptionCount = v"
+            @update:value=" v => {
+              tableConfig.descriptionCount = v
+              saveTableConfig()
+            }"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -84,7 +100,10 @@
             :options="columnDict || []"
             :value="tableConfig.idColumn"
             style="width: 150px"
-            @update:value=" v => tableConfig.idColumn = v"
+            @update:value=" v => {
+              tableConfig.idColumn = v
+              saveTableConfig()
+            }"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -95,7 +114,10 @@
             :options="columnDict || []"
             :value="tableConfig.nameColumn"
             style="width: 150px"
-            @update:value=" v => tableConfig.nameColumn = v"
+            @update:value=" v => {
+              tableConfig.nameColumn = v
+              saveTableConfig()
+            }"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -106,6 +128,7 @@
             checkedValue="1"
             style="width: 40px;"
             unCheckedValue="0"
+            @change="saveTableConfig"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -117,7 +140,10 @@
             :options="columnDict || []"
             :value="tableConfig.orderColumn"
             style="width: 150px"
-            @update:value=" v => tableConfig.orderColumn = v"
+            @update:value=" v => {
+              tableConfig.orderColumn = v
+              saveTableConfig()
+            }"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -128,6 +154,7 @@
             checkedValue="1"
             style="width: 40px;"
             unCheckedValue="0"
+            @change="saveTableConfig"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -139,7 +166,10 @@
             :options="columnDict || []"
             :value="tableConfig.pidColumn"
             style="width: 150px"
-            @update:value=" v => tableConfig.pidColumn = v"
+            @update:value=" v => {
+              tableConfig.pidColumn = v
+              saveTableConfig()
+            }"
           />
         </a-descriptions-item>
       </a-descriptions>
@@ -184,7 +214,7 @@
         <div v-if="selectedColumnId !== ''" style="width: 100%; margin-top: 10px; margin-left: 10px">
           <a-descriptions :column="8" :title="tableConfig.displayName" bordered layout="vertical" size="small">
             <template #extra>
-              <a-button style="margin-right: 10px" type="primary" @click="saveTableColumn">保存</a-button>
+              <a-button style="margin-right: 10px" type="primary" @click="saveTableColumn(false)">保存</a-button>
             </template>
             <!-- region 字段基础信息 -->
             <a-descriptions-item
@@ -197,6 +227,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).show"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -204,7 +235,7 @@
               label="字段名称">
               <a-input
                 :value="columnMap.get(selectedColumnId).displayName"
-                placeholder="输入表格名称"
+                placeholder="输入字段名称"
                 @update:value=" v => columnMap.get(selectedColumnId).displayName = v"
               />
             </a-descriptions-item>
@@ -216,20 +247,50 @@
                 :options="fieldTypeDict || []"
                 :value="columnMap.get(selectedColumnId).fieldType"
                 style="width: 120px"
-                @update:value=" v => columnMap.get(selectedColumnId).fieldType = v"
+                @update:value=" v => {
+                  columnMap.get(selectedColumnId).fieldType = v
+                  saveTableColumn()
+                }"
               />
             </a-descriptions-item>
             <a-descriptions-item
               :span="2"
               label="相关引用">
               <a-input
+                v-if="columnMap.get(selectedColumnId).fieldType !== FIELD_TYPE.ENTITY"
                 :value="columnMap.get(selectedColumnId).reference"
                 placeholder="输入相关引用名称"
                 @update:value=" v => columnMap.get(selectedColumnId).reference = v"
               />
+              <a-select
+                v-else
+                :options="tableList"
+                :value="columnMap.get(selectedColumnId).reference"
+                style="width: 200px"
+                @update:value=" v => {
+                  columnMap.get(selectedColumnId).reference = v
+                  saveTableColumn()
+                }"
+              />
             </a-descriptions-item>
             <a-descriptions-item
-              :span="2" />
+              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
+              :span="2"
+              label="操作字段">
+              <a-select
+                :options="columnDict"
+                :value="columnMap.get(selectedColumnId).dbField"
+                style="width: 200px"
+                @update:value=" v => {
+                  columnMap.get(selectedColumnId).dbField = v
+                  saveTableColumn()
+                }"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-else
+              :span="2"
+              label="" />
             <a-descriptions-item
               :span="8"
               label="" />
@@ -259,7 +320,10 @@
                 :options="alignDict || []"
                 :value="columnMap.get(selectedColumnId).align"
                 style="width: 120px"
-                @update:value=" v => columnMap.get(selectedColumnId).align = v"
+                @update:value=" v => {
+                  columnMap.get(selectedColumnId).align = v
+                  saveTableColumn()
+                }"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -271,6 +335,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).fixed"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -282,6 +347,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).tooltip"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -292,6 +358,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).filterAble"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -302,6 +369,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).sortAble"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -323,6 +391,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).detailShow"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -348,6 +417,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).editAble"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -361,16 +431,20 @@
                 v-model:checked="columnMap.get(selectedColumnId).addShow"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
               :span="1"
               label="是否必填">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1' || columnMap.get(selectedColumnId).editAble !== '1'"
+                :disabled="columnMap.get(selectedColumnId).show !== '1'
+                  ||( columnMap.get(selectedColumnId).editAble !== '1'
+                    && columnMap.get(selectedColumnId).addShow !== '1')"
                 v-model:checked="columnMap.get(selectedColumnId).required"
                 checkedValue="1"
                 unCheckedValue="0"
+                @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -418,11 +492,16 @@
 import {Ref} from 'vue'
 import {isNotEmpty} from '@/framework/utils/common'
 import {
+  FIELD_TYPE
+} from '@/framework/components/common/portal/type'
+import {
+  deletePortalConfig,
   getPortalConfig,
   getPortalList, updatePortalColumn,
   updatePortalColumnOrder,
   updatePortalConfig
 } from '@/framework/apis/portal/config'
+import {MinusCircleOutlined} from '@ant-design/icons-vue'
 import {ValueLabel} from '@/framework/utils/type'
 import {dictStore} from '@/framework/store/common'
 import {CellRenderArgs} from '@surely-vue/table'
@@ -452,12 +531,18 @@ const getTableConfigByName = (item: any) => {
   })
 }
 
-const saveTableConfig = () => {
-  updatePortalConfig(tableConfig.value).then(() => onSearch())
+const deleteConfig = (item: ValueLabel) => {
+  deletePortalConfig(item.value).then(() => {
+    onSearch()
+  })
 }
 
-const saveTableColumn = () => {
-  updatePortalColumn(columnMap.get(selectedColumnId.value)).then(() => getPortalConfig(tableConfig.value.name))
+const saveTableConfig = (silent = true) => {
+  updatePortalConfig(tableConfig.value, silent).then(() => onSearch())
+}
+
+const saveTableColumn = (silent = true) => {
+  updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() => getPortalConfig(tableConfig.value.name))
 }
 
 const onSearch = () => {
@@ -510,6 +595,10 @@ onMounted(() => {
 .root {
   display: flex;
   height: calc(100% - 80px);
+  .list-footer-content {
+    display: flex;
+    justify-content: flex-end;
+  }
 }
 
 .table-list {

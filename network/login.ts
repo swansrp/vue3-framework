@@ -85,7 +85,7 @@ export const checkLoginState = async () => {
             })
         } else {
             if (window.location.hash === '#/login') {
-                return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, getTokenRes.payload.token)
+                return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
             } else {
                 return _executeLogin(token).then(() => {
                     if (window.location.hash !== '#/login') {

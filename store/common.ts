@@ -50,6 +50,9 @@ export const dictStore = defineStore('dictStore', {
 
                 res.payload.forEach((data: ValueLabel) => {
                     valueMap.set(data.value, data.label)
+                    // if(!isNaN(Number(data.value))) {
+                    //     valueMap.set(Number(data.value), data.label)
+                    // }
                     labelMap.set(data.label, data.value)
                 })
                 this.map.set(dictName, {data: res.payload, valueMap, labelMap})

@@ -50,6 +50,7 @@ export const defaultColumn = {
     resizable: true,
     rowDrag: false,
     editable: 'cellEditorSlot',
+    referenceDictOption: [] as Array<any>,
     tooltip: {placement: 'topLeft', mouseEnterDelay: 0.5, overlayStyle: {}, popupStyle: {}},
     filterAble: false,
     sorter: false,

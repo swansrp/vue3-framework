@@ -68,18 +68,15 @@ axiosInstance.interceptors.response.use(
 const _handleTimeOut = function (data: ResponseDataType) {
     if (data.status != null) {
         if (data.status.code === errCode.SESSION_TIME_OUT) {
-            localStorageMethods.removeLocalStorage(AUTHORIZATION_TOKEN)
-            localStorageMethods.removeLocalStorage('operator')
+            // localStorageMethods.removeLocalStorage(AUTHORIZATION_TOKEN)
+            // localStorageMethods.removeLocalStorage('operator')
             let redirectUri
             if (isNotEmpty(import.meta.env.VITE_ssoDomain)) {
                 redirectUri = import.meta.env.VITE_ssoDomain
                 if (redirectUri === 'localhost') {
-                    return getToken().then((token) => {
-                        localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token.payload.token)
-                        const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
-                        const redirect_uri = url === 'login' ? undefined : url
-                        return router.replace({path: ssoLoginUrl, query: {redirect_uri} as LocationQueryRaw})
-                    })
+                    const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
+                    const redirect_uri = url === 'login' ? undefined : url
+                    return router.replace({path: ssoLoginUrl, query: {redirect_uri} as LocationQueryRaw})
                 }
             } else {
                 const url = window.location.href.split('://')[1]
