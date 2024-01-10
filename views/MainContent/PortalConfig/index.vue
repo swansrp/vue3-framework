@@ -260,7 +260,7 @@
                 v-if="columnMap.get(selectedColumnId).fieldType !== FIELD_TYPE.ENTITY"
                 :value="columnMap.get(selectedColumnId).reference"
                 placeholder="输入相关引用名称"
-                @update:value=" v => columnMap.get(selectedColumnId).reference = v"
+                @update:value=" v => columnMap.get(selectedColumnId).reference = v "
               />
               <a-select
                 v-else
@@ -268,6 +268,9 @@
                 :value="columnMap.get(selectedColumnId).reference"
                 style="width: 200px"
                 @update:value=" v => {
+                  if(columnMap.get(selectedColumnId).reference !== v) {
+                    columnMap.get(selectedColumnId).dbField = null
+                  }
                   columnMap.get(selectedColumnId).reference = v
                   saveTableColumn()
                 }"
@@ -413,7 +416,7 @@
               :span="1"
               label="编辑是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).show !== '1' || isNotEmpty(columnMap.get(selectedColumnId).dbField)"
                 v-model:checked="columnMap.get(selectedColumnId).editAble"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -490,7 +493,7 @@
 </template>
 <script lang="ts" setup>
 import {Ref} from 'vue'
-import {isNotEmpty} from '@/framework/utils/common'
+import {isNotEmpty, log} from '@/framework/utils/common'
 import {
   FIELD_TYPE
 } from '@/framework/components/common/portal/type'

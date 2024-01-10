@@ -27,6 +27,8 @@ export type TableConfigType = {
     summary: boolean,
     // 树形结构
     treeMode: boolean,
+    // 是否能够调整顺序
+    orderMode: boolean,
     // 树形栏是否显示
     treeMenuShow: boolean,
     // 弹框
@@ -181,6 +183,16 @@ export type QuerySortType = {
 export type QueryType = {
     conditionList: Array<QueryConditionType>, sortList: Array<QuerySortType>
     currentPage: number, pageSize: number
+}
+
+export type UpdateOrderType = {
+    id: string | number,
+    showOrder: number
+}
+
+export type UpdatePidType = {
+    id: string | number,
+    pid: string | number | null
 }
 
 
