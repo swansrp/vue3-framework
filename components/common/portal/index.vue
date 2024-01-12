@@ -75,7 +75,7 @@
               </template>
             </a-button>
           </a-tooltip>
-          <a-tooltip placement="top">
+          <a-tooltip placement="top" v-if="config.exportAble">
             <template #title>
               <span>导出</span>
             </template>
@@ -99,6 +99,7 @@
             :data-source="dataSource"
             :loading="config.loading"
             :pagination="false"
+            :range-selection="false"
             :row-selection="rowSelection"
             :rowKey="config.rowKey"
             :scroll="{x: getTableWidth(), y: getTableHeight()}"
@@ -174,9 +175,10 @@
                 </a-badge-ribbon>
               </template>
               <template v-else-if="column.dataIndex === 'actionColumn'">
+                <!-- (portalConfig: TableConfigType, column: ColumnType, record: any) -->
                 <slot
-                  :column="columns"
-                  :data="record"
+                  :column="column"
+                  :record="record"
                   :portal-config="config"
                   name="action">
                 </slot>
@@ -548,10 +550,23 @@
         v-if="config.modal.type === 'view'" :column="config.descriptionCount" :title="config.title" bordered
         layout="vertical">
         <a-descriptions-item
-          v-for="column in columns.filter(item => item.detailShow)"
+          v-for="column in columnArray.filter(item => item.detailShow)"
           :key="column.dataIndex"
           :label="column.title"
-          :span="column.descriptionSize">{{ config.modal.data[column.dataIndex] }}
+          :span="column.descriptionSize">
+          <template v-if="column.fieldType === FIELD_TYPE.SWITCH">
+            <a-switch
+              v-model:checked="dataSource[config.modal.editRowIndex][`${column.dataIndex}`]"
+              checkedValue="1"
+              disabled
+              unCheckedValue="0" />
+          </template>
+          <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
+            {{ dict.getLabel(column.referenceDict, dataSource[config.modal.editRowIndex][`${column.dataIndex}`]) }}
+          </template>
+          <template v-else>
+            {{ dataSource[config.modal.editRowIndex][column.dataIndex] }}
+          </template>
         </a-descriptions-item>
       </a-descriptions>
       <a-form v-else ref="editModalRef" :model="config.modal.data" layout="vertical">
@@ -750,8 +765,9 @@ import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
 import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
 
 const props = defineProps<{
-  tableId?: string,
+  tableId: string,
   readOnly?: boolean,
+  actionWidth?: number
 }>()
 const dict = dictStore()
 // region 调整表格大小
@@ -1001,7 +1017,6 @@ const deleteRow = (args: any) => {
   })
 }
 const showEntityDialogBox = (column: ColumnType) => {
-  console.log(column.title, column.referenceDict)
   entityDialogBox.column = column
   entityDialogBox.show = true
 }
@@ -1106,7 +1121,7 @@ const handleModalClose = () => {
 }
 // 查看行数据详情
 const detailRow = (args: any) => {
-  console.log(modifyCellMap, args.recordIndexs[0])
+  console.debug(modifyCellMap, args.recordIndexs[0])
   const {data} = _buildRowData(args.recordIndexs[0])
   config.modal.data = Object.fromEntries(data)
   if (data.size != 0) {
@@ -1128,7 +1143,7 @@ const saveAddRow = async () => {
 // 打开编辑详情页
 const editRow = (args: any) => {
   const {id, data} = _buildRowData(args.recordIndexs[0])
-  console.log('打开编辑详情页', id, data)
+  console.debug('打开编辑详情页', id, data)
   if (data.size != 0) {
     data.set(config.rowKey, id)
     config.modal.data = Object.fromEntries(data)
@@ -1251,7 +1266,8 @@ const queryDataAsync = async () => {
       }
       data.push(record)
     }
-    console.log('init finish', config, columns.value)
+    console.log('init finish')
+    console.debug(config, columns.value)
     return data
   })
 }
@@ -1277,7 +1293,8 @@ const refresh = () => {
  * 初始化
  */
 const init = async () => {
-  console.log('init start', props)
+  console.log('init start')
+  console.debug(props)
   updateTableWidthAndHeight()
   initQueryCondition()
   return await getPortalConfig(config.tableId).then(async res => {
@@ -1300,8 +1317,10 @@ const init = async () => {
     config.treeMode = tableConfig.treeMode === '1'
     config.orderMode = tableConfig.orderMode === '1'
     config.descriptionCount = tableConfig.descriptionCount
+    config.importAble = tableConfig.importAble === '1'
+    config.exportAble = tableConfig.exportAble === '1'
     for (let layout of tableConfig.columns) {
-      if (layout.show === '1') {
+      if (layout.enable === '1') {
         const column = _.cloneDeep(defaultColumn)
         column.title = layout.displayName
         column.dataIndex = layout.property
@@ -1315,7 +1334,7 @@ const init = async () => {
         column.filterAble = layout.filterAble === '1'
         column.sorter = layout.sortAble === '1'
         column.addShow = layout.addShow === '1'
-        column.checked = layout.detailShow === '1'
+        column.checked = layout.show === '1'
         column.detailShow = layout.detailShow === '1'
         column.descriptionSize = layout.descriptionSize
         // 单元格编辑模式
@@ -1337,6 +1356,7 @@ const init = async () => {
         columnArray.value.push(column)
       }
     }
+    actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
     columnArray.value.push(actionColumn)
     // 首列支持拖拽
     columnArray.value[0].rowDrag = tableConfig.orderMode === '1'
@@ -1353,6 +1373,7 @@ watch(() => props.tableId, value => {
   config.tableId = value
   refresh()
 })
+defineExpose({queryData})
 </script>
 <style lang="less" scoped>
 .root {

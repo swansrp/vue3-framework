@@ -58,14 +58,14 @@ const buildApi = (
 
 const buildGetApiByType = (
     url: string,
-    type: string,
+    type = web,
     domain: string = baseDomain,
     version = '1.0'
 ) => buildApi(domain, url, requestMethod.GET, version, type)
 
 const buildPostApiByType = (
     url: string,
-    type: string,
+    type = web,
     domain: string = baseDomain,
     version = '1.0'
 ) => buildApi(domain, url, requestMethod.POST, version, type)

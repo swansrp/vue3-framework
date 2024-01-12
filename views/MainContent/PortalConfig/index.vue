@@ -23,7 +23,7 @@
     <!-- region 右侧编辑栏 -->
     <div v-if="isNotEmpty(tableConfig.name)" class="table-config">
       <!-- region 表格整体配置 -->
-      <a-descriptions :column="6" :title="tableConfig.displayName" bordered layout="vertical" size="small">
+      <a-descriptions :column="8" :title="tableConfig.displayName" bordered layout="vertical" size="small">
         <template #extra>
           <a-button style="margin-right: 10px" type="primary" @click="saveTableConfig(false)">保存</a-button>
         </template>
@@ -90,6 +90,28 @@
               tableConfig.descriptionCount = v
               saveTableConfig()
             }"
+          />
+        </a-descriptions-item>
+        <a-descriptions-item
+          :span="1"
+          label="支持导入">
+          <a-switch
+            v-model:checked="tableConfig.importAble"
+            checkedValue="1"
+            style="width: 40px;"
+            unCheckedValue="0"
+            @change="saveTableConfig"
+          />
+        </a-descriptions-item>
+        <a-descriptions-item
+          :span="1"
+          label="支持导出">
+          <a-switch
+            v-model:checked="tableConfig.exportAble"
+            checkedValue="1"
+            style="width: 40px;"
+            unCheckedValue="0"
+            @change="saveTableConfig"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -222,9 +244,9 @@
               :label="'字段基础信息(' + columnMap.get(selectedColumnId).property + ')'" />
             <a-descriptions-item
               :span="1"
-              label="是否可见">
+              label="是否有效">
               <a-switch
-                v-model:checked="columnMap.get(selectedColumnId).show"
+                v-model:checked="columnMap.get(selectedColumnId).enable"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -304,9 +326,20 @@
               label="表格显示" />
             <a-descriptions-item
               :span="1"
+              label="是否显示">
+              <a-switch
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
+                v-model:checked="columnMap.get(selectedColumnId).show"
+                checkedValue="1"
+                unCheckedValue="0"
+                @change="saveTableColumn"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
+              :span="1"
               label="内容宽度（px）">
               <a-input-number
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :value="columnMap.get(selectedColumnId).width"
                 min="0"
                 max="1000"
@@ -318,7 +351,7 @@
               :span="1"
               label="对齐方式">
               <a-select
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :bordered="false"
                 :options="alignDict || []"
                 :value="columnMap.get(selectedColumnId).align"
@@ -330,11 +363,11 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
-              :disabled="columnMap.get(selectedColumnId).show !== '1'"
+              :disabled="columnMap.get(selectedColumnId).enable !== '1'"
               :span="1"
               label="表格冻结列">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).fixed"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -342,11 +375,11 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
-              :disabled="columnMap.get(selectedColumnId).show !== '1'"
+              :disabled="columnMap.get(selectedColumnId).enable !== '1'"
               :span="1"
               label="是否显示tooltip">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).tooltip"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -357,7 +390,7 @@
               :span="1"
               label="是否可以筛选">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).filterAble"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -368,7 +401,7 @@
               :span="1"
               label="是否可以排序">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).sortAble"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -376,7 +409,7 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
-              :span="2"
+              :span="1"
               label="" />
             <a-descriptions-item
               :span="8"
@@ -390,7 +423,7 @@
               :span="1"
               label="详情是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).detailShow"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -401,7 +434,7 @@
               :span="1"
               label="显示宽度">
               <a-input-number
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :value="columnMap.get(selectedColumnId).descriptionSize"
                 min="0"
                 max="16"
@@ -416,7 +449,7 @@
               :span="1"
               label="编辑是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1' || isNotEmpty(columnMap.get(selectedColumnId).dbField)"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1' || isNotEmpty(columnMap.get(selectedColumnId).dbField)"
                 v-model:checked="columnMap.get(selectedColumnId).editAble"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -430,7 +463,7 @@
               :span="1"
               label="新增是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).addShow"
                 checkedValue="1"
                 unCheckedValue="0"
@@ -441,7 +474,7 @@
               :span="1"
               label="是否必填">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).show !== '1'
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
                   ||( columnMap.get(selectedColumnId).editAble !== '1'
                     && columnMap.get(selectedColumnId).addShow !== '1')"
                 v-model:checked="columnMap.get(selectedColumnId).required"
@@ -454,7 +487,7 @@
               :span="2"
               label="默认值">
               <a-input
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :value="columnMap.get(selectedColumnId).defaultValue"
                 placeholder="输入最小值(最小长度)"
                 @update:value=" v => columnMap.get(selectedColumnId).defaultValue = v"
@@ -464,7 +497,7 @@
               :span="2"
               label="最小值(最小长度)">
               <a-input
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :value="columnMap.get(selectedColumnId).min"
                 placeholder="输入最小值(最小长度)"
                 @update:value=" v => columnMap.get(selectedColumnId).min = v"
@@ -474,7 +507,7 @@
               :span="2"
               label="最大值(最大长度)">
               <a-input
-                :disabled="columnMap.get(selectedColumnId).show !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :value="columnMap.get(selectedColumnId).max"
                 placeholder="输入最大值(最大长度)"
                 @update:value=" v => columnMap.get(selectedColumnId).min = v"

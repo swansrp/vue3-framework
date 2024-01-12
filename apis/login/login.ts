@@ -16,3 +16,6 @@ export const getUserInfo = () => request(buildGetApi("/user/info"), {}, {}, fals
 
 export const login = (graphCode: string, loginId: string, password: string) => request(buildPostApi("/login"), {graphCode, loginId, password}, {}, true, false) as Promise<any>
 export const ghostLogin = (customerNumber: string) => request(buildPostApi("/admin/ghost/login"), {customerNumber}, {}, true, false) as Promise<any>
+
+export const initPasswordAndLogin = (loginId: string, password: string, passwordConfirm: string, graphCode: string) => request(buildPostApi("/login/password/init"), {loginId, password, passwordConfirm, graphCode}, {}, true, false) as Promise<any>
+export const passwordReset = (customerNumber: string) => request(buildPostApi("/password/reset"), {}, {customerNumber}, true, false) as Promise<any>

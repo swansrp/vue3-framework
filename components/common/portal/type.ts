@@ -35,6 +35,10 @@ export type TableConfigType = {
     modal: ModelType,
     // 详情每行显示个数
     descriptionCount: number,
+    // 支持导入
+    importAble: boolean,
+    // 支持导出
+    exportAble: boolean
 }
 
 export type ModelType = {

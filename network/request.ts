@@ -140,7 +140,7 @@ function request(apiType: ApiType,
                 const errLevel = +resp.data.payload.errLevel
                 const errType = errTypeMapList[errLevel]
                 ElMessage.error({message: resp.data.payload.errMsg, type: errType})
-                throw new Error()
+                throw new Error(resp.data.status.msg)
             }
         } else if (showSuccess) {
             const message = resp.data.status.details

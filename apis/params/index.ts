@@ -11,14 +11,14 @@ import {
 
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.config, domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.config, domain)
-const configAdmin = apiType.config + "/admin"
+const configAdminApi = apiType.config + '/admin'
 
 export const getConfig = (configKey: string) => request(buildGetApi(""), {configKey}) as Promise<any>
 
 export const queryParams = (conditionList: Array<any>, sortList: Array<any>, pageSize: number, currentPage: number, domain: string = baseDomain) =>
-    generalQueryRequest(configAdmin, conditionList, sortList, pageSize, currentPage, domain)
-export const updateParams = (data: object, domain: string = baseDomain) => updateRequest(configAdmin, data, domain)
-export const deleteParams = (id: string, domain: string = baseDomain) => deleteRequest(configAdmin, id, domain)
+    generalQueryRequest(configAdminApi, conditionList, sortList, pageSize, currentPage, domain)
+export const updateParams = (data: object, domain: string = baseDomain) => updateRequest(configAdminApi, data, domain)
+export const deleteParams = (id: string, domain: string = baseDomain) => deleteRequest(configAdminApi, id, domain)
 
 export const refreshParams = (domain: string = baseDomain) =>
     request(buildPostApi("/admin/refresh", domain), {}, {}, true, true) as Promise<any>
