@@ -7,16 +7,53 @@
           <div style="display: flex; justify-content: flex-start">
             {{ item.label }}
           </div>
-          <div style="display: flex; justify-content: flex-end">
-            <a-popconfirm title="注意 即将删除该配置" @confirm="deleteConfig(item)">
-              <a-button type="link"><template #icon><MinusCircleOutlined /></template></a-button>
-            </a-popconfirm>
-
-          </div>
         </a-list-item>
       </template>
       <template #header>
         <a-input-search v-model:value="inputTableName" enter-button placeholder="请输入表格名称" @search="onSearch" />
+      </template>
+      <template #footer>
+        <div style="display: flex; justify-content: space-between">
+          <a-button shape="round" @click="openCopyConfigModal" :disabled="isEmpty(tableConfig.id)"> 复制
+            <template #icon>
+              <CopyOutlined />
+            </template>
+          </a-button>
+          <a-modal
+            v-model:visible="copyConfigModal.visible"
+            :title="tableConfig.displayName + '(' + tableConfig.name + ')'"
+            centered
+            @ok="copyConfig"
+          >
+            <a-form ref="copyConfigModalRef" :model="copyConfigModal">
+              <a-form-item
+                :rules="[
+                  { required: true, message: '请输入表格编号' },
+                  { validator: checkConfigIdExisted, trigger: 'blur' }]"
+                has-feedback
+                label="表格配置代码"
+                name="configId">
+                <a-input
+                  v-model:value="copyConfigModal.configId" autocomplete="off" placeholder="表格配置代码" />
+              </a-form-item>
+              <a-form-item
+                :rules="[{ required: true, message: '请输入表格名称' }]"
+                has-feedback
+                label="表格配置名称"
+                name="configDescription">
+                <a-input
+                  v-model:value="copyConfigModal.configDescription" autocomplete="off" placeholder="表格配置名称" />
+              </a-form-item>
+            </a-form>
+          </a-modal>
+          <a-popconfirm title="注意 即将删除该配置" @confirm="deleteConfig()">
+            <a-button shape="round" :disabled="isEmpty(tableConfig.id)"> 删除
+              <template #icon>
+                <MinusCircleOutlined />
+              </template>
+            </a-button>
+          </a-popconfirm>
+        </div>
       </template>
     </a-list>
     <!-- endregion -->
@@ -240,8 +277,8 @@
             </template>
             <!-- region 字段基础信息 -->
             <a-descriptions-item
-              :span="8"
-              :label="'字段基础信息(' + columnMap.get(selectedColumnId).property + ')'" />
+              :label="'字段基础信息(' + columnMap.get(selectedColumnId).property + ')'"
+              :span="8" />
             <a-descriptions-item
               :span="1"
               label="是否有效">
@@ -270,22 +307,28 @@
                 :value="columnMap.get(selectedColumnId).fieldType"
                 style="width: 120px"
                 @update:value=" v => {
+                  if(columnMap.get(selectedColumnId).fieldType !== v) {
+                    columnMap.get(selectedColumnId).reference = null
+                    columnMap.get(selectedColumnId).dbField = null
+                  }
                   columnMap.get(selectedColumnId).fieldType = v
                   saveTableColumn()
                 }"
               />
             </a-descriptions-item>
             <a-descriptions-item
+              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT ||
+                columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
               :span="2"
               label="相关引用">
               <a-input
-                v-if="columnMap.get(selectedColumnId).fieldType !== FIELD_TYPE.ENTITY"
+                v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT"
                 :value="columnMap.get(selectedColumnId).reference"
                 placeholder="输入相关引用名称"
                 @update:value=" v => columnMap.get(selectedColumnId).reference = v "
               />
               <a-select
-                v-else
+                v-else-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
                 :options="tableList"
                 :value="columnMap.get(selectedColumnId).reference"
                 style="width: 200px"
@@ -308,6 +351,7 @@
                 style="width: 200px"
                 @update:value=" v => {
                   columnMap.get(selectedColumnId).dbField = v
+                  columnMap.get(selectedColumnId).editAble = '1'
                   saveTableColumn()
                 }"
               />
@@ -328,8 +372,8 @@
               :span="1"
               label="是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).show"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -339,10 +383,11 @@
               :span="1"
               label="内容宽度（px）">
               <a-input-number
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
+                  || columnMap.get(selectedColumnId).show !== '1'"
                 :value="columnMap.get(selectedColumnId).width"
-                min="0"
                 max="1000"
+                min="0"
                 placeholder="内容宽度 0为自动"
                 @update:value=" v => columnMap.get(selectedColumnId).width = v"
               />
@@ -351,8 +396,9 @@
               :span="1"
               label="对齐方式">
               <a-select
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :bordered="false"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
+                  || columnMap.get(selectedColumnId).show !== '1'"
                 :options="alignDict || []"
                 :value="columnMap.get(selectedColumnId).align"
                 style="width: 120px"
@@ -363,24 +409,24 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
-              :disabled="columnMap.get(selectedColumnId).enable !== '1'"
               :span="1"
               label="表格冻结列">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).fixed"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
+                  || columnMap.get(selectedColumnId).show !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
               />
             </a-descriptions-item>
             <a-descriptions-item
-              :disabled="columnMap.get(selectedColumnId).enable !== '1'"
               :span="1"
               label="是否显示tooltip">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).tooltip"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
+                  || columnMap.get(selectedColumnId).show !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -390,8 +436,9 @@
               :span="1"
               label="是否可以筛选">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).filterAble"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
+                  ||columnMap.get(selectedColumnId).show !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -401,8 +448,9 @@
               :span="1"
               label="是否可以排序">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).sortAble"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
+                  || columnMap.get(selectedColumnId).show !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -423,8 +471,8 @@
               :span="1"
               label="详情是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).detailShow"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -436,8 +484,8 @@
               <a-input-number
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :value="columnMap.get(selectedColumnId).descriptionSize"
-                min="0"
                 max="16"
+                min="0"
                 placeholder="详情显示宽度"
                 @update:value=" v => columnMap.get(selectedColumnId).descriptionSize = v"
               />
@@ -449,8 +497,8 @@
               :span="1"
               label="编辑是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1' || isNotEmpty(columnMap.get(selectedColumnId).dbField)"
                 v-model:checked="columnMap.get(selectedColumnId).editAble"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1' || isNotEmpty(columnMap.get(selectedColumnId).dbField)"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -463,8 +511,8 @@
               :span="1"
               label="新增是否显示">
               <a-switch
-                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 v-model:checked="columnMap.get(selectedColumnId).addShow"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -474,10 +522,10 @@
               :span="1"
               label="是否必填">
               <a-switch
+                v-model:checked="columnMap.get(selectedColumnId).required"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'
                   ||( columnMap.get(selectedColumnId).editAble !== '1'
                     && columnMap.get(selectedColumnId).addShow !== '1')"
-                v-model:checked="columnMap.get(selectedColumnId).required"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"
@@ -526,18 +574,18 @@
 </template>
 <script lang="ts" setup>
 import {Ref} from 'vue'
-import {isNotEmpty, log} from '@/framework/utils/common'
+import {isNotEmpty, isEmpty} from '@/framework/utils/common'
+import {FIELD_TYPE} from '@/framework/components/common/portal/type'
 import {
-  FIELD_TYPE
-} from '@/framework/components/common/portal/type'
-import {
-  deletePortalConfig,
+  copyPortalConfig,
+  deletePortalConfig, existedPortalConfig,
   getPortalConfig,
-  getPortalList, updatePortalColumn,
+  getPortalList,
+  updatePortalColumn,
   updatePortalColumnOrder,
   updatePortalConfig
 } from '@/framework/apis/portal/config'
-import {MinusCircleOutlined} from '@ant-design/icons-vue'
+import {MinusCircleOutlined, CopyOutlined} from '@ant-design/icons-vue'
 import {ValueLabel} from '@/framework/utils/type'
 import {dictStore} from '@/framework/store/common'
 import {CellRenderArgs} from '@surely-vue/table'
@@ -552,6 +600,26 @@ let columnDict = reactive([] as Array<ValueLabel>)
 let columnMap = reactive(new Map())
 let selectedColumnId = ref('')
 
+let copyConfigModal = reactive({
+  visible: false,
+  configId: '',
+  configDescription: ''
+})
+const checkConfigIdExisted = () => {
+  return existedPortalConfig(copyConfigModal.configId)
+}
+const openCopyConfigModal = () => {
+  copyConfigModal.visible = true
+}
+const copyConfig = () => {
+  copyPortalConfig(tableConfig.value.id, copyConfigModal.configId, copyConfigModal.configDescription).then(() => {
+    copyConfigModal.visible = false
+    onSearch()
+  })
+
+}
+
+
 const tableConfig = ref({} as any)
 const getTableConfigByName = (item: any) => {
   getPortalConfig(item.value).then(res => {
@@ -563,12 +631,16 @@ const getTableConfigByName = (item: any) => {
       columnDict.push({value: column.property, label: column.displayName} as ValueLabel)
       columnMap.set(column.id, column)
     })
-    console.log(tableConfig.value)
+    console.debug(tableConfig.value)
   })
 }
 
-const deleteConfig = (item: ValueLabel) => {
-  deletePortalConfig(item.value).then(() => {
+const deleteConfig = () => {
+  deletePortalConfig(tableConfig.value.id).then(() => {
+    columnDict.length = 0
+    columnMap.clear()
+    selectedColumnId.value = ''
+    tableConfig.value = {}
     onSearch()
   })
 }
@@ -597,6 +669,7 @@ const handleColumnOrderChanged = () => {
         title: column.displayName,
         showOrder: index++
       }
+      columnMap.get(column.id)[`${tableConfig.value.orderColumn}`] = order.showOrder
       columnOrder.push(order)
     }
     updatePortalColumnOrder(columnOrder).then(() => onSearch())
@@ -617,7 +690,7 @@ const init = async () => {
     }),
     await dict.getDict('PORTAL_ALIGN_DICT').then(res => {
       alignDict = res || []
-    }),
+    })
   ])
 }
 
@@ -631,6 +704,7 @@ onMounted(() => {
 .root {
   display: flex;
   height: calc(100% - 80px);
+
   .list-footer-content {
     display: flex;
     justify-content: flex-end;
@@ -656,7 +730,7 @@ onMounted(() => {
 }
 
 .table-config {
-  width: 100%;
+  width: calc(100% - 250px);
   margin-top: 10px;
 }
 

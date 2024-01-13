@@ -1327,7 +1327,7 @@ const init = async () => {
         column.dbField = layout.dbField
         column.key = layout.property
         column.width = layout.width !== 0 ? layout.width : 100
-        column.fixed = layout.fiex === '1'
+        column.fixed = layout.fixed === '1'
         column.fieldType = layout.fieldType
         column.referenceDict = layout.reference || layout.entity
         column.contentAlign = layout.align

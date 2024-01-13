@@ -7,8 +7,8 @@ const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiB
 export const getPortalList = (name: string) =>
     get(buildGetApi('/list'), {name}) as Promise<any>
 
-export const deletePortalConfig = (name: string) =>
-    post(buildPostApi('/config/delete'), undefined, {name}) as Promise<any>
+export const deletePortalConfig = (id: any) =>
+    post(buildPostApi('/config/delete'), undefined, {id}) as Promise<any>
 
 export const getPortalConfig = (name: string) =>
     get(buildGetApi('/config'), {name}) as Promise<any>
@@ -21,3 +21,9 @@ export const updatePortalColumnOrder = (idOrderReq: any) =>
 
 export const updatePortalColumn = (column: any, silent: boolean) =>
     post(buildPostApi('/column'), undefined, column, !silent, !silent) as Promise<any>
+
+export const existedPortalConfig = (name: string) =>
+    get(buildGetApi('/config/existed'), {name}, {}, false, false, false) as Promise<any>
+
+export const copyPortalConfig = (sourceConfigId: any, targetName: string, targetDisplayName: string) =>
+    post(buildPostApi('/config/copy'), {}, {sourceConfigId, targetName, targetDisplayName}) as Promise<any>

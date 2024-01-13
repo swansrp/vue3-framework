@@ -19,7 +19,7 @@
     <a-form-item label="是否为外链" required>
       <a-switch v-model:checked="formState['isFrame']" />
     </a-form-item>
-    <a-form-item label="路由路径" name="path">
+    <a-form-item label="路由路径" name="path" required>
       <a-input v-model:value="formState['path']" />
     </a-form-item>
     <a-form-item label="组件地址" name="component">

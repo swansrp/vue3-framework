@@ -135,12 +135,16 @@ function request(apiType: ApiType,
         }
     }).then(resp => {
         if (resp.data.status?.code !== errCode.SUCCESS) {
-            if (resp.data.status?.msg && showErr) {
+            if (resp.data.status?.msg) {
                 const errTypeMapList = ['info', 'warning', 'error']
                 const errLevel = +resp.data.payload.errLevel
                 const errType = errTypeMapList[errLevel]
-                ElMessage.error({message: resp.data.payload.errMsg, type: errType})
-                throw new Error(resp.data.status.msg)
+                if(showErr) {
+                    ElMessage.error({message: resp.data.payload.errMsg, type: errType})
+                    throw new Error(resp.data.status.msg)
+                } else {
+                    throw new Error(resp.data.status.details)
+                }
             }
         } else if (showSuccess) {
             const message = resp.data.status.details

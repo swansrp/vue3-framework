@@ -1,15 +1,14 @@
-import {request} from '@/framework/network/request'
 import {
     addRequest,
     apiType,
-    baseDomain,
-    buildGetApiByType,
-    buildPostApiByType,
     deleteRequest,
     generalQueryRequest,
-    getByIdRequest, getTreeDataRequest,
-    updateListRequest, updateOrderRequest,
-    updateRequest, updateTreePidRequest
+    getByIdRequest,
+    getTreeDataRequest,
+    updateListRequest,
+    updateOrderRequest,
+    updateRequest,
+    updateTreePidRequest
 } from '@/framework/apis'
 import {QueryType, UpdateOrderType, UpdatePidType} from '@/framework/components/common/portal/type'
 

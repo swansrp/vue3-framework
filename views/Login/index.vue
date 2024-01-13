@@ -13,7 +13,7 @@
         has-feedback
         label="输入密码"
         name="password">
-        <a-input
+        <a-input-password
           v-model:value="passwordResetForm.password" autocomplete="off" placeholder="密码" size="large"
           type="password" />
       </a-form-item>
@@ -22,7 +22,7 @@
         has-feedback
         label="确认密码"
         name="passwordConfirm">
-        <a-input
+        <a-input-password
           v-model:value="passwordResetForm.passwordConfirm" autocomplete="off" placeholder="确认密码"
           size="large" type="password" />
       </a-form-item>
@@ -52,13 +52,13 @@
         </a-input>
       </a-form-item>
       <a-form-item :rules="[{ required: true, message: '请输入密码!' }]" name="password">
-        <a-input
+        <a-input-password
           v-model:value="formInline.password" autocomplete="off" placeholder="密码" size="large" style="height: 55px;"
           type="password">
           <template #prefix>
             <lock-outlined />
           </template>
-        </a-input>
+        </a-input-password>
       </a-form-item>
       <a-form-item :rules="[{ required: true, message: '请输入验证码!' }]" name="captcha">
         <a-input

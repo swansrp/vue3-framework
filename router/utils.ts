@@ -11,7 +11,7 @@ export const goBackTo = (targetPath: string, delay = 0, needRefresh = false) =>
 
 export const enterFirstDynamicRoute = () => {
   const routeStore = useRouteStore(pinia)
-  console.debug(routeStore)
+  console.debug('enterFirstDynamicRoute', routeStore)
   const topNavPath = routeStore.dynamicRoute[0].path
   // 顶部导航节点
   let node = routeStore.dynamicRoute[0]
