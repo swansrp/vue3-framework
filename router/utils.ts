@@ -31,5 +31,5 @@ export const enterFirstDynamicRoute = () => {
   tabStore.tabActivateKey = leftNavPath
   // 用于LeftNav判断是否为指定的路由路径
   tabStore.updateLeftNav = true
-  return leftNavPath
+  return [topNavPath, leftNavPath].join('/')
 }

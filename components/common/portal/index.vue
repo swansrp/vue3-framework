@@ -9,9 +9,9 @@
       <a-tree
         :key="treeData"
         :defaultExpandAll="true"
+        :draggable="config.treeDragAble"
         :show-line="true"
         :tree-data="treeData"
-        draggable
         @drop="updateTree" />
     </div>
     <!-- endregion 树形配置 -->
@@ -21,7 +21,7 @@
       <div class="portal-button-space">
         <!-- region 左侧按钮区 -->
         <div>
-          <a-tooltip v-if="config.treeMode || config.orderMode" placement="top">
+          <a-tooltip v-if="config.treeMode" placement="top">
             <template #title>
               <span>树形结构</span>
             </template>
@@ -31,7 +31,7 @@
               </template>
             </a-button>
           </a-tooltip>
-          <a-tooltip v-if="!config.readOnly" placement="top">
+          <a-tooltip v-if="!config.readOnly && config.addModalAble" placement="top">
             <template #title>
               <span>新增</span>
             </template>
@@ -65,7 +65,7 @@
               </template>
             </a-button>
           </a-tooltip>
-          <a-tooltip v-if="!config.readOnly" placement="top">
+          <a-tooltip v-if="!config.readOnly && config.saveAllButtonShow" placement="top">
             <template #title>
               <span>保存全部</span>
             </template>
@@ -75,7 +75,7 @@
               </template>
             </a-button>
           </a-tooltip>
-          <a-tooltip placement="top" v-if="config.exportAble">
+          <a-tooltip v-if="config.exportAble" placement="top">
             <template #title>
               <span>导出</span>
             </template>
@@ -178,8 +178,8 @@
                 <!-- (portalConfig: TableConfigType, column: ColumnType, record: any) -->
                 <slot
                   :column="column"
-                  :record="record"
                   :portal-config="config"
+                  :record="record"
                   name="action">
                 </slot>
               </template>
@@ -247,7 +247,7 @@
                   查看详情
                 </li>
                 <li
-                  v-if="!config.readOnly && !isRowUpdate(args.recordIndexs[0])"
+                  v-if="!config.readOnly && !isRowUpdate(args.recordIndexs[0]) && config.editModalAble"
                   class="popup-item"
                   @click="editRow(args)">
                   <form-outlined />
@@ -442,14 +442,14 @@
                   :allow-clear="false"
                   :bordered="false"
                   :get-popup-container="getPopupContainer"
-                  :value="dayjs(modelValue.value)"
+                  :value="modelValue.value ? dayjs(modelValue.value) : null"
                   open
                   style="width: 100%"
                   @blur="closeEditor"
                   @update:value="
                     v => {
                       cellUpdate(recordIndexs[0], column.dataIndex, v)
-                      modelValue.value = v?.format('YYYY-MM-DD') ?? '';
+                      modelValue.value = v?.format('YYYY-MM-DD HH:mm:ss') ?? '';
                       save();
                     }
                   "
@@ -463,7 +463,7 @@
                   :allow-clear="false"
                   :bordered="false"
                   :get-popup-container="getPopupContainer"
-                  :value="dayjs(modelValue.value)"
+                  :value="modelValue.value ? dayjs(modelValue.value) : null"
                   open
                   show-time
                   style="width: 100%"
@@ -490,7 +490,7 @@
                     :ref="editorRef"
                     :placeholder="column.defaultValue"
                     :value="modelValue.value"
-                    autoSize
+                    :autoSize="{ minRows: 3 }"
                     style="width: 100%; margin: 0px 3px"
                     @update:value=" v => {
                       cellUpdate(recordIndexs[0], column.dataIndex, v)
@@ -542,18 +542,19 @@
       :okText="getModalOkText()"
       :title="getModalTitle()"
       :visible="config.modal.show"
-      width="100%"
+      :width="getModalWidth()"
       @cancel="handleModalCancel"
       @close="handleModalClose"
       @ok="handleModalConfirm">
       <a-descriptions
-        v-if="config.modal.type === 'view'" :column="config.descriptionCount" :title="config.title" bordered
-        layout="vertical">
+        v-if="config.modal.type === 'view'"
+        :key="config.key"
+        :column="config.descriptionCount" :size="config.size" :title="config.title" bordered>
         <a-descriptions-item
           v-for="column in columnArray.filter(item => item.detailShow)"
           :key="column.dataIndex"
           :label="column.title"
-          :span="column.descriptionSize">
+          :span="column.detailSize">
           <template v-if="column.fieldType === FIELD_TYPE.SWITCH">
             <a-switch
               v-model:checked="dataSource[config.modal.editRowIndex][`${column.dataIndex}`]"
@@ -564,132 +565,117 @@
           <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
             {{ dict.getLabel(column.referenceDict, dataSource[config.modal.editRowIndex][`${column.dataIndex}`]) }}
           </template>
+          <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
+            {{
+              isNotEmpty(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]) ?
+                dayjs(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]).format('YYYY-MM-DD')
+                :
+                ''
+            }}
+          </template>
+          <template v-else-if="column.fieldType === FIELD_TYPE.DATETIME">
+            {{
+              isNotEmpty(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]) ?
+                dayjs(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]).format('YYYY-MM-DD HH:mm:ss')
+                :
+                ''
+            }}
+          </template>
           <template v-else>
             {{ dataSource[config.modal.editRowIndex][column.dataIndex] }}
           </template>
         </a-descriptions-item>
       </a-descriptions>
       <a-form v-else ref="editModalRef" :model="config.modal.data" layout="vertical">
-        <a-descriptions :column="config.descriptionCount" :title="config.title" bordered>
-          <a-descriptions-item
-            v-for="column in columns.filter(item => item.detailShow)"
-            :key="column.dataIndex"
-            :span="column.descriptionSize">
-            <a-form-item
-              v-if="column.fieldType === FIELD_TYPE.INPUT"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <a-input
-                :placeholder="column.defaultValue"
-                :value="config.modal.data[column.dataIndex]"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-            </a-form-item>
-            <a-form-item
-              v-if="column.fieldType === FIELD_TYPE.NUMBER"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <a-input-number
-                :max="column.max"
-                :min="column.min"
-                :value="config.modal.data[column.dataIndex]"
-                string-mode
-                style="width: 100%"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-            </a-form-item>
-            <a-form-item
-              v-else-if="column.fieldType === FIELD_TYPE.SWITCH"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <div style="width: 100%; display: flex; justify-content: center">
+        <a-descriptions
+          :column="config.descriptionCount" :size="config.size" :title="config.title" bordered
+          layout="vertical">
+          <template
+            v-for="column in columnArray.filter(item => config.modal.type === 'add' ? item.addShow : item.editShow)"
+            :key="column.dataIndex">
+            <a-descriptions-item
+              :span="config.modal.type === 'add' ? column.addSize : column.editSize"
+              label="">
+              <a-form-item
+                :label="strRemoveLF(column.title)"
+                :name="column.dataIndex"
+                :required="column.required">
+                <a-input
+                  v-if="column.fieldType === FIELD_TYPE.INPUT"
+                  :placeholder="column.defaultValue"
+                  :value="config.modal.data[column.dataIndex]"
+                  @update:value=" v => config.modal.data[column.dataIndex] = v"
+                />
+                <a-input-number
+                  v-else-if="column.fieldType === FIELD_TYPE.NUMBER"
+                  :max="column.max"
+                  :min="column.min"
+                  :value="config.modal.data[column.dataIndex]"
+                  string-mode
+                  @update:value=" v => config.modal.data[column.dataIndex] = v"
+                />
                 <a-switch
+                  v-else-if="column.fieldType === FIELD_TYPE.SWITCH"
                   v-model:checked="config.modal.data[column.dataIndex]"
                   checkedValue="1"
                   style="width: 40px;"
                   unCheckedValue="0"
                 />
-              </div>
-            </a-form-item>
-            <a-form-item
-              v-else-if="column.fieldType === FIELD_TYPE.SELECT"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <a-select
-                :bordered="false"
-                :options="column.referenceDictOption || []"
-                :value="config.modal.data[column.dataIndex]"
-                style="width: 100%"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-            </a-form-item>
-            <a-form-item
-              v-else-if="column.fieldType === FIELD_TYPE.DATE"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <a-date-picker
-                :allow-clear="false"
-                :bordered="false"
-                :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
-                style="width: 100%"
-                @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
-              />
-            </a-form-item>
-            <a-form-item
-              v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <a-date-picker
-                :allow-clear="false"
-                :bordered="false"
-                :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
-                show-time
-                style="width: 100%"
-                @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
-              />
-            </a-form-item>
-            <a-form-item
-              v-else-if="column.fieldType === FIELD_TYPE.HREF
-                || column.fieldType === FIELD_TYPE.HTML
-                || column.fieldType === FIELD_TYPE.TEXT_AREA"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <a-textarea
-                :placeholder="column.defaultValue"
-                :value="config.modal.data[column.dataIndex]"
-                autoSize
-                style="width: 100%; margin: 0px 3px"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-            </a-form-item>
-            <a-form-item
-              v-else-if="column.fieldType === FIELD_TYPE.ENTITY"
-              :label="column.title"
-              :name="column.dataIndex"
-              :required="column.required">
-              <a-button type="text" @click="showEntityDialogBox(column)">{{
-                getEntityDialogBoxLabel(column)
-              }}
-              </a-button>
-            </a-form-item>
-          </a-descriptions-item>
+                <a-select
+                  v-else-if="column.fieldType === FIELD_TYPE.SELECT"
+                  :bordered="false"
+                  :options="column.referenceDictOption || []"
+                  :value="config.modal.data[column.dataIndex]"
+                  @update:value=" v => config.modal.data[column.dataIndex] = v"
+                />
+                <a-date-picker
+                  v-else-if="column.fieldType === FIELD_TYPE.DATE"
+                  :allow-clear="false"
+                  :bordered="false"
+                  :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
+                  @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
+                />
+                <a-date-picker
+                  v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
+                  :allow-clear="false"
+                  :bordered="false"
+                  :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
+                  show-time
+                  @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
+                />
+                <a-textarea
+                  v-else-if="column.fieldType === FIELD_TYPE.HREF
+                    || column.fieldType === FIELD_TYPE.HTML
+                    || column.fieldType === FIELD_TYPE.TEXT_AREA"
+                  :placeholder="column.defaultValue"
+                  :value="config.modal.data[column.dataIndex]"
+                  :autoSize="{ minRows: 3 }"
+                  style="width: 100%; margin: 0px 3px"
+                  @update:value=" v => config.modal.data[column.dataIndex] = v"
+                />
+                <a-button
+                  v-else-if="column.fieldType === FIELD_TYPE.ENTITY"
+                  type="text" @click="showEntityDialogBox(column)">{{
+                    strRemoveLF(getEntityDialogBoxLabel(column))
+                  }}
+                </a-button>
+              </a-form-item>
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="config.modal.type === 'add' ? column.addPadding !== 0 : column.editPadding !== 0"
+              :span="config.modal.type === 'add' ? column.addPadding : column.editPadding"
+              label="" />
+          </template>
         </a-descriptions>
       </a-form>
     </a-modal>
     <dialog-box
       v-model:visible="entityDialogBox.show"
-      :title="'配置 ' + entityDialogBox.column.title"
+      :title="'配置 ' + strRemoveLF(entityDialogBox.column.title)"
       is-full>
       <portal :table-id="entityDialogBox.column.referenceDict" read-only>
-        <template #action="{ portalConfig, column, data }">
-          <a-button type="text" @click="bind(portalConfig, column, data)">确认</a-button>
+        <template #action="{ portalConfig, column, record }">
+          <a-button type="text" @click="bind(portalConfig, column, record)">确认</a-button>
         </template>
       </portal>
     </dialog-box>
@@ -713,7 +699,6 @@ import {
 import {getPortalConfig} from '@/framework/apis/portal/config'
 import {dictStore} from '@/framework/store/common'
 import * as _ from 'lodash'
-import portal from '@/framework/components/common/portal/index.vue'
 import {
   ColumnType,
   FIELD_TYPE,
@@ -748,6 +733,7 @@ import {
   isNotEmpty,
   log,
   strLF2HtmlLF,
+  strRemoveLF,
   updateTableSize
 } from '@/framework/utils/common'
 import {
@@ -756,6 +742,7 @@ import {
   getDefaultFilterType,
   indexColumn
 } from '@/framework/components/common/portal/constant'
+import portal from '@/framework/components/common/portal/index.vue'
 import dayjs from 'dayjs'
 import {AUTO} from '@/framework/utils/constant'
 import {createVNode, Ref} from 'vue'
@@ -783,7 +770,7 @@ const getTableHeight = () => {
   return tableHeight.value
 }
 const updateTableWidthAndHeight = () => {
-  console.log('updateTableWidthAndHeight')
+  console.debug('updateTableWidthAndHeight')
   updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 250)
 }
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
@@ -809,7 +796,16 @@ const config = reactive({
     data: {},
     editRowIndex: null
   } as ModelType,
-  descriptionCount: 4
+  saveAllButtonShow: false,
+  descriptionCount: 4,
+  detailWidth: '100%',
+  addWidth: '100%',
+  editWidth: '100%',
+  addModalAble: false,
+  editModalAble: false,
+  importAble: false,
+  exportAble: false
+
 } as TableConfigType)
 /**
  * 数据
@@ -900,6 +896,7 @@ const cellUpdate = (index: number, dataIndex: string, v: any) => {
 const isCellUpdate = (index: number, column: any): Boolean => {
   const modifyCell = modifyCellMap.get(index + column.dataIndex)
   if (modifyCell && isNotEmpty(modifyCell)) {
+    if (modifyCell.needUpdated) config.saveAllButtonShow = true
     return modifyCell.needUpdated
   }
   return false
@@ -916,7 +913,7 @@ const isRowUpdate = (index: number): Boolean => {
 const saveCell = (args: any) => {
   const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
   if (modifyCell && modifyCell.needUpdated) {
-    updateEntity(config.tableId, {
+    updateEntity(config.url, {
       [modifyCell.dataIndex]: modifyCell.current,
       [config.rowKey]: modifyCell.id
     }).then(() => queryData())
@@ -948,7 +945,7 @@ const saveRow = (args: any) => {
   if (data.size != 0) {
     data.set(config.rowKey, id)
     log('保存行内容', data)
-    updateEntity(config.tableId, Object.fromEntries(data)).then(() => {
+    updateEntity(config.url, Object.fromEntries(data)).then(() => {
       queryData()
       args.hidePopup()
     })
@@ -995,7 +992,7 @@ const saveAll = () => {
       dataMap.set(index, Object.fromEntries(data))
     }
   }
-  updateEntityList(config.tableId, [...dataMap.values()]).then(() => queryData())
+  updateEntityList(config.url, [...dataMap.values()]).then(() => queryData())
   log('保存所有内容', dataMap)
 }
 const deleteRow = (args: any) => {
@@ -1006,7 +1003,7 @@ const deleteRow = (args: any) => {
     onOk() {
       const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
       if (modifyCell) {
-        deleteEntity(config.tableId, modifyCell.id).then(() => queryData())
+        deleteEntity(config.url, modifyCell.id).then(() => queryData())
         log('删除整行内容')
       }
       args.hidePopup()
@@ -1021,8 +1018,12 @@ const showEntityDialogBox = (column: ColumnType) => {
   entityDialogBox.show = true
 }
 const bind = (portalConfig: TableConfigType, column: ColumnType, record: Array<any>) => {
-  config.modal.data[`${entityDialogBox.column.dbField}`] = record[`${portalConfig.rowKey}`]
+  const entityField = entityDialogBox.column.referenceEntityField || portalConfig.rowKey
+  console.log('bind', entityField, record[`${entityField}`], portalConfig.nameKey, record[`${portalConfig.nameKey}`])
+  config.modal.data[`${entityDialogBox.column.dbField}`] = record[`${entityField}`]
   config.modal.data[`${entityDialogBox.column.dataIndex}`] = record[`${portalConfig.nameKey}`]
+  console.log(entityDialogBox.column.dbField, config.modal.data[`${entityDialogBox.column.dbField}`])
+  console.log(entityDialogBox.column.dataIndex, config.modal.data[`${entityDialogBox.column.dataIndex}`])
   entityDialogBox.show = false
 }
 const getEntityDialogBoxLabel = (column: ColumnType) => {
@@ -1043,9 +1044,9 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
   brotherNodes.forEach((node: any, index: number) => {
     updateOrderData.push({id: node.key, showOrder: index})
   })
-  await updateOrder(config.tableId, updateOrderData)
-  if(info.dragNode.pid !== pid) {
-    await updateTreePid(config.tableId, {
+  await updateOrder(config.url, updateOrderData)
+  if (info.dragNode.pid !== pid) {
+    await updateTreePid(config.url, {
       id: dragKey,
       pid
     })
@@ -1064,6 +1065,18 @@ const getModalTitle = () => {
       return '新增数据'
     case 'modify':
       return '编辑详情'
+    default:
+      return ''
+  }
+}
+const getModalWidth = () => {
+  switch (config.modal.type) {
+    case 'view':
+      return config.detailWidth
+    case 'add':
+      return config.addWidth
+    case 'modify':
+      return config.editWidth
     default:
       return ''
   }
@@ -1138,7 +1151,7 @@ const addRow = () => {
 }
 // 保存添加数据
 const saveAddRow = async () => {
-  return await addEntity(config.tableId, config.modal.data)
+  return await addEntity(config.url, config.modal.data)
 }
 // 打开编辑详情页
 const editRow = (args: any) => {
@@ -1156,7 +1169,7 @@ const editRow = (args: any) => {
 // 保存编辑详情页
 const updateEditRow = async () => {
   log('保存内容', config.modal.data)
-  return await updateEntity(config.tableId, config.modal.data)
+  return await updateEntity(config.url, config.modal.data)
 }
 const closeModal = () => {
   config.modal.show = false
@@ -1245,6 +1258,7 @@ const queryData = () => {
 }
 const initData = (data: Array<any>) => {
   dataSource.value = data || []
+  config.saveAllButtonShow = false
   for (let index in data) {
     for (let dataIndex in data[index]) {
       initCellData(Number(index), dataIndex, data[index][`${dataIndex}`], data[index][`${config.rowKey}`])
@@ -1252,10 +1266,10 @@ const initData = (data: Array<any>) => {
   }
 }
 const queryDataAsync = async () => {
-  if (config.treeMode || config.orderMode) {
-    await getTreeData(config.tableId).then(res => treeData.value = res.payload || [])
+  if (config.treeMode) {
+    await getTreeData(config.url).then(res => treeData.value = res.payload || [])
   }
-  return await generalQuery(config.tableId, query.value).then(res => {
+  return await generalQuery(config.url, query.value).then(res => {
     config.total = res.payload.total
     const data = []
     for (let record of res.payload.records) {
@@ -1266,8 +1280,6 @@ const queryDataAsync = async () => {
       }
       data.push(record)
     }
-    console.log('init finish')
-    console.debug(config, columns.value)
     return data
   })
 }
@@ -1298,7 +1310,6 @@ const init = async () => {
   updateTableWidthAndHeight()
   initQueryCondition()
   return await getPortalConfig(config.tableId).then(async res => {
-    config.key = config.key + 1
     dictColumnArray.length = 0
     columnArray.value.length = 0
     const index = _.cloneDeep(indexColumn)
@@ -1313,10 +1324,15 @@ const init = async () => {
     if (props.readOnly) {
       config.readOnly = true
     }
+    config.url = tableConfig.url
     config.summary = tableConfig.summary === '1'
-    config.treeMode = tableConfig.treeMode === '1'
-    config.orderMode = tableConfig.orderMode === '1'
+    config.treeMode = isNotEmpty(tableConfig.pidColumn)
+    config.orderMode = isNotEmpty(tableConfig.orderColumn)
+    config.treeDragAble = tableConfig.treeDrag === '1'
     config.descriptionCount = tableConfig.descriptionCount
+    config.detailWidth = tableConfig.detailWidth + '%'
+    config.addWidth = tableConfig.addWidth + '%'
+    config.editWidth = tableConfig.editWidth + '%'
     config.importAble = tableConfig.importAble === '1'
     config.exportAble = tableConfig.exportAble === '1'
     for (let layout of tableConfig.columns) {
@@ -1326,17 +1342,25 @@ const init = async () => {
         column.dataIndex = layout.property
         column.dbField = layout.dbField
         column.key = layout.property
-        column.width = layout.width !== 0 ? layout.width : 100
+        column.width = layout.width !== 0 ? layout.width : 140
         column.fixed = layout.fixed === '1'
         column.fieldType = layout.fieldType
         column.referenceDict = layout.reference || layout.entity
+        column.referenceEntityField = layout.entityField
         column.contentAlign = layout.align
         column.filterAble = layout.filterAble === '1'
         column.sorter = layout.sortAble === '1'
         column.addShow = layout.addShow === '1'
+        if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow
+        column.editShow = layout.editShow === '1'
+        if (!config.editModalAble && column.editShow) config.editModalAble = column.editShow
         column.checked = layout.show === '1'
         column.detailShow = layout.detailShow === '1'
-        column.descriptionSize = layout.descriptionSize
+        column.detailSize = layout.detailSize
+        column.addSize = layout.addSize
+        column.addPadding = layout.addPadding
+        column.editSize = layout.editSize
+        column.editPadding = layout.editPadding
         // 单元格编辑模式
         if (layout.editAble !== '1') {
           column.editable = layout.editAble
@@ -1359,8 +1383,11 @@ const init = async () => {
     actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
     columnArray.value.push(actionColumn)
     // 首列支持拖拽
-    columnArray.value[0].rowDrag = tableConfig.orderMode === '1'
+    columnArray.value[0].rowDrag = tableConfig.tableDrag === '1'
 
+    console.log('init finish')
+    console.debug(config, columnArray.value, columns.value)
+    config.key = config.key + 1
     return await queryDataAsync()
   })
 }
@@ -1433,7 +1460,7 @@ defineExpose({queryData})
  保证数据少时右键菜单显示完整
  */
 :deep(.surely-table-body-viewport-container) {
-  min-height: 150px !important;
+  min-height: 350px !important;
 }
 
 :deep(.surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner) {

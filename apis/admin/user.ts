@@ -7,3 +7,5 @@ const buildGetApi = (url: string) => buildGetApiByType(url)
 export const passwordReset = (customerNumber: string) => request(buildPostApi('/password/reset'), {}, {customerNumber}, true, false) as Promise<any>
 export const userDisable = (customerNumber: string) => request(buildPostApi('/portal/user/disable'), {customerNumber}, {}, true, false) as Promise<any>
 export const userEnable = (customerNumber: string) => request(buildPostApi('/portal/user/enable'), {customerNumber}, {}, true, false) as Promise<any>
+export const userExisted = (phoneNumber: string, email?: string, userName?: string) =>
+    request(buildGetApi('/user/existed'), {phoneNumber, email, userName}, {}, true, false, false) as Promise<any>

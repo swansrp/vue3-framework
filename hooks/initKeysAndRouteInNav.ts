@@ -16,13 +16,13 @@ const getTitlePathByKey = (tree: Array<any>, targetKey: Key) => {
                 const endRecursiveLoop = getPath(item.children, targetKey)
                 if (endRecursiveLoop) {
                     nodeTitlePathArray.push(item.title)
-                    nodePathArray.push(item.path || item.title)
+                    nodePathArray.push(item.key)
                     return true
                 }
             } // 对应的接口返回数据中，path是需要匹配的字段
-            if (item.path === targetKey) {
+            if (item.key === targetKey) {
                 nodeTitlePathArray.push(item.title)
-                nodePathArray.push(item.path || item.title)
+                nodePathArray.push(item.key)
                 return true
             }
         }

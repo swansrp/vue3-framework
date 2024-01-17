@@ -1,6 +1,8 @@
 export type TableConfigType = {
     // tableId 配合后端指明表格用途
     tableId: string,
+    // 网络地址
+    url: string,
     // vue-key 变更重新渲染
     key: number,
     // 表格中文名称
@@ -27,14 +29,28 @@ export type TableConfigType = {
     summary: boolean,
     // 树形结构
     treeMode: boolean,
+    // 树形结构支持拖拽
+    treeDragAble: boolean,
     // 是否能够调整顺序
     orderMode: boolean,
     // 树形栏是否显示
     treeMenuShow: boolean,
+    // 保存全部按钮是否显示,
+    saveAllButtonShow: boolean,
     // 弹框
     modal: ModelType,
     // 详情每行显示个数
     descriptionCount: number,
+    // 详情弹框宽度
+    detailWidth: string,
+    // 新增弹框宽度
+    addWidth: string,
+    // 编辑弹框宽度
+    editWidth: string,
+    // 支持弹框新增
+    addModalAble: boolean,
+    // 支持弹框编辑
+    editModalAble: boolean,
     // 支持导入
     importAble: boolean,
     // 支持导出
@@ -101,9 +117,14 @@ export type ColumnType = {
 
     // region 后端配置
     // 字段类型
-    fieldType: string, // 相关字典
-    referenceDict: string, // 字典选项
-    referenceDictOption: Array<any>, //endregion
+    fieldType: string,
+    // 相关字典
+    referenceDict: string,
+    // 字典选项
+    referenceDictOption: Array<any>,
+    // 相关实体字段
+    referenceEntityField: string,
+    //endregion
 
     // region 内容约束
     required: boolean,
@@ -114,7 +135,16 @@ export type ColumnType = {
     // endregion
 
     // region 详情显示
-    descriptionSize: number,
+    // 详情显示格数
+    detailSize: number,
+    // 新增显示格数
+    addSize: number,
+    // 新增弹框布局显示后占位填充
+    addPadding: number,
+    // 编辑显示格数
+    editSize: number,
+    // 编辑弹框布局显示后占位填充
+    editPadding: number,
     // 详情是否显示
     detailShow: boolean,
     // 新增是否显示

@@ -108,7 +108,7 @@ const handleMenuClick = (e:any) => {
   flex: 1 0 auto;
 }
 .top_user {
-  width: 180px;
+  width: 240px;
   height: 100%;
   position: absolute;
   right: 0;
@@ -120,7 +120,7 @@ const handleMenuClick = (e:any) => {
 }
 .top_user_name {
   margin-left: 10px;
-  width: 90px;
+  width: 150px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

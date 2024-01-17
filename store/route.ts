@@ -1,11 +1,11 @@
-import router from "@/framework/router"
+import router from '@/framework/router'
 import {defineStore} from 'pinia'
-import {getRouteTree} from "@/framework/apis/nav/route"
-import _ from "lodash"
-import {MAIN_CONTENT} from "@/framework/utils/constant";
-import {NavListType} from "@/framework/components/navigationFramework/navMenu/type"
-import pinia from "@/framework/store/index";
-import {setField} from "@/framework/utils/common";
+import {getRouteTree} from '@/framework/apis/nav/route'
+import _ from 'lodash'
+import {MAIN_CONTENT} from '@/framework/utils/constant'
+import {NavListType} from '@/framework/components/navigationFramework/navMenu/type'
+import pinia from '@/framework/store/index'
+import {setField} from '@/framework/utils/common'
 
 export const useRouteStore = defineStore('routeStore', {
     state: () => {
@@ -16,12 +16,14 @@ export const useRouteStore = defineStore('routeStore', {
             routePathIsFrameMap: {} as { [key: string]: boolean }
         }
     }, actions: {
-         async getDynamicRouteAction() {
+        async getDynamicRouteAction() {
             return getRouteTree().then((res) => {
                 const routeTree = res.payload
-                this.dynamicRoute = _.cloneDeep(routeTree)
+                // this.dynamicRoute = _.cloneDeep(routeTree)
+                this.dynamicRoute = res.payload
                 this.travelRouteTree(routeTree)
-                this.clearNoNameNode(routeTree)
+                // this.clearNoNameNode(routeTree)
+                // console.log('clearNoNameNode', routeTree)
                 for (let i = 0; i < routeTree.length; ++i) router.addRoute(MAIN_CONTENT, routeTree[i])
                 console.debug(router.getRoutes())
             })
@@ -38,16 +40,35 @@ export const useRouteStore = defineStore('routeStore', {
                 for (let i = 0, len = nodeList.length; i < len; ++i) {
                     const node = nodeList[i]
                     node.name = node.path
+                    // antd menu key 是 string类型
+                    node.key = node.key.toString()
                     const currentPathIsNotEmpty = Boolean(node.path)
-                    if (currentPathIsNotEmpty) parentPathArray.push(node.path)
+                    if (currentPathIsNotEmpty) {
+                        parentPathArray.push(node.path)
+                    }
+
                     parentTitlePathArray.push(node.title)
                     setField(routePath2RouteTitlePathMap, parentPathArray.join('/'), parentTitlePathArray.join('/'))
                     setField(routePathIsFrameMap, parentPathArray.join('/'), !!+node.isFrame)
-                    node.component = modules[`/src${node.component}/index.vue`]
-                    this.dynamicRouteMap[node.path] = node
+                    if (node.component.endsWith('.vue')) {
+                        node.component = modules[`/src${node.component}`]
+                    } else {
+                        node.component = modules[`/src${node.component}/index.vue`]
+                    }
+                    const navPath = parentPathArray.join('/')
+                    if (navPath !== '') {
+                        node.name = navPath
+                        this.dynamicRouteMap[navPath] = node
+                    } else {
+                        this.dynamicRouteMap[node.path] = node
+                    }
+                    // this.dynamicRouteMap[node.path] = node
                     _travelRouteTree(node.children, parentPathArray, parentTitlePathArray)
-                    if (currentPathIsNotEmpty) parentPathArray.pop()
+                    if (currentPathIsNotEmpty) {
+                        parentPathArray.pop()
+                    }
                     parentTitlePathArray.pop()
+
                 }
             }
             _travelRouteTree(nodeList)
@@ -55,6 +76,11 @@ export const useRouteStore = defineStore('routeStore', {
             routeStore.routePathIsFrameMap = routePathIsFrameMap
             routeStore.routePath2RouteTitlePathMap['Home'] = '首页'
             routeStore.routePathIsFrameMap['Home'] = false
+
+            // console.log(routeStore.dynamicRouteMap)
+            // console.log(routeStore.routePath2RouteTitlePathMap)
+            // console.log(routeStore.routePathIsFrameMap)
+
         },
         // 因为可能存在某些节点只用于展示menu的title，并不需要放在路由中，所以需要对path为空的节点进行删除
         // 否则，会产生警告

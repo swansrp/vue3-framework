@@ -104,7 +104,7 @@ const inputIconForm = () => {
 // 清空表单内容
 const resetForm = () => {
   formState.value.title = ''
-  formState.value.icon = ''
+  formState.value.icon = 'SettingOutlined'
   formState.value.isCache = false
   formState.value.isFrame = false
   formState.value.path = ''

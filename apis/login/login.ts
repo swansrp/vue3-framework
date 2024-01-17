@@ -1,8 +1,8 @@
 import {request} from "@/framework/network/request";
-import {apiType, buildGetApiByType, buildPostApiByType} from "@/framework/apis";
+import {buildGetApiByType, buildPostApiByType} from "@/framework/apis";
 
-const buildGetApi = (url: string) => buildGetApiByType(url, apiType.auth)
-const buildPostApi = (url: string) => buildPostApiByType(url, apiType.auth)
+const buildGetApi = (url: string) => buildGetApiByType(url)
+const buildPostApi = (url: string) => buildPostApiByType(url)
 
 
 export const getToken = () => request(buildGetApi("/token")) as Promise<any>
@@ -18,4 +18,3 @@ export const login = (graphCode: string, loginId: string, password: string) => r
 export const ghostLogin = (customerNumber: string) => request(buildPostApi("/admin/ghost/login"), {customerNumber}, {}, true, false) as Promise<any>
 
 export const initPasswordAndLogin = (loginId: string, password: string, passwordConfirm: string, graphCode: string) => request(buildPostApi("/login/password/init"), {loginId, password, passwordConfirm, graphCode}, {}, true, false) as Promise<any>
-export const passwordReset = (customerNumber: string) => request(buildPostApi("/password/reset"), {}, {customerNumber}, true, false) as Promise<any>

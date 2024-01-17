@@ -204,6 +204,7 @@ const updateOrderRequest = (
 ) => request(updateOrderApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
 export {
+    web,
     baseUrl,
     apiType,
     baseDomain,

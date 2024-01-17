@@ -4,16 +4,16 @@
       v-if="tabStore.isNeedLeftNav"
       v-model:openKeys="keys.openKeys"
       v-model:selectedKeys="keys.selectedKeys"
-      class="left-menu"
+      :inline-collapsed="collapsed"
       :style="{width: collapsed ? '50px' : '250px'}"
+      class="left-menu"
       mode="inline"
       theme="dark"
-      :inline-collapsed="collapsed"
       @select="selectLeftNav">
       <template v-for="item in navList">
         <template v-if="!item.children">
           <a-menu-item
-            :id="item.key.toString()" :key="item.path || item.title" :path="item.path" :query="item.query"
+            :id="item.key" :key="item.key" :path="item.name || item.path" :query="item.query"
             :title="item.title">
             <template #icon>
               <Icon :icon="item.icon" />
@@ -22,35 +22,36 @@
           </a-menu-item>
         </template>
         <template v-else>
-          <sub-nav :id="item.key.toString()" :key="item.path || item.title" :subNavList="item" />
+          <sub-nav :id="item.key" :key="item.key" :subNavList="item" />
         </template>
       </template>
     </a-menu>
-    <a-button v-if="collapsed" type="text" style="position: absolute;left: 20px; bottom: 0; z-index: 1000" @click="toggleCollapsed">
+    <a-button
+      v-if="collapsed" style="position: absolute;left: 20px; bottom: 0; z-index: 1000" type="text"
+      @click="toggleCollapsed">
       <RightOutlined style="color: rgba(255,255,255,0.7)" />
     </a-button>
-    <a-button v-else type="text" style="position: absolute;left: 215px; bottom: 0; z-index: 1000" @click="toggleCollapsed">
+    <a-button
+      v-else style="position: absolute;left: 215px; bottom: 0; z-index: 1000" type="text"
+      @click="toggleCollapsed">
       <LeftOutlined style="color: rgba(255,255,255,0.7)" />
     </a-button>
   </div>
 </template>
 
 <script lang="ts" setup>
-import mitt from "@/framework/utils/mitt"
-import {LocationQueryRaw, useRouter} from "vue-router"
-import {NavListType} from "../type"
-import {useTabStore} from "@/framework/store/nav"
-import {useRouteStore} from "@/framework/store/route"
+import mitt from '@/framework/utils/mitt'
+import {LocationQueryRaw, useRouter} from 'vue-router'
+import {NavListType} from '../type'
+import {useTabStore} from '@/framework/store/nav'
+import {useRouteStore} from '@/framework/store/route'
 import 'ant-design-vue/lib/message/style/index.css'
-import {CHANGE_TAB, HOME, MAIN_CONTENT} from "@/framework/utils/constant"
-import {genAntdMenuFirstSelectObject, getTitlePathByKey} from "@/framework/hooks/initKeysAndRouteInNav"
-import SubNav from "@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue"
-import {getQueryObject} from "@/framework/network/utils"
-import pinia from "@/framework/store"
-import {
-  LeftOutlined,
-  RightOutlined
-} from '@ant-design/icons-vue'
+import {CHANGE_TAB, HOME, MAIN_CONTENT} from '@/framework/utils/constant'
+import {genAntdMenuFirstSelectObject, getTitlePathByKey} from '@/framework/hooks/initKeysAndRouteInNav'
+import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
+import {getQueryObject} from '@/framework/network/utils'
+import pinia from '@/framework/store'
+import {LeftOutlined, RightOutlined} from '@ant-design/icons-vue'
 
 
 const router = useRouter()
@@ -79,15 +80,18 @@ const initCurrentRouteAndVar = () => {
 }
 
 const selectLeftNav = (obj: any) => {
-  let path = obj.item.path
-  const fullPath = `/${MAIN_CONTENT}/${topNavPath}/${path}`
+  // console.trace('selectLeftNav', obj, navList.value)
+  // tab跳转过来走name 自动走path
+  let path = obj.item.name || obj.item.path
+  let selectedKey = obj.key ? obj.key : obj.item.key
+  const fullPath = `/${MAIN_CONTENT}/${path}`
   const query = (obj.item.query ? getQueryObject(obj.item.query) : {}) as LocationQueryRaw
   router.push({
     path: fullPath,
     query
   }).then(() => {
-    keys.selectedKeys = [path]
-    const {titlePath, keyPath} = getTitlePathByKey(navList.value, path)
+    keys.selectedKeys = [selectedKey]
+    const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
     keys.openKeys = keyPath
     // 选中左侧菜单后， 为面包屑提供数据
     tabStore.setTitlePath(titlePath)
@@ -117,11 +121,13 @@ const initLeftNavList = () => {
       }
       // 如果地址栏中的fullPath存在关于左侧导航菜单的相关路径，则根据这个路径初始化左侧菜单的选中情况
       if (currentLeftNav) {
+        // console.log('currentLeftNav', topNavPath, currentLeftNav)
         if (tabStore.updateLeftNav) {
           // const targetPath = `/${MAIN_CONTENT}/${tabStore.topNavPath}/${tabStore.tabActivateKey}`
           genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
         } else {
-          getObjectByLeftNavPath(routeStore.dynamicRouteMap[currentLeftNav])
+          // console.log('getObjectByLeftNavPath', routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')])
+          getObjectByLeftNavPath(routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')])
         }
       }
       // 否则，默认选中第一个叶子节点

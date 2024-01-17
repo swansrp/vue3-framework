@@ -76,7 +76,7 @@ import {changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder} fro
 
 const _initFormState: FormState = {
   title: '',
-  icon: '',
+  icon: 'SettingOutlined',
   isCache: false,
   isFrame: false,
   path: '',

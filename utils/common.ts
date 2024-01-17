@@ -1,5 +1,5 @@
-import {Ref} from "vue"
-import dayjs from "dayjs"
+import {Ref} from 'vue'
+import dayjs from 'dayjs'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
 import isoWeeksInYear from 'dayjs/plugin/isoWeeksInYear'
 import isLeapYear from 'dayjs/plugin/isLeapYear'
@@ -83,7 +83,7 @@ function getAllParentNodes(list: any, id: any, key: any) {
 }
 
 const structureUrl = (url: string, id: string) => {
-    return url + id;
+    return url + id
 }
 
 // 使用这个方法，才能直接使用Object.keys对formState赋值，否则会有TS类型检查错误
@@ -139,8 +139,8 @@ const updateTableSize = (tableWrapper: Ref, tableWidth?: Ref, w_bias?: number, t
 }
 
 const _getWeekStartEndDay = (day: string) => {
-    const start = dayjs(day).subtract(dayjs(day).day() ? dayjs(day).day() - 1 : 6, "day").format("YYYY-MM-DD")
-    const end = dayjs(start).add(6, 'day').format("YYYY-MM-DD")
+    const start = dayjs(day).subtract(dayjs(day).day() ? dayjs(day).day() - 1 : 6, 'day').format('YYYY-MM-DD')
+    const end = dayjs(start).add(6, 'day').format('YYYY-MM-DD')
     return {start, end}
 }
 
@@ -158,6 +158,13 @@ const clearFromField = (form: any, formRef: Ref) => {
 const strLF2HtmlLF = (str: string) => {
     if (isNotEmpty(str) && typeof str === 'string') {
         str = str.replace(/\n|\\n/g, '<br/>')
+    }
+    return str
+}
+
+const strRemoveLF = (str: string) => {
+    if (isNotEmpty(str) && typeof str === 'string') {
+        str = str.replace(/\n|\\n/g, '')
     }
     return str
 }
@@ -189,6 +196,7 @@ export {
     _getWeekStartEndDay,
     clearFromField,
     strLF2HtmlLF,
+    strRemoveLF,
     doFunctions,
     log
 }

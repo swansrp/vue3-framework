@@ -1,5 +1,5 @@
 <template>
-  <a-sub-menu :key="subNavList.path || subNavList.title">
+  <a-sub-menu :key="subNavList.key">
     <template #icon>
       <Icon :icon="subNavList.icon" />
     </template>
@@ -7,7 +7,7 @@
     <template v-for="item in subNavList.children">
       <template v-if="!item.children">
         <a-menu-item
-          :id="item.key.toString()" :key="item.path || item.title" :path="item.path"
+          :id="item.key" :key="item.key" :path="item.name || item.path"
           :query="item.query" :title="item.title">
           <template #icon>
             <Icon :icon="item.icon" />
@@ -16,7 +16,7 @@
         </a-menu-item>
       </template>
       <template v-else>
-        <sub-nav :id="item.key.toString()" :key="item.path || item.title" :subNavList="item" />
+        <sub-nav :id="item.key" :key="item.key" :subNavList="item" />
       </template>
     </template>
   </a-sub-menu>
