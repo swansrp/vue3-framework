@@ -25,7 +25,6 @@ export const useRouteStore = defineStore('routeStore', {
                 // this.clearNoNameNode(routeTree)
                 // console.log('clearNoNameNode', routeTree)
                 for (let i = 0; i < routeTree.length; ++i) router.addRoute(MAIN_CONTENT, routeTree[i])
-                console.debug(router.getRoutes())
             })
         },
         // 遍历后台所给的路由树，需要自己手动转换为vue-router可以识别的route形式
