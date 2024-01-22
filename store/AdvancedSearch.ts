@@ -9,13 +9,13 @@ export const useAdvancedSearch = defineStore('AdvancedSearchStore', {
   state: () => {
     return {
       selectConditionMap: {} as SelectConditionMapType,
-      ConditionLabelValueTypeOption: [] as ConditionLabelValueType[]
+      conditionLabelValueTypeOption: [] as ConditionLabelValueType[]
     }
   },
   actions: {
     setSelectConditionMap(key: string, value: ValueLabel){ this.selectConditionMap[key] = value },
     getSelectConditionMap(key: string): ValueLabel { return this.selectConditionMap[key] },
-    setConditionLabelValueTypeOption(option: ConditionLabelValueType[]) { this.ConditionLabelValueTypeOption = option },
-    getConditionLabelValueTypeOption() { return this.ConditionLabelValueTypeOption }
+    setConditionLabelValueTypeOption(option: ConditionLabelValueType[]) { this.conditionLabelValueTypeOption = option },
+    getConditionLabelValueTypeOption() { return this.conditionLabelValueTypeOption }
   }
 })

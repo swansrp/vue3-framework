@@ -1,6 +1,5 @@
 <template>
   <a-select
-    size="small"
     v-model:value="value"
     style="width: 60px; margin-left: -30px"
     @change="onChange">

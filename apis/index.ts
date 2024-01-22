@@ -1,7 +1,12 @@
 import {Method} from 'axios'
 import {name} from '@/../package.json'
 import {request} from '@/framework/network/request'
-import {UpdateOrderType, UpdatePidType} from '@/framework/components/common/portal/type'
+import {
+    AdvancedQueryConditionType,
+    QuerySortType,
+    UpdateOrderType,
+    UpdatePidType
+} from '@/framework/components/common/Portal/type'
 
 const baseDomain = '/' + name
 const apiType: any = {
@@ -100,6 +105,12 @@ const generalQueryApi = (
     version = '1.0'
 ) => buildApi(domain, commonUrl.GENERAL_QUERY, requestMethod.POST, version, type)
 
+const advancedQueryApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.ADVANCED_QUERY, requestMethod.POST, version, type)
+
 const addApi = (
     type: string,
     domain: string = baseDomain,
@@ -172,6 +183,22 @@ const generalQueryRequest = (
     currentPage
 }, showSuccess, showLoading) as Promise<any>
 
+const advancedQueryRequest = (
+    type: string,
+    condition: AdvancedQueryConditionType,
+    sortList: Array<QuerySortType>,
+    pageSize: number,
+    currentPage: number,
+    domain: string = baseDomain,
+    showSuccess = false,
+    showLoading = true
+) => request(advancedQueryApi(type, domain), {}, {
+    condition,
+    sortList,
+    pageSize,
+    currentPage
+}, showSuccess, showLoading) as Promise<any>
+
 const getByIdRequest = (
     type: string,
     id: string,
@@ -215,6 +242,7 @@ export {
     updateTreePidRequest,
     updateOrderRequest,
     generalQueryRequest,
+    advancedQueryRequest,
     addRequest,
     updateRequest,
     updateListRequest,

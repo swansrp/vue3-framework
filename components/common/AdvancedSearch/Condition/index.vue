@@ -1,76 +1,126 @@
 <template>
   <div class="condition-wrapper">
     <a-select
-      size="small"
-      style="width: 200px;"
-      placeholder="选择属性字段"
       v-model:value="propertyValue"
       :options="propertySelectOptions"
+      placeholder="选择属性字段"
+      style="width: 200px;"
       @change="onPropertyChange" />
     <a-select
-      size="small"
-      style="width: 130px;"
-      placeholder="选择比较关系"
-      v-model:value="conditionValue"
+      v-model:value="relationValue"
       :options="conditionSelectOptions"
+      placeholder="选择比较关系"
+      style="width: 130px;"
       @change="onConditionChange" />
     <ConditionValueComponent
-      :width="350"
+      v-model:condition-content-value="conditionContentValue"
       :reference="conditionReference"
       :type="conditionType"
-      v-model:condition-value="conditionContentValue" />
+      :width="350" />
   </div>
 </template>
 
-<script setup lang="ts">
-import {Ref} from "vue"
-import {ValueLabel} from "@/framework/utils/type"
-import {SelectValue} from "ant-design-vue/es/select"
-import {useAdvancedSearch} from "@/framework/store/AdvancedSearch"
-import ConditionValueComponent from "../ConditionValueComponent/index.vue"
-import {getRelation} from "@/framework/components/common/AdvancedSearch/funs";
+<script lang="ts" setup>
+import {Ref} from 'vue'
+import {ValueLabel} from '@/framework/utils/type'
+import {SelectValue} from 'ant-design-vue/es/select'
+import {useAdvancedSearch} from '@/framework/store/AdvancedSearch'
+import ConditionValueComponent from '../ConditionValueComponent/index.vue'
+import {getRelation} from '@/framework/components/common/AdvancedSearch/funs'
+import {isNotEmpty} from '@/framework/utils/common'
 
 
 const useAdvancedSearchStore = useAdvancedSearch()
 const emit = defineEmits(['update:property', 'update:relation', 'update:value'])
 
 const props = defineProps<{
-  property: string | number,
-  relation: string | number | undefined,
-  value: string | undefined,
-  propertySelectOptions: ValueLabel[]}>()
+  property?: string | null,
+  relation?: number | string | null,
+  value: Array<any>,
+  propertySelectOptions: Array<any>
+}>()
 
-const { propertySelectOptions } = toRefs(props)
-const propertyValue: Ref<number| string | undefined> = ref()
-const conditionValue: Ref<number| string| undefined> = ref()
+// 字段选择值
+const propertyValue: Ref<number | string | undefined | null> = ref()
+// 字段下拉列表
+const {propertySelectOptions} = toRefs(props)
+
+// 关系选择值
+const relationValue: Ref<number | string | undefined | null> = ref()
+// 关系下拉列表内容
 const conditionSelectOptions: Ref<ValueLabel[]> = ref([])
+
+// 内容值
+const conditionContentValue: Ref = ref()
+// 内容下拉列表
 const conditionReference: Ref<ValueLabel[]> = ref([])
-const conditionType: Ref<number> = ref(-1)
-const conditionTypeTemp: Ref<number> = ref(-1)
-const conditionContentValue: Ref<string| undefined | number> = ref()
+// 内容类型
+const conditionType: Ref = ref('')
+const conditionTypeTemp: Ref = ref('')
 
 
 const onPropertyChange = (_property: SelectValue, option: any) => {
-  const { fieldType, referenceDictOption } = option
+  console.log('onPropertyChange')
+  const {fieldType, referenceDictOption} = option
   const relations = getRelation(fieldType)
   conditionReference.value = referenceDictOption
-  conditionTypeTemp.value = +fieldType
-  conditionValue.value = undefined
-  conditionContentValue.value = undefined
+  conditionTypeTemp.value = fieldType
+  relationValue.value = null
+  conditionContentValue.value = null
   emit('update:property', propertyValue.value)
   conditionSelectOptions.value = relations.map((item: string) => useAdvancedSearchStore.getSelectConditionMap(item))
 }
 
 const onConditionChange = () => {
+  console.log('onConditionChange')
   conditionType.value = conditionTypeTemp.value
-  emit('update:relation', +conditionValue.value!)
+  emit('update:relation', relationValue.value)
+}
+
+const render = () => {
+  if(isNotEmpty(props.propertySelectOptions)) {
+    const propertySelectArray = props.propertySelectOptions.filter((item) => item.value === propertyValue.value)
+    if (isNotEmpty(propertySelectArray)) {
+      const {fieldType, referenceDictOption} = propertySelectArray[0]
+      const relations = getRelation(fieldType)
+      // 内容下拉列表
+      conditionReference.value = referenceDictOption
+      // 内容类型
+      conditionType.value = fieldType
+
+      // 关系下拉列表内容
+      conditionSelectOptions.value = relations.map((item: string) => useAdvancedSearchStore.getSelectConditionMap(item))
+    }
+  }
 }
 
 // 由于ConditionValueComponent是自定义组件，没有 change 事件，所以需要单独监听
-watch(conditionContentValue, (value: string | undefined | number | Array<any>) => {
+watch(conditionContentValue, (value: string | undefined | number | Array<any> | null) => {
   if (Array.isArray(value)) emit('update:value', value)
-  else emit('update:value', [value])
+  else if (isNotEmpty(value)) emit('update:value', [value])
+  else emit('update:value', [])
 })
+
+watch(() => props.property,
+    () => {
+      propertyValue.value = props.property
+      render()
+    },
+    {immediate: true}
+)
+watch(() => props.relation, () => {
+  // 关系选择值
+  relationValue.value = props.relation
+}, {immediate: true})
+watch(() => props.value, () => {
+  // console.log('props.value', props.value)
+  // 内容值
+  conditionContentValue.value = props.value
+}, {immediate: true})
+watch(() => props.propertySelectOptions, () => {
+  // console.log(' props.propertySelectOptions', props.propertySelectOptions)
+  render()
+}, {immediate: true})
 
 </script>
 
@@ -80,6 +130,7 @@ watch(conditionContentValue, (value: string | undefined | number | Array<any>) =
   display: flex;
   align-items: center;
 }
+
 .condition-wrapper > * {
   margin-right: 10px;
 }

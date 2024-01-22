@@ -2,7 +2,7 @@ import {
     addRequest,
     apiType,
     deleteRequest,
-    generalQueryRequest,
+    advancedQueryRequest,
     getByIdRequest,
     getTreeDataRequest,
     updateListRequest,
@@ -10,7 +10,7 @@ import {
     updateRequest,
     updateTreePidRequest
 } from '@/framework/apis'
-import {QueryType, UpdateOrderType, UpdatePidType} from '@/framework/components/common/portal/type'
+import {QueryType, UpdateOrderType, UpdatePidType} from '@/framework/components/common/Portal/type'
 
 export const getById = (url: string, id: string) =>
     getByIdRequest(apiType.common + '/' + url, id) as Promise<any>
@@ -27,11 +27,8 @@ export const updateEntityList = (url: string, entity: Array<any>) =>
 export const deleteEntity = (url: string, id: string) =>
     deleteRequest(apiType.common + '/' + url, id) as Promise<any>
 
-export const generalQuery = (url: string, query: QueryType) =>
-    generalQueryRequest(apiType.common + '/' + url, query.conditionList, query.sortList, query.pageSize, query.currentPage) as Promise<any>
-
 export const advancedQuery = (url: string, query: QueryType) =>
-    generalQueryRequest(apiType.common + '/' + url, query.conditionList, query.sortList, query.pageSize, query.currentPage) as Promise<any>
+    advancedQueryRequest(apiType.common + '/' + url, query.condition, query.sortList, query.pageSize, query.currentPage) as Promise<any>
 
 export const getTreeData = (url: string) =>
     getTreeDataRequest(apiType.common + '/' + url) as Promise<any>

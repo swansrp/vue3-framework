@@ -35,23 +35,15 @@ const localStorageMethods = {
 function isEmpty(data: any) {
     if (data === undefined || data == null) {
         return true
+    } else if (data instanceof Array) {
+        return data.length === 0
+    } else if (data instanceof Map) {
+        return data.size === 0
+    } else if (typeof data === 'string') {
+        return data.length === 0 || data === ''
+    } else {
+        return JSON.stringify(data) == "{}"
     }
-    if (data instanceof Array) {
-        if (data.length === 0) {
-            return true
-        }
-    }
-    if (data instanceof Map) {
-        if (data.size === 0) {
-            return true
-        }
-    }
-    if (typeof data === 'string') {
-        if (data.length === 0 || data === '') {
-            return true
-        }
-    }
-    return false
 }
 
 function isNotEmpty(data: any) {

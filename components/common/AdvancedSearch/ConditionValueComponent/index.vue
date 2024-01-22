@@ -1,95 +1,79 @@
 <template>
   <div :style="{width: width + 'px', display: 'inline-block'}">
     <a-input
-      size="small"
-      v-if="type === +FIELD_TYPE.INPUT"
-      v-model:value="type1value"
+      v-if="type === FIELD_TYPE.INPUT"
+      v-model:value="value"
       placeholder="请输入属性值"
-      @change="$emit('update:conditionValue', type1value)" />
+      @change="$emit('update:conditionContentValue', value)" />
     <a-input-number
+      v-else-if="type === FIELD_TYPE.NUMBER"
+      v-model:value="value"
+      class="full-width"
+      placeholder="请输入属性值"
       type="number"
-      size="small"
-      v-else-if="type === +FIELD_TYPE.NUMBER"
-      v-model:value="type2value"
-      placeholder="请输入属性值"
-      class="full-width"
-      @change="$emit('update:conditionValue', type2value)" />
+      @change="$emit('update:conditionContentValue', value)" />
     <a-switch
-      size="small"
-      v-else-if="type === +FIELD_TYPE.SWITCH"
-      v-model:checked="type3value"
+      v-else-if="type === FIELD_TYPE.SWITCH"
+      v-model:checked="value"
       placeholder="请输入属性值"
-      @change="$emit('update:conditionValue', type3value)" />
+      @change="$emit('update:conditionContentValue', value)" />
     <a-select
-      size="small"
-      v-else-if="type === +FIELD_TYPE.SELECT"
-      class="full-width"
-      v-model:value="type4value"
+      v-else-if="type === FIELD_TYPE.SELECT"
+      v-model:value="value"
       :options="type4Options"
+      class="full-width"
       placeholder="请选择属性值"
-      @change="$emit('update:conditionValue', type4value)" />
+      @change="$emit('update:conditionContentValue', value)" />
 
     <a-range-picker
-      size="small"
-      v-else-if="type === +FIELD_TYPE.DATE"
-      v-model:value="type6value"
-      @change="onDayChange"
+      v-else-if="type === FIELD_TYPE.DATE"
+      v-model:value="valueArray"
       :locale="locale"
       class="full-width"
       valueFormat="YYYY-MM-DD HH:mm:ss"
+      @change="onDayChange"
     />
     <a-range-picker
-      size="small"
-      v-else-if="type === +FIELD_TYPE.DATETIME"
-      :show-time="true"
+      v-else-if="type === FIELD_TYPE.DATETIME"
+      v-model:value="valueArray"
       :locale="locale"
+      :show-time="true"
       class="full-width"
-      v-model:value="type7value"
-      @change="onDayChange"
       valueFormat="YYYY-MM-DD HH:mm:ss"
+      @change="onDayChange"
     />
     <a-textarea
-      size="small"
-      class="full-width"
-      v-else-if="type === +FIELD_TYPE.HREF"
-      v-model:value="type8value"
-      placeholder="请输入属性值"
+      v-else-if="type === FIELD_TYPE.HREF"
+      v-model:value="value"
       :rows="1"
-      @change="$emit('update:conditionValue', type8value)" />
-
-    <a-input v-else disabled placeholder="选择属性字段后再填写" size="small" />
+      class="full-width"
+      placeholder="请输入属性值"
+      @change="$emit('update:conditionContentValue', value)" />
+    <div v-else></div>
   </div>
 </template>
 
-<script setup lang="ts">
-import {Ref} from "vue"
-import type { Dayjs } from 'dayjs'
-import {ValueLabel} from "@/framework/utils/type"
-import {SelectValue} from "ant-design-vue/es/select"
-import {FIELD_TYPE} from "@/framework/components/common/portal/type"
+<script lang="ts" setup>
+import {Ref} from 'vue'
+import {ValueLabel} from '@/framework/utils/type'
+import {FIELD_TYPE} from '@/framework/components/common/portal/type'
 import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
+import {isNotEmpty} from '@/framework/utils/common'
 
 
-type RangeValue = [Dayjs, Dayjs]
-
-const type1value: Ref<string | undefined> = ref()
-const type2value: Ref<number | undefined> = ref()
-const type3value: Ref<boolean | undefined> = ref()
-const type4value: Ref<SelectValue> = ref()
-const type6value: Ref<RangeValue | undefined> = ref()
-const type7value: Ref<RangeValue | undefined> = ref()
-const type8value: Ref<string | undefined> = ref()
+const value: Ref = ref()
+const valueArray: Ref = ref([])
 
 const type4Options: Ref<ValueLabel[]> = ref([])
-const props = defineProps<{type: number, reference?: Array<ValueLabel>, width: number, conditionValue: string | undefined | number}>()
+const props = defineProps<{ type: string, reference?: Array<ValueLabel>, width: number, conditionContentValue?: Array<any> }>()
 const {type, reference} = toRefs(props)
 
-const emit = defineEmits(['update:conditionValue'])
+const emit = defineEmits(['update:conditionContentValue'])
 
-const onDayChange = (day: [any, any]) => emit('update:conditionValue', day)
+const onDayChange = (day: [any, any]) => emit('update:conditionContentValue', day)
 
 const getOption = () => {
-  if (type.value === 4 && reference && reference.value) {
+  if (type.value === FIELD_TYPE.SELECT && reference && reference.value) {
     type4Options.value = reference.value
   }
 }
@@ -97,6 +81,18 @@ const getOption = () => {
 
 watch(() => props.type, getOption, {immediate: true})
 watch(() => props.reference, getOption, {immediate: true})
+watch(() => props.conditionContentValue, () => {
+  // console.log('props.conditionContentValue', props.conditionContentValue)
+  if (type.value === FIELD_TYPE.DATE || type.value === FIELD_TYPE.DATETIME) {
+    valueArray.value = props.conditionContentValue
+  } else {
+    if (isNotEmpty(props.conditionContentValue)) {
+      value.value = props.conditionContentValue![0]
+    } else {
+      value.value = undefined
+    }
+  }
+}, {immediate: true})
 
 </script>
 

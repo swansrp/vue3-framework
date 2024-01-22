@@ -14,7 +14,7 @@
       </template>
       <template #footer>
         <div style="display: flex; justify-content: space-between">
-          <a-button shape="round" @click="openCopyConfigModal" :disabled="isEmpty(tableConfig.id)"> 复制
+          <a-button :disabled="isEmpty(tableConfig.id)" shape="round" @click="openCopyConfigModal"> 复制
             <template #icon>
               <CopyOutlined />
             </template>
@@ -47,7 +47,7 @@
             </a-form>
           </a-modal>
           <a-popconfirm title="注意 即将删除该配置" @confirm="deleteConfig()">
-            <a-button shape="round" :disabled="isEmpty(tableConfig.id)"> 删除
+            <a-button :disabled="isEmpty(tableConfig.id)" shape="round"> 删除
               <template #icon>
                 <MinusCircleOutlined />
               </template>
@@ -67,7 +67,7 @@
         <a-descriptions-item
           :span="1"
           label="表格编码">
-          <span style="width: 200px;">{{ tableConfig.name }}</span>
+          <span style="width: 120px;">{{ tableConfig.name }}</span>
         </a-descriptions-item>
         <a-descriptions-item
           :span="1"
@@ -243,8 +243,8 @@
             :bordered="false"
             :options="columnDict || []"
             :value="tableConfig.orderColumn"
-            style="width: 150px"
             allow-clear
+            style="width: 150px"
             @update:value=" v => {
               tableConfig.orderColumn = v
               saveTableConfig()
@@ -258,8 +258,8 @@
             :bordered="false"
             :options="columnDict || []"
             :value="tableConfig.pidColumn"
-            style="width: 150px"
             allow-clear
+            style="width: 150px"
             @update:value=" v => {
               tableConfig.pidColumn = v
               saveTableConfig()
@@ -270,8 +270,8 @@
           :span="1"
           label="表格拖拽">
           <a-switch
-            :disabled="isEmpty(tableConfig.orderColumn)"
             v-model:checked="tableConfig.tableDrag"
+            :disabled="isEmpty(tableConfig.orderColumn)"
             checkedValue="1"
             style="width: 40px;"
             unCheckedValue="0"
@@ -282,8 +282,8 @@
           :span="1"
           label="树形拖拽">
           <a-switch
-            :disabled="isEmpty(tableConfig.pidColumn)"
             v-model:checked="tableConfig.treeDrag"
+            :disabled="isEmpty(tableConfig.pidColumn)"
             checkedValue="1"
             style="width: 40px;"
             unCheckedValue="0"
@@ -317,7 +317,7 @@
           range-selection="single"
           rowKey="id"
           size="small"
-          style="width: 250px;"
+          style="width: 200px;"
           @cell-click="handleColumnSelected"
           @row-drag-end="handleColumnOrderChanged"
         >
@@ -397,7 +397,7 @@
                 v-else-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
                 :options="tableList"
                 :value="columnMap.get(selectedColumnId).reference"
-                style="width: 200px"
+                style="width: 150px"
                 @update:value="v => {
                   if(columnMap.get(selectedColumnId).reference !== v) {
                     columnMap.get(selectedColumnId).dbField = null
@@ -410,34 +410,51 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
-              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
-              :span="2"
-              label="实体字段">
-              <a-select
-                :options="entityColumnDict"
-                :value="columnMap.get(selectedColumnId).entityField"
-                style="width: 200px"
-                @update:value=" v => {
-                  columnMap.get(selectedColumnId).entityField = v
-                  saveTableColumn()
-                }"
-              />
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
-              :span="2"
-              label="操作字段">
-              <a-select
-                :options="columnDict"
-                :value="columnMap.get(selectedColumnId).dbField"
-                style="width: 200px"
-                @update:value=" v => {
-                  columnMap.get(selectedColumnId).dbField = v
-                  columnMap.get(selectedColumnId).editAble = '1'
-                  saveTableColumn()
-                }"
-              />
-            </a-descriptions-item>
+              v-else
+              :span="1"
+              label="" />
+            <template v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY">
+              <a-descriptions-item
+                v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
+                :span="2"
+                label="实体字段">
+                <a-select
+                  :options="entityColumnDict"
+                  :value="columnMap.get(selectedColumnId).entityField"
+                  style="width: 150px"
+                  @update:value=" v => {
+                    columnMap.get(selectedColumnId).entityField = v
+                    saveTableColumn()
+                  }"
+                />
+              </a-descriptions-item>
+              <a-descriptions-item
+                v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
+                :span="1"
+                label="操作字段">
+                <a-select
+                  :options="columnDict"
+                  :value="columnMap.get(selectedColumnId).dbField"
+                  style="width: 150px"
+                  @update:value=" v => {
+                    columnMap.get(selectedColumnId).dbField = v
+                    columnMap.get(selectedColumnId).editAble = '1'
+                    saveTableColumn()
+                  }"
+                />
+              </a-descriptions-item>
+              <a-descriptions-item
+                v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
+                :span="1"
+                label="关联参数">
+                <a-button type="link" @click="entityConditionDrawOpen()">设置条件</a-button>
+              </a-descriptions-item>
+            </template>
+            <template v-else>
+              <a-descriptions-item
+                :span="4"
+                label="" />
+            </template>
             <a-descriptions-item
               :span="8"
               label="" />
@@ -557,7 +574,7 @@
               label="弹框显示" />
             <a-descriptions-item
               :span="1"
-              label="详情是否显示">
+              label="详情显示">
               <a-switch
                 v-model:checked="columnMap.get(selectedColumnId).detailShow"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
@@ -581,7 +598,7 @@
             </a-descriptions-item>
             <a-descriptions-item
               :span="1"
-              label="编辑是否显示">
+              label="编辑显示">
               <a-switch
                 v-model:checked="columnMap.get(selectedColumnId).editShow"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
@@ -595,11 +612,11 @@
               label="编辑显示格数">
               <a-input-number
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
-                :value="columnMap.get(selectedColumnId).editSize"
                 :max="tableConfig.descriptionCount"
+                :value="columnMap.get(selectedColumnId).editSize"
                 min="1"
                 placeholder="编辑显示格数"
-                style="width:120px"
+                style="width:80px"
                 @update:value=" v => columnMap.get(selectedColumnId).editSize = v"
               />
             </a-descriptions-item>
@@ -608,17 +625,17 @@
               label="编辑占位格数">
               <a-input-number
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
-                :value="columnMap.get(selectedColumnId).editPadding"
                 :max="tableConfig.descriptionCount"
+                :value="columnMap.get(selectedColumnId).editPadding"
                 min="0"
                 placeholder="编辑占位宽度"
-                style="width:120px"
+                style="width:80px"
                 @update:value=" v => columnMap.get(selectedColumnId).editPadding = v"
               />
             </a-descriptions-item>
             <a-descriptions-item
               :span="1"
-              label="新增是否显示">
+              label="新增显示">
               <a-switch
                 v-model:checked="columnMap.get(selectedColumnId).addShow"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
@@ -632,11 +649,11 @@
               label="新增显示格数">
               <a-input-number
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
-                :value="columnMap.get(selectedColumnId).addSize"
                 :max="tableConfig.descriptionCount"
+                :value="columnMap.get(selectedColumnId).addSize"
                 min="1"
                 placeholder="新增显示格数"
-                style="width:120px"
+                style="width:80px"
                 @update:value=" v => columnMap.get(selectedColumnId).addSize = v"
               />
             </a-descriptions-item>
@@ -645,11 +662,11 @@
               label="新增占位格数">
               <a-input-number
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
-                :value="columnMap.get(selectedColumnId).addPadding"
                 :max="tableConfig.descriptionCount"
+                :value="columnMap.get(selectedColumnId).addPadding"
                 min="0"
                 placeholder="新增占位宽度"
-                style="width:120px"
+                style="width:80px"
                 @update:value=" v => columnMap.get(selectedColumnId).addPadding = v"
               />
             </a-descriptions-item>
@@ -697,7 +714,7 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
-              :span="2"
+              :span="1"
               label="" />
             <!-- endregion -->
           </a-descriptions>
@@ -707,26 +724,46 @@
       <!-- endregion -->
     </div>
     <!-- endregion 右侧编辑栏 -->
-
+    <!-- region 关联实体查询条件 -->
+    <a-drawer
+      :title="'配置' + entityCondition.title + '查询条件'"
+      :visible="entityCondition.show"
+      :width="1050"
+      placement="right"
+      @close="entityConditionDrawClose"
+    >
+      <template #extra>
+        <div></div>
+      </template>
+      <AdvancedSearch
+        :condition="entityCondition.condition"
+        :columns="entityCondition.columns"
+        :key="entityCondition.key"
+        okText="保存"
+        @get-condition="saveEntityCondition" />
+    </a-drawer>
+    <!-- endregion 关联实体查询条件 -->
   </div>
 </template>
 <script lang="ts" setup>
 import {Ref} from 'vue'
-import {isNotEmpty, isEmpty, log} from '@/framework/utils/common'
-import {FIELD_TYPE} from '@/framework/components/common/portal/type'
+import {isEmpty, isNotEmpty} from '@/framework/utils/common'
+import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 import {
   copyPortalConfig,
-  deletePortalConfig, existedPortalConfig,
+  deletePortalConfig,
+  existedPortalConfig,
   getPortalConfig,
   getPortalList,
   updatePortalColumn,
   updatePortalColumnOrder,
   updatePortalConfig
 } from '@/framework/apis/portal/config'
-import {MinusCircleOutlined, CopyOutlined} from '@ant-design/icons-vue'
+import {CopyOutlined, MinusCircleOutlined} from '@ant-design/icons-vue'
 import {ValueLabel} from '@/framework/utils/type'
 import {dictStore} from '@/framework/store/common'
 import {CellRenderArgs} from '@surely-vue/table'
+import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 
 const dict = dictStore()
 let inputTableName: Ref<string> = ref('')
@@ -739,6 +776,13 @@ let columnMap = reactive(new Map())
 let selectedColumnId = ref('')
 // 关联属性
 const entityConfig = ref({} as any)
+const entityCondition = reactive({
+  show: false,
+  columns: [],
+  title: '',
+  condition: {} as ConditionType | undefined,
+  key: 0,
+})
 const entityColumnDict = reactive([] as Array<ValueLabel>)
 
 let copyConfigModal = reactive({
@@ -767,7 +811,7 @@ const getEntityConfig = (tableId: string) => {
     entityConfig.value.columns.forEach(column => {
       entityColumnDict.push({value: column.property, label: column.displayName} as ValueLabel)
     })
-    if(isEmpty(columnMap.get(selectedColumnId.value).entityField)) {
+    if (isEmpty(columnMap.get(selectedColumnId.value).entityField)) {
       columnMap.get(selectedColumnId.value).entityField = entityConfig.value.idColumn
     }
   })
@@ -779,6 +823,7 @@ const getTableConfigByName = (item: any) => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
+    entityCondition.condition = {} as ConditionType
     tableConfig.value = res.payload
     tableConfig.value.columns.forEach(column => {
       columnDict.push({value: column.property, label: column.displayName} as ValueLabel)
@@ -832,9 +877,43 @@ const handleColumnOrderChanged = () => {
 
 const handleColumnSelected = (event: MouseEvent, params: CellRenderArgs) => {
   selectedColumnId.value = params.record.id
-  if(params.record.fieldType === FIELD_TYPE.ENTITY) {
+  if (params.record.fieldType === FIELD_TYPE.ENTITY) {
     getEntityConfig(params.record.reference)
   }
+}
+
+const entityConditionDrawOpen = async () => {
+  entityCondition.columns = entityConfig.value.columns.filter((item: { filterAble: string; }) => item.filterAble === '1').map((item: any) => ({
+    title: item.displayName,
+    key: item.property,
+    referenceDict: item.reference,
+    fieldType: item.fieldType
+  }))
+  for (let item of entityCondition.columns) {
+    if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.referenceDict)) {
+      item.referenceDictOption = await dict.getDict(item.referenceDict) || []
+    }
+  }
+  if (isNotEmpty(columnMap.get(selectedColumnId.value).entityCondition)) {
+    console.log('json parse', columnMap.get(selectedColumnId.value).entityCondition)
+    entityCondition.condition = JSON.parse(columnMap.get(selectedColumnId.value).entityCondition)
+  } else {
+    entityCondition.condition = {} as ConditionType
+  }
+  entityCondition.show = true
+  // 强制更新高级查询组件
+  entityCondition.key++
+  console.log('entityCondition', entityCondition)
+}
+const entityConditionDrawClose = () => {
+  console.log('entityConditionDrawClose')
+  entityCondition.show = false
+}
+const saveEntityCondition = (condition: ConditionType) => {
+  entityCondition.condition = condition
+  columnMap.get(selectedColumnId.value).entityCondition = JSON.stringify(condition)
+  saveTableColumn()
+  entityConditionDrawClose()
 }
 
 const init = async () => {
@@ -869,7 +948,7 @@ onMounted(() => {
 }
 
 .table-list {
-  width: 250px;
+  width: 200px;
   height: calc(100% - 15px);
   box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
   margin: 10px 15px;

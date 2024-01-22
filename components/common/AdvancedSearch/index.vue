@@ -1,39 +1,74 @@
 <template>
   <div id="advancedSearch" :style="{width}">
-    <Entity class="search-item" v-model:query-data="queryData[0]" />
+    <Entity v-model:condition="advancedCondition" class="search-item" />
   </div>
-  <a-button type="primary" style="margin-left: 15px" @click="queryGraphData">查询数据</a-button>
+  <a-button style="margin-left: 15px" type="primary" @click="getCondition">{{ okText }}</a-button>
+  <a-button style="margin-left: 15px" type="primary" @click="resetCondition">{{ resetText }}</a-button>
 </template>
 
-<script setup lang="ts">
-import {Ref} from "vue"
-import Entity from "./Entity/index.vue"
+<script lang="ts" setup>
+import Entity from './Entity/index.vue'
 import 'ant-design-vue/lib/message/style/index.css'
-import {useAdvancedSearch} from "@/framework/store/AdvancedSearch"
-import {QueryDataType} from "./type"
-import pinia from "@/framework/store";
-import {getDictList} from "@/framework/apis/common/common";
-import {ValueLabel} from "@/framework/utils/type";
-import {genEmptyCondition} from "@/framework/components/common/AdvancedSearch/ConditionList/funs";
+import {useAdvancedSearch} from '@/framework/store/AdvancedSearch'
+import pinia from '@/framework/store'
+import {ValueLabel} from '@/framework/utils/type'
+import {AND, genEmptyCondition} from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
+import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
+import {dictStore} from '@/framework/store/common'
+import {isNotEmpty} from '@/framework/utils/common'
+import {Ref} from 'vue'
 
 
 const useAdvancedSearchStore = useAdvancedSearch(pinia)
-const queryData:Ref<Array<QueryDataType>> = ref([{ condition: { conditionList: [genEmptyCondition()], andOr: '0' }}])
-
-const props = defineProps<{width?: number, columns: Array<any>}>()
+const dict = dictStore()
+const props = withDefaults(defineProps<{
+      width?: number
+      columns: Array<any>,
+      okText?: string,
+      resetText?: string,
+      condition?: ConditionType
+    }>(),
+    {
+      okText: '查询',
+      width: 1000,
+      resetText: '重置',
+      condition: () => ({conditionList: [genEmptyCondition()], andOr: AND})
+    }
+)
+const {okText, resetText, condition} = toRefs(props)
 const width = computed(() => props.width ? props.width + 'px' : '1000px')
-const {columns} = toRefs(props)
-
-const emit = defineEmits(['queryGraphData'])
-const queryGraphData = () => emit('queryGraphData', {conditions: queryData.value, pageSize: 200})
-
-onBeforeMount(() => {
-  let filterColumns = columns.value.filter((item: any) => item.filterAble)
-  filterColumns = filterColumns.map((item: any) => ({label: item.title, value: item.key, fieldType: item.fieldType, referenceDictOption: item.referenceDictOption})) as any
+const advancedCondition:Ref = ref({conditionList: [genEmptyCondition()], andOr: AND})
+const emit = defineEmits(['getCondition'])
+const getCondition = () => emit('getCondition', advancedCondition.value)
+const resetCondition = () => {
+  advancedCondition.value.conditionList = [genEmptyCondition()]
+  advancedCondition.value.andOr = AND
+}
+const log = (...data: Array<any>) => {
+  console.log(data)
+}
+const updateAdvancedConditionFromProps = () => {
+  console.log('updateAdvancedConditionFromProps', condition.value)
+  if(isNotEmpty(condition.value)) {
+    advancedCondition.value = condition.value
+  } else {
+    resetCondition()
+  }
+}
+onBeforeMount(async () => {
+  const filterColumns = props.columns.map((item: any) => ({
+    label: item.title,
+    value: item.key,
+    fieldType: item.fieldType,
+    referenceDictOption: item.referenceDictOption
+  })) as any
   useAdvancedSearchStore.setConditionLabelValueTypeOption(filterColumns)
-  getDictList('PORTAL_CONDITION_DICT')
-    .then(res => res.payload.forEach((item: ValueLabel) => useAdvancedSearchStore.setSelectConditionMap(item.value, item)))
+  const conditionDict = await dict.getDict('PORTAL_CONDITION_DICT')
+  conditionDict.forEach((item: ValueLabel) => useAdvancedSearchStore.setSelectConditionMap(item.value, item))
+  updateAdvancedConditionFromProps()
 })
+
+watch(() => props.condition, () => updateAdvancedConditionFromProps, {immediate: true})
 
 </script>
 

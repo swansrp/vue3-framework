@@ -11,7 +11,7 @@
 </template>
 
 <script lang="ts" setup>
-import {ColumnType, TableConfigType} from '@/framework/components/common/portal/type'
+import {ColumnType, TableConfigType} from '@/framework/components/common/Portal/type'
 import {passwordReset, userEnable, userDisable} from '@/framework/apis/admin/user'
 import {createVNode, Ref} from 'vue'
 import {Modal} from 'ant-design-vue'

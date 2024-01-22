@@ -1,19 +1,19 @@
 <template>
   <div class="entity-wrapper">
-    <ConditionList v-model:condition="queryData.condition" :index="-1" />
+    <ConditionList v-model:condition="condition" :index="-1" />
   </div>
 </template>
 
 <script setup lang="ts">
 import {Ref} from "vue"
-import {QueryDataType} from "../type"
+import {ConditionType} from '../type'
 import ConditionList from "../ConditionList/index.vue"
 
 
-const props = defineProps<{queryData: QueryDataType}>()
-const queryData:Ref<QueryDataType|undefined> = ref()
+const props = defineProps<{condition: ConditionType}>()
+const condition:Ref<ConditionType|undefined> = ref()
 
-watch(() => props.queryData, () => queryData.value = props.queryData, {immediate: true})
+watch(() => props.condition, () => condition.value = props.condition, {immediate: true})
 
 </script>
 

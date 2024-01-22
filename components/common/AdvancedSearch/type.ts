@@ -1,11 +1,7 @@
-import {ConditionListType} from "./ConditionList/type"
-
-export interface QueryDataType {
-  condition: ConditionType
-}
+import {ConditionListType} from './ConditionList/type'
 
 export interface ConditionType {
-  conditionList: ConditionListType[]
-  andOr: string
+    conditionList: Array<ConditionListType>
+    andOr: '0' | '1'
 }
 

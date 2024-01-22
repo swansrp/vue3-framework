@@ -1,20 +1,21 @@
 <template>
-  <div style="margin-top: 20px;padding-left: 10px;">
+  <div style="margin-top: 10px;padding-left: 10px;padding-top: 6px;">
     <a-timeline>
       <a-timeline-item v-if="propertySelectOptions.length">
         <AndOrSelect v-model:value="condition.andOr" />
       </a-timeline-item>
       <template v-if="condition.conditionList.length">
         <a-timeline-item v-for="(item, idx) in condition.conditionList" :key="item.id">
-          <div class="condition-item" v-if="item.isShow">
+          <div v-if="item.isShow" class="condition-item">
+            <a-tooltip placement="bottom" title="删除当前条件">
+              <minus-circle-outlined style="color: red" @click="onClickDeleteCondition(item.id)" />
+            </a-tooltip>
             <Condition
               v-model:property="item.property"
               v-model:relation="item.relation"
               v-model:value="item.value"
-              :property-select-options="propertySelectOptions" />
-            <a-tooltip placement="right" title="删除当前条件">
-              <minus-circle-outlined style="color: red" @click="onClickDeleteCondition(item.id)" />
-            </a-tooltip>
+              :property-select-options="propertySelectOptions"
+              style="margin-left: 5px" />
           </div>
           <template v-if="item.conditionList && item.conditionList.length">
             <ConditionList
@@ -27,7 +28,11 @@
     </a-timeline>
     <template v-if="!propertySelectOptions.length">
       <a-tooltip placement="right" title="当前配置关系没有任何属性，不可添加查询条件">
-        <a-button disabled><PlusCircleOutlined />添加<DownOutlined /></a-button>
+        <a-button disabled>
+          <PlusCircleOutlined />
+          添加
+          <DownOutlined />
+        </a-button>
       </a-tooltip>
     </template>
     <a-dropdown v-else>
@@ -43,50 +48,58 @@
           </a-menu-item>
         </a-menu>
       </template>
-      <a-button size="small">
-        <PlusCircleOutlined />添加<DownOutlined />
+      <a-button>
+        <PlusCircleOutlined />
+        添加
+        <DownOutlined />
       </a-button>
     </a-dropdown>
   </div>
 </template>
 
-<script setup lang="ts">
-import {Ref} from "vue"
-import {MenuProps} from "ant-design-vue"
-import {ValueLabel} from "@/framework/utils/type"
-import {genEmptyCondition} from "./funs"
-import {ConditionType} from "../type"
-import pinia from "@/framework/store"
+<script lang="ts" setup>
+import {Ref} from 'vue'
+import {MenuProps} from 'ant-design-vue'
+import {ValueLabel} from '@/framework/utils/type'
+import {genEmptyCondition} from './funs'
+import {ConditionType} from '../type'
+import pinia from '@/framework/store'
 import Condition from '../Condition/index.vue'
-import AndOrSelect from "../AndOrSelect/index.vue"
-import ConditionList from "../ConditionList/index.vue"
-import {useAdvancedSearch} from "@/framework/store/AdvancedSearch"
-import {ApartmentOutlined, DownOutlined, PlusCircleOutlined, PlusSquareOutlined, MinusCircleOutlined} from "@ant-design/icons-vue"
+import AndOrSelect from '../AndOrSelect/index.vue'
+import ConditionList from '../ConditionList/index.vue'
+import {useAdvancedSearch} from '@/framework/store/AdvancedSearch'
+import {
+  ApartmentOutlined,
+  DownOutlined,
+  MinusCircleOutlined,
+  PlusCircleOutlined,
+  PlusSquareOutlined
+} from '@ant-design/icons-vue'
+import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 
-const condition: Ref<ConditionType | any> = ref()
+const condition: Ref = ref()
 const propertySelectOptions: Ref<Array<ValueLabel>> = ref([])
-const props = defineProps<{condition: ConditionType, index: number}>()
+const props = defineProps<{ condition: ConditionType | ConditionListType, index: number }>()
 const {index} = toRefs(props)
 
 const useAdvancedSearchStore = useAdvancedSearch(pinia)
-const emit = defineEmits(['update:condition','deleteCurrentConditionList'])
+const emit = defineEmits(['update:condition', 'deleteCurrentConditionList'])
 
 const onClickDeleteCondition = (id: number) => {
-  condition.value.conditionList =  condition.value.conditionList.filter((condition: any) => id !== condition.id)
+  condition.value.conditionList = condition.value.conditionList.filter((condition: any) => id !== condition.id)
   if (condition.value.conditionList.length === 0)
     emit('deleteCurrentConditionList', index.value)
-  emit('update:condition',  condition.value)
+  emit('update:condition', condition.value)
 }
 
 const deleteCurrentConditionList = (index: number) =>
-  condition.value.conditionList = condition.value.conditionList.filter((_: any, i: number) => i !== index)
+    condition.value.conditionList = condition.value.conditionList.filter((_: any, i: number) => i !== index)
 
 const handleAddMenuClick: MenuProps['onClick'] = ({key}) => {
   if (+key === 1) {
     condition.value.conditionList.push(genEmptyCondition())
-  }
-  else if (+key === 2) {
+  } else if (+key === 2) {
     const emptyCondition = genEmptyCondition()
     emptyCondition.isShow = false
     emptyCondition.conditionList = [genEmptyCondition()]
@@ -104,18 +117,22 @@ watch(() => props.condition, () => condition.value = props.condition, {immediate
 .menu-item {
   height: 32px;
 }
-:deep(.ant-timeline-item){
+
+:deep(.ant-timeline-item) {
   padding-bottom: 5px;
 }
+
 :deep(.ant-timeline-item-content .condition-item) {
   display: flex;
   justify-content: start;
   align-items: center;
 }
+
 :deep(.ant-timeline-item-head) {
-  top: 10px;
+  top: 5px;
 }
-:deep(.ant-timeline-item-tail){
+
+:deep(.ant-timeline-item-tail) {
   height: 100%;
 }
 </style>

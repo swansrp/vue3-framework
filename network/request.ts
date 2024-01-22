@@ -60,12 +60,13 @@ axiosInstance.interceptors.response.use(
         else if (err.response.status === 403)
             return ElMessage.error({message: '权限不足,请联系管理员!'})
         else if (err.response.status === 500)
-            return ElMessage.error({message: '系统错误,请刷新网页，或联系管理员!'})
+            return ElMessage.error({message: '系统错误,联系管理员!'})
         else console.log(err)
     }
 )
 
 const _handleTimeOut = function (data: ResponseDataType) {
+    console.log(data)
     if (data.status != null) {
         if (data.status.code === errCode.SESSION_TIME_OUT) {
             // localStorageMethods.removeLocalStorage(AUTHORIZATION_TOKEN)
