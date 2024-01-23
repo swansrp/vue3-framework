@@ -87,14 +87,20 @@ const useAdvancedSearchStore = useAdvancedSearch(pinia)
 const emit = defineEmits(['update:condition', 'deleteCurrentConditionList'])
 
 const onClickDeleteCondition = (id: number) => {
+  console.log('onClickDeleteCondition', condition.value.conditionList, id)
   condition.value.conditionList = condition.value.conditionList.filter((condition: any) => id !== condition.id)
   if (condition.value.conditionList.length === 0)
     emit('deleteCurrentConditionList', index.value)
   emit('update:condition', condition.value)
 }
 
-const deleteCurrentConditionList = (index: number) =>
-    condition.value.conditionList = condition.value.conditionList.filter((_: any, i: number) => i !== index)
+const deleteCurrentConditionList = (idx: number) => {
+  console.log('deleteCurrentConditionList', condition.value.conditionList, idx)
+  condition.value.conditionList = condition.value.conditionList.filter((_: any, i: number) => i !== idx)
+  if (condition.value.conditionList.length === 0)
+    emit('deleteCurrentConditionList', index.value)
+}
+
 
 const handleAddMenuClick: MenuProps['onClick'] = ({key}) => {
   if (+key === 1) {
