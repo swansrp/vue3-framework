@@ -259,7 +259,7 @@
             :options="columnDict || []"
             :value="tableConfig.pidColumn"
             allow-clear
-            style="width: 150px"
+            style="width: 120px"
             @update:value=" v => {
               tableConfig.pidColumn = v
               saveTableConfig()
@@ -312,12 +312,12 @@
           }]"
           :data-source="tableConfig.columns"
           :pagination="false"
-          :scroll="{y: 600}"
+          :scroll="{y: getTableHeight()}"
           bordered
           range-selection="single"
           rowKey="id"
           size="small"
-          style="width: 200px;"
+          style="width: 220px;"
           @cell-click="handleColumnSelected"
           @row-drag-end="handleColumnOrderChanged"
         >
@@ -456,8 +456,7 @@
                 label="" />
             </template>
             <a-descriptions-item
-              :span="8"
-              label="" />
+              :span="8" />
             <!-- endregion -->
             <!-- region 表格显示 -->
             <a-descriptions-item
@@ -530,7 +529,7 @@
             </a-descriptions-item>
             <a-descriptions-item
               :span="1"
-              label="是否可以筛选">
+              label="是否筛选">
               <a-switch
                 v-model:checked="columnMap.get(selectedColumnId).filterAble"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'
@@ -542,7 +541,7 @@
             </a-descriptions-item>
             <a-descriptions-item
               :span="1"
-              label="是否可以排序">
+              label="是否排序">
               <a-switch
                 v-model:checked="columnMap.get(selectedColumnId).sortAble"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'
@@ -565,8 +564,7 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
-              :span="8"
-              label="" />
+              :span="8" />
             <!-- endregion -->
             <!-- region 弹框显示 -->
             <a-descriptions-item
@@ -736,9 +734,9 @@
         <div></div>
       </template>
       <AdvancedSearch
-        :condition="entityCondition.condition"
-        :columns="entityCondition.columns"
         :key="entityCondition.key"
+        :columns="entityCondition.columns"
+        :condition="entityCondition.condition"
         okText="保存"
         @get-condition="saveEntityCondition" />
     </a-drawer>
@@ -747,7 +745,7 @@
 </template>
 <script lang="ts" setup>
 import {Ref} from 'vue'
-import {isEmpty, isNotEmpty} from '@/framework/utils/common'
+import {isEmpty, isNotEmpty, updateTableSize} from '@/framework/utils/common'
 import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 import {
   copyPortalConfig,
@@ -764,6 +762,8 @@ import {ValueLabel} from '@/framework/utils/type'
 import {dictStore} from '@/framework/store/common'
 import {CellRenderArgs} from '@surely-vue/table'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
+import {AUTO} from '@/framework/utils/constant'
+import * as _ from 'lodash'
 
 const dict = dictStore()
 let inputTableName: Ref<string> = ref('')
@@ -781,7 +781,7 @@ const entityCondition = reactive({
   columns: [],
   title: '',
   condition: {} as ConditionType | undefined,
-  key: 0,
+  key: 0
 })
 const entityColumnDict = reactive([] as Array<ValueLabel>)
 
@@ -883,12 +883,17 @@ const handleColumnSelected = (event: MouseEvent, params: CellRenderArgs) => {
 }
 
 const entityConditionDrawOpen = async () => {
-  entityCondition.columns = entityConfig.value.columns.filter((item: { filterAble: string; }) => item.filterAble === '1').map((item: any) => ({
-    title: item.displayName,
-    key: item.property,
-    referenceDict: item.reference,
-    fieldType: item.fieldType
-  }))
+  entityCondition.columns = entityConfig.value.columns.filter(
+      (item: {
+        filterAble: string;
+        show: string;
+      }) => item.filterAble === '1' && item.show === '1')
+      .map((item: any) => ({
+        title: item.displayName,
+        key: item.property,
+        referenceDict: item.reference,
+        fieldType: item.fieldType
+      }))
   for (let item of entityCondition.columns) {
     if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.referenceDict)) {
       item.referenceDictOption = await dict.getDict(item.referenceDict) || []
@@ -917,6 +922,7 @@ const saveEntityCondition = (condition: ConditionType) => {
 }
 
 const init = async () => {
+  updateTableWidthAndHeight()
   return Promise.all([
     await dict.getDict('PORTAL_TABLE_SIZE_DICT').then(res => {
       tableSizeDict = res || []
@@ -935,6 +941,26 @@ onMounted(() => {
     onSearch()
   })
 })
+// region 调整表格大小
+const root: Ref = ref()
+let tableWidth: Ref<number> = ref(0)
+let tableHeight: Ref<number> = ref(0)
+const getTableWidth = () => {
+  if (tableWidth.value == undefined) return AUTO
+  return tableWidth.value - 20
+}
+const getTableHeight = () => {
+  if (tableHeight.value == undefined) return AUTO
+  return tableHeight.value
+}
+const updateTableWidthAndHeight = () => {
+  console.debug('updateTableWidthAndHeight')
+  updateTableSize(root, tableWidth, 40, tableHeight, 270)
+  console.log(getTableWidth(), getTableHeight())
+}
+window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
+//endregion
+
 </script>
 <style lang="less" scoped>
 .root {
