@@ -167,14 +167,19 @@ function download(
     apiType: ApiType,
     fileName: string,
     params: object,
-    body: object) {
+    data: object) {
     ElMessage.success({message: '开始下载……'})
     return axiosInstance({
         baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain,
         method: apiType.method,
-        url: apiType.url,
-        data: body,
-        params: params,
+        url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
+        data,
+        params: null,
+        headers: {
+            'Content-Type': 'application/json',
+            'api-version': apiType.version,
+            'client-type': 0
+        },
         responseType: 'blob'
     }).then(resp => {
         _download(resp, fileName)
