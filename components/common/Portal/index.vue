@@ -1,5 +1,5 @@
 <template>
-  <div ref="root" class="root">
+  <div ref="root" class="root" v-bind="$attrs">
     <!-- region 树形配置 -->
     <div v-if="config.treeMenuShow" class="menu-tree">
       <div class="menu-category">{{ config.title }}</div>
@@ -249,14 +249,14 @@
                   查看详情
                 </li>
                 <li
-                  v-if="!config.readOnly && !isRowUpdate(args.recordIndexs[0]) && config.editModalAble"
+                  v-if="rowAllowEdit(args)"
                   class="popup-item"
                   @click="editRow(args)">
                   <form-outlined />
                   编辑记录
                 </li>
                 <li
-                  v-if="!config.readOnly && !isRowUpdate(args.recordIndexs[0])"
+                  v-if="rowAllowDelete(args)"
                   class="popup-item"
                   @click="deleteRow(args)">
                   <delete-outlined />
@@ -655,12 +655,14 @@
                   style="width: 100%; margin: 0px 3px"
                   @update:value=" v => config.modal.data[column.dataIndex] = v"
                 />
-                <a-button
-                  v-else-if="column.fieldType === FIELD_TYPE.ENTITY"
-                  type="text" @click="showEntityDialogBox(column)">{{
-                    strRemoveLF(getEntityDialogBoxLabel(column))
-                  }}
-                </a-button>
+                <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY">
+                  <delete-outlined v-if="config.modal.data[column.dataIndex] !== null" @click="cleanEntity(column)" />
+                  <a-button
+                    :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
+                    @click="showEntityDialogBox(column)">{{ strRemoveLF(getEntityDialogBoxLabel(column)) }}
+                  </a-button>
+                </div>
+
               </a-form-item>
             </a-descriptions-item>
             <a-descriptions-item
@@ -675,7 +677,9 @@
       v-model:visible="entityDialogBox.show"
       :title="'配置 ' + strRemoveLF(entityDialogBox.column.title)"
       is-full>
-      <Portal :table-id="entityDialogBox.column.referenceDict" read-only :advance-condition="entityDialogBox.column.entityCondition">
+      <Portal
+        :advance-condition="entityDialogBox.column.entityCondition" :table-id="entityDialogBox.column.referenceDict"
+        read-only>
         <template #action="{ portalConfig, column, record }">
           <a-button type="text" @click="bind(portalConfig, column, record)">确认</a-button>
         </template>
@@ -706,6 +710,7 @@ import {
   addEntity,
   advancedQuery,
   deleteEntity,
+  exportData,
   getTreeData,
   updateEntity,
   updateEntityList,
@@ -768,12 +773,36 @@ import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
+/**
+ * @param tableId 表格ID
+ * @param readOnly 不能编辑
+ * @param actionWidth 操作栏宽度
+ * @param advanceCondition 默认查询参数
+ * @param defaultSortColumn 默认排序字段
+ */
 const props = defineProps<{
   tableId: string,
   readOnly?: boolean,
   actionWidth?: number,
   advanceCondition?: ConditionType,
+  defaultSortColumn?: Array<QuerySortType>
 }>()
+
+const emit = defineEmits<{
+  /**
+   * rowAllowEdit: 该行是否能够编辑
+   * @param record 该行数据
+   * @param allow 结果
+   */
+  rowAllowEdit: [{ record: any, allow: boolean }]
+  /**
+   * rowAllowEdit: 该行是否能够删除
+   * @param record 该行数据
+   * @param allow 结果
+   */
+  rowAllowDelete: [{ record: any, allow: boolean }]
+}>()
+const $attrs = useAttrs()
 const dict = dictStore()
 // region 调整表格大小
 const root: Ref = ref()
@@ -837,6 +866,7 @@ let treeData: Ref<Array<DataNode>> = ref([])
  * 表头
  */
 const columnArray = ref([] as Array<ColumnType>)
+const columnRaw = []
 const columns = computed(() => {
   return columnArray.value.filter(item => item.checked)
 })
@@ -1035,6 +1065,10 @@ const showEntityDialogBox = (column: ColumnType) => {
   entityDialogBox.column = column
   entityDialogBox.show = true
 }
+const cleanEntity = (column: ColumnType) => {
+  config.modal.data[column.dataIndex] = null
+  config.modal.data[column.dbField] = null
+}
 const bind = (portalConfig: TableConfigType, column: ColumnType, record: Array<any>) => {
   const entityField = entityDialogBox.column.referenceEntityField || portalConfig.rowKey
   console.log('bind', entityField, record[`${entityField}`], portalConfig.nameKey, record[`${portalConfig.nameKey}`])
@@ -1074,6 +1108,26 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
 // endregion
 // region 编辑弹框
 const editModalRef = ref<FormInstance>()
+const rowAllowEdit = (record: any) => {
+  let allow = !config.readOnly
+  allow = allow && !isRowUpdate(record.index) && config.editModalAble
+  if ($attrs.onRowAllowEdit) {
+    const data = {record: record.record, allow}
+    emit('rowAllowEdit', data)
+    allow = allow && data.allow
+  }
+  return allow
+}
+const rowAllowDelete = (record: any) => {
+  let allow = !config.readOnly
+  allow = allow && !isRowUpdate(record.index)
+  if ($attrs.onRowAllowDelete) {
+    const data = {record: record.record, allow}
+    emit('rowAllowDelete', data)
+    allow = allow && data.allow
+  }
+  return allow
+}
 // 获取弹框标题
 const getModalTitle = () => {
   switch (config.modal.type) {
@@ -1186,8 +1240,12 @@ const editRow = (args: any) => {
 }
 // 保存编辑详情页
 const updateEditRow = async () => {
-  log('保存内容', config.modal.data)
-  return await updateEntity(config.url, config.modal.data)
+  console.debug('原始内容', dataSource.value[config.modal.editRowIndex])
+  console.debug('保存内容', config.modal.data)
+  return await updateEntity(config.url, {
+    ...dataSource.value[config.modal.editRowIndex],
+    ...config.modal.data
+  })
 }
 const closeModal = () => {
   config.modal.show = false
@@ -1206,7 +1264,8 @@ const query = computed(() => {
     currentPage: config.currentPage,
     pageSize: config.pageSize
   } as QueryType
-  if (isNotEmpty(querySortMap.values())) {
+  queryCondition.sortList = props.defaultSortColumn || []
+  if (isNotEmpty(querySortMap)) {
     queryCondition.sortList = [...querySortMap.values()]
   }
   if (isNotEmpty(advancedCondition.condition)) {
@@ -1261,7 +1320,7 @@ const initQueryCondition = () => {
 const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, hidePopup: any, column: any) => {
   console.log(column)
   const condition = {
-    property: column.dbField ? column.dbField : dataIndex as string,
+    property: dataIndex as string,
     value: selectedKeys as Array<any>,
     relation: getDefaultFilterType(column.fieldType)
   }
@@ -1298,7 +1357,7 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
       querySortMap.set(column.columnKey,
           {
             property: column.column.dbField ? column.column.dbField : column.columnKey,
-            type: (column.order === 'ascend' ? 1 : 0)
+            type: (column.order === 'ascend' ? 0 : 1)
           })
     }
     queryData()
@@ -1363,7 +1422,7 @@ const paginationChange = () => {
  * 导出
  */
 const download = () => {
-  log('导出')
+  exportData(config.url, query.value, config.title + "-" + dayjs().format('HHmmss') + '.xlsx')
 }
 /**
  * 刷新
@@ -1414,53 +1473,54 @@ const init = async () => {
       throw new Error('尚未配置字段id')
     }
     for (let layout of tableConfig.columns) {
+      const column = _.cloneDeep(defaultColumn)
+      column.title = layout.displayName
+      column.dataIndex = layout.property
+      column.dbField = layout.dbField
+      column.key = layout.property
+      column.width = layout.width !== 0 ? layout.width : 140
+      column.fixed = layout.fixed === '1'
+      column.fieldType = layout.fieldType
+      column.referenceDict = layout.reference || layout.entity
+      column.referenceEntityField = layout.entityField
+      column.contentAlign = layout.align
+      column.filterAble = layout.filterAble === '1'
+      column.sorter = layout.sortAble === '1'
+      column.addShow = layout.addShow === '1'
+      if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow
+      column.editShow = layout.editShow === '1'
+      if (!config.editModalAble && column.editShow) config.editModalAble = column.editShow
+      column.checked = layout.show === '1'
+      column.detailShow = layout.detailShow === '1'
+      column.detailSize = layout.detailSize
+      column.addSize = layout.addSize
+      column.addPadding = layout.addPadding
+      column.editSize = layout.editSize
+      column.editPadding = layout.editPadding
+      // 单元格编辑模式
+      if (layout.editAble !== '1') {
+        column.editable = layout.editAble
+      }
+      // 提示有默认值配置
+      if (layout.tooltip !== '1') {
+        column.tooltip = false
+      }
+      column.required = layout.required === '1'
+      column.min = layout.min
+      column.max = layout.max
+      column.defaultValue = layout.defaultValue
+      if (isNotEmpty(column.referenceDict)) {
+        if (column.fieldType !== FIELD_TYPE.ENTITY) {
+          dictColumnArray.push(column)
+          column.referenceDictOption = await dict.getDict(column.referenceDict)
+        } else {
+          column.entityCondition = JSON.parse(layout.entityCondition)
+        }
+      }
       if (layout.enable === '1') {
-        const column = _.cloneDeep(defaultColumn)
-        column.title = layout.displayName
-        column.dataIndex = layout.property
-        column.dbField = layout.dbField
-        column.key = layout.property
-        column.width = layout.width !== 0 ? layout.width : 140
-        column.fixed = layout.fixed === '1'
-        column.fieldType = layout.fieldType
-        column.referenceDict = layout.reference || layout.entity
-        column.referenceEntityField = layout.entityField
-        column.contentAlign = layout.align
-        column.filterAble = layout.filterAble === '1'
-        column.sorter = layout.sortAble === '1'
-        column.addShow = layout.addShow === '1'
-        if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow
-        column.editShow = layout.editShow === '1'
-        if (!config.editModalAble && column.editShow) config.editModalAble = column.editShow
-        column.checked = layout.show === '1'
-        column.detailShow = layout.detailShow === '1'
-        column.detailSize = layout.detailSize
-        column.addSize = layout.addSize
-        column.addPadding = layout.addPadding
-        column.editSize = layout.editSize
-        column.editPadding = layout.editPadding
-        // 单元格编辑模式
-        if (layout.editAble !== '1') {
-          column.editable = layout.editAble
-        }
-        // 提示有默认值配置
-        if (layout.tooltip !== '1') {
-          column.tooltip = false
-        }
-        column.required = layout.required === '1'
-        column.min = layout.min
-        column.max = layout.max
-        column.defaultValue = layout.defaultValue
-        if (isNotEmpty(column.referenceDict)) {
-          if (column.fieldType !== FIELD_TYPE.ENTITY) {
-            dictColumnArray.push(column)
-            column.referenceDictOption = await dict.getDict(column.referenceDict)
-          } else {
-            column.entityCondition = JSON.parse(layout.entityCondition)
-          }
-        }
         columnArray.value.push(column)
       }
+      columnRaw.push(column)
     }
     actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
     columnArray.value.push(actionColumn)

@@ -13,7 +13,7 @@
                 {{ item.roleName }}
                 <div>
                   <a-button size="small" type="primary" @click="onEditRole(item)">编辑</a-button>
-                  <delete-pop-confirm @delete-event="handleDeleteRole(item.roleId)" />
+                  <delete-pop-confirm @delete-event="handleDeleteRole(item.roleId)" v-if="item.status !== -1" />
                 </div>
               </div>
             </a-list-item>
@@ -97,6 +97,7 @@ import {ValueLabelArray} from "@/framework/utils/type";
 import 'ant-design-vue/lib/message/style/index.css'
 import {message} from "ant-design-vue";
 import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
+import {log} from '@/framework/utils/common'
 
 let inputRoleName: Ref<string> = ref('')
 let activateItemIndex:Ref<number> = ref(-1)

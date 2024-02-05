@@ -1,12 +1,8 @@
 import {Method} from 'axios'
 import {name} from '@/../package.json'
-import {request} from '@/framework/network/request'
-import {
-    AdvancedQueryConditionType,
-    QuerySortType,
-    UpdateOrderType,
-    UpdatePidType
-} from '@/framework/components/common/Portal/type'
+import {download, request, upload} from '@/framework/network/request'
+import {QuerySortType, QueryType, UpdateOrderType, UpdatePidType} from '@/framework/components/common/Portal/type'
+import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 
 const baseDomain = '/' + name
 const apiType: any = {
@@ -50,7 +46,11 @@ const commonUrl = {
     DELETE: '/delete',
     TREE: '/tree/data',
     TREE_PID: '/pid',
-    ORDER: '/order/update'
+    ORDER: '/order/update',
+    EXPORT_DATA: '/advanced/query/export',
+    EXPORT_TEMPLATE: '/template/export',
+    IMPORT_ADD: '/import/add',
+    IMPORT_ADD_PROGRESS: '/import/add/progress'
 }
 
 const buildApi = (
@@ -135,6 +135,30 @@ const deleteApi = (
     version = '1.0'
 ) => buildApi(domain, commonUrl.DELETE, requestMethod.POST, version, type)
 
+const exportDataApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.EXPORT_DATA, requestMethod.POST, version, type)
+
+const exportTemplateApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.EXPORT_TEMPLATE, requestMethod.GET, version, type)
+
+const importAddDataApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.IMPORT_ADD, requestMethod.GET, version, type)
+
+const importAddProgressApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.IMPORT_ADD_PROGRESS, requestMethod.GET, version, type)
+
 const addRequest = (
     type: string,
     data: object,
@@ -154,10 +178,11 @@ const deleteRequest = (
 const updateRequest = (
     type: string,
     data: object,
+    params: object = {},
     domain: string = baseDomain,
     showSuccess = true,
     showLoading = true
-) => request(updateApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
+) => request(updateApi(type, domain), params, data, showSuccess, showLoading) as Promise<any>
 
 const updateListRequest = (
     type: string,
@@ -185,7 +210,7 @@ const generalQueryRequest = (
 
 const advancedQueryRequest = (
     type: string,
-    condition: AdvancedQueryConditionType,
+    condition: ConditionType,
     sortList: Array<QuerySortType>,
     pageSize: number,
     currentPage: number,
@@ -230,6 +255,30 @@ const updateOrderRequest = (
     showLoading = true
 ) => request(updateOrderApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
+const exportDataRequest = (
+    type: string,
+    data: QueryType,
+    fileName: string,
+    domain: string = baseDomain
+) => download(exportDataApi(type, domain), fileName, {}, data) as Promise<any>
+
+const exportTemplateRequest = (
+    type: string,
+    fileName: string,
+    domain: string = baseDomain
+) => download(exportTemplateApi(type, domain), fileName, {}, {}) as Promise<any>
+
+const importAddRequest = (
+    type: string,
+    data: QueryType,
+    domain: string = baseDomain
+) => upload(importAddDataApi(type, domain), {}, data) as Promise<any>
+
+const importAddProgressRequest = (
+    type: string,
+    domain: string = baseDomain
+) => request(importAddProgressApi(type, domain), {}) as Promise<any>
+
 export {
     web,
     baseUrl,
@@ -246,5 +295,9 @@ export {
     addRequest,
     updateRequest,
     updateListRequest,
-    deleteRequest
+    deleteRequest,
+    exportDataRequest,
+    exportTemplateRequest,
+    importAddRequest,
+    importAddProgressRequest
 }

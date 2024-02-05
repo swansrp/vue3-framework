@@ -44,9 +44,6 @@ const resetCondition = () => {
   advancedCondition.value.conditionList = [genEmptyCondition()]
   advancedCondition.value.andOr = AND
 }
-const log = (...data: Array<any>) => {
-  console.log(data)
-}
 const updateAdvancedConditionFromProps = () => {
   console.log('updateAdvancedConditionFromProps', condition.value)
   if(isNotEmpty(condition.value)) {

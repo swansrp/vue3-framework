@@ -9,7 +9,6 @@ import {AUTHORIZATION_TOKEN} from '@/framework/utils/constant'
 import {useCommonStore} from '@/framework/store/common'
 import pinia from '@/framework/store'
 import router from '@/framework/router'
-import {getToken} from '@/framework/apis/login/login'
 import {LocationQueryRaw} from 'vue-router'
 import {removeURLParameter} from '@/framework/network/utils'
 
@@ -35,7 +34,6 @@ axiosInstance.interceptors.request.use(
         const {data, showLoading} = config.data as configDataType
         if (showLoading) loadingInstance = createLoadingInstance()
         config.data = data
-        // if (commonStore.getLoginState) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
         const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
         if (token) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
         return config
@@ -116,7 +114,7 @@ function post(apiType: ApiType,
 // showErr 是否显示错误提示信息
 function request(apiType: ApiType,
                  params: object = {},
-                 data: object = {},
+                 body: object = {},
                  showSuccess = false,
                  showLoading = true,
                  showErr = true) {
@@ -125,7 +123,7 @@ function request(apiType: ApiType,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {
-            data,
+            data: body,
             showLoading
         },
         params: null,
@@ -140,7 +138,7 @@ function request(apiType: ApiType,
                 const errTypeMapList = ['info', 'warning', 'error']
                 const errLevel = +resp.data.payload.errLevel
                 const errType = errTypeMapList[errLevel]
-                if(showErr) {
+                if (showErr) {
                     ElMessage.error({message: resp.data.payload.errMsg, type: errType})
                     throw new Error(resp.data.status.msg)
                 } else {
@@ -167,13 +165,13 @@ function download(
     apiType: ApiType,
     fileName: string,
     params: object,
-    data: object) {
+    body: object) {
     ElMessage.success({message: '开始下载……'})
     return axiosInstance({
         baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
-        data,
+        data: {data: body},
         params: null,
         headers: {
             'Content-Type': 'application/json',
@@ -199,11 +197,10 @@ function upload(
     apiType: ApiType,
     params: object,
     body: object) {
-
-    axios({
+    return axiosInstance({
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
-        data: body,
+        data: {data: body},
         params: null,
         headers: {'Content-Type': 'multipart/form-data'}
     }).then(resp => ({
@@ -212,6 +209,7 @@ function upload(
             response: resp
         })
     ).catch(err => {
+        ElMessage.error({message: '上传失败，请检查网络后重试，或联系系统管理员！'})
         console.log(err)
         return err
     })

@@ -1,8 +1,9 @@
 import {
     addRequest,
+    advancedQueryRequest,
     apiType,
     deleteRequest,
-    advancedQueryRequest,
+    exportDataRequest,
     getByIdRequest,
     getTreeDataRequest,
     updateListRequest,
@@ -19,7 +20,7 @@ export const addEntity = (url: string, entity: object) =>
     addRequest(apiType.common + '/' + url, entity) as Promise<any>
 
 export const updateEntity = (url: string, entity: object) =>
-    updateRequest(apiType.common + '/' + url, entity) as Promise<any>
+    updateRequest(apiType.common + '/' + url, entity, {strict: true}) as Promise<any>
 
 export const updateEntityList = (url: string, entity: Array<any>) =>
     updateListRequest(apiType.common + '/' + url, entity) as Promise<any>
@@ -38,3 +39,6 @@ export const updateTreePid = (url: string, data: UpdatePidType) =>
 
 export const updateOrder = (url: string, data: Array<UpdateOrderType>) =>
     updateOrderRequest(apiType.common + '/' + url, data) as Promise<any>
+
+export const exportData = (url: string, query: QueryType, fileName: string) =>
+    exportDataRequest(apiType.common + '/' + url, query, fileName) as Promise<any>

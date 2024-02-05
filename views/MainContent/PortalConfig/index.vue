@@ -301,16 +301,10 @@
             align: 'center',
             dataIndex: 'displayName',
             tooltip: {placement: 'topLeft', mouseEnterDelay: 0.5},
-            rowDrag: true,
-            filters: [
-              { text: '表格显示', value: 'show' },
-              { text: '详情显示', value: 'detailShow' },
-              { text: '新增显示', value: 'addShow' },
-              { text: '编辑显示', value: 'editShow' }
-            ],
-            onFilter: (value: string, record: any) => record.enable === '1' && record[`${value}`] === '1'
+            rowDrag: !filtered,
+            showMenu: true
           }]"
-          :data-source="tableConfig.columns"
+          :data-source="fieldRecords"
           :pagination="false"
           :scroll="{y: getTableHeight()}"
           bordered
@@ -332,6 +326,40 @@
           </template>
           <template #tooltipTitle="{ value }">
             {{ value }}
+          </template>
+          <template #menuIcon="{ filtered }">
+            <filter-outlined :class="filtered && 'filter-active'" />
+          </template>
+          <template
+            #menuPopup="{ column, hidePopup, filter: { setSelectedKeys, selectedKeysRef, confirm, clearFilters } }">
+            <div style="background-color: white; height: 80px; width: fit-content; padding: 8px 16px 8px 16px;">
+              <a-select
+                clearable
+                :get-popup-container="(triggerNode) => triggerNode.parentNode"
+                :options="[
+                  { label: '有效', value: 'enable' },
+                  { label: '表格显示', value: 'show' },
+                  { label: '详情显示', value: 'detailShow' },
+                  { label: '新增显示', value: 'addShow' },
+                  { label: '编辑显示', value: 'editShow' }
+                ]"
+                :placeholder="`查看类型`"
+                :showSearch="false"
+                :value="selectedKeysRef.value"
+                style="width: 188px; margin-bottom: 8px; display: block"
+                @select="e => {
+                  const selectedKey = e ? e : ''
+                  setSelectedKeys(selectedKey)
+                  handleColumnFilter(selectedKey, confirm, column.key, hidePopup, column, clearFilters)
+                }"
+              />
+              <a-button
+                type="primary"
+                style="width: 100%"
+                @click="handleColumnFilter('', confirm, column.key, hidePopup, column, clearFilters)">
+                显示全部
+              </a-button>
+            </div>
           </template>
         </s-table>
         <!-- endregion -->
@@ -417,7 +445,7 @@
               <a-descriptions-item
                 v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
                 :span="2"
-                label="实体字段">
+                label="引用实体字段">
                 <a-select
                   :options="entityColumnDict"
                   :value="columnMap.get(selectedColumnId).entityField"
@@ -431,7 +459,7 @@
               <a-descriptions-item
                 v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
                 :span="1"
-                label="操作字段">
+                label="本体操作字段">
                 <a-select
                   :options="columnDict"
                   :value="columnMap.get(selectedColumnId).dbField"
@@ -447,7 +475,7 @@
                 v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
                 :span="1"
                 label="关联参数">
-                <a-button type="link" @click="entityConditionDrawOpen()">设置条件</a-button>
+                <a-button type="link" @click="entityConditionDrawOpen">设置条件</a-button>
               </a-descriptions-item>
             </template>
             <template v-else>
@@ -757,13 +785,14 @@ import {
   updatePortalColumnOrder,
   updatePortalConfig
 } from '@/framework/apis/portal/config'
-import {CopyOutlined, MinusCircleOutlined} from '@ant-design/icons-vue'
+import {CopyOutlined, FilterOutlined, MinusCircleOutlined} from '@ant-design/icons-vue'
 import {ValueLabel} from '@/framework/utils/type'
 import {dictStore} from '@/framework/store/common'
 import {CellRenderArgs} from '@surely-vue/table'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 import {AUTO} from '@/framework/utils/constant'
 import * as _ from 'lodash'
+
 
 const dict = dictStore()
 let inputTableName: Ref<string> = ref('')
@@ -774,6 +803,7 @@ let alignDict = reactive([] as Array<ValueLabel>)
 let columnDict = reactive([] as Array<ValueLabel>)
 let columnMap = reactive(new Map())
 let selectedColumnId = ref('')
+let columnFiltered: Ref<boolean> = ref(false)
 // 关联属性
 const entityConfig = ref({} as any)
 const entityCondition = reactive({
@@ -808,7 +838,7 @@ const getEntityConfig = (tableId: string) => {
   getPortalConfig(tableId).then(res => {
     entityColumnDict.length = 0
     entityConfig.value = res.payload
-    entityConfig.value.columns.forEach(column => {
+    entityConfig.value.columns.forEach((column: { property: any; displayName: any; }) => {
       entityColumnDict.push({value: column.property, label: column.displayName} as ValueLabel)
     })
     if (isEmpty(columnMap.get(selectedColumnId.value).entityField)) {
@@ -818,6 +848,7 @@ const getEntityConfig = (tableId: string) => {
 }
 
 const tableConfig = ref({} as any)
+const fieldRecords = ref([] as Array<any>)
 const getTableConfigByName = (item: any) => {
   getPortalConfig(item.value).then(res => {
     columnDict.length = 0
@@ -825,11 +856,11 @@ const getTableConfigByName = (item: any) => {
     selectedColumnId.value = ''
     entityCondition.condition = {} as ConditionType
     tableConfig.value = res.payload
-    tableConfig.value.columns.forEach(column => {
+    tableConfig.value.columns.forEach((column: { property: any; displayName: any; id: any; }) => {
       columnDict.push({value: column.property, label: column.displayName} as ValueLabel)
       columnMap.set(column.id, column)
     })
-
+    fieldRecords.value = [...tableConfig.value.columns]
     console.debug(tableConfig.value)
   })
 }
@@ -858,17 +889,34 @@ const onSearch = () => {
   })
 }
 
+const handleColumnFilter = (selectedKey: any, confirm: any, dataIndex: any, hidePopup: any, column: any, clearFilters: any) => {
+  fieldRecords.value.length = 0
+  if(selectedKey === '') {
+    fieldRecords.value = [...tableConfig.value.columns]
+    columnFiltered.value = false
+    clearFilters()
+  } else {
+    const filterColumn = tableConfig.value.columns.filter((record: { [x: string]: string; enable: string; }) => record.enable === '1' && record[`${selectedKey}`] === '1')
+    fieldRecords.value = filterColumn
+    columnFiltered.value = true
+    confirm()
+  }
+  hidePopup()
+}
+
+
 const handleColumnOrderChanged = () => {
   const columnOrder = [] as any
   let index = 1
   setTimeout(() => {
-    for (let column of tableConfig.value.columns) {
+    for (let column of fieldRecords.value) {
       const order = {
         id: column.id,
         title: column.displayName,
         showOrder: index++
       }
-      columnMap.get(column.id)[`${tableConfig.value.orderColumn}`] = order.showOrder
+      console.log(columnMap.get(column.id))
+      columnMap.get(column.id).displayOrder = order.showOrder
       columnOrder.push(order)
     }
     updatePortalColumnOrder(columnOrder).then(() => onSearch())
@@ -945,7 +993,7 @@ onMounted(() => {
 const root: Ref = ref()
 let tableWidth: Ref<number> = ref(0)
 let tableHeight: Ref<number> = ref(0)
-const getTableWidth = () => {
+const _getTableWidth = () => {
   if (tableWidth.value == undefined) return AUTO
   return tableWidth.value - 20
 }
@@ -954,9 +1002,7 @@ const getTableHeight = () => {
   return tableHeight.value
 }
 const updateTableWidthAndHeight = () => {
-  console.debug('updateTableWidthAndHeight')
   updateTableSize(root, tableWidth, 40, tableHeight, 270)
-  console.log(getTableWidth(), getTableHeight())
 }
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
 //endregion
@@ -1020,5 +1066,21 @@ window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
 :deep(.column-list .ant-spin-container li:hover) {
   background-color: #e6f7ff;
   border-right: 3px solid #1890ff;
+}
+
+:deep(.surely-table-popup-container-inner) {
+  width: 260px;
+  height: 400px;
+}
+
+:deep(.surely-table-popup-container) {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.filter-active {
+  color: var(--surely-table-primary-color) !important;
+  opacity: 1 !important;
 }
 </style>
