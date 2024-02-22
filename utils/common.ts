@@ -5,6 +5,7 @@ import isoWeeksInYear from 'dayjs/plugin/isoWeeksInYear'
 import isLeapYear from 'dayjs/plugin/isLeapYear'
 
 import {name} from '../../../package.json'
+import {TimerType} from '@/framework/utils/type'
 
 const localStoragePrefix = name + '-'
 
@@ -19,11 +20,9 @@ const localStorageMethods = {
             return ''
         }
         return value
-    },
-    removeLocalStorage(key: string) {
+    }, removeLocalStorage(key: string) {
         window.localStorage.removeItem(localStoragePrefix + key)
-    },
-    setLocalStorage(key: string, value: string) {
+    }, setLocalStorage(key: string, value: string) {
         if (!value) {
             window.localStorage.setItem(localStoragePrefix + key, '')
         } else {
@@ -42,7 +41,7 @@ function isEmpty(data: any) {
     } else if (typeof data === 'string') {
         return data.length === 0 || data === ''
     } else {
-        return JSON.stringify(data) == "{}"
+        return JSON.stringify(data) == '{}'
     }
 }
 
@@ -123,10 +122,8 @@ const customTableRowDblClickEvent = (projectId: string, lastExpandedRowKeys: Ref
 
 const updateTableSize = (tableWrapper: Ref, tableWidth?: Ref, w_bias?: number, tableHeight?: Ref, h_bias?: number) => {
     if (tableWrapper && tableWrapper.value) {
-        if (tableWidth && w_bias)
-            tableWidth.value = tableWrapper.value.offsetWidth - w_bias
-        if (tableHeight && h_bias)
-            tableHeight.value = tableWrapper.value.offsetHeight - h_bias
+        if (tableWidth && w_bias) tableWidth.value = tableWrapper.value.offsetWidth - w_bias
+        if (tableHeight && h_bias) tableHeight.value = tableWrapper.value.offsetHeight - h_bias
     }
 }
 
@@ -140,10 +137,18 @@ const clearFromField = (form: any, formRef: Ref) => {
     // 二者顺序不能交换，否则会失效
     formRef.value && formRef.value.resetFields()
     Object.keys(form).forEach(key => {
-        if (key === 'version' || key === 'id' || key === 'type') return
-        else if (key === 'partnerList' || key === 'competitorList' || key === 'financingMode') form[key] = []
-        else if (key === 'customer') form[key] = {value: ''}
-        else form[key] = ''
+        if (key === 'version' || key === 'id' || key === 'type') {
+            return
+        }
+        else if (key === 'partnerList' || key === 'competitorList' || key === 'financingMode') {
+            form[key] = []
+        }
+        else if (key === 'customer') {
+            form[key] = {value: ''}
+        }
+        else {
+            form[key] = ''
+        }
     })
 }
 
@@ -171,6 +176,39 @@ const log = (...a: Array<any>) => {
     return true
 }
 
+const stopTimer = (data: TimerType) => {
+    return new Promise((resolve, reject) => {
+        if (data.timer != null) {
+            window.cancelAnimationFrame(data.timer)
+            data.timer = null
+            resolve(data)
+        }
+    })
+}
+const startTimer = (data: TimerType, render: Function, replace = true) => {
+    return new Promise((resolve, reject) => {
+        const animLoop = () => {
+            const now = Date.now()
+            if (Date.now() - data.lastTime > data.diff) {
+                data.lastTime = now
+                render()
+            }
+            data.timer = window.requestAnimationFrame(animLoop)
+        }
+        if (data.timer != null) {
+            if (replace) {
+                stopTimer(data).then(() => {
+                    data.timer = window.requestAnimationFrame(animLoop)
+                    resolve(data)
+                })
+            }
+        } else {
+            data.timer = window.requestAnimationFrame(animLoop)
+            resolve(data)
+        }
+    })
+}
+
 
 export {
     localStorageMethods,
@@ -190,5 +228,7 @@ export {
     strLF2HtmlLF,
     strRemoveLF,
     doFunctions,
-    log
+    log,
+    startTimer,
+    stopTimer
 }

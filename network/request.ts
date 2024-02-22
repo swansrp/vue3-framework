@@ -11,12 +11,14 @@ import pinia from '@/framework/store'
 import router from '@/framework/router'
 import {LocationQueryRaw} from 'vue-router'
 import {removeURLParameter} from '@/framework/network/utils'
+import {AxiosProgressEvent} from 'axios/index'
+import {baseDomain, web} from '@/framework/apis'
 
 // 全局的 ElLoading，即使多次创建，也只会存在一个，方便随时关闭
 let loadingInstance: LoadingInstance
 const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
 const commonStore = useCommonStore(pinia)
-
+const baseURL = import.meta.env.VITE_baseURL + baseDomain + web
 
 const errCode = {
     SUCCESS: 0,
@@ -54,17 +56,18 @@ axiosInstance.interceptors.response.use(
         _handleTimeOut(err.response.data)
 
         if (err.response.status === 504 || err.response.status === 404)
-            return ElMessage.error({message: '服务器被吃了⊙﹏⊙∥'})
+            ElMessage.error({message: '服务器被吃了⊙﹏⊙∥'})
         else if (err.response.status === 403)
-            return ElMessage.error({message: '权限不足,请联系管理员!'})
+            ElMessage.error({message: '权限不足,请联系管理员!'})
         else if (err.response.status === 500)
-            return ElMessage.error({message: '系统错误,联系管理员!'})
-        else console.log(err)
+            ElMessage.error({message: '系统错误,联系管理员!'})
+        else
+            console.log(err)
+        throw new Error(err)
     }
 )
 
 const _handleTimeOut = function (data: ResponseDataType) {
-    console.log(data)
     if (data.status != null) {
         if (data.status.code === errCode.SESSION_TIME_OUT) {
             // localStorageMethods.removeLocalStorage(AUTHORIZATION_TOKEN)
@@ -75,7 +78,10 @@ const _handleTimeOut = function (data: ResponseDataType) {
                 if (redirectUri === 'localhost') {
                     const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
                     const redirect_uri = url === 'login' ? undefined : url
-                    return router.replace({path: ssoLoginUrl, query: {redirect_uri} as LocationQueryRaw})
+                    return router.replace({
+                        path: ssoLoginUrl,
+                        query: {redirect_uri} as LocationQueryRaw
+                    }).then(() => window.location.reload())
                 }
             } else {
                 const url = window.location.href.split('://')[1]
@@ -119,7 +125,7 @@ function request(apiType: ApiType,
                  showLoading = true,
                  showErr = true) {
     return axiosInstance({
-        baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain,
+        baseURL,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {
@@ -168,7 +174,7 @@ function download(
     body: object) {
     ElMessage.success({message: '开始下载……'})
     return axiosInstance({
-        baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain,
+        baseURL,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {data: body},
@@ -189,29 +195,35 @@ function download(
     }, err => {
         ElMessage.error({message: '下载失败，请检查网络后重试，或联系系统管理员！'})
         console.log(err)
-        return err
+        throw new Error(err)
     })
 }
 
 function upload(
     apiType: ApiType,
     params: object,
-    body: object) {
+    body: object,
+    onUploadProgress: Function) {
     return axiosInstance({
+        baseURL,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {data: body},
         params: null,
-        headers: {'Content-Type': 'multipart/form-data'}
-    }).then(resp => ({
+        headers: {'Content-Type': 'multipart/form-data'},
+        onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+            onUploadProgress(progressEvent)
+        }
+    }).then(resp => {
+        return {
             status: resp.data.status,
             payload: resp.data.payload,
             response: resp
-        })
-    ).catch(err => {
+        }
+    }).catch(err => {
         ElMessage.error({message: '上传失败，请检查网络后重试，或联系系统管理员！'})
         console.log(err)
-        return err
+        throw new Error(err)
     })
 }
 
@@ -241,5 +253,5 @@ function _download(res: AxiosResponse, fileName: string) {
 }
 
 
-export {get, post, request, upload, download}
+export {baseURL, get, post, request, upload, download}
 

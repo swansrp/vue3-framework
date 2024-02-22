@@ -85,7 +85,6 @@
 import {Md5} from 'ts-md5'
 import {reactive, Ref} from 'vue'
 import {message} from 'ant-design-vue'
-import {baseUrl} from '@/framework/apis'
 import 'ant-design-vue/lib/message/style/index.css'
 import {checkLoginState} from '@/framework/network/login'
 import {initPasswordAndLogin, login} from '@/framework/apis/login/login'
@@ -93,6 +92,7 @@ import {localStorageMethods} from '@/framework/utils/common'
 import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from '@/framework/utils/constant'
 import {LockOutlined, SafetyOutlined, UserOutlined} from '@ant-design/icons-vue'
 import {useRouter} from 'vue-router'
+import {baseURL} from '@/framework/network/request'
 
 const title: Ref<string> = ref(document.title)
 const router = useRouter()
@@ -103,7 +103,7 @@ const formInline = reactive({username: '', password: '', captcha: ''})
 const passwordResetMode: Ref<Boolean> = ref(false)
 const passwordResetForm = reactive({password: '', passwordConfirm: '', captcha: ''})
 
-const getCaptchaUrl = (captchaType: string) => baseUrl + '/captcha.jpg?token=' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN) + '&captchaType=' + captchaType
+const getCaptchaUrl = (captchaType: string) => baseURL + '/captcha.jpg?token=' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN) + '&captchaType=' + captchaType
 const updateCaptchaUrl = (captchaType: string) => captchaUrl.value = getCaptchaUrl(captchaType) + '&r=' + Math.random()
 
 const recoveryFun = (captchaType: string) => {

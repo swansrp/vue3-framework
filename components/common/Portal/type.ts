@@ -40,7 +40,7 @@ export type TableConfigType = {
     // 保存全部按钮是否显示,
     saveAllButtonShow: boolean,
     // 弹框
-    modal: ModelType,
+    modal: ModalType,
     // 详情每行显示个数
     descriptionCount: number,
     // 详情弹框宽度
@@ -59,12 +59,23 @@ export type TableConfigType = {
     exportAble: boolean
 }
 
-export type ModelType = {
+export type ModalType = {
     show: boolean,
     type: 'view' | 'add' | 'modify' | undefined,
     data: object,
     // 当前修改的rowId
     editRowIndex: any
+}
+
+export type UploadModalType = {
+    show: boolean,
+    type: 'INIT' | 'UPLOAD' | 'VALIDATE' | 'SAVE' | 'SUCCESS' | 'FAILED'
+    step: Number,
+    file: Array<any>,
+    total: Number,
+    loaded: Number,
+    percent: Number,
+    failedReason: Array<String>
 }
 
 export type ColumnType = {
@@ -203,7 +214,11 @@ export enum FIELD_TYPE {
     HREF = '8',
     HTML = '9',
     TEXT_AREA = '10',
-    ENTITY = '11'
+    ENTITY = '11',
+    IMAGE = "12",
+    VIDEO = "13",
+    AUDIO = "14",
+    FILE = "15"
 }
 
 export type QuerySortType = {

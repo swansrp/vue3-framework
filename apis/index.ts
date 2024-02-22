@@ -4,6 +4,7 @@ import {download, request, upload} from '@/framework/network/request'
 import {QuerySortType, QueryType, UpdateOrderType, UpdatePidType} from '@/framework/components/common/Portal/type'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 
+const web = '/web'
 const baseDomain = '/' + name
 const apiType: any = {
     navEdit: '/admin/menu',
@@ -23,11 +24,6 @@ const apiType: any = {
     config: '/config',
     portal: '/portal'
 }
-
-const web = '/web'
-Object.entries(apiType).forEach(([key, value]) => apiType[key] = web + value)
-
-const baseUrl = import.meta.env.VITE_baseURL + baseDomain + web
 
 const requestMethod = {
     GET: 'GET' as Method,
@@ -151,7 +147,7 @@ const importAddDataApi = (
     type: string,
     domain: string = baseDomain,
     version = '1.0'
-) => buildApi(domain, commonUrl.IMPORT_ADD, requestMethod.GET, version, type)
+) => buildApi(domain, commonUrl.IMPORT_ADD, requestMethod.POST, version, type)
 
 const importAddProgressApi = (
     type: string,
@@ -177,8 +173,8 @@ const deleteRequest = (
 
 const updateRequest = (
     type: string,
-    data: object,
     params: object = {},
+    data: object,
     domain: string = baseDomain,
     showSuccess = true,
     showLoading = true
@@ -186,11 +182,12 @@ const updateRequest = (
 
 const updateListRequest = (
     type: string,
+    params: object = {},
     data: object,
     domain: string = baseDomain,
     showSuccess = true,
     showLoading = true
-) => request(updateListApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
+) => request(updateListApi(type, domain), params, data, showSuccess, showLoading) as Promise<any>
 
 const generalQueryRequest = (
     type: string,
@@ -257,31 +254,35 @@ const updateOrderRequest = (
 
 const exportDataRequest = (
     type: string,
+    params: string,
     data: QueryType,
     fileName: string,
     domain: string = baseDomain
-) => download(exportDataApi(type, domain), fileName, {}, data) as Promise<any>
+) => download(exportDataApi(type, domain), fileName, {name: params}, data) as Promise<any>
 
 const exportTemplateRequest = (
     type: string,
+    params: string,
     fileName: string,
     domain: string = baseDomain
-) => download(exportTemplateApi(type, domain), fileName, {}, {}) as Promise<any>
+) => download(exportTemplateApi(type, domain), fileName, {name: params}, {}) as Promise<any>
 
 const importAddRequest = (
     type: string,
-    data: QueryType,
+    params: string,
+    body: object,
+    onUploadProgress: Function,
     domain: string = baseDomain
-) => upload(importAddDataApi(type, domain), {}, data) as Promise<any>
+) => upload(importAddDataApi(type, domain), {name: params}, body, onUploadProgress) as Promise<any>
 
 const importAddProgressRequest = (
     type: string,
+    params: string,
     domain: string = baseDomain
-) => request(importAddProgressApi(type, domain), {}) as Promise<any>
+) => request(importAddProgressApi(type, domain), {name: params}, {} ,false, false, false) as Promise<any>
 
 export {
     web,
-    baseUrl,
     apiType,
     baseDomain,
     buildGetApiByType,

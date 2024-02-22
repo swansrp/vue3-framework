@@ -18,78 +18,15 @@
     <!-- region 数据 -->
     <div style="width: 100%;">
       <!-- region 按钮区 -->
-      <div class="portal-button-space">
-        <!-- region 左侧按钮区 -->
-        <div>
-          <a-tooltip v-if="config.treeMode" placement="top">
-            <template #title>
-              <span>树形结构</span>
-            </template>
-            <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="showTreeMenu">
-              <template #icon>
-                <align-left-outlined style="transform:scale(-1, -1);" />
-              </template>
-            </a-button>
-          </a-tooltip>
-          <a-tooltip v-if="!config.readOnly && config.addModalAble" placement="top">
-            <template #title>
-              <span>新增</span>
-            </template>
-            <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="addRow">
-              <template #icon>
-                <appstore-add-outlined />
-              </template>
-            </a-button>
-          </a-tooltip>
-          <a-tooltip placement="top">
-            <template #title>
-              <span>刷新</span>
-            </template>
-            <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="refresh">
-              <template #icon>
-                <reload-outlined />
-              </template>
-            </a-button>
-          </a-tooltip>
-        </div>
-        <!-- endregion 左侧按钮区 -->
-        <!-- region 右侧按钮区 -->
-        <div>
-          <a-tooltip placement="top">
-            <template #title>
-              <span>高级查询</span>
-            </template>
-            <a-button
-              shape="circle" size="middle" style="margin-left: 3px" type="primary"
-              @click="() => advancedCondition.show = true">
-              <template #icon>
-                <funnel-plot-outlined />
-              </template>
-            </a-button>
-          </a-tooltip>
-          <a-tooltip v-if="!config.readOnly && config.saveAllButtonShow" placement="top">
-            <template #title>
-              <span>保存全部</span>
-            </template>
-            <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="saveAll">
-              <template #icon>
-                <save-outlined />
-              </template>
-            </a-button>
-          </a-tooltip>
-          <a-tooltip v-if="config.exportAble" placement="top">
-            <template #title>
-              <span>导出</span>
-            </template>
-            <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="download">
-              <template #icon>
-                <DownloadOutlined />
-              </template>
-            </a-button>
-          </a-tooltip>
-        </div>
-        <!-- endregion 右侧按钮区 -->
-      </div>
+      <portal-button-action
+        :advancedCondition="advancedCondition"
+        :config="config"
+        @download="download"
+        @refresh="refresh"
+        @show-tree-menu="showTreeMenu"
+        @add-row="addRow"
+        @save-all="saveAll"
+        @open-upload-modal="openUploadModal" />
       <!-- endregion -->
       <!-- region 表格区 -->
       <div ref="portalConfigSpace" class="portal-table-space">
@@ -131,74 +68,21 @@
             <!-- endregion -->
             <!-- region 单元格样式-->
             <template #bodyCell="{ column, record, index }">
-              <template v-if="(column.dataIndex === 'index')">
-                <div :style="{textAlign: 'center'}">{{ (index + 1) + config.pageSize * (config.currentPage - 1) }}</div>
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.SWITCH">
-                <a-badge-ribbon
-                  :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
-                  placement="start">
-                  <a-switch
-                    v-model:checked="record[`${column.dataIndex}`]"
-                    checkedValue="1"
-                    disabled
-                    unCheckedValue="0" />
-                </a-badge-ribbon>
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
-                <a-badge-ribbon
-                  :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
-                  placement="start">
-                  {{ dict.getLabel(column.referenceDict, record[`${column.dataIndex}`]) }}
-                </a-badge-ribbon>
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
-                <a-badge-ribbon
-                  :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
-                  placement="start">
-                  {{
-                    isNotEmpty(record[`${column.dataIndex}`]) ?
-                      dayjs(record[`${column.dataIndex}`]).format('YYYY-MM-DD')
-                      :
-                      ''
-                  }}
-                </a-badge-ribbon>
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.DATETIME">
-                <a-badge-ribbon
-                  :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
-                  placement="start">
-                  {{
-                    isNotEmpty(record[`${column.dataIndex}`]) ?
-                      dayjs(record[`${column.dataIndex}`]).format('YYYY-MM-DD HH:mm:ss')
-                      :
-                      ''
-                  }}
-                </a-badge-ribbon>
-              </template>
-              <template v-else-if="column.dataIndex === 'actionColumn'">
-                <!-- (portalConfig: TableConfigType, column: ColumnType, record: any) -->
-                <slot
-                  :column="column"
-                  :portal-config="config"
-                  :record="record"
-                  name="action">
-                </slot>
-              </template>
-              <template v-else>
-                <a-badge-ribbon
-                  :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
-                  placement="start">
-                  <div
-                    :style="{textAlign: column.contentAlign || 'left',
-                             textOverflow: 'ellipsis',
-                             whiteSpace: 'nowrap',
-                             overflow: 'hidden',
-                             height: '100%'}"
-                    v-html="strLF2HtmlLF(record[`${column.dataIndex}`])"></div>
-                </a-badge-ribbon>
-              </template>
-
+              <portal-body-cell
+                :column="column"
+                :config="config"
+                :index="index"
+                :record="record"
+                @is-cell-update="isCellUpdate">
+                <template #action="{}">
+                  <slot
+                    :column="column"
+                    :portal-config="config"
+                    :record="record"
+                    name="action">
+                  </slot>
+                </template>
+              </portal-body-cell>
             </template>
             <!-- endregion -->
             <!-- region 总结栏样式 -->
@@ -219,50 +103,20 @@
             <!-- endregion -->
             <!-- region 右键菜单样式 -->
             <template #contextmenuPopup="args">
-              <ul class="popup">
-                <li
-                  v-if="!config.readOnly && args.column.editable && isCellUpdate(args.recordIndexs[0], args.column)"
-                  class="popup-item"
-                  @click="resetCell(args)">
-                  <history-outlined />
-                  撤销修改
-                </li>
-                <li
-                  v-if="!config.readOnly && args.column.editable && isCellUpdate(args.recordIndexs[0], args.column)"
-                  class="popup-item"
-                  @click="saveCell(args)">
-                  <save-outlined />
-                  保存单元格
-                </li>
-                <li
-                  v-if="!config.readOnly && isRowUpdate(args.recordIndexs[0])"
-                  class="popup-item"
-                  @click="saveRow(args)">
-                  <delivered-procedure-outlined />
-                  保存整行
-                </li>
-                <li
-                  v-if="!isRowUpdate(args.recordIndexs[0])"
-                  class="popup-item"
-                  @click="detailRow(args)">
-                  <search-outlined />
-                  查看详情
-                </li>
-                <li
-                  v-if="rowAllowEdit(args)"
-                  class="popup-item"
-                  @click="editRow(args)">
-                  <form-outlined />
-                  编辑记录
-                </li>
-                <li
-                  v-if="rowAllowDelete(args)"
-                  class="popup-item"
-                  @click="deleteRow(args)">
-                  <delete-outlined />
-                  删除记录
-                </li>
-              </ul>
+              <portal-context-menu-popup
+                :args="args"
+                :config="config"
+                @reset-cell="resetCell"
+                @save-cell="saveCell"
+                @save-row="saveRow"
+                @detail-row="detailRow"
+                @edit-row="editRow"
+                @delete-row="deleteRow"
+                @is-cell-update="isCellUpdate"
+                @is-row-update="isRowUpdate"
+                @row-allow-edit="rowAllowEdit"
+                @row-allow-delete="rowAllowDelete"
+              />
             </template>
             <!-- endregion -->
             <!-- region 下拉搜索样式 -->
@@ -298,60 +152,17 @@
               <!-- endregion -->
               <!-- region 列搜索 -->
               <div v-else-if="column.filterAble">
-                <div class="filter-column">
-                  <a-select
-                    v-if="column.fieldType === FIELD_TYPE.SELECT"
-                    :get-popup-container="(triggerNode) => triggerNode.parentNode"
-                    :options="column.referenceDictOption"
-                    :placeholder="`选择 ${column.title}`"
-                    :value="selectedKeysRef.value"
-                    mode="multiple"
-                    style="width: 188px; margin-bottom: 8px; display: block"
-                    @change="e => {
-                      setSelectedKeys(e ? e : [])
-                    }"
-                  />
-                  <a-range-picker
-                    v-else-if="column.fieldType === FIELD_TYPE.DATE"
-                    :get-popup-container="(triggerNode) => triggerNode.parentNode"
-                    :value="[dayjs(selectedKeysRef.value[0]), dayjs(selectedKeysRef.value[1])]"
-                    style="width: 250px; margin-bottom: 8px; display: flex"
-                    @ok="e => setSelectedKeys(e ? [e] : [])"
-                  />
-                  <a-range-picker
-                    v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
-                    :get-popup-container="(triggerNode) => triggerNode.parentNode"
-                    :value="[dayjs(selectedKeysRef.value[0]), dayjs(selectedKeysRef.value[1])]"
-                    show-time
-                    style="width: 330px; margin-bottom: 8px; display: flex"
-                    @ok="e => setSelectedKeys(e ? [e] : [])"
-                  />
-                  <a-input
-                    v-else
-                    ref="searchInput"
-                    :placeholder="`搜索 ${column.title}`"
-                    :value="selectedKeysRef.value[0]"
-                    style="width: 188px; margin-bottom: 8px; display: block"
-                    @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"
-                    @press-enter="handleSearch(selectedKeysRef.value, confirm, column.key, hidePopup, column)"
-                  />
-                  <a-button
-                    size="small"
-                    style="width: 90px; margin-right: 8px"
-                    type="primary"
-                    @click="handleSearch(selectedKeysRef.value, confirm, column.key, hidePopup, column)"
-                  >
-                    <template #icon>
-                      <search-outlined />
-                    </template>
-                    搜索
-                  </a-button>
-                  <a-button
-                    size="small" style="width: 90px"
-                    @click="handleReset(clearFilters, column.dataIndex, hidePopup)">
-                    重置
-                  </a-button>
-                </div>
+                <portal-column-condition
+                  :clearFilters="clearFilters"
+                  :column="column"
+                  :config="config"
+                  :confirm="confirm"
+                  :hidePopup="hidePopup"
+                  :selectedKeysRef="selectedKeysRef"
+                  :setSelectedKeys="setSelectedKeys"
+                  @handle-search="handleSearch"
+                  @handle-reset="handleReset"
+                />
               </div>
               <!-- endregion -->
             </template>
@@ -368,139 +179,17 @@
             <!-- region 单元格编辑样式 -->
             <template
               #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs }">
-              <template v-if="column.fieldType === FIELD_TYPE.INPUT">
-                <a-input
-                  :ref="editorRef"
-                  :get-popup-container="getPopupContainer"
-                  :placeholder="column.defaultValue"
-                  :value="modelValue.value"
-                  @blur="doFunctions(save, closeEditor)"
-                  @keydown.esc="closeEditor"
-                  @update:value=" v => {
-                    cellUpdate(recordIndexs[0], column.dataIndex, v)
-                    modelValue.value = v
-                  }"
-                />
-              </template>
-              <template v-if="column.fieldType === FIELD_TYPE.NUMBER">
-                <a-input-number
-                  :ref="editorRef"
-                  :get-popup-container="getPopupContainer"
-                  :max="column.max"
-                  :min="column.min"
-                  :value="modelValue.value"
-                  string-mode="true"
-                  @blur="doFunctions(save, closeEditor)"
-                  @keydown.esc="closeEditor"
-                  @update:value=" v => {
-                    cellUpdate(recordIndexs[0], column.dataIndex, v)
-                    modelValue.value = v
-                  }"
-                />
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.SWITCH">
-                <div style="width: 100%; display: flex; justify-content: center">
-                  <a-switch
-                    :ref="editorRef"
-                    :checked="modelValue.value"
-                    checkedValue="1"
-                    style="width: 40px;"
-                    unCheckedValue="0"
-                    @keydown.esc="closeEditor"
-                    @update:checked="
-                      v => {
-                        cellUpdate(recordIndexs[0], column.dataIndex, v)
-                        modelValue.value = v
-                        save();
-                        closeEditor()
-                      }"
-                  />
-                </div>
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
-                <a-select
-                  :ref="editorRef"
-                  :bordered="false"
-                  :get-popup-container="getPopupContainer"
-                  :options="column.referenceDictOption || []"
-                  :value="modelValue.value"
-                  open
-                  style="width: 120px"
-                  @update:value="
-                    v => {
-                      log(getPopupContainer())
-                      cellUpdate(recordIndexs[0], column.dataIndex, v)
-                      modelValue.value = v;
-                      save();
-                    }
-                  "
-                  @keydown.esc="closeEditor"
-                  @click.stop="closeEditor"
-                />
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
-                <a-date-picker
-                  :ref="editorRef"
-                  :allow-clear="false"
-                  :bordered="false"
-                  :get-popup-container="getPopupContainer"
-                  :value="modelValue.value ? dayjs(modelValue.value) : null"
-                  open
-                  style="width: 100%"
-                  @blur="closeEditor"
-                  @update:value="
-                    v => {
-                      cellUpdate(recordIndexs[0], column.dataIndex, v)
-                      modelValue.value = v?.format('YYYY-MM-DD HH:mm:ss') ?? '';
-                      save();
-                    }
-                  "
-                  @keydown.esc="closeEditor"
-                  @click.stop="closeEditor"
-                />
-              </template>
-              <template v-else-if="column.fieldType === FIELD_TYPE.DATETIME">
-                <a-date-picker
-                  :ref="editorRef"
-                  :allow-clear="false"
-                  :bordered="false"
-                  :get-popup-container="getPopupContainer"
-                  :value="modelValue.value ? dayjs(modelValue.value) : null"
-                  open
-                  show-time
-                  style="width: 100%"
-                  @blur="closeEditor"
-                  @update:value="
-                    v => {
-                      cellUpdate(recordIndexs[0], column.dataIndex, v)
-                      modelValue.value = v?.format('YYYY-MM-DD HH:mm:ss') ?? '';
-                      save();
-                    }
-                  "
-                  @keydown.esc="closeEditor"
-                  @click.stop="closeEditor"
-                />
-              </template>
-              <template
-                v-else-if="column.fieldType === FIELD_TYPE.HREF
-                  || column.fieldType === FIELD_TYPE.HTML
-                  || column.fieldType === FIELD_TYPE.TEXT_AREA">
-                <a-modal
-                  :title="'编辑 ' + column.title" visible @cancel="closeEditor"
-                  @ok="doFunctions(save, closeEditor)">
-                  <a-textarea
-                    :ref="editorRef"
-                    :autoSize="{ minRows: 3 }"
-                    :placeholder="column.defaultValue"
-                    :value="modelValue.value"
-                    style="width: 100%; margin: 0px 3px"
-                    @update:value=" v => {
-                      cellUpdate(recordIndexs[0], column.dataIndex, v)
-                      modelValue.value = v
-                    }"
-                  />
-                </a-modal>
-              </template>
+              <portal-cell-editor
+                :closeEditor="closeEditor"
+                :column="column"
+                :config="config"
+                :editorRef="editorRef"
+                :getPopupContainer="getPopupContainer"
+                :modelValue="modelValue"
+                :recordIndexs="recordIndexs"
+                :save="save"
+                @cell-update="cellUpdate"
+              />
             </template>
             <!-- endregion -->
           </s-table>
@@ -539,152 +228,32 @@
     </div>
     <!-- endregion 数据 -->
     <!-- region 详情框 -->
-    <a-modal
-      :cancel-button-props="{style:{display: config.modal.type === 'view' ? 'none' : ''}}"
-      :okText="getModalOkText()"
-      :title="getModalTitle()"
-      :visible="config.modal.show"
-      :width="getModalWidth()"
+    <portal-view-modal
+      v-if="config.modal.type === 'view'"
+      :columnArray="columnArray"
+      :config="config"
+      :dataSource="dataSource"
+      :modifyCellMap="modifyCellMap"
       @cancel="handleModalCancel"
       @close="handleModalClose"
-      @ok="handleModalConfirm">
-      <a-descriptions
-        v-if="config.modal.type === 'view'"
-        :key="config.key"
-        :column="config.descriptionCount" :size="config.size" :title="config.title" bordered>
-        <a-descriptions-item
-          v-for="column in columnArray.filter(item => item.detailShow)"
-          :key="column.dataIndex"
-          :label="column.title"
-          :span="column.detailSize">
-          <template v-if="column.fieldType === FIELD_TYPE.SWITCH">
-            <a-switch
-              v-model:checked="dataSource[config.modal.editRowIndex][`${column.dataIndex}`]"
-              checkedValue="1"
-              disabled
-              unCheckedValue="0" />
-          </template>
-          <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
-            {{ dict.getLabel(column.referenceDict, dataSource[config.modal.editRowIndex][`${column.dataIndex}`]) }}
-          </template>
-          <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
-            {{
-              isNotEmpty(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]) ?
-                dayjs(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]).format('YYYY-MM-DD')
-                :
-                ''
-            }}
-          </template>
-          <template v-else-if="column.fieldType === FIELD_TYPE.DATETIME">
-            {{
-              isNotEmpty(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]) ?
-                dayjs(dataSource[config.modal.editRowIndex][`${column.dataIndex}`]).format('YYYY-MM-DD HH:mm:ss')
-                :
-                ''
-            }}
-          </template>
-          <template v-else>
-            {{ dataSource[config.modal.editRowIndex][column.dataIndex] }}
-          </template>
-        </a-descriptions-item>
-      </a-descriptions>
-      <a-form v-else ref="editModalRef" :model="config.modal.data" layout="vertical">
-        <a-descriptions
-          :column="config.descriptionCount" :size="config.size" :title="config.title" bordered
-          layout="vertical">
-          <template
-            v-for="column in columnArray.filter(item => config.modal.type === 'add' ? item.addShow : item.editShow)"
-            :key="column.dataIndex">
-            <a-descriptions-item
-              :span="config.modal.type === 'add' ? column.addSize : column.editSize"
-              label="">
-              <a-form-item
-                :label="strRemoveLF(column.title)"
-                :name="column.dataIndex"
-                :required="column.required">
-                <a-input
-                  v-if="column.fieldType === FIELD_TYPE.INPUT"
-                  :placeholder="column.defaultValue"
-                  :value="config.modal.data[column.dataIndex]"
-                  @update:value=" v => config.modal.data[column.dataIndex] = v"
-                />
-                <a-input-number
-                  v-else-if="column.fieldType === FIELD_TYPE.NUMBER"
-                  :max="column.max"
-                  :min="column.min"
-                  :value="config.modal.data[column.dataIndex]"
-                  string-mode
-                  @update:value=" v => config.modal.data[column.dataIndex] = v"
-                />
-                <a-switch
-                  v-else-if="column.fieldType === FIELD_TYPE.SWITCH"
-                  v-model:checked="config.modal.data[column.dataIndex]"
-                  checkedValue="1"
-                  style="width: 40px;"
-                  unCheckedValue="0"
-                />
-                <a-select
-                  v-else-if="column.fieldType === FIELD_TYPE.SELECT"
-                  :bordered="false"
-                  :options="column.referenceDictOption || []"
-                  :value="config.modal.data[column.dataIndex]"
-                  @update:value=" v => config.modal.data[column.dataIndex] = v"
-                />
-                <a-date-picker
-                  v-else-if="column.fieldType === FIELD_TYPE.DATE"
-                  :allow-clear="false"
-                  :bordered="false"
-                  :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
-                  @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
-                />
-                <a-date-picker
-                  v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
-                  :allow-clear="false"
-                  :bordered="false"
-                  :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
-                  show-time
-                  @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
-                />
-                <a-textarea
-                  v-else-if="column.fieldType === FIELD_TYPE.HREF
-                    || column.fieldType === FIELD_TYPE.HTML
-                    || column.fieldType === FIELD_TYPE.TEXT_AREA"
-                  :autoSize="{ minRows: 3 }"
-                  :placeholder="column.defaultValue"
-                  :value="config.modal.data[column.dataIndex]"
-                  style="width: 100%; margin: 0px 3px"
-                  @update:value=" v => config.modal.data[column.dataIndex] = v"
-                />
-                <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY">
-                  <delete-outlined v-if="config.modal.data[column.dataIndex] !== null" @click="cleanEntity(column)" />
-                  <a-button
-                    :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
-                    @click="showEntityDialogBox(column)">{{ strRemoveLF(getEntityDialogBoxLabel(column)) }}
-                  </a-button>
-                </div>
-
-              </a-form-item>
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-if="config.modal.type === 'add' ? column.addPadding !== 0 : column.editPadding !== 0"
-              :span="config.modal.type === 'add' ? column.addPadding : column.editPadding"
-              label="" />
-          </template>
-        </a-descriptions>
-      </a-form>
-    </a-modal>
-    <dialog-box
-      v-model:visible="entityDialogBox.show"
-      :title="'配置 ' + strRemoveLF(entityDialogBox.column.title)"
-      is-full>
-      <Portal
-        :advance-condition="entityDialogBox.column.entityCondition" :table-id="entityDialogBox.column.referenceDict"
-        read-only>
-        <template #action="{ portalConfig, column, record }">
-          <a-button type="text" @click="bind(portalConfig, column, record)">确认</a-button>
-        </template>
-      </Portal>
-    </dialog-box>
+      @confirm="handleModalConfirm"
+    />
+    <portal-edit-modal
+      v-else
+      :columnArray="columnArray"
+      :config="config"
+      :entityDialogBox="entityDialogBox"
+      @cancel="handleModalCancel"
+      @close="handleModalClose"
+      @confirm="handleModalConfirm"
+    />
+    <portal-upload
+      ref="portalUploadModal"
+      @upload="uploadAdd"
+      @after-close="queryData"
+      @template-export="templateExport"
+      @upload-progress="uploadAddProgress"
+    />
     <!-- endregion -->
     <!-- region 高级筛选 -->
     <a-drawer
@@ -711,9 +280,13 @@ import {
   advancedQuery,
   deleteEntity,
   exportData,
+  exportTemplate,
   getTreeData,
+  importAdd,
+  importAddProgress,
   updateEntity,
-  updateEntityList,
+  updateEntityListSelective,
+  updateEntitySelective,
   updateOrder,
   updateTreePid
 } from '@/framework/apis/portal'
@@ -723,28 +296,13 @@ import * as _ from 'lodash'
 import {
   ColumnType,
   FIELD_TYPE,
-  ModelType,
+  ModalType,
   ModifyCellType,
   QuerySortType,
   QueryType,
   TableConfigType
 } from '@/framework/components/common/Portal/type'
-import {
-  AlignLeftOutlined,
-  AppstoreAddOutlined,
-  BarsOutlined,
-  DeleteOutlined,
-  DeliveredProcedureOutlined,
-  DownloadOutlined,
-  ExclamationCircleOutlined,
-  FilterOutlined,
-  FormOutlined,
-  FunnelPlotOutlined,
-  HistoryOutlined,
-  ReloadOutlined,
-  SaveOutlined,
-  SearchOutlined
-} from '@ant-design/icons-vue'
+import {BarsOutlined, ExclamationCircleOutlined, FilterOutlined} from '@ant-design/icons-vue'
 import {
   doFunctions,
   getAllParentNodes,
@@ -752,8 +310,6 @@ import {
   isEmpty,
   isNotEmpty,
   log,
-  strLF2HtmlLF,
-  strRemoveLF,
   updateTableSize
 } from '@/framework/utils/common'
 import {
@@ -762,11 +318,10 @@ import {
   getDefaultFilterType,
   indexColumn
 } from '@/framework/components/common/Portal/constant'
-import Portal from '@/framework/components/common/Portal/index.vue'
 import dayjs from 'dayjs'
 import {AUTO} from '@/framework/utils/constant'
 import {createVNode, Ref} from 'vue'
-import {FormInstance, message, Modal} from 'ant-design-vue'
+import {message, Modal} from 'ant-design-vue'
 import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
 import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
 import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
@@ -789,18 +344,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  /**
-   * rowAllowEdit: 该行是否能够编辑
-   * @param record 该行数据
-   * @param allow 结果
-   */
-  rowAllowEdit: [{ record: any, allow: boolean }]
-  /**
-   * rowAllowEdit: 该行是否能够删除
-   * @param record 该行数据
-   * @param allow 结果
-   */
-  rowAllowDelete: [{ record: any, allow: boolean }]
+  (e: 'rowAllowEdit', record: any, result: { updated: boolean }): void
+  (e: 'rowAllowDelete', record: any, result: { updated: boolean }): void
 }>()
 const $attrs = useAttrs()
 const dict = dictStore()
@@ -828,7 +373,7 @@ window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
 /**
  * 整体配置
  */
-const config = reactive({
+const config: TableConfigType = reactive({
   tableId: props.tableId,
   key: 1,
   size: '',
@@ -842,7 +387,7 @@ const config = reactive({
     type: undefined,
     data: {},
     editRowIndex: null
-  } as ModelType,
+  } as ModalType,
   saveAllButtonShow: false,
   descriptionCount: 4,
   detailWidth: '100%',
@@ -852,20 +397,19 @@ const config = reactive({
   editModalAble: false,
   importAble: false,
   exportAble: false
-
 } as TableConfigType)
 /**
  * 数据
  */
-let dataSource = ref([] as Array<any>)
+let dataSource: Ref<Array<any>> = ref([] as Array<any>)
 let dataSummary = ref({} as any)
 const modifyCellMap = new Map<string, ModifyCellType>()
-const entityDialogBox = reactive({show: false, column: {} as ColumnType} as any)
+const entityDialogBox: { show: boolean, column: ColumnType } = reactive({show: false, column: {} as ColumnType} as any)
 let treeData: Ref<Array<DataNode>> = ref([])
 /**
  * 表头
  */
-const columnArray = ref([] as Array<ColumnType>)
+const columnArray: Ref<Array<ColumnType>> = ref([] as Array<ColumnType>)
 const columnRaw = []
 const columns = computed(() => {
   return columnArray.value.filter(item => item.checked)
@@ -941,27 +485,28 @@ const cellUpdate = (index: number, dataIndex: string, v: any) => {
     modifyCell.needUpdated = v !== modifyCell.original
   }
 }
-const isCellUpdate = (index: number, column: any): Boolean => {
+const isCellUpdate = (index: number, column: any, result: { updated: boolean } = {updated: false}): Boolean => {
   const modifyCell = modifyCellMap.get(index + column.dataIndex)
   if (modifyCell && isNotEmpty(modifyCell)) {
     if (modifyCell.needUpdated) config.saveAllButtonShow = true
-    return modifyCell.needUpdated
+    result.updated = modifyCell.needUpdated
   }
-  return false
+  return result.updated
 }
-const isRowUpdate = (index: number): Boolean => {
+const isRowUpdate = (index: number, result: { updated: boolean } = {updated: false}): Boolean => {
   for (let column of columns.value) {
     const modifyCell = modifyCellMap.get(index + column.dataIndex)
     if (modifyCell && isNotEmpty(modifyCell) && modifyCell.needUpdated) {
-      return true
+      result.updated = true
+      return result.updated
     }
   }
-  return false
+  return result.updated
 }
 const saveCell = (args: any) => {
   const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
   if (modifyCell && modifyCell.needUpdated) {
-    updateEntity(config.url, {
+    updateEntitySelective(config.url, {
       [modifyCell.dataIndex]: modifyCell.current,
       [config.rowKey]: modifyCell.id
     }).then(() => queryData())
@@ -993,7 +538,7 @@ const saveRow = (args: any) => {
   if (data.size != 0) {
     data.set(config.rowKey, id)
     log('保存行内容', data)
-    updateEntity(config.url, Object.fromEntries(data)).then(() => {
+    updateEntitySelective(config.url, Object.fromEntries(data)).then(() => {
       queryData()
       args.hidePopup()
     })
@@ -1026,21 +571,14 @@ const _buildRowData = (index: any) => {
 const saveAll = () => {
   const dataMap = new Map<number, Map<String, any>>()
   for (let index = 0; index < dataSource.value.length; index++) {
-    const data = new Map<any, any>()
-    let id = null
-    for (let column of columns.value) {
-      const modifyCell = modifyCellMap.get(index + column.dataIndex)
-      if (modifyCell && isNotEmpty(modifyCell) && modifyCell.needUpdated) {
-        data.set(modifyCell.dataIndex, modifyCell.current)
-        id = modifyCell.id
-      }
-    }
-    if (isNotEmpty(id)) {
+    let {id, data} = _buildUpdatedRowData(index)
+    if (data.size != 0) {
       data.set(config.rowKey, id)
+      log('保存行内容' + index, data)
       dataMap.set(index, Object.fromEntries(data))
     }
   }
-  updateEntityList(config.url, [...dataMap.values()]).then(() => queryData())
+  updateEntityListSelective(config.url, [...dataMap.values()]).then(() => queryData())
   log('保存所有内容', dataMap)
 }
 const deleteRow = (args: any) => {
@@ -1060,30 +598,6 @@ const deleteRow = (args: any) => {
       args.hidePopup()
     }
   })
-}
-const showEntityDialogBox = (column: ColumnType) => {
-  entityDialogBox.column = column
-  entityDialogBox.show = true
-}
-const cleanEntity = (column: ColumnType) => {
-  config.modal.data[column.dataIndex] = null
-  config.modal.data[column.dbField] = null
-}
-const bind = (portalConfig: TableConfigType, column: ColumnType, record: Array<any>) => {
-  const entityField = entityDialogBox.column.referenceEntityField || portalConfig.rowKey
-  console.log('bind', entityField, record[`${entityField}`], portalConfig.nameKey, record[`${portalConfig.nameKey}`])
-  config.modal.data[`${entityDialogBox.column.dbField}`] = record[`${entityField}`]
-  config.modal.data[`${entityDialogBox.column.dataIndex}`] = record[`${portalConfig.nameKey}`]
-  console.log(entityDialogBox.column.dbField, config.modal.data[`${entityDialogBox.column.dbField}`])
-  console.log(entityDialogBox.column.dataIndex, config.modal.data[`${entityDialogBox.column.dataIndex}`])
-  entityDialogBox.show = false
-}
-const getEntityDialogBoxLabel = (column: ColumnType) => {
-  if (config.modal.data[column.dataIndex] == null) {
-    return '点击配置' + column.title
-  } else {
-    return config.modal.data[column.dataIndex]
-  }
 }
 const updateTree = async (info: AntTreeNodeDropEvent) => {
   const dragKey = info.dragNode.key
@@ -1107,64 +621,21 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
 }
 // endregion
 // region 编辑弹框
-const editModalRef = ref<FormInstance>()
-const rowAllowEdit = (record: any) => {
+const rowAllowEdit = (record: any, result: { updated: boolean } = {updated: false}) => {
   let allow = !config.readOnly
   allow = allow && !isRowUpdate(record.index) && config.editModalAble
-  if ($attrs.onRowAllowEdit) {
-    const data = {record: record.record, allow}
-    emit('rowAllowEdit', data)
-    allow = allow && data.allow
-  }
-  return allow
+  let res = {updated: false}
+  emit('rowAllowEdit', record, res)
+  result.updated = allow && res
+  return result.updated
 }
-const rowAllowDelete = (record: any) => {
+const rowAllowDelete = (record: any, result: { updated: boolean } = {updated: false}) => {
   let allow = !config.readOnly
   allow = allow && !isRowUpdate(record.index)
-  if ($attrs.onRowAllowDelete) {
-    const data = {record: record.record, allow}
-    emit('rowAllowDelete', data)
-    allow = allow && data.allow
-  }
-  return allow
-}
-// 获取弹框标题
-const getModalTitle = () => {
-  switch (config.modal.type) {
-    case 'view':
-      return '查看详情'
-    case 'add':
-      return '新增数据'
-    case 'modify':
-      return '编辑详情'
-    default:
-      return ''
-  }
-}
-const getModalWidth = () => {
-  switch (config.modal.type) {
-    case 'view':
-      return config.detailWidth
-    case 'add':
-      return config.addWidth
-    case 'modify':
-      return config.editWidth
-    default:
-      return ''
-  }
-}
-// 获取确认按键文字
-const getModalOkText = () => {
-  switch (config.modal.type) {
-    case 'view':
-      return '确定'
-    case 'add':
-      return '保存'
-    case 'modify':
-      return '更新'
-    default:
-      return ''
-  }
+  let res = {updated: false}
+  emit('rowAllowDelete', record, res)
+  result.updated = allow && res
+  return result.updated
 }
 // 相应确认按钮
 const handleModalConfirm = () => {
@@ -1173,10 +644,10 @@ const handleModalConfirm = () => {
       closeModal()
       break
     case 'add':
-      editModalRef.value?.validate().then(() => saveAddRow().then(() => doFunctions(queryData, closeModal)))
+      saveAddRow().then(() => doFunctions(queryData, closeModal))
       break
     case 'modify':
-      editModalRef.value?.validate().then(() => updateEditRow().then(() => doFunctions(queryData, closeModal)))
+      updateEditRow().then(() => doFunctions(queryData, closeModal))
       break
     default:
       closeModal()
@@ -1225,6 +696,23 @@ const addRow = () => {
 const saveAddRow = async () => {
   return await addEntity(config.url, config.modal.data)
 }
+// 模版下载
+const templateExport = () => {
+  exportTemplate(config.url, config.tableId, config.title + '-模版' + '.xlsx')
+}
+const portalUploadModal = ref()
+// 上传弹框
+const openUploadModal = () => {
+  importAddProgress(config.url, config.tableId).then(resp => {
+    portalUploadModal.value.openUploadModal(resp)
+  })
+}
+const uploadAdd = async (file: Object, onUploadProgress: Function, onSuccess: Function, onFailed: Function) => {
+  return await importAdd(config.url, config.tableId, file, onUploadProgress).then(resp => onSuccess(resp)).catch(resp => onFailed(resp))
+}
+const uploadAddProgress = (onSuccess: Function) => {
+  return importAddProgress(config.url, config.tableId).then((resp) => onSuccess(resp))
+}
 // 打开编辑详情页
 const editRow = (args: any) => {
   const {id, data} = _buildRowData(args.recordIndexs[0])
@@ -1256,7 +744,6 @@ const openModal = (type: 'view' | 'add' | 'modify' | undefined) => {
   config.modal.type = type
 }
 // endregion
-
 // region 表格搜索
 
 const query = computed(() => {
@@ -1323,7 +810,7 @@ const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, hidePopup
     property: dataIndex as string,
     value: selectedKeys as Array<any>,
     relation: getDefaultFilterType(column.fieldType)
-  }
+  } as ConditionListType
 
   if (isNotEmpty(selectedKeys)) {
     queryConditionMap.set(dataIndex as string, condition)
@@ -1422,7 +909,7 @@ const paginationChange = () => {
  * 导出
  */
 const download = () => {
-  exportData(config.url, query.value, config.title + "-" + dayjs().format('HHmmss') + '.xlsx')
+  exportData(config.url, config.tableId, query.value, config.title + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
 }
 /**
  * 刷新
@@ -1556,7 +1043,7 @@ defineExpose({queryData})
   .menu-tree {
     width: 280px;
     box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
-    margin: 5px 0px 5px 15px;
+    margin: 5px 0 5px 15px;
     position: relative;
 
     .no-data {
@@ -1610,39 +1097,7 @@ defineExpose({queryData})
 }
 
 :deep(.surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner) {
-  padding: 0px !important;
-}
-
-:deep(.modify-badge) {
-  height: 0;
-  top: 0;
-
-  .ant-ribbon-corner {
-    border-color: currentColor transparent transparent currentColor !important;
-  }
-
-  .ant-ribbon-corner::after {
-    color: rgba(0, 0, 0, 0);
-  }
-}
-
-.popup {
-  width: 120px;
-  height: 20px;
-
-  .popup-item {
-    cursor: pointer;
-    padding: 8px;
-
-    &:hover {
-      background-color: var(--surely-table-row-hover-bg);
-    }
-
-    &.disabled {
-      color: var(--surely-table-disabled-color);
-      cursor: not-allowed;
-    }
-  }
+  padding: 0 !important;
 }
 
 .table-title-cell {
@@ -1686,13 +1141,6 @@ defineExpose({queryData})
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
-}
-
-.filter-column {
-  background-color: white;
-  height: 80px;
-  width: fit-content;
-  padding: 8px 16px 8px 16px
 }
 
 .menu-popup {

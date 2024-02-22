@@ -1,13 +1,14 @@
 import {defineStore} from 'pinia'
-import {getDictList} from "@/framework/apis/common/common";
-import {isEmpty, isNotEmpty} from "@/framework/utils/common";
-import {ValueLabel} from "@/framework/utils/type";
-import {getConfig} from "@/framework/apis/params";
+import {getDictList} from '@/framework/apis/common/common'
+import {isEmpty, isNotEmpty} from '@/framework/utils/common'
+import {ValueLabel} from '@/framework/utils/type'
+import {getConfig} from '@/framework/apis/params'
+import {getDictNameList} from '@/framework/apis/dict/dict'
 
 export const useCommonStore = defineStore('commonStore', {
     state: () => {
         return {
-            version: '', hasLogin: false, // 用于判断请求中 headers 字段中的 Authorization
+            version: '', hasLogin: false // 用于判断请求中 headers 字段中的 Authorization
         }
     }, getters: {
         getLoginState: (state): boolean => state.hasLogin
@@ -36,7 +37,8 @@ export const parameterStore = defineStore('parameterStore', {
 export const dictStore = defineStore('dictStore', {
     state: () => {
         return {
-            map: new Map()
+            map: new Map(),
+            allDict: [] as Array<{ value: string, label: string }>
         }
     }, actions: {
         async getDict(dictName: string) {
@@ -83,6 +85,20 @@ export const dictStore = defineStore('dictStore', {
             return this.map.get(dictName).valueMap.get(value)
         }, getValue(dictName: string, label: number | string) {
             return this.map.get(dictName).labelMap.get(label)
+        }, async getAllDict(dictName: string) {
+            if (isEmpty(this.allDict)) {
+                return await getDictNameList({name: dictName}).then((res) => {
+                    this.allDict = res.payload || []
+                    return this.allDict
+                })
+            } else {
+                if (isEmpty(dictName)) {
+                    return this.allDict
+                } else {
+                    return this.allDict.filter(dict => dict.value.indexOf(dictName) !== -1)
+                }
+
+            }
         }
     }, getters: {}
 })

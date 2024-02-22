@@ -301,7 +301,7 @@
             align: 'center',
             dataIndex: 'displayName',
             tooltip: {placement: 'topLeft', mouseEnterDelay: 0.5},
-            rowDrag: !filtered,
+            rowDrag: !columnFiltered,
             showMenu: true
           }]"
           :data-source="fieldRecords"
@@ -334,7 +334,6 @@
             #menuPopup="{ column, hidePopup, filter: { setSelectedKeys, selectedKeysRef, confirm, clearFilters } }">
             <div style="background-color: white; height: 80px; width: fit-content; padding: 8px 16px 8px 16px;">
               <a-select
-                clearable
                 :get-popup-container="(triggerNode) => triggerNode.parentNode"
                 :options="[
                   { label: '有效', value: 'enable' },
@@ -346,6 +345,7 @@
                 :placeholder="`查看类型`"
                 :showSearch="false"
                 :value="selectedKeysRef.value"
+                clearable
                 style="width: 188px; margin-bottom: 8px; display: block"
                 @select="e => {
                   const selectedKey = e ? e : ''
@@ -354,8 +354,8 @@
                 }"
               />
               <a-button
-                type="primary"
                 style="width: 100%"
+                type="primary"
                 @click="handleColumnFilter('', confirm, column.key, hidePopup, column, clearFilters)">
                 显示全部
               </a-button>
@@ -415,10 +415,15 @@
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
               :span="1"
               label="相关引用">
-              <a-input
+              <a-select
                 v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT"
+                :filter-option="(input: string, option: any) => {
+                  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0}"
+                :options="sysDictList"
                 :value="columnMap.get(selectedColumnId).reference"
                 placeholder="输入相关引用名称"
+                show-search
+                style="width: 150px"
                 @update:value=" v => columnMap.get(selectedColumnId).reference = v "
               />
               <a-select
@@ -797,6 +802,7 @@ import * as _ from 'lodash'
 const dict = dictStore()
 let inputTableName: Ref<string> = ref('')
 let tableList: Ref<Array<ValueLabel>> = ref([] as Array<ValueLabel>)
+let sysDictList = reactive([] as Array<any>)
 let tableSizeDict = reactive([] as Array<ValueLabel>)
 let fieldTypeDict = reactive([] as Array<ValueLabel>)
 let alignDict = reactive([] as Array<ValueLabel>)
@@ -891,7 +897,7 @@ const onSearch = () => {
 
 const handleColumnFilter = (selectedKey: any, confirm: any, dataIndex: any, hidePopup: any, column: any, clearFilters: any) => {
   fieldRecords.value.length = 0
-  if(selectedKey === '') {
+  if (selectedKey === '') {
     fieldRecords.value = [...tableConfig.value.columns]
     columnFiltered.value = false
     clearFilters()
@@ -980,6 +986,9 @@ const init = async () => {
     }),
     await dict.getDict('PORTAL_ALIGN_DICT').then(res => {
       alignDict = res || []
+    }),
+    await dict.getAllDict('').then(res => {
+      sysDictList = res || []
     })
   ])
 }

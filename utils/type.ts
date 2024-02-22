@@ -1,4 +1,4 @@
-import {Method} from "axios"
+import {Method} from 'axios'
 
 declare global {
     // 因为不能保证所有的浏览器都可以使用msSaveBlob，所以需要定义Navigator的类型
@@ -21,9 +21,7 @@ declare global {
 
     interface ResponseDataType {
         status: {
-            code: number,
-            msg: string,
-            detailMsg: string
+            code: number, msg: string, detailMsg: string
         },
         payload: {
             ssoLoginUrl?: string
@@ -37,6 +35,7 @@ export interface ValueLabel {
     label: string,
     option: any
 }
+
 export type ValueLabelArray = Array<ValueLabel>
 
 export interface StaffBaseSelectType extends ValueLabel {
@@ -51,14 +50,18 @@ export interface IdName {
     id: string
     name: string
 }
+
 export type IdNameArray = Array<IdName>
 
 export interface CompanyIdName {
     companyId: string
     companyName: string
 }
+
 export type CompanyArray = Array<CompanyIdName>
 
 export interface EmptyObjectType {
-    [key: string | number]: string |number | boolean | Array<any>
+    [key: string | number]: string | number | boolean | Array<any>
 }
+
+export type TimerType = { timer: any, lastTime: number, diff: number }
