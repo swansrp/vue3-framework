@@ -12,12 +12,13 @@ import router from '@/framework/router'
 import {LocationQueryRaw} from 'vue-router'
 import {removeURLParameter} from '@/framework/network/utils'
 import {AxiosProgressEvent} from 'axios/index'
-import {baseDomain, web} from '@/framework/apis'
+import {baseDomain} from '@/framework/apis'
 
 // 全局的 ElLoading，即使多次创建，也只会存在一个，方便随时关闭
 let loadingInstance: LoadingInstance
 const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
 const commonStore = useCommonStore(pinia)
+const web = '/web'
 const baseURL = import.meta.env.VITE_baseURL + baseDomain + web
 
 const errCode = {

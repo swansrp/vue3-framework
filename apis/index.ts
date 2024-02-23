@@ -4,7 +4,6 @@ import {download, request, upload} from '@/framework/network/request'
 import {QuerySortType, QueryType, UpdateOrderType, UpdatePidType} from '@/framework/components/common/Portal/type'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 
-const web = '/web'
 const baseDomain = '/' + name
 const apiType: any = {
     navEdit: '/admin/menu',
@@ -59,14 +58,14 @@ const buildApi = (
 
 const buildGetApiByType = (
     url: string,
-    type = web,
+    type = '',
     domain: string = baseDomain,
     version = '1.0'
 ) => buildApi(domain, url, requestMethod.GET, version, type)
 
 const buildPostApiByType = (
     url: string,
-    type = web,
+    type = '',
     domain: string = baseDomain,
     version = '1.0'
 ) => buildApi(domain, url, requestMethod.POST, version, type)
@@ -282,7 +281,6 @@ const importAddProgressRequest = (
 ) => request(importAddProgressApi(type, domain), {name: params}, {} ,false, false, false) as Promise<any>
 
 export {
-    web,
     apiType,
     baseDomain,
     buildGetApiByType,
