@@ -33,7 +33,7 @@
           <template #suffix>
             <img
               :src="captchaUrl" alt="验证码" class="absolute right-0 h-full cursor-pointer"
-              @click="updateCaptchaUrl" />
+              @click="updateCaptchaUrl('INIT_PASSWORD_CAPTCHA')" />
           </template>
         </a-input>
       </a-form-item>
@@ -70,7 +70,7 @@
           <template #suffix>
             <img
               :src="captchaUrl" alt="验证码" class="absolute right-0 h-full cursor-pointer"
-              @click="updateCaptchaUrl" />
+              @click="updateCaptchaUrl('LOGIN_CAPTCHA')" />
           </template>
         </a-input>
       </a-form-item>

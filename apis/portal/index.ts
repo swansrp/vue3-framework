@@ -1,12 +1,24 @@
 import {
     addRequest,
     advancedQueryRequest,
-    apiType,
+    bindAllRequest,
+    bindBatchRequest,
+    bindReplaceAllRequest,
+    bindReplaceBatchRequest,
+    bindRequest,
     deleteRequest,
     exportDataRequest,
     exportTemplateRequest,
+    getAllBindListRequest,
     getByIdRequest,
-    getTreeDataRequest, importAddProgressRequest, importAddRequest,
+    getTreeDataRequest,
+    importAddProgressRequest,
+    importAddRequest,
+    queryBindListRequest,
+    queryUnbindListRequest,
+    unbindAllRequest,
+    unbindBatchRequest,
+    unbindRequest,
     updateListRequest,
     updateOrderRequest,
     updateRequest,
@@ -15,46 +27,79 @@ import {
 import {QueryType, UpdateOrderType, UpdatePidType} from '@/framework/components/common/Portal/type'
 
 export const getById = (url: string, id: string) =>
-    getByIdRequest(apiType.common + '/' + url, id) as Promise<any>
+    getByIdRequest('/' + url, id) as Promise<any>
 
 export const addEntity = (url: string, entity: object) =>
-    addRequest(apiType.common + '/' + url, entity) as Promise<any>
+    addRequest('/' + url, entity) as Promise<any>
 
 export const updateEntity = (url: string, entity: object) =>
-    updateRequest(apiType.common + '/' + url, {strict: true}, entity) as Promise<any>
+    updateRequest('/' + url, {strict: true}, entity) as Promise<any>
 
 export const updateEntitySelective = (url: string, entity: object) =>
-    updateRequest(apiType.common + '/' + url, {strict: false}, entity) as Promise<any>
+    updateRequest('/' + url, {strict: false}, entity) as Promise<any>
 
 export const updateEntityList = (url: string, entity: Array<any>) =>
-    updateListRequest(apiType.common + '/' + url, {strict: true}, entity) as Promise<any>
+    updateListRequest('/' + url, {strict: true}, entity) as Promise<any>
 
 export const updateEntityListSelective = (url: string, entity: Array<any>) =>
-    updateListRequest(apiType.common + '/' + url, {strict: false}, entity) as Promise<any>
+    updateListRequest('/' + url, {strict: false}, entity) as Promise<any>
 
 export const deleteEntity = (url: string, id: string) =>
-    deleteRequest(apiType.common + '/' + url, id) as Promise<any>
+    deleteRequest('/' + url, id) as Promise<any>
 
 export const advancedQuery = (url: string, query: QueryType) =>
-    advancedQueryRequest(apiType.common + '/' + url, query.condition, query.sortList, query.pageSize, query.currentPage) as Promise<any>
+    advancedQueryRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage) as Promise<any>
 
-export const getTreeData = (url: string) =>
-    getTreeDataRequest(apiType.common + '/' + url) as Promise<any>
+export const getTreeData = (url: string, query: QueryType) =>
+    getTreeDataRequest('/' + url, query) as Promise<any>
 
 export const updateTreePid = (url: string, data: UpdatePidType) =>
-    updateTreePidRequest(apiType.common + '/' + url, data) as Promise<any>
+    updateTreePidRequest('/' + url, data) as Promise<any>
 
 export const updateOrder = (url: string, data: Array<UpdateOrderType>) =>
-    updateOrderRequest(apiType.common + '/' + url, data) as Promise<any>
+    updateOrderRequest('/' + url, data) as Promise<any>
 
 export const exportData = (url: string, name: string, query: QueryType, fileName: string) =>
-    exportDataRequest(apiType.common + '/' + url, name, query, fileName) as Promise<any>
+    exportDataRequest('/' + url, name, query, fileName) as Promise<any>
 
 export const exportTemplate = (url: string, name: string, fileName: string) =>
-    exportTemplateRequest(apiType.common + '/' + url, name, fileName) as Promise<any>
+    exportTemplateRequest('/' + url, name, fileName) as Promise<any>
 
 export const importAdd = (url: string, name: string, file: object, onUploadProgress: Function) =>
-    importAddRequest(apiType.common + '/' + url, name, file, onUploadProgress) as Promise<any>
+    importAddRequest('/' + url, name, file, onUploadProgress) as Promise<any>
 
 export const importAddProgress = (url: string, name: string) =>
-    importAddProgressRequest(apiType.common + '/' + url, name) as Promise<any>
+    importAddProgressRequest('/' + url, name) as Promise<any>
+
+export const getAllBindList = (entity: string, attach: string, entityId: any) =>
+    getAllBindListRequest('/' + entity + '/' + attach, entityId) as Promise<any>
+
+export const queryBindList = (entity: string, attach: string, entityId: any, attachQuery: QueryType) =>
+    queryBindListRequest('/' + entity + '/' + attach, entityId, attachQuery) as Promise<any>
+
+export const queryUnbindList = (entity: string, attach: string, entityId: any, attachQuery: QueryType) =>
+    queryUnbindListRequest('/' + entity + '/' + attach, entityId, attachQuery) as Promise<any>
+
+export const bindAttach = (entity: string, attach: string, entityId: any, attachId: any) =>
+    bindRequest('/' + entity + '/' + attach, entityId, attachId) as Promise<any>
+
+export const unbindAttach = (entity: string, attach: string, entityId: any, attachId: any) =>
+    unbindRequest('/' + entity + '/' + attach, entityId, attachId) as Promise<any>
+
+export const bindBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>) =>
+    bindBatchRequest('/' + entity + '/' + attach, entityId, attachIdList) as Promise<any>
+
+export const unbindBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>) =>
+    unbindBatchRequest('/' + entity + '/' + attach, entityId, attachIdList) as Promise<any>
+
+export const bindReplaceBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>) =>
+    bindReplaceBatchRequest('/' + entity + '/' + attach, entityId, attachIdList) as Promise<any>
+
+export const bindReplaceAllAttach = (entity: string, attach: string, entityId: any, attachQuery: QueryType) =>
+    bindReplaceAllRequest('/' + entity + '/' + attach, entityId, attachQuery) as Promise<any>
+
+export const bindAllAttach = (entity: string, attach: string, entityId: any, attachQuery = {} as QueryType) =>
+    bindAllRequest('/' + entity + '/' + attach, entityId, attachQuery) as Promise<any>
+
+export const unbindAllAttach = (entity: string, attach: string, entityId: any) =>
+    unbindAllRequest('/' + entity + '/' + attach, entityId) as Promise<any>

@@ -39,13 +39,24 @@ const commonUrl = {
     UPDATE: '/update',
     UPDATE_LIST: '/update/list',
     DELETE: '/delete',
-    TREE: '/tree/data',
+    TREE: '/advanced/tree/data',
     TREE_PID: '/pid',
     ORDER: '/order/update',
     EXPORT_DATA: '/advanced/query/export',
     EXPORT_TEMPLATE: '/template/export',
     IMPORT_ADD: '/import/add',
-    IMPORT_ADD_PROGRESS: '/import/add/progress'
+    IMPORT_ADD_PROGRESS: '/import/add/progress',
+    BIND_ALL_LIST: '/bind/list',
+    BIND_LIST: '/bind/advanced/query',
+    UNBIND_LIST: '/unbind/advanced/query',
+    BIND: '/bind',
+    BIND_BATCH: '/bind/batch',
+    UNBIND: '/unbind',
+    UNBIND_BATCH: '/unbind/batch',
+    BIND_REPLACE: '/replace',
+    BIND_REPLACE_ALL: '/advanced/replace',
+    BIND_ALL: '/bind/all',
+    UNBIND_ALL: '/unbind/all'
 }
 
 const buildApi = (
@@ -80,7 +91,7 @@ const getTreeApi = (
     type: string,
     domain: string = baseDomain,
     version = '1.0'
-) => buildApi(domain, commonUrl.TREE, requestMethod.GET, version, type)
+) => buildApi(domain, commonUrl.TREE, requestMethod.POST, version, type)
 
 const updateTreePidApi = (
     type: string,
@@ -154,7 +165,73 @@ const importAddProgressApi = (
     version = '1.0'
 ) => buildApi(domain, commonUrl.IMPORT_ADD_PROGRESS, requestMethod.GET, version, type)
 
-const addRequest = (
+const bindAllListApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.BIND_ALL_LIST, requestMethod.GET, version, type)
+
+const bindListApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.BIND_LIST, requestMethod.POST, version, type)
+
+const unbindListApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.UNBIND_LIST, requestMethod.POST, version, type)
+
+const bindApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.BIND, requestMethod.POST, version, type)
+
+const unbindApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.UNBIND, requestMethod.POST, version, type)
+
+const bindBatchApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.BIND_BATCH, requestMethod.POST, version, type)
+
+const unbindBatchApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.UNBIND_BATCH, requestMethod.POST, version, type)
+
+const bindReplaceApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.BIND_REPLACE, requestMethod.POST, version, type)
+
+const bindReplaceAllApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.BIND_REPLACE_ALL, requestMethod.POST, version, type)
+
+const bindAllApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.BIND_ALL, requestMethod.POST, version, type)
+
+const unbindAllApi = (
+    type: string,
+    domain: string = baseDomain,
+    version = '1.0'
+) => buildApi(domain, commonUrl.UNBIND_ALL, requestMethod.POST, version, type)
+
+export const addRequest = (
     type: string,
     data: object,
     domain: string = baseDomain,
@@ -162,7 +239,7 @@ const addRequest = (
     showLoading = true
 ) => request(addApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
-const deleteRequest = (
+export const deleteRequest = (
     type: string,
     id: string,
     domain: string = baseDomain,
@@ -170,7 +247,7 @@ const deleteRequest = (
     showLoading = true
 ) => request(deleteApi(type, domain), {}, {id}, showSuccess, showLoading) as Promise<any>
 
-const updateRequest = (
+export const updateRequest = (
     type: string,
     params: object = {},
     data: object,
@@ -179,7 +256,7 @@ const updateRequest = (
     showLoading = true
 ) => request(updateApi(type, domain), params, data, showSuccess, showLoading) as Promise<any>
 
-const updateListRequest = (
+export const updateListRequest = (
     type: string,
     params: object = {},
     data: object,
@@ -188,7 +265,7 @@ const updateListRequest = (
     showLoading = true
 ) => request(updateListApi(type, domain), params, data, showSuccess, showLoading) as Promise<any>
 
-const generalQueryRequest = (
+export const generalQueryRequest = (
     type: string,
     conditionList: Array<any>,
     sortList: Array<any>,
@@ -204,7 +281,7 @@ const generalQueryRequest = (
     currentPage
 }, showSuccess, showLoading) as Promise<any>
 
-const advancedQueryRequest = (
+export const advancedQueryRequest = (
     type: string,
     condition: ConditionType,
     sortList: Array<QuerySortType>,
@@ -220,7 +297,7 @@ const advancedQueryRequest = (
     currentPage
 }, showSuccess, showLoading) as Promise<any>
 
-const getByIdRequest = (
+export const getByIdRequest = (
     type: string,
     id: string,
     domain: string = baseDomain,
@@ -228,14 +305,15 @@ const getByIdRequest = (
     showLoading = true
 ) => request(getByIdApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
 
-const getTreeDataRequest = (
+export const getTreeDataRequest = (
     type: string,
+    query: QueryType,
     domain: string = baseDomain,
     showSuccess = false,
     showLoading = true
-) => request(getTreeApi(type, domain), {}, {}, showSuccess, showLoading) as Promise<any>
+) => request(getTreeApi(type, domain), {}, query, showSuccess, showLoading) as Promise<any>
 
-const updateTreePidRequest = (
+export const updateTreePidRequest = (
     type: string,
     data: UpdatePidType,
     domain: string = baseDomain,
@@ -243,7 +321,7 @@ const updateTreePidRequest = (
     showLoading = true
 ) => request(updateTreePidApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
-const updateOrderRequest = (
+export const updateOrderRequest = (
     type: string,
     data: Array<UpdateOrderType>,
     domain: string = baseDomain,
@@ -251,7 +329,7 @@ const updateOrderRequest = (
     showLoading = true
 ) => request(updateOrderApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
-const exportDataRequest = (
+export const exportDataRequest = (
     type: string,
     params: string,
     data: QueryType,
@@ -259,14 +337,14 @@ const exportDataRequest = (
     domain: string = baseDomain
 ) => download(exportDataApi(type, domain), fileName, {name: params}, data) as Promise<any>
 
-const exportTemplateRequest = (
+export const exportTemplateRequest = (
     type: string,
     params: string,
     fileName: string,
     domain: string = baseDomain
 ) => download(exportTemplateApi(type, domain), fileName, {name: params}, {}) as Promise<any>
 
-const importAddRequest = (
+export const importAddRequest = (
     type: string,
     params: string,
     body: object,
@@ -274,29 +352,89 @@ const importAddRequest = (
     domain: string = baseDomain
 ) => upload(importAddDataApi(type, domain), {name: params}, body, onUploadProgress) as Promise<any>
 
-const importAddProgressRequest = (
+export const importAddProgressRequest = (
     type: string,
     params: string,
     domain: string = baseDomain
-) => request(importAddProgressApi(type, domain), {name: params}, {} ,false, false, false) as Promise<any>
+) => request(importAddProgressApi(type, domain), {name: params}, {}, false, false, false) as Promise<any>
 
+export const getAllBindListRequest = (
+    type: string,
+    entityId: any,
+    domain: string = baseDomain
+) => request(bindAllListApi(type, domain), {entityId}, {}) as Promise<any>
+
+export const queryBindListRequest = (
+    type: string,
+    entityId: any,
+    query: QueryType,
+    domain: string = baseDomain
+) => request(bindListApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+
+export const queryUnbindListRequest = (
+    type: string,
+    entityId: any,
+    query: QueryType,
+    domain: string = baseDomain
+) => request(unbindListApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+
+export const bindRequest = (
+    type: string,
+    entityId: any,
+    attachId: any,
+    domain: string = baseDomain
+) => request(bindApi(type, domain), {}, {attachId, entityId}) as Promise<any>
+
+export const unbindRequest = (
+    type: string,
+    entityId: any,
+    attachId: any,
+    domain: string = baseDomain
+) => request(unbindApi(type, domain), {}, {attachId, entityId}) as Promise<any>
+
+export const bindBatchRequest = (
+    type: string,
+    entityId: any,
+    attachIdList: Array<any>,
+    domain: string = baseDomain
+) => request(bindBatchApi(type, domain), {}, {attachIdList, entityId}) as Promise<any>
+
+export const unbindBatchRequest = (
+    type: string,
+    entityId: any,
+    attachIdList: Array<any>,
+    domain: string = baseDomain
+) => request(unbindBatchApi(type, domain), {}, {attachIdList, entityId}) as Promise<any>
+
+export const bindReplaceAllRequest = (
+    type: string,
+    entityId: any,
+    query: QueryType,
+    domain: string = baseDomain
+) => request(bindReplaceAllApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+
+export const bindReplaceBatchRequest = (
+    type: string,
+    entityId: any,
+    attachIdList: Array<any>,
+    domain: string = baseDomain
+) => request(bindReplaceApi(type, domain), {}, {entityId, attachIdList}) as Promise<any>
+
+export const bindAllRequest = (
+    type: string,
+    entityId: any,
+    query: QueryType,
+    domain: string = baseDomain
+) => request(bindAllApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+
+export const unbindAllRequest = (
+    type: string,
+    entityId: any,
+    domain: string = baseDomain
+) => request(unbindAllApi(type, domain), {}, {entityId}) as Promise<any>
 export {
     apiType,
     baseDomain,
     buildGetApiByType,
-    buildPostApiByType,
-    getByIdRequest,
-    getTreeDataRequest,
-    updateTreePidRequest,
-    updateOrderRequest,
-    generalQueryRequest,
-    advancedQueryRequest,
-    addRequest,
-    updateRequest,
-    updateListRequest,
-    deleteRequest,
-    exportDataRequest,
-    exportTemplateRequest,
-    importAddRequest,
-    importAddProgressRequest
+    buildPostApiByType
 }

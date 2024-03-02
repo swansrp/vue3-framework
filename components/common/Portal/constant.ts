@@ -36,7 +36,7 @@ export const actionColumn = {
     checked: true,
     disabled: true,
     addShow: false,
-    detailShow: false,
+    detailShow: false
 } as ColumnType
 export const defaultColumn = {
     title: '',
@@ -53,6 +53,7 @@ export const defaultColumn = {
     referenceDictOption: [] as Array<any>,
     tooltip: {placement: 'topLeft', mouseEnterDelay: 0.5, overlayStyle: {}, popupStyle: {}},
     filterAble: false,
+    filterStrict: true,
     sorter: false,
     checked: true,
     disabled: false,
@@ -60,13 +61,13 @@ export const defaultColumn = {
     addShow: false,
     detailSize: 1,
     addSize: 1,
-    editSize: 1,
+    editSize: 1
 } as ColumnType
 
-export const getDefaultFilterType = (fieldType: FIELD_TYPE) => {
+export const getDefaultFilterType = (fieldType: FIELD_TYPE, strict = false) => {
     switch (fieldType) {
         case FIELD_TYPE.INPUT:
-            return FILTER_TYPE.LIKE
+            return strict ? FILTER_TYPE.EQUAL : FILTER_TYPE.LIKE
         case FIELD_TYPE.SWITCH:
             return FILTER_TYPE.EQUAL
         case FIELD_TYPE.NUMBER:
@@ -80,6 +81,6 @@ export const getDefaultFilterType = (fieldType: FIELD_TYPE) => {
         case FIELD_TYPE.DATETIME:
             return FILTER_TYPE.BETWEEN
         default:
-            return FILTER_TYPE.LIKE
+            return strict ? FILTER_TYPE.EQUAL : FILTER_TYPE.LIKE
     }
 }

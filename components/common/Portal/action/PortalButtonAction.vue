@@ -58,7 +58,7 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip v-if="config.importAble" placement="top">
+      <a-tooltip v-if="!config.readOnly && config.importAble" placement="top">
         <template #title>
           <span>导入新增</span>
         </template>

@@ -1,42 +1,42 @@
 <template>
   <ul class="popup">
     <li
-      v-if="!config.readOnly && args.column.editable && isCellUpdate(args.recordIndexs[0], args.column)"
+      v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
       class="popup-item"
       @click="() => emit('resetCell', args)">
       <history-outlined />
       撤销修改
     </li>
     <li
-      v-if="!config.readOnly && args.column.editable && isCellUpdate(args.recordIndexs[0], args.column)"
+      v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
       class="popup-item"
       @click="() => emit('saveCell', args)">
       <save-outlined />
       保存单元格
     </li>
     <li
-      v-if="!config.readOnly && isRowUpdate(args.recordIndexs[0])"
+      v-if="!config.readOnly && prop.isRowUpdate(args.recordIndexs[0])"
       class="popup-item"
       @click="() => emit('saveRow', args)">
       <delivered-procedure-outlined />
       保存整行
     </li>
     <li
-      v-if="!isRowUpdate(args.recordIndexs[0])"
+      v-if="!prop.isRowUpdate(args.recordIndexs[0])"
       class="popup-item"
       @click="() => emit('detailRow', args)">
       <search-outlined />
       查看详情
     </li>
     <li
-      v-if="rowAllowEdit(args)"
+      v-if="prop.rowAllowEdit(args)"
       class="popup-item"
       @click="() => emit('editRow', args)">
       <form-outlined />
       编辑记录
     </li>
     <li
-      v-if="rowAllowDelete(args)"
+      v-if="prop.rowAllowDelete(args)"
       class="popup-item"
       @click="() => emit('deleteRow', args)">
       <delete-outlined />
@@ -55,9 +55,14 @@ import {
   SearchOutlined
 } from '@ant-design/icons-vue'
 import {TableConfigType} from '@/framework/components/common/portal/type'
+
 const prop = defineProps<{
   args: any
   config: TableConfigType
+  isCellUpdate: (index: number, column: any) => boolean
+  isRowUpdate: (args: any) => boolean
+  rowAllowEdit: (args: any) => boolean
+  rowAllowDelete: (args: any) => boolean
 }>()
 const emit = defineEmits<{
   (e: 'resetCell', args: any): void
@@ -66,32 +71,8 @@ const emit = defineEmits<{
   (e: 'detailRow', args: any): void
   (e: 'editRow', args: any): void
   (e: 'deleteRow', args: any): void
-  (e: 'isCellUpdate', index: number, column: any, result: { updated: boolean }): void
-  (e: 'isRowUpdate', args: any, result: { updated: boolean }): void
-  (e: 'rowAllowEdit', args: any, result: { updated: boolean }): void
-  (e: 'rowAllowDelete', args: any, result: { updated: boolean }): void
 }>()
 const {args, config} = toRefs(prop)
-const isCellUpdate = (index: number, column: any) => {
-  let result = {updated: false}
-  emit('isCellUpdate', index, column, result)
-  return result.updated
-}
-const isRowUpdate = (args: any) => {
-  let result = {updated: false}
-  emit('isRowUpdate', args, result)
-  return result.updated
-}
-const rowAllowEdit = (args: any) => {
-  let result = {updated: false}
-  emit('rowAllowEdit', args, result)
-  return result.updated
-}
-const rowAllowDelete = (args: any) => {
-  let result = {updated: false}
-  emit('rowAllowDelete', args, result)
-  return result.updated
-}
 </script>
 
 <style lang="less" scoped>

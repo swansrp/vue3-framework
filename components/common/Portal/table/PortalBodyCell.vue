@@ -78,18 +78,11 @@ const prop = defineProps<{
   column: any,
   record: any,
   index: any,
-  config: TableConfigType
+  config: TableConfigType,
+  isCellUpdate: (index: number, column: any) => boolean
 }>()
 const {record, config, column, index} = toRefs(prop)
-const emit = defineEmits<{
-  (e: 'isCellUpdate', index: number, column: any, result: { updated: boolean }): void
-}>()
 const dict = dictStore()
-const isCellUpdate = (index: number, column: any) => {
-  let result = { updated: false }
-  emit('isCellUpdate', index, column, result)
-  return result.updated
-}
 </script>
 
 <style lang="less" scoped>

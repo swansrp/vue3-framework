@@ -1,275 +1,335 @@
 <template>
-  <div ref="root" class="root" v-bind="$attrs">
-    <!-- region 树形配置 -->
-    <div v-if="config.treeMenuShow" class="menu-tree">
-      <div class="menu-category">{{ config.title }}</div>
-      <!--如果treeData的length为0，说明没有数据，展示提示信息-->
-      <div v-if="!treeData || !treeData.length" class="no-data">暂无数据</div>
-      <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
-      <a-tree
-        :key="treeData"
-        :defaultExpandAll="true"
-        :draggable="config.treeDragAble"
-        :show-line="true"
-        :tree-data="treeData"
-        @drop="updateTree" />
-    </div>
-    <!-- endregion 树形配置 -->
-    <!-- region 数据 -->
-    <div style="width: 100%;">
-      <!-- region 按钮区 -->
-      <portal-button-action
-        :advancedCondition="advancedCondition"
-        :config="config"
-        @download="download"
-        @refresh="refresh"
-        @show-tree-menu="showTreeMenu"
-        @add-row="addRow"
-        @save-all="saveAll"
-        @open-upload-modal="openUploadModal" />
-      <!-- endregion -->
-      <!-- region 表格区 -->
-      <div ref="portalConfigSpace" class="portal-table-space">
-        <div class="portal-table">
-          <!-- region 表格 -->
-          <s-table
-            :key="config.key"
-            :columns="columns"
-            :data-source="dataSource"
-            :loading="config.loading"
-            :pagination="false"
-            :range-selection="false"
-            :row-selection="rowSelection"
-            :rowKey="config.rowKey"
-            :scroll="{x: getTableWidth(), y: getTableHeight()}"
-            :size="config.size"
-            :style="{width: String(tableWidth) === 'auto' ? '100%' : tableWidth + 'px'}"
-            :table-id="config.tableId"
-            auto-header-height
+  <div ref="root" v-bind="$attrs">
+    <a-layout v-if="treeMode || listMode">
+      <a-layout-sider
+        :class="[isBindTabExisted ? 'portal-tree-wrapper':'portal-tree-bind-wrapper']"
+        :width="isBindTabExisted ? '25%':'99%'"
+      >
+        <div style="margin-top: 20px;">
+          <a-tree
+            v-if="treeMode && treeData.length"
+            :key="treeData"
+            v-model:checkedKeys="selectedTreeData"
+            :checkStrictly="props.checkStrictly"
+            :checkable="props.treeCheckAble"
+            :defaultExpandAll="true"
+            :draggable="!config.readOnly && config.treeDragAble"
+            :show-line="true"
+            :tree-data="treeData"
+            @drop="updateTree"
+            @select="handleTreeSelected" />
+          <a-list
+            v-else-if="listMode"
+            :data-source="listData"
             bordered
-            columnDrag
-            deepWatchDataSource
-            showSorterTooltip
-            sticky
-            stripe
-            summary-fixed
-            @change="handleTableChange">
-            <!-- region 表头样式 -->
-            <template #headerCell="{title, column}">
-              <div v-if="title.indexOf('\n') !== -1" class="table-title-cell">
-                <div v-for="(item, index) in title.split('\n')" :key="index">{{ item }}</div>
-              </div>
-              <div v-else-if="title.indexOf('\\n') !== -1" class="table-title-cell">
-                <div v-for="(item, index) in title.split('\\n')" :key="index">{{ item }}</div>
-              </div>
-              <span v-else-if="column.dataIndex === 'index'"></span>
-              <span v-else class="table-title-cell">{{ title }}</span>
-            </template>
-            <!-- endregion -->
-            <!-- region 单元格样式-->
-            <template #bodyCell="{ column, record, index }">
-              <portal-body-cell
-                :column="column"
-                :config="config"
-                :index="index"
-                :record="record"
-                @is-cell-update="isCellUpdate">
-                <template #action="{}">
-                  <slot
-                    :column="column"
-                    :portal-config="config"
-                    :record="record"
-                    name="action">
-                  </slot>
-                </template>
-              </portal-body-cell>
-            </template>
-            <!-- endregion -->
-            <!-- region 总结栏样式 -->
-            <template #summary>
-              <s-table-summary-row v-if="config.summary">
-                <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
-                  <div v-if="index === 1">总计</div>
-                  <div v-else-if="index === columns.length"></div>
-                  <div v-else> {{ dataSummary[`${columns[index - 1].dataIndex}`] || '--' }}</div>
-                </s-table-summary-cell>
-              </s-table-summary-row>
-            </template>
-            <!-- endregion -->
-            <!-- region 提示样式 -->
-            <template #tooltipTitle="{ value }">
-              {{ value }}
-            </template>
-            <!-- endregion -->
-            <!-- region 右键菜单样式 -->
-            <template #contextmenuPopup="args">
-              <portal-context-menu-popup
-                :args="args"
-                :config="config"
-                @reset-cell="resetCell"
-                @save-cell="saveCell"
-                @save-row="saveRow"
-                @detail-row="detailRow"
-                @edit-row="editRow"
-                @delete-row="deleteRow"
-                @is-cell-update="isCellUpdate"
-                @is-row-update="isRowUpdate"
-                @row-allow-edit="rowAllowEdit"
-                @row-allow-delete="rowAllowDelete"
-              />
-            </template>
-            <!-- endregion -->
-            <!-- region 下拉搜索样式 -->
-            <template #menuIcon="{ column, filtered }">
-              <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'" />
-              <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'" />
-            </template>
-            <template
-              #menuPopup="{ column, hidePopup, filter: { setSelectedKeys, selectedKeysRef, confirm, clearFilters } }">
-              <!-- region 列显示选择 -->
-              <div v-if="column.dataIndex === 'index'">
-                <div class="menu-popup-container">
-                  <ul class="menu-popup">
-                    <li class="menu-popup-item" style="border-bottom: 1px solid #f0f0f0">
-                      <a-checkbox v-model:checked="checkedAll" :indeterminate="indeterminate">
-                        全选 / 取消选择
-                      </a-checkbox>
-                    </li>
-                    <template v-for="col in columnArray" :key="col.key">
-                      <li class="menu-popup-item">
-                        <a-checkbox
-                          v-model:checked="col.checked"
-                          :disabled="!!col.disabled"
-                          style="width: 100%"
-                        >
-                          {{ col.title }}
-                        </a-checkbox>
-                      </li>
-                    </template>
-                  </ul>
+            class="table-list"
+            size="small">
+            <template #renderItem="{ item }">
+              <a-list-item
+                :class="{'activate-item': selectedListDataRowKey === item.value}"
+                @click="selectedListDataRowKey = item.value">
+                <div style="display: flex; justify-content: flex-start">
+                  {{ item.label }}
                 </div>
+              </a-list-item>
+            </template>
+            <template #header>
+              <div style="display: flex; align-items: center">
+                <lock-outlined
+                  v-if="listSearchStrict" style="margin-right: 5px"
+                  @click="listSearchStrict = !listSearchStrict" />
+                <unlock-outlined
+                  v-else
+                  style="margin-right: 5px"
+                  @click="listSearchStrict = !listSearchStrict" />
+                <a-input-search
+                  v-model:value="searchName" enter-button placeholder="搜索"
+                  @search="onListDataSearch" />
               </div>
+            </template>
+          </a-list>
+          <a-empty v-else />
+        </div>
+      </a-layout-sider>
+      <a-layout-content
+        v-if="isBindTabExisted"
+        style="margin-left: 10px; margin-right: 10px">
+        <portal-bind-tab
+          :bind-tabs="bindTabs"
+          :entity-id="selectedEntityId"
+          :entity-name="props.tableId" />
+      </a-layout-content>
+    </a-layout>
+    <div v-else class="root">
+      <!-- region 树形配置 -->
+      <div v-if="config.treeMenuShow" class="menu-tree">
+        <div class="menu-category">{{ config.title }}</div>
+        <!--如果treeData的length为0，说明没有数据，展示提示信息-->
+        <div v-if="!treeData || !treeData.length" class="no-data">暂无数据</div>
+        <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
+        <a-tree
+          :key="treeData"
+          :defaultExpandAll="true"
+          :draggable="!config.readOnly && config.treeDragAble"
+          :show-line="true"
+          :tree-data="treeData"
+          @drop="updateTree" />
+      </div>
+      <!-- endregion 树形配置 -->
+      <!-- region 数据 -->
+      <div style="width: 100%;">
+        <!-- region 按钮区 -->
+        <portal-button-action
+          :advancedCondition="advancedCondition"
+          :config="config"
+          @download="download"
+          @refresh="refresh"
+          @show-tree-menu="showTreeMenu"
+          @add-row="addRow"
+          @save-all="saveAll"
+          @open-upload-modal="openUploadModal" />
+        <!-- endregion -->
+        <!-- region 表格区 -->
+        <div ref="portalConfigSpace" class="portal-table-space">
+          <div class="portal-table">
+            <!-- region 表格 -->
+            <s-table
+              :key="config.key"
+              :columns="columns"
+              :data-source="dataSource"
+              :loading="config.loading"
+              :pagination="false"
+              :range-selection="false"
+              :row-selection="rowSelection"
+              :rowKey="config.rowKey"
+              :scroll="{x: getTableWidth(), y: getTableHeight()}"
+              :size="config.size"
+              :style="{width: String(tableWidth) === 'auto' ? '100%' : tableWidth + 'px'}"
+              :table-id="config.tableId"
+              auto-header-height
+              bordered
+              columnDrag
+              deepWatchDataSource
+              showSorterTooltip
+              sticky
+              stripe
+              summary-fixed
+              @change="handleTableChange">
+              <!-- region 表头样式 -->
+              <template #headerCell="{title, column}">
+                <div v-if="title.indexOf('\n') !== -1" class="table-title-cell">
+                  <div v-for="(item, index) in title.split('\n')" :key="index">{{ item }}</div>
+                </div>
+                <div v-else-if="title.indexOf('\\n') !== -1" class="table-title-cell">
+                  <div v-for="(item, index) in title.split('\\n')" :key="index">{{ item }}</div>
+                </div>
+                <span v-else-if="column.dataIndex === 'index'"></span>
+                <span v-else class="table-title-cell">{{ title }}</span>
+              </template>
               <!-- endregion -->
-              <!-- region 列搜索 -->
-              <div v-else-if="column.filterAble">
-                <portal-column-condition
-                  :clearFilters="clearFilters"
+              <!-- region 单元格样式-->
+              <template #bodyCell="{ column, record, index }">
+                <portal-body-cell
                   :column="column"
                   :config="config"
-                  :confirm="confirm"
-                  :hidePopup="hidePopup"
-                  :selectedKeysRef="selectedKeysRef"
-                  :setSelectedKeys="setSelectedKeys"
-                  @handle-search="handleSearch"
-                  @handle-reset="handleReset"
-                />
-              </div>
+                  :index="index"
+                  :is-cell-update="isCellUpdate"
+                  :record="record">
+                  <template #action="{}">
+                    <slot
+                      :column="column"
+                      :portal-config="config"
+                      :record="record"
+                      name="action">
+                    </slot>
+                  </template>
+                </portal-body-cell>
+              </template>
               <!-- endregion -->
-            </template>
+              <!-- region 总结栏样式 -->
+              <template #summary>
+                <s-table-summary-row v-if="config.summary">
+                  <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
+                    <div v-if="index === 1">总计</div>
+                    <div v-else-if="index === columns.length"></div>
+                    <div v-else> {{ dataSummary[`${columns[index - 1].dataIndex}`] || '--' }}</div>
+                  </s-table-summary-cell>
+                </s-table-summary-row>
+              </template>
+              <!-- endregion -->
+              <!-- region 提示样式 -->
+              <template #tooltipTitle="{ value }">
+                {{ value }}
+              </template>
+              <!-- endregion -->
+              <!-- region 右键菜单样式 -->
+              <template #contextmenuPopup="args">
+                <portal-context-menu-popup
+                  :args="args"
+                  :config="config"
+                  :is-cell-update="isCellUpdate"
+                  :is-row-update="isRowUpdate"
+                  :row-allow-delete="rowAllowDelete"
+                  :row-allow-edit="rowAllowEdit"
+                  @reset-cell="resetCell"
+                  @save-cell="saveCell"
+                  @save-row="saveRow"
+                  @detail-row="detailRow"
+                  @edit-row="editRow"
+                  @delete-row="deleteRow"
+                />
+              </template>
+              <!-- endregion -->
+              <!-- region 下拉搜索样式 -->
+              <template #menuIcon="{ column, filtered }">
+                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'" />
+                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'" />
+              </template>
+              <template
+                #menuPopup="{ column, hidePopup, filter: { setSelectedKeys, selectedKeysRef, confirm, clearFilters } }">
+                <!-- region 列显示选择 -->
+                <div v-if="column.dataIndex === 'index'">
+                  <div class="menu-popup-container">
+                    <ul class="menu-popup">
+                      <li class="menu-popup-item" style="border-bottom: 1px solid #f0f0f0">
+                        <a-checkbox v-model:checked="checkedAll" :indeterminate="indeterminate">
+                          全选 / 取消选择
+                        </a-checkbox>
+                      </li>
+                      <template v-for="col in columnArray" :key="col.key">
+                        <li class="menu-popup-item">
+                          <a-checkbox
+                            v-model:checked="col.checked"
+                            :disabled="!!col.disabled"
+                            style="width: 100%"
+                          >
+                            {{ col.title }}
+                          </a-checkbox>
+                        </li>
+                      </template>
+                    </ul>
+                  </div>
+                </div>
+                <!-- endregion -->
+                <!-- region 列搜索 -->
+                <div v-else-if="column.filterAble">
+                  <portal-column-condition
+                    :clearFilters="clearFilters"
+                    :column="column"
+                    :confirm="confirm"
+                    :hidePopup="hidePopup"
+                    :selectedKeysRef="selectedKeysRef"
+                    :setSelectedKeys="setSelectedKeys"
+                    @handle-search="handleSearch"
+                    @handle-reset="handleReset"
+                  />
+                </div>
+                <!-- endregion -->
+              </template>
+              <!-- endregion -->
+              <!-- region 拖拽显示样式 -->
+              <template #rowDragGhost="{ record, icon, preTargetInfo, nextTargetInfo }">
+                <component :is="icon" />
+                <span style="color: red">
+                  dragging from {{ record.name }} to
+                  {{ preTargetInfo?.record.name || nextTargetInfo?.record.name }}
+                </span>
+              </template>
+              <!-- endregion -->
+              <!-- region 单元格编辑样式 -->
+              <template
+                #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs }">
+                <portal-cell-editor
+                  :closeEditor="closeEditor"
+                  :column="column"
+                  :config="config"
+                  :editorRef="editorRef"
+                  :getPopupContainer="getPopupContainer"
+                  :modelValue="modelValue"
+                  :recordIndexs="recordIndexs"
+                  :save="save"
+                  @cell-update="cellUpdate"
+                />
+              </template>
+              <!-- endregion -->
+            </s-table>
             <!-- endregion -->
-            <!-- region 拖拽显示样式 -->
-            <template #rowDragGhost="{ record, icon, preTargetInfo, nextTargetInfo }">
-              <component :is="icon" />
-              <span style="color: red">
-                dragging from {{ record.name }} to
-                {{ preTargetInfo?.record.name || nextTargetInfo?.record.name }}
-              </span>
-            </template>
+            <!-- region 分页 -->
+            <a-pagination
+              v-model:current="config.currentPage"
+              v-model:pageSize="config.pageSize"
+              :page-size="config.pageSize"
+              :page-size-options="['10','20','30','50','100','200', '500', '1000']"
+              :show-total="total => `共 ${total} 项`"
+              :size="config.size"
+              :total="config.total"
+              class="pagination"
+              hideOnSinglePage
+              show-less-items
+              show-quick-jumper
+              show-size-changer
+              @change="paginationChange">
+              <template #itemRender="{ type, originalElement }">
+                <a v-if="type === 'prev'">&lt;</a>
+                <a v-else-if="type === 'next'">&gt;</a>
+                <component :is="originalElement" v-else />
+              </template>
+              <template #buildOptionText="prop">
+                <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
+                  {{ prop.value }}条/页
+                </span>
+                <span v-else style="width: 60px; display: inline-block">全部</span>
+              </template>
+            </a-pagination>
             <!-- endregion -->
-            <!-- region 单元格编辑样式 -->
-            <template
-              #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs }">
-              <portal-cell-editor
-                :closeEditor="closeEditor"
-                :column="column"
-                :config="config"
-                :editorRef="editorRef"
-                :getPopupContainer="getPopupContainer"
-                :modelValue="modelValue"
-                :recordIndexs="recordIndexs"
-                :save="save"
-                @cell-update="cellUpdate"
-              />
-            </template>
-            <!-- endregion -->
-          </s-table>
-          <!-- endregion -->
-          <!-- region 分页 -->
-          <a-pagination
-            v-model:current="config.currentPage"
-            v-model:pageSize="config.pageSize"
-            :page-size="config.pageSize"
-            :page-size-options="['10','20','30','50','100','200', '500', '1000']"
-            :show-total="total => `共 ${total} 项`"
-            :size="config.size"
-            :total="config.total"
-            class="pagination"
-            hideOnSinglePage
-            show-less-items
-            show-quick-jumper
-            show-size-changer
-            @change="paginationChange">
-            <template #itemRender="{ type, originalElement }">
-              <a v-if="type === 'prev'">&lt;</a>
-              <a v-else-if="type === 'next'">&gt;</a>
-              <component :is="originalElement" v-else />
-            </template>
-            <template #buildOptionText="prop">
-              <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
-                {{ prop.value }}条/页
-              </span>
-              <span v-else style="width: 60px; display: inline-block">全部</span>
-            </template>
-          </a-pagination>
-          <!-- endregion -->
+          </div>
         </div>
+        <!-- endregion -->
       </div>
+      <!-- endregion 数据 -->
+      <!-- region 详情框 -->
+      <portal-view-modal
+        v-if="config.modal.type === 'view'"
+        :columnDisplayMap="columnDisplayMap"
+        :config="config"
+        :dataSource="dataSource"
+        :modifyCellMap="modifyCellMap"
+        @cancel="handleModalCancel"
+        @close="handleModalClose"
+        @confirm="handleModalConfirm"
+      />
+      <portal-edit-modal
+        v-else
+        :columnDisplayMap="columnDisplayMap"
+        :config="config"
+        @cancel="handleModalCancel"
+        @close="handleModalClose"
+        @confirm="handleModalConfirm"
+      />
+      <portal-upload
+        ref="portalUploadModal"
+        @upload="uploadAdd"
+        @after-close="queryData"
+        @template-export="templateExport"
+        @upload-progress="uploadAddProgress"
+      />
       <!-- endregion -->
+      <!-- region 高级筛选 -->
+      <a-drawer
+        :visible="advancedCondition.show"
+        :width="1050"
+        placement="right"
+        title="高级筛选"
+        @close="advancedConditionDrawClose"
+      >
+        <template #extra>
+          <div></div>
+        </template>
+        <AdvancedSearch
+          :columns="columnArray.filter(item => item.filterAble)"
+          @get-condition="getAdvancedCondition" />
+      </a-drawer>
     </div>
-    <!-- endregion 数据 -->
-    <!-- region 详情框 -->
-    <portal-view-modal
-      v-if="config.modal.type === 'view'"
-      :columnArray="columnArray"
-      :config="config"
-      :dataSource="dataSource"
-      :modifyCellMap="modifyCellMap"
-      @cancel="handleModalCancel"
-      @close="handleModalClose"
-      @confirm="handleModalConfirm"
-    />
-    <portal-edit-modal
-      v-else
-      :columnArray="columnArray"
-      :config="config"
-      :entityDialogBox="entityDialogBox"
-      @cancel="handleModalCancel"
-      @close="handleModalClose"
-      @confirm="handleModalConfirm"
-    />
-    <portal-upload
-      ref="portalUploadModal"
-      @upload="uploadAdd"
-      @after-close="queryData"
-      @template-export="templateExport"
-      @upload-progress="uploadAddProgress"
-    />
-    <!-- endregion -->
-    <!-- region 高级筛选 -->
-    <a-drawer
-      :visible="advancedCondition.show"
-      :width="1050"
-      placement="right"
-      title="高级筛选"
-      @close="advancedConditionDrawClose"
-    >
-      <template #extra>
-        <div></div>
-      </template>
-      <AdvancedSearch
-        :columns="columnArray.filter(item => item.filterAble)"
-        @get-condition="getAdvancedCondition" />
-    </a-drawer>
   </div>
   <!-- endregion -->
 </template>
@@ -301,8 +361,14 @@ import {
   QuerySortType,
   QueryType,
   TableConfigType
-} from '@/framework/components/common/Portal/type'
-import {BarsOutlined, ExclamationCircleOutlined, FilterOutlined} from '@ant-design/icons-vue'
+} from '@/framework/components/common/portal/type'
+import {
+  BarsOutlined,
+  ExclamationCircleOutlined,
+  FilterOutlined,
+  LockOutlined,
+  UnlockOutlined
+} from '@ant-design/icons-vue'
 import {
   doFunctions,
   getAllParentNodes,
@@ -317,7 +383,7 @@ import {
   defaultColumn,
   getDefaultFilterType,
   indexColumn
-} from '@/framework/components/common/Portal/constant'
+} from '@/framework/components/common/portal/constant'
 import dayjs from 'dayjs'
 import {AUTO} from '@/framework/utils/constant'
 import {createVNode, Ref} from 'vue'
@@ -327,6 +393,7 @@ import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
 import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import {PortalBindType} from '@/framework/components/common/portal/bind/type'
 
 /**
  * @param tableId 表格ID
@@ -334,19 +401,41 @@ import {ConditionListType} from '@/framework/components/common/AdvancedSearch/Co
  * @param actionWidth 操作栏宽度
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
+ * @param rowAllowEdit 该行右键是否能够编辑
+ * @param rowAllowDelete 该行右键是否能够删除
+ * @param query 查询函数
+ * @param treeMode 是否以树形结构展示
+ * @param listMode 是否以列表形式展示
+ * @param bindTabs 显示需要绑定的数据标签
+ * @param treeCheckAble 绑定操作树是否有可选框
+ * @param selectedTreeData 树形结构展示当前选择项
+ * @param checkStrictly 树形结构选择是否完全受控
+ * @param bindDefaultValue 1:N entity字段名称-字段属性
  */
 const props = defineProps<{
   tableId: string,
   readOnly?: boolean,
   actionWidth?: number,
-  advanceCondition?: ConditionType,
-  defaultSortColumn?: Array<QuerySortType>
+  advanceCondition?: ConditionListType,
+  defaultSortColumn?: Array<QuerySortType>,
+  rowAllowEdit?: (record: any) => boolean,
+  rowAllowDelete?: (record: any) => boolean,
+  query?: (url: string, query: QueryType) => Promise<any>,
+  treeMode?: boolean,
+  listMode?: boolean,
+  bindTabs?: Array<PortalBindType>,
+  treeCheckAble?: boolean,
+  selectedTreeData?: Array<any>,
+  checkStrictly?: boolean
+  bindDefaultValue?: any
 }>()
 
 const emit = defineEmits<{
-  (e: 'rowAllowEdit', record: any, result: { updated: boolean }): void
-  (e: 'rowAllowDelete', record: any, result: { updated: boolean }): void
+  (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
 }>()
+const isBindTabExisted = computed(() => {
+  return props.bindTabs && props.bindTabs.length > 0
+})
 const $attrs = useAttrs()
 const dict = dictStore()
 // region 调整表格大小
@@ -398,18 +487,28 @@ const config: TableConfigType = reactive({
   importAble: false,
   exportAble: false
 } as TableConfigType)
+watch(props, (value, old) => {
+  config.readOnly = value.readOnly
+  console.log(value, old)
+})
 /**
  * 数据
  */
 let dataSource: Ref<Array<any>> = ref([] as Array<any>)
 let dataSummary = ref({} as any)
 const modifyCellMap = new Map<string, ModifyCellType>()
-const entityDialogBox: { show: boolean, column: ColumnType } = reactive({show: false, column: {} as ColumnType} as any)
-let treeData: Ref<Array<DataNode>> = ref([])
+const treeData: Ref<Array<DataNode>> = ref([])
+const listData = computed(() => {
+  const map = dataSource.value.map((value) => {
+    return {value: value[config.rowKey], label: value[config.nameKey]}
+  })
+  return map
+})
 /**
  * 表头
  */
 const columnArray: Ref<Array<ColumnType>> = ref([] as Array<ColumnType>)
+const columnDisplayMap: Ref<Map<any, Array<ColumnType>>> = ref(new Map<any, Array<ColumnType>>())
 const columnRaw = []
 const columns = computed(() => {
   return columnArray.value.filter(item => item.checked)
@@ -434,6 +533,38 @@ const indeterminate = computed(() => {
   const checkedCount = columns.value.filter(column => column.checked).length
   return checkedCount > 0 && checkedCount < columns.value.length
 })
+const selectedEntityId = computed(() => {
+  return selectedListDataRowKey.value || selectedTreeDataRowKey.value
+})
+/**
+ * 树选择配置
+ */
+const selectedTreeData = ref(props.selectedTreeData || [])
+watch(() => props.selectedTreeData, (data: Array<any> | undefined) => {
+  if (data !== undefined) {
+    selectedTreeData.value = data
+  }
+}, {immediate: true})
+watch(() => selectedTreeData.value, (data: Array<any>) => {
+  emit('update:selectedTreeData', data)
+})
+const selectedTreeDataRowKey = ref()
+/**
+ * 列表选择配置
+ */
+const selectedListDataRowKey = ref()
+const searchName = ref()
+const listSearchStrict = ref(true)
+const onListDataSearch = () => {
+  const condition = {
+    property: config.nameKey,
+    value: [searchName.value],
+    relation: getDefaultFilterType(FIELD_TYPE.INPUT, listSearchStrict.value)
+  } as ConditionListType
+  console.log('onListDataSearch', config.nameKey, condition)
+  queryConditionMap.set(config.nameKey, condition)
+  queryData()
+}
 /**
  * 行选择配置
  */
@@ -449,6 +580,9 @@ const rowSelection = computed(() => {
     ]
   }
 })
+const getRowSelection = () => {
+  return rowSelection.value.selectedRowKeys
+}
 /**
  * 树形菜单是否显示
  */
@@ -485,23 +619,25 @@ const cellUpdate = (index: number, dataIndex: string, v: any) => {
     modifyCell.needUpdated = v !== modifyCell.original
   }
 }
-const isCellUpdate = (index: number, column: any, result: { updated: boolean } = {updated: false}): Boolean => {
+const isCellUpdate = (index: number, column: any): Boolean => {
+  let result = false
   const modifyCell = modifyCellMap.get(index + column.dataIndex)
   if (modifyCell && isNotEmpty(modifyCell)) {
     if (modifyCell.needUpdated) config.saveAllButtonShow = true
-    result.updated = modifyCell.needUpdated
+    result = modifyCell.needUpdated
   }
-  return result.updated
+  return result
 }
-const isRowUpdate = (index: number, result: { updated: boolean } = {updated: false}): Boolean => {
+const isRowUpdate = (index: number): Boolean => {
+  let result = false
   for (let column of columns.value) {
     const modifyCell = modifyCellMap.get(index + column.dataIndex)
     if (modifyCell && isNotEmpty(modifyCell) && modifyCell.needUpdated) {
-      result.updated = true
-      return result.updated
+      result = true
+      return result
     }
   }
-  return result.updated
+  return result
 }
 const saveCell = (args: any) => {
   const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
@@ -619,23 +755,28 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
   }
   return queryDataAsync()
 }
+const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedNodes: any, node: any, event: any }) => {
+  if (e.selected) {
+    selectedTreeDataRowKey.value = e.node.key
+  }
+}
 // endregion
 // region 编辑弹框
-const rowAllowEdit = (record: any, result: { updated: boolean } = {updated: false}) => {
+const rowAllowEdit = (record: any) => {
   let allow = !config.readOnly
   allow = allow && !isRowUpdate(record.index) && config.editModalAble
-  let res = {updated: false}
-  emit('rowAllowEdit', record, res)
-  result.updated = allow && res
-  return result.updated
+  if (props.rowAllowEdit) {
+    allow = allow && props.rowAllowEdit(record)
+  }
+  return allow
 }
-const rowAllowDelete = (record: any, result: { updated: boolean } = {updated: false}) => {
+const rowAllowDelete = (record: any) => {
   let allow = !config.readOnly
   allow = allow && !isRowUpdate(record.index)
-  let res = {updated: false}
-  emit('rowAllowDelete', record, res)
-  result.updated = allow && res
-  return result.updated
+  if (props.rowAllowDelete) {
+    allow = allow && props.rowAllowDelete(record)
+  }
+  return allow
 }
 // 相应确认按钮
 const handleModalConfirm = () => {
@@ -689,12 +830,17 @@ const detailRow = (args: any) => {
 // 添加数据
 const addRow = () => {
   openModal('add')
-  config.modal.data = {}
+  if (props.bindDefaultValue) {
+    config.modal.data = props.bindDefaultValue
+  } else {
+    config.modal.data = {}
+  }
+  console.log(config.modal.data)
   config.modal.editRowIndex = null
 }
 // 保存添加数据
 const saveAddRow = async () => {
-  return await addEntity(config.url, config.modal.data)
+  await addEntity(config.url, config.modal.data)
 }
 // 模版下载
 const templateExport = () => {
@@ -805,13 +951,12 @@ const initQueryCondition = () => {
 }
 
 const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, hidePopup: any, column: any) => {
-  console.log(column)
   const condition = {
     property: dataIndex as string,
     value: selectedKeys as Array<any>,
-    relation: getDefaultFilterType(column.fieldType)
+    relation: getDefaultFilterType(column.fieldType, column.filterStrict)
   } as ConditionListType
-
+  console.log(column, condition)
   if (isNotEmpty(selectedKeys)) {
     queryConditionMap.set(dataIndex as string, condition)
   } else {
@@ -828,7 +973,7 @@ const handleReset = (clearFilters: any, dataIndex: any, hidePopup: any) => {
   hidePopup()
   queryData()
 }
-const selectedRowKeys = ref<any['key'][]>([])
+const selectedRowKeys = ref<Array<string>>([])
 const onSelectChange = (changableRowKeys: string[]) => {
   console.log('selectedRowKeys changed: ', changableRowKeys)
   selectedRowKeys.value = changableRowKeys
@@ -867,13 +1012,23 @@ const getAdvancedCondition = (condition: ConditionType) => {
 // endregion
 
 //region 常用功能函数
+const queryCondition = () => {
+  return query.value
+}
+const getConfig = () => {
+  return config
+}
 /**
  * 获取数据
  */
 const queryData = () => {
-  queryDataAsync().then(data => {
-    initData(data)
-  })
+  // 外部组件调用queryData接口 尚未完成初始化
+  if (config.url) {
+    queryDataAsync().then(data => {
+      initData(data)
+    })
+  }
+
 }
 const initData = (data: Array<any>) => {
   dataSource.value = data || []
@@ -885,7 +1040,7 @@ const initData = (data: Array<any>) => {
   }
 }
 const queryDataAsync = async () => {
-  return await advancedQuery(config.url, query.value).then(res => {
+  const resolve = (res: any) => {
     config.total = res.payload.total
     const data = []
     for (let record of res.payload.records) {
@@ -897,7 +1052,12 @@ const queryDataAsync = async () => {
       data.push(record)
     }
     return data
-  })
+  }
+  if (props.query) {
+    return await props.query(config.url, query.value).then(resolve)
+  } else {
+    return await advancedQuery(config.url, query.value).then(resolve)
+  }
 }
 /**
  * 分页变更
@@ -978,12 +1138,16 @@ const init = async () => {
       column.editShow = layout.editShow === '1'
       if (!config.editModalAble && column.editShow) config.editModalAble = column.editShow
       column.checked = layout.show === '1'
+      column.displayGroupName = layout.displayGroupName
       column.detailShow = layout.detailShow === '1'
       column.detailSize = layout.detailSize
+      column.detailPadding = layout.detailPadding
       column.addSize = layout.addSize
       column.addPadding = layout.addPadding
+      column.addDisabled = layout.addDisabled === '1'
       column.editSize = layout.editSize
       column.editPadding = layout.editPadding
+      column.editDisabled = layout.editDisabled === '1'
       // 单元格编辑模式
       if (layout.editAble !== '1') {
         column.editable = layout.editAble
@@ -1006,6 +1170,10 @@ const init = async () => {
       }
       if (layout.enable === '1') {
         columnArray.value.push(column)
+        if (isEmpty(columnDisplayMap.value.get(column.displayGroupName))) {
+          columnDisplayMap.value.set(column.displayGroupName, [])
+        }
+        columnDisplayMap.value.get(column.displayGroupName)?.push(column)
       }
       columnRaw.push(column)
     }
@@ -1015,14 +1183,34 @@ const init = async () => {
     columnArray.value[0].rowDrag = tableConfig.tableDrag === '1'
 
     console.log('init finish')
+
     console.debug(config, columnArray.value, columns.value)
     config.key = config.key + 1
 
     if (config.treeMode) {
-      await getTreeData(config.url).then(res => treeData.value = res.payload || [])
+      const condition: QueryType = {} as QueryType
+      if (props.advanceCondition) {
+        condition.condition = {} as ConditionType
+        condition.condition.andOr = '0'
+        condition.condition.conditionList = [props.advanceCondition]
+      }
+      await queryTreeData()
     }
     return await queryDataAsync()
   })
+}
+const queryTreeData = async () => {
+  const condition: QueryType = {} as QueryType
+  console.log(props.advanceCondition)
+  if (props.advanceCondition) {
+    condition.condition = {} as ConditionType
+    condition.condition.andOr = '0'
+    condition.condition.conditionList = [props.advanceCondition]
+  }
+  // 外部组件调用queryData接口 尚未完成初始化
+  if (config.url) {
+    await getTreeData(config.url, condition).then(res => treeData.value = res.payload || [])
+  }
 }
 //endregion
 
@@ -1033,9 +1221,26 @@ watch(() => props.tableId, value => {
   config.tableId = value
   refresh()
 })
-defineExpose({queryData})
+defineExpose({queryData, queryTreeData, queryCondition, getRowSelection, getConfig})
 </script>
 <style lang="less" scoped>
+.portal-tree-wrapper {
+  background-color: white;
+  box-sizing: border-box;
+  overflow: auto;
+  height: calc(100vh - 150px);
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  margin: 10px 15px;
+}
+
+.portal-tree-bind-wrapper {
+  background-color: white;
+  box-sizing: border-box;
+  overflow: auto;
+  height: calc(100vh - 200px);
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+}
+
 .root {
   height: calc(100% - 70px);
   display: flex;
@@ -1163,6 +1368,14 @@ defineExpose({queryData})
 
 .surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner {
   padding: 1px !important;
+}
+
+/**
+list模式样式
+ */
+.activate-item {
+  background-color: #e6f7ff;
+  border-right: 3px solid #1890ff;
 }
 
 </style>

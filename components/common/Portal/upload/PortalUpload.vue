@@ -1,58 +1,58 @@
 <template>
   <a-modal
-      :keyboard="false"
-      :maskClosable="false"
-      :visible="config.show"
-      :width="800"
-      centered
-      @cancel="closeUploadModal">
+    :keyboard="false"
+    :maskClosable="false"
+    :visible="config.show"
+    :width="800"
+    centered
+    @cancel="closeUploadModal">
     <a-upload-dragger
-        v-if="config.type === 'INIT'"
-        v-model:fileList="config.file"
-        :before-upload="beforeUpload"
-        :customRequest="handleFileUpload"
-        accept=".xlsx"
-        name="file"
-        style="margin-top: 30px"
-        @change="handleUploadChange"
-        @reject="reject">
+      v-if="config.type === 'INIT'"
+      v-model:fileList="config.file"
+      :before-upload="beforeUpload"
+      :customRequest="handleFileUpload"
+      accept=".xlsx"
+      name="file"
+      style="margin-top: 30px"
+      @change="handleUploadChange"
+      @reject="reject">
       <p class="ant-upload-drag-icon">
-        <inbox-outlined/>
+        <inbox-outlined />
       </p>
       <p class="ant-upload-text">点击或者拖拽文件至此上传</p>
       <p class="ant-upload-hint">
-        注意请使用系统提供的模版填充数据<br/>模版格式不正确可能导致数据无法被处理
+        注意请使用系统提供的模版填充数据<br />模版格式不正确可能导致数据无法被处理
       </p>
     </a-upload-dragger>
     <a-result
-        v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) !== -1"
-        :title="'正在' + stepTitle[config.step] + '数据...'">
+      v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) !== -1"
+      :title="'正在' + stepTitle[config.step] + '数据...'">
       <template #icon>
         <a-steps
-            :current="config.step"
-            :percent="config.percent">
+          :current="config.step"
+          :percent="config.percent">
           <a-step
-              v-for="title in stepTitle"
-              :key="title"
-              :title="title + '数据'"
-              description=""/>
+            v-for="title in stepTitle"
+            :key="title"
+            :title="title + '数据'"
+            description="" />
         </a-steps>
       </template>
     </a-result>
     <a-result
-        v-if="config.type === 'SUCCESS'"
-        :sub-title="'已成功保存数据' + config.loaded + '条'"
-        status="success"
-        title="上传数据成功"
+      v-if="config.type === 'SUCCESS'"
+      :sub-title="'已成功保存数据' + config.loaded + '条'"
+      status="success"
+      title="上传数据成功"
     >
       <template #extra>
 
       </template>
     </a-result>
     <a-result
-        v-if="config.type === 'FAILED'"
-        status="error"
-        title="上传数据失败"
+      v-if="config.type === 'FAILED'"
+      status="error"
+      title="上传数据失败"
     >
       <template #extra>
         <a-button key="console" type="primary" @click="resetUploadProgress()">重新上传</a-button>
@@ -63,7 +63,7 @@
           <strong>上传过程发生了下列错误:</strong>
         </p>
         <p v-for="reason in config.failedReason" :key="reason">
-          <close-circle-outlined :style="{ color: 'red' }"/>
+          <close-circle-outlined :style="{ color: 'red' }" />
           {{ reason }}
         </p>
       </div>

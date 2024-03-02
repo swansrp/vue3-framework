@@ -113,6 +113,8 @@ export type ColumnType = {
     // region 筛选查询
     // 能否查询
     filterAble: boolean,
+    // 严格/模糊查询
+    filterStrict: boolean,
     // 能否排序
     sorter: boolean,
     // 表头菜单显示方式
@@ -150,16 +152,24 @@ export type ColumnType = {
     // endregion
 
     // region 详情显示
+    // 字段显示组名称
+    displayGroupName: string
     // 详情显示格数
     detailSize: number,
+    // 详情弹框布局显示后占位填充
+    detailPadding: number,
     // 新增显示格数
     addSize: number,
     // 新增弹框布局显示后占位填充
     addPadding: number,
+    // 新增弹框布局disable显示
+    addDisabled: boolean
     // 编辑显示格数
     editSize: number,
     // 编辑弹框布局显示后占位填充
     editPadding: number,
+    // 编辑弹框布局disable显示
+    editDisabled: boolean
     // 详情是否显示
     detailShow: boolean,
     // 新增是否显示
@@ -215,10 +225,26 @@ export enum FIELD_TYPE {
     HTML = '9',
     TEXT_AREA = '10',
     ENTITY = '11',
-    IMAGE = "12",
-    VIDEO = "13",
-    AUDIO = "14",
-    FILE = "15"
+    IMAGE = '12',
+    VIDEO = '13',
+    AUDIO = '14',
+    FILE = '15'
+}
+
+export enum UPLOAD_FILE_TYPE {
+    DOC = '1',
+    IMG = '2',
+    VIDEO = '3',
+    APK = '4',
+    AUDIO = '5',
+    TEXT = '6',
+    FILE = '7',
+    WORD = '8',
+    EXCEL = '9',
+    PPT = '10',
+    PDF = '11',
+    LOG = '12',
+    OTHER = '13'
 }
 
 export type QuerySortType = {
