@@ -1,5 +1,5 @@
 <template>
-  <div ref="root" v-bind="$attrs">
+  <div ref="root" v-bind="$attrs" class="root">
     <a-layout v-if="treeMode || listMode">
       <a-layout-sider
         :class="[isBindTabExisted ? 'portal-tree-wrapper':'portal-tree-bind-wrapper']"
@@ -60,7 +60,7 @@
           :entity-name="props.tableId" />
       </a-layout-content>
     </a-layout>
-    <div v-else class="root">
+    <template v-else >
       <!-- region 树形配置 -->
       <div v-if="config.treeMenuShow" class="menu-tree">
         <div class="menu-category">{{ config.title }}</div>
@@ -329,7 +329,7 @@
           :columns="columnArray.filter(item => item.filterAble)"
           @get-condition="getAdvancedCondition" />
       </a-drawer>
-    </div>
+    </template>
   </div>
   <!-- endregion -->
 </template>
@@ -660,7 +660,7 @@ const resetCell = (args: any) => {
   args.hidePopup()
 }
 const resetRow = (index: any) => {
-  for (let column of columns.value) {
+  for (let column of columnArray.value) {
     const modifyCell = modifyCellMap.get(index + column.dataIndex)
     if (modifyCell && isNotEmpty(modifyCell) && modifyCell.needUpdated) {
       cellUpdate(index, column.dataIndex, modifyCell.original)
@@ -695,7 +695,7 @@ const _buildUpdatedRowData = (index: any) => {
 const _buildRowData = (index: any) => {
   let id
   const data = new Map()
-  for (let column of columns.value) {
+  for (let column of columnArray.value) {
     const modifyCell = modifyCellMap.get(index + column.dataIndex)
     if (modifyCell) {
       data.set(modifyCell.dataIndex, modifyCell.current)
@@ -1088,6 +1088,7 @@ const init = async () => {
   return await getPortalConfig(config.tableId).then(async res => {
     dictColumnArray.length = 0
     columnArray.value.length = 0
+    columnDisplayMap.value.clear()
     const index = _.cloneDeep(indexColumn)
     columnArray.value.push(index)
     const tableConfig = res.payload

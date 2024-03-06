@@ -89,8 +89,8 @@
               />
               <div
                 v-else-if="column.fieldType === FIELD_TYPE.IMAGE">
-                <div v-if="isNotEmpty(config.modal.data[column.dataIndex])" style="display: flex">
-                  <a-image :src="config.modal.data[column.dataIndex]" :width="250" />
+                <div v-if="log(column.dataIndex, config.modal.data, config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex]))" style="display: flex">
+                  <a-image :src="config.modal.data[column.dataIndex]" :width="100" />
                   <close-circle-outlined
                     :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                     style="color: lightslategray; margin-left: -20px; margin-top: 5px; z-index: 999"
