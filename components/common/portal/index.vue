@@ -946,6 +946,8 @@ const query = computed(() => {
 const queryConditionMap = reactive(new Map<String, ConditionListType>())
 const querySortMap = reactive(new Map<String, QuerySortType>())
 const initQueryCondition = () => {
+  config.currentPage = 1
+  config.pageSize = 10
   queryConditionMap.clear()
   querySortMap.clear()
 }

@@ -1,5 +1,5 @@
 <template>
-  <portal ref="userTable" table-id="user" :action-width="180">
+  <portal ref="userTable" table-id="AcUser" :action-width="180">
     <template #action="{ portalConfig, column, record }">
       <div style="display: flex">
         <a-button type="link" @click="resetPassword(portalConfig, column, record)">重置密码</a-button>

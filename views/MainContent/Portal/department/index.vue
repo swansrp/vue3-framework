@@ -1,5 +1,5 @@
 <template>
-  <portal table-id="department" />
+  <portal table-id="AcDept" />
 </template>
 
 <script lang="ts" setup>

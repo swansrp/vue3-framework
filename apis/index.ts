@@ -356,7 +356,7 @@ export const importAddProgressRequest = (
     type: string,
     params: string,
     domain: string = baseDomain
-) => request(importAddProgressApi(type, domain), {name: params}, {}, false, false, false) as Promise<any>
+) => request(importAddProgressApi(type, domain), {name: params}, {}, false, false, true) as Promise<any>
 
 export const getAllBindListRequest = (
     type: string,

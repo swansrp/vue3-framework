@@ -1,5 +1,5 @@
 <template>
-  <portal table-id="sysConfig" />
+  <portal table-id="SysConfig" />
 </template>
 
 <script lang="ts" setup>

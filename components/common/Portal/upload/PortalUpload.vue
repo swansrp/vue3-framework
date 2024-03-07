@@ -11,7 +11,7 @@
       v-model:fileList="config.file"
       :before-upload="beforeUpload"
       :customRequest="handleFileUpload"
-      accept=".xlsx"
+      accept=".xlsx,.xls"
       name="file"
       style="margin-top: 30px"
       @change="handleUploadChange"
