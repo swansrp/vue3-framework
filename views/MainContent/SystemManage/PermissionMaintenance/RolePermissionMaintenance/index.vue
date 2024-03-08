@@ -97,7 +97,6 @@ import {ValueLabelArray} from "@/framework/utils/type";
 import 'ant-design-vue/lib/message/style/index.css'
 import {message} from "ant-design-vue";
 import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
-import {log} from '@/framework/utils/common'
 
 let inputRoleName: Ref<string> = ref('')
 let activateItemIndex:Ref<number> = ref(-1)

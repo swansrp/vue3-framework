@@ -153,7 +153,7 @@ const emit = defineEmits<{
   (e: 'cellUpdate', index: number, dataIndex: string, v: any): void
   (e: 'update:modelValue', v: any): void
 }>()
-const {column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs, config} = toRefs(prop)
+const {column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs} = toRefs(prop)
 watch(modelValue, (value) => {
   emit('update:modelValue', value)
 }, {deep: true})

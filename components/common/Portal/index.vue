@@ -60,7 +60,7 @@
           :entity-name="props.tableId" />
       </a-layout-content>
     </a-layout>
-    <template v-else >
+    <template v-else>
       <!-- region 树形配置 -->
       <div v-if="config.treeMenuShow" class="menu-tree">
         <div class="menu-category">{{ config.title }}</div>

@@ -70,7 +70,7 @@
     </a-result>
     <template #footer>
       <a-button @click="templateExport">下载模版</a-button>
-      <a-button @click="resetUploadProgress()">默认</a-button>
+      <a-button @click="resetUploadProgress()">重新上传</a-button>
     </template>
   </a-modal>
 </template>
@@ -144,7 +144,7 @@ const setFailedProgress = () => {
 }
 const updateProgress = (resp: any) => {
   const {step, loaded, comments, total} = resp
-  console.log('updateProgress', step, loaded, comments, total)
+  console.debug('updateProgress', step, loaded, comments, total)
   config.type = step
   config.loaded = loaded
   config.total = total
@@ -180,8 +180,8 @@ const templateExport = () => {
   emit('templateExport')
 }
 const closeUploadModal = () => {
-  resetUploadProgress()
   needRefresh && emit('afterClose')
+  resetUploadProgress()
   config.show = false
 }
 const beforeUpload = (file: any) => {
@@ -222,7 +222,7 @@ const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?:
     setUploadProgress(percent)
   }, (resp: any) => {
     onSuccess(resp, file)
-  }, (resp: any) => {
+  }, () => {
     setFailedProgress()
     stopTimer(uploadProgressTimer)
   })
