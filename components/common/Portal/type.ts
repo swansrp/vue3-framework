@@ -15,6 +15,8 @@ export type TableConfigType = {
     rowKey: string,
     // 表格中作为名字的Column
     nameKey: string,
+    // 表格中作为父类id的column
+    parentKey: string,
     // 表格加载样式
     loading: boolean,
     // 表格渲染图层

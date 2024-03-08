@@ -1,5 +1,5 @@
 <template>
-  <div ref="root" v-bind="$attrs" class="root">
+  <div ref="root" class="root" v-bind="$attrs">
     <a-layout v-if="treeMode || listMode">
       <a-layout-sider
         :class="[isBindTabExisted ? 'portal-tree-wrapper':'portal-tree-bind-wrapper']"
@@ -17,7 +17,23 @@
             :show-line="true"
             :tree-data="treeData"
             @drop="updateTree"
-            @select="handleTreeSelected" />
+            @select="handleTreeSelected">
+            <template #title="{ dataRef }">
+              <a-dropdown :trigger="['contextmenu']">
+                <span>{{ dataRef.title }}</span>
+                <template #overlay>
+                  <a-menu @click="({ key: menuKey }) => handleTreeModeMenuContext(dataRef, menuKey)">
+                    <a-menu-item key="1">查看详情</a-menu-item>
+                    <template v-if="!config.readOnly">
+                      <a-menu-item key="2">新增记录</a-menu-item>
+                      <a-menu-item key="3">编辑记录</a-menu-item>
+                      <a-menu-item key="4">删除记录</a-menu-item>
+                    </template>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </template>
+          </a-tree>
           <a-list
             v-else-if="listMode"
             :data-source="listData"
@@ -287,49 +303,49 @@
         <!-- endregion -->
       </div>
       <!-- endregion 数据 -->
-      <!-- region 详情框 -->
-      <portal-view-modal
-        v-if="config.modal.type === 'view'"
-        :columnDisplayMap="columnDisplayMap"
-        :config="config"
-        :dataSource="dataSource"
-        :modifyCellMap="modifyCellMap"
-        @cancel="handleModalCancel"
-        @close="handleModalClose"
-        @confirm="handleModalConfirm"
-      />
-      <portal-edit-modal
-        v-else
-        :columnDisplayMap="columnDisplayMap"
-        :config="config"
-        @cancel="handleModalCancel"
-        @close="handleModalClose"
-        @confirm="handleModalConfirm"
-      />
-      <portal-upload
-        ref="portalUploadModal"
-        @upload="uploadAdd"
-        @after-close="queryData"
-        @template-export="templateExport"
-        @upload-progress="uploadAddProgress"
-      />
-      <!-- endregion -->
-      <!-- region 高级筛选 -->
-      <a-drawer
-        :visible="advancedCondition.show"
-        :width="1050"
-        placement="right"
-        title="高级筛选"
-        @close="advancedConditionDrawClose"
-      >
-        <template #extra>
-          <div></div>
-        </template>
-        <AdvancedSearch
-          :columns="columnArray.filter(item => item.filterAble)"
-          @get-condition="getAdvancedCondition" />
-      </a-drawer>
     </template>
+    <!-- region 详情框 -->
+    <portal-view-modal
+      v-if="config.modal.type === 'view'"
+      :columnDisplayMap="columnDisplayMap"
+      :config="config"
+      :dataSource="dataSource"
+      :modifyCellMap="modifyCellMap"
+      @cancel="handleModalCancel"
+      @close="handleModalClose"
+      @confirm="handleModalConfirm"
+    />
+    <portal-edit-modal
+      v-else
+      :columnDisplayMap="columnDisplayMap"
+      :config="config"
+      @cancel="handleModalCancel"
+      @close="handleModalClose"
+      @confirm="handleModalConfirm"
+    />
+    <portal-upload
+      ref="portalUploadModal"
+      @upload="uploadAdd"
+      @after-close="queryData"
+      @template-export="templateExport"
+      @upload-progress="uploadAddProgress"
+    />
+    <!-- endregion -->
+    <!-- region 高级筛选 -->
+    <a-drawer
+      :visible="advancedCondition.show"
+      :width="1050"
+      placement="right"
+      title="高级筛选"
+      @close="advancedConditionDrawClose"
+    >
+      <template #extra>
+        <div></div>
+      </template>
+      <AdvancedSearch
+        :columns="columnArray.filter(item => item.filterAble)"
+        @get-condition="getAdvancedCondition" />
+    </a-drawer>
   </div>
   <!-- endregion -->
 </template>
@@ -341,6 +357,7 @@ import {
   deleteEntity,
   exportData,
   exportTemplate,
+  getById,
   getTreeData,
   importAdd,
   importAddProgress,
@@ -778,6 +795,42 @@ const rowAllowDelete = (record: any) => {
   }
   return allow
 }
+const handleTreeModeMenuContext = (record: any, key: string) => {
+  console.log('12313131', record, key === '1')
+  switch (key) {
+    case '1':
+      getById(config.url, record.key).then(resp => {
+        config.modal.data = resp.payload
+        openModal('view')
+      })
+      break
+    case '2':
+      config.modal.data[`${config.parentKey}`] = record.key
+      openModal('add')
+      break
+    case '3':
+      getById(config.url, record.key).then(resp => {
+        config.modal.data = resp.payload
+        openModal('modify')
+      })
+      break
+    case '4':
+      Modal.confirm({
+        title: '注意',
+        icon: createVNode(ExclamationCircleOutlined),
+        content: createVNode('div', {style: 'color:red;'}, '即将删除该记录,请确认'),
+        onOk() {
+          deleteEntity(config.url, record.key).then(() => queryData())
+        },
+        onCancel() {
+
+        }
+      })
+      break
+    default:
+      break
+  }
+}
 // 相应确认按钮
 const handleModalConfirm = () => {
   switch (config.modal.type) {
@@ -890,6 +943,7 @@ const openModal = (type: 'view' | 'add' | 'modify' | undefined) => {
   config.modal.type = type
 }
 // endregion
+
 // region 表格搜索
 
 const query = computed(() => {
@@ -1026,6 +1080,9 @@ const getConfig = () => {
 const queryData = () => {
   // 外部组件调用queryData接口 尚未完成初始化
   if (config.url) {
+    if (config.treeMode) {
+      queryTreeData()
+    }
     queryDataAsync().then(data => {
       initData(data)
     })
@@ -1106,6 +1163,7 @@ const init = async () => {
     config.url = tableConfig.url
     config.summary = tableConfig.summary === '1'
     config.treeMode = isNotEmpty(tableConfig.pidColumn)
+    config.parentKey = tableConfig.pidColumn
     config.orderMode = isNotEmpty(tableConfig.orderColumn)
     config.treeDragAble = tableConfig.treeDrag === '1'
     config.descriptionCount = tableConfig.descriptionCount
@@ -1204,7 +1262,6 @@ const init = async () => {
 }
 const queryTreeData = async () => {
   const condition: QueryType = {} as QueryType
-  console.log(props.advanceCondition)
   if (props.advanceCondition) {
     condition.condition = {} as ConditionType
     condition.condition.andOr = '0'

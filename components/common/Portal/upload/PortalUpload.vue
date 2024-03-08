@@ -197,7 +197,7 @@ const reject = () => {
 const handleUploadChange = (info: UploadChangeParam) => {
   const status = info.file.status
   if (status !== 'uploading') {
-    console.log(info.file, info.fileList)
+    // console.log(info.file, info.fileList)
   }
   if (status === 'done') {
     startTimer(uploadProgressTimer, () => {
