@@ -1,3 +1,4 @@
+import {QuerySortType} from '@/framework/components/common/portal/type'
 
 export type PortalBindType = {
     /**
@@ -12,6 +13,10 @@ export type PortalBindType = {
      * 是否显示绑定按钮(是否是N:N关系)
      */
     showBind: boolean,
+    /**
+     * 数据默认排序
+     */
+    defaultSortColumn?: Array<QuerySortType>,
     /**
      * 是否以树的形式展示
      */

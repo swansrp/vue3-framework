@@ -39,7 +39,9 @@
             :data-source="listData"
             bordered
             class="table-list"
-            size="small">
+            size="small"
+            :pagination="{pageSize:15}"
+          >
             <template #renderItem="{ item }">
               <a-list-item
                 :class="{'activate-item': selectedListDataRowKey === item.value}"
@@ -1001,7 +1003,11 @@ const queryConditionMap = reactive(new Map<String, ConditionListType>())
 const querySortMap = reactive(new Map<String, QuerySortType>())
 const initQueryCondition = () => {
   config.currentPage = 1
-  config.pageSize = 10
+  if(props.listMode) {
+    config.pageSize = 30000
+  } else {
+    config.pageSize = 10
+  }
   queryConditionMap.clear()
   querySortMap.clear()
 }

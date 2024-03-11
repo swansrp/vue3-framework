@@ -10,6 +10,7 @@
         <Portal
           :ref="(arg) => bindPortalRefMap.set(key, arg)"
           v-model:selectedTreeData="checkedKeys"
+          :default-sort-column="bindTabs[activeKey].defaultSortColumn"
           :advance-condition="bindCondition"
           :bind-default-value="bindDefaultValue"
           :read-only="isReadOnly(item)"

@@ -10,11 +10,22 @@
         </a-list-item>
       </template>
       <template #header>
+        <a-select
+          v-model:value="selectedRole"
+          :options="roleDictList || []"
+          show-search
+          style="width: 100%; margin-bottom: 5px"
+          @change="init().then(onSearch)"
+        />
         <a-input-search v-model:value="inputTableName" enter-button placeholder="请输入表格名称" @search="onSearch" />
       </template>
       <template #footer>
-        <div style="display: flex; justify-content: space-between">
-          <a-button :disabled="isEmpty(tableConfig.id)" shape="round" @click="openCopyConfigModal"> 复制
+        <div style="display: flex; justify-content: space-around">
+          <a-button
+            v-if="selectedRole === '0' && tableList.length !== 0"
+            :disabled="isEmpty(tableConfig.id)"
+            shape="round"
+            @click="openCopyConfigModal"> 复制
             <template #icon>
               <CopyOutlined />
             </template>
@@ -47,13 +58,42 @@
             </a-form>
           </a-modal>
           <a-popconfirm title="注意 即将删除该配置" @confirm="deleteConfig()">
-            <a-button :disabled="isEmpty(tableConfig.id)" shape="round"> 删除
+            <a-button
+              v-if="selectedRole === '0' && tableList.length !== 0"
+              :disabled="isEmpty(tableConfig.id)"
+              shape="round"
+              style="margin-left: 5px"> 删除
               <template #icon>
-                <MinusCircleOutlined />
+                <DeleteOutlined />
               </template>
             </a-button>
           </a-popconfirm>
         </div>
+        <a-popconfirm title="注意清空该角色的所有配置, 该角色即将使用默认配置" @confirm="cleanPortalConfigByRole">
+          <a-button
+            v-if="selectedRole !== '0' && tableList.length !== 0"
+            shape="round" style="margin-top: 5px; width: 160px"> 清空
+            <template #icon>
+              <MinusCircleOutlined />
+            </template>
+          </a-button>
+        </a-popconfirm>
+        <a-dropdown v-if="selectedRole !== '0' && tableList.length === 0">
+          <template #overlay>
+            <a-menu @click="handleMenuClick">
+              <a-menu-item v-for="role in bindRoleDictList" :key="role.value">
+                <UserOutlined />
+                {{ role.label }}
+              </a-menu-item>
+            </a-menu>
+          </template>
+          <a-button
+            shape="round" style="margin-top: 5px; width: 160px"> 初始化
+            <template #icon>
+              <ForkOutlined />
+            </template>
+          </a-button>
+        </a-dropdown>
       </template>
     </a-list>
     <!-- endregion -->
@@ -826,22 +866,34 @@ import {Ref} from 'vue'
 import {isEmpty, isNotEmpty, updateTableSize} from '@/framework/utils/common'
 import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 import {
+  bindRole,
   copyPortalConfig,
   deletePortalConfig,
   existedPortalConfig,
+  getBindRole,
   getPortalConfig,
   getPortalList,
+  unbindRole,
   updatePortalColumn,
   updatePortalColumnOrder,
   updatePortalConfig
 } from '@/framework/apis/portal/config'
-import {CopyOutlined, FilterOutlined, MinusCircleOutlined} from '@ant-design/icons-vue'
+import {
+  CopyOutlined,
+  DeleteOutlined,
+  FilterOutlined,
+  ForkOutlined,
+  MinusCircleOutlined,
+  UserOutlined
+} from '@ant-design/icons-vue'
 import {ValueLabel} from '@/framework/utils/type'
 import {dictStore} from '@/framework/store/common'
 import {CellRenderArgs} from '@surely-vue/table'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 import {AUTO} from '@/framework/utils/constant'
 import * as _ from 'lodash'
+import {getRoleList} from '@/framework/apis/admin/rolePermission'
+import {MenuProps} from 'ant-design-vue'
 
 
 const dict = dictStore()
@@ -855,6 +907,9 @@ let columnDict = reactive([] as Array<ValueLabel>)
 let columnMap = reactive(new Map())
 let selectedColumnId = ref('')
 let columnFiltered: Ref<boolean> = ref(false)
+let roleDictList = reactive([{value: '0', label: '默认配置'}] as Array<ValueLabel>)
+let bindRoleDictList = reactive([] as Array<ValueLabel>)
+let selectedRole = ref('0')
 // 关联属性
 const entityConfig = ref({} as any)
 const entityCondition = reactive({
@@ -872,7 +927,7 @@ let copyConfigModal = reactive({
   configDescription: ''
 })
 const checkConfigIdExisted = () => {
-  return existedPortalConfig(copyConfigModal.configId)
+  return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
 }
 const openCopyConfigModal = () => {
   copyConfigModal.visible = true
@@ -901,7 +956,7 @@ const getEntityConfig = (tableId: string) => {
 const tableConfig = ref({} as any)
 const fieldRecords = ref([] as Array<any>)
 const getTableConfigByName = (item: any) => {
-  getPortalConfig(item.value).then(res => {
+  getPortalConfig(item.value, selectedRole.value).then(res => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
@@ -935,7 +990,7 @@ const saveTableColumn = (silent = true) => {
 }
 
 const onSearch = () => {
-  getPortalList(inputTableName.value).then((res) => {
+  getPortalList(inputTableName.value, selectedRole.value).then((res) => {
     tableList.value = res.payload || []
   })
 }
@@ -1024,6 +1079,8 @@ const saveEntityCondition = (condition: ConditionType) => {
 
 const init = async () => {
   updateTableWidthAndHeight()
+  tableConfig.value = []
+  fieldRecords.value = []
   return Promise.all([
     await dict.getDict('PORTAL_TABLE_SIZE_DICT').then(res => {
       tableSizeDict = res || []
@@ -1036,8 +1093,27 @@ const init = async () => {
     }),
     await dict.getAllDict('').then(res => {
       sysDictList = res || []
-    })
+    }),
+    await getRoleList().then(res => {
+      if (res.payload && res.payload.records) {
+        for (let role of res.payload.records) {
+          roleDictList.push({value: role.roleId, label: role.roleName})
+        }
+      }
+    }),
+    await getBindRole().then(res => bindRoleDictList = res.payload || [])
   ])
+}
+const handleMenuClick: MenuProps['onClick'] = async e => {
+  await bindRole(selectedRole.value, e.key)
+  await init()
+  onSearch()
+}
+
+const cleanPortalConfigByRole = async () => {
+  await unbindRole(selectedRole.value)
+  await init()
+  onSearch()
 }
 
 onMounted(() => {

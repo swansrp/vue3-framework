@@ -1,13 +1,14 @@
 <template>
   <portal
-    list-mode
-    table-id="SysDictType"
     :bind-tabs="[{
       title: '字典条目',
       tableId: 'SysDict',
       showBind: false,
-      bindFieldProperty: 'dictName'
-    }]" />
+      bindFieldProperty: 'dictName',
+      defaultSortColumn: [{property: 'dictName', type: 0}, {property: 'dictSort', type: 0}]
+    }]"
+    list-mode
+    table-id="SysDictType" />
 </template>
 
 <script lang="ts" setup>
