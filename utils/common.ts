@@ -41,7 +41,7 @@ function isEmpty(data: any) {
     } else if (typeof data === 'string') {
         return data.length === 0 || data === ''
     } else {
-        return JSON.stringify(data) == '{}'
+        return JSON.stringify(data) === '{}'
     }
 }
 

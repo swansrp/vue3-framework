@@ -28,5 +28,9 @@ export type PortalBindType = {
     /**
      * 1:N 关联字段名
      */
-    bindFieldProperty?: string
+    bindFieldProperty?: string,
+    /**
+     * 递归tab页
+     */
+    bindTabs?: Array<PortalBindType>
 }

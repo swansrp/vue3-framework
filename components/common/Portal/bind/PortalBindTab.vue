@@ -10,9 +10,10 @@
         <Portal
           :ref="(arg) => bindPortalRefMap.set(key, arg)"
           v-model:selectedTreeData="checkedKeys"
-          :default-sort-column="bindTabs[activeKey].defaultSortColumn"
           :advance-condition="bindCondition"
           :bind-default-value="bindDefaultValue"
+          :bind-tabs="bindTabs[activeKey].bindTabs"
+          :default-sort-column="bindTabs[activeKey].defaultSortColumn"
           :read-only="isReadOnly(item)"
           :table-id="item.tableId"
           :tree-check-able="isNotEmpty(prop.entityId) && item.showBind"
@@ -64,9 +65,9 @@ watch(checkedKeys, (newValue: Array<any>) => {
   }
 })
 const activeKey = ref(0)
-const bindCondition = ref({} as ConditionListType)
+const bindCondition: Ref<ConditionListType | undefined> = ref({} as ConditionListType)
 const bindDefaultValue = computed(() => {
-  if (bindCondition.value.value) {
+  if (bindCondition.value && bindCondition.value.value) {
     return {[`${bindCondition.value.property}`]: bindCondition.value.value[0]}
   } else {
     return {}
@@ -96,7 +97,6 @@ const refresh = (arg?: any) => {
   }
 }
 const handleTabChanged = (arg: any) => {
-  console.log(activeKey.value)
   refresh(arg)
 }
 const bindAll = () => {
@@ -139,7 +139,7 @@ const getBindList = () => {
 }
 watch(prop, () => {
   refresh()
-})
+}, {immediate: true})
 </script>
 
 <style scoped>

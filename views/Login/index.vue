@@ -194,7 +194,7 @@ onBeforeMount(() => getToken().then((res) => {
   height: 100vh;
   padding-top: 200px;
   background: #fff url('../../../assets/image/login/backgroud.jpg');
-  background-size: 100%;
+  background-size: 125%;
   flex-direction: column;
   align-items: center;
 

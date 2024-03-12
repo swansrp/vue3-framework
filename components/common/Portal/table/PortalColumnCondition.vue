@@ -32,7 +32,7 @@
       <unlock-outlined @click="column.filterStrict = !column.filterStrict" style="margin-bottom: 8px; margin-right: 5px" v-else />
       <a-input
         ref="searchInput"
-        :placeholder="`搜索 ${column.title}`"
+        :placeholder="(column.filterStrict ? '' : '模糊') + '搜索 ' + `${column.title}`"
         :value="selectedKeysRef[0]"
         style="width: 170px; margin-bottom: 8px; display: block"
         @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"

@@ -6,9 +6,11 @@
         <template #title>
           <span>树形结构</span>
         </template>
-        <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="() => emit('showTreeMenu')">
+        <a-button
+          shape="circle" size="middle" style="margin-left: 3px" type="primary"
+          @click="() => emit('showTreeMenu')">
           <template #icon>
-            <align-left-outlined style="transform:scale(-1, -1);" />
+            <cluster-outlined rotate="-90" />
           </template>
         </a-button>
       </a-tooltip>
@@ -62,7 +64,9 @@
         <template #title>
           <span>导入新增</span>
         </template>
-        <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="() => emit('openUploadModal')">
+        <a-button
+          shape="circle" size="middle" style="margin-left: 3px" type="primary"
+          @click="() => emit('openUploadModal')">
           <template #icon>
             <CloudUploadOutlined />
           </template>
@@ -86,9 +90,9 @@
 <script lang="ts" setup>
 import {TableConfigType} from '@/framework/components/common/Portal/type'
 import {
-  AlignLeftOutlined,
   AppstoreAddOutlined,
   CloudUploadOutlined,
+  ClusterOutlined,
   DownloadOutlined,
   FunnelPlotOutlined,
   ReloadOutlined,

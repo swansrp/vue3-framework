@@ -1,77 +1,62 @@
 <template>
   <div ref="root" class="root" v-bind="$attrs">
-    <a-layout v-if="treeMode || listMode">
+    <a-layout v-if="isTreeMode || isListMode">
       <a-layout-sider
         :class="[isBindTabExisted ? 'portal-tree-wrapper':'portal-tree-bind-wrapper']"
         :width="isBindTabExisted ? '25%':'99%'"
       >
-        <div style="margin-top: 20px;">
-          <a-tree
-            v-if="treeMode && treeData.length"
-            :key="treeData"
-            v-model:checkedKeys="selectedTreeData"
-            :checkStrictly="props.checkStrictly"
-            :checkable="props.treeCheckAble"
-            :defaultExpandAll="true"
-            :draggable="!config.readOnly && config.treeDragAble"
-            :show-line="true"
+        <div style="margin: 10px">
+          <portal-tree-mode
+            v-if="isTreeMode && treeData.length"
+            v-model:selected-tree-data="selectedTreeData"
+            :config="config"
             :tree-data="treeData"
-            @drop="updateTree"
-            @select="handleTreeSelected">
-            <template #title="{ dataRef }">
-              <a-dropdown :trigger="['contextmenu']">
-                <span>{{ dataRef.title }}</span>
-                <template #overlay>
-                  <a-menu @click="({ key: menuKey }) => handleTreeModeMenuContext(dataRef, menuKey)">
-                    <a-menu-item key="1">查看详情</a-menu-item>
-                    <template v-if="!config.readOnly">
-                      <a-menu-item key="2">新增记录</a-menu-item>
-                      <a-menu-item key="3">编辑记录</a-menu-item>
-                      <a-menu-item key="4">删除记录</a-menu-item>
-                    </template>
-                  </a-menu>
-                </template>
-              </a-dropdown>
+            @update-tree="updateTree"
+            @handle-tree-selected="handleTreeSelected"
+            @handle-menu-context-view="handleMenuContextView"
+            @handle-menu-context-add="handleMenuContextAdd"
+            @handle-menu-context-modify="handleMenuContextModify"
+            @handle-menu-context-delete="handleMenuContextDelete">
+            <template #end-action>
+              <portal-mode-button
+                :config="config"
+                :isListMode="isListMode"
+                :isTreeMode="isTreeMode"
+                :current-mode="currentDisplayMode"
+                @on-display-changed="handleDisplayModeChange"
+              />
             </template>
-          </a-tree>
-          <a-list
-            v-else-if="listMode"
+          </portal-tree-mode>
+          <portal-list-mode
+            v-else-if="isListMode"
+            :config="config"
             :data-source="listData"
-            bordered
-            class="table-list"
-            size="small"
-            :pagination="{pageSize:15}"
-          >
-            <template #renderItem="{ item }">
-              <a-list-item
-                :class="{'activate-item': selectedListDataRowKey === item.value}"
-                @click="selectedListDataRowKey = item.value">
-                <div style="display: flex; justify-content: flex-start">
-                  {{ item.label }}
-                </div>
-              </a-list-item>
+            :pagination-change="paginationChange"
+            :title-column="titleColumn"
+            class="list-mode-table"
+            @search="onListDataSearch"
+            @cell-click="(event, params) => selectedListDataItem = params.record"
+            @handle-menu-context-view="handleMenuContextView"
+            @handle-menu-context-add="handleMenuContextAdd"
+            @handle-menu-context-modify="handleMenuContextModify"
+            @handle-menu-context-delete="handleMenuContextDelete">
+            <template #end-action>
+              <portal-mode-button
+                :config="config"
+                :isListMode="isListMode"
+                :isTreeMode="isTreeMode"
+                :current-mode="currentDisplayMode"
+                @on-display-changed="handleDisplayModeChange"
+              />
             </template>
-            <template #header>
-              <div style="display: flex; align-items: center">
-                <lock-outlined
-                  v-if="listSearchStrict" style="margin-right: 5px"
-                  @click="listSearchStrict = !listSearchStrict" />
-                <unlock-outlined
-                  v-else
-                  style="margin-right: 5px"
-                  @click="listSearchStrict = !listSearchStrict" />
-                <a-input-search
-                  v-model:value="searchName" enter-button placeholder="搜索"
-                  @search="onListDataSearch" />
-              </div>
-            </template>
-          </a-list>
+          </portal-list-mode>
           <a-empty v-else />
         </div>
       </a-layout-sider>
       <a-layout-content
         v-if="isBindTabExisted"
         style="margin-left: 10px; margin-right: 10px">
+        <div style="margin-top: 10px; font-size: 20px; font-weight: bold;">{{ selectedEntityName }}</div>
         <portal-bind-tab
           :bind-tabs="bindTabs"
           :entity-id="selectedEntityId"
@@ -269,36 +254,53 @@
                   @cell-update="cellUpdate"
                 />
               </template>
+              <template v-if="isBindTabExisted" #expandedRowRender="{record}">
+                <portal-bind-tab
+                  :bind-tabs="bindTabs"
+                  :entity-id="record[`${config.rowKey}`]"
+                  :entity-name="props.tableId" />
+              </template>
+              <template #footer>
+                <div class="pagination">
+                  <div><slot name="footer-action"></slot></div>
+                  <div style="display: flex">
+                    <a-pagination
+                      v-model:current="config.currentPage"
+                      v-model:pageSize="config.pageSize"
+                      :page-size="config.pageSize"
+                      :page-size-options="['10','20','30','50','100','200', '500', '1000']"
+                      :show-total="total => `共 ${total} 项`"
+                      :size="config.size"
+                      :total="config.total"
+                      hideOnSinglePage
+                      show-less-items
+                      show-quick-jumper
+                      show-size-changer
+                      @change="paginationChange">
+                      <template #itemRender="{ type, originalElement }">
+                        <a v-if="type === 'prev'">&lt;</a>
+                        <a v-else-if="type === 'next'">&gt;</a>
+                        <component :is="originalElement" v-else />
+                      </template>
+                      <template #buildOptionText="prop">
+                        <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
+                          {{ prop.value }}条/页
+                        </span>
+                        <span v-else style="width: 60px; display: inline-block">全部</span>
+                      </template>
+                    </a-pagination>
+                    <portal-mode-button
+                      :config="config"
+                      :isListMode="isListMode"
+                      :isTreeMode="isTreeMode"
+                      :current-mode="currentDisplayMode"
+                      @on-display-changed="handleDisplayModeChange"
+                    />
+                  </div>
+                </div>
+              </template>
               <!-- endregion -->
             </s-table>
-            <!-- endregion -->
-            <!-- region 分页 -->
-            <a-pagination
-              v-model:current="config.currentPage"
-              v-model:pageSize="config.pageSize"
-              :page-size="config.pageSize"
-              :page-size-options="['10','20','30','50','100','200', '500', '1000']"
-              :show-total="total => `共 ${total} 项`"
-              :size="config.size"
-              :total="config.total"
-              class="pagination"
-              hideOnSinglePage
-              show-less-items
-              show-quick-jumper
-              show-size-changer
-              @change="paginationChange">
-              <template #itemRender="{ type, originalElement }">
-                <a v-if="type === 'prev'">&lt;</a>
-                <a v-else-if="type === 'next'">&gt;</a>
-                <component :is="originalElement" v-else />
-              </template>
-              <template #buildOptionText="prop">
-                <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
-                  {{ prop.value }}条/页
-                </span>
-                <span v-else style="width: 60px; display: inline-block">全部</span>
-              </template>
-            </a-pagination>
             <!-- endregion -->
           </div>
         </div>
@@ -381,13 +383,7 @@ import {
   QueryType,
   TableConfigType
 } from '@/framework/components/common/portal/type'
-import {
-  BarsOutlined,
-  ExclamationCircleOutlined,
-  FilterOutlined,
-  LockOutlined,
-  UnlockOutlined
-} from '@ant-design/icons-vue'
+import {BarsOutlined, ExclamationCircleOutlined, FilterOutlined} from '@ant-design/icons-vue'
 import {
   doFunctions,
   getAllParentNodes,
@@ -413,6 +409,7 @@ import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
 import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import {PortalBindType} from '@/framework/components/common/portal/bind/type'
+import PortalListMode from '@/framework/components/common/portal/mode/PortalListMode.vue'
 
 /**
  * @param tableId 表格ID
@@ -448,13 +445,14 @@ const props = defineProps<{
   checkStrictly?: boolean
   bindDefaultValue?: any
 }>()
-
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
 }>()
 const isBindTabExisted = computed(() => {
   return props.bindTabs && props.bindTabs.length > 0
 })
+const isTreeMode = ref(props.treeMode)
+const isListMode = ref(props.listMode)
 const $attrs = useAttrs()
 const dict = dictStore()
 // region 调整表格大小
@@ -508,7 +506,7 @@ const config: TableConfigType = reactive({
 } as TableConfigType)
 watch(props, (value, old) => {
   config.readOnly = value.readOnly
-  console.log(value, old)
+  console.debug('propsChanged', value, old)
 })
 /**
  * 数据
@@ -533,6 +531,7 @@ const columns = computed(() => {
   return columnArray.value.filter(item => item.checked)
 })
 const dictColumnArray: Array<ColumnType> = []
+let titleColumn = {} as ColumnType
 /**
  * 列显示
  */
@@ -553,8 +552,41 @@ const indeterminate = computed(() => {
   return checkedCount > 0 && checkedCount < columns.value.length
 })
 const selectedEntityId = computed(() => {
-  return selectedListDataRowKey.value || selectedTreeDataRowKey.value
+  if (isNotEmpty(selectedListDataItem.value) || isNotEmpty(selectedTreeDataNode.value)) {
+    return selectedListDataItem.value.value || selectedTreeDataNode.value.key
+  } else {
+    return null
+  }
+
 })
+const selectedEntityName = computed(() => {
+  if (isNotEmpty(selectedListDataItem.value) || isNotEmpty(selectedTreeDataNode.value)) {
+    return selectedListDataItem.value.label || selectedTreeDataNode.value.title
+  } else {
+    return null
+  }
+})
+const currentDisplayMode = computed(() => {
+  if (isListMode.value) return '列表模式'
+  if (isTreeMode.value) return '树形模式'
+  return '表格模式'
+})
+const handleDisplayModeChange = (menuKey: any) => {
+  switch (menuKey) {
+    case 'tableMode':
+      isListMode.value = false
+      isTreeMode.value = false
+      break
+    case 'listMode':
+      isListMode.value = true
+      isTreeMode.value = false
+      break
+    case 'treeMode':
+      isTreeMode.value = true
+      isListMode.value = false
+      break
+  }
+}
 /**
  * 树选择配置
  */
@@ -567,20 +599,17 @@ watch(() => props.selectedTreeData, (data: Array<any> | undefined) => {
 watch(() => selectedTreeData.value, (data: Array<any>) => {
   emit('update:selectedTreeData', data)
 })
-const selectedTreeDataRowKey = ref()
+const selectedTreeDataNode = ref()
 /**
  * 列表选择配置
  */
-const selectedListDataRowKey = ref()
-const searchName = ref()
-const listSearchStrict = ref(true)
-const onListDataSearch = () => {
+const selectedListDataItem = ref()
+const onListDataSearch = (searchName: string, searchStrict: boolean) => {
   const condition = {
     property: config.nameKey,
-    value: [searchName.value],
-    relation: getDefaultFilterType(FIELD_TYPE.INPUT, listSearchStrict.value)
+    value: [searchName],
+    relation: getDefaultFilterType(FIELD_TYPE.INPUT, searchStrict)
   } as ConditionListType
-  console.log('onListDataSearch', config.nameKey, condition)
   queryConditionMap.set(config.nameKey, condition)
   queryData()
 }
@@ -776,7 +805,7 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
 }
 const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedNodes: any, node: any, event: any }) => {
   if (e.selected) {
-    selectedTreeDataRowKey.value = e.node.key
+    selectedTreeDataNode.value = e.node
   }
 }
 // endregion
@@ -797,41 +826,34 @@ const rowAllowDelete = (record: any) => {
   }
   return allow
 }
-const handleTreeModeMenuContext = (record: any, key: string) => {
-  console.log('12313131', record, key === '1')
-  switch (key) {
-    case '1':
-      getById(config.url, record.key).then(resp => {
-        config.modal.data = resp.payload
-        openModal('view')
-      })
-      break
-    case '2':
-      config.modal.data[`${config.parentKey}`] = record.key
-      openModal('add')
-      break
-    case '3':
-      getById(config.url, record.key).then(resp => {
-        config.modal.data = resp.payload
-        openModal('modify')
-      })
-      break
-    case '4':
-      Modal.confirm({
-        title: '注意',
-        icon: createVNode(ExclamationCircleOutlined),
-        content: createVNode('div', {style: 'color:red;'}, '即将删除该记录,请确认'),
-        onOk() {
-          deleteEntity(config.url, record.key).then(() => queryData())
-        },
-        onCancel() {
+const handleMenuContextView = (recordId: any) => {
+  getById(config.url, recordId).then(resp => {
+    config.modal.data = resp.payload
+    openModal('view')
+  })
+}
+const handleMenuContextAdd = (recordId: any) => {
+  config.modal.data[`${config.parentKey}`] = recordId
+  openModal('add')
+}
+const handleMenuContextModify = (recordId: any) => {
+  getById(config.url, recordId).then(resp => {
+    config.modal.data = resp.payload
+    openModal('modify')
+  })
+}
+const handleMenuContextDelete = (recordId: any) => {
+  Modal.confirm({
+    title: '注意',
+    icon: createVNode(ExclamationCircleOutlined),
+    content: createVNode('div', {style: 'color:red;'}, '即将删除该记录,请确认'),
+    onOk() {
+      deleteEntity(config.url, recordId).then(() => queryData())
+    },
+    onCancel() {
 
-        }
-      })
-      break
-    default:
-      break
-  }
+    }
+  })
 }
 // 相应确认按钮
 const handleModalConfirm = () => {
@@ -1003,8 +1025,8 @@ const queryConditionMap = reactive(new Map<String, ConditionListType>())
 const querySortMap = reactive(new Map<String, QuerySortType>())
 const initQueryCondition = () => {
   config.currentPage = 1
-  if(props.listMode) {
-    config.pageSize = 30000
+  if (isListMode.value) {
+    config.pageSize = 15
   } else {
     config.pageSize = 10
   }
@@ -1235,6 +1257,9 @@ const init = async () => {
           column.entityCondition = JSON.parse(layout.entityCondition)
         }
       }
+      if (column.dataIndex === config.nameKey) {
+        titleColumn = column
+      }
       if (layout.enable === '1') {
         columnArray.value.push(column)
         if (isEmpty(columnDisplayMap.value.get(column.displayGroupName))) {
@@ -1349,15 +1374,14 @@ defineExpose({queryData, queryTreeData, queryCondition, getRowSelection, getConf
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-
-      .pagination {
-        margin-top: 15px;
-        margin-right: 0;
-        display: flex;
-        justify-content: flex-end;
-      }
     }
   }
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /**
@@ -1442,6 +1466,12 @@ list模式样式
 .activate-item {
   background-color: #e6f7ff;
   border-right: 3px solid #1890ff;
+}
+
+.list-mode-table {
+  :deep(.surely-table-header) {
+    height: 0 !important;
+  }
 }
 
 </style>
