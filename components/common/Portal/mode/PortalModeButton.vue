@@ -27,8 +27,7 @@ import {
 const prop = defineProps<{
   config: TableConfigType
   isListMode?: boolean,
-  isTreeMode?: boolean,
-  currentMode: string
+  isTreeMode?: boolean
 }>()
 const emit = defineEmits<{
   (e: 'onDisplayChanged', menuKey: any):void

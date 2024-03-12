@@ -2,6 +2,7 @@
   <div ref="root" class="root" v-bind="$attrs">
     <a-layout v-if="isTreeMode || isListMode">
       <a-layout-sider
+        v-if="layoutSiderDisplay"
         :class="[isBindTabExisted ? 'portal-tree-wrapper':'portal-tree-bind-wrapper']"
         :width="isBindTabExisted ? '25%':'99%'"
       >
@@ -22,7 +23,6 @@
                 :config="config"
                 :isListMode="isListMode"
                 :isTreeMode="isTreeMode"
-                :current-mode="currentDisplayMode"
                 @on-display-changed="handleDisplayModeChange"
               />
             </template>
@@ -45,7 +45,6 @@
                 :config="config"
                 :isListMode="isListMode"
                 :isTreeMode="isTreeMode"
-                :current-mode="currentDisplayMode"
                 @on-display-changed="handleDisplayModeChange"
               />
             </template>
@@ -56,7 +55,13 @@
       <a-layout-content
         v-if="isBindTabExisted"
         style="margin-left: 10px; margin-right: 10px">
-        <div style="margin-top: 10px; font-size: 20px; font-weight: bold;">{{ selectedEntityName }}</div>
+        <div style="margin-top: 10px; font-size: 20px; font-weight: bold;" v-if="isNotEmpty(selectedEntityName)">
+          <caret-right-outlined
+            :rotate="layoutSiderDisplay ? 0 : 180"
+            style="color: #1677ff;font-size: 15px;margin-right: 5px"
+            @click="handleLayoutSiderDisplay" />
+          <span>{{ selectedEntityName }}</span>
+        </div>
         <portal-bind-tab
           :bind-tabs="bindTabs"
           :entity-id="selectedEntityId"
@@ -293,7 +298,6 @@
                       :config="config"
                       :isListMode="isListMode"
                       :isTreeMode="isTreeMode"
-                      :current-mode="currentDisplayMode"
                       @on-display-changed="handleDisplayModeChange"
                     />
                   </div>
@@ -383,7 +387,7 @@ import {
   QueryType,
   TableConfigType
 } from '@/framework/components/common/portal/type'
-import {BarsOutlined, ExclamationCircleOutlined, FilterOutlined} from '@ant-design/icons-vue'
+import {BarsOutlined, ExclamationCircleOutlined, FilterOutlined, CaretRightOutlined} from '@ant-design/icons-vue'
 import {
   doFunctions,
   getAllParentNodes,
@@ -410,6 +414,7 @@ import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
 import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import {PortalBindType} from '@/framework/components/common/portal/bind/type'
 import PortalListMode from '@/framework/components/common/portal/mode/PortalListMode.vue'
+import bus from '@/framework/mitt'
 
 /**
  * @param tableId 表格ID
@@ -453,6 +458,7 @@ const isBindTabExisted = computed(() => {
 })
 const isTreeMode = ref(props.treeMode)
 const isListMode = ref(props.listMode)
+const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
 const dict = dictStore()
 // region 调整表格大小
@@ -472,6 +478,7 @@ const updateTableWidthAndHeight = () => {
   updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 250)
 }
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
+bus.on('portal:table:resize', _.debounce(updateTableWidthAndHeight, 200))
 //endregion
 
 
@@ -566,11 +573,10 @@ const selectedEntityName = computed(() => {
     return null
   }
 })
-const currentDisplayMode = computed(() => {
-  if (isListMode.value) return '列表模式'
-  if (isTreeMode.value) return '树形模式'
-  return '表格模式'
-})
+const handleLayoutSiderDisplay = () => {
+  layoutSiderDisplay.value = !layoutSiderDisplay.value
+  bus.emit('portal:table:resize')
+}
 const handleDisplayModeChange = (menuKey: any) => {
   switch (menuKey) {
     case 'tableMode':
