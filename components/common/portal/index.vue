@@ -326,7 +326,7 @@
     <portal-edit-modal
       v-else
       :columnDisplayMap="columnDisplayMap"
-      :config="config"
+      v-model:config="config"
       @cancel="handleModalCancel"
       @close="handleModalClose"
       @confirm="handleModalConfirm"

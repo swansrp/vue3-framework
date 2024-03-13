@@ -2,6 +2,7 @@
   <a-modal
     :cancel-button-props="{style:{display: 'none'}}"
     :visible="config.modal.show"
+    :wrap-class-name="config.detailWidth==='100%' ? 'full-modal' : ''"
     :width="config.detailWidth"
     okText="确定"
     title="查看详情"
@@ -98,6 +99,23 @@ const emit = defineEmits<{
 const dict = dictStore()
 </script>
 
-<style scoped>
+<style lang="less" scoped>
+.full-modal {
+  .ant-modal {
+    max-width: 100%;
+    top: 0;
+    padding-bottom: 0;
+    margin: 0;
+  }
 
+  .ant-modal-content {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh);
+  }
+
+  .ant-modal-body {
+    flex: 1;
+  }
+}
 </style>

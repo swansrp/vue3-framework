@@ -10,7 +10,7 @@
           shape="circle" size="middle" style="margin-left: 3px" type="primary"
           @click="() => emit('showTreeMenu')">
           <template #icon>
-            <cluster-outlined rotate="-90" />
+            <cluster-outlined :rotate="-90" />
           </template>
         </a-button>
       </a-tooltip>
