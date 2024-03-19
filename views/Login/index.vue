@@ -1,5 +1,5 @@
 <template>
-  <div class="login-box">
+  <div class="login-box fullscreen-bg">
     <div
       style="width: 425px; height: 500px; box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5); background: rgba(255,255,255,0.3)">
       <div class="login-logo">
@@ -188,13 +188,19 @@ onBeforeMount(() => getToken().then((res) => {
 </script>
 
 <style lang="less" scoped>
+.fullscreen-bg {
+  background-image: url('../../../assets/image/login/backgroud.jpg');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  height: 100%;
+}
 .login-box {
   display: flex;
   width: 100vw;
   height: 100vh;
   padding-top: 200px;
-  background: #fff url('../../../assets/image/login/backgroud.jpg');
-  background-size: 125%;
   flex-direction: column;
   align-items: center;
 

@@ -57,7 +57,7 @@
         style="margin-left: 10px; margin-right: 10px">
         <div style="margin-top: 10px; font-size: 20px; font-weight: bold;" v-if="isNotEmpty(selectedEntityName)">
           <caret-right-outlined
-            :rotate="layoutSiderDisplay ? 0 : 180"
+            :rotate="layoutSiderDisplay ? 180 : 0"
             style="color: #1677ff;font-size: 15px;margin-right: 5px"
             @click="handleLayoutSiderDisplay" />
           <span>{{ selectedEntityName }}</span>

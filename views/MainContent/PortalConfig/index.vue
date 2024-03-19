@@ -5,7 +5,32 @@
       <template #renderItem="{ item }">
         <a-list-item :class="{'activate-item': tableConfig.name === item.value}" @click="getTableConfigByName(item)">
           <div style="display: flex; justify-content: flex-start">
-            {{ item.label }}
+            <a-dropdown v-if="tableList.length !== 0" :trigger="['contextmenu']">
+              <span>{{ item.label }}</span>
+              <template #overlay v-if="selectedRole === '0'">
+                <a-menu>
+                  <a-menu-item key="1">
+                    <a-button
+                      shape="text"
+                      size="small"
+                      @click="openCopyConfigModal(item)"> 复制
+                      <template #icon>
+                        <CopyOutlined />
+                      </template>
+                    </a-button>
+                  </a-menu-item>
+                  <a-menu-item key="2">
+                    <a-popconfirm title="注意 即将删除该配置" @confirm="deleteConfig(item.value)">
+                      <a-button shape="text" size="small"> 删除
+                        <template #icon>
+                          <DeleteOutlined />
+                        </template>
+                      </a-button>
+                    </a-popconfirm>
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </div>
         </a-list-item>
       </template>
@@ -15,60 +40,11 @@
           :options="roleDictList || []"
           show-search
           style="width: 100%; margin-bottom: 5px"
-          @change="init().then(onSearch)"
+          @change="init().then(() => onSearch())"
         />
         <a-input-search v-model:value="inputTableName" enter-button placeholder="请输入表格名称" @search="onSearch" />
       </template>
       <template #footer>
-        <div style="display: flex; justify-content: space-around">
-          <a-button
-            v-if="selectedRole === '0' && tableList.length !== 0"
-            :disabled="isEmpty(tableConfig.id)"
-            shape="round"
-            @click="openCopyConfigModal"> 复制
-            <template #icon>
-              <CopyOutlined />
-            </template>
-          </a-button>
-          <a-modal
-            v-model:visible="copyConfigModal.visible"
-            :title="tableConfig.displayName + '(' + tableConfig.name + ')'"
-            centered
-            @ok="copyConfig"
-          >
-            <a-form ref="copyConfigModalRef" :model="copyConfigModal">
-              <a-form-item
-                :rules="[
-                  { required: true, message: '请输入表格编号' },
-                  { validator: checkConfigIdExisted, trigger: 'blur' }]"
-                has-feedback
-                label="表格配置代码"
-                name="configId">
-                <a-input
-                  v-model:value="copyConfigModal.configId" autocomplete="off" placeholder="表格配置代码" />
-              </a-form-item>
-              <a-form-item
-                :rules="[{ required: true, message: '请输入表格名称' }]"
-                has-feedback
-                label="表格配置名称"
-                name="configDescription">
-                <a-input
-                  v-model:value="copyConfigModal.configDescription" autocomplete="off" placeholder="表格配置名称" />
-              </a-form-item>
-            </a-form>
-          </a-modal>
-          <a-popconfirm title="注意 即将删除该配置" @confirm="deleteConfig()">
-            <a-button
-              v-if="selectedRole === '0' && tableList.length !== 0"
-              :disabled="isEmpty(tableConfig.id)"
-              shape="round"
-              style="margin-left: 5px"> 删除
-              <template #icon>
-                <DeleteOutlined />
-              </template>
-            </a-button>
-          </a-popconfirm>
-        </div>
         <a-popconfirm title="注意清空该角色的所有配置, 该角色即将使用默认配置" @confirm="cleanPortalConfigByRole">
           <a-button
             v-if="selectedRole !== '0' && tableList.length !== 0"
@@ -840,6 +816,35 @@
       <!-- endregion -->
     </div>
     <!-- endregion 右侧编辑栏 -->
+    <!-- region 复制配置 -->
+    <a-modal
+      v-model:visible="copyConfigModal.visible"
+      :title="copyConfigModal.title"
+      centered
+      @ok="copyConfig"
+    >
+      <a-form ref="copyConfigModalRef" :model="copyConfigModal">
+        <a-form-item
+          :rules="[
+            { required: true, message: '请输入表格编号' },
+            { validator: checkConfigIdExisted, trigger: 'blur' }]"
+          has-feedback
+          label="表格配置代码"
+          name="configId">
+          <a-input
+            v-model:value="copyConfigModal.configId" autocomplete="off" placeholder="表格配置代码" />
+        </a-form-item>
+        <a-form-item
+          :rules="[{ required: true, message: '请输入表格名称' }]"
+          has-feedback
+          label="表格配置名称"
+          name="configDescription">
+          <a-input
+            v-model:value="copyConfigModal.configDescription" autocomplete="off" placeholder="表格配置名称" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+    <!-- endregion -->
     <!-- region 关联实体查询条件 -->
     <a-drawer
       :title="'配置' + entityCondition.title + '查询条件'"
@@ -924,13 +929,15 @@ const entityColumnDict = reactive([] as Array<ValueLabel>)
 let copyConfigModal = reactive({
   visible: false,
   configId: '',
-  configDescription: ''
+  configDescription: '',
+  title: ''
 })
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
 }
-const openCopyConfigModal = () => {
+const openCopyConfigModal = (item: any) => {
   copyConfigModal.visible = true
+  copyConfigModal.title = item.label + '(' + item.value + ')'
 }
 const copyConfig = () => {
   copyPortalConfig(tableConfig.value.id, copyConfigModal.configId, copyConfigModal.configDescription).then(() => {
@@ -941,7 +948,7 @@ const copyConfig = () => {
 }
 
 const getEntityConfig = (tableId: string) => {
-  getPortalConfig(tableId).then(res => {
+  getPortalConfig(tableId, selectedRole.value).then(res => {
     entityColumnDict.length = 0
     entityConfig.value = res.payload
     entityConfig.value.columns.forEach((column: { property: any; displayName: any; }) => {
@@ -962,17 +969,21 @@ const getTableConfigByName = (item: any) => {
     selectedColumnId.value = ''
     entityCondition.condition = {} as ConditionType
     tableConfig.value = res.payload
-    tableConfig.value.columns.forEach((column: { property: any; displayName: any; id: any; }) => {
+    tableConfig.value.columns.forEach((column: { property: any; displayName: any; id: any; fieldType: any; reference: string }) => {
       columnDict.push({value: column.property, label: column.displayName} as ValueLabel)
       columnMap.set(column.id, column)
+      if(column.fieldType === FIELD_TYPE.ENTITY) {
+        console.log(column)
+        getEntityConfig(column.reference)
+      }
     })
     fieldRecords.value = [...tableConfig.value.columns]
     console.debug(tableConfig.value)
   })
 }
 
-const deleteConfig = () => {
-  deletePortalConfig(tableConfig.value.id).then(() => {
+const deleteConfig = (id: any) => {
+  deletePortalConfig(id || tableConfig.value.id).then(() => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
@@ -986,7 +997,7 @@ const saveTableConfig = (silent = true) => {
 }
 
 const saveTableColumn = (silent = true) => {
-  updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() => getPortalConfig(tableConfig.value.name))
+  updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() => getPortalConfig(tableConfig.value.name, selectedRole.value))
 }
 
 const onSearch = () => {
@@ -1081,6 +1092,8 @@ const init = async () => {
   updateTableWidthAndHeight()
   tableConfig.value = []
   fieldRecords.value = []
+  roleDictList.length = 0
+  roleDictList.push({value: '0', label: '默认配置'})
   return Promise.all([
     await dict.getDict('PORTAL_TABLE_SIZE_DICT').then(res => {
       tableSizeDict = res || []
