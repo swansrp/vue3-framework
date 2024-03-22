@@ -14,22 +14,28 @@
     />
     <a-range-picker
       v-else-if="column.fieldType === FIELD_TYPE.DATE"
+      v-model:value="selectedKeysRef"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
-      :value="[dayjs(selectedKeysRef[0]), dayjs(selectedKeysRef[1])]"
       style="width: 250px; margin-bottom: 8px; display: flex"
+      valueFormat="YYYY-MM-DD HH:mm:ss"
       @ok="e => setSelectedKeys(e ? [e] : [])"
     />
     <a-range-picker
       v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
+      v-model::value="selectedKeysRef"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
-      :value="[dayjs(selectedKeysRef[0]), dayjs(selectedKeysRef[1])]"
       show-time
       style="width: 330px; margin-bottom: 8px; display: flex"
+      valueFormat="YYYY-MM-DD HH:mm:ss"
       @ok="e => setSelectedKeys(e ? [e] : [])"
     />
-    <div style="display: flex; align-items: center;" v-else>
-      <lock-outlined @click="column.filterStrict = !column.filterStrict" style="margin-bottom: 8px; margin-right: 5px" v-if="column.filterStrict" />
-      <unlock-outlined @click="column.filterStrict = !column.filterStrict" style="margin-bottom: 8px; margin-right: 5px" v-else />
+    <div v-else style="display: flex; align-items: center;">
+      <lock-outlined
+        v-if="column.filterStrict" style="margin-bottom: 8px; margin-right: 5px"
+        @click="column.filterStrict = !column.filterStrict" />
+      <unlock-outlined
+        v-else style="margin-bottom: 8px; margin-right: 5px"
+        @click="column.filterStrict = !column.filterStrict" />
       <a-input
         ref="searchInput"
         :placeholder="(column.filterStrict ? '' : '模糊') + '搜索 ' + `${column.title}`"
@@ -61,7 +67,6 @@
 <script lang="ts" setup>
 import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 import {LockOutlined, SearchOutlined, UnlockOutlined} from '@ant-design/icons-vue'
-import dayjs from 'dayjs'
 
 const prop = defineProps<{
   column: any,
