@@ -19,9 +19,11 @@ export const enterFirstDynamicRoute = () => {
   // 查找第一个可用的路由节点
   while (node) {
     // 根据是否有children进行判断，是否为根节点
-    if (node.children) node = node.children[0]
+    if (node.children) {
+      leftNavPath = [leftNavPath, node.children[0].path].join('/')
+      node = node.children[0]
+    }
     else {
-      leftNavPath = node.path
       break
     }
   }
@@ -31,5 +33,5 @@ export const enterFirstDynamicRoute = () => {
   tabStore.tabActivateKey = leftNavPath
   // 用于LeftNav判断是否为指定的路由路径
   tabStore.updateLeftNav = true
-  return [topNavPath, leftNavPath].join('/')
+  return [topNavPath, leftNavPath.substring(1, leftNavPath.length)].join('/')
 }
