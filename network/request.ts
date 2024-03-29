@@ -126,7 +126,7 @@ function request(apiType: ApiType,
                  showLoading = true,
                  showErr = true) {
     return axiosInstance({
-        baseURL,
+        baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {
@@ -175,7 +175,7 @@ function download(
     body: object) {
     ElMessage.success({message: '开始下载……'})
     return axiosInstance({
-        baseURL,
+        baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {data: body},
@@ -206,7 +206,7 @@ function upload(
     body: object,
     onUploadProgress: Function) {
     return axiosInstance({
-        baseURL,
+        baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
         method: apiType.method,
         url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
         data: {data: body},
