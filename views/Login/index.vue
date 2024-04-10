@@ -40,7 +40,7 @@
           </a-input>
         </a-form-item>
         <a-form-item>
-          <a-button :loading="loading" block html-type="submit" size="small" type="primary">设置密码并登录</a-button>
+          <a-button :loading="loading" block html-type="submit" size="large" type="primary">设置密码并登录</a-button>
         </a-form-item>
       </a-form>
       <a-form v-else :model="formInline" layout="horizontal" @finish="handleSubmit">
