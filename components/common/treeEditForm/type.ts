@@ -3,6 +3,7 @@ interface FormState {
     icon: string
     isCache: boolean | number
     isFrame: boolean | number
+    menuType: number
     path: string
     query: string
     component: string
@@ -11,6 +12,6 @@ interface FormState {
     menuId: undefined
 }
 
-type FormType = 'edit' | 'add'
+type FormType = 'edit' | 'add_menu' | 'add_button'
 
 export type { FormState, FormType }

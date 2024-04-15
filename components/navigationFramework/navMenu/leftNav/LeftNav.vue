@@ -11,7 +11,7 @@
       theme="dark"
       @select="selectLeftNav">
       <template v-for="item in navList">
-        <template v-if="!item.children">
+        <template v-if="!item.children || item.children?.length === 0">
           <a-menu-item
             :id="item.key" :key="item.key" :path="item.name || item.path" :query="item.query"
             :title="item.title">

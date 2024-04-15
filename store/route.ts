@@ -13,7 +13,8 @@ export const useRouteStore = defineStore('routeStore', {
             dynamicRoute: [] as Array<NavListType>,
             dynamicRouteMap: {} as { [key: string]: NavListType },
             routePath2RouteTitlePathMap: {} as { [key: string]: string },
-            routePathIsFrameMap: {} as { [key: string]: boolean }
+            routePathIsFrameMap: {} as { [key: string]: boolean },
+            buttonMap: new Map
         }
     }, actions: {
         async getDynamicRouteAction() {
@@ -22,8 +23,8 @@ export const useRouteStore = defineStore('routeStore', {
                 // this.dynamicRoute = _.cloneDeep(routeTree)
                 this.dynamicRoute = res.payload
                 this.travelRouteTree(routeTree)
-                // this.clearNoNameNode(routeTree)
-                // console.log('clearNoNameNode', routeTree)
+                this.clearButtonNode(routeTree)
+                //
                 for (let i = 0; i < routeTree.length; ++i) router.addRoute(MAIN_CONTENT, routeTree[i])
             })
         },
@@ -34,6 +35,7 @@ export const useRouteStore = defineStore('routeStore', {
             const modules = import.meta.glob('@/**/*.vue')
             const routePath2RouteTitlePathMap: { [key: string]: string } = {}
             const routePathIsFrameMap: { [key: string]: boolean } = {}
+            const buttonMap = new Map()
             const _travelRouteTree = (nodeList: any, parentPathArray: Array<string> = [], parentTitlePathArray: Array<string> = []) => {
                 if (!nodeList || !nodeList.length) return
                 for (let i = 0, len = nodeList.length; i < len; ++i) {
@@ -41,33 +43,31 @@ export const useRouteStore = defineStore('routeStore', {
                     node.name = node.path
                     // antd menu key 是 string类型
                     node.key = node.key.toString()
-                    const currentPathIsNotEmpty = Boolean(node.path)
-                    if (currentPathIsNotEmpty) {
+                    // 页面中的按钮权限
+                    if (node.menuType === 3) {
+                        buttonMap.set(parentPathArray.join('/'), [...(buttonMap.get(parentPathArray.join('/')) || []), node.path])
+                    } else {
                         parentPathArray.push(node.path)
-                    }
-
-                    parentTitlePathArray.push(node.title)
-                    setField(routePath2RouteTitlePathMap, parentPathArray.join('/'), parentTitlePathArray.join('/'))
-                    setField(routePathIsFrameMap, parentPathArray.join('/'), !!+node.isFrame)
-                    if (node.component.endsWith('.vue')) {
-                        node.component = modules[`/src${node.component}`]
-                    } else {
-                        node.component = modules[`/src${node.component}/index.vue`]
-                    }
-                    const navPath = parentPathArray.join('/')
-                    if (navPath !== '') {
-                        node.name = navPath
-                        this.dynamicRouteMap[navPath] = node
-                    } else {
-                        this.dynamicRouteMap[node.path] = node
+                        parentTitlePathArray.push(node.title)
+                        setField(routePath2RouteTitlePathMap, parentPathArray.join('/'), parentTitlePathArray.join('/'))
+                        setField(routePathIsFrameMap, parentPathArray.join('/'), !!+node.isFrame)
+                        if (node.component.endsWith('.vue')) {
+                            node.component = modules[`/src${node.component}`]
+                        } else {
+                            node.component = modules[`/src${node.component}/index.vue`]
+                        }
+                        const navPath = parentPathArray.join('/')
+                        if (navPath !== '') {
+                            node.name = navPath
+                            this.dynamicRouteMap[navPath] = node
+                        } else {
+                            this.dynamicRouteMap[node.path] = node
+                        }
+                        _travelRouteTree(node.children, parentPathArray, parentTitlePathArray)
+                        parentPathArray.pop()
+                        parentTitlePathArray.pop()
                     }
                     // this.dynamicRouteMap[node.path] = node
-                    _travelRouteTree(node.children, parentPathArray, parentTitlePathArray)
-                    if (currentPathIsNotEmpty) {
-                        parentPathArray.pop()
-                    }
-                    parentTitlePathArray.pop()
-
                 }
             }
             _travelRouteTree(nodeList)
@@ -75,28 +75,28 @@ export const useRouteStore = defineStore('routeStore', {
             routeStore.routePathIsFrameMap = routePathIsFrameMap
             routeStore.routePath2RouteTitlePathMap['Home'] = '首页'
             routeStore.routePathIsFrameMap['Home'] = false
+            routeStore.buttonMap = buttonMap
 
             // console.log(routeStore.dynamicRouteMap)
             // console.log(routeStore.routePath2RouteTitlePathMap)
             // console.log(routeStore.routePathIsFrameMap)
+            // console.log(routeStore.buttonMap)
 
         },
-        // 因为可能存在某些节点只用于展示menu的title，并不需要放在路由中，所以需要对path为空的节点进行删除
-        // 否则，会产生警告
-        clearNoNameNode(nodeList: any) {
+        // 清除按钮类型节点
+        clearButtonNode(nodeList: any) {
             if (!nodeList || !nodeList.length) return
             for (let i = 0; i < nodeList.length; ++i) {
                 const node = nodeList[i]
-                if (!node.path) {
-                    if (node.children) {
-                        nodeList.push(...node.children)
-                    }
+                if (node.menuType === 3) {
                     nodeList.splice(i, 1)
                     --i
-                } else this.clearNoNameNode(node.children)
+                } else this.clearButtonNode(node.children)
             }
+        },
+        isButtonEnable(buttonPath: string): boolean {
+            return this.buttonMap.get(this.currentRoutePath).indexOf(buttonPath) !== -1
         }
-
     }, getters: {
         currentRoutePath() {
             return router.currentRoute.value.fullPath.slice(MAIN_CONTENT.length + 2)

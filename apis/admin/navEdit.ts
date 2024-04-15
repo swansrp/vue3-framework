@@ -12,6 +12,7 @@ export const addMainMenu = (data: object) => request(buildPostApi("/add/main"), 
 // Sub Menu子菜单的增改（内容）查
 export const getSubMenu = (params: object) => request(buildGetApi("/sub/tree"), params) as Promise<any>
 export const addSubMenu = (data: object) => request(buildPostApi("/add/sub"), {}, data, true) as Promise<any>
+export const addMenuButton = (data: object) => request(buildPostApi("/add/button"), {}, data, true) as Promise<any>
 export const updateSubMenu = (data: object) => request(buildPostApi("/update"),{}, data, true) as Promise<any>
 
 // Main Menu主菜单和Sub Menu子菜单 删除 和 顺序更新

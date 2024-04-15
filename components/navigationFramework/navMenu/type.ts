@@ -7,6 +7,7 @@ interface NavListType extends NavNodeType {
 interface NavNodeType {
     id: Key,
     pid: Key,
+    menuType: number,
     title: string,
     key: string,
     icon: string,

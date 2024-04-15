@@ -19,7 +19,7 @@ export const enterFirstDynamicRoute = () => {
   // 查找第一个可用的路由节点
   while (node) {
     // 根据是否有children进行判断，是否为根节点
-    if (node.children) {
+    if (node.children && node.children.length > 0) {
       leftNavPath = [leftNavPath, node.children[0].path].join('/')
       node = node.children[0]
     }
