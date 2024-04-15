@@ -2,7 +2,7 @@
   <div class="portal-button-space">
     <!-- region 左侧按钮区 -->
     <div>
-      <a-tooltip v-if="config.treeMode" placement="top">
+      <a-tooltip v-if="config.treeMode && !isTreeDataEmpty" placement="top">
         <template #title>
           <span>树形结构</span>
         </template>
@@ -100,7 +100,8 @@ import {
 } from '@ant-design/icons-vue'
 
 const prop = defineProps<{
-  config: TableConfigType
+  config: TableConfigType,
+  isTreeDataEmpty: boolean,
   advancedCondition: any
 }>()
 const emit = defineEmits<{

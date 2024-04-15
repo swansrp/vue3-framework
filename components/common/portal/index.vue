@@ -21,8 +21,9 @@
             <template #end-action>
               <portal-mode-button
                 :config="config"
-                :isListMode="isListMode"
-                :isTreeMode="isTreeMode"
+                :is-list-mode="isListMode"
+                :is-tree-mode="isTreeMode"
+                :is-tree-data-empty="treeData.length === 0"
                 @on-display-changed="handleDisplayModeChange"
               />
             </template>
@@ -43,8 +44,9 @@
             <template #end-action>
               <portal-mode-button
                 :config="config"
-                :isListMode="isListMode"
-                :isTreeMode="isTreeMode"
+                :is-list-mode="isListMode"
+                :is-tree-mode="isTreeMode"
+                :is-tree-data-empty="treeData.length === 0"
                 @on-display-changed="handleDisplayModeChange"
               />
             </template>
@@ -90,6 +92,7 @@
         <portal-button-action
           :advancedCondition="advancedCondition"
           :config="config"
+          :is-tree-data-empty="treeData.length === 0"
           @download="download"
           @refresh="refresh"
           @show-tree-menu="showTreeMenu"
@@ -296,8 +299,9 @@
                     </a-pagination>
                     <portal-mode-button
                       :config="config"
-                      :isListMode="isListMode"
-                      :isTreeMode="isTreeMode"
+                      :is-list-mode="isListMode"
+                      :is-tree-mode="isTreeMode"
+                      :is-tree-data-empty="treeData.length === 0"
                       @on-display-changed="handleDisplayModeChange"
                     />
                   </div>
@@ -456,8 +460,8 @@ const emit = defineEmits<{
 const isBindTabExisted = computed(() => {
   return props.bindTabs && props.bindTabs.length > 0
 })
-const isTreeMode = ref(props.treeMode)
-const isListMode = ref(props.listMode)
+const isTreeMode:Ref<boolean> = ref(props.treeMode)
+const isListMode:Ref<boolean> = ref(props.listMode)
 const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
 const dict = dictStore()

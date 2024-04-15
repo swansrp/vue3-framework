@@ -4,7 +4,7 @@
       <a-menu @click="({ key: menuKey }) => emit('onDisplayChanged', menuKey)">
         <a-menu-item v-if="isListMode || isTreeMode" key="tableMode">表格模式</a-menu-item>
         <a-menu-item v-if="!isListMode" key="listMode">列表模式</a-menu-item>
-        <a-menu-item v-if="config.treeMode && !isTreeMode" key="treeMode">树形模式</a-menu-item>
+        <a-menu-item v-if="config.treeMode && !isTreeMode && !isTreeDataEmpty" key="treeMode">树形模式</a-menu-item>
       </a-menu>
     </template>
     <a-button shape="text" style="margin-top: -2px">
@@ -24,9 +24,10 @@ import {BarsOutlined, ClusterOutlined, TableOutlined} from '@ant-design/icons-vu
 const prop = defineProps<{
   config: TableConfigType
   isListMode?: boolean,
-  isTreeMode?: boolean
+  isTreeMode?: boolean,
+  isTreeDataEmpty: boolean
 }>()
-const {config, isListMode, isTreeMode} = toRefs(prop)
+const {config, isListMode, isTreeMode, isTreeDataEmpty} = toRefs(prop)
 const emit = defineEmits<{
   (e: 'onDisplayChanged', menuKey: any): void
 }>()
