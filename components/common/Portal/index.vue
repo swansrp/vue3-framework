@@ -22,8 +22,8 @@
               <portal-mode-button
                 :config="config"
                 :is-list-mode="isListMode"
-                :is-tree-mode="isTreeMode"
                 :is-tree-data-empty="treeData.length === 0"
+                :is-tree-mode="isTreeMode"
                 @on-display-changed="handleDisplayModeChange"
               />
             </template>
@@ -45,8 +45,8 @@
               <portal-mode-button
                 :config="config"
                 :is-list-mode="isListMode"
-                :is-tree-mode="isTreeMode"
                 :is-tree-data-empty="treeData.length === 0"
+                :is-tree-mode="isTreeMode"
                 @on-display-changed="handleDisplayModeChange"
               />
             </template>
@@ -57,7 +57,7 @@
       <a-layout-content
         v-if="isBindTabExisted"
         style="margin-left: 10px; margin-right: 10px">
-        <div style="margin-top: 10px; font-size: 20px; font-weight: bold;" v-if="isNotEmpty(selectedEntityName)">
+        <div v-if="isNotEmpty(selectedEntityName)" style="margin-top: 10px; font-size: 20px; font-weight: bold;">
           <caret-right-outlined
             :rotate="layoutSiderDisplay ? 180 : 0"
             style="color: #1677ff;font-size: 15px;margin-right: 5px"
@@ -270,7 +270,9 @@
               </template>
               <template #footer>
                 <div class="pagination">
-                  <div><slot name="footer-action"></slot></div>
+                  <div>
+                    <slot name="footer-action"></slot>
+                  </div>
                   <div style="display: flex">
                     <a-pagination
                       v-model:current="config.currentPage"
@@ -300,8 +302,8 @@
                     <portal-mode-button
                       :config="config"
                       :is-list-mode="isListMode"
-                      :is-tree-mode="isTreeMode"
                       :is-tree-data-empty="treeData.length === 0"
+                      :is-tree-mode="isTreeMode"
                       @on-display-changed="handleDisplayModeChange"
                     />
                   </div>
@@ -329,8 +331,8 @@
     />
     <portal-edit-modal
       v-else
-      :columnDisplayMap="columnDisplayMap"
       v-model:config="config"
+      :columnDisplayMap="columnDisplayMap"
       @cancel="handleModalCancel"
       @close="handleModalClose"
       @confirm="handleModalConfirm"
@@ -379,8 +381,8 @@ import {
   updateOrder,
   updateTreePid
 } from '@/framework/apis/portal'
-import {getPortalConfig} from '@/framework/apis/portal/config'
-import {dictStore} from '@/framework/store/common'
+import { getPortalConfig } from '@/framework/apis/portal/config'
+import { dictStore } from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
   ColumnType,
@@ -391,7 +393,7 @@ import {
   QueryType,
   TableConfigType
 } from '@/framework/components/common/portal/type'
-import {BarsOutlined, ExclamationCircleOutlined, FilterOutlined, CaretRightOutlined} from '@ant-design/icons-vue'
+import { BarsOutlined, CaretRightOutlined, ExclamationCircleOutlined, FilterOutlined } from '@ant-design/icons-vue'
 import {
   doFunctions,
   getAllParentNodes,
@@ -408,16 +410,15 @@ import {
   indexColumn
 } from '@/framework/components/common/portal/constant'
 import dayjs from 'dayjs'
-import {AUTO} from '@/framework/utils/constant'
-import {createVNode, Ref} from 'vue'
-import {message, Modal} from 'ant-design-vue'
-import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
-import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
-import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
-import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
-import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import {PortalBindType} from '@/framework/components/common/portal/bind/type'
-import PortalListMode from '@/framework/components/common/portal/mode/PortalListMode.vue'
+import { AUTO } from '@/framework/utils/constant'
+import { createVNode, Ref } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { PortalBindType } from '@/framework/components/common/portal/bind/type'
 import bus from '@/framework/mitt'
 
 /**
@@ -460,8 +461,8 @@ const emit = defineEmits<{
 const isBindTabExisted = computed(() => {
   return props.bindTabs && props.bindTabs.length > 0
 })
-const isTreeMode:Ref<boolean> = ref(props.treeMode)
-const isListMode:Ref<boolean> = ref(props.listMode)
+const isTreeMode: Ref<boolean> = ref(props.treeMode)
+const isListMode: Ref<boolean> = ref(props.listMode)
 const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
 const dict = dictStore()
@@ -1081,10 +1082,10 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     querySortMap.clear()
     if (isNotEmpty(column.order)) {
       querySortMap.set(column.columnKey,
-          {
-            property: column.column.dbField ? column.column.dbField : column.columnKey,
-            type: (column.order === 'ascend' ? 0 : 1)
-          })
+        {
+          property: column.column.dbField ? column.column.dbField : column.columnKey,
+          type: (column.order === 'ascend' ? 0 : 1)
+        })
     }
     queryData()
   }
