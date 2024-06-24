@@ -82,7 +82,14 @@ export const dictStore = defineStore('dictStore', {
                 return dict.labelMap.get(label)
             }
         }, getLabel(dictName: string, value: number | string) {
-            return this.map.get(dictName).valueMap.get(value)
+            if(isEmpty(value)) return ''
+            const dictArray = value.toString().split(',')
+            const display = [] as Array<string>
+            dictArray.forEach((item: any) => {
+                display.push(this.map.get(dictName).valueMap.get(item))
+            })
+            return display.join(',')
+
         }, getValue(dictName: string, label: number | string) {
             return this.map.get(dictName).labelMap.get(label)
         }, async getAllDict(dictName: string) {
