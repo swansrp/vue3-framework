@@ -70,9 +70,9 @@
 
 <script lang="ts" setup>
 import dayjs from 'dayjs'
-import {isNotEmpty, strLF2HtmlLF} from '@/framework/utils/common'
-import {FIELD_TYPE, TableConfigType} from '@/framework/components/common/portal/type'
-import {dictStore} from '@/framework/store/common'
+import { isNotEmpty, strLF2HtmlLF } from '@/framework/utils/common'
+import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/portal/type'
+import { dictStore } from '@/framework/store/common'
 
 const prop = defineProps<{
   column: any,

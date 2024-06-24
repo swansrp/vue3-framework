@@ -2,8 +2,8 @@
   <a-modal
     :cancel-button-props="{style:{display: 'none'}}"
     :visible="config.modal.show"
-    :wrap-class-name="config.detailWidth==='100%' ? 'full-modal' : ''"
     :width="config.detailWidth"
+    :wrap-class-name="config.detailWidth==='100%' ? 'full-modal' : ''"
     okText="确定"
     title="查看详情"
     @cancel="() => emit('cancel')"
@@ -20,7 +20,7 @@
         v-for="column in value[1].filter(item => item.detailShow)"
         :key="column.dataIndex">
         <a-descriptions-item
-          :label="column.title"
+          :label="strRemoveLF(column.title)"
           :span="column.detailSize">
           <template v-if="column.fieldType === FIELD_TYPE.SWITCH">
             <a-switch
@@ -68,9 +68,9 @@
 </template>
 
 <script lang="ts" setup>
-import {dictStore} from '@/framework/store/common'
-import {ColumnType, FIELD_TYPE, TableConfigType} from '@/framework/components/common/Portal/type'
-import {isNotEmpty} from '@/framework/utils/common'
+import { dictStore } from '@/framework/store/common'
+import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
+import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 
 const prop = defineProps<{
