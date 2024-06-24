@@ -7,7 +7,7 @@
           <div style="display: flex; justify-content: flex-start">
             <a-dropdown v-if="tableList.length !== 0" :trigger="['contextmenu']">
               <span>{{ item.label }}</span>
-              <template #overlay v-if="selectedRole === '0'">
+              <template v-if="selectedRole === '0'" #overlay>
                 <a-menu>
                   <a-menu-item key="1">
                     <a-button
@@ -78,6 +78,8 @@
       <!-- region 表格整体配置 -->
       <a-descriptions :column="9" :title="tableConfig.displayName" bordered layout="vertical" size="small">
         <template #extra>
+          <a-button style="margin-right: 10px" type="primary">导出配置</a-button>
+          <a-button style="margin-right: 10px" type="primary">导入配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="saveTableConfig(false)">保存</a-button>
         </template>
         <a-descriptions-item
@@ -321,6 +323,7 @@
           :pagination="false"
           :scroll="{y: getTableHeight()}"
           bordered
+          deepWatchDataSource
           range-selection="single"
           rowKey="id"
           size="small"
@@ -373,6 +376,22 @@
                 显示全部
               </a-button>
             </div>
+          </template>
+          <template #contextmenuPopup="args">
+            <ul class="popup">
+              <li
+                class="popup-item"
+                @click="setOrderToTop(args)">
+                <vertical-align-top-outlined />
+                置顶
+              </li>
+              <li
+                class="popup-item"
+                @click="setOrderToBottom(args)">
+                <vertical-align-bottom-outlined />
+                置底
+              </li>
+            </ul>
           </template>
         </s-table>
         <!-- endregion -->
@@ -867,9 +886,9 @@
   </div>
 </template>
 <script lang="ts" setup>
-import {Ref} from 'vue'
-import {isEmpty, isNotEmpty, updateTableSize} from '@/framework/utils/common'
-import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
+import { Ref } from 'vue'
+import { isEmpty, isNotEmpty, strRemoveLF, updateTableSize } from '@/framework/utils/common'
+import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import {
   bindRole,
   copyPortalConfig,
@@ -889,16 +908,18 @@ import {
   FilterOutlined,
   ForkOutlined,
   MinusCircleOutlined,
-  UserOutlined
+  UserOutlined,
+  VerticalAlignBottomOutlined,
+  VerticalAlignTopOutlined
 } from '@ant-design/icons-vue'
-import {ValueLabel} from '@/framework/utils/type'
-import {dictStore} from '@/framework/store/common'
-import {CellRenderArgs} from '@surely-vue/table'
-import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
-import {AUTO} from '@/framework/utils/constant'
+import { ValueLabel } from '@/framework/utils/type'
+import { dictStore } from '@/framework/store/common'
+import { CellRenderArgs } from '@surely-vue/table'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { AUTO } from '@/framework/utils/constant'
 import * as _ from 'lodash'
-import {getRoleList} from '@/framework/apis/admin/rolePermission'
-import {MenuProps} from 'ant-design-vue'
+import { getRoleList } from '@/framework/apis/admin/rolePermission'
+import { MenuProps } from 'ant-design-vue'
 
 
 const dict = dictStore()
@@ -970,9 +991,9 @@ const getTableConfigByName = (item: any) => {
     entityCondition.condition = {} as ConditionType
     tableConfig.value = res.payload
     tableConfig.value.columns.forEach((column: { property: any; displayName: any; id: any; fieldType: any; reference: string }) => {
-      columnDict.push({value: column.property, label: column.displayName} as ValueLabel)
+      columnDict.push({value: column.property, label: strRemoveLF(column.displayName)} as ValueLabel)
       columnMap.set(column.id, column)
-      if(column.fieldType === FIELD_TYPE.ENTITY) {
+      if (column.fieldType === FIELD_TYPE.ENTITY) {
         console.log(column)
         getEntityConfig(column.reference)
       }
@@ -1021,6 +1042,18 @@ const handleColumnFilter = (selectedKey: any, confirm: any, dataIndex: any, hide
   hidePopup()
 }
 
+const setOrderToTop = (arg: any) => {
+  fieldRecords.value.splice(arg.index, 1)
+  fieldRecords.value.unshift(arg.record)
+  handleColumnOrderChanged()
+  arg.hidePopup()
+}
+const setOrderToBottom = (arg: any) => {
+  fieldRecords.value.splice(arg.index, 1)
+  fieldRecords.value.push(arg.record)
+  handleColumnOrderChanged()
+  arg.hidePopup()
+}
 
 const handleColumnOrderChanged = () => {
   const columnOrder = [] as any
@@ -1032,7 +1065,6 @@ const handleColumnOrderChanged = () => {
         title: column.displayName,
         showOrder: index++
       }
-      console.log(columnMap.get(column.id))
       columnMap.get(column.id).displayOrder = order.showOrder
       columnOrder.push(order)
     }
@@ -1051,16 +1083,16 @@ const handleColumnSelected = (event: MouseEvent, params: CellRenderArgs) => {
 
 const entityConditionDrawOpen = async () => {
   entityCondition.columns = entityConfig.value.columns.filter(
-      (item: {
-        filterAble: string;
-        show: string;
-      }) => item.filterAble === '1' && item.show === '1')
-      .map((item: any) => ({
-        title: item.displayName,
-        key: item.property,
-        referenceDict: item.reference,
-        fieldType: item.fieldType
-      }))
+    (item: {
+      filterAble: string;
+      show: string;
+    }) => item.filterAble === '1' && item.show === '1')
+    .map((item: any) => ({
+      title: item.displayName,
+      key: item.property,
+      referenceDict: item.reference,
+      fieldType: item.fieldType
+    }))
   for (let item of entityCondition.columns) {
     if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.referenceDict)) {
       item.referenceDictOption = await dict.getDict(item.referenceDict) || []
@@ -1227,5 +1259,24 @@ window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
 .filter-active {
   color: var(--surely-table-primary-color) !important;
   opacity: 1 !important;
+}
+
+.popup {
+  width: 100px;
+  height: 20px;
+
+  .popup-item {
+    cursor: pointer;
+    padding: 8px;
+
+    &:hover {
+      background-color: var(--surely-table-row-hover-bg);
+    }
+
+    &.disabled {
+      color: var(--surely-table-disabled-color);
+      cursor: not-allowed;
+    }
+  }
 }
 </style>
