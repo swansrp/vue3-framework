@@ -1,17 +1,17 @@
 <template>
   <a-modal
-    v-model:visible="visible"
+    v-model:open="_visible"
     :body-style="{overflow: 'auto'}"
-    :mask-closable="maskClosable"
-    :width="width"
-    :wrap-class-name="isFull ? 'full-modal' : 'box-modal'"
+    :mask-closable="_maskClosable"
+    :width="_width"
+    :wrap-class-name="_isFull ? 'full-modal' : 'box-modal'"
     destroyOnClose
     @cancel="$emit('update:visible', false)">
     <slot></slot>
-    <template v-if="title" #title>
+    <template v-if="_title" #title>
       <div class="title">
-        <img v-if="iconPath" :src="iconPath" alt="" class="icon-img" />
-        {{ title }}
+        <img v-if="_iconPath" :src="_iconPath" alt="" class="icon-img" />
+        {{ _title }}
       </div>
     </template>
     <template #footer>
@@ -22,12 +22,12 @@
 </template>
 <script lang="ts" setup>
 
-let visible = ref(false)
-let title = ref('具体内容')
-let isFull = ref(false)
-let iconPath = ref('')
-let width = ref<string | number | undefined>('100%')
-let maskClosable = ref(false)
+let _visible = ref(false)
+let _title = ref('具体内容')
+let _isFull = ref(false)
+let _iconPath = ref('')
+let _width = ref<string | number | undefined>('100%')
+let _maskClosable = ref(false)
 
 const props = defineProps<{
   title: string,
@@ -41,13 +41,13 @@ const props = defineProps<{
 
 defineEmits(['update:visible'])
 
-watch(() => props.isFull, value => isFull.value = value, {immediate: true})
-watch(() => props.visible, value => visible.value = value)
-watch(() => props.title, value => title.value = value || '', {immediate: true})
-watch(() => props.iconPath, value => iconPath.value = value || '', {immediate: true})
-watch(() => props.maskClosable, value => maskClosable.value = !!value, {immediate: true})
+watch(() => props.isFull, value => _isFull.value = value, {immediate: true})
+watch(() => props.visible, value => _visible.value = value)
+watch(() => props.title, value => _title.value = value || '', {immediate: true})
+watch(() => props.iconPath, value => _iconPath.value = value || '', {immediate: true})
+watch(() => props.maskClosable, value => _maskClosable.value = !!value, {immediate: true})
 watch(() => props.width, value => {
-  if (!isFull.value && width.value) width.value = value
+  if (!_isFull.value && _width.value) _width.value = value
 }, {immediate: true})
 
 </script>

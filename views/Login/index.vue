@@ -89,7 +89,6 @@
 import {Md5} from 'ts-md5'
 import {reactive, Ref} from 'vue'
 import {message} from 'ant-design-vue'
-import 'ant-design-vue/lib/message/style/index.css'
 import {checkLoginState} from '@/framework/network/login'
 import {getToken, initPasswordAndLogin, login} from '@/framework/apis/login/login'
 import {localStorageMethods} from '@/framework/utils/common'

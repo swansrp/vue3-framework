@@ -837,7 +837,7 @@
     <!-- endregion 右侧编辑栏 -->
     <!-- region 复制配置 -->
     <a-modal
-      v-model:visible="copyConfigModal.visible"
+      v-model:open="copyConfigModal.visible"
       :title="copyConfigModal.title"
       centered
       @ok="copyConfig"

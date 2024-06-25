@@ -125,7 +125,6 @@
 import * as _ from 'lodash'
 import {Ref, UnwrapRef} from "vue"
 import {message} from "ant-design-vue"
-import 'ant-design-vue/lib/message/style/index.css' // 需要单独引入message的样式，否则message的样式异常
 import {PlusOutlined, CheckOutlined, EditOutlined} from "@ant-design/icons-vue"
 import {DictDateType, DictConfigItemType, DataItem} from "./types"
 import { deleteDictItem, getDictItemByName, getDictNameList, updateDictItem, updateDictItemSetDefault,

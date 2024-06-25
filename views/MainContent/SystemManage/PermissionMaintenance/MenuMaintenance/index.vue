@@ -83,7 +83,6 @@
 <script lang="ts" setup>
 import { Ref } from "vue"
 import { message } from "ant-design-vue"
-import 'ant-design-vue/lib/message/style/index.css'
 import { Key } from "ant-design-vue/es/_util/type"
 import { EDIT } from "@/framework/utils/constant"
 import { AntTreeNodeDropEvent } from "ant-design-vue/es/tree"

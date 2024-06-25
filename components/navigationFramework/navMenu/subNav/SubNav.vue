@@ -25,12 +25,10 @@
 <script lang="ts" setup>
 import {NavListType} from "../type"
 
-const subNavList = ref<NavListType>()
 const props = defineProps<{ subNavList: NavListType }>()
+const { subNavList } = toRefs(props)
 
-watch(() => props.subNavList, () => {
-  subNavList.value = props.subNavList
-}, {immediate: true})
+
 
 </script>
 

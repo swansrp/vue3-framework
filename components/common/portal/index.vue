@@ -347,7 +347,7 @@
     <!-- endregion -->
     <!-- region 高级筛选 -->
     <a-drawer
-      :visible="advancedCondition.show"
+      :open="advancedCondition.show"
       :width="1050"
       placement="right"
       title="高级筛选"

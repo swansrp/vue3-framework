@@ -85,7 +85,6 @@ import * as _ from "lodash"
 import {QUERY_INTERVAL} from "@/framework/utils/constant"
 import {DataNode} from "ant-design-vue/es/vc-tree/interface"
 import {message} from "ant-design-vue"
-import 'ant-design-vue/lib/message/style/index.css'
 import {WarningFilled} from "@ant-design/icons-vue"
 import AddAndEditUserGroup from './addAndEditUserGroup/index.vue'
 import {AntTreeNodeDropEvent} from "ant-design-vue/es/tree"

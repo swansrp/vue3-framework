@@ -3,7 +3,7 @@
     <div v-if="showDept">
       <a-form-item :label="departmentInputLabel" :style="{width: inputWidth}">
         <a-cascader
-          v-model:value="departmentListValue"
+          v-model:value="localDepartmentListValue"
           :options="departmentListOption"
           :show-search="{ cascaderFilter }"
           :showSearch="true"
@@ -20,7 +20,7 @@
     <a-form-item :label="staffInputLabel" :style="{width: inputWidth}">
       <a-select
         ref="selectUserRef"
-        v-model:value="staffListValue"
+        v-model:value="localStaffListValue"
         :max-tag-count="staffMaxTagCount"
         :options="staffListOption"
         :maxTagTextLength="10"
@@ -116,14 +116,14 @@ const staffInputLabel = computed(() => (isHorizontal ? '' : '职工姓名') as a
 
 // 级联选择器（部门选择）部分的代码
 let departmentList: Array<string> = []
-let departmentListValue = ref<Array<string>>([])
+let localDepartmentListValue = ref<Array<string>>([])
 let departmentListOption = ref<ValueLabelArray>()
 
 showDept && showDept.value && getDepartmentTree().then(res => departmentListOption.value = res.payload)
 
 const selectDepartment = () => {
-  emit('update:departmentListValue', departmentListValue.value)
-  departmentList = getCascaderList(departmentListValue, departmentListOption).map(item => item.value)
+  emit('update:departmentListValue', localDepartmentListValue.value)
+  departmentList = getCascaderList(localDepartmentListValue, departmentListOption).map(item => item.value)
   clearAllSelectStaff() // 重新选择部门后，应清空职工姓名的select
 }
 const cascaderFilter: ShowSearchType['filter'] = (inputValue, path) =>
@@ -133,11 +133,11 @@ const cascaderFilter: ShowSearchType['filter'] = (inputValue, path) =>
 // 多选（职工选择）部分的代码
 let selectUserRef = ref()
 let staffListOption = ref<StaffBaseSelectArrayType>([])
-const staffListValue = ref<StaffBaseSelectArrayType>([])
+const localStaffListValue = ref<StaffBaseSelectArrayType>([])
 let staffId2AvatarMap: { [key: string]: string } = {}
 // 职工姓名的全选（“全选” 按钮对应的点击事件）
 const selectAllStaff = () => {
-  staffListValue.value = staffListOption.value.map((item: any) => {
+  localStaffListValue.value = staffListOption.value.map((item: any) => {
     item.option = _.cloneDeep(item)
     return item
   })
@@ -145,8 +145,8 @@ const selectAllStaff = () => {
 }
 // 职工姓名的反向选择（“反选” 按钮对应的点击事件）
 const invertCurrentStaff = () => {
-  const staffListValueSet = new Set(staffListValue.value.map(item => item.value))
-  staffListValue.value = staffListOption.value.filter(item => !staffListValueSet.has(item.value)).map((item: any) => {
+  const staffListValueSet = new Set(localStaffListValue.value.map(item => item.value))
+  localStaffListValue.value = staffListOption.value.filter(item => !staffListValueSet.has(item.value)).map((item: any) => {
     item.option = _.cloneDeep(item)
     return item
   })
@@ -154,7 +154,7 @@ const invertCurrentStaff = () => {
 }
 // 职工姓名的清空（“清空” 按钮对应的点击事件）
 const clearAllSelectStaff = () => {
-  staffListValue.value = []
+  localStaffListValue.value = []
   handleStaffChange()
   queryStaffList(departmentList, '')
 }
@@ -176,18 +176,18 @@ const staffKey2StaffNumberMap:{[key: string]: string | number} = {}
 // 当职工名称对应的select发生改变，向外部更新staffListValue
 const handleStaffChange = (option?: any[]) => {
   if (isMultiple.value) {
-    staffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
-    let copyData = _.cloneDeep(staffListValue.value)
+    localStaffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
+    let copyData = _.cloneDeep(localStaffListValue.value)
     copyData.forEach((item: any) => !item.option && (item.option = staffKey2StaffNumberMap[item.key || item.value]))
     emit('update:staffListValue', copyData)
   }
   else if (option && Array.isArray(option)) {
-    if (option.length === 0) staffListValue.value = []
-    else staffListValue.value = [{...option[option.length - 1]}]
-    emit('update:staffListValue', staffListValue.value)
+    if (option.length === 0) localStaffListValue.value = []
+    else localStaffListValue.value = [{...option[option.length - 1]}]
+    emit('update:staffListValue', localStaffListValue.value)
   }
   emit('onChange', {
-    staffListValue: staffListValue.value
+    staffListValue: localStaffListValue.value
   })
 }
 
@@ -200,10 +200,10 @@ document.addEventListener("error", function (e: any) {
 }, true /*指定事件处理函数在捕获阶段执行*/)
 
 watch(() => props.staffListValue, value => {
-  staffListValue.value = value
-  staffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
+  localStaffListValue.value = value
+  localStaffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
 }, {immediate: true})
-watch(() => props.departmentListValue, value => departmentListValue && value && (departmentListValue.value = value), {immediate: true})
+watch(() => props.departmentListValue, value => localDepartmentListValue && value && (localDepartmentListValue.value = value), {immediate: true})
 
 </script>
 

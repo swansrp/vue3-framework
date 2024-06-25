@@ -13,7 +13,8 @@ interface NavNodeType {
     icon: string,
     path: string,
     query: string,
-    component: any
+    component: any,
+    name: string
 }
 
 export type {NavNodeType, NavListType}

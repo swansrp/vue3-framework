@@ -8,7 +8,6 @@
 
 <script lang="ts" setup>
 import Entity from './Entity/index.vue'
-import 'ant-design-vue/lib/message/style/index.css'
 import {useAdvancedSearch} from '@/framework/store/AdvancedSearch'
 import pinia from '@/framework/store'
 import {ValueLabel} from '@/framework/utils/type'

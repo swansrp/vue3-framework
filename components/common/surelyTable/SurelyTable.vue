@@ -10,7 +10,7 @@
     :animate-rows="false"
     :rowClassName="rowClassName"
     :scroll="{x: getTableWidth(), y: getTableHeight()}"
-    :style="{width: String(tableWidth) === 'auto' ? '100%' : tableWidth + 'px'}"
+    :style="{width: String(_tableWidth) === 'auto' ? '100%' : _tableWidth + 'px'}"
     :customRow="customRow"
     :customHeaderCell="customHeaderCell"
     @row-drag-end="rowDragEnd"
@@ -101,8 +101,8 @@ let needExpandedRowRender = ref(slots['expandedRowRender'])
 const emit = defineEmits(['onRowDrag', 'pageChange', 'expandedRowsChange', 'handleSearch', 'handleReset', 'change'])
 
 let updatedColumns:Ref<any[]> = ref([])
-let tableHeight = ref<number | undefined>()
-let tableWidth = ref<number | undefined>()
+let _tableHeight = ref<number | undefined>()
+let _tableWidth = ref<number | undefined>()
 let pagination = ref(props.pagination)
 let {tableId, columns, dataSource, rowClassName, stripe, customRow, customHeaderCell, rowHeight} = toRefs(props)
 let bordered = computed(() => props.bordered === undefined ? true : props.bordered)
@@ -155,19 +155,19 @@ const columnDragEnd = (_info: any) => {
 }
 
 const getTableWidth = () => {
-  if (tableWidth.value === undefined) return AUTO
-  return tableWidth.value - 20
+  if (_tableWidth.value === undefined) return AUTO
+  return _tableWidth.value - 20
 }
 const getTableHeight = () => {
-  if (tableHeight.value === undefined) return AUTO
-  return tableHeight.value
+  if (_tableHeight.value === undefined) return AUTO
+  return _tableHeight.value
 }
 
 initPagination()
 updateColumns(updatedColumns, columns, tableId)
 
-watch(() => props.tableWidth, value => value && (tableWidth.value = value))
-watch(() => props.tableHeight, value => value && (tableHeight.value = value), {immediate: true})
+watch(() => props.tableWidth, value => value && (_tableWidth.value = value))
+watch(() => props.tableHeight, value => value && (_tableHeight.value = value), {immediate: true})
 
 </script>
 

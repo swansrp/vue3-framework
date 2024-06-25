@@ -10,7 +10,6 @@
 <script setup lang="ts">
 import {Ref} from "vue"
 import {message} from "ant-design-vue"
-import 'ant-design-vue/lib/message/style/index.css'
 import {ValueLabelArray} from "@/framework/utils/type"
 import {ghostLogin} from "@/framework/apis/login/login";
 import {localStorageMethods} from "@/framework/utils/common";
