@@ -3,7 +3,7 @@
     <a-row type="flex" class="content-wrap-row">
       <a-col :span="8">
         <a-card title="人员选择">
-          <department-and-staff-select layout-mode="vertical" :width="600" v-model:staffListValue="staffListValue" :is-multiple="false" />
+          <department-and-staff-select layout-mode="vertical" v-model:staffListValue="staffListValue" :is-multiple="false" />
         </a-card>
         <a-card :title="staffListTitle">
           <a-list
