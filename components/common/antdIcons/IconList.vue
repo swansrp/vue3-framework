@@ -14,8 +14,7 @@ const emitIconName = (icon: string) => emit('getIconName', icon)
   width: 40px;
   height: 40px;
   font-size: 20px;
-  line-height: 40px;
-  text-align: center;
+  justify-content: center;
 }
 
 .icons:hover {

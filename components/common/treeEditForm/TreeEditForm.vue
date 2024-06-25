@@ -13,7 +13,7 @@
         <a-input v-model:value="formState['title']" />
       </a-form-item>
       <a-form-item :rules="[{ required: true, message: '请选择一个菜单图标!' }]" label="菜单图标" name="icon">
-        <a-input ref="iconInput" v-model:value="formState['icon']" class="icon-input" readOnly @click="selectMenuIcon">
+        <a-input id="iconInput" v-model:value="formState['icon']" class="icon-input" readOnly @click="selectMenuIcon">
           <template v-if="formState['icon'].length" #prefix>
             <Icon :icon="formState['icon']" />
           </template>
@@ -67,14 +67,13 @@ import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue"
 import { FormState, FormType } from "@/framework/components/common/treeEditForm/type"
 import { addMainMenu, addMenuButton, addSubMenu, updateMainMenu, updateSubMenu } from "@/framework/apis/admin/navEdit"
 
-const iconInput = ref()
 let visible: Ref<boolean> = ref(false) //控制图标选择对话框的弹出
 let inputIconBoxVisible: Ref<boolean> = ref(false)
 let iconForm: Ref<{ icon: string }> = ref({icon: ''})
 
 // formState：默认表单数据，因为编辑的时候需要展示已有信息， type：用于区别是目前表单应为编辑表单还是新增表单
 // menuId: 菜单项Id，用于编辑Sub Menu和Main Menu菜单项和新增Sub Menu菜单项
-const props = defineProps<{ formState: FormState, type: FormType, menuId?: number, grandId?: number | null }>()
+const props = defineProps<{ formState: FormState, type: FormType, menuId?: number | undefined, grandId?: number | null }>()
 let {formState, menuId, type, grandId} = toRefs(props)
 
 // 从父组件中接收两个函数，以更新父组件中相关组件的更新
@@ -137,26 +136,21 @@ watch(() => formState.value.icon, () => {
   // 因为js为input赋值的时候，不会触发input的change等方法，所以需要手动定义一个change事件，并在对应的input元素上触发
   // 目的是更新form的验证状态，antd是根据input的change事件，更新的表单验证状态
   const changeEvent = new Event('change')
-  iconInput.value?.input.dispatchEvent(changeEvent)
+  const iconInput = document.getElementById('iconInput') as HTMLInputElement
+  iconInput.dispatchEvent(changeEvent)
 })
 
-onMounted(() => {
-  (type.value === 'add_menu' || type.value === 'add_button') && resetForm()
-})
-
+onMounted(() => (type.value === 'add_menu' || type.value === 'add_button') && resetForm())
 
 </script>
 <style>
-
 .icon-input, .icon-input input .ant-input {
   cursor: pointer !important;
 }
-
 .form-button-list {
   display: flex;
   justify-content: space-between;
 }
-
 .form-button-list button {
   width: 45%;
 }
