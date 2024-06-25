@@ -1,7 +1,7 @@
 <template>
   <a-modal
     :cancel-button-props="{style:{display: 'none'}}"
-    :visible="config.modal.show"
+    :open="config.modal.show"
     :width="config.detailWidth"
     :wrap-class-name="config.detailWidth==='100%' ? 'full-modal' : ''"
     okText="确定"

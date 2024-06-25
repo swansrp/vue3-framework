@@ -1,4 +1,4 @@
-import { get, post } from '@/framework/network/request'
+import { download, get, post, upload } from '@/framework/network/request'
 import { apiType, baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.portal + '/admin', domain)
@@ -14,6 +14,13 @@ export const getPortalConfig = (name: string, roleId?: any) => get(buildGetApi('
 }) as Promise<any>
 
 export const updatePortalConfig = (portalConfig: any, silent: boolean) => post(buildPostApi('/config'), undefined, portalConfig, !silent, !silent) as Promise<any>
+
+export const exportPortalConfig = (configName: string, roleId: string, fileName: string) => download(buildGetApi('/config/export'), fileName, {
+  name: configName,
+  roleId
+}, {}) as Promise<any>
+
+export const importPortalConfig = (file: object, onUploadProgress: Function) => upload(buildPostApi('/config/import'), {}, file, onUploadProgress) as Promise<any>
 
 export const updatePortalColumnOrder = (idOrderReq: any) => post(buildPostApi('/column/order'), undefined, idOrderReq) as Promise<any>
 

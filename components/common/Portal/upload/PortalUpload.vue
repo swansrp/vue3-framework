@@ -2,7 +2,7 @@
   <a-modal
     :keyboard="false"
     :maskClosable="false"
-    :visible="config.show"
+    :open="config.show"
     :width="800"
     centered
     @cancel="closeUploadModal">
@@ -76,13 +76,13 @@
 </template>
 
 <script lang="ts" setup>
-import {CloseCircleOutlined, InboxOutlined} from '@ant-design/icons-vue'
-import {UploadModalType} from '@/framework/components/common/portal/type'
-import {message, UploadChangeParam} from 'ant-design-vue'
-import {AxiosProgressEvent} from 'axios'
-import {isNumber} from 'lodash'
-import {startTimer, stopTimer} from '@/framework/utils/common'
-import {TimerType} from '@/framework/utils/type'
+import { CloseCircleOutlined, InboxOutlined } from '@ant-design/icons-vue'
+import { UploadModalType } from '@/framework/components/common/portal/type'
+import { message, UploadChangeParam } from 'ant-design-vue'
+import { AxiosProgressEvent } from 'axios'
+import { isNumber } from 'lodash'
+import { startTimer, stopTimer } from '@/framework/utils/common'
+import { TimerType } from '@/framework/utils/type'
 
 const emit = defineEmits<{
   /**

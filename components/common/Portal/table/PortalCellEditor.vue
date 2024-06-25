@@ -95,9 +95,9 @@
       :allow-clear="false"
       :bordered="false"
       :get-popup-container="getPopupContainer"
+      :show-time="true"
       :value="modelValue ? dayjs(modelValue) : null"
       open
-      :show-time="true"
       style="width: 100%"
       @blur="closeEditor"
       @update:value="
@@ -116,7 +116,7 @@
       || column.fieldType === FIELD_TYPE.HTML
       || column.fieldType === FIELD_TYPE.TEXT_AREA">
     <a-modal
-      :title="'编辑 ' + column.title" visible @cancel="closeEditor"
+      :title="'编辑 ' + column.title" open @cancel="closeEditor"
       @ok="doFunctions(save, closeEditor)">
       <a-textarea
         :ref="editorRef"
@@ -136,8 +136,8 @@
 <script lang="ts" setup>
 
 import dayjs from 'dayjs'
-import {FIELD_TYPE, TableConfigType} from '@/framework/components/common/portal/type'
-import {doFunctions} from '@/framework/utils/common'
+import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/portal/type'
+import { doFunctions } from '@/framework/utils/common'
 
 const prop = defineProps<{
   column: any,

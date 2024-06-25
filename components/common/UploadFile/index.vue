@@ -2,7 +2,7 @@
   <a-modal
     :keyboard="false"
     :maskClosable="false"
-    :visible="uploadDialogBox.show"
+    :open="uploadDialogBox.show"
     :width="800"
     centered
     @cancel="closeUploadModal"
@@ -27,17 +27,18 @@
 
 <script lang="ts" setup>
 
-import {message} from 'ant-design-vue'
-import {uploadFile} from '@/framework/apis/common/common'
-import {AxiosProgressEvent} from 'axios'
-import {isNumber} from 'lodash'
-import {getUploadAccepts, getUploadFileType} from '@/framework/components/common/UploadFile/utils'
-import {InboxOutlined} from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { uploadFile } from '@/framework/apis/common/common'
+import { AxiosProgressEvent } from 'axios'
+import { isNumber } from 'lodash'
+import { getUploadAccepts, getUploadFileType } from '@/framework/components/common/UploadFile/utils'
+import { InboxOutlined } from '@ant-design/icons-vue'
 
 const prop = defineProps<{
   folder?: string,
   fileName?: string,
-  url: any
+  url?: any,
+  upload?: any,
 }>()
 const emit = defineEmits<{
   /**
@@ -46,7 +47,9 @@ const emit = defineEmits<{
    * @param url
    */
   (e: 'update:url', url: any): void
+  (e: 'afterConfirm'): void
 }>()
+
 const accept = ref('')
 const uploadDialogBox: { show: boolean, uploadFileType: any, file: Array<any>, url: string | null } = reactive({
   show: false,
@@ -71,25 +74,39 @@ const beforeUpload = (file: any) => {
   }
   return isLt20M
 }
-const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?: any }) => {
-  const {file, onProgress, onSuccess} = data
+const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?: any; onError?: any }) => {
+  const {file, onProgress, onSuccess, onError} = data
   let formData = new FormData()
   formData.append('file', file)
-  return uploadFile(formData, (progressEvent: AxiosProgressEvent) => {
-    let percent = 0
-    if (isNumber(progressEvent.total)) {
-      percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-    }
-    onProgress({percent: percent}, file)
-  }, getUploadFileType(file), prop.folder, prop.fileName).then((resp: any) => {
-    onSuccess(resp, file)
-    uploadDialogBox.url = resp.payload.url
-  })
+  if (prop.upload) {
+    prop.upload(formData, (progressEvent: AxiosProgressEvent) => {
+      let percent = 0
+      if (isNumber(progressEvent.total)) {
+        percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+      }
+      onProgress({percent: percent}, file)
+    }).then((resp: any) => {
+      onSuccess(resp, file)
+    }).catch((resp: any) => {
+      onError(resp.payload, '', file)
+    })
+  } else {
+    return uploadFile(formData, (progressEvent: AxiosProgressEvent) => {
+      let percent = 0
+      if (isNumber(progressEvent.total)) {
+        percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+      }
+      onProgress({percent: percent}, file)
+    }, getUploadFileType(file), prop.folder, prop.fileName).then((resp: any) => {
+      onSuccess(resp, file)
+      uploadDialogBox.url = resp.payload.url
+    })
+  }
 }
 const confirmUploadModal = () => {
-  console.log(uploadDialogBox.url)
   emit('update:url', uploadDialogBox.url)
   uploadDialogBox.show = false
+  emit('afterConfirm')
 }
 const handleUploadChange = () => {
 

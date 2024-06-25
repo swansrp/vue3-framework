@@ -3,7 +3,9 @@
     <!-- region 左侧表格筛选栏 -->
     <a-list :data-source="tableList" bordered class="table-list" size="small">
       <template #renderItem="{ item }">
-        <a-list-item :class="{'activate-item': tableConfig.name === item.value}" @click="getTableConfigByName(item)">
+        <a-list-item
+          :class="{'activate-item': tableConfig.name === item.value}"
+          @click="getTableConfigByName(item.value)">
           <div style="display: flex; justify-content: flex-start">
             <a-dropdown v-if="tableList.length !== 0" :trigger="['contextmenu']">
               <span>{{ item.label }}</span>
@@ -73,13 +75,17 @@
       </template>
     </a-list>
     <!-- endregion -->
+    <upload-file
+      ref="uploadTableConfigRef"
+      :upload="importTableConfig"
+      @after-confirm="getTableConfigByName(tableConfig.name)" />
     <!-- region 右侧编辑栏 -->
     <div v-if="isNotEmpty(tableConfig.name)" class="table-config">
       <!-- region 表格整体配置 -->
       <a-descriptions :column="9" :title="tableConfig.displayName" bordered layout="vertical" size="small">
         <template #extra>
-          <a-button style="margin-right: 10px" type="primary">导出配置</a-button>
-          <a-button style="margin-right: 10px" type="primary">导入配置</a-button>
+          <a-button style="margin-right: 10px" type="primary" @click="exportTableConfig()">导出配置</a-button>
+          <a-button style="margin-right: 10px" type="primary" @click="uploadTableConfig()">导入配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="saveTableConfig(false)">保存</a-button>
         </template>
         <a-descriptions-item
@@ -337,11 +343,11 @@
                        textOverflow: 'ellipsis',
                        whiteSpace: 'nowrap',
                        overflow: 'hidden',
-                       height: '100%'}">{{ record[`${column.dataIndex}`] }}
+                       height: '100%'}">{{ strRemoveLF(record[`${column.dataIndex}`]) }}
             </div>
           </template>
           <template #tooltipTitle="{ value }">
-            {{ value }}
+            <div v-html="strLF2HtmlLF(value)"></div>
           </template>
           <template #menuIcon="{ filtered }">
             <filter-outlined :class="filtered && 'filter-active'" />
@@ -399,7 +405,7 @@
         <div v-if="selectedColumnId !== ''" style="width: 100%; margin-top: 10px; margin-left: 10px">
           <a-descriptions
             :column="8"
-            :title="'基础信息: ' + columnMap.get(selectedColumnId).displayName + '(' + columnMap.get(selectedColumnId).property + ')'"
+            :title="'基础信息: ' + strRemoveLF(columnMap.get(selectedColumnId).displayName) + '(' + columnMap.get(selectedColumnId).property + ')'"
             bordered
             layout="vertical"
             size="small">
@@ -887,16 +893,18 @@
 </template>
 <script lang="ts" setup>
 import { Ref } from 'vue'
-import { isEmpty, isNotEmpty, strRemoveLF, updateTableSize } from '@/framework/utils/common'
+import { isEmpty, isNotEmpty, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import {
   bindRole,
   copyPortalConfig,
   deletePortalConfig,
   existedPortalConfig,
+  exportPortalConfig,
   getBindRole,
   getPortalConfig,
   getPortalList,
+  importPortalConfig,
   unbindRole,
   updatePortalColumn,
   updatePortalColumnOrder,
@@ -920,6 +928,8 @@ import { AUTO } from '@/framework/utils/constant'
 import * as _ from 'lodash'
 import { getRoleList } from '@/framework/apis/admin/rolePermission'
 import { MenuProps } from 'ant-design-vue'
+import dayjs from 'dayjs'
+import UploadFile from '@/framework/components/common/UploadFile/index.vue'
 
 
 const dict = dictStore()
@@ -984,7 +994,7 @@ const getEntityConfig = (tableId: string) => {
 const tableConfig = ref({} as any)
 const fieldRecords = ref([] as Array<any>)
 const getTableConfigByName = (item: any) => {
-  getPortalConfig(item.value, selectedRole.value).then(res => {
+  getPortalConfig(item, selectedRole.value).then(res => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
@@ -994,7 +1004,6 @@ const getTableConfigByName = (item: any) => {
       columnDict.push({value: column.property, label: strRemoveLF(column.displayName)} as ValueLabel)
       columnMap.set(column.id, column)
       if (column.fieldType === FIELD_TYPE.ENTITY) {
-        console.log(column)
         getEntityConfig(column.reference)
       }
     })
@@ -1019,6 +1028,19 @@ const saveTableConfig = (silent = true) => {
 
 const saveTableColumn = (silent = true) => {
   updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() => getPortalConfig(tableConfig.value.name, selectedRole.value))
+}
+
+const exportTableConfig = () => {
+  exportPortalConfig(tableConfig.value.name, selectedRole.value,
+    tableConfig.value.displayName + '-' + selectedRole.value + '-' + dayjs().format('YYYYMMDDHHmmss') + '.dat')
+}
+
+const uploadTableConfigRef = ref()
+const uploadTableConfig = () => {
+  uploadTableConfigRef.value.showUploadDialogBox('.dat')
+}
+const importTableConfig = (file: any, onUploadProgress: any) => {
+  return importPortalConfig(file, onUploadProgress)
 }
 
 const onSearch = () => {

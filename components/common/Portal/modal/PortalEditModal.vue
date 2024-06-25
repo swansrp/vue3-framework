@@ -1,8 +1,8 @@
 <template>
   <a-modal
     :okText="config.modal.type === 'add' ? '保存' : '更新'"
-    :title="config.modal.type === 'add' ? '新增数据' : '编辑数据'"
     :open="config.modal.show"
+    :title="config.modal.type === 'add' ? '新增数据' : '编辑数据'"
     :width="config.modal.type === 'add' ? config.addWidth : config.editWidth"
     :wrap-class-name="(config.modal.type === 'add' ? config.addWidth==='100%' : config.editWidth==='100%') ? 'full-modal' : ''"
     @cancel="() => emit('cancel')"
@@ -146,11 +146,11 @@
 </template>
 
 <script lang="ts" setup>
-import {ColumnType, FIELD_TYPE, TableConfigType} from '@/framework/components/common/portal/type'
-import {isNotEmpty, log, strRemoveLF} from '@/framework/utils/common'
+import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/portal/type'
+import { isNotEmpty, log, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
-import {FormInstance} from 'ant-design-vue'
-import {CloseCircleOutlined, DeleteOutlined} from '@ant-design/icons-vue'
+import { FormInstance } from 'ant-design-vue'
+import { CloseCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 const uploadFileModal = ref()
 const prop = defineProps<{
