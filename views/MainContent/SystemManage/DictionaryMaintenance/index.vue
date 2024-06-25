@@ -14,27 +14,11 @@
       </template>
     </a-list>
     <div class="dictionary-config-space" ref="dictionaryConfigSpace">
+      <div class="add-dict-item-btn">
+        <a-button @click="handleAddDictItem" type="primary">新增字典项</a-button>
+      </div>
       <a-tabs v-if="dictConfigItem === 'currentConfig'" type="card">
         <a-tab-pane key="editNode" tab="编辑字典项">
-          <div class="add-dict-item-btn">
-            <a-button @click="handleAddDictItem" type="primary">新增字典项</a-button>
-          </div>
-          <dialog-box v-model:visible="addDictItemVisible" title="新增字典项">
-            <a-form :model="addDictItemForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 14 }" @finish="onAddDictItemFinish" ref="addDictItemFormRef">
-              <a-form-item label="字典项名称" name="dictLabel" :rules="[{ required: true, message: '请输入字典项名称!' }]">
-                <a-input v-model:value="addDictItemForm['dictLabel']" />
-              </a-form-item>
-              <a-form-item label="字典项值" name="dictValue" required :rules="[{ required: true, message: '请填写字典项值!' }]">
-                <a-input v-model:value="addDictItemForm['dictValue']" />
-              </a-form-item>
-              <a-form-item :wrapper-col="{ span: 14, offset: 6 }">
-                <div class="form-button-list">
-                  <a-button @click="resetForm(addDictItemFormRef)">清空</a-button>
-                  <a-button type="primary" html-type="submit">提交</a-button>
-                </div>
-              </a-form-item>
-            </a-form>
-          </dialog-box>
           <surely-table
             :data-source="surelyTableData"
             :columns="surelyTableColumns"
@@ -112,6 +96,23 @@
           <a-form-item :wrapper-col="{ span: 14, offset: 6 }">
             <div class="form-button-list">
               <a-button @click="resetForm(addDictFormRef)">清空</a-button>
+              <a-button type="primary" html-type="submit">提交</a-button>
+            </div>
+          </a-form-item>
+        </a-form>
+      </dialog-box>
+
+      <dialog-box v-model:visible="addDictItemVisible" title="新增字典项">
+        <a-form :model="addDictItemForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 14 }" @finish="onAddDictItemFinish" ref="addDictItemFormRef">
+          <a-form-item label="字典项名称" name="dictLabel" :rules="[{ required: true, message: '请输入字典项名称!' }]">
+            <a-input v-model:value="addDictItemForm['dictLabel']" />
+          </a-form-item>
+          <a-form-item label="字典项值" name="dictValue" required :rules="[{ required: true, message: '请填写字典项值!' }]">
+            <a-input v-model:value="addDictItemForm['dictValue']" />
+          </a-form-item>
+          <a-form-item :wrapper-col="{ span: 14, offset: 6 }">
+            <div class="form-button-list">
+              <a-button @click="resetForm(addDictItemFormRef)">清空</a-button>
               <a-button type="primary" html-type="submit">提交</a-button>
             </div>
           </a-form-item>
@@ -325,7 +326,6 @@ window.addEventListener('resize', _.debounce(updateContentWidth, 50))
   .editable-cell-icon {
     margin-top: 4px;
     display: inline-block;
-    // display: none;
   }
 
   .editable-cell-icon-check {
@@ -344,8 +344,9 @@ window.addEventListener('resize', _.debounce(updateContentWidth, 50))
 .add-dict-item-btn {
   margin-bottom: 8px;
   margin-right: 5px;
-  margin-top: -55px;
   display: flex;
+  position: absolute;
+  right: 0;
   justify-content: flex-end;
 }
 .form-button-list {
