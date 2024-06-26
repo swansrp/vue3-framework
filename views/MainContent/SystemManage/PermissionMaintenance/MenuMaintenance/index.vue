@@ -72,7 +72,7 @@
       </a-tabs>
       <div v-if="menuConfigItem === 'addRootMenu'" class="add-root-menu">
         <div class="add-root-menu-title">新增根节点</div>
-        <tree-edit-form :formState="addRootMenuFormState" :grandId="grandId" type="add" />
+        <tree-edit-form :formState="addRootMenuFormState" :grandId="grandId" type="add_menu" />
       </div>
       <div v-if="!menuConfigItem" class="config-warning">顶部导航和左侧导航的叶子节点必须要配置“路由路径”和“组件地址”
       </div>
