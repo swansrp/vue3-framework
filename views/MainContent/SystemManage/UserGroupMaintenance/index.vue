@@ -1,7 +1,7 @@
 <template>
   <div class="wrapper">
     <a-layout style="height: 100%">
-      <a-layout-sider class="user-group-category-list-wrapper" width="280">
+      <a-layout-sider class="user-group-category-list-wrapper" width="280" theme="light">
         <a-list :data-source="userGroupCategory" bordered class="user-group-category-list" size="small">
           <template #renderItem="{ item, index }">
             <a-list-item
@@ -16,7 +16,7 @@
           </template>
         </a-list>
       </a-layout-sider>
-      <a-layout-sider v-if="hasSelectUserGroupCategory" class="user-group-list-wrapper" width="400">
+      <a-layout-sider v-if="hasSelectUserGroupCategory" class="user-group-list-wrapper" width="400" theme="light">
         <div>
           <a-tree
             v-if="userGroupTreeData.length"
