@@ -92,6 +92,7 @@ import {getDroppedData} from "@/framework/hooks/antTreeDropSort"
 import {getAllParentNodes, getBrotherNodes} from "@/framework/utils/common"
 import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
 import UserPermission from '@/framework/components/common/userPermission/index.vue'
+import {Key} from 'ant-design-vue/es/table/interface'
 
 
 let activateDictItem: Ref<number> = ref(-1)
@@ -119,11 +120,11 @@ const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.va
 
 const onSearchUserGroupCategory = renderUserGroupType
 
-const onContextMenuClick = (data: IdName, menuKey: string) => {
+const onContextMenuClick = (data: IdName, menuKey: string | number) => {
   currentUserGroupInfo.value.name = data.name
   currentUserGroupInfo.value.id = data.id
-  if (menuKey === '1') addUserGroupNodeVisible.value = true
-  else if (menuKey === '2') editUserGroupNodeVisible.value = true
+  if (+menuKey === 1) addUserGroupNodeVisible.value = true
+  else if (+menuKey === 2) editUserGroupNodeVisible.value = true
 }
 
 const addUserGroupTreeRootNode = () => {
@@ -155,7 +156,7 @@ const getCurrentUserGroupCategory = (id: string, index: number) => {
   renderUserGroupTree().then(() => hasSelectUserGroupCategory.value = true)
 }
 
-const selectUserGroup = (_: string, info: any) => {
+const selectUserGroup = (_: Key[], info: any) => {
   const {id, name} = info.node
   currentUserGroupInfo.value.name = name
   currentUserGroupInfo.value.id = id
