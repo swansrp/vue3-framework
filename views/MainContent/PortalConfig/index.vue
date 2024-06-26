@@ -451,6 +451,16 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
+              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.MONEY"
+              :span="1"
+              label="显示格式(精度,单位)">
+              <a-input
+                :value="columnMap.get(selectedColumnId).reference"
+                placeholder="显示格式(精度,单位)"
+                @update:value=" v => columnMap.get(selectedColumnId).reference = v"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
               v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT ||
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
               :span="1"
