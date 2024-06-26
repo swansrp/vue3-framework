@@ -39,7 +39,7 @@ const switchPermission = () => {
 <style scoped>
 .wrapper {
   width: 550px;
-  margin: 50px auto;
+  margin: -200px auto 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
