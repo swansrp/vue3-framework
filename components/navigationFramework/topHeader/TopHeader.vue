@@ -102,13 +102,12 @@ const handleMenuClick = (e:any) => {
 .top_title img {
   height: 20px;
   width: 20px;
-  margin-right: 5px;
 }
 .top_nav {
   flex: 1 0 auto;
 }
 .top_user {
-  width: 240px;
+  width: 190px;
   height: 100%;
   position: absolute;
   right: 0;
@@ -120,7 +119,7 @@ const handleMenuClick = (e:any) => {
 }
 .top_user_name {
   margin-left: 10px;
-  width: 150px;
+  width: 100px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
