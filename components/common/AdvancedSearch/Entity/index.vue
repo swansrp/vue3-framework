@@ -1,6 +1,6 @@
 <template>
   <div class="entity-wrapper">
-    <ConditionList v-model:condition="condition" :index="-1" />
+    <ConditionList v-model:condition="_condition" :index="-1" />
   </div>
 </template>
 
@@ -9,11 +9,10 @@ import {Ref} from "vue"
 import {ConditionType} from '../type'
 import ConditionList from "../ConditionList/index.vue"
 
-
 const props = defineProps<{condition: ConditionType}>()
-const condition:Ref<ConditionType|undefined> = ref()
+const _condition:Ref<ConditionType|undefined> = ref()
 
-watch(() => props.condition, () => condition.value = props.condition, {immediate: true})
+watch(() => props.condition, () => _condition.value = props.condition, {immediate: true})
 
 </script>
 

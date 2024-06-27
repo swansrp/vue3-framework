@@ -2,13 +2,13 @@
   <div style="margin-top: 10px;padding-left: 10px;padding-top: 6px;">
     <a-timeline>
       <a-timeline-item v-if="propertySelectOptions.length">
-        <AndOrSelect v-model:value="condition.andOr" />
+        <AndOrSelect v-model:value="_condition.andOr" />
       </a-timeline-item>
-      <template v-if="condition.conditionList.length">
-        <a-timeline-item v-for="(item, idx) in condition.conditionList" :key="item.id">
+      <template v-if="_condition.conditionList.length">
+        <a-timeline-item v-for="(item, idx) in _condition.conditionList" :key="item.id">
           <div v-if="item.isShow" class="condition-item">
             <a-tooltip placement="bottom" title="删除当前条件">
-              <minus-circle-outlined style="color: red" @click="onClickDeleteCondition(item.id)" />
+              <minus-circle-outlined style="color: red" @click="onClickDeleteCondition(item.id as number)" />
             </a-tooltip>
             <Condition
               v-model:property="item.property"
@@ -19,7 +19,7 @@
           </div>
           <template v-if="item.conditionList && item.conditionList.length">
             <ConditionList
-              :condition="condition.conditionList[idx]"
+              :condition="_condition.conditionList[idx]"
               :index="idx"
               @delete-current-condition-list="deleteCurrentConditionList" />
           </template>
@@ -78,7 +78,7 @@ import {
 import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 
-const condition: Ref = ref()
+const _condition: Ref = ref()
 const propertySelectOptions: Ref<Array<ValueLabel>> = ref([])
 const props = defineProps<{ condition: ConditionType | ConditionListType, index: number }>()
 const {index} = toRefs(props)
@@ -87,35 +87,33 @@ const useAdvancedSearchStore = useAdvancedSearch(pinia)
 const emit = defineEmits(['update:condition', 'deleteCurrentConditionList'])
 
 const onClickDeleteCondition = (id: number) => {
-  console.log('onClickDeleteCondition', condition.value.conditionList, id)
-  condition.value.conditionList = condition.value.conditionList.filter((condition: any) => id !== condition.id)
-  if (condition.value.conditionList.length === 0)
+  _condition.value.conditionList = _condition.value.conditionList.filter((condition: any) => id !== condition.id)
+  if (_condition.value.conditionList.length === 0)
     emit('deleteCurrentConditionList', index.value)
-  emit('update:condition', condition.value)
+  emit('update:condition', _condition.value)
 }
 
 const deleteCurrentConditionList = (idx: number) => {
-  console.log('deleteCurrentConditionList', condition.value.conditionList, idx)
-  condition.value.conditionList = condition.value.conditionList.filter((_: any, i: number) => i !== idx)
-  if (condition.value.conditionList.length === 0)
+  _condition.value.conditionList = _condition.value.conditionList.filter((_: any, i: number) => i !== idx)
+  if (_condition.value.conditionList.length === 0)
     emit('deleteCurrentConditionList', index.value)
 }
 
 
 const handleAddMenuClick: MenuProps['onClick'] = ({key}) => {
   if (+key === 1) {
-    condition.value.conditionList.push(genEmptyCondition())
+    _condition.value.conditionList.push(genEmptyCondition())
   } else if (+key === 2) {
     const emptyCondition = genEmptyCondition()
     emptyCondition.isShow = false
     emptyCondition.conditionList = [genEmptyCondition()]
-    condition.value.conditionList.push(emptyCondition)
+    _condition.value.conditionList.push(emptyCondition)
   }
 }
 
 onBeforeMount(() => propertySelectOptions.value = useAdvancedSearchStore.getConditionLabelValueTypeOption())
 
-watch(() => props.condition, () => condition.value = props.condition, {immediate: true})
+watch(() => props.condition, () => _condition.value = props.condition, {immediate: true})
 
 </script>
 
