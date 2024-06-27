@@ -17,7 +17,7 @@
         </a-list>
       </a-layout-sider>
       <a-layout-sider v-if="hasSelectUserGroupCategory" class="user-group-list-wrapper" width="400" theme="light">
-        <div>
+        <div style="padding: 10px 0">
           <a-tree
             v-if="userGroupTreeData.length"
             :defaultExpandAll="true"
@@ -51,7 +51,7 @@
           <a-empty v-else />
           <a-input
             v-model:value="inputUserGroupTreeRootNodeName" placeholder="请输入根节点名称"
-            style="width: 285px" />
+            style="width: 250px;margin-right: 10px" />
           <a-button type="primary" @click="addUserGroupTreeRootNode">添加根节点</a-button>
         </div>
       </a-layout-sider>

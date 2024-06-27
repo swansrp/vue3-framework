@@ -2,7 +2,7 @@
   <div class="wrapper">
     <a-typography-title :level="2">将系统超级管理员的权限切换到指定用户</a-typography-title>
     <br />
-    <department-and-staff-select v-model:staffListValue="staffListValue" :is-multiple="false" layout-mode="vertical"/>
+    <department-and-staff-select v-model:staffListValue="staffListValue" :is-multiple="false" layout-mode="vertical" />
     <a-button block type="primary" @click="switchPermission">切换</a-button>
   </div>
 </template>
