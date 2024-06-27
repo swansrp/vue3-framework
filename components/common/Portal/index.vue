@@ -408,10 +408,12 @@ import {
   isEmpty,
   isNotEmpty,
   log,
-  updateTableSize
+  updateTableSize,
+  uuid
 } from '@/framework/utils/common'
 import {
   actionColumn,
+  AUTO_UUID_ROW_KEY,
   defaultColumn,
   getDefaultFilterType,
   indexColumn
@@ -1184,6 +1186,9 @@ const queryDataAsync = async () => {
           record[`${dictColumn.dataIndex}`] = String(record[`${dictColumn.dataIndex}`])
         }
       }
+      if (config.rowKey === AUTO_UUID_ROW_KEY) {
+        record[config.rowKey] = uuid()
+      }
       data.push(record)
     }
     return data
@@ -1253,9 +1258,10 @@ const init = async () => {
       throw new Error('尚未配置访问地址')
     }
     if (isEmpty(config.rowKey)) {
-      message.error('尚未配置字段id')
-      throw new Error('尚未配置字段id')
+      message.error('尚未配置id字段')
+      throw new Error('尚未配置id字段')
     }
+
     for (let layout of tableConfig.columns) {
       const column = _.cloneDeep(defaultColumn)
       column.title = layout.displayName
@@ -1317,8 +1323,15 @@ const init = async () => {
       }
       columnRaw.push(column)
     }
-    actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
-    columnArray.value.push(actionColumn)
+    if (config.rowKey === AUTO_UUID_ROW_KEY) {
+      config.readOnly = true
+    } else {
+      if (props.actionWidth > 0) {
+        actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
+        columnArray.value.push(actionColumn)
+      }
+    }
+
     // 首列支持拖拽
     columnArray.value[0].rowDrag = tableConfig.tableDrag === '1'
 

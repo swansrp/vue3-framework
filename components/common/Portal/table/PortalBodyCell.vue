@@ -53,6 +53,15 @@
       }}
     </a-badge-ribbon>
   </template>
+  <template v-else-if="column.fieldType === FIELD_TYPE.PERCENT">
+    <a-badge-ribbon
+      :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
+      placement="start">
+      {{
+        formatPercent(record[column.dataIndex], column.referenceDict?.split(',')[0], column.referenceDict?.split(',')[1])
+      }}
+    </a-badge-ribbon>
+  </template>
   <template v-else-if="column.dataIndex === 'actionColumn'">
     <!-- (portalConfig: TableConfigType, column: ColumnType, record: any) -->
     <slot
@@ -82,7 +91,7 @@ import dayjs from 'dayjs'
 import { isNotEmpty, strLF2HtmlLF } from '@/framework/utils/common'
 import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/portal/type'
 import { dictStore } from '@/framework/store/common'
-import { formatMoney } from '@/framework/utils/formatter'
+import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const prop = defineProps<{
   column: any,

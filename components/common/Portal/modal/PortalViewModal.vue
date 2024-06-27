@@ -53,6 +53,11 @@
               formatMoney(config.modal.data[column.dataIndex], column.referenceDict?.split(',')[0], column.referenceDict?.split(',')[1])
             }}
           </template>
+          <template v-else-if="column.fieldType === FIELD_TYPE.PERCENT">
+            {{
+              formatPercent(config.modal.data[column.dataIndex], column.referenceDict?.split(',')[0], column.referenceDict?.split(',')[1])
+            }}
+          </template>
           <template v-else-if="column.fieldType === FIELD_TYPE.IMAGE">
             <a-image
               :src="config.modal.data[`${column.dataIndex}`]"
@@ -77,7 +82,7 @@ import { dictStore } from '@/framework/store/common'
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
-import { formatMoney } from '@/framework/utils/formatter'
+import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const prop = defineProps<{
   dataSource: Array<any>,

@@ -1,5 +1,6 @@
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
+export const AUTO_UUID_ROW_KEY = "auto_uuid_row_key"
 export const indexColumn = {
   title: '序号',
   dataIndex: 'index',

@@ -231,7 +231,8 @@ export enum FIELD_TYPE {
   VIDEO = '13',
   AUDIO = '14',
   FILE = '15',
-  MONEY = '16'
+  MONEY = '16',
+  PERCENT = '17'
 }
 
 export enum UPLOAD_FILE_TYPE {

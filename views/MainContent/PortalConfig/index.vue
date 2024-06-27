@@ -234,7 +234,8 @@
           label="id字段">
           <a-select
             :bordered="false"
-            :options="columnDict || []"
+            :options="[{value: AUTO_UUID_ROW_KEY, label: '自动生成ID'},
+                       ...columnDict]"
             :value="tableConfig.idColumn"
             style="width: 150px"
             @update:value=" v => {
@@ -452,6 +453,16 @@
             </a-descriptions-item>
             <a-descriptions-item
               v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.MONEY"
+              :span="1"
+              label="显示格式(精度,单位)">
+              <a-input
+                :value="columnMap.get(selectedColumnId).reference"
+                placeholder="显示格式(精度,单位)"
+                @update:value=" v => columnMap.get(selectedColumnId).reference = v"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.PERCENT"
               :span="1"
               label="显示格式(精度,单位)">
               <a-input
@@ -940,6 +951,7 @@ import { getRoleList } from '@/framework/apis/admin/rolePermission'
 import { MenuProps } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
+import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 
 
 const dict = dictStore()
