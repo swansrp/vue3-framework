@@ -18,7 +18,6 @@
 import { TableConfigType } from '@/framework/components/common/Portal/type'
 import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 
-
 const props = withDefaults(
   defineProps<{
     config: TableConfigType,
@@ -27,7 +26,6 @@ const props = withDefaults(
   {}
 )
 const {config} = toRefs(props)
-console.log('12321312313', config.value)
 const emit = defineEmits<{
   /**
    * cancel: 取消弹框
