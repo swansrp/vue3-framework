@@ -1,4 +1,4 @@
-import {FIELD_TYPE, FILTER_TYPE} from "@/framework/components/common/portal/type";
+import {FIELD_TYPE, FILTER_TYPE} from "@/framework/components/common/Portal/type";
 
 export const getRelation = (type: FIELD_TYPE | string): Array<any> => {
   switch (type) {

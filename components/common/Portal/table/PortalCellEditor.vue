@@ -136,7 +136,7 @@
 <script lang="ts" setup>
 
 import dayjs from 'dayjs'
-import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/portal/type'
+import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { doFunctions } from '@/framework/utils/common'
 
 const prop = defineProps<{

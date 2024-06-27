@@ -56,7 +56,7 @@
 <script lang="ts" setup>
 import {Ref} from 'vue'
 import {ValueLabel} from '@/framework/utils/type'
-import {FIELD_TYPE} from '@/framework/components/common/portal/type'
+import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
 import {isNotEmpty} from '@/framework/utils/common'
 

@@ -28,15 +28,15 @@
 </template>
 
 <script lang="ts" setup>
-import { createVNode, Ref } from 'vue'
-import { Modal } from 'ant-design-vue'
-import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
-import { bindAllAttach, bindReplaceBatchAttach, getAllBindList, unbindAllAttach } from '@/framework/apis/portal'
-import { PortalBindType } from '@/framework/components/common/portal/bind/type'
-import { isNotEmpty } from '@/framework/utils/common'
+import {createVNode, Ref} from 'vue'
+import {Modal} from 'ant-design-vue'
+import {ExclamationCircleOutlined} from '@ant-design/icons-vue'
+import {bindAllAttach, bindReplaceBatchAttach, getAllBindList, unbindAllAttach} from '@/framework/apis/portal'
+import {PortalBindType} from '@/framework/components/common/Portal/bind/type'
+import {isNotEmpty} from '@/framework/utils/common'
 import * as _ from 'lodash'
-import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { FILTER_TYPE } from '@/framework/components/common/portal/type'
+import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import {FILTER_TYPE} from '@/framework/components/common/Portal/type'
 
 const bindPortalRefMap = new Map<number, any>()
 const prop = defineProps<{
@@ -61,7 +61,7 @@ watch(checkedKeys, (newValue: Array<any>) => {
   } else if (!_.isEqual(newValue, oldValue)) {
     checkedKeysMap.set(activeKey.value + prop.entityId, newValue)
     bindReplaceBatchAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId, newValue)
-      .then(getBindList)
+        .then(getBindList)
   }
 })
 const activeKey = ref(0)
@@ -106,7 +106,7 @@ const bindAll = () => {
     onOk() {
       console.log(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId)
       bindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId)
-        .then(getBindList)
+          .then(getBindList)
     },
     onCancel() {
 
@@ -121,7 +121,7 @@ const unbindAll = () => {
     content: createVNode('div', {style: 'color:red;'}, '注意: 所有授权信息将被清除'),
     onOk() {
       unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId)
-        .then(getBindList)
+          .then(getBindList)
     },
     onCancel() {
 

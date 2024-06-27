@@ -399,7 +399,7 @@ import {
   QuerySortType,
   QueryType,
   TableConfigType
-} from '@/framework/components/common/portal/type'
+} from '@/framework/components/common/Portal/type'
 import { BarsOutlined, CaretRightOutlined, ExclamationCircleOutlined, FilterOutlined } from '@ant-design/icons-vue'
 import {
   doFunctions,
@@ -417,7 +417,7 @@ import {
   defaultColumn,
   getDefaultFilterType,
   indexColumn
-} from '@/framework/components/common/portal/constant'
+} from '@/framework/components/common/Portal/constant'
 import dayjs from 'dayjs'
 import { AUTO } from '@/framework/utils/constant'
 import { createVNode, Ref } from 'vue'
@@ -427,7 +427,7 @@ import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { PortalBindType } from '@/framework/components/common/portal/bind/type'
+import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 

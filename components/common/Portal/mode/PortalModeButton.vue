@@ -18,7 +18,7 @@
 </template>
 
 <script lang="ts" setup>
-import {TableConfigType} from '@/framework/components/common/portal/type'
+import {TableConfigType} from '@/framework/components/common/Portal/type'
 import {BarsOutlined, ClusterOutlined, TableOutlined} from '@ant-design/icons-vue'
 
 const prop = defineProps<{

@@ -1,7 +1,7 @@
 import {request, upload} from '@/framework/network/request'
 import {apiType, baseDomain, buildGetApiByType, buildPostApiByType} from '@/framework/apis'
 import {Ref} from 'vue'
-import {UPLOAD_FILE_TYPE} from '@/framework/components/common/portal/type'
+import {UPLOAD_FILE_TYPE} from '@/framework/components/common/Portal/type'
 
 const buildGetApi = (url: string, domain = baseDomain) => buildGetApiByType(url, apiType.common, domain)
 const buildPostApi = (url: string, domain = baseDomain) => buildPostApiByType(url, apiType.common, domain)

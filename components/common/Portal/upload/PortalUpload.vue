@@ -77,7 +77,7 @@
 
 <script lang="ts" setup>
 import { CloseCircleOutlined, InboxOutlined } from '@ant-design/icons-vue'
-import { UploadModalType } from '@/framework/components/common/portal/type'
+import { UploadModalType } from '@/framework/components/common/Portal/type'
 import { message, UploadChangeParam } from 'ant-design-vue'
 import { AxiosProgressEvent } from 'axios'
 import { isNumber } from 'lodash'

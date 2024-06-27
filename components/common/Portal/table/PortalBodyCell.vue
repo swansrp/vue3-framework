@@ -89,7 +89,7 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
 import { isNotEmpty, strLF2HtmlLF } from '@/framework/utils/common'
-import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/portal/type'
+import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { dictStore } from '@/framework/store/common'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 

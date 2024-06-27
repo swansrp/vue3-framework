@@ -1,4 +1,4 @@
-import { FIELD_TYPE } from '@/framework/components/common/portal/type'
+import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
 export enum UPLOAD_FILE_TYPE {
   DOC = '1',

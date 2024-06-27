@@ -1,4 +1,4 @@
-import {QuerySortType} from '@/framework/components/common/portal/type'
+import {QuerySortType} from '@/framework/components/common/Portal/type'
 
 export type PortalBindType = {
     /**

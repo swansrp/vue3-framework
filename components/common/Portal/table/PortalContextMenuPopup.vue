@@ -62,7 +62,7 @@ import {
   SaveOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
-import { TableConfigType } from '@/framework/components/common/portal/type'
+import { TableConfigType } from '@/framework/components/common/Portal/type'
 
 const prop = defineProps<{
   args: any

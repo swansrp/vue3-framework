@@ -146,7 +146,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/portal/type'
+import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { isNotEmpty, log, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { FormInstance } from 'ant-design-vue'

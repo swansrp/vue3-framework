@@ -83,7 +83,7 @@
 
 <script lang="ts" setup>
 import {CellRenderArgs} from '@surely-vue/table'
-import {ColumnType, TableConfigType} from '@/framework/components/common/portal/type'
+import {ColumnType, TableConfigType} from '@/framework/components/common/Portal/type'
 import {LockOutlined, UnlockOutlined} from '@ant-design/icons-vue'
 
 const prop = defineProps<{

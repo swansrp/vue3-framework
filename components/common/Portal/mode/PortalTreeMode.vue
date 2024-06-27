@@ -30,7 +30,7 @@
 </template>
 
 <script lang="ts" setup>
-import {TableConfigType} from '@/framework/components/common/portal/type'
+import {TableConfigType} from '@/framework/components/common/Portal/type'
 import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
 import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
 
