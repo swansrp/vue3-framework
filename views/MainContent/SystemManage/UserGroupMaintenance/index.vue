@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <a-layout style="height: 100%">
+    <a-layout style="height: 100%;background-color: #fff">
       <a-layout-sider class="user-group-category-list-wrapper" width="280" theme="light">
         <a-list :data-source="userGroupCategory" bordered class="user-group-category-list" size="small">
           <template #renderItem="{ item, index }">
@@ -55,7 +55,7 @@
           <a-button type="primary" @click="addUserGroupTreeRootNode">添加根节点</a-button>
         </div>
       </a-layout-sider>
-      <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper">
+      <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper" style="padding: 20px">
         <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag" :need-default-permission-select="true" />
       </a-layout-content>
     </a-layout>

@@ -3,14 +3,14 @@
     v-model:staffListValue="staffListValue" v-model:departmentListValue="departmentListValue"
     is-multiple :width="350" :staff-max-tag-count="1" layout-mode="vertical" />
   <a-form-item label="用户权限" v-if="needDefaultPermissionSelect">
-    <a-select v-model:value="currentPermission" placeholder="请选择权限">
+    <a-select v-model:value="currentPermission" placeholder="请选择权限" style="width: 285px">
       <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
         {{ item.label }}
       </a-select-option>
     </a-select>
   </a-form-item>
   <a-button
-    style="width: 200px;margin-bottom: 10px;margin-left: 70px;display: block;" type="primary"
+    style="width: 285px;margin-bottom: 10px;margin-left: 70px;display: block;" type="primary"
     @click="handleAddUser">绑定
   </a-button>
   <a-card size="small" title="已绑定用户">

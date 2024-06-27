@@ -41,6 +41,8 @@
 }
 
 .user-name-wrapper {
-    padding: 20px;
+    margin: 10px 0 0 15px;
+    border-radius: 8px;
     box-sizing: border-box;
+    box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
 }
