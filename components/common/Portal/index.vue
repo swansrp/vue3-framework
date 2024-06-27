@@ -1268,7 +1268,9 @@ const init = async () => {
       column.dataIndex = layout.property
       column.dbField = layout.dbField
       column.key = layout.property
-      column.width = layout.width !== 0 ? layout.width : 140
+      if (layout.width !== 0) {
+        column.width = layout.width || 140
+      }
       column.fixed = layout.fixed === '1'
       column.fieldType = layout.fieldType
       column.referenceDict = layout.reference || layout.entity
