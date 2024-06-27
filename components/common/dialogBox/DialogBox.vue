@@ -72,8 +72,7 @@ watch(() => props.width, value => {
 }
 
 .box-modal {
-  margin: 0 auto;
-  margin-top: -30px;
+  margin: -30px auto 0;
 }
 
 .title {
