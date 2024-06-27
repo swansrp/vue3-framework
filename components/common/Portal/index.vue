@@ -163,7 +163,7 @@
                   <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
                     <div v-if="index === 1">总计</div>
                     <div v-else-if="index === columns.length"></div>
-                    <div v-else> {{ dataSummary[`${columns[index - 1].dataIndex}`] || '--' }}</div>
+                    <div v-else> {{ dataSummary[`${ columns[index - 1].dataIndex }`] || '--' }}</div>
                   </s-table-summary-cell>
                 </s-table-summary-row>
               </template>
@@ -199,7 +199,7 @@
                 <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'" />
               </template>
               <template
-                #menuPopup="{ column, hidePopup, filter: { setSelectedKeys, selectedKeysRef, confirm, clearFilters } }">
+                #menuPopup="{ column }">
                 <!-- region 列显示选择 -->
                 <div v-if="column.dataIndex === 'index'">
                   <div class="menu-popup-container">
@@ -224,20 +224,25 @@
                   </div>
                 </div>
                 <!-- endregion -->
-                <!-- region 列搜索 -->
-                <div v-else-if="column.filterAble">
-                  <portal-column-condition
-                    :clearFilters="clearFilters"
-                    :column="column"
-                    :confirm="confirm"
-                    :hidePopup="hidePopup"
-                    :selectedKeysRef="selectedKeysRef"
-                    :setSelectedKeys="setSelectedKeys"
-                    @handle-search="handleSearch"
-                    @handle-reset="handleReset"
-                  />
-                </div>
-                <!-- endregion -->
+              </template>
+              <!-- endregion -->
+              <!-- region 列搜索 -->
+              <template #customFilterIcon="{ filtered }">
+                <search-outlined :style="{ color: filtered ? '#108ee9' : undefined }" />
+              </template>
+              <template
+                #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
+              >
+                <portal-column-condition
+                  ref="filterDropdownRef"
+                  :clearFilters="clearFilters"
+                  :column="column"
+                  :confirm="confirm"
+                  :selectedKeysRef="selectedKeys"
+                  :setSelectedKeys="setSelectedKeys"
+                  @handle-search="handleSearch"
+                  @handle-reset="handleReset"
+                />
               </template>
               <!-- endregion -->
               <!-- region 拖拽显示样式 -->
@@ -388,8 +393,8 @@ import {
   updateOrder,
   updateTreePid
 } from '@/framework/apis/portal'
-import { getPortalConfig } from '@/framework/apis/portal/config'
-import { dictStore } from '@/framework/store/common'
+import {getPortalConfig} from '@/framework/apis/portal/config'
+import {dictStore} from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
   ColumnType,
@@ -400,7 +405,13 @@ import {
   QueryType,
   TableConfigType
 } from '@/framework/components/common/Portal/type'
-import { BarsOutlined, CaretRightOutlined, ExclamationCircleOutlined, FilterOutlined } from '@ant-design/icons-vue'
+import {
+  BarsOutlined,
+  CaretRightOutlined,
+  ExclamationCircleOutlined,
+  FilterOutlined,
+  SearchOutlined
+} from '@ant-design/icons-vue'
 import {
   doFunctions,
   getAllParentNodes,
@@ -419,15 +430,15 @@ import {
   indexColumn
 } from '@/framework/components/common/Portal/constant'
 import dayjs from 'dayjs'
-import { AUTO } from '@/framework/utils/constant'
-import { createVNode, Ref } from 'vue'
-import { message, Modal } from 'ant-design-vue'
-import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
-import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
-import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
-import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
-import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
+import {AUTO} from '@/framework/utils/constant'
+import {createVNode, Ref} from 'vue'
+import {message, Modal} from 'ant-design-vue'
+import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
+import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
+import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
+import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
+import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import {PortalBindType} from '@/framework/components/common/Portal/bind/type'
 import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 
@@ -450,40 +461,40 @@ import PortalAssociationModal from '@/framework/components/common/Portal/modal/P
  * @param expanded 是否有展开按钮
  */
 const props = withDefaults(defineProps<{
-    tableId: string,
-    readOnly?: boolean,
-    actionWidth?: number,
-    advanceCondition?: ConditionListType,
-    defaultSortColumn?: Array<QuerySortType>,
-    rowAllowEdit?: (record: any) => boolean,
-    rowAllowDelete?: (record: any) => boolean,
-    query?: (url: string, query: QueryType) => Promise<any>,
-    treeMode?: boolean,
-    listMode?: boolean,
-    bindTabs?: Array<PortalBindType>,
-    treeCheckAble?: boolean,
-    selectedTreeData?: Array<any>,
-    checkStrictly?: boolean
-    bindDefaultValue?: any
-    expanded?: boolean
-  }>(),
-  {
-    readOnly: false,
-    actionWidth: 150,
-    advanceCondition: undefined,
-    defaultSortColumn: undefined,
-    rowAllowEdit: () => true,
-    rowAllowDelete: () => true,
-    query: undefined,
-    treeMode: false,
-    listMode: false,
-    bindTabs: undefined,
-    treeCheckAble: false,
-    selectedTreeData: undefined,
-    checkStrictly: false,
-    bindDefaultValue: undefined,
-    expanded: false
-  })
+      tableId: string,
+      readOnly?: boolean,
+      actionWidth?: number,
+      advanceCondition?: ConditionListType,
+      defaultSortColumn?: Array<QuerySortType>,
+      rowAllowEdit?: (record: any) => boolean,
+      rowAllowDelete?: (record: any) => boolean,
+      query?: (url: string, query: QueryType) => Promise<any>,
+      treeMode?: boolean,
+      listMode?: boolean,
+      bindTabs?: Array<PortalBindType>,
+      treeCheckAble?: boolean,
+      selectedTreeData?: Array<any>,
+      checkStrictly?: boolean
+      bindDefaultValue?: any
+      expanded?: boolean
+    }>(),
+    {
+      readOnly: false,
+      actionWidth: 150,
+      advanceCondition: undefined,
+      defaultSortColumn: undefined,
+      rowAllowEdit: () => true,
+      rowAllowDelete: () => true,
+      query: undefined,
+      treeMode: false,
+      listMode: false,
+      bindTabs: undefined,
+      treeCheckAble: false,
+      selectedTreeData: undefined,
+      checkStrictly: false,
+      bindDefaultValue: undefined,
+      expanded: false
+    })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
 }>()
@@ -1084,27 +1095,24 @@ const initQueryCondition = () => {
   querySortMap.clear()
 }
 
-const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, hidePopup: any, column: any) => {
+const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, column: any) => {
   const condition = {
     property: dataIndex as string,
     value: selectedKeys as Array<any>,
     relation: getDefaultFilterType(column.fieldType, column.filterStrict)
   } as ConditionListType
-  console.log(column, condition)
   if (isNotEmpty(selectedKeys)) {
     queryConditionMap.set(dataIndex as string, condition)
   } else {
     queryConditionMap.delete(dataIndex as string)
   }
   confirm()
-  hidePopup()
   queryData()
 }
 
-const handleReset = (clearFilters: any, dataIndex: any, hidePopup: any) => {
+const handleReset = (clearFilters: any, dataIndex: any) => {
   queryConditionMap.delete(dataIndex as string)
   clearFilters()
-  hidePopup()
   queryData()
 }
 const selectedRowKeys = ref<Array<string>>([])
@@ -1121,10 +1129,10 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     querySortMap.clear()
     if (isNotEmpty(column.order)) {
       querySortMap.set(column.columnKey,
-        {
-          property: column.column.dbField ? column.column.dbField : column.columnKey,
-          type: (column.order === 'ascend' ? 0 : 1)
-        })
+          {
+            property: column.column.dbField ? column.column.dbField : column.columnKey,
+            type: (column.order === 'ascend' ? 0 : 1)
+          })
     }
     queryData()
   }
@@ -1276,7 +1284,7 @@ const init = async () => {
       column.referenceDict = layout.reference || layout.entity
       column.referenceEntityField = layout.entityField
       column.contentAlign = layout.align
-      column.filterAble = layout.filterAble === '1'
+      column.customFilterDropdown = layout.filterAble === '1'
       column.sorter = layout.sortAble === '1'
       column.addShow = layout.addShow === '1'
       if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow

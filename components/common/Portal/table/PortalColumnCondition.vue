@@ -42,14 +42,14 @@
         :value="selectedKeysRef[0]"
         style="width: 170px; margin-bottom: 8px; display: block"
         @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"
-        @press-enter="handleSearch(selectedKeysRef, confirm, column.key, hidePopup, column)"
+        @press-enter="handleSearch(selectedKeysRef, confirm, column.key, column)"
       />
     </div>
     <a-button
       size="small"
       style="width: 90px; margin-right: 8px"
       type="primary"
-      @click="handleSearch(selectedKeysRef, confirm, column.key, hidePopup, column)"
+      @click="handleSearch(selectedKeysRef, confirm, column.key, column)"
     >
       <template #icon>
         <search-outlined />
@@ -58,7 +58,7 @@
     </a-button>
     <a-button
       size="small" style="width: 90px"
-      @click="handleReset(clearFilters, column.dataIndex, hidePopup)">
+      @click="handleReset(clearFilters, column.dataIndex)">
       重置
     </a-button>
   </div>
@@ -70,26 +70,25 @@ import {LockOutlined, SearchOutlined, UnlockOutlined} from '@ant-design/icons-vu
 
 const prop = defineProps<{
   column: any,
-  hidePopup: any,
   setSelectedKeys: any,
   selectedKeysRef: any,
   confirm: any,
   clearFilters: any
 }>()
 const emit = defineEmits<{
-  (e: 'handleSearch', selectedKeys: any, confirm: any, dataIndex: any, hidePopup: any, column: any): void
-  (e: 'handleReset', clearFilters: any, dataIndex: any, hidePopup: any): void
+  (e: 'handleSearch', selectedKeys: any, confirm: any, dataIndex: any, column: any): void
+  (e: 'handleReset', clearFilters: any, dataIndex: any): void
   (e: 'update:column', column: any): void
 }>()
-const {column, hidePopup, setSelectedKeys, selectedKeysRef, confirm, clearFilters} = toRefs(prop)
+const {column, setSelectedKeys, selectedKeysRef, confirm, clearFilters} = toRefs(prop)
 watch(column, (column) => {
   emit('update:column', column)
 }, {deep: true})
-const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, hidePopup: any, column: any) => {
-  emit('handleSearch', selectedKeys, confirm, dataIndex, hidePopup, column)
+const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, column: any) => {
+  emit('handleSearch', selectedKeys, confirm, dataIndex, column)
 }
-const handleReset = (clearFilters: any, dataIndex: any, hidePopup: any) => {
-  emit('handleReset', clearFilters, dataIndex, hidePopup)
+const handleReset = (clearFilters: any, dataIndex: any) => {
+  emit('handleReset', clearFilters, dataIndex)
 }
 </script>
 
