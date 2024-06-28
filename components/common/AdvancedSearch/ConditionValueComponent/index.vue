@@ -24,7 +24,6 @@
       class="full-width"
       placeholder="请选择属性值"
       @change="$emit('update:conditionContentValue', value)" />
-
     <a-range-picker
       v-else-if="type === FIELD_TYPE.DATE"
       v-model:value="valueArray"
@@ -78,19 +77,14 @@ const getOption = () => {
   }
 }
 
-
 watch(() => props.type, getOption, {immediate: true})
 watch(() => props.reference, getOption, {immediate: true})
 watch(() => props.conditionContentValue, () => {
-  // console.log('props.conditionContentValue', props.conditionContentValue)
   if (type.value === FIELD_TYPE.DATE || type.value === FIELD_TYPE.DATETIME) {
     valueArray.value = props.conditionContentValue
   } else {
-    if (isNotEmpty(props.conditionContentValue)) {
-      value.value = props.conditionContentValue![0]
-    } else {
-      value.value = undefined
-    }
+    if (isNotEmpty(props.conditionContentValue)) value.value = props.conditionContentValue![0]
+    else value.value = undefined
   }
 }, {immediate: true})
 
