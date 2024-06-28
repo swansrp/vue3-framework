@@ -34,10 +34,12 @@
           </template>
         </a-button>
       </a-tooltip>
+      <slot name="left-btns"></slot>
     </div>
     <!-- endregion 左侧按钮区 -->
     <!-- region 右侧按钮区 -->
     <div>
+      <slot name="right-btns"></slot>
       <a-tooltip placement="top">
         <template #title>
           <span>高级查询</span>

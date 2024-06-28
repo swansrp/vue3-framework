@@ -98,7 +98,14 @@
           @show-tree-menu="showTreeMenu"
           @add-row="addRow"
           @save-all="saveAll"
-          @open-upload-modal="openUploadModal" />
+          @open-upload-modal="openUploadModal">
+          <template #left-btns>
+            <slot name="left-btns"></slot>
+          </template>
+          <template #right-btns>
+            <slot name="right-btns"></slot>
+          </template>
+        </portal-button-action>
         <!-- endregion -->
         <!-- region 表格区 -->
         <div ref="portalConfigSpace" class="portal-table-space">
@@ -1386,6 +1393,7 @@ watch(() => props.tableId, value => {
   config.tableId = value
   refresh()
 })
+
 defineExpose({queryData, queryTreeData, queryCondition, getRowSelection, getConfig})
 </script>
 <style lang="less" scoped>
