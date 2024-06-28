@@ -53,7 +53,8 @@
                 unCheckedValue="0"
               />
               <a-select
-                v-else-if="column.fieldType === FIELD_TYPE.SELECT"
+                v-else-if="column.fieldType === FIELD_TYPE.SELECT||
+                  column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
                 :bordered="false"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                 :options="column.referenceDictOption || []"

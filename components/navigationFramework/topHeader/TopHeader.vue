@@ -1,7 +1,7 @@
 <template>
   <div id="top">
-    <div class="top_title" :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'">
-      <img src="../../../../../public/icon.png" alt="公司标志" v-if="tabStore.isNeedLeftNav" />
+    <div :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'" class="top_title">
+      <img v-if="tabStore.isNeedLeftNav" alt="公司标志" src="../../../../../public/icon.png" style="margin-right: 5px" />
       {{ projectName }}
     </div>
     <top-nav class="top_nav" />
@@ -26,8 +26,10 @@
               </a-menu-item>
             </a-menu>
           </template>
-          <a-button type="text" shape="circle" size="large">
-            <template #icon><SettingOutlined /></template>
+          <a-button shape="circle" size="large" type="text">
+            <template #icon>
+              <SettingOutlined />
+            </template>
           </a-button>
         </a-dropdown>
       </div>
@@ -36,22 +38,22 @@
 </template>
 
 <script lang="ts" setup>
-import {reLogin, logoff} from "@/framework/apis/login/login"
-import {useUserStore} from "@/framework/store/user"
-import {localStorageMethods} from "@/framework/utils/common"
-import {title as projectName} from '../../../../../package.json'
-import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from "@/framework/utils/constant"
-import { UserOutlined, SettingOutlined, RedoOutlined, PoweroffOutlined } from "@ant-design/icons-vue"
+import { logoff, reLogin } from "@/framework/apis/login/login"
+import { useUserStore } from "@/framework/store/user"
+import { localStorageMethods } from "@/framework/utils/common"
+import { title as projectName } from '../../../../../package.json'
+import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from "@/framework/utils/constant"
+import { PoweroffOutlined, RedoOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons-vue"
 import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
-import {useTabStore} from "@/framework/store/nav";
+import { useTabStore } from "@/framework/store/nav";
 import pinia from "@/framework/store";
-import {afterLogin} from "@/framework/network/login";
+import { afterLogin } from "@/framework/network/login";
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
 const router = useRouter()
 
-const handleMenuClick = (e:any) => {
+const handleMenuClick = (e: any) => {
   if (e.key === '1') {
     const refreshToken = localStorageMethods.getLocalStorage(REFRESH_TOKEN)
     reLogin(refreshToken).then(res => {
@@ -71,8 +73,9 @@ const handleMenuClick = (e:any) => {
   height: 50px;
   display: flex;
   position: relative;
-    overflow: hidden;
+  overflow: hidden;
 }
+
 .top_title {
   width: 250px;
   height: 100%;
@@ -83,7 +86,7 @@ const handleMenuClick = (e:any) => {
   font-weight: bold;
   text-align: center;
   box-sizing: border-box;
-  color: rgb(0,21,41);
+  color: rgb(0, 21, 41);
   background-color: #fff;
   flex: 0 0 auto;
   display: flex;
@@ -92,20 +95,25 @@ const handleMenuClick = (e:any) => {
   position: relative;
   z-index: 999;
 }
+
 .show-left-nav {
   background-color: #fff;
 }
+
 .hide-left-nav {
   background-color: #1890ff;
   box-shadow: none;
 }
+
 .top_title img {
   height: 20px;
   width: 20px;
 }
+
 .top_nav {
   flex: 1 0 auto;
 }
+
 .top_user {
   width: 190px;
   height: 100%;
@@ -117,6 +125,7 @@ const handleMenuClick = (e:any) => {
   padding-left: 10px;
   flex: 0 0 auto;
 }
+
 .top_user_name {
   margin-left: 10px;
   width: 100px;
@@ -124,6 +133,7 @@ const handleMenuClick = (e:any) => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 :deep(.top_user_setting .ant-btn-circle) {
   margin-right: 2px;
 }

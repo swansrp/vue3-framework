@@ -1324,7 +1324,10 @@ const init = async () => {
       column.max = layout.max
       column.defaultValue = layout.defaultValue
       if (isNotEmpty(column.referenceDict)) {
-        if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
+        if (column.fieldType === FIELD_TYPE.SELECT ||
+          column.fieldType === FIELD_TYPE.TREE ||
+          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           dictColumnArray.push(column)
           column.referenceDictOption = await dict.getDict(column.referenceDict)
         } else {

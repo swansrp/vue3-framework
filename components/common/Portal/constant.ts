@@ -81,6 +81,10 @@ export const getDefaultFilterType = (fieldType: FIELD_TYPE, strict = false) => {
       return FILTER_TYPE.BETWEEN
     case FIELD_TYPE.DATETIME:
       return FILTER_TYPE.BETWEEN
+    case FIELD_TYPE.SELECT_MULTI_IN_ONE:
+      return FILTER_TYPE.CONTAIN_IN
+    case FIELD_TYPE.TREE_MULTI_IN_ONE:
+      return FILTER_TYPE.CONTAIN_IN
     default:
       return strict ? FILTER_TYPE.EQUAL : FILTER_TYPE.LIKE
   }

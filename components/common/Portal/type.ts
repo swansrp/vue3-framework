@@ -214,6 +214,8 @@ export enum FILTER_TYPE {
   NOT_IN,
   BETWEEN,
   NOT_BETWEEN,
+  CONTAIN,
+  CONTAIN_IN
 }
 
 export enum FIELD_TYPE {
@@ -234,7 +236,9 @@ export enum FIELD_TYPE {
   AUDIO = '14',
   FILE = '15',
   MONEY = '16',
-  PERCENT = '17'
+  PERCENT = '17',
+  SELECT_MULTI_IN_ONE = '18',
+  TREE_MULTI_IN_ONE = '19',
 }
 
 export enum UPLOAD_FILE_TYPE {

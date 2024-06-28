@@ -322,7 +322,7 @@
             title: '字段列表(拖动调整顺序)',
             align: 'center',
             dataIndex: 'displayName',
-            tooltip: {placement: 'topLeft', mouseEnterDelay: 0.5},
+            tooltip: {placement: 'left', mouseEnterDelay: 1},
             rowDrag: !columnFiltered,
             showMenu: true
           }]"
@@ -473,11 +473,17 @@
             </a-descriptions-item>
             <a-descriptions-item
               v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT ||
-                columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
+                columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY ||
+                columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE ||
+                columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+                columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
               :span="1"
               label="相关引用">
               <a-select
-                v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT"
+                v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT ||
+                  columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE ||
+                  columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+                  columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
                 :filter-option="(input: string, option: any) => {
                   return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0}"
                 :options="sysDictList"

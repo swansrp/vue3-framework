@@ -29,7 +29,9 @@
               disabled
               unCheckedValue="0" />
           </template>
-          <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
+          <template
+            v-else-if="column.fieldType === FIELD_TYPE.SELECT||
+              column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE">
             {{ dict.getLabel(column.referenceDict, config.modal.data[`${column.dataIndex}`]) }}
           </template>
           <template v-else-if="column.fieldType === FIELD_TYPE.DATE">

@@ -1,7 +1,8 @@
 <template>
   <div class="filter-column">
     <a-select
-      v-if="column.fieldType === FIELD_TYPE.SELECT"
+      v-if="column.fieldType === FIELD_TYPE.SELECT||
+        column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
       :filterOption="filterOption"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       :options="column.referenceDictOption"

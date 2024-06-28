@@ -48,7 +48,9 @@
       />
     </div>
   </template>
-  <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
+  <template
+    v-else-if="column.fieldType === FIELD_TYPE.SELECT||
+      column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE">
     <a-select
       :ref="editorRef"
       :bordered="false"

@@ -13,7 +13,9 @@
         unCheckedValue="0" />
     </a-badge-ribbon>
   </template>
-  <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
+  <template
+    v-else-if="column.fieldType === FIELD_TYPE.SELECT ||
+      column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE">
     <a-badge-ribbon
       :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
       placement="start">
