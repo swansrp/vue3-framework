@@ -163,7 +163,7 @@
                   <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
                     <div v-if="index === 1">总计</div>
                     <div v-else-if="index === columns.length"></div>
-                    <div v-else> {{ dataSummary[`${ columns[index - 1].dataIndex }`] || '--' }}</div>
+                    <div v-else> {{ dataSummary[`${columns[index - 1].dataIndex}`] || '--' }}</div>
                   </s-table-summary-cell>
                 </s-table-summary-row>
               </template>
@@ -240,8 +240,7 @@
                   :confirm="confirm"
                   :selectedKeysRef="selectedKeys"
                   :setSelectedKeys="setSelectedKeys"
-                  @handle-search="handleSearch"
-                  @handle-reset="handleReset"
+                  @handle-search-condition-changed="handleSearchConditionChanged"
                 />
               </template>
               <!-- endregion -->
@@ -393,8 +392,8 @@ import {
   updateOrder,
   updateTreePid
 } from '@/framework/apis/portal'
-import {getPortalConfig} from '@/framework/apis/portal/config'
-import {dictStore} from '@/framework/store/common'
+import { getPortalConfig } from '@/framework/apis/portal/config'
+import { dictStore } from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
   ColumnType,
@@ -430,15 +429,15 @@ import {
   indexColumn
 } from '@/framework/components/common/Portal/constant'
 import dayjs from 'dayjs'
-import {AUTO} from '@/framework/utils/constant'
-import {createVNode, Ref} from 'vue'
-import {message, Modal} from 'ant-design-vue'
-import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
-import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
-import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
-import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
-import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import {PortalBindType} from '@/framework/components/common/Portal/bind/type'
+import { AUTO } from '@/framework/utils/constant'
+import { createVNode, Ref } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 
@@ -461,40 +460,40 @@ import PortalAssociationModal from '@/framework/components/common/Portal/modal/P
  * @param expanded 是否有展开按钮
  */
 const props = withDefaults(defineProps<{
-      tableId: string,
-      readOnly?: boolean,
-      actionWidth?: number,
-      advanceCondition?: ConditionListType,
-      defaultSortColumn?: Array<QuerySortType>,
-      rowAllowEdit?: (record: any) => boolean,
-      rowAllowDelete?: (record: any) => boolean,
-      query?: (url: string, query: QueryType) => Promise<any>,
-      treeMode?: boolean,
-      listMode?: boolean,
-      bindTabs?: Array<PortalBindType>,
-      treeCheckAble?: boolean,
-      selectedTreeData?: Array<any>,
-      checkStrictly?: boolean
-      bindDefaultValue?: any
-      expanded?: boolean
-    }>(),
-    {
-      readOnly: false,
-      actionWidth: 150,
-      advanceCondition: undefined,
-      defaultSortColumn: undefined,
-      rowAllowEdit: () => true,
-      rowAllowDelete: () => true,
-      query: undefined,
-      treeMode: false,
-      listMode: false,
-      bindTabs: undefined,
-      treeCheckAble: false,
-      selectedTreeData: undefined,
-      checkStrictly: false,
-      bindDefaultValue: undefined,
-      expanded: false
-    })
+    tableId: string,
+    readOnly?: boolean,
+    actionWidth?: number,
+    advanceCondition?: ConditionListType,
+    defaultSortColumn?: Array<QuerySortType>,
+    rowAllowEdit?: (record: any) => boolean,
+    rowAllowDelete?: (record: any) => boolean,
+    query?: (url: string, query: QueryType) => Promise<any>,
+    treeMode?: boolean,
+    listMode?: boolean,
+    bindTabs?: Array<PortalBindType>,
+    treeCheckAble?: boolean,
+    selectedTreeData?: Array<any>,
+    checkStrictly?: boolean
+    bindDefaultValue?: any
+    expanded?: boolean
+  }>(),
+  {
+    readOnly: false,
+    actionWidth: 150,
+    advanceCondition: undefined,
+    defaultSortColumn: undefined,
+    rowAllowEdit: () => true,
+    rowAllowDelete: () => true,
+    query: undefined,
+    treeMode: false,
+    listMode: false,
+    bindTabs: undefined,
+    treeCheckAble: false,
+    selectedTreeData: undefined,
+    checkStrictly: false,
+    bindDefaultValue: undefined,
+    expanded: false
+  })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
 }>()
@@ -1031,7 +1030,7 @@ const openModal = (type: 'view' | 'add' | 'modify' | 'association' | undefined) 
 
 // region 表格搜索
 
-const query = computed(() => {
+const getQueryCondition = () => {
   const queryCondition: QueryType = {
     currentPage: config.currentPage,
     pageSize: config.pageSize
@@ -1053,6 +1052,7 @@ const query = computed(() => {
       }
     }
   }
+  console.log('queryConditionMap', queryConditionMap)
   if (isNotEmpty(queryConditionMap)) {
     if (isNotEmpty(queryCondition.condition)) {
       queryCondition.condition = {
@@ -1081,7 +1081,7 @@ const query = computed(() => {
   }
 
   return queryCondition
-})
+}
 const queryConditionMap = reactive(new Map<String, ConditionListType>())
 const querySortMap = reactive(new Map<String, QuerySortType>())
 const initQueryCondition = () => {
@@ -1095,7 +1095,7 @@ const initQueryCondition = () => {
   querySortMap.clear()
 }
 
-const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, column: any) => {
+const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, column: any) => {
   const condition = {
     property: dataIndex as string,
     value: selectedKeys as Array<any>,
@@ -1106,15 +1106,14 @@ const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any, column: a
   } else {
     queryConditionMap.delete(dataIndex as string)
   }
-  confirm()
-  queryData()
 }
 
-const handleReset = (clearFilters: any, dataIndex: any) => {
-  queryConditionMap.delete(dataIndex as string)
-  clearFilters()
-  queryData()
+const onFilterDropdownOpenChange = (visible: boolean) => {
+  if (!visible) {
+    queryData()
+  }
 }
+
 const selectedRowKeys = ref<Array<string>>([])
 const onSelectChange = (changableRowKeys: string[]) => {
   console.log('selectedRowKeys changed: ', changableRowKeys)
@@ -1129,10 +1128,10 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     querySortMap.clear()
     if (isNotEmpty(column.order)) {
       querySortMap.set(column.columnKey,
-          {
-            property: column.column.dbField ? column.column.dbField : column.columnKey,
-            type: (column.order === 'ascend' ? 0 : 1)
-          })
+        {
+          property: column.column.dbField ? column.column.dbField : column.columnKey,
+          type: (column.order === 'ascend' ? 0 : 1)
+        })
     }
     queryData()
   }
@@ -1155,7 +1154,7 @@ const getAdvancedCondition = (condition: ConditionType) => {
 
 //region 常用功能函数
 const queryCondition = () => {
-  return query.value
+  return getQueryCondition()
 }
 const getConfig = () => {
   return config
@@ -1201,10 +1200,11 @@ const queryDataAsync = async () => {
     }
     return data
   }
+  console.log(getQueryCondition())
   if (props.query) {
-    return await props.query(config.url, query.value).then(resolve)
+    return await props.query(config.url, getQueryCondition()).then(resolve)
   } else {
-    return await advancedQuery(config.url, query.value).then(resolve)
+    return await advancedQuery(config.url, getQueryCondition()).then(resolve)
   }
 }
 /**
@@ -1217,7 +1217,7 @@ const paginationChange = () => {
  * 导出
  */
 const download = () => {
-  exportData(config.url, config.tableId, query.value, config.title + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
+  exportData(config.url, config.tableId, getQueryCondition(), config.title + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
 }
 /**
  * 刷新
@@ -1284,7 +1284,10 @@ const init = async () => {
       column.referenceDict = layout.reference || layout.entity
       column.referenceEntityField = layout.entityField
       column.contentAlign = layout.align
-      column.customFilterDropdown = layout.filterAble === '1'
+      if (layout.filterAble === '1') {
+        column.customFilterDropdown = true
+        column.onFilterDropdownOpenChange = onFilterDropdownOpenChange
+      }
       column.sorter = layout.sortAble === '1'
       column.addShow = layout.addShow === '1'
       if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow

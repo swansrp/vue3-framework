@@ -52,7 +52,7 @@ export const defaultColumn = {
   rowDrag: false,
   editable: 'cellEditorSlot',
   referenceDictOption: [] as Array<any>,
-  tooltip: {placement: 'topLeft', mouseEnterDelay: 1, overlayStyle: {}, popupStyle: {}},
+  tooltip: {placement: 'rightBottom', mouseEnterDelay: 1, overlayStyle: {}, popupStyle: {}},
   filterAble: false,
   filterStrict: true,
   sorter: false,

@@ -11,7 +11,7 @@ export const deletePortalConfig = (id: any) => post(buildPostApi('/config/delete
 export const getPortalConfig = (name: string, roleId?: any) => get(buildGetApi('/config'), {
   name,
   roleId
-}) as Promise<any>
+}, {}, false, false) as Promise<any>
 
 export const updatePortalConfig = (portalConfig: any, silent: boolean) => post(buildPostApi('/config'), undefined, portalConfig, !silent, !silent) as Promise<any>
 

@@ -123,6 +123,8 @@ export type ColumnType = {
   showMenu: 'hover' | boolean
   // 下拉筛选器
   customFilterDropdown: boolean,
+  // 筛选器状态响应
+  onFilterDropdownOpenChange: any,
   // endregion
 
 
