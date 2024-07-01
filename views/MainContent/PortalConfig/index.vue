@@ -538,7 +538,9 @@
                   style="width: 150px"
                   @update:value=" v => {
                     columnMap.get(selectedColumnId).dbField = v
-                    columnMap.get(selectedColumnId).editAble = '1'
+                    if(columnMap.get(selectedColumnId).enable === '1') {
+                      columnMap.get(selectedColumnId).editAble = '1'
+                    }
                     saveTableColumn()
                   }"
                 />
