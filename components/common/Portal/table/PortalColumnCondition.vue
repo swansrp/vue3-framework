@@ -6,7 +6,7 @@
       :filterOption="filterOption"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       :options="column.referenceDictOption"
-      :placeholder="`选择 ${column.title}`"
+      :placeholder="'选择' + strRemoveLF(column.title)"
       :value="selectedKeysRef"
       mode="multiple"
       style="width: 188px; margin-bottom: 8px; display: block"
@@ -51,7 +51,7 @@
       <a-input
         ref="searchInput"
         v-model:value="_selectedKeysRef[0]"
-        :placeholder="(column.filterStrict ? '' : '模糊') + '搜索 ' + `${column.title}`"
+        :placeholder="(column.filterStrict ? '' : '模糊') + '搜索 ' + strRemoveLF(column.title)"
         style="width: 170px; margin-bottom: 8px; display: block"
         @change="e => handleSearchConditionChanged(e.target.value ? [e.target.value] : [], column)"
         @press-enter="handleSearch()"
@@ -80,6 +80,7 @@
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { LockOutlined, SearchOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 import { filterOption } from '@/framework/components/common/utils'
+import { strRemoveLF } from '@/framework/utils/common'
 
 const prop = defineProps<{
   column: any,

@@ -563,7 +563,9 @@ const config: TableConfigType = reactive({
   exportAble: false
 } as TableConfigType)
 watch(props, (value, old) => {
-  config.readOnly = value.readOnly
+  if (value.readOnly != old.readOnly) {
+    config.readOnly = value.readOnly
+  }
   console.debug('propsChanged', value, old)
 })
 /**
