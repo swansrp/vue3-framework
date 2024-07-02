@@ -375,7 +375,7 @@
         <div></div>
       </template>
       <AdvancedSearch
-        :columns="columnArray.filter(item => item.filterAble)"
+        :columns="columnArray.filter(item => item.customFilterDropdown)"
         @get-condition="getAdvancedCondition" />
     </a-drawer>
   </div>
@@ -1279,6 +1279,8 @@ const init = async () => {
       throw new Error('尚未配置id字段')
     }
 
+    let promiseList = []
+
     for (let layout of tableConfig.columns) {
       const column = _.cloneDeep(defaultColumn)
       column.title = layout.displayName
@@ -1331,7 +1333,8 @@ const init = async () => {
           column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
           column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           dictColumnArray.push(column)
-          column.referenceDictOption = await dict.getDict(column.referenceDict)
+          let promise = dict.getDict(column.referenceDict).then(data => column.referenceDictOption = data)
+          promiseList.push(promise)
         } else {
           column.entityCondition = JSON.parse(layout.entityCondition)
         }
@@ -1374,6 +1377,7 @@ const init = async () => {
       }
       await queryTreeData()
     }
+    await Promise.all(promiseList)
     return await queryDataAsync()
   })
 }
