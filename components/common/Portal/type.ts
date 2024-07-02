@@ -96,6 +96,8 @@ export type ColumnType = {
   contentAlign: string,
   // 列宽
   width: number,
+  // 最小列宽
+  minWidth: number,
   // 锁定列
   fixed: boolean | string,
   // 列宽调整

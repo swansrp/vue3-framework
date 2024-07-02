@@ -79,6 +79,29 @@
       ref="uploadTableConfigRef"
       :upload="importTableConfig"
       @after-confirm="getTableConfigByName(tableConfig.name)" />
+    <dialog-box
+      v-model:visible="associateDialogBox.show"
+      :title="tableConfig.displayName + '关联配置'"
+      is-full>
+      <portal
+        :action-width="0"
+        :advance-condition="{
+          andOr: '0',
+          conditionList:[
+            {
+              property: 'portalId',
+              relation: FILTER_TYPE.EQUAL,
+              value: [tableConfig.id]
+            },{
+              property: 'roleId',
+              relation: FILTER_TYPE.EQUAL,
+              value: [selectedRole]
+            }]
+        }"
+        :bind-default-value="{portalId: tableConfig.id, roleId: selectedRole}"
+        :default-sort-column="[{property:'displayOrder', type:0}]"
+        table-id="SysPortalAssociate" />
+    </dialog-box>
     <!-- region 右侧编辑栏 -->
     <div v-if="isNotEmpty(tableConfig.name)" class="table-config">
       <!-- region 表格整体配置 -->
@@ -86,6 +109,7 @@
         <template #extra>
           <a-button style="margin-right: 10px" type="primary" @click="exportTableConfig()">导出配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="uploadTableConfig()">导入配置</a-button>
+          <a-button style="margin-right: 10px" type="primary" @click="associateTableConfig()">关联配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="saveTableConfig(false)">保存</a-button>
         </template>
         <a-descriptions-item
@@ -923,7 +947,7 @@
 <script lang="ts" setup>
 import { Ref } from 'vue'
 import { isEmpty, isNotEmpty, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
-import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import { FIELD_TYPE, FILTER_TYPE } from "@/framework/components/common/Portal/type"
 import {
   bindRole,
   copyPortalConfig,
@@ -1015,7 +1039,7 @@ const getEntityConfig = (tableId: string) => {
     entityConfig.value.columns.forEach((column: { property: any; displayName: any; }) => {
       entityColumnDict.push({value: column.property, label: column.displayName} as ValueLabel)
     })
-    if (isEmpty(columnMap.get(selectedColumnId.value).entityField)) {
+    if (selectedColumnId.value && isEmpty(columnMap.get(selectedColumnId.value)?.entityField)) {
       columnMap.get(selectedColumnId.value).entityField = entityConfig.value.idColumn
     }
   })
@@ -1071,6 +1095,13 @@ const uploadTableConfig = () => {
 }
 const importTableConfig = (file: any, onUploadProgress: any) => {
   return importPortalConfig(file, onUploadProgress)
+}
+
+const associateDialogBox = reactive({
+  show: false
+})
+const associateTableConfig = () => {
+  associateDialogBox.show = true
 }
 
 const onSearch = () => {

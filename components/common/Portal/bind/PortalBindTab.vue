@@ -3,7 +3,7 @@
     v-model:active-key="activeKey"
     @change="handleTabChanged">
     <a-tab-pane
-      v-for="(item, key) in prop.bindTabs"
+      v-for="(item, key) in bindTabs"
       :key="key"
       :tab="item.title">
       <div style="height: calc(100vh - 200px);">
@@ -16,11 +16,11 @@
           :default-sort-column="bindTabs[activeKey].defaultSortColumn"
           :read-only="isReadOnly(item)"
           :table-id="item.tableId"
-          :tree-check-able="isNotEmpty(prop.entityId) && item.showBind"
+          :tree-check-able="isNotEmpty(record) && item.bindType === '2'"
           :tree-mode="item.treeMode" />
       </div>
     </a-tab-pane>
-    <template v-if="prop.bindTabs[activeKey]?.showBind" #rightExtra>
+    <template v-if="bindTabs[activeKey]?.bindType === '2'" #rightExtra>
       <a-button style="margin-right: 5px;" type="primary" @click="bindAll">绑定全部</a-button>
       <a-button type="primary" @click="unbindAll">清除全部</a-button>
     </template>
@@ -28,40 +28,42 @@
 </template>
 
 <script lang="ts" setup>
-import {createVNode, Ref} from 'vue'
-import {Modal} from 'ant-design-vue'
-import {ExclamationCircleOutlined} from '@ant-design/icons-vue'
-import {bindAllAttach, bindReplaceBatchAttach, getAllBindList, unbindAllAttach} from '@/framework/apis/portal'
-import {PortalBindType} from '@/framework/components/common/Portal/bind/type'
-import {isNotEmpty} from '@/framework/utils/common'
+import { createVNode, Ref } from 'vue'
+import { Modal } from 'ant-design-vue'
+import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
+import { bindAllAttach, bindReplaceBatchAttach, getAllBindList, unbindAllAttach } from '@/framework/apis/portal'
+import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
+import { isNotEmpty } from '@/framework/utils/common'
 import * as _ from 'lodash'
-import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import {FILTER_TYPE} from '@/framework/components/common/Portal/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
 const bindPortalRefMap = new Map<number, any>()
 const prop = defineProps<{
   entityName: string,
-  entityId?: any
-  bindTabs?: Array<PortalBindType>
+  record: any,
+  rowKey: string,
+  bindTabs: Array<PortalBindType>
 }>()
+const {record, rowKey} = toRefs(prop)
 const bindTabs: Ref<Array<PortalBindType>> = ref(prop.bindTabs || [])
 const isSelectedEntity = computed(() => {
-  return isNotEmpty(prop.entityId)
+  return isNotEmpty(record.value)
 })
 const isReadOnly = (item: any) => {
-  return ((item.showBind === true || item.treeMode !== false) && !isSelectedEntity.value)
+  return ((item.bindType === '2' || item.treeMode !== false) && !isSelectedEntity.value)
 }
 const checkedKeys: Ref<Array<any>> = ref([])
 const checkedKeysMap = new Map<string, any>()
 watch(checkedKeys, (newValue: Array<any>) => {
-  let oldValue = checkedKeysMap.get(activeKey.value + prop.entityId)
+  let oldValue = checkedKeysMap.get(activeKey.value + record.value[rowKey.value])
   console.log(oldValue !== undefined || !_.isEqual(newValue, oldValue), checkedKeysMap, newValue, activeKey.value)
   if (oldValue === undefined) {
-    checkedKeysMap.set(activeKey.value + prop.entityId, newValue)
+    checkedKeysMap.set(activeKey.value + record.value[rowKey.value], newValue)
   } else if (!_.isEqual(newValue, oldValue)) {
-    checkedKeysMap.set(activeKey.value + prop.entityId, newValue)
-    bindReplaceBatchAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId, newValue)
-        .then(getBindList)
+    checkedKeysMap.set(activeKey.value + record.value[rowKey.value], newValue)
+    bindReplaceBatchAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], newValue)
+      .then(getBindList)
   }
 })
 const activeKey = ref(0)
@@ -72,21 +74,30 @@ const bindDefaultValue = computed(() => {
   } else {
     return {}
   }
-
 })
 const refresh = (arg?: any) => {
-  if (prop.bindTabs && isNotEmpty(prop.entityId)) {
-    if (prop.bindTabs[activeKey.value].showBind) {
+  if (bindTabs.value && isNotEmpty(record.value)) {
+    console.log('refresh', bindTabs.value, record.value, rowKey.value)
+    if (bindTabs.value[activeKey.value].bindType === '2') {
       getBindList()
     } else {
-      const condition = {
-        property: prop.bindTabs[activeKey.value].bindFieldProperty,
-        relation: FILTER_TYPE.EQUAL,
-        value: [prop.entityId]
-      } as ConditionListType
-      bindCondition.value = condition
+      if (bindTabs.value[activeKey.value].bindType === '0') {
+        const condition = {
+          property: bindTabs.value[activeKey.value].bindFieldProperty,
+          relation: FILTER_TYPE.EQUAL,
+          value: [record.value[rowKey.value]]
+        } as ConditionListType
+        bindCondition.value = condition
+      } else {
+        const condition = {
+          property: bindTabs.value[activeKey.value].bindFieldProperty,
+          relation: FILTER_TYPE.EQUAL,
+          value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
+        } as ConditionListType
+        bindCondition.value = condition
+      }
       nextTick(() => {
-        if (prop.bindTabs && prop.bindTabs[activeKey.value].treeMode) {
+        if (bindTabs.value && bindTabs.value[activeKey.value].treeMode) {
           bindPortalRefMap.get(arg || activeKey.value).queryTreeData()
         } else {
           bindPortalRefMap.get(arg || activeKey.value).queryData()
@@ -104,9 +115,9 @@ const bindAll = () => {
     title: '将所有' + bindTabs.value[activeKey.value].title + '进行绑定',
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      console.log(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId)
-      bindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId)
-          .then(getBindList)
+      console.log(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value])
+      bindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value])
+        .then(getBindList)
     },
     onCancel() {
 
@@ -120,8 +131,8 @@ const unbindAll = () => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', {style: 'color:red;'}, '注意: 所有授权信息将被清除'),
     onOk() {
-      unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId)
-          .then(getBindList)
+      unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value])
+        .then(getBindList)
     },
     onCancel() {
 
@@ -130,16 +141,32 @@ const unbindAll = () => {
 }
 
 const getBindList = () => {
-  getAllBindList(prop.entityName, bindTabs.value[activeKey.value].tableId, prop.entityId).then(res => {
+  getAllBindList(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value]).then(res => {
     let rowKey = bindPortalRefMap.get(activeKey.value).getConfig().rowKey
-    checkedKeys.value = res.payload?.map((value) => {
+    checkedKeys.value = res.payload?.map((value: any) => {
       return value[rowKey]
     }) || []
   })
 }
-watch(prop, () => {
-  refresh()
-}, {immediate: true})
+watch(
+  () => record.value,
+  () => {
+    refresh()
+  },
+  {
+    deep: true,
+    immediate: true
+  })
+watch(
+  () => prop.bindTabs,
+  () => {
+    console.log('prop.bindTabs', prop.bindTabs)
+    bindTabs.value = prop.bindTabs
+  },
+  {
+    deep: true,
+    immediate: true
+  })
 </script>
 
 <style scoped>

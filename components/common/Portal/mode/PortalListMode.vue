@@ -4,7 +4,7 @@
       title: titleColumn.title,
       align: 'center',
       dataIndex: 'label',
-      tooltip: {placement: 'topLeft', mouseEnterDelay: 0.5}
+      tooltip: {placement: 'rightBottom', mouseEnterDelay: 0.5}
     }]"
     :data-source="dataSource"
     :pagination="false"
@@ -57,7 +57,9 @@
     </template>
     <template #footer>
       <div class="pagination">
-        <div><slot name="footer-action"></slot></div>
+        <div>
+          <slot name="footer-action"></slot>
+        </div>
         <div style="display: flex;">
           <a-pagination
             v-model:current="config.currentPage"
@@ -74,7 +76,9 @@
               <component :is="originalElement" v-else />
             </template>
           </a-pagination>
-          <div><slot name="end-action"></slot></div>
+          <div>
+            <slot name="end-action"></slot>
+          </div>
         </div>
       </div>
     </template>
@@ -82,9 +86,9 @@
 </template>
 
 <script lang="ts" setup>
-import {CellRenderArgs} from '@surely-vue/table'
-import {ColumnType, TableConfigType} from '@/framework/components/common/Portal/type'
-import {LockOutlined, UnlockOutlined} from '@ant-design/icons-vue'
+import { CellRenderArgs } from '@surely-vue/table'
+import { ColumnType, TableConfigType } from '@/framework/components/common/Portal/type'
+import { LockOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 
 const prop = defineProps<{
   config: TableConfigType,

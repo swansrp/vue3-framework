@@ -9,8 +9,9 @@
     @ok="() => emit('confirm')">
     <portal-bind-tab
       :bind-tabs="bindTabs"
-      :entity-id="config.modal.data[config.rowKey]"
-      :entity-name="config.tableId" />
+      :entity-name="config.tableId"
+      :record="config.modal.data"
+      :row-key="config.rowKey" />
   </a-modal>
 </template>
 
@@ -25,7 +26,8 @@ const props = withDefaults(
   }>(),
   {}
 )
-const {config} = toRefs(props)
+const {config, bindTabs} = toRefs(props)
+
 const emit = defineEmits<{
   /**
    * cancel: 取消弹框
@@ -39,11 +41,7 @@ const emit = defineEmits<{
    * confirm: 确定弹框
    */
   (e: 'confirm'): void
-  (e: 'update:config', config: TableConfigType): void
 }>()
-watch(config, (config) => {
-  emit('update:config', config)
-}, {deep: true})
 onMounted(() => {
 })
 </script>

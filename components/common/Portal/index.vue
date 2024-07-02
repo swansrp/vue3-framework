@@ -4,7 +4,7 @@
       <a-layout-sider
         v-if="layoutSiderDisplay"
         :class="[isBindTabExisted ? 'portal-tree-wrapper':'portal-tree-bind-wrapper']"
-        :width="isBindTabExisted ? '25%':'99%'"
+        :width="isBindTabExisted ? '20%':'99%'"
       >
         <div style="margin: 10px">
           <portal-tree-mode
@@ -66,8 +66,9 @@
         </div>
         <portal-bind-tab
           :bind-tabs="bindTabs"
-          :entity-id="selectedEntityId"
-          :entity-name="props.tableId" />
+          :entity-name="props.tableId"
+          :record="selectedRecord"
+          :row-key="config.rowKey" />
       </a-layout-content>
     </a-layout>
     <template v-else>
@@ -132,7 +133,8 @@
               sticky
               stripe
               summary-fixed
-              @change="handleTableChange">
+              @change="handleTableChange"
+              @row-drag-end="handleRowDragEnd">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
                 <div v-if="title.indexOf('\n') !== -1" class="table-title-cell">
@@ -254,9 +256,9 @@
               <!-- region 拖拽显示样式 -->
               <template #rowDragGhost="{ record, icon, preTargetInfo, nextTargetInfo }">
                 <component :is="icon" />
-                <span style="color: red">
-                  dragging from {{ record.name }} to
-                  {{ preTargetInfo?.record.name || nextTargetInfo?.record.name }}
+                <span style="color: gray">
+                  dragging from {{ record[config.nameKey] }} to
+                  {{ preTargetInfo?.record[config.nameKey] || nextTargetInfo?.record[config.nameKey] }}
                 </span>
               </template>
               <!-- endregion -->
@@ -341,7 +343,7 @@
     />
     <portal-association-modal
       v-else-if="config.modal.type === 'association'"
-      :bind-tabs="props.bindTabs"
+      :bind-tabs="bindTabs"
       :config="config"
       @cancel="handleModalCancel"
       @close="handleModalClose"
@@ -505,8 +507,9 @@ const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
 }>()
 const isBindTabExisted = computed(() => {
-  return props.bindTabs && props.bindTabs.length > 0
+  return bindTabs.value && bindTabs.value.length > 0
 })
+const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
 const isListMode: Ref<boolean> = ref(props.listMode)
 const layoutSiderDisplay = ref(true)
@@ -572,6 +575,7 @@ watch(props, (value, old) => {
  * 数据
  */
 let dataSource: Ref<Array<any>> = ref([] as Array<any>)
+const dataSourceMap: Ref<Map<any, any>> = ref(new Map() as Map<any, any>)
 let dataSummary = ref({} as any)
 const modifyCellMap = new Map<string, ModifyCellType>()
 const treeData: Ref<Array<DataNode>> = ref([])
@@ -611,9 +615,12 @@ const indeterminate = computed(() => {
   const checkedCount = columns.value.filter(column => column.checked).length
   return checkedCount > 0 && checkedCount < columns.value.length
 })
-const selectedEntityId = computed(() => {
-  if (isNotEmpty(selectedListDataItem.value) || isNotEmpty(selectedTreeDataNode.value)) {
-    return selectedListDataItem.value.value || selectedTreeDataNode.value.key
+const selectedRecord = computed(() => {
+  if (isListMode && isNotEmpty(selectedListDataItem.value)) {
+    console.log('selectedRecord', dataSourceMap.value, selectedListDataItem.value, dataSourceMap.value.get(selectedListDataItem.value.value))
+    return dataSourceMap.value.get(selectedListDataItem.value.value)
+  } else if (isTreeMode && isNotEmpty(selectedTreeDataNode.value)) {
+    return dataSourceMap.value.get(selectedTreeDataNode.value.key)
   } else {
     return null
   }
@@ -1119,6 +1126,7 @@ const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, column:
 
 const onFilterDropdownOpenChange = (visible: boolean) => {
   if (!visible) {
+    config.currentPage = 1
     queryData()
   }
 }
@@ -1144,6 +1152,18 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     }
     queryData()
   }
+}
+const handleRowDragEnd = () => {
+  nextTick(() => {
+    let updateOrderData: any = []
+    dataSource.value.forEach((node: any, index: number) => {
+      updateOrderData.push({
+        id: node[config.rowKey],
+        showOrder: (index + 1) + config.pageSize * (config.currentPage - 1)
+      })
+    })
+    updateOrder(config.url, updateOrderData)
+  })
 }
 const advancedCondition = reactive({
   show: false,
@@ -1187,6 +1207,7 @@ const initData = (data: Array<any>) => {
   dataSource.value = data || []
   config.saveAllButtonShow = false
   for (let index in data) {
+    dataSourceMap.value.set(data[index][config.rowKey], data[index])
     for (let dataIndex in data[index]) {
       initCellData(Number(index), dataIndex, data[index][`${dataIndex}`], data[index][`${config.rowKey}`])
     }
@@ -1289,6 +1310,8 @@ const init = async () => {
       column.key = layout.property
       if (layout.width !== 0) {
         column.width = layout.width || 140
+      } else {
+        column.minWidth = 140
       }
       column.fixed = layout.fixed === '1'
       column.fieldType = layout.fieldType
@@ -1363,9 +1386,23 @@ const init = async () => {
     // 首列支持拖拽
     columnArray.value[0].rowDrag = tableConfig.tableDrag === '1'
 
+    // 关联配置
+    if (isNotEmpty(tableConfig.associates) && isEmpty(bindTabs.value)) {
+      for (let associate of tableConfig.associates) {
+        const bind: PortalBindType = {} as PortalBindType
+        bind.title = associate.title
+        bind.tableId = associate.bindPortalName
+        bind.bindType = associate.bindType
+        bind.defaultSortColumn = [{property: associate.bindSortPrperty, type: associate.bindSortType}]
+        bind.treeMode = associate.treeMode === '1'
+        bind.checkStrictly = associate.treeCheckStrict === '1'
+        bind.bindFieldProperty = associate.bindProperty
+        bindTabs.value.push(bind)
+      }
+    }
     console.log('init finish')
 
-    console.debug(config, columnArray.value, columns.value)
+    console.debug(config, columnArray.value, columns.value, bindTabs.value)
     config.key = config.key + 1
 
     if (config.treeMode) {
