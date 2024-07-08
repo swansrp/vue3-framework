@@ -46,7 +46,7 @@
         </template>
         <a-button
           shape="circle" size="middle" style="margin-left: 3px" type="primary"
-          @click="() => advancedCondition.show = true">
+          @click="advancedCondition.show = true">
           <template #icon>
             <funnel-plot-outlined />
           </template>
@@ -87,10 +87,13 @@
     </div>
     <!-- endregion 右侧按钮区 -->
   </div>
+  <portal-advanced-search-modal
+    :advanced-condition="advancedCondition"
+    @confirm="emit('queryData')" />
 </template>
 
 <script lang="ts" setup>
-import {TableConfigType} from '@/framework/components/common/Portal/type'
+import { TableConfigType } from '@/framework/components/common/Portal/type'
 import {
   AppstoreAddOutlined,
   CloudUploadOutlined,
@@ -113,6 +116,7 @@ const emit = defineEmits<{
   (e: 'saveAll'): void
   (e: 'openUploadModal'): void
   (e: 'download'): void
+  (e: 'queryData'): void
 }>()
 const {config, advancedCondition} = toRefs(prop)
 </script>

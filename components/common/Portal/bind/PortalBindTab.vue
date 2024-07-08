@@ -41,7 +41,7 @@ import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 const bindPortalRefMap = new Map<number, any>()
 const prop = defineProps<{
   entityName: string,
-  record: any,
+  record: { [key: string]: any },
   rowKey: string,
   bindTabs: Array<PortalBindType>
 }>()
@@ -81,20 +81,35 @@ const refresh = (arg?: any) => {
     if (bindTabs.value[activeKey.value].bindType === '2') {
       getBindList()
     } else {
+      let condition = {} as ConditionListType
       if (bindTabs.value[activeKey.value].bindType === '0') {
-        const condition = {
+        condition = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.EQUAL,
           value: [record.value[rowKey.value]]
         } as ConditionListType
-        bindCondition.value = condition
-      } else {
-        const condition = {
+      } else if (bindTabs.value[activeKey.value].bindType === '3') {
+        condition = {
+          property: bindTabs.value[activeKey.value].bindFieldProperty,
+          relation: FILTER_TYPE.CONTAIN,
+          value: [record.value[rowKey.value]]
+        } as ConditionListType
+      } else if (bindTabs.value[activeKey.value].bindType === '1') {
+        condition = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.EQUAL,
           value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
         } as ConditionListType
-        bindCondition.value = condition
+      } else if (bindTabs.value[activeKey.value].bindType === '4') {
+        condition = {
+          property: bindTabs.value[activeKey.value].bindFieldProperty,
+          relation: FILTER_TYPE.CONTAIN,
+          value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
+        } as ConditionListType
+      }
+      bindCondition.value = {
+        andOr: '0',
+        conditionList: [condition, bindTabs.value[activeKey.value].defaultAdvancedCondition || {} as ConditionListType]
       }
       nextTick(() => {
         if (bindTabs.value && bindTabs.value[activeKey.value].treeMode) {
@@ -102,7 +117,6 @@ const refresh = (arg?: any) => {
         } else {
           bindPortalRefMap.get(arg || activeKey.value).queryData()
         }
-
       })
     }
   }
@@ -160,7 +174,6 @@ watch(
 watch(
   () => prop.bindTabs,
   () => {
-    console.log('prop.bindTabs', prop.bindTabs)
     bindTabs.value = prop.bindTabs
   },
   {

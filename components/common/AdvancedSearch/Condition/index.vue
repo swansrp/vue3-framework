@@ -21,13 +21,13 @@
 </template>
 
 <script lang="ts" setup>
-import {Ref} from 'vue'
-import {ValueLabel} from '@/framework/utils/type'
-import {SelectValue} from 'ant-design-vue/es/select'
-import {useAdvancedSearch} from '@/framework/store/AdvancedSearch'
+import { Ref } from 'vue'
+import { ValueLabel } from '@/framework/utils/type'
+import { SelectValue } from 'ant-design-vue/es/select'
+import { useAdvancedSearch } from '@/framework/store/AdvancedSearch'
 import ConditionValueComponent from '../ConditionValueComponent/index.vue'
-import {getRelation} from '@/framework/components/common/AdvancedSearch/funs'
-import {isNotEmpty} from '@/framework/utils/common'
+import { getRelation } from '@/framework/components/common/AdvancedSearch/funs'
+import { isNotEmpty } from '@/framework/utils/common'
 
 
 const useAdvancedSearchStore = useAdvancedSearch()
@@ -60,7 +60,7 @@ const conditionTypeTemp: Ref = ref('')
 
 
 const onPropertyChange = (_property: SelectValue, option: any) => {
-  console.log('onPropertyChange')
+  console.log('onPropertyChange', option)
   const {fieldType, referenceDictOption} = option
   const relations = getRelation(fieldType)
   conditionReference.value = referenceDictOption
@@ -78,7 +78,7 @@ const onConditionChange = () => {
 }
 
 const render = () => {
-  if(isNotEmpty(props.propertySelectOptions)) {
+  if (isNotEmpty(props.propertySelectOptions)) {
     const propertySelectArray = props.propertySelectOptions.filter((item) => item.value === propertyValue.value)
     if (isNotEmpty(propertySelectArray)) {
       const {fieldType, referenceDictOption} = propertySelectArray[0]
@@ -102,11 +102,11 @@ watch(conditionContentValue, (value: string | undefined | number | Array<any> | 
 })
 
 watch(() => props.property,
-    () => {
-      propertyValue.value = props.property
-      render()
-    },
-    {immediate: true}
+  () => {
+    propertyValue.value = props.property
+    render()
+  },
+  {immediate: true}
 )
 watch(() => props.relation, () => {
   // 关系选择值

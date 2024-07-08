@@ -105,7 +105,7 @@
     <!-- region 右侧编辑栏 -->
     <div v-if="isNotEmpty(tableConfig.name)" class="table-config">
       <!-- region 表格整体配置 -->
-      <a-descriptions :column="9" :title="tableConfig.displayName" bordered layout="vertical" size="small">
+      <a-descriptions :column="10" :title="tableConfig.displayName" bordered layout="vertical" size="small">
         <template #extra>
           <a-button style="margin-right: 10px" type="primary" @click="exportTableConfig()">导出配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="uploadTableConfig()">导入配置</a-button>
@@ -128,7 +128,7 @@
         </a-descriptions-item>
         <a-descriptions-item
           :span="1"
-          label="不可编辑">
+          label="只读">
           <a-switch
             v-model:checked="tableConfig.readOnly"
             checkedValue="1"
@@ -199,6 +199,35 @@
         </a-descriptions-item>
         <a-descriptions-item
           :span="1"
+          label="默认排序字段">
+          <div style="display: flex;">
+            <arrow-up-outlined
+              v-if="tableConfig.sortType"
+              @click="() => {
+                tableConfig.sortType = !tableConfig.sortType
+                saveTableConfig()
+              }" />
+            <arrow-down-outlined
+              v-else
+              @click="() => {
+                tableConfig.sortType = !tableConfig.sortType
+                saveTableConfig()
+              }" />
+            <a-select
+              :bordered="false"
+              :options="columnDict || []"
+              :value="tableConfig.sortColumn"
+              allow-clear
+              style="width: 100px"
+              @update:value=" v => {
+                tableConfig.sortColumn = v
+                saveTableConfig()
+              }"
+            />
+          </div>
+        </a-descriptions-item>
+        <a-descriptions-item
+          :span="1"
           label="支持导入">
           <a-switch
             v-model:checked="tableConfig.importAble"
@@ -226,7 +255,7 @@
             :bordered="false"
             :options="tableSizeDict || []"
             :value="tableConfig.size"
-            style="width: 150px"
+            style="width: 120px"
             @update:value=" v => {
               tableConfig.size = v
               saveTableConfig()
@@ -261,7 +290,7 @@
             :options="[{value: AUTO_UUID_ROW_KEY, label: '自动生成ID'},
                        ...columnDict]"
             :value="tableConfig.idColumn"
-            style="width: 150px"
+            style="width: 100px"
             @update:value=" v => {
               tableConfig.idColumn = v
               saveTableConfig()
@@ -275,7 +304,7 @@
             :bordered="false"
             :options="columnDict || []"
             :value="tableConfig.nameColumn"
-            style="width: 150px"
+            style="width: 100px"
             @update:value=" v => {
               tableConfig.nameColumn = v
               saveTableConfig()
@@ -290,7 +319,7 @@
             :options="columnDict || []"
             :value="tableConfig.orderColumn"
             allow-clear
-            style="width: 150px"
+            style="width: 100px"
             @update:value=" v => {
               tableConfig.orderColumn = v
               saveTableConfig()
@@ -305,12 +334,23 @@
             :options="columnDict || []"
             :value="tableConfig.pidColumn"
             allow-clear
-            style="width: 120px"
+            style="width: 100px"
             @update:value=" v => {
               tableConfig.pidColumn = v
               saveTableConfig()
             }"
           />
+        </a-descriptions-item>
+        <a-descriptions-item
+          :span="1"
+          label="默认查询条件">
+          <delete-outlined
+            v-if="tableConfig.defaultCondition !== null"
+            @click="cleanDefaultCondition" />
+          <a-button
+            :type="tableConfig.defaultCondition !== null ? 'link' : 'dashed'"
+            @click="defaultCondition.show = true">默认筛选条件
+          </a-button>
         </a-descriptions-item>
         <a-descriptions-item
           :span="1"
@@ -427,7 +467,7 @@
         </s-table>
         <!-- endregion -->
         <!-- region 表格字段编辑栏 -->
-        <div v-if="selectedColumnId !== ''" style="width: 100%; margin-top: 10px; margin-left: 10px">
+        <div v-if="selectedColumnId !== ''" style="width: 100%; margin-top: 5px; margin-left: 10px">
           <a-descriptions
             :column="8"
             :title="'基础信息: ' + strRemoveLF(columnMap.get(selectedColumnId).displayName) + '(' + columnMap.get(selectedColumnId).property + ')'"
@@ -498,6 +538,7 @@
             <a-descriptions-item
               v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT ||
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY ||
+                columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY_CONDITION ||
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE ||
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
@@ -508,19 +549,24 @@
                   columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE ||
                   columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
                   columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
-                :filter-option="(input: string, option: any) => {
-                  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0}"
+                :filter-option="filterOption"
                 :options="sysDictList"
                 :value="columnMap.get(selectedColumnId).reference"
                 placeholder="输入相关引用名称"
                 show-search
                 style="width: 150px"
-                @update:value=" v => columnMap.get(selectedColumnId).reference = v "
+                @update:value=" v => {
+                  columnMap.get(selectedColumnId).reference = v
+                  saveTableColumn()
+                } "
               />
               <a-select
                 v-else-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
+                :filter-option="filterOption"
                 :options="tableList"
                 :value="columnMap.get(selectedColumnId).reference"
+                placeholder="输入相关引用名称"
+                show-search
                 style="width: 150px"
                 @update:value="v => {
                   if(columnMap.get(selectedColumnId).reference !== v) {
@@ -532,12 +578,30 @@
                   saveTableColumn()
                 }"
               />
+              <a-select
+                v-else-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY_CONDITION"
+                :filter-option="filterOption"
+                :options="log(columnDict) && columnDict"
+                :value="columnMap.get(selectedColumnId).reference"
+                placeholder="输入存放实体名称字段"
+                show-search
+                style="width: 150px"
+                @update:value="v => {
+                  if(columnMap.get(selectedColumnId).reference !== v) {
+                    columnMap.get(selectedColumnId).dbField = null
+                    columnMap.get(selectedColumnId).entityField = null
+                  }
+                  columnMap.get(selectedColumnId).reference = v
+                  saveTableColumn()
+                }"
+              />
             </a-descriptions-item>
             <a-descriptions-item
               v-else
               :span="1"
               label="" />
-            <template v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY">
+            <template
+              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY">
               <a-descriptions-item
                 v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY"
                 :span="2"
@@ -585,12 +649,12 @@
           <!-- endregion -->
           <!-- region 表格显示 -->
           <a-descriptions
-            :column="8"
+            :column="9"
             :title="'表格显示'"
             bordered
             layout="vertical"
             size="small"
-            style="margin-top: 20px">
+            style="margin-top: 10px">
             <a-descriptions-item
               :span="1"
               label="是否显示">
@@ -612,8 +676,24 @@
                 max="1000"
                 min="0"
                 placeholder="内容宽度 0为自动"
-                style="width:120px"
+                style="width:100px"
                 @update:value=" v => columnMap.get(selectedColumnId).width = v"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
+              :span="1"
+              label="移动端显示">
+              <a-select
+                :bordered="false"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'
+                  || columnMap.get(selectedColumnId).show !== '1'"
+                :options="mobileDisplayTypeDict || []"
+                :value="columnMap.get(selectedColumnId).mobileDisplayType"
+                style="width: 100px"
+                @update:value=" v => {
+                  columnMap.get(selectedColumnId).mobileDisplayType = v
+                  saveTableColumn()
+                }"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -625,7 +705,7 @@
                   || columnMap.get(selectedColumnId).show !== '1'"
                 :options="alignDict || []"
                 :value="columnMap.get(selectedColumnId).align"
-                style="width: 120px"
+                style="width: 100px"
                 @update:value=" v => {
                   columnMap.get(selectedColumnId).align = v
                   saveTableColumn()
@@ -646,7 +726,7 @@
             </a-descriptions-item>
             <a-descriptions-item
               :span="1"
-              label="是否显示tooltip">
+              label="是否显示提示">
               <a-switch
                 v-model:checked="columnMap.get(selectedColumnId).tooltip"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'
@@ -701,7 +781,7 @@
             bordered
             layout="vertical"
             size="small"
-            style="margin-top: 20px">
+            style="margin-top: 10px">
             <template #extra>
               <a-input
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
@@ -924,30 +1004,19 @@
     </a-modal>
     <!-- endregion -->
     <!-- region 关联实体查询条件 -->
-    <a-drawer
-      :title="'配置' + entityCondition.title + '查询条件'"
-      :visible="entityCondition.show"
-      :width="1050"
-      placement="right"
-      @close="entityConditionDrawClose"
-    >
-      <template #extra>
-        <div></div>
-      </template>
-      <AdvancedSearch
-        :key="entityCondition.key"
-        :columns="entityCondition.columns"
-        :condition="entityCondition.condition"
-        okText="保存"
-        @get-condition="saveEntityCondition" />
-    </a-drawer>
+    <portal-advanced-search-modal
+      :advanced-condition="entityCondition"
+      @confirm="saveEntityCondition" />
     <!-- endregion 关联实体查询条件 -->
+    <portal-advanced-search-modal
+      :advanced-condition="defaultCondition"
+      @confirm="saveDefaultCondition" />
   </div>
 </template>
 <script lang="ts" setup>
 import { Ref } from 'vue'
-import { isEmpty, isNotEmpty, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
-import { FIELD_TYPE, FILTER_TYPE } from "@/framework/components/common/Portal/type"
+import { isEmpty, isNotEmpty, log, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
+import { ColumnType, FIELD_TYPE, FILTER_TYPE } from "@/framework/components/common/Portal/type"
 import {
   bindRole,
   copyPortalConfig,
@@ -964,6 +1033,8 @@ import {
   updatePortalConfig
 } from '@/framework/apis/portal/config'
 import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
   CopyOutlined,
   DeleteOutlined,
   FilterOutlined,
@@ -984,7 +1055,7 @@ import { MenuProps } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
-
+import { filterOption } from '@/framework/components/common/utils'
 
 const dict = dictStore()
 let inputTableName: Ref<string> = ref('')
@@ -992,6 +1063,7 @@ let tableList: Ref<Array<ValueLabel>> = ref([] as Array<ValueLabel>)
 let sysDictList = reactive([] as Array<any>)
 let tableSizeDict = reactive([] as Array<ValueLabel>)
 let fieldTypeDict = reactive([] as Array<ValueLabel>)
+let mobileDisplayTypeDict = reactive([] as Array<ValueLabel>)
 let alignDict = reactive([] as Array<ValueLabel>)
 let columnDict = reactive([] as Array<ValueLabel>)
 let columnMap = reactive(new Map())
@@ -1004,13 +1076,22 @@ let selectedRole = ref('0')
 const entityConfig = ref({} as any)
 const entityCondition = reactive({
   show: false,
-  columns: [],
+  columns: [] as Array<ColumnType>,
   title: '',
   condition: {} as ConditionType | undefined,
-  key: 0
+  key: 0,
+  okText: '保存'
 })
 const entityColumnDict = reactive([] as Array<ValueLabel>)
-
+// 默认查询条件
+const defaultCondition = reactive({
+  show: false,
+  columnArray: [] as Array<any>,
+  title: '',
+  condition: {} as ConditionType | undefined,
+  key: 0,
+  okText: '保存'
+})
 let copyConfigModal = reactive({
   visible: false,
   configId: '',
@@ -1048,20 +1129,45 @@ const getEntityConfig = (tableId: string) => {
 const tableConfig = ref({} as any)
 const fieldRecords = ref([] as Array<any>)
 const getTableConfigByName = (item: any) => {
-  getPortalConfig(item, selectedRole.value).then(res => {
+  getPortalConfig(item, selectedRole.value).then(async res => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
     entityCondition.condition = {} as ConditionType
+    defaultCondition.columnArray = []
     tableConfig.value = res.payload
-    tableConfig.value.columns.forEach((column: { property: any; displayName: any; id: any; fieldType: any; reference: string }) => {
+    const promiseList = [] as Array<Promise<any>>
+    tableConfig.value.columns.forEach((column: { property: any; displayName: any; id: any; fieldType: any; reference: string; filterAble: string }) => {
       columnDict.push({value: column.property, label: strRemoveLF(column.displayName)} as ValueLabel)
       columnMap.set(column.id, column)
       if (column.fieldType === FIELD_TYPE.ENTITY) {
         getEntityConfig(column.reference)
       }
+      if (column.filterAble === '1') {
+        const columnConfig = {
+          title: column.displayName,
+          key: column.property,
+          fieldType: column.fieldType,
+          referenceDictOption: null
+        }
+        if (column.fieldType === FIELD_TYPE.SELECT ||
+          column.fieldType === FIELD_TYPE.TREE ||
+          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+          let promise = dict.getDict(column.reference).then((option: any) => columnConfig.referenceDictOption = option)
+          promiseList.push(promise)
+        }
+        if (column.filterAble) {
+          defaultCondition.columnArray.push(columnConfig)
+        }
+      }
     })
+    await Promise.all(promiseList)
     fieldRecords.value = [...tableConfig.value.columns]
+    defaultCondition.condition = tableConfig.value.defaultCondition
+    const sortConfig = JSON.parse(tableConfig.value.defaultSort)[0]
+    tableConfig.value.sortType = sortConfig.type === 0
+    tableConfig.value.sortColumn = sortConfig.property
     console.debug(tableConfig.value)
   })
 }
@@ -1077,6 +1183,10 @@ const deleteConfig = (id: any) => {
 }
 
 const saveTableConfig = (silent = true) => {
+  tableConfig.value.defaultSort = JSON.stringify([{
+    property: tableConfig.value.sortColumn,
+    type: tableConfig.value.sortType ? 0 : 1
+  }])
   updatePortalConfig(tableConfig.value, silent).then(() => onSearch())
 }
 
@@ -1117,8 +1227,10 @@ const handleColumnFilter = (selectedKey: any, confirm: any, dataIndex: any, hide
     columnFiltered.value = false
     clearFilters()
   } else {
-    const filterColumn = tableConfig.value.columns.filter((record: { [x: string]: string; enable: string; }) => record.enable === '1' && record[`${selectedKey}`] === '1')
-    fieldRecords.value = filterColumn
+    fieldRecords.value = tableConfig.value.columns.filter
+    ((record: { [x: string]: string; enable: string; }) =>
+      record.enable === '1' && record[`${selectedKey}`] === '1'
+    )
     columnFiltered.value = true
     confirm()
   }
@@ -1159,7 +1271,7 @@ const handleColumnSelected = (event: MouseEvent, params: CellRenderArgs) => {
   selectedColumnId.value = params.record.id
   if (params.record.fieldType === FIELD_TYPE.ENTITY) {
     if (isNotEmpty(params.record.reference)) {
-      params.record.reference
+      getEntityConfig(params.record.reference)
     }
   }
 }
@@ -1192,15 +1304,21 @@ const entityConditionDrawOpen = async () => {
   entityCondition.key++
   console.log('entityCondition', entityCondition)
 }
-const entityConditionDrawClose = () => {
-  console.log('entityConditionDrawClose')
-  entityCondition.show = false
-}
 const saveEntityCondition = (condition: ConditionType) => {
   entityCondition.condition = condition
   columnMap.get(selectedColumnId.value).entityCondition = JSON.stringify(condition)
   saveTableColumn()
-  entityConditionDrawClose()
+}
+
+const saveDefaultCondition = () => {
+  console.log(defaultCondition)
+  tableConfig.value.defaultCondition = JSON.stringify(defaultCondition.condition)
+  saveTableConfig()
+}
+const cleanDefaultCondition = () => {
+  defaultCondition.condition = undefined
+  tableConfig.value.defaultCondition = null
+  saveTableConfig(false)
 }
 
 const init = async () => {
@@ -1208,13 +1326,16 @@ const init = async () => {
   tableConfig.value = []
   fieldRecords.value = []
   roleDictList.length = 0
-  roleDictList.push({value: '0', label: '默认配置'})
+  roleDictList.push({value: '0', label: '默认配置'} as ValueLabel)
   return Promise.all([
     await dict.getDict('PORTAL_TABLE_SIZE_DICT').then(res => {
       tableSizeDict = res || []
     }),
     await dict.getDict('PORTAL_FIELD_DICT').then(res => {
       fieldTypeDict = res || []
+    }),
+    await dict.getDict('PORTAL_MOBILE_DISPLAY_TYPE_DICT').then(res => {
+      mobileDisplayTypeDict = res || []
     }),
     await dict.getDict('PORTAL_ALIGN_DICT').then(res => {
       alignDict = res || []
@@ -1225,7 +1346,7 @@ const init = async () => {
     await getRoleList().then(res => {
       if (res.payload && res.payload.records) {
         for (let role of res.payload.records) {
-          roleDictList.push({value: role.roleId, label: role.roleName})
+          roleDictList.push({value: role.roleId, label: role.roleName} as ValueLabel)
         }
       }
     }),
@@ -1262,7 +1383,7 @@ const getTableHeight = () => {
   return tableHeight.value
 }
 const updateTableWidthAndHeight = () => {
-  updateTableSize(root, tableWidth, 40, tableHeight, 270)
+  updateTableSize(root, tableWidth, 40, tableHeight, 275)
 }
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
 //endregion

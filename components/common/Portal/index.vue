@@ -96,6 +96,7 @@
           :is-tree-data-empty="treeData.length === 0"
           @download="download"
           @refresh="refresh"
+          @query-data="queryData"
           @show-tree-menu="showTreeMenu"
           @add-row="addRow"
           @save-all="saveAll"
@@ -365,23 +366,7 @@
       @upload-progress="uploadAddProgress"
     />
     <!-- endregion -->
-    <!-- region 高级筛选 -->
-    <a-drawer
-      :open="advancedCondition.show"
-      :width="1050"
-      placement="right"
-      title="高级筛选"
-      @close="advancedConditionDrawClose"
-    >
-      <template #extra>
-        <div></div>
-      </template>
-      <AdvancedSearch
-        :columns="columnArray.filter(item => item.customFilterDropdown)"
-        @get-condition="getAdvancedCondition" />
-    </a-drawer>
   </div>
-  <!-- endregion -->
 </template>
 <script lang="ts" setup>
 import Table from '@surely-vue/table'
@@ -552,7 +537,7 @@ const config: TableConfigType = reactive({
   modal: {
     show: false,
     type: undefined,
-    data: {},
+    data: {} as { [key: string]: any },
     editRowIndex: null
   } as ModalType,
   saveAllButtonShow: false,
@@ -563,7 +548,9 @@ const config: TableConfigType = reactive({
   addModalAble: false,
   editModalAble: false,
   importAble: false,
-  exportAble: false
+  exportAble: false,
+  defaultCondition: {} as ConditionListType,
+  defaultSort: [] as Array<QuerySortType>
 } as TableConfigType)
 watch(props, (value, old) => {
   if (value.readOnly != old.readOnly) {
@@ -1048,10 +1035,11 @@ const openModal = (type: 'view' | 'add' | 'modify' | 'association' | undefined) 
 
 const getQueryCondition = () => {
   const queryCondition: QueryType = {
+    condition: config.defaultCondition,
     currentPage: config.currentPage,
     pageSize: config.pageSize
   } as QueryType
-  queryCondition.sortList = props.defaultSortColumn || []
+  queryCondition.sortList = props.defaultSortColumn || config.defaultSort || []
   if (isNotEmpty(querySortMap)) {
     queryCondition.sortList = [...querySortMap.values()]
   }
@@ -1167,18 +1155,10 @@ const handleRowDragEnd = () => {
 }
 const advancedCondition = reactive({
   show: false,
-  condition: {} as ConditionType
+  condition: {} as ConditionType,
+  columnArray: [] as Array<any>,
+  okText: '查询'
 })
-const advancedConditionDrawClose = () => {
-  advancedCondition.show = false
-}
-const getAdvancedCondition = (condition: ConditionType) => {
-  advancedCondition.condition = condition
-  console.log('getAdvancedCondition', advancedCondition)
-  queryData()
-  advancedConditionDrawClose()
-
-}
 // endregion
 
 //region 常用功能函数
@@ -1267,6 +1247,7 @@ const init = async () => {
     dictColumnArray.length = 0
     columnArray.value.length = 0
     columnDisplayMap.value.clear()
+    advancedCondition.columnArray = []
     const index = _.cloneDeep(indexColumn)
     columnArray.value.push(index)
     const tableConfig = res.payload
@@ -1299,6 +1280,12 @@ const init = async () => {
       message.error('尚未配置id字段')
       throw new Error('尚未配置id字段')
     }
+    if (tableConfig.defaultCondition && isEmpty(props.advanceCondition)) {
+      config.defaultCondition = JSON.parse(tableConfig.defaultCondition)
+    }
+    if (tableConfig.defaultSort && isEmpty(props.defaultSortColumn)) {
+      config.defaultSort = JSON.parse(tableConfig.defaultSort)
+    }
 
     let promiseList = []
 
@@ -1321,6 +1308,7 @@ const init = async () => {
       if (layout.filterAble === '1') {
         column.customFilterDropdown = true
         column.onFilterDropdownOpenChange = onFilterDropdownOpenChange
+        advancedCondition.columnArray.push(column)
       }
       column.sorter = layout.sortAble === '1'
       column.addShow = layout.addShow === '1'
@@ -1393,7 +1381,14 @@ const init = async () => {
         bind.title = associate.title
         bind.tableId = associate.bindPortalName
         bind.bindType = associate.bindType
-        bind.defaultSortColumn = [{property: associate.bindSortPrperty, type: associate.bindSortType}]
+        if (isNotEmpty(associate.attachCondition)) {
+          console.log(associate.attachCondition)
+          bind.defaultAdvancedCondition = JSON.parse(associate.attachCondition)
+        }
+        bind.defaultSortColumn = [{
+          property: associate.bindSortPrperty,
+          type: associate.bindSortType
+        }]
         bind.treeMode = associate.treeMode === '1'
         bind.checkStrictly = associate.treeCheckStrict === '1'
         bind.bindFieldProperty = associate.bindProperty

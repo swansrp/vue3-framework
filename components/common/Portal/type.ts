@@ -1,4 +1,5 @@
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 export type TableConfigType = {
   // tableId 配合后端指明表格用途
@@ -58,13 +59,17 @@ export type TableConfigType = {
   // 支持导入
   importAble: boolean,
   // 支持导出
-  exportAble: boolean
+  exportAble: boolean,
+  // 默认筛选条件
+  defaultCondition: ConditionListType
+  // 默认排序
+  defaultSort: Array<QuerySortType>
 }
 
 export type ModalType = {
   show: boolean,
   type: 'view' | 'add' | 'modify' | 'association' | undefined,
-  data: object,
+  data: { [key: string]: any },
   // 当前修改的rowId
   editRowIndex: any
 }
@@ -98,6 +103,8 @@ export type ColumnType = {
   width: number,
   // 最小列宽
   minWidth: number,
+  // 最大列宽
+  maxWidth: number,
   // 锁定列
   fixed: boolean | string,
   // 列宽调整
@@ -241,6 +248,7 @@ export enum FIELD_TYPE {
   PERCENT = '17',
   SELECT_MULTI_IN_ONE = '18',
   TREE_MULTI_IN_ONE = '19',
+  ENTITY_CONDITION = '20'
 }
 
 export enum UPLOAD_FILE_TYPE {

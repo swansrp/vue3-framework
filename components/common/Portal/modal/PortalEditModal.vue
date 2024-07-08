@@ -107,6 +107,17 @@
                   @click="showUploadDialogBox(column)">{{ '点击上传' + column.title }}
                 </a-button>
               </div>
+              <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY_CONDITION">
+                <delete-outlined
+                  v-if="config.modal.data[column.dataIndex] !== null"
+                  :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                  @click="cleanEntityCondition(column)" />
+                <a-button
+                  :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                  :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
+                  @click="showEntityConditionDialogBox(column, config.modal.data[column.dataIndex])">设置条件
+                </a-button>
+              </div>
               <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY">
                 <delete-outlined
                   v-if="config.modal.data[column.dataIndex] !== null"
@@ -132,18 +143,22 @@
     v-model:visible="entityDialogBox.show"
     :title="'配置 ' + strRemoveLF(entityDialogBox.column.title)"
     is-full>
-    <Portal
-      :advance-condition="entityDialogBox.column.entityCondition" :table-id="entityDialogBox.column.referenceDict"
+    <portal
+      :advance-condition="entityDialogBox.column.entityCondition"
+      :table-id="entityDialogBox.column.referenceDict"
       read-only>
       <template #action="{ portalConfig, column, record }">
         <a-button type="text" @click="bind(portalConfig, column, record)">确认</a-button>
       </template>
-    </Portal>
+    </portal>
   </dialog-box>
   <upload-file
     ref="uploadFileModal"
     v-model:url="config.modal.data[uploadDialogBox.column.dataIndex]"
     :folder="config.tableId" />
+  <portal-advanced-search-modal
+    :advanced-condition="advancedCondition"
+    @confirm="handleAdvanceSearchConfirm" />
 </template>
 
 <script lang="ts" setup>
@@ -152,6 +167,9 @@ import { isNotEmpty, log, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { FormInstance } from 'ant-design-vue'
 import { CloseCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { getPortalConfig } from '@/framework/apis/portal/config'
+import { dictStore } from '@/framework/store/common'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 
 const uploadFileModal = ref()
 const prop = defineProps<{
@@ -209,7 +227,56 @@ const cleanEntity = (column: ColumnType) => {
   config.value.modal.data[column.dataIndex] = null
   config.value.modal.data[column.dbField] = null
 }
-const bind = (portalConfig: TableConfigType, column: ColumnType, record: Array<any>) => {
+const advancedCondition = reactive({
+  show: false,
+  currentColumn: {} as ColumnType,
+  columnArray: [] as Array<any>,
+  condition: {} as ConditionType,
+  okText: ''
+})
+const handleAdvanceSearchConfirm = () => {
+  config.value.modal.data[advancedCondition.currentColumn.dataIndex] = JSON.stringify(advancedCondition.condition)
+  advancedCondition.show = false
+}
+const dict = dictStore()
+const showEntityConditionDialogBox = (column: ColumnType, condition: string) => {
+  advancedCondition.currentColumn = column
+  return getPortalConfig(config.value.modal.data[column.referenceDict]).then(async res => {
+    const columnArray = res.payload.columns || []
+    advancedCondition.columnArray = [] as Array<ColumnType>
+    const promiseList = [] as Array<Promise<any>>
+    columnArray.forEach((column: any) => {
+      if (column.filterAble) {
+        const columnConfig = {
+          title: column.displayName,
+          key: column.property,
+          fieldType: column.fieldType,
+          referenceDictOption: null
+        }
+        if (column.fieldType === FIELD_TYPE.SELECT ||
+          column.fieldType === FIELD_TYPE.TREE ||
+          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+          let promise = dict.getDict(column.reference).then((option: any) => columnConfig.referenceDictOption = option)
+          promiseList.push(promise)
+        }
+        if (column.filterAble) {
+          advancedCondition.columnArray.push(columnConfig)
+        }
+      }
+    })
+    await Promise.all(promiseList)
+    advancedCondition.condition = JSON.parse(condition)
+    advancedCondition.okText = '确定'
+    advancedCondition.show = true
+  })
+}
+const cleanEntityCondition = (column: ColumnType) => {
+  advancedCondition.columnArray = []
+  advancedCondition.condition = {} as ConditionType
+  config.value.modal.data[column.dataIndex] = null
+}
+const bind = (portalConfig: TableConfigType, column: ColumnType, record: { [key: string]: any }) => {
   const entityField = entityDialogBox.column.referenceEntityField || portalConfig.rowKey
   console.log('bind', entityField, record[`${entityField}`], portalConfig.nameKey, record[`${portalConfig.nameKey}`])
   config.value.modal.data[`${entityDialogBox.column.dbField}`] = record[`${entityField}`]

@@ -5,19 +5,6 @@
 </template>
 
 <script lang="ts" setup>
-const props = withDefaults(
-  defineProps<{
-    modelValue: any
-  }>(),
-  {
-    modelValue: ''
-  }
-)
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: any): void
-}>()
-onMounted(() => {
-})
-</script>
+import Portal from '@/framework/components/common/Portal/index.vue'</script>
 
 <style lang="less" scoped></style>

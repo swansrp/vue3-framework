@@ -1,4 +1,5 @@
 import { QuerySortType } from '@/framework/components/common/Portal/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 export type PortalBindType = {
   /**
@@ -15,6 +16,10 @@ export type PortalBindType = {
    * @2 多对多
    */
   bindType?: string,
+  /**
+   * 默认查询条件
+   */
+  defaultAdvancedCondition?: ConditionListType,
   /**
    * 数据默认排序
    */
