@@ -621,14 +621,13 @@
                 :span="1"
                 label="本体操作字段">
                 <a-select
+                  :filter-option="filterOption"
                   :options="columnDict"
                   :value="columnMap.get(selectedColumnId).dbField"
+                  show-search
                   style="width: 150px"
                   @update:value=" v => {
                     columnMap.get(selectedColumnId).dbField = v
-                    if(columnMap.get(selectedColumnId).enable === '1') {
-                      columnMap.get(selectedColumnId).editAble = '1'
-                    }
                     saveTableColumn()
                   }"
                 />
