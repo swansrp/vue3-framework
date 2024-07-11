@@ -61,14 +61,13 @@ export const dictStore = defineStore('dictStore', {
                 return res.payload
             })
         }, async getLabelAsync(dictName: string, value: number | string) {
-            let dict = this.map.get(dictName)
+            const dict = this.map.get(dictName)
             if (isEmpty(dict)) {
                 return await this.getDict(dictName).then(() => {
-                    dict = this.map.get(dictName)
-                    return dict.valueMap.get(value)
+                    return this.getLabel(dictName, value)
                 })
             } else {
-                return dict.valueMap.get(value)
+                return this.getLabel(dictName, value)
             }
 
         }, async getValueAsync(dictName: string, label: number | string) {

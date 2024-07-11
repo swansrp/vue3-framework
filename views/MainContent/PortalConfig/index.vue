@@ -506,8 +506,13 @@
                 :value="columnMap.get(selectedColumnId).fieldType"
                 style="width: 120px"
                 @update:value=" v => {
+
                   if(columnMap.get(selectedColumnId).fieldType !== v) {
-                    columnMap.get(selectedColumnId).reference = null
+                    if(v === FIELD_TYPE.MONEY) {
+                      columnMap.get(selectedColumnId).reference = '2,10000'
+                    } else {
+                      columnMap.get(selectedColumnId).reference = null
+                    }
                     columnMap.get(selectedColumnId).dbField = null
                   }
                   columnMap.get(selectedColumnId).fieldType = v
