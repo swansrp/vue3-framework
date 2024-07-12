@@ -149,7 +149,7 @@
               </template>
               <!-- endregion -->
               <!-- region 单元格样式-->
-              <template #bodyCell="{ column, record, index }">
+              <template v-if="!config.readOnly" #bodyCell="{ column, record, index }">
                 <portal-body-cell
                   :column="column"
                   :config="config"
@@ -434,6 +434,7 @@ import { ConditionListType } from '@/framework/components/common/AdvancedSearch/
 import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
+import { parse } from '@/framework/components/common/Portal/utils'
 
 /**
  * @param tableId 表格ID
@@ -1184,7 +1185,11 @@ const queryData = () => {
 
 }
 const initData = (data: Array<any>) => {
-  dataSource.value = data || []
+  if (config.readOnly) {
+    dataSource.value = parse(data || [], columnArray.value, config)
+  } else {
+    dataSource.value = data || []
+  }
   config.saveAllButtonShow = false
   for (let index in data) {
     dataSourceMap.value.set(data[index][config.rowKey], data[index])
