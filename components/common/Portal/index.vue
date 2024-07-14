@@ -149,8 +149,9 @@
               </template>
               <!-- endregion -->
               <!-- region 单元格样式-->
-              <template v-if="!config.readOnly" #bodyCell="{ column, record, index }">
+              <template #bodyCell="{ column, record, index }">
                 <portal-body-cell
+                  v-if="!config.readOnly"
                   :column="column"
                   :config="config"
                   :index="index"
@@ -165,6 +166,7 @@
                     </slot>
                   </template>
                 </portal-body-cell>
+                <span v-else>{{ parsedDataSource[index][column.dataIndex] }}</span>
               </template>
               <!-- endregion -->
               <!-- region 总结栏样式 -->
@@ -173,7 +175,7 @@
                   <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
                     <div v-if="index === 1">总计</div>
                     <div v-else-if="index === columns.length"></div>
-                    <div v-else> {{ dataSummary[`${columns[index - 1].dataIndex}`] || '--' }}</div>
+                    <div v-else> {{ dataSummary[`${ columns[index - 1].dataIndex }`] || '--' }}</div>
                   </s-table-summary-cell>
                 </s-table-summary-row>
               </template>
@@ -374,7 +376,6 @@ import {
   addEntity,
   advancedQuery,
   deleteEntity,
-  exportData,
   exportTemplate,
   getById,
   getTreeData,
@@ -386,8 +387,8 @@ import {
   updateOrder,
   updateTreePid
 } from '@/framework/apis/portal'
-import { getPortalConfig } from '@/framework/apis/portal/config'
-import { dictStore } from '@/framework/store/common'
+import {getPortalConfig} from '@/framework/apis/portal/config'
+import {dictStore} from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
   ColumnType,
@@ -422,19 +423,19 @@ import {
   getDefaultFilterType,
   indexColumn
 } from '@/framework/components/common/Portal/constant'
-import dayjs from 'dayjs'
-import { AUTO } from '@/framework/utils/constant'
-import { createVNode, Ref } from 'vue'
-import { message, Modal } from 'ant-design-vue'
-import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
-import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
-import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
-import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
-import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
+import {AUTO} from '@/framework/utils/constant'
+import {createVNode, Ref} from 'vue'
+import {message, Modal} from 'ant-design-vue'
+import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
+import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
+import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
+import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
+import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import {PortalBindType} from '@/framework/components/common/Portal/bind/type'
 import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
-import { parse } from '@/framework/components/common/Portal/utils'
+import {parse} from '@/framework/components/common/Portal/utils'
+import {excelExport} from "@/framework/utils/excel";
 
 /**
  * @param tableId 表格ID
@@ -455,40 +456,40 @@ import { parse } from '@/framework/components/common/Portal/utils'
  * @param expanded 是否有展开按钮
  */
 const props = withDefaults(defineProps<{
-    tableId: string,
-    readOnly?: boolean,
-    actionWidth?: number,
-    advanceCondition?: ConditionListType,
-    defaultSortColumn?: Array<QuerySortType>,
-    rowAllowEdit?: (record: any) => boolean,
-    rowAllowDelete?: (record: any) => boolean,
-    query?: (url: string, query: QueryType) => Promise<any>,
-    treeMode?: boolean,
-    listMode?: boolean,
-    bindTabs?: Array<PortalBindType>,
-    treeCheckAble?: boolean,
-    selectedTreeData?: Array<any>,
-    checkStrictly?: boolean
-    bindDefaultValue?: any
-    expanded?: boolean
-  }>(),
-  {
-    readOnly: false,
-    actionWidth: 150,
-    advanceCondition: undefined,
-    defaultSortColumn: undefined,
-    rowAllowEdit: () => true,
-    rowAllowDelete: () => true,
-    query: undefined,
-    treeMode: false,
-    listMode: false,
-    bindTabs: undefined,
-    treeCheckAble: false,
-    selectedTreeData: undefined,
-    checkStrictly: false,
-    bindDefaultValue: undefined,
-    expanded: false
-  })
+      tableId: string,
+      readOnly?: boolean,
+      actionWidth?: number,
+      advanceCondition?: ConditionListType,
+      defaultSortColumn?: Array<QuerySortType>,
+      rowAllowEdit?: (record: any) => boolean,
+      rowAllowDelete?: (record: any) => boolean,
+      query?: (url: string, query: QueryType) => Promise<any>,
+      treeMode?: boolean,
+      listMode?: boolean,
+      bindTabs?: Array<PortalBindType>,
+      treeCheckAble?: boolean,
+      selectedTreeData?: Array<any>,
+      checkStrictly?: boolean
+      bindDefaultValue?: any
+      expanded?: boolean
+    }>(),
+    {
+      readOnly: false,
+      actionWidth: 150,
+      advanceCondition: undefined,
+      defaultSortColumn: undefined,
+      rowAllowEdit: () => true,
+      rowAllowDelete: () => true,
+      query: undefined,
+      treeMode: false,
+      listMode: false,
+      bindTabs: undefined,
+      treeCheckAble: false,
+      selectedTreeData: undefined,
+      checkStrictly: false,
+      bindDefaultValue: undefined,
+      expanded: false
+    })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
 }>()
@@ -563,6 +564,7 @@ watch(props, (value, old) => {
  * 数据
  */
 let dataSource: Ref<Array<any>> = ref([] as Array<any>)
+const parsedDataSource: Ref<Array<any>> = ref([] as Array<any>)
 const dataSourceMap: Ref<Map<any, any>> = ref(new Map() as Map<any, any>)
 let dataSummary = ref({} as any)
 const modifyCellMap = new Map<string, ModifyCellType>()
@@ -1134,10 +1136,10 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     querySortMap.clear()
     if (isNotEmpty(column.order)) {
       querySortMap.set(column.columnKey,
-        {
-          property: column.column.dbField ? column.column.dbField : column.columnKey,
-          type: (column.order === 'ascend' ? 0 : 1)
-        })
+          {
+            property: column.column.dbField ? column.column.dbField : column.columnKey,
+            type: (column.order === 'ascend' ? 0 : 1)
+          })
     }
     queryData()
   }
@@ -1185,17 +1187,16 @@ const queryData = () => {
 
 }
 const initData = (data: Array<any>) => {
-  if (config.readOnly) {
-    dataSource.value = parse(data || [], columnArray.value, config)
-  } else {
-    dataSource.value = data || []
-  }
+  dataSource.value = data || []
   config.saveAllButtonShow = false
   for (let index in data) {
+    const parsedData = _.cloneDeep(data[index])
     dataSourceMap.value.set(data[index][config.rowKey], data[index])
-    for (let dataIndex in data[index]) {
-      initCellData(Number(index), dataIndex, data[index][`${dataIndex}`], data[index][`${config.rowKey}`])
-    }
+    columnArray.value.forEach((column: ColumnType) => {
+      initCellData(Number(index), column.dataIndex, data[index][`${column.dataIndex}`], data[index][`${config.rowKey}`])
+      parse(parsedData, Number(index), column, config)
+    })
+    parsedDataSource.value.push(parsedData)
   }
 }
 const queryDataAsync = async () => {
@@ -1232,7 +1233,8 @@ const paginationChange = () => {
  * 导出
  */
 const download = () => {
-  exportData(config.url, config.tableId, getQueryCondition(), config.title + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
+  // exportData(config.url, config.tableId, getQueryCondition(), config.title + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
+  excelExport(parsedDataSource.value, columnArray.value, config.title)
 }
 /**
  * 刷新
@@ -1309,7 +1311,7 @@ const init = async () => {
       column.fieldType = layout.fieldType
       column.referenceDict = layout.reference || layout.entity
       column.referenceEntityField = layout.entityField
-      column.contentAlign = layout.align
+      column.align = layout.align
       if (layout.filterAble === '1') {
         column.customFilterDropdown = true
         column.onFilterDropdownOpenChange = onFilterDropdownOpenChange
@@ -1345,9 +1347,9 @@ const init = async () => {
       column.defaultValue = layout.defaultValue
       if (isNotEmpty(column.referenceDict)) {
         if (column.fieldType === FIELD_TYPE.SELECT ||
-          column.fieldType === FIELD_TYPE.TREE ||
-          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
-          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+            column.fieldType === FIELD_TYPE.TREE ||
+            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+            column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           dictColumnArray.push(column)
           let promise = dict.getDict(column.referenceDict).then(data => column.referenceDictOption = data)
           promiseList.push(promise)
