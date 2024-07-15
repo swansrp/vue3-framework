@@ -517,7 +517,7 @@ const getTableHeight = () => {
 }
 const updateTableWidthAndHeight = () => {
   console.debug('updateTableWidthAndHeight')
-  updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 170)
+  updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 225)
 }
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
 bus.on('portal:table:resize', _.debounce(updateTableWidthAndHeight, 200))
@@ -1188,7 +1188,7 @@ const queryData = () => {
 
 }
 const initData = (data: Array<any>) => {
-  dataSource.value = data || []
+  parsedDataSource.value = []
   config.saveAllButtonShow = false
   for (let index in data) {
     const parsedData = _.cloneDeep(data[index])
@@ -1199,6 +1199,7 @@ const initData = (data: Array<any>) => {
     })
     parsedDataSource.value.push(parsedData)
   }
+  dataSource.value = data || []
 }
 const queryDataAsync = async () => {
   const resolve = (res: any) => {
@@ -1241,7 +1242,7 @@ const download = () => {
         parse(dataArray[index], Number(index), column, config)
       })
     }
-    excelExport(dataArray, columnArray.value, config.title)
+    excelExport(dataArray, columns.value, config.title)
   })
 }
 /**
