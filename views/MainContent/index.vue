@@ -3,12 +3,16 @@
   <a-config-provider :locale="zhCN">
     <navigation-framework>
       <template #router-view>
-        <router-view :key="$route.path" />
+        <router-view v-slot="{ Component }">
+          <keep-alive :include="routeStore.getKeepAliveList()">
+            <Component :is="Component" :key="$route.fullPath" />
+          </keep-alive>
+        </router-view>
       </template>
     </navigation-framework>
   </a-config-provider>
 </template>
-<script setup lang="ts">
+<script lang="ts" setup>
 // 添加antd vue 组件的中文化
 import zhCN from "ant-design-vue/es/locale/zh_CN"
 // 添加antd vue dataPicker组件的中文化
@@ -16,8 +20,10 @@ import 'dayjs/locale/zh-cn'
 // 配置周选择器的相关配置，
 import dayjs from 'dayjs'
 import updateLocale from 'dayjs/plugin/updateLocale'
-import NavigationFramework  from '@/framework/components/navigationFramework/index.vue'
+import NavigationFramework from '@/framework/components/navigationFramework/index.vue'
+import { useRouteStore } from '@/framework/store/route'
 
+const routeStore = useRouteStore()
 dayjs.extend(updateLocale)
 dayjs.updateLocale('zh-cn', {
   weekStart: 1, // 每周周日为每周的第一天

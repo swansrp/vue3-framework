@@ -1,5 +1,5 @@
 <template>
-  <h1>首页功能尚未开发，请使用本系统中的其他模块！</h1>
+  <h1 style="margin-left: 50px">数据中心欢迎您</h1>
 </template>
 
 <script lang="ts" setup>

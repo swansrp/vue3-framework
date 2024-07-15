@@ -1200,6 +1200,7 @@ const initData = (data: Array<any>) => {
     parsedDataSource.value.push(parsedData)
   }
   dataSource.value = data || []
+  config.key = config.key + 1
 }
 const queryDataAsync = async () => {
   const resolve = (res: any) => {
@@ -1415,7 +1416,6 @@ const init = async () => {
     console.log('init finish')
 
     console.debug(config, columnArray.value, columns.value, bindTabs.value)
-    config.key = config.key + 1
 
     if (config.treeMode) {
       const condition: QueryType = {} as QueryType

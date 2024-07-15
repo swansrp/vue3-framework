@@ -4,7 +4,7 @@
     :table-id="tableId" />
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" name="portal" setup>
 import { useRouter } from 'vue-router'
 import { Ref } from 'vue'
 
