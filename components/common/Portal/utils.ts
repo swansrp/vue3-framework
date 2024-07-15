@@ -18,7 +18,7 @@ export const parse = (record: any, index: number, column: ColumnType, config: Ta
   } else if (column.fieldType === FIELD_TYPE.PERCENT) {
     record[column.dataIndex] = formatPercent(record[column.dataIndex], Number(column.referenceDict?.split(',')[0]), Number(column.referenceDict?.split(',')[1]))
   }
-  if (column.fieldType !== FIELD_TYPE.TEXT_AREA && column.width !== 0) {
+  if (column.fieldType !== FIELD_TYPE.TEXT_AREA && column.width !== undefined) {
     column.width = column.width > getTextWidth(record[column.dataIndex]) ? column.width : getTextWidth(record[column.dataIndex])
   }
 }
