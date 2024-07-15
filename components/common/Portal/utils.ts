@@ -1,8 +1,8 @@
-import {ColumnType, FIELD_TYPE, TableConfigType} from '@/framework/components/common/Portal/type'
-import {dictStore} from '@/framework/store/common'
-import {isNotEmpty} from '@/framework/utils/common'
+import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
+import { dictStore } from '@/framework/store/common'
+import { isNotEmpty } from '@/framework/utils/common'
 import dayjs from 'dayjs'
-import {formatMoney, formatPercent} from '@/framework/utils/formatter'
+import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const dict = dictStore()
 export const parse = (record: any, index: number, column: ColumnType, config: TableConfigType) => {

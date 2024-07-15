@@ -175,7 +175,7 @@
                   <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
                     <div v-if="index === 1">总计</div>
                     <div v-else-if="index === columns.length"></div>
-                    <div v-else> {{ dataSummary[`${ columns[index - 1].dataIndex }`] || '--' }}</div>
+                    <div v-else> {{ dataSummary[`${columns[index - 1].dataIndex}`] || '--' }}</div>
                   </s-table-summary-cell>
                 </s-table-summary-row>
               </template>
@@ -375,6 +375,7 @@ import Table from '@surely-vue/table'
 import {
   addEntity,
   advancedQuery,
+  advancedSelect,
   deleteEntity,
   exportTemplate,
   getById,
@@ -387,8 +388,8 @@ import {
   updateOrder,
   updateTreePid
 } from '@/framework/apis/portal'
-import {getPortalConfig} from '@/framework/apis/portal/config'
-import {dictStore} from '@/framework/store/common'
+import { getPortalConfig } from '@/framework/apis/portal/config'
+import { dictStore } from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
   ColumnType,
@@ -423,19 +424,19 @@ import {
   getDefaultFilterType,
   indexColumn
 } from '@/framework/components/common/Portal/constant'
-import {AUTO} from '@/framework/utils/constant'
-import {createVNode, Ref} from 'vue'
-import {message, Modal} from 'ant-design-vue'
-import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
-import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
-import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
-import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
-import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import {PortalBindType} from '@/framework/components/common/Portal/bind/type'
+import { AUTO } from '@/framework/utils/constant'
+import { createVNode, Ref } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
-import {parse} from '@/framework/components/common/Portal/utils'
-import {excelExport} from "@/framework/utils/excel";
+import { parse } from '@/framework/components/common/Portal/utils'
+import { excelExport } from "@/framework/utils/excel";
 
 /**
  * @param tableId 表格ID
@@ -456,40 +457,40 @@ import {excelExport} from "@/framework/utils/excel";
  * @param expanded 是否有展开按钮
  */
 const props = withDefaults(defineProps<{
-      tableId: string,
-      readOnly?: boolean,
-      actionWidth?: number,
-      advanceCondition?: ConditionListType,
-      defaultSortColumn?: Array<QuerySortType>,
-      rowAllowEdit?: (record: any) => boolean,
-      rowAllowDelete?: (record: any) => boolean,
-      query?: (url: string, query: QueryType) => Promise<any>,
-      treeMode?: boolean,
-      listMode?: boolean,
-      bindTabs?: Array<PortalBindType>,
-      treeCheckAble?: boolean,
-      selectedTreeData?: Array<any>,
-      checkStrictly?: boolean
-      bindDefaultValue?: any
-      expanded?: boolean
-    }>(),
-    {
-      readOnly: false,
-      actionWidth: 150,
-      advanceCondition: undefined,
-      defaultSortColumn: undefined,
-      rowAllowEdit: () => true,
-      rowAllowDelete: () => true,
-      query: undefined,
-      treeMode: false,
-      listMode: false,
-      bindTabs: undefined,
-      treeCheckAble: false,
-      selectedTreeData: undefined,
-      checkStrictly: false,
-      bindDefaultValue: undefined,
-      expanded: false
-    })
+    tableId: string,
+    readOnly?: boolean,
+    actionWidth?: number,
+    advanceCondition?: ConditionListType,
+    defaultSortColumn?: Array<QuerySortType>,
+    rowAllowEdit?: (record: any) => boolean,
+    rowAllowDelete?: (record: any) => boolean,
+    query?: (url: string, query: QueryType) => Promise<any>,
+    treeMode?: boolean,
+    listMode?: boolean,
+    bindTabs?: Array<PortalBindType>,
+    treeCheckAble?: boolean,
+    selectedTreeData?: Array<any>,
+    checkStrictly?: boolean
+    bindDefaultValue?: any
+    expanded?: boolean
+  }>(),
+  {
+    readOnly: false,
+    actionWidth: 150,
+    advanceCondition: undefined,
+    defaultSortColumn: undefined,
+    rowAllowEdit: () => true,
+    rowAllowDelete: () => true,
+    query: undefined,
+    treeMode: false,
+    listMode: false,
+    bindTabs: undefined,
+    treeCheckAble: false,
+    selectedTreeData: undefined,
+    checkStrictly: false,
+    bindDefaultValue: undefined,
+    expanded: false
+  })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
 }>()
@@ -516,7 +517,7 @@ const getTableHeight = () => {
 }
 const updateTableWidthAndHeight = () => {
   console.debug('updateTableWidthAndHeight')
-  updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 250)
+  updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 170)
 }
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
 bus.on('portal:table:resize', _.debounce(updateTableWidthAndHeight, 200))
@@ -1136,10 +1137,10 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     querySortMap.clear()
     if (isNotEmpty(column.order)) {
       querySortMap.set(column.columnKey,
-          {
-            property: column.column.dbField ? column.column.dbField : column.columnKey,
-            type: (column.order === 'ascend' ? 0 : 1)
-          })
+        {
+          property: column.column.dbField ? column.column.dbField : column.columnKey,
+          type: (column.order === 'ascend' ? 0 : 1)
+        })
     }
     queryData()
   }
@@ -1233,8 +1234,15 @@ const paginationChange = () => {
  * 导出
  */
 const download = () => {
-  // exportData(config.url, config.tableId, getQueryCondition(), config.title + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
-  excelExport(parsedDataSource.value, columnArray.value, config.title)
+  advancedSelect(config.url, getQueryCondition()).then((resp: any) => {
+    const dataArray = resp.payload || []
+    for (let index in dataArray) {
+      columnArray.value.forEach((column: ColumnType) => {
+        parse(dataArray[index], Number(index), column, config)
+      })
+    }
+    excelExport(dataArray, columnArray.value, config.title)
+  })
 }
 /**
  * 刷新
@@ -1311,6 +1319,7 @@ const init = async () => {
       column.fieldType = layout.fieldType
       column.referenceDict = layout.reference || layout.entity
       column.referenceEntityField = layout.entityField
+      column.contentAlign = layout.align
       column.align = layout.align
       if (layout.filterAble === '1') {
         column.customFilterDropdown = true
@@ -1347,9 +1356,9 @@ const init = async () => {
       column.defaultValue = layout.defaultValue
       if (isNotEmpty(column.referenceDict)) {
         if (column.fieldType === FIELD_TYPE.SELECT ||
-            column.fieldType === FIELD_TYPE.TREE ||
-            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
-            column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+          column.fieldType === FIELD_TYPE.TREE ||
+          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           dictColumnArray.push(column)
           let promise = dict.getDict(column.referenceDict).then(data => column.referenceDictOption = data)
           promiseList.push(promise)

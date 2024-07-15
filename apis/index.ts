@@ -36,6 +36,7 @@ const commonUrl = {
   ADD: '/insert',
   GENERAL_QUERY: '/general/query',
   ADVANCED_QUERY: '/advanced/query',
+  ADVANCED_SELECT: '/advanced/select',
   UPDATE: '/update',
   UPDATE_LIST: '/update/list',
   DELETE: '/delete',
@@ -116,6 +117,12 @@ const advancedQueryApi = (
   domain: string = baseDomain,
   version = '1.0'
 ) => buildApi(domain, commonUrl.ADVANCED_QUERY, requestMethod.POST, version, type)
+
+const advancedSelectApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.ADVANCED_SELECT, requestMethod.POST, version, type)
 
 const addApi = (
   type: string,
@@ -291,6 +298,22 @@ export const advancedQueryRequest = (
   showSuccess = false,
   showLoading = false
 ) => request(advancedQueryApi(type, domain), {}, {
+  condition,
+  sortList,
+  pageSize,
+  currentPage
+}, showSuccess, showLoading) as Promise<any>
+
+export const advancedSelectRequest = (
+  type: string,
+  condition: ConditionType,
+  sortList: Array<QuerySortType>,
+  pageSize: number,
+  currentPage: number,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(advancedSelectApi(type, domain), {}, {
   condition,
   sortList,
   pageSize,
