@@ -129,6 +129,7 @@
               auto-header-height
               bordered
               columnDrag
+              deepWatchColumns
               deepWatchDataSource
               showSorterTooltip
               sticky
@@ -166,7 +167,7 @@
                     </slot>
                   </template>
                 </portal-body-cell>
-                <span v-else>{{ parsedDataSource[index][column.dataIndex] }}</span>
+                <span v-else>{{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span>
               </template>
               <!-- endregion -->
               <!-- region 总结栏样式 -->
@@ -1188,6 +1189,7 @@ const queryData = () => {
 
 }
 const initData = (data: Array<any>) => {
+  dataSource.value = data || []
   parsedDataSource.value = []
   config.saveAllButtonShow = false
   for (let index in data) {
@@ -1199,8 +1201,6 @@ const initData = (data: Array<any>) => {
     })
     parsedDataSource.value.push(parsedData)
   }
-  dataSource.value = data || []
-  config.key = config.key + 1
 }
 const queryDataAsync = async () => {
   const resolve = (res: any) => {
@@ -1414,7 +1414,7 @@ const init = async () => {
       }
     }
     console.log('init finish')
-
+    config.key = config.key + 1
     console.debug(config, columnArray.value, columns.value, bindTabs.value)
 
     if (config.treeMode) {
