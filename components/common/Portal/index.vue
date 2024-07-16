@@ -167,7 +167,10 @@
                     </slot>
                   </template>
                 </portal-body-cell>
-                <span v-else>{{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span>
+                <span
+                  v-else
+                  :style="{display: 'block', textAlign: column.contentAlign || 'left'}">
+                  {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span>
               </template>
               <!-- endregion -->
               <!-- region 总结栏样式 -->
@@ -1322,7 +1325,6 @@ const init = async () => {
       column.referenceDict = layout.reference || layout.entity
       column.referenceEntityField = layout.entityField
       column.contentAlign = layout.align
-      column.align = layout.align
       if (layout.filterAble === '1') {
         column.customFilterDropdown = true
         column.onFilterDropdownOpenChange = onFilterDropdownOpenChange
