@@ -169,7 +169,7 @@
                 </portal-body-cell>
                 <span
                   v-else
-                  :style="{display: 'block', textAlign: column.contentAlign || 'left'}">
+                  :style="{display: 'block', textAlign: column.contentAlign || 'center'}">
                   {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span>
               </template>
               <!-- endregion -->
