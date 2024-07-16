@@ -35,6 +35,29 @@
       valueFormat="YYYY-MM-DD HH:mm:ss"
       @change="e => handleSearchConditionChanged(e || [], column)"
     />
+    <a-input-group
+      v-else-if="column.fieldType === FIELD_TYPE.NUMBER || column.fieldType === FIELD_TYPE.MONEY || column.fieldType === FIELD_TYPE.PERCENT"
+      compact style=" margin-bottom: 8px; ">
+      <a-input-number
+        v-model:value="_selectedKeysRef[0]"
+        placeholder="大于等于"
+        style="width: 100px; text-align: center"
+        @change="e => handleNumberConditionChanged([e, _selectedKeysRef[1]], column)"
+      />
+      <a-input
+        class="site-input-split"
+        disabled
+        placeholder="~"
+        style="width: 30px; border-left: 0; pointer-events: none"
+      />
+      <a-input-number
+        v-model:value="_selectedKeysRef[1]"
+        class="site-input-right"
+        placeholder="小于等于"
+        style="width: 100px; text-align: center"
+        @change="e => handleNumberConditionChanged([_selectedKeysRef[0], e], column)"
+      />
+    </a-input-group>
     <div v-else style="display: flex; align-items: center;">
       <lock-outlined
         v-if="column.filterStrict" style="margin-bottom: 8px; margin-right: 5px"
@@ -101,11 +124,32 @@ watch(column, (column) => {
 const _selectedKeysRef = ref(selectedKeysRef.value)
 watch(
   () => selectedKeysRef.value,
-  () => _selectedKeysRef.value = selectedKeysRef.value
+  () => {
+    console.log(' selectedKeysRef.value', selectedKeysRef.value)
+    _selectedKeysRef.value = selectedKeysRef.value
+  }
 )
 const handleSearchConditionChanged = (value: any, column: any) => {
   setSelectedKeys.value(value)
   emit('handleSearchConditionChanged', value, column.dataIndex, column)
+}
+const handleNumberConditionChanged = (value: any, column: any) => {
+  setSelectedKeys.value(value)
+  let left
+  let right
+
+  if (column.fieldType === FIELD_TYPE.PERCENT) {
+    left = value[0] ? value[0] * column.referenceDict.split(',')[1] / 100 : Number.MIN_VALUE
+    right = value[1] ? value[1] * column.referenceDict.split(',')[1] / 100 : Number.MAX_VALUE
+  } else if (column.fieldType === FIELD_TYPE.MONEY) {
+    left = value[0] ? value[0] * column.referenceDict.split(',')[1] : Number.MIN_VALUE
+    right = value[1] ? value[1] * column.referenceDict.split(',')[1] : Number.MAX_VALUE
+  } else {
+    left = value[0] || Number.MIN_VALUE
+    right = value[1] || Number.MAX_VALUE
+  }
+  console.log(' handleNumberConditionChanged', column, value, [left, right])
+  emit('handleSearchConditionChanged', [left, right], column.dataIndex, column)
 }
 const handleSearch = () => {
   confirm.value()

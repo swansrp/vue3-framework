@@ -17,7 +17,8 @@
           :read-only="isReadOnly(item)"
           :table-id="item.tableId"
           :tree-check-able="isNotEmpty(record) && item.bindType === '2'"
-          :tree-mode="item.treeMode" />
+          :tree-mode="item.treeMode"
+          action-width="0" />
       </div>
     </a-tab-pane>
     <template v-if="bindTabs[activeKey]?.bindType === '2'" #rightExtra>

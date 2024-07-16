@@ -72,7 +72,11 @@ export const getDefaultFilterType = (fieldType: FIELD_TYPE, strict = false) => {
     case FIELD_TYPE.SWITCH:
       return FILTER_TYPE.EQUAL
     case FIELD_TYPE.NUMBER:
-      return FILTER_TYPE.EQUAL
+      return FILTER_TYPE.BETWEEN
+    case FIELD_TYPE.MONEY:
+      return FILTER_TYPE.BETWEEN
+    case FIELD_TYPE.PERCENT:
+      return FILTER_TYPE.BETWEEN
     case FIELD_TYPE.SELECT:
       return FILTER_TYPE.IN
     case FIELD_TYPE.TREE:
