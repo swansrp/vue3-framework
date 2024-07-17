@@ -10,6 +10,7 @@
         <Portal
           :ref="(arg) => bindPortalRefMap.set(key, arg)"
           v-model:selectedTreeData="checkedKeys"
+          :action-width="0"
           :advance-condition="bindCondition"
           :bind-default-value="bindDefaultValue"
           :bind-tabs="bindTabs[activeKey].bindTabs"
@@ -17,8 +18,7 @@
           :read-only="isReadOnly(item)"
           :table-id="item.tableId"
           :tree-check-able="isNotEmpty(record) && item.bindType === '2'"
-          :tree-mode="item.treeMode"
-          action-width="0" />
+          :tree-mode="item.treeMode" />
       </div>
     </a-tab-pane>
     <template v-if="bindTabs[activeKey]?.bindType === '2'" #rightExtra>
@@ -42,7 +42,7 @@ import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 const bindPortalRefMap = new Map<number, any>()
 const prop = defineProps<{
   entityName: string,
-  record: { [key: string]: any },
+  record: { [key: string]: any } | null,
   rowKey: string,
   bindTabs: Array<PortalBindType>
 }>()

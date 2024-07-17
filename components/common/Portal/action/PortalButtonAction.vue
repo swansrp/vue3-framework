@@ -24,7 +24,7 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip placement="top">
+      <a-tooltip v-if="!config.plain" placement="top">
         <template #title>
           <span>刷新</span>
         </template>
@@ -40,7 +40,7 @@
     <!-- region 右侧按钮区 -->
     <div>
       <slot name="right-btns"></slot>
-      <a-tooltip placement="top">
+      <a-tooltip v-if="!config.plain" placement="top">
         <template #title>
           <span>高级查询</span>
         </template>

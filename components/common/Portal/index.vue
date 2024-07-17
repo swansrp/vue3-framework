@@ -301,7 +301,6 @@
                       :show-total="total => `共 ${total} 项`"
                       :size="config.size"
                       :total="config.total"
-                      hideOnSinglePage
                       show-less-items
                       show-quick-jumper
                       show-size-changer
@@ -444,6 +443,7 @@ import { excelExport } from "@/framework/utils/excel";
 
 /**
  * @param tableId 表格ID
+ * @param data 显示数据
  * @param readOnly 不能编辑
  * @param actionWidth 操作栏宽度
  * @param advanceCondition 默认查询参数
@@ -462,6 +462,7 @@ import { excelExport } from "@/framework/utils/excel";
  */
 const props = withDefaults(defineProps<{
     tableId: string,
+    data?: Array<any>,
     readOnly?: boolean,
     actionWidth?: number,
     advanceCondition?: ConditionListType,
@@ -479,6 +480,7 @@ const props = withDefaults(defineProps<{
     expanded?: boolean
   }>(),
   {
+    data: undefined,
     readOnly: false,
     actionWidth: 150,
     advanceCondition: undefined,
@@ -501,6 +503,7 @@ const emit = defineEmits<{
 const isBindTabExisted = computed(() => {
   return bindTabs.value && bindTabs.value.length > 0
 })
+const {data} = toRefs(props)
 const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
 const isListMode: Ref<boolean> = ref(props.listMode)
@@ -557,7 +560,8 @@ const config: TableConfigType = reactive({
   importAble: false,
   exportAble: false,
   defaultCondition: {} as ConditionListType,
-  defaultSort: [] as Array<QuerySortType>
+  defaultSort: [] as Array<QuerySortType>,
+  plain: false
 } as TableConfigType)
 watch(props, (value, old) => {
   if (value.readOnly != old.readOnly) {
@@ -565,6 +569,13 @@ watch(props, (value, old) => {
   }
   console.debug('propsChanged', value, old)
 })
+watch(
+  () => data.value,
+  () => {
+    config.total = data.value?.length || 0
+    initData(data.value || [])
+  }
+)
 /**
  * 数据
  */
@@ -1222,11 +1233,17 @@ const queryDataAsync = async () => {
     }
     return data
   }
-  console.log(getQueryCondition())
-  if (props.query) {
-    return await props.query(config.url, getQueryCondition()).then(resolve)
+  if (config.plain) {
+    return await data.value?.slice(
+      (config.currentPage - 1) * config.pageSize,
+      (config.currentPage - 1) * config.pageSize + config.pageSize
+    ) || []
   } else {
-    return await advancedQuery(config.url, getQueryCondition()).then(resolve)
+    if (props.query) {
+      return await props.query(config.url, getQueryCondition()).then(resolve)
+    } else {
+      return await advancedQuery(config.url, getQueryCondition()).then(resolve)
+    }
   }
 }
 /**
@@ -1239,15 +1256,19 @@ const paginationChange = () => {
  * 导出
  */
 const download = () => {
-  advancedSelect(config.url, getQueryCondition()).then((resp: any) => {
-    const dataArray = resp.payload || []
-    for (let index in dataArray) {
-      columnArray.value.forEach((column: ColumnType) => {
-        parse(dataArray[index], Number(index), column, config)
-      })
-    }
-    excelExport(dataArray, columns.value, config.title)
-  })
+  if (config.plain) {
+    excelExport(parsedDataSource.value || [], columns.value, config.title)
+  } else {
+    advancedSelect(config.url, getQueryCondition()).then((resp: any) => {
+      const dataArray = resp.payload || []
+      for (let index in dataArray) {
+        columnArray.value.forEach((column: ColumnType) => {
+          parse(dataArray[index], Number(index), column, config)
+        })
+      }
+      excelExport(dataArray, columns.value, config.title)
+    })
+  }
 }
 /**
  * 刷新
@@ -1280,9 +1301,13 @@ const init = async () => {
     if (props.readOnly) {
       config.readOnly = true
     }
+    if (data.value !== undefined) {
+      config.plain = true
+      config.readOnly = true
+    }
     config.url = tableConfig.url
     config.summary = tableConfig.summary === '1'
-    config.treeMode = isNotEmpty(tableConfig.pidColumn)
+    config.treeMode = isNotEmpty(tableConfig.pidColumn) && isEmpty(data.value)
     config.parentKey = tableConfig.pidColumn
     config.orderMode = isNotEmpty(tableConfig.orderColumn)
     config.treeDragAble = tableConfig.treeDrag === '1'
@@ -1325,12 +1350,12 @@ const init = async () => {
       column.referenceDict = layout.reference || layout.entity
       column.referenceEntityField = layout.entityField
       column.contentAlign = layout.align
-      if (layout.filterAble === '1') {
+      if (layout.filterAble === '1' && !config.plain) {
         column.customFilterDropdown = true
         column.onFilterDropdownOpenChange = onFilterDropdownOpenChange
         advancedCondition.columnArray.push(column)
       }
-      column.sorter = layout.sortAble === '1'
+      column.sorter = layout.sortAble === '1' && !config.plain
       column.addShow = layout.addShow === '1'
       if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow
       column.editShow = layout.editShow === '1'

@@ -61,9 +61,11 @@ export type TableConfigType = {
   // 支持导出
   exportAble: boolean,
   // 默认筛选条件
-  defaultCondition: ConditionListType
+  defaultCondition: ConditionListType,
   // 默认排序
-  defaultSort: Array<QuerySortType>
+  defaultSort: Array<QuerySortType>,
+  // 外部传入数据 不支持查询排序的朴素表格
+  plain: boolean
 }
 
 export type ModalType = {
