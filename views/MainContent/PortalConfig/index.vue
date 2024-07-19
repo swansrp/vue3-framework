@@ -653,7 +653,7 @@
           <!-- endregion -->
           <!-- region 表格显示 -->
           <a-descriptions
-            :column="9"
+            :column="10"
             :title="'表格显示'"
             bordered
             layout="vertical"
@@ -759,6 +759,17 @@
                 v-model:checked="columnMap.get(selectedColumnId).sortAble"
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'
                   || columnMap.get(selectedColumnId).show !== '1'"
+                checkedValue="1"
+                unCheckedValue="0"
+                @change="saveTableColumn"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
+              :span="1"
+              label="汇总">
+              <a-switch
+                v-model:checked="columnMap.get(selectedColumnId).summaryAble"
+                :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checkedValue="1"
                 unCheckedValue="0"
                 @change="saveTableColumn"

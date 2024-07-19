@@ -1,29 +1,30 @@
 import {
-    addRequest,
-    advancedQueryRequest,
-    advancedSelectRequest,
-    bindAllRequest,
-    bindBatchRequest,
-    bindReplaceAllRequest,
-    bindReplaceBatchRequest,
-    bindRequest,
-    deleteRequest,
-    exportDataRequest,
-    exportTemplateRequest,
-    getAllBindListRequest,
-    getByIdRequest,
-    getTreeDataRequest,
-    importAddProgressRequest,
-    importAddRequest,
-    queryBindListRequest,
-    queryUnbindListRequest,
-    unbindAllRequest,
-    unbindBatchRequest,
-    unbindRequest,
-    updateListRequest,
-    updateOrderRequest,
-    updateRequest,
-    updateTreePidRequest
+  addRequest,
+  advancedQueryRequest,
+  advancedSelectRequest,
+  advancedSummaryRequest,
+  bindAllRequest,
+  bindBatchRequest,
+  bindReplaceAllRequest,
+  bindReplaceBatchRequest,
+  bindRequest,
+  deleteRequest,
+  exportDataRequest,
+  exportTemplateRequest,
+  getAllBindListRequest,
+  getByIdRequest,
+  getTreeDataRequest,
+  importAddProgressRequest,
+  importAddRequest,
+  queryBindListRequest,
+  queryUnbindListRequest,
+  unbindAllRequest,
+  unbindBatchRequest,
+  unbindRequest,
+  updateListRequest,
+  updateOrderRequest,
+  updateRequest,
+  updateTreePidRequest
 } from '@/framework/apis'
 import { QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 
@@ -52,7 +53,10 @@ export const advancedQuery = (url: string, query: QueryType) =>
   advancedQueryRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage) as Promise<any>
 
 export const advancedSelect = (url: string, query: QueryType) =>
-  advancedSelectRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage) as Promise<any>
+  advancedSelectRequest('/' + url, query.condition, query.sortList) as Promise<any>
+
+export const advancedSummary = (url: string, query: QueryType, columns: Array<string>) =>
+  advancedSummaryRequest('/' + url, query.condition, query.sortList, columns) as Promise<any>
 
 export const getTreeData = (url: string, query: QueryType) =>
   getTreeDataRequest('/' + url, query) as Promise<any>

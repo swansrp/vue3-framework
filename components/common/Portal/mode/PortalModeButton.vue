@@ -7,7 +7,7 @@
         <a-menu-item v-if="config.treeMode && !isTreeMode && !isTreeDataEmpty" key="treeMode">树形模式</a-menu-item>
       </a-menu>
     </template>
-    <a-button shape="text" style="margin-top: -2px">
+    <a-button style="margin-top: -2px" type="text">
       <template #icon>
         <table-outlined v-if="!(isListMode || isTreeMode)" />
         <bars-outlined v-if="isListMode" />
@@ -18,8 +18,8 @@
 </template>
 
 <script lang="ts" setup>
-import {TableConfigType} from '@/framework/components/common/Portal/type'
-import {BarsOutlined, ClusterOutlined, TableOutlined} from '@ant-design/icons-vue'
+import { TableConfigType } from '@/framework/components/common/Portal/type'
+import { BarsOutlined, ClusterOutlined, TableOutlined } from '@ant-design/icons-vue'
 
 const prop = defineProps<{
   config: TableConfigType

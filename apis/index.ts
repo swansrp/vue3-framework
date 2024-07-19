@@ -37,6 +37,7 @@ const commonUrl = {
   GENERAL_QUERY: '/general/query',
   ADVANCED_QUERY: '/advanced/query',
   ADVANCED_SELECT: '/advanced/select',
+  ADVANCED_SUMMARY: '/advanced/summary',
   UPDATE: '/update',
   UPDATE_LIST: '/update/list',
   DELETE: '/delete',
@@ -123,6 +124,12 @@ const advancedSelectApi = (
   domain: string = baseDomain,
   version = '1.0'
 ) => buildApi(domain, commonUrl.ADVANCED_SELECT, requestMethod.POST, version, type)
+
+const advancedSummaryApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.ADVANCED_SUMMARY, requestMethod.POST, version, type)
 
 const addApi = (
   type: string,
@@ -308,16 +315,26 @@ export const advancedSelectRequest = (
   type: string,
   condition: ConditionType,
   sortList: Array<QuerySortType>,
-  pageSize: number,
-  currentPage: number,
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false
 ) => request(advancedSelectApi(type, domain), {}, {
   condition,
+  sortList
+}, showSuccess, showLoading) as Promise<any>
+
+export const advancedSummaryRequest = (
+  type: string,
+  condition: ConditionType,
+  sortList: Array<QuerySortType>,
+  columns: Array<string>,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(advancedSummaryApi(type, domain), {}, {
+  condition,
   sortList,
-  pageSize,
-  currentPage
+  columns
 }, showSuccess, showLoading) as Promise<any>
 
 export const getByIdRequest = (

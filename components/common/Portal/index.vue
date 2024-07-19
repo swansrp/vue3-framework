@@ -175,13 +175,11 @@
               <!-- endregion -->
               <!-- region 总结栏样式 -->
               <template #summary>
-                <s-table-summary-row v-if="config.summary">
-                  <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
-                    <div v-if="index === 1">总计</div>
-                    <div v-else-if="index === columns.length"></div>
-                    <div v-else> {{ dataSummary[`${columns[index - 1].dataIndex}`] || '--' }}</div>
-                  </s-table-summary-cell>
-                </s-table-summary-row>
+                <portal-summary
+                  :columns="columns"
+                  :config="config"
+                  :dataSummary="dataSummary"
+                />
               </template>
               <!-- endregion -->
               <!-- region 提示样式 -->
@@ -379,6 +377,7 @@ import {
   addEntity,
   advancedQuery,
   advancedSelect,
+  advancedSummary,
   deleteEntity,
   exportTemplate,
   getById,
@@ -582,7 +581,8 @@ watch(
 let dataSource: Ref<Array<any>> = ref([] as Array<any>)
 const parsedDataSource: Ref<Array<any>> = ref([] as Array<any>)
 const dataSourceMap: Ref<Map<any, any>> = ref(new Map() as Map<any, any>)
-let dataSummary = ref({} as any)
+const dataSummary = ref({} as { [key: string]: any })
+const summaryColumns = [] as Array<string>
 const modifyCellMap = new Map<string, ModifyCellType>()
 const treeData: Ref<Array<DataNode>> = ref([])
 const listData = computed(() => {
@@ -1196,6 +1196,10 @@ const queryData = () => {
     if (config.treeMode) {
       queryTreeData()
     }
+    if (config.summary) {
+      advancedSummary(config.url, getQueryCondition(), summaryColumns)
+        .then((resp: any) => dataSummary.value = resp.payload)
+    }
     queryDataAsync().then(data => {
       initData(data)
     })
@@ -1289,6 +1293,7 @@ const init = async () => {
     columnArray.value.length = 0
     columnDisplayMap.value.clear()
     advancedCondition.columnArray = []
+    summaryColumns.length = 0
     const index = _.cloneDeep(indexColumn)
     columnArray.value.push(index)
     const tableConfig = res.payload
@@ -1356,6 +1361,9 @@ const init = async () => {
         advancedCondition.columnArray.push(column)
       }
       column.sorter = layout.sortAble === '1' && !config.plain
+      if (layout.summaryAble === '1') {
+        summaryColumns.push(layout.property)
+      }
       column.addShow = layout.addShow === '1'
       if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow
       column.editShow = layout.editShow === '1'
@@ -1454,6 +1462,10 @@ const init = async () => {
       await queryTreeData()
     }
     await Promise.all(promiseList)
+    if (config.summary) {
+      await advancedSummary(config.url, getQueryCondition(), summaryColumns)
+        .then((resp: any) => dataSummary.value = resp.payload)
+    }
     return await queryDataAsync()
   })
 }

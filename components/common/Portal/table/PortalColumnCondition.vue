@@ -35,29 +35,48 @@
       valueFormat="YYYY-MM-DD HH:mm:ss"
       @change="e => handleSearchConditionChanged(e || [], column)"
     />
-    <a-input-group
+    <div
       v-else-if="column.fieldType === FIELD_TYPE.NUMBER || column.fieldType === FIELD_TYPE.MONEY || column.fieldType === FIELD_TYPE.PERCENT"
-      compact style=" margin-bottom: 8px; ">
+      style="display: flex; align-items: center;">
+      <lock-outlined
+        v-if="column.filterStrict" style="margin-bottom: 8px; margin-right: 5px"
+        @click="() => {
+          column.filterStrict = !column.filterStrict
+        }" />
+      <unlock-outlined
+        v-else style="margin-bottom: 8px; margin-right: 5px"
+        @click="() => {
+          column.filterStrict = !column.filterStrict
+        }" />
       <a-input-number
+        v-if="!column.filterStrict"
         v-model:value="_selectedKeysRef[0]"
-        placeholder="大于等于"
-        style="width: 100px; text-align: center"
-        @change="e => handleNumberConditionChanged([e, _selectedKeysRef[1]], column)"
-      />
-      <a-input
-        class="site-input-split"
-        disabled
-        placeholder="~"
-        style="width: 30px; border-left: 0; pointer-events: none"
-      />
-      <a-input-number
-        v-model:value="_selectedKeysRef[1]"
-        class="site-input-right"
-        placeholder="小于等于"
-        style="width: 100px; text-align: center"
-        @change="e => handleNumberConditionChanged([_selectedKeysRef[0], e], column)"
-      />
-    </a-input-group>
+        style=" margin-bottom: 8px; width: 170px;"
+        @change="e => handleNumberConditionChanged([e, e], column)" />
+      <a-input-group
+        v-else
+        compact style=" margin-bottom: 8px; ">
+        <a-input-number
+          v-model:value="_selectedKeysRef[0]"
+          placeholder="大于等于"
+          style="width: 100px; text-align: center"
+          @change="e => handleNumberConditionChanged([e, _selectedKeysRef[1]], column)"
+        />
+        <a-input
+          class="site-input-split"
+          disabled
+          placeholder="~"
+          style="width: 30px; border-left: 0; pointer-events: none"
+        />
+        <a-input-number
+          v-model:value="_selectedKeysRef[1]"
+          class="site-input-right"
+          placeholder="小于等于"
+          style="width: 100px; text-align: center"
+          @change="e => handleNumberConditionChanged([_selectedKeysRef[0], e], column)"
+        />
+      </a-input-group>
+    </div>
     <div v-else style="display: flex; align-items: center;">
       <lock-outlined
         v-if="column.filterStrict" style="margin-bottom: 8px; margin-right: 5px"
@@ -80,22 +99,24 @@
         @press-enter="handleSearch()"
       />
     </div>
-    <a-button
-      size="small"
-      style="width: 90px; margin-right: 8px"
-      type="primary"
-      @click="handleSearch()"
-    >
-      <template #icon>
-        <search-outlined />
-      </template>
-      搜索
-    </a-button>
-    <a-button
-      size="small" style="width: 90px"
-      @click="handleReset(column)">
-      重置
-    </a-button>
+    <div style="display: flex; justify-content: center">
+      <a-button
+        size="small"
+        style="width: 90px; margin-right: 8px;"
+        type="primary"
+        @click="handleSearch()"
+      >
+        <template #icon>
+          <search-outlined />
+        </template>
+        搜索
+      </a-button>
+      <a-button
+        size="small" style="width: 90px"
+        @click="handleReset(column)">
+        重置
+      </a-button>
+    </div>
   </div>
 </template>
 
