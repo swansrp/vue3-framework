@@ -160,14 +160,14 @@ const handleNumberConditionChanged = (value: any, column: any) => {
   let right
 
   if (column.fieldType === FIELD_TYPE.PERCENT) {
-    left = value[0] ? value[0] * column.referenceDict.split(',')[1] / 100 : Number.MIN_VALUE
-    right = value[1] ? value[1] * column.referenceDict.split(',')[1] / 100 : Number.MAX_VALUE
+    left = value[0] !== undefined ? value[0] === 0 ? 0 : value[0] * column.referenceDict.split(',')[1] / 100 : Number.MIN_VALUE
+    right = value[1] !== undefined ? value[1] === 0 ? 0 : value[1] * column.referenceDict.split(',')[1] / 100 : Number.MAX_VALUE
   } else if (column.fieldType === FIELD_TYPE.MONEY) {
-    left = value[0] ? value[0] * column.referenceDict.split(',')[1] : Number.MIN_VALUE
-    right = value[1] ? value[1] * column.referenceDict.split(',')[1] : Number.MAX_VALUE
+    left = value[0] !== undefined ? value[0] === 0 ? 0 : value[0] * column.referenceDict.split(',')[1] : Number.MIN_VALUE
+    right = value[1] !== undefined ? value[1] === 0 ? 0 : value[1] * column.referenceDict.split(',')[1] : Number.MAX_VALUE
   } else {
-    left = value[0] || Number.MIN_VALUE
-    right = value[1] || Number.MAX_VALUE
+    left = value[0] === 0 ? 0 : value[0] || Number.MIN_VALUE
+    right = value[1] === 0 ? 0 : value[1] || Number.MAX_VALUE
   }
   console.log(' handleNumberConditionChanged', column, value, [left, right])
   emit('handleSearchConditionChanged', [left, right], column.dataIndex, column)

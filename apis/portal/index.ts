@@ -11,6 +11,9 @@ import {
   deleteRequest,
   exportDataRequest,
   exportTemplateRequest,
+  generalQueryRequest,
+  generalSelectRequest,
+  generalSummaryRequest,
   getAllBindListRequest,
   getByIdRequest,
   getTreeDataRequest,
@@ -51,6 +54,15 @@ export const deleteEntity = (url: string, id: string) =>
 
 export const advancedQuery = (url: string, query: QueryType) =>
   advancedQueryRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage) as Promise<any>
+
+export const generalQuery = (url: string, query: QueryType) =>
+  generalQueryRequest('/' + url, query.conditionList, query.sortList, query.pageSize, query.currentPage) as Promise<any>
+
+export const generalSelect = (url: string, query: QueryType) =>
+  generalSelectRequest('/' + url, query.conditionList, query.sortList) as Promise<any>
+
+export const generalSummary = (url: string, query: QueryType, columns: Array<string>) =>
+  generalSummaryRequest('/' + url, query.conditionList, query.sortList, columns) as Promise<any>
 
 export const advancedSelect = (url: string, query: QueryType) =>
   advancedSelectRequest('/' + url, query.condition, query.sortList) as Promise<any>

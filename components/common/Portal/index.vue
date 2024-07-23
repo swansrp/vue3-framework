@@ -380,6 +380,9 @@ import {
   advancedSummary,
   deleteEntity,
   exportTemplate,
+  generalQuery,
+  generalSelect,
+  generalSummary,
   getById,
   getTreeData,
   importAdd,
@@ -560,7 +563,8 @@ const config: TableConfigType = reactive({
   exportAble: false,
   defaultCondition: {} as ConditionListType,
   defaultSort: [] as Array<QuerySortType>,
-  plain: false
+  plain: false,
+  advancedSearchAble: true
 } as TableConfigType)
 watch(props, (value, old) => {
   if (value.readOnly != old.readOnly) {
@@ -1052,7 +1056,7 @@ const openModal = (type: 'view' | 'add' | 'modify' | 'association' | undefined) 
 
 // region 表格搜索
 
-const getQueryCondition = () => {
+const getAdvancedCondition = () => {
   const queryCondition: QueryType = {
     condition: config.defaultCondition,
     currentPage: config.currentPage,
@@ -1062,7 +1066,7 @@ const getQueryCondition = () => {
   if (isNotEmpty(querySortMap)) {
     queryCondition.sortList = [...querySortMap.values()]
   }
-  if (isNotEmpty(advancedCondition.condition)) {
+  if (isNotEmpty(advancedCondition.condition) && isNotEmpty(advancedCondition.condition.conditionList)) {
     if (isNotEmpty(queryCondition.condition)) {
       queryCondition.condition = {
         conditionList: [queryCondition.condition as ConditionListType, advancedCondition.condition as ConditionListType],
@@ -1100,6 +1104,36 @@ const getQueryCondition = () => {
         conditionList: [props.advanceCondition as ConditionListType],
         andOr: '0'
       }
+    }
+  }
+
+  return queryCondition
+}
+
+const getGeneralCondition = () => {
+  const queryCondition: QueryType = {
+    conditionList: config.defaultCondition.conditionList,
+    sortList: [] as Array<QuerySortType>,
+    currentPage: config.currentPage,
+    pageSize: config.pageSize
+  } as QueryType
+  queryCondition.sortList = props.defaultSortColumn || config.defaultSort || []
+  if (isNotEmpty(querySortMap)) {
+    queryCondition.sortList = [...querySortMap.values()]
+  }
+  console.log('queryConditionMap', queryConditionMap)
+  if (isNotEmpty(queryConditionMap)) {
+    if (isNotEmpty(queryCondition.conditionList)) {
+      queryCondition.conditionList = [...queryCondition.conditionList, ...queryConditionMap.values()]
+    } else {
+      queryCondition.conditionList = [...queryConditionMap.values()]
+    }
+  }
+  if (props.advanceCondition && isNotEmpty(props.advanceCondition)) {
+    if (isNotEmpty(queryCondition.conditionList)) {
+      queryCondition.conditionList = [...queryCondition.conditionList, ...props.advanceCondition.conditionList]
+    } else {
+      queryCondition.conditionList = [...props.advanceCondition.conditionList]
     }
   }
 
@@ -1182,7 +1216,11 @@ const advancedCondition = reactive({
 
 //region 常用功能函数
 const queryCondition = () => {
-  return getQueryCondition()
+  if (config.advancedSearchAble) {
+    return getAdvancedCondition()
+  } else {
+    return getGeneralCondition()
+  }
 }
 const getConfig = () => {
   return config
@@ -1197,8 +1235,7 @@ const queryData = () => {
       queryTreeData()
     }
     if (config.summary) {
-      advancedSummary(config.url, getQueryCondition(), summaryColumns)
-        .then((resp: any) => dataSummary.value = resp.payload)
+      getDataSummary()
     }
     queryDataAsync().then(data => {
       initData(data)
@@ -1244,11 +1281,25 @@ const queryDataAsync = async () => {
     ) || []
   } else {
     if (props.query) {
-      return await props.query(config.url, getQueryCondition()).then(resolve)
+      return await props.query(config.url, queryCondition()).then(resolve)
     } else {
-      return await advancedQuery(config.url, getQueryCondition()).then(resolve)
+      if (config.advancedSearchAble) {
+        return await advancedQuery(config.url, queryCondition()).then(resolve)
+      } else {
+        return await generalQuery(config.url, queryCondition()).then(resolve)
+      }
     }
   }
+}
+const getDataSummary = async () => {
+  if (config.advancedSearchAble) {
+    return advancedSummary(config.url, queryCondition(), summaryColumns)
+      .then((resp: any) => dataSummary.value = resp.payload)
+  } else {
+    return generalSummary(config.url, queryCondition(), summaryColumns)
+      .then((resp: any) => dataSummary.value = resp.payload)
+  }
+
 }
 /**
  * 分页变更
@@ -1263,7 +1314,7 @@ const download = () => {
   if (config.plain) {
     excelExport(parsedDataSource.value || [], columns.value, config.title)
   } else {
-    advancedSelect(config.url, getQueryCondition()).then((resp: any) => {
+    const resolve = (resp: any) => {
       const dataArray = resp.payload || []
       for (let index in dataArray) {
         columnArray.value.forEach((column: ColumnType) => {
@@ -1271,7 +1322,12 @@ const download = () => {
         })
       }
       excelExport(dataArray, columns.value, config.title)
-    })
+    }
+    if (config.advancedSearchAble) {
+      advancedSelect(config.url, queryCondition()).then((resp: any) => resolve(resp))
+    } else {
+      generalSelect(config.url, queryCondition()).then((resp: any) => resolve(resp))
+    }
   }
 }
 /**
@@ -1312,6 +1368,7 @@ const init = async () => {
     }
     config.url = tableConfig.url
     config.summary = tableConfig.summary === '1'
+    config.advancedSearchAble = tableConfig.advanced === '1'
     config.treeMode = isNotEmpty(tableConfig.pidColumn) && isEmpty(data.value)
     config.parentKey = tableConfig.pidColumn
     config.orderMode = isNotEmpty(tableConfig.orderColumn)
@@ -1463,8 +1520,7 @@ const init = async () => {
     }
     await Promise.all(promiseList)
     if (config.summary) {
-      await advancedSummary(config.url, getQueryCondition(), summaryColumns)
-        .then((resp: any) => dataSummary.value = resp.payload)
+      await getDataSummary()
     }
     return await queryDataAsync()
   })

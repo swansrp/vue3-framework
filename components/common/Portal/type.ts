@@ -65,7 +65,9 @@ export type TableConfigType = {
   // 默认排序
   defaultSort: Array<QuerySortType>,
   // 外部传入数据 不支持查询排序的朴素表格
-  plain: boolean
+  plain: boolean,
+  // 是否支持高级查询
+  advancedSearchAble: boolean,
 }
 
 export type ModalType = {
@@ -276,6 +278,7 @@ export type QuerySortType = {
 
 export type QueryType = {
   condition: ConditionType,
+  conditionList: Array<ConditionListType>,
   sortList: Array<QuerySortType>
   currentPage: number,
   pageSize: number

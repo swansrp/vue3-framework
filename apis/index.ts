@@ -35,6 +35,8 @@ const commonUrl = {
   GET_BY_ID: '/id',
   ADD: '/insert',
   GENERAL_QUERY: '/general/query',
+  GENERAL_SELECT: '/general/select',
+  GENERAL_SUMMARY: '/general/summary',
   ADVANCED_QUERY: '/advanced/query',
   ADVANCED_SELECT: '/advanced/select',
   ADVANCED_SUMMARY: '/advanced/summary',
@@ -112,6 +114,18 @@ const generalQueryApi = (
   domain: string = baseDomain,
   version = '1.0'
 ) => buildApi(domain, commonUrl.GENERAL_QUERY, requestMethod.POST, version, type)
+
+const generalSelectApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.GENERAL_SELECT, requestMethod.POST, version, type)
+
+const generalSummaryApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.GENERAL_SUMMARY, requestMethod.POST, version, type)
 
 const advancedQueryApi = (
   type: string,
@@ -293,6 +307,32 @@ export const generalQueryRequest = (
   sortList,
   pageSize,
   currentPage
+}, showSuccess, showLoading) as Promise<any>
+
+export const generalSelectRequest = (
+  type: string,
+  conditionList: Array<any>,
+  sortList: Array<QuerySortType>,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(generalSelectApi(type, domain), {}, {
+  conditionList,
+  sortList
+}, showSuccess, showLoading) as Promise<any>
+
+export const generalSummaryRequest = (
+  type: string,
+  conditionList: Array<any>,
+  sortList: Array<QuerySortType>,
+  columns: Array<string>,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(generalSummaryApi(type, domain), {}, {
+  conditionList,
+  sortList,
+  columns
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedQueryRequest = (
