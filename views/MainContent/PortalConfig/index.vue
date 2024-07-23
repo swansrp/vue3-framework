@@ -644,6 +644,19 @@
                 <a-button type="link" @click="entityConditionDrawOpen">设置条件</a-button>
               </a-descriptions-item>
             </template>
+            <template
+              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT &&
+                columnMap.get(selectedColumnId).mobileDisplayType === '3'">
+              <a-descriptions-item
+                :span="2"
+                label="徽标颜色">
+                <a-input
+                  :value="columnMap.get(selectedColumnId).entityField"
+                  placeholder="按选项顺序(逗号隔开)"
+                  @update:value=" v => columnMap.get(selectedColumnId).entityField = v"
+                />
+              </a-descriptions-item>
+            </template>
             <template v-else>
               <a-descriptions-item
                 :span="4"
