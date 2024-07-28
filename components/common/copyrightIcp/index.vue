@@ -1,5 +1,5 @@
 <template>
-  <div class="icp">{{`© ${year} ${author} ` }}<a href="http://beian.miit.gov.cn/" target="_blank">{{ icp }}</a></div>
+  <div class="icp">{{ `© ${year} ${author} ` }}<a href="http://beian.miit.gov.cn/" target="_blank">{{ icp }}</a></div>
 </template>
 
 <script lang="ts" setup>

@@ -33,7 +33,7 @@ const props = withDefaults(
   }>(),
   {}
 )
-const emit = defineEmits<{}>()
+const {config, columns, dataSummary} = toRefs(props)
 onMounted(() => {
 })
 </script>
