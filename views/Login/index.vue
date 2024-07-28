@@ -82,6 +82,7 @@
         </a-form-item>
       </a-form>
     </div>
+    <copyright-icp />
   </div>
 </template>
 
@@ -96,6 +97,7 @@ import {AUTHORIZATION_TOKEN, REFRESH_TOKEN} from '@/framework/utils/constant'
 import {LockOutlined, SafetyOutlined, UserOutlined} from '@ant-design/icons-vue'
 import {useRouter} from 'vue-router'
 import {baseURL} from '@/framework/network/request'
+import CopyrightIcp from '@/framework/components/common/copyrightIcp/index.vue'
 
 const title: Ref<string> = ref(document.title)
 const router = useRouter()
