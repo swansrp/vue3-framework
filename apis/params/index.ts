@@ -17,7 +17,7 @@ export const getConfig = (configKey: string) => request(buildGetApi(""), {config
 
 export const queryParams = (conditionList: Array<any>, sortList: Array<any>, pageSize: number, currentPage: number, domain: string = baseDomain) =>
     generalQueryRequest(configAdminApi, conditionList, sortList, pageSize, currentPage, domain)
-export const updateParams = (data: object, domain: string = baseDomain) => updateRequest(configAdminApi, data, domain)
+export const updateParams = (data: object, domain: string = baseDomain) => updateRequest(configAdminApi, {}, data, domain)
 export const deleteParams = (id: string, domain: string = baseDomain) => deleteRequest(configAdminApi, id, domain)
 
 export const refreshParams = (domain: string = baseDomain) =>
