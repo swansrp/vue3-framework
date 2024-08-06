@@ -1104,7 +1104,7 @@ let selectedRole = ref('0')
 const entityConfig = ref({} as any)
 const entityCondition = reactive({
   show: false,
-  columns: [] as Array<ColumnType>,
+  columnArray: [] as Array<ColumnType>,
   title: '',
   condition: {} as ConditionType | undefined,
   key: 0,
@@ -1193,9 +1193,12 @@ const getTableConfigByName = (item: any) => {
     await Promise.all(promiseList)
     fieldRecords.value = [...tableConfig.value.columns]
     defaultCondition.condition = tableConfig.value.defaultCondition
-    const sortConfig = JSON.parse(tableConfig.value.defaultSort)[0]
-    tableConfig.value.sortType = sortConfig.type === 0
-    tableConfig.value.sortColumn = sortConfig.property
+    const defaultSort = JSON.parse(tableConfig.value.defaultSort)
+    if(isNotEmpty(defaultSort)) {
+      const sortConfig = defaultSort[0]
+      tableConfig.value.sortType = sortConfig.type === 0
+      tableConfig.value.sortColumn = sortConfig.property
+    }
     console.debug(tableConfig.value)
   })
 }
@@ -1305,7 +1308,7 @@ const handleColumnSelected = (event: MouseEvent, params: CellRenderArgs) => {
 }
 
 const entityConditionDrawOpen = async () => {
-  entityCondition.columns = entityConfig.value.columns.filter(
+  entityCondition.columnArray = entityConfig.value.columns.filter(
     (item: {
       filterAble: string;
       show: string;
@@ -1316,7 +1319,7 @@ const entityConditionDrawOpen = async () => {
       referenceDict: item.reference,
       fieldType: item.fieldType
     }))
-  for (let item of entityCondition.columns) {
+  for (let item of entityCondition.columnArray) {
     if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.referenceDict)) {
       item.referenceDictOption = await dict.getDict(item.referenceDict) || []
     }
