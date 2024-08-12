@@ -1,19 +1,16 @@
 import qs from 'qs'
 import axios, { AxiosResponse } from 'axios'
-import { ElLoading, ElMessage } from 'element-plus'
-import 'element-plus/es/components/loading/style/css'
-import 'element-plus/es/components/message/style/css'
 import { localStorageMethods } from '@/framework/utils/common'
-import { LoadingInstance } from 'element-plus/lib/components/loading/src/loading'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 import { useCommonStore } from '@/framework/store/common'
 import pinia from '@/framework/store'
-import { AxiosProgressEvent } from 'axios/index'
+import { AxiosProgressEvent } from 'axios'
 import { baseDomain } from '@/framework/apis'
 import { navigation2Login } from '@/framework/network/login'
+import {message} from "ant-design-vue";
+import { load } from '@/framework/components/common/Loading'
 
-// 全局的 ElLoading，即使多次创建，也只会存在一个，方便随时关闭
-let loadingInstance: LoadingInstance
+message.config({ maxCount: 1 })
 const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
 const commonStore = useCommonStore(pinia)
 const web = '/web'
@@ -24,42 +21,36 @@ const errCode = {
   SESSION_TIME_OUT: 401
 }
 const axiosInstance = axios.create({})
-const createLoadingInstance = () => ElLoading.service({
-  fullscreen: true,
-  text: '加载中，请稍后……',
-  background: 'rgba(0, 0, 0, 0.7)'
-})
-
 axiosInstance.interceptors.request.use(
   (config) => {
     const {data, showLoading} = config.data as configDataType
-    if (showLoading) loadingInstance = createLoadingInstance()
+    if (showLoading) load.show()
     config.data = data
     const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
     if (token) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
     return config
   }, err => {
     console.log(err)
-    loadingInstance && loadingInstance.close()
-    return ElMessage.error({message: '请求超时，请检查网络设置!'})
+    load.close()
+    return message.error('请求超时，请检查网络设置!')
   }
 )
 
 axiosInstance.interceptors.response.use(
   (resp) => {
-    loadingInstance && loadingInstance.close()
+    load.close()
     _handleTimeOut(resp.data)
     return Promise.resolve(resp)
   }, err => {
-    loadingInstance && loadingInstance.close()
+      load.close()
     _handleTimeOut(err.response.data)
 
     if (err.response.status === 504 || err.response.status === 404)
-      ElMessage.error({message: '服务器被吃了⊙﹏⊙∥'})
+      message.error('服务器被吃了⊙﹏⊙∥')
     else if (err.response.status === 403)
-      ElMessage.error({message: '权限不足,请联系管理员!'})
+      message.error('权限不足,请联系管理员!')
     else if (err.response.status === 500)
-      ElMessage.error({message: '系统错误,联系管理员!'})
+      message.error( '系统错误,联系管理员!')
     else
       console.log(err)
     throw new Error(err)
@@ -125,15 +116,18 @@ function request(apiType: ApiType,
         const errLevel = +resp.data.payload.errLevel
         const errType = errTypeMapList[errLevel]
         if (showErr) {
-          ElMessage.error({message: resp.data.payload.errMsg, type: errType})
+          const msg = resp.data.payload.errMsg
+          if (errType === 'info') message.info(msg)
+          else if (errType === 'warning') message.warning(msg)
+          else if (errType === 'error') message.error(msg)
           throw new Error(resp.data.status.msg)
         } else {
           throw new Error(resp.data.status.details)
         }
       }
     } else if (showSuccess) {
-      const message = resp.data.status.details
-      if (message) ElMessage.success({message})
+      const msg = resp.data.status.details
+      if (msg) message.success(msg)
     }
     return {
       status: resp.data.status,
@@ -141,8 +135,8 @@ function request(apiType: ApiType,
       response: resp
     }
   }, err => {
-    loadingInstance && loadingInstance.close()
-    ElMessage.error({message: '后台接口错误，请联系后台管理员！'})
+    load.close()
+    message.error('后台接口错误，请联系后台管理员！')
     throw new Error(err)
   })
 }
@@ -152,7 +146,7 @@ function download(
   fileName: string,
   params: object,
   body: object) {
-  ElMessage.success({message: '开始下载……'})
+  message.success('开始下载……')
   return axiosInstance({
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,
@@ -173,7 +167,7 @@ function download(
       response: resp
     }
   }, err => {
-    ElMessage.error({message: '下载失败，请检查网络后重试，或联系系统管理员！'})
+    message.error('下载失败，请检查网络后重试，或联系系统管理员！')
     console.log(err)
     throw new Error(err)
   })
@@ -201,7 +195,7 @@ function upload(
       response: resp
     }
   }).catch(err => {
-    ElMessage.error({message: '上传失败，请检查网络后重试，或联系系统管理员！'})
+    message.error('上传失败，请检查网络后重试，或联系系统管理员！')
     console.log(err)
     throw new Error(err)
   })
