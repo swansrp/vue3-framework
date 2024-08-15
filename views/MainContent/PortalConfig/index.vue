@@ -475,6 +475,20 @@
             layout="vertical"
             size="small">
             <template #extra>
+              <a-dropdown>
+                <template #overlay>
+                  <a-menu @click="({ key: menuKey }) => quickConfig(columnMap.get(selectedColumnId), menuKey)">
+                    <a-menu-item key="displayNone">不显示</a-menu-item>
+                    <a-menu-item key="displaySearchSort">显示/筛选/排序</a-menu-item>
+                    <a-menu-item key="displaySearch">显示/筛选</a-menu-item>
+                    <a-menu-item key="displayNoAction">只显示</a-menu-item>
+                    <a-menu-item key="displayTableOnly">表格显示</a-menu-item>
+                    <a-menu-item key="displayDetailOnly">详情显示</a-menu-item>
+                    <a-menu-item key="displayTableAndDetail">不参与编辑</a-menu-item>
+                  </a-menu>
+                </template>
+                <a-button style="margin-right: 5px" type="link"> 常用配置</a-button>
+              </a-dropdown>
               <a-button style="margin-right: 10px" type="primary" @click="saveTableColumn(false)">保存</a-button>
             </template>
             <!-- region 字段基础信息 -->
@@ -656,11 +670,6 @@
                   @update:value=" v => columnMap.get(selectedColumnId).entityField = v"
                 />
               </a-descriptions-item>
-            </template>
-            <template v-else>
-              <a-descriptions-item
-                :span="4"
-                label="" />
             </template>
           </a-descriptions>
           <!-- endregion -->
@@ -1194,7 +1203,7 @@ const getTableConfigByName = (item: any) => {
     fieldRecords.value = [...tableConfig.value.columns]
     defaultCondition.condition = tableConfig.value.defaultCondition
     const defaultSort = JSON.parse(tableConfig.value.defaultSort)
-    if(isNotEmpty(defaultSort)) {
+    if (isNotEmpty(defaultSort)) {
       const sortConfig = defaultSort[0]
       tableConfig.value.sortType = sortConfig.type === 0
       tableConfig.value.sortColumn = sortConfig.property
@@ -1223,6 +1232,47 @@ const saveTableConfig = (silent = true) => {
 
 const saveTableColumn = (silent = true) => {
   updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() => getPortalConfig(tableConfig.value.name, selectedRole.value))
+}
+
+const quickConfig = (column: any, type: string) => {
+  if (type === 'displayNone') {
+    column.show = '0'
+    column.detailShow = '0'
+    column.addShow = '0'
+    column.editShow = '0'
+    column.filterAble = '0'
+    column.sortAble = '0'
+  } else if (type === 'displaySearchSort') {
+    column.show = '1'
+    column.detailShow = '1'
+    column.addShow = '0'
+    column.editShow = '0'
+    column.filterAble = '1'
+    column.sortAble = '1'
+  } else if (type === 'displaySearch') {
+    column.show = '1'
+    column.detailShow = '1'
+    column.addShow = '0'
+    column.editShow = '0'
+    column.filterAble = '1'
+    column.sortAble = '0'
+  } else if (type === 'displayTableOnly') {
+    column.show = '1'
+    column.detailShow = '0'
+    column.addShow = '0'
+    column.editShow = '0'
+  } else if (type === 'displayDetailOnly') {
+    column.show = '1'
+    column.detailShow = '0'
+    column.addShow = '0'
+    column.editShow = '0'
+  } else if (type === 'displayTableAndDetail') {
+    column.show = '1'
+    column.detailShow = '1'
+    column.addShow = '0'
+    column.editShow = '0'
+  }
+  saveTableColumn()
 }
 
 const exportTableConfig = () => {

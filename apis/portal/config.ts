@@ -4,7 +4,7 @@ import { apiType, baseDomain, buildGetApiByType, buildPostApiByType } from '@/fr
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.portal + '/admin', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.portal + '/admin', domain)
 
-export const getPortalList = (name: string, roleId: any) => get(buildGetApi('/list'), {name, roleId}) as Promise<any>
+export const getPortalList = (name: string, roleId: any) => get(buildGetApi('/list'), {name, roleId}, {}, false, false) as Promise<any>
 
 export const deletePortalConfig = (id: any) => post(buildPostApi('/config/delete'), undefined, {id}) as Promise<any>
 
