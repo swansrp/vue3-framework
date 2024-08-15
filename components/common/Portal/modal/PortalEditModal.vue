@@ -92,7 +92,7 @@
               <div
                 v-else-if="column.fieldType === FIELD_TYPE.IMAGE">
                 <div
-                  v-if="log(column.dataIndex, config.modal.data, config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex]))"
+                  v-if="config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
                   style="display: flex">
                   <a-image :src="config.modal.data[column.dataIndex]" :width="100" />
                   <close-circle-outlined
@@ -148,7 +148,7 @@
       :table-id="entityDialogBox.column.referenceDict"
       read-only>
       <template #action="{ portalConfig, column, record }">
-        <a-button type="text" @click="bind(portalConfig, column, record)">确认</a-button>
+        <a-button type="link" @click="bind(portalConfig, column, record)">确认</a-button>
       </template>
     </portal>
   </dialog-box>

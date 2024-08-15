@@ -1,8 +1,7 @@
 <template>
   <div class="filter-column">
     <a-select
-      v-if="column.fieldType === FIELD_TYPE.SELECT||
-        column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+      v-if="column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
       :filterOption="filterOption"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       :options="column.referenceDictOption"
@@ -38,16 +37,10 @@
     <div
       v-else-if="column.fieldType === FIELD_TYPE.NUMBER || column.fieldType === FIELD_TYPE.MONEY || column.fieldType === FIELD_TYPE.PERCENT"
       style="display: flex; align-items: center;">
-      <lock-outlined
-        v-if="column.filterStrict" style="margin-bottom: 8px; margin-right: 5px"
-        @click="() => {
-          column.filterStrict = !column.filterStrict
-        }" />
-      <unlock-outlined
-        v-else style="margin-bottom: 8px; margin-right: 5px"
-        @click="() => {
-          column.filterStrict = !column.filterStrict
-        }" />
+      <lock-switch
+        v-model="column.filterStrict"
+        style="margin-bottom: 8px; margin-right: 5px"
+      />
       <a-input-number
         v-if="!column.filterStrict"
         v-model:value="_selectedKeysRef[0]"
@@ -78,18 +71,11 @@
       </a-input-group>
     </div>
     <div v-else style="display: flex; align-items: center;">
-      <lock-outlined
-        v-if="column.filterStrict" style="margin-bottom: 8px; margin-right: 5px"
-        @click="() => {
-          column.filterStrict = !column.filterStrict
-          handleSearchConditionChanged(_selectedKeysRef[0] ? [_selectedKeysRef[0]] : [], column)
-        }" />
-      <unlock-outlined
-        v-else style="margin-bottom: 8px; margin-right: 5px"
-        @click="() => {
-          column.filterStrict = !column.filterStrict
-          handleSearchConditionChanged(_selectedKeysRef[0] ? [_selectedKeysRef[0]] : [], column)
-        }" />
+      <lock-switch
+        v-model="column.filterStrict"
+        style="margin-bottom: 8px; margin-right: 5px"
+        @click="() => handleSearchConditionChanged(_selectedKeysRef[0] ? [_selectedKeysRef[0]] : [], column)"
+      />
       <a-input
         ref="searchInput"
         v-model:value="_selectedKeysRef[0]"
@@ -122,9 +108,10 @@
 
 <script lang="ts" setup>
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
-import { LockOutlined, SearchOutlined, UnlockOutlined } from '@ant-design/icons-vue'
+import { SearchOutlined } from '@ant-design/icons-vue'
 import { filterOption } from '@/framework/components/common/utils'
 import { strRemoveLF } from '@/framework/utils/common'
+import LockSwitch from '@/framework/components/common/lockSwitch/index.vue'
 
 const prop = defineProps<{
   column: any,

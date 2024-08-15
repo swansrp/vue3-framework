@@ -152,7 +152,7 @@
               <!-- region 单元格样式-->
               <template #bodyCell="{ column, record, index }">
                 <portal-body-cell
-                  v-if="!config.readOnly"
+                  v-if="isNotEmpty($slots.action) || !config.readOnly"
                   :column="column"
                   :config="config"
                   :index="index"
