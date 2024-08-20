@@ -64,6 +64,9 @@
       }}
     </a-badge-ribbon>
   </template>
+  <template v-else-if="column.fieldType === FIELD_TYPE.IMAGE">
+    <a-image :src="record[column.dataIndex]" :width="150" />
+  </template>
   <template v-else-if="column.dataIndex === 'actionColumn'">
     <!-- (portalConfig: TableConfigType, column: ColumnType, record: any) -->
     <slot
