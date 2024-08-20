@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getDictList } from '@/framework/apis/common/common'
+import { getDictList, getTreeList } from '@/framework/apis/common/common'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { ValueLabel } from '@/framework/utils/type'
 import { getConfig } from '@/framework/apis/params'
@@ -105,6 +105,25 @@ export const dictStore = defineStore('dictStore', {
         }
 
       }
+    }
+  }, getters: {}
+})
+
+export const useTreeStore = defineStore('treeStore', {
+  state: () => {
+    return {
+      map: new Map() // 用于判断请求中 headers 字段中的 Authorization
+    }
+  }, actions: {
+    async getTree(dictName: string) {
+      const result = this.map.get(dictName)
+      if (isNotEmpty(result)) {
+        return result
+      }
+      return getTreeList(dictName).then(res => {
+        this.map.set(dictName, res.payload)
+        return res.payload
+      })
     }
   }, getters: {}
 })
