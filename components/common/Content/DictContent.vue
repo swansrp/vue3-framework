@@ -11,7 +11,8 @@
     show-line
     @check="checkTreeNode">
     <template #title="{ dataRef }">
-      <span>{{ dataRef[props.labelField] }}</span>
+      <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
+      <span v-else>{{ dataRef[props.labelField] }}</span>
     </template>
   </a-tree>
   <a-list
@@ -21,7 +22,8 @@
       <a-list-item
         :class="{'activate-item': selectedData.checked.indexOf(item.value) !== -1}"
         @click="checkListNode(item.value)">
-        <span>{{ item[props.labelField] }}</span>
+        <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
+        <span v-else>{{ item[props.labelField] }}</span>
       </a-list-item>
     </template>
   </a-list>
