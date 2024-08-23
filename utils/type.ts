@@ -31,9 +31,9 @@ declare global {
 
 
 export interface ValueLabel {
-    value: string
+    value: string | number
     label: string,
-    option: any
+    option?: any
 }
 
 export type ValueLabelArray = Array<ValueLabel>
