@@ -41,16 +41,16 @@
 
 <script lang="ts" setup>
 import mitt from '@/framework/utils/mitt'
-import {LocationQueryRaw, useRouter} from 'vue-router'
-import {NavListType} from '../type'
-import {useTabStore} from '@/framework/store/nav'
-import {useRouteStore} from '@/framework/store/route'
-import {CHANGE_TAB, HOME, MAIN_CONTENT} from '@/framework/utils/constant'
-import {genAntdMenuFirstSelectObject, getTitlePathByKey} from '@/framework/hooks/initKeysAndRouteInNav'
+import { LocationQueryRaw, useRouter } from 'vue-router'
+import { NavListType } from '../type'
+import { useTabStore } from '@/framework/store/nav'
+import { useRouteStore } from '@/framework/store/route'
+import { CHANGE_TAB, HOME, MAIN_CONTENT } from '@/framework/utils/constant'
+import { genAntdMenuFirstSelectObject, getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
 import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
-import {getQueryObject} from '@/framework/network/utils'
+import { getQueryObject } from '@/framework/network/utils'
 import pinia from '@/framework/store'
-import {LeftOutlined, RightOutlined} from '@ant-design/icons-vue'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 
 
 const router = useRouter()
@@ -78,30 +78,37 @@ const initCurrentRouteAndVar = () => {
   }
 }
 
-const selectLeftNav = (obj: any) => {
+const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   // console.trace('selectLeftNav', obj, navList.value)
   // tab跳转过来走name 自动走path
   let path = obj.item.name || obj.item.path
   let selectedKey = obj.key ? obj.key : obj.item.key
   const fullPath = `/${MAIN_CONTENT}/${path}`
   const query = (obj.item.query ? getQueryObject(obj.item.query) : {}) as LocationQueryRaw
-  router.push({
-    path: fullPath,
-    query
-  }).then(() => {
-    keys.selectedKeys = [selectedKey]
-    const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
-    keys.openKeys = keyPath
-    // 选中左侧菜单后， 为面包屑提供数据
-    tabStore.setTitlePath(titlePath)
-    // 选中左侧菜单后，增加对应的tab信息
-    // const tabName = titlePath[titlePath.length - 1]
-    tabStore.addHistoryTab(obj.item, fullPath)
-  })
+  const isFrame = routeStore.routePathIsFrameMap[path]
+  if (isFrame && triggerIsFrame) {
+    console.log('====== 外链 ============')
+    const routeUrl = router.resolve({path: fullPath, query})
+    window.open(routeUrl.href, '_blank')
+  } else {
+    router.push({
+      path: fullPath,
+      query
+    }).then(() => {
+      keys.selectedKeys = [selectedKey]
+      const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
+      keys.openKeys = keyPath
+      // 选中左侧菜单后， 为面包屑提供数据
+      tabStore.setTitlePath(titlePath)
+      // 选中左侧菜单后，增加对应的tab信息
+      // const tabName = titlePath[titlePath.length - 1]
+      tabStore.addHistoryTab(obj.item, fullPath)
+    })
+  }
 }
 
 const getObjectByLeftNavPath = (currentNode: NavListType) => {
-  selectLeftNav({item: currentNode})
+  selectLeftNav({item: currentNode}, false)
 }
 
 

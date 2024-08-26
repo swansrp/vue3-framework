@@ -1,9 +1,9 @@
 <template>
-  <GridLayout
+  <grid-layout
     v-model:layout="list"
     :row-height="rowHeight"
   >
-    <GridItem
+    <grid-item
       v-for="item in list"
       :key="item.i"
       :h="item.h"
@@ -16,8 +16,8 @@
       @moved="movedEvent"
     >
       <slot :item="item" name="render"></slot>
-    </GridItem>
-  </GridLayout>
+    </grid-item>
+  </grid-layout>
 </template>
 
 <script lang="ts" setup>
@@ -53,7 +53,7 @@ const getNode = (position: number, data: any, x: number, y: number) => {
     w: width.value,
     h: height.value,
     i: data[fieldNames.value.value],
-    label:data[fieldNames.value.label],
+    label: data[fieldNames.value.label],
     position,
     static: false,
     data
