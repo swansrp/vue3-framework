@@ -1,0 +1,198 @@
+
+:deep(.surely-table), :deep(.surely-table-header), :deep(.surely-table-header-cell) {
+
+    background-color: rgb(2, 57, 85) !important;
+}
+
+:deep(.surely-table-header-cell) {
+    color: #fff;
+    background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0));
+}
+
+:deep(.surely-table-filter-trigger, .ant-dropdown-trigger, .surely-table-menu-popup-trigger) {
+    color: #fff;
+}
+
+:deep(.surely-table.surely-table-stripe .surely-table-body .surely-table-row-odd) {
+    background: #1B475D !important;
+    color: #fff;
+    font-size: 16px;
+    font-family: 'Noto Sans SC', serif;
+}
+
+:deep(.surely-table-tbody > tr.surely-table-row:hover > td, .surely-table-tbody > tr > td.surely-table-cell-row-hover) {
+    background-color: #0E3D55;
+}
+
+:deep(.surely-table-bordered .surely-table-cell:not(.surely-table-body-cell-range-single-cell):not( .surely-table-body-cell-range-selected)) {
+    border: none;
+}
+
+:deep(.surely-table-row) {
+    color: #fff;
+    background: #0E3D55 !important;
+    font-size: 16px;
+    font-family: 'Noto Sans SC', serif;
+    border: none;
+    transition-duration: 0s;
+}
+
+:deep(.surely-table-row.surely-table-row-hover) {
+    background: #0E3D55 !important;
+    animation: none;
+    transition-duration: 0s;
+}
+
+:deep(.surely-table-row-hover) {
+    background-color: transparent;
+    color: #fff;
+    font-size: 16px;
+    font-family: 'Noto Sans SC', serif;
+}
+
+:deep(.surely-table-header) {
+    border-width: 1px;
+    border-style: solid;
+    border-image-source: linear-gradient(to top, rgba(90, 211, 251, 1), rgba(90, 211, 251, 0));
+    border-image-slice: 1;
+}
+
+:deep(.surely-table-cell) {
+    border: none;
+}
+
+.project-name {
+    color: #07D1FA;
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+}
+
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+:deep(.ant-pagination-total-text) {
+    color: #1FC6FF;
+    font-size: 14px;
+    font-family: 'Noto Sans SC', serif;
+}
+
+:deep(.surely-table-body) {
+    overflow-y: hidden !important;
+}
+
+:deep(.surely-table-header-scrollbar) {
+    width: 0 !important;
+    min-width: 0 !important;
+}
+
+/*表格滚动条样式*/
+:deep(*::-webkit-scrollbar) {
+    width: 12px;
+    height: 12px;
+    border-radius: 5px;
+    background-color: #181c32;
+}
+
+:deep(*::-webkit-scrollbar-thumb) {
+    width: 12px;
+    border-radius: 5px;
+    background-color: #22536D;
+    border-top: 1px solid #2485A6;
+    border-bottom: 1px solid #2485A6;
+}
+
+:deep(*::-webkit-scrollbar-track) {
+    width: 12px;
+    border-radius: 5px;
+    background-color: #0E2D3C;
+    border: 1px solid #2485A6;
+    box-sizing: border-box;
+}
+
+/* 底部分页器的样式 */
+:deep(.ant-pagination-prev), :deep(.ant-pagination-next) {
+    margin-right: 5px !important;
+    border-radius: 0;
+    border: 1px solid #1FC6FF;
+}
+
+:deep(.ant-pagination-item-link) {
+    color: #fff;
+    font-family: 'Noto Sans SC', serif;
+}
+
+:deep(.ant-pagination-item) {
+    margin-right: 5px !important;
+    border: 1px solid #1FC6FF !important;
+}
+
+:deep(.ant-pagination-item a) {
+    color: #fff;
+}
+
+:deep(.ant-pagination-item-active) {
+    border: 1px solid #1FC6FF;
+    border-radius: 0;
+    background-color: #1FC6FF !important;
+}
+
+:deep(.ant-pagination-options-quick-jumper) {
+    color: #fff;
+}
+
+:deep(.ant-pagination-options .ant-select-selector) {
+    display: none;
+}
+
+:deep(.ant-pagination-options-quick-jumper input) {
+    color: #1FC6FF;
+    background-color: #091F33;
+}
+
+:deep(.ant-pagination-item-ellipsis) {
+    color: #fff !important;
+}
+
+:deep(button:disabled) {
+    color: #fff !important;
+}
+
+:deep(.ant-empty-description) {
+    color: #fff;
+}
+
+:deep(.surely-table-header-cell-title) {
+    flex: none;
+}
+
+:deep(.surely-table-footer) {
+    background: transparent;
+}
+
+:deep(.surely-table-wrapper-bordered .surely-table-footer) {
+    border: none;
+}
+
+:deep(.surely-table-bordered) {
+    border: none;
+}
+
+:deep(:where(.css-dev-only-do-not-override-19iuou) a) {
+    color: #fff;
+}
+
+:deep(.surely-table-bordered .surely-table-header-scrollbar, .surely-table-bordered .surely-table-summary-scrollbar) {
+    border: none;
+}
+
+:deep(.surely-table-column-sorter) {
+    color: #fff;
+}
+
+:deep(.surely-table-selection-extra-dropdown-icon) {
+    color: #fff;
+}
