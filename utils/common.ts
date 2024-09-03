@@ -143,6 +143,8 @@ const clearFromField = (form: any, formRef: Ref) => {
       form[key] = []
     } else if (key === 'customer') {
       form[key] = {value: ''}
+    } else if (key === 'visitAt' || key === 'planAt') {
+      form[key] = null
     } else {
       form[key] = ''
     }
