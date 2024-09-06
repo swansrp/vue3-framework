@@ -68,6 +68,8 @@ export type TableConfigType = {
   plain: boolean,
   // 是否支持高级查询
   advancedSearchAble: boolean,
+  // 高级查询按钮
+  advancedSearchButton: boolean
 }
 
 export type ModalType = {

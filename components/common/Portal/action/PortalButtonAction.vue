@@ -40,7 +40,7 @@
     <!-- region 右侧按钮区 -->
     <div>
       <slot name="right-btns"></slot>
-      <a-tooltip v-if="!config.plain && config.advancedSearchAble" placement="top">
+      <a-tooltip v-if="!config.plain && config.advancedSearchButton" placement="top">
         <template #title>
           <span>高级查询</span>
         </template>

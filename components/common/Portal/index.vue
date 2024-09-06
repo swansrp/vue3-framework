@@ -467,6 +467,8 @@ const props = withDefaults(defineProps<{
     data?: Array<any>,
     readOnly?: boolean,
     actionWidth?: number,
+    advance?: boolean,
+    advanceButton?: boolean,
     advanceCondition?: ConditionListType,
     defaultSortColumn?: Array<QuerySortType>,
     rowAllowEdit?: (record: any) => boolean,
@@ -485,6 +487,8 @@ const props = withDefaults(defineProps<{
     data: undefined,
     readOnly: false,
     actionWidth: 150,
+    advance: false,
+    advanceButton: false,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
     rowAllowEdit: () => true,
@@ -564,7 +568,8 @@ const config: TableConfigType = reactive({
   defaultCondition: {} as ConditionListType,
   defaultSort: [] as Array<QuerySortType>,
   plain: false,
-  advancedSearchAble: true
+  advancedSearchAble: true,
+  advancedSearchButton: true
 } as TableConfigType)
 watch(props, (value, old) => {
   if (value.readOnly != old.readOnly) {
@@ -1130,6 +1135,7 @@ const getGeneralCondition = () => {
     }
   }
   if (props.advanceCondition && isNotEmpty(props.advanceCondition)) {
+    console.log('==========================', props.advanceCondition)
     if (isNotEmpty(queryCondition.conditionList)) {
       queryCondition.conditionList = [...queryCondition.conditionList, ...props.advanceCondition.conditionList]
     } else {
@@ -1368,7 +1374,8 @@ const init = async () => {
     }
     config.url = tableConfig.url
     config.summary = tableConfig.summary === '1'
-    config.advancedSearchAble = tableConfig.advanced === '1'
+    config.advancedSearchAble = tableConfig.advanced === '1' || props.advance
+    config.advancedSearchButton = config.advancedSearchAble && props.advanceButton
     config.treeMode = isNotEmpty(tableConfig.pidColumn) && isEmpty(data.value)
     config.parentKey = tableConfig.pidColumn
     config.orderMode = isNotEmpty(tableConfig.orderColumn)
