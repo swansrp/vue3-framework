@@ -51,7 +51,7 @@ watch(() => props.width, value => {
 }, {immediate: true})
 
 </script>
-<style lang="scss">
+<style lang="scss" scoped>
 .full-modal {
   .ant-modal {
     max-width: 100%;

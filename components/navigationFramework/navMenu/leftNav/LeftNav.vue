@@ -27,12 +27,12 @@
       </template>
     </a-menu>
     <a-button
-      v-if="collapsed" style="position: absolute;left: 20px; bottom: 0; z-index: 1000" type="text"
+      v-if="collapsed" style="position: absolute;left: 20px; bottom: 0; z-index: 1000" type="link"
       @click="toggleCollapsed">
       <RightOutlined style="color: rgba(255,255,255,0.7)" />
     </a-button>
     <a-button
-      v-else style="position: absolute;left: 215px; bottom: 0; z-index: 1000" type="text"
+      v-else style="position: absolute;left: 215px; bottom: 0; z-index: 1000" type="link"
       @click="toggleCollapsed">
       <LeftOutlined style="color: rgba(255,255,255,0.7)" />
     </a-button>

@@ -163,7 +163,7 @@
 
 <script lang="ts" setup>
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
-import { isNotEmpty, log, strRemoveLF } from '@/framework/utils/common'
+import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { FormInstance } from 'ant-design-vue'
 import { CloseCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
