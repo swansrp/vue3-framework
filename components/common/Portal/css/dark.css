@@ -162,7 +162,7 @@
     color: #fff;
 }
 
-:deep(.surely-table-footer) {
+:deep(.surely-table-footer), :deep(.surely-table-column-sort) {
     background: transparent;
 }
 
