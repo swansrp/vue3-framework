@@ -1,11 +1,15 @@
+/* 使用CSS变量语法覆盖默认变量 */
+
 
 :deep(.surely-table), :deep(.surely-table-header), :deep(.surely-table-header-cell) {
-
     background-color: rgb(2, 57, 85) !important;
+    --surely-table-background-color: transparent;
 }
 
 :deep(.surely-table-header-cell) {
     color: #fff;
+    font-family: 'Noto Sans SC', serif;
+    font-size: 16px;
     background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0));
 }
 
@@ -59,13 +63,6 @@
 
 :deep(.surely-table-cell) {
     border: none;
-}
-
-.project-name {
-    color: #07D1FA;
-    display: inline-block;
-    width: 100%;
-    height: 100%;
 }
 
 .ellipsis {
@@ -191,4 +188,12 @@
 
 :deep(.surely-table-selection-extra-dropdown-icon) {
     color: #fff;
+}
+
+:deep(.surely-table-summary), :deep(.surely-table-summary-cell) {
+    background: #0E3D55;
+}
+
+:deep(.surely-table-summary-scrollbar) {
+    border: none;
 }
