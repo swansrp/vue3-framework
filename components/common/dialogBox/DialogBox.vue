@@ -9,7 +9,7 @@
     @cancel="$emit('update:visible', false)">
     <slot></slot>
     <template v-if="_title" #title>
-      <div class="title">
+      <div class="dialog-title">
         <img v-if="_iconPath" :src="_iconPath" alt="" class="icon-img" />
         {{ _title }}
       </div>
@@ -51,7 +51,7 @@ watch(() => props.width, value => {
 }, {immediate: true})
 
 </script>
-<style lang="scss" scoped>
+<style lang="scss">
 .full-modal {
   .ant-modal {
     max-width: 100%;
@@ -75,7 +75,7 @@ watch(() => props.width, value => {
   margin: -30px auto 0;
 }
 
-.title {
+.dialog-title {
   display: flex;
   align-items: center;
 }

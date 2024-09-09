@@ -8,6 +8,7 @@
     @close="() => emit('close')"
     @ok="() => emit('confirm')">
     <portal-bind-tab
+      :base-domain="config.baseDomain"
       :bind-tabs="bindTabs"
       :entity-name="config.tableId"
       :record="config.modal.data"

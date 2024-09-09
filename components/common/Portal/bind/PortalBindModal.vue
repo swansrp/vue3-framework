@@ -67,7 +67,7 @@
 </template>
 
 <script lang="ts" setup>
-import {ColumnType, QueryType, TableConfigType} from '@/framework/components/common/Portal/type'
+import { ColumnType, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
 import {
   bindAllAttach,
   bindAttach,
@@ -80,12 +80,13 @@ import {
   unbindAttach,
   unbindBatchAttach
 } from '@/framework/apis/portal'
-import {isEmpty, isNotEmpty} from '@/framework/utils/common'
-import {Modal} from 'ant-design-vue'
-import {createVNode} from 'vue'
-import {ExclamationCircleOutlined} from '@ant-design/icons-vue'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { Modal } from 'ant-design-vue'
+import { createVNode } from 'vue'
+import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 
 const prop = defineProps<{
+  baseDomain: string
   attacheEntity: string,
   title: string
 }>()
@@ -107,20 +108,20 @@ const showBindDialogBox = (entityName: string, entityId: any) => {
   bindDialogBox.show = true
 }
 const bind = (portalConfig: TableConfigType, column: ColumnType, record: any) => {
-  bindAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, record[portalConfig.rowKey])
-      .then(unbindPortal.value.queryData)
+  bindAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, record[portalConfig.rowKey], prop.baseDomain)
+    .then(unbindPortal.value.queryData)
 }
 const unbind = (portalConfig: TableConfigType, column: ColumnType, record: any) => {
-  unbindAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, record[portalConfig.rowKey])
-      .then(bindPortal.value.queryData)
+  unbindAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, record[portalConfig.rowKey], prop.baseDomain)
+    .then(bindPortal.value.queryData)
 }
 const bindSelected = () => {
-  bindBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, unbindPortal.value.getRowSelection())
-      .then(unbindPortal.value.queryData)
+  bindBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, unbindPortal.value.getRowSelection(), prop.baseDomain)
+    .then(unbindPortal.value.queryData)
 }
 const unbindSelected = () => {
-  unbindBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, bindPortal.value.getRowSelection())
-      .then(bindPortal.value.queryData)
+  unbindBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, bindPortal.value.getRowSelection(), prop.baseDomain)
+    .then(bindPortal.value.queryData)
 }
 const bindAll = () => {
   Modal.confirm({
@@ -128,8 +129,8 @@ const bindAll = () => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', {style: 'color:red;'}, '注意: 单次授权数量大于60000条可能会失败'),
     onOk() {
-      bindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, unbindPortal.value.queryCondition())
-          .then(unbindPortal.value.queryData)
+      bindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, unbindPortal.value.queryCondition(), prop.baseDomain)
+        .then(unbindPortal.value.queryData)
     },
     onCancel() {
 
@@ -143,8 +144,8 @@ const unbindAll = () => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', {style: 'color:red;'}, '注意: 所有授权信息将被清除'),
     onOk() {
-      unbindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId)
-          .then(bindPortal.value.queryData)
+      unbindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, prop.baseDomain)
+        .then(bindPortal.value.queryData)
     },
     onCancel() {
 
@@ -158,8 +159,8 @@ const bindReplace = () => {
       icon: createVNode(ExclamationCircleOutlined),
       content: createVNode('div', {style: 'color:red;'}, '注意: 原有授权信息将被清除'),
       onOk() {
-        bindReplaceBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.getRowSelection())
-            .then(allPortal.value.queryData)
+        bindReplaceBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.getRowSelection(), prop.baseDomain)
+          .then(allPortal.value.queryData)
       },
       onCancel() {
 
@@ -171,8 +172,8 @@ const bindReplace = () => {
       icon: createVNode(ExclamationCircleOutlined),
       content: createVNode('div', {style: 'color:red;'}, '注意: 原有授权信息将被清除,单次授权数量大于60000条可能会失败'),
       onOk() {
-        bindReplaceAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.queryCondition())
-            .then(allPortal.value.queryData)
+        bindReplaceAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.queryCondition(), prop.baseDomain)
+          .then(allPortal.value.queryData)
       },
       onCancel() {
 
@@ -181,10 +182,10 @@ const bindReplace = () => {
   }
 }
 const queryBindListFunc = async (url: string, query: QueryType) => {
-  return queryBindList(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, query)
+  return queryBindList(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, query, prop.baseDomain)
 }
 const queryUnbindListFunc = async (url: string, query: QueryType) => {
-  return queryUnbindList(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, query)
+  return queryUnbindList(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, query, prop.baseDomain)
 }
 const handleTabChanged = (activeKey: string) => {
   bindDialogBox.tab = activeKey

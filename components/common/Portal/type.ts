@@ -2,6 +2,8 @@ import { ConditionType } from '@/framework/components/common/AdvancedSearch/type
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 export type TableConfigType = {
+  // domain
+  baseDomain: string,
   // tableId 配合后端指明表格用途
   tableId: string,
   // 网络地址

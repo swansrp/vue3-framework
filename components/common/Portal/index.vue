@@ -65,6 +65,7 @@
           <span>{{ selectedEntityName }}</span>
         </div>
         <portal-bind-tab
+          :base-domain="props.baseDomain"
           :bind-tabs="bindTabs"
           :entity-name="props.tableId"
           :record="selectedRecord"
@@ -442,7 +443,7 @@ import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 import { parse } from '@/framework/components/common/Portal/utils'
 import { excelExport } from "@/framework/utils/excel";
-
+import { name } from '@/../package.json'
 /**
  * @param tableId 表格ID
  * @param data 显示数据
@@ -463,6 +464,7 @@ import { excelExport } from "@/framework/utils/excel";
  * @param expanded 是否有展开按钮
  */
 const props = withDefaults(defineProps<{
+    baseDomain?: string,
     tableId: string,
     data?: Array<any>,
     readOnly?: boolean,
@@ -484,6 +486,7 @@ const props = withDefaults(defineProps<{
     expanded?: boolean
   }>(),
   {
+    baseDomain: '/' + name,
     data: undefined,
     readOnly: false,
     actionWidth: 150,
@@ -542,6 +545,7 @@ bus.on('portal:table:resize', _.debounce(updateTableWidthAndHeight, 200))
  * 整体配置
  */
 const config: TableConfigType = reactive({
+  baseDomain: props.baseDomain,
   tableId: props.tableId,
   key: 1,
   size: '',
@@ -774,7 +778,7 @@ const saveCell = (args: any) => {
     updateEntitySelective(config.url, {
       [modifyCell.dataIndex]: modifyCell.current,
       [config.rowKey]: modifyCell.id
-    }).then(() => queryData())
+    }, config.baseDomain).then(() => queryData())
     log('保存单元格内容', {[args.column.dataIndex]: modifyCell.current, [config.rowKey]: modifyCell.id})
   }
   args.hidePopup()
@@ -803,7 +807,7 @@ const saveRow = (args: any) => {
   if (data.size != 0) {
     data.set(config.rowKey, id)
     log('保存行内容', data)
-    updateEntitySelective(config.url, Object.fromEntries(data)).then(() => {
+    updateEntitySelective(config.url, Object.fromEntries(data), config.baseDomain).then(() => {
       queryData()
       args.hidePopup()
     })
@@ -843,7 +847,7 @@ const saveAll = () => {
       dataMap.set(index, Object.fromEntries(data))
     }
   }
-  updateEntityListSelective(config.url, [...dataMap.values()]).then(() => queryData())
+  updateEntityListSelective(config.url, [...dataMap.values()], config.baseDomain).then(() => queryData())
   log('保存所有内容', dataMap)
 }
 const deleteRow = (args: any) => {
@@ -854,7 +858,7 @@ const deleteRow = (args: any) => {
     onOk() {
       const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
       if (modifyCell) {
-        deleteEntity(config.url, modifyCell.id).then(() => queryData())
+        deleteEntity(config.url, modifyCell.id, config.baseDomain).then(() => queryData())
         log('删除整行内容')
       }
       args.hidePopup()
@@ -875,12 +879,12 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
   brotherNodes.forEach((node: any, index: number) => {
     updateOrderData.push({id: node.key, showOrder: index})
   })
-  await updateOrder(config.url, updateOrderData)
+  await updateOrder(config.url, updateOrderData, config.baseDomain)
   if (info.dragNode.pid !== pid) {
     await updateTreePid(config.url, {
       id: dragKey,
       pid
-    })
+    }, config.baseDomain)
   }
   return queryDataAsync()
 }
@@ -908,7 +912,7 @@ const rowAllowDelete = (record: any) => {
   return allow
 }
 const handleMenuContextView = (recordId: any) => {
-  getById(config.url, recordId).then(resp => {
+  getById(config.url, recordId, config.baseDomain).then(resp => {
     config.modal.data = resp.payload
     openModal('view')
   })
@@ -918,7 +922,7 @@ const handleMenuContextAdd = (recordId: any) => {
   openModal('add')
 }
 const handleMenuContextModify = (recordId: any) => {
-  getById(config.url, recordId).then(resp => {
+  getById(config.url, recordId, config.baseDomain).then(resp => {
     config.modal.data = resp.payload
     openModal('modify')
   })
@@ -929,7 +933,7 @@ const handleMenuContextDelete = (recordId: any) => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', {style: 'color:red;'}, '即将删除该记录,请确认'),
     onOk() {
-      deleteEntity(config.url, recordId).then(() => queryData())
+      deleteEntity(config.url, recordId, config.baseDomain).then(() => queryData())
     },
     onCancel() {
 
@@ -1008,11 +1012,11 @@ const addRow = () => {
 }
 // 保存添加数据
 const saveAddRow = async () => {
-  await addEntity(config.url, config.modal.data)
+  await addEntity(config.url, config.modal.data, config.baseDomain)
 }
 // 模版下载
 const templateExport = () => {
-  exportTemplate(config.url, config.tableId, config.title + '-模版' + '.xlsx')
+  exportTemplate(config.url, config.tableId, config.title + '-模版' + '.xlsx', config.baseDomain)
 }
 const portalUploadModal = ref()
 // 上传弹框
@@ -1022,7 +1026,7 @@ const openUploadModal = () => {
   })
 }
 const uploadAdd = async (file: Object, onUploadProgress: Function, onSuccess: Function, onFailed: Function) => {
-  return await importAdd(config.url, config.tableId, file, onUploadProgress).then(resp => onSuccess(resp)).catch(resp => onFailed(resp))
+  return await importAdd(config.url, config.tableId, file, onUploadProgress, config.baseDomain).then(resp => onSuccess(resp)).catch(resp => onFailed(resp))
 }
 const uploadAddProgress = (onSuccess: Function) => {
   return importAddProgress(config.url, config.tableId).then((resp) => onSuccess(resp))
@@ -1047,7 +1051,7 @@ const updateEditRow = async () => {
   return await updateEntity(config.url, {
     ...dataSource.value[config.modal.editRowIndex],
     ...config.modal.data
-  })
+  }, config.baseDomain)
 }
 const closeModal = () => {
   config.modal.show = false
@@ -1209,7 +1213,7 @@ const handleRowDragEnd = () => {
         showOrder: (index + 1) + config.pageSize * (config.currentPage - 1)
       })
     })
-    updateOrder(config.url, updateOrderData)
+    updateOrder(config.url, updateOrderData, config.baseDomain)
   })
 }
 const advancedCondition = reactive({
@@ -1290,19 +1294,19 @@ const queryDataAsync = async () => {
       return await props.query(config.url, queryCondition()).then(resolve)
     } else {
       if (config.advancedSearchAble) {
-        return await advancedQuery(config.url, queryCondition()).then(resolve)
+        return await advancedQuery(config.url, queryCondition(), config.baseDomain).then(resolve)
       } else {
-        return await generalQuery(config.url, queryCondition()).then(resolve)
+        return await generalQuery(config.url, queryCondition(), config.baseDomain).then(resolve)
       }
     }
   }
 }
 const getDataSummary = async () => {
   if (config.advancedSearchAble) {
-    return advancedSummary(config.url, queryCondition(), summaryColumns)
+    return advancedSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   } else {
-    return generalSummary(config.url, queryCondition(), summaryColumns)
+    return generalSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   }
 
@@ -1330,9 +1334,9 @@ const download = () => {
       excelExport(dataArray, columns.value, config.title)
     }
     if (config.advancedSearchAble) {
-      advancedSelect(config.url, queryCondition()).then((resp: any) => resolve(resp))
+      advancedSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
     } else {
-      generalSelect(config.url, queryCondition()).then((resp: any) => resolve(resp))
+      generalSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
     }
   }
 }
@@ -1541,7 +1545,7 @@ const queryTreeData = async () => {
   }
   // 外部组件调用queryData接口 尚未完成初始化
   if (config.url) {
-    await getTreeData(config.url, condition).then(res => treeData.value = res.payload || [])
+    await getTreeData(config.url, condition, config.baseDomain).then(res => treeData.value = res.payload || [])
   }
 }
 //endregion

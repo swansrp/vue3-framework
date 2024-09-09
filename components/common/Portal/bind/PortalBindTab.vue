@@ -41,6 +41,7 @@ import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
 const bindPortalRefMap = new Map<number, any>()
 const prop = defineProps<{
+  baseDomain: string
   entityName: string,
   record: { [key: string]: any } | null,
   rowKey: string,
@@ -63,7 +64,7 @@ watch(checkedKeys, (newValue: Array<any>) => {
     checkedKeysMap.set(activeKey.value + record.value[rowKey.value], newValue)
   } else if (!_.isEqual(newValue, oldValue)) {
     checkedKeysMap.set(activeKey.value + record.value[rowKey.value], newValue)
-    bindReplaceBatchAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], newValue)
+    bindReplaceBatchAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], newValue, prop.baseDomain)
       .then(getBindList)
   }
 })
@@ -131,7 +132,7 @@ const bindAll = () => {
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       console.log(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value])
-      bindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value])
+      bindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], {}, prop.baseDomain)
         .then(getBindList)
     },
     onCancel() {
@@ -146,7 +147,7 @@ const unbindAll = () => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', {style: 'color:red;'}, '注意: 所有授权信息将被清除'),
     onOk() {
-      unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value])
+      unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], prop.baseDomain)
         .then(getBindList)
     },
     onCancel() {
@@ -156,7 +157,7 @@ const unbindAll = () => {
 }
 
 const getBindList = () => {
-  getAllBindList(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value]).then(res => {
+  getAllBindList(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], prop.baseDomain).then(res => {
     let rowKey = bindPortalRefMap.get(activeKey.value).getConfig().rowKey
     checkedKeys.value = res.payload?.map((value: any) => {
       return value[rowKey]
