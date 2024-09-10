@@ -154,8 +154,10 @@
               <template #bodyCell="{ column, record, index }">
                 <portal-body-cell
                   v-if="isNotEmpty($slots.action) || !config.readOnly"
+                  :key="modifyCellMap.get(index + column.dataIndex).current"
                   :column="column"
                   :config="config"
+                  :display-map="modifyCellMap"
                   :index="index"
                   :is-cell-update="isCellUpdate"
                   :record="record">
@@ -1213,7 +1215,7 @@ const handleRowDragEnd = () => {
         showOrder: (index + 1) + config.pageSize * (config.currentPage - 1)
       })
     })
-    updateOrder(config.url, updateOrderData, config.baseDomain)
+    updateOrder(config.url, updateOrderData, config.baseDomain).then(() => queryData())
   })
 }
 const advancedCondition = reactive({

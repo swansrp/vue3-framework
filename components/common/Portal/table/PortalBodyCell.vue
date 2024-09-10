@@ -86,7 +86,7 @@
                  whiteSpace: 'nowrap',
                  overflow: 'hidden',
                  height: '100%'}"
-        v-html="strLF2HtmlLF(record[column.dataIndex])"></div>
+        v-html="strLF2HtmlLF(displayMap.get(index+column.dataIndex).current || record[column.dataIndex])"></div>
     </a-badge-ribbon>
   </template>
 </template>
@@ -101,11 +101,12 @@ import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 const prop = defineProps<{
   column: any,
   record: any,
+  displayMap: any,
   index: any,
   config: TableConfigType,
   isCellUpdate: (index: number, column: any) => boolean
 }>()
-const {record, config, column, index} = toRefs(prop)
+const {record, displayMap, config, column, index} = toRefs(prop)
 const dict = dictStore()
 </script>
 
