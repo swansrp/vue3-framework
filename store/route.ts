@@ -108,6 +108,9 @@ export const useRouteStore = defineStore('routeStore', {
       return this.keepAliveList
     }
   }, getters: {
+    currentRouteNode(state) {
+      return state.dynamicRouteMap[router.currentRoute.value.fullPath.slice(MAIN_CONTENT.length + 2).split('?')[0]]
+    },
     currentRoutePath() {
       return router.currentRoute.value.fullPath.slice(MAIN_CONTENT.length + 2)
     }, currentTopNav() {

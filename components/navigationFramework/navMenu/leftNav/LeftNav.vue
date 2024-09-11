@@ -82,7 +82,6 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   // console.trace('selectLeftNav', obj, navList.value)
   // tab跳转过来走name 自动走path
   let path = obj.item.name || obj.item.path
-  let selectedKey = obj.key ? obj.key : obj.item.key
   const fullPath = `/${MAIN_CONTENT}/${path}`
   const query = (obj.item.query ? getQueryObject(obj.item.query) : {}) as LocationQueryRaw
   const isFrame = routeStore.routePathIsFrameMap[path]
@@ -94,18 +93,24 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
     router.push({
       path: fullPath,
       query
-    }).then(() => {
-      keys.selectedKeys = [selectedKey]
-      const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
-      keys.openKeys = keyPath
-      // 选中左侧菜单后， 为面包屑提供数据
-      tabStore.setTitlePath(titlePath)
-      // 选中左侧菜单后，增加对应的tab信息
-      // const tabName = titlePath[titlePath.length - 1]
-      tabStore.addHistoryTab(obj.item, fullPath)
     })
   }
 }
+
+watch(
+  () => routeStore.currentRouteNode,
+  (value) => {
+    const selectedKey = value.key
+    keys.selectedKeys = [selectedKey]
+    const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
+    keys.openKeys = keyPath
+    // 选中左侧菜单后， 为面包屑提供数据
+    tabStore.setTitlePath(titlePath)
+    // 选中左侧菜单后，增加对应的tab信息
+    // const tabName = titlePath[titlePath.length - 1]
+    tabStore.addHistoryTab(value, value.fullPath)
+  }
+)
 
 const getObjectByLeftNavPath = (currentNode: NavListType) => {
   selectLeftNav({item: currentNode}, false)
