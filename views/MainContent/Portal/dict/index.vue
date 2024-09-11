@@ -1,6 +1,7 @@
 <template>
   <portal
     :bind-tabs="[{
+      bindType: '0',
       title: '字典条目',
       tableId: 'SysDict',
       showBind: false,

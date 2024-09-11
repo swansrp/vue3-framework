@@ -78,7 +78,7 @@ function moveEvent(i: string, newX: number, newY: number) {
   }
 }
 
-function movedEvent(i: string, newX: number, newY: number) {
+function movedEvent(i: string, newX: number) {
   nextTick(() => {
     if (map.get(i).direction !== 0) {
       if (map.get(i).direction > 0) {

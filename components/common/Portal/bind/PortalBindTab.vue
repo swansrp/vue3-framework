@@ -7,7 +7,7 @@
       :key="key"
       :tab="item.title">
       <div style="height: calc(100vh - 200px);">
-        <Portal
+        <portal
           :ref="(arg) => bindPortalRefMap.set(key, arg)"
           v-model:selectedTreeData="checkedKeys"
           :action-width="0"
