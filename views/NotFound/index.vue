@@ -2,20 +2,17 @@
   <div style="background:#f0f2f5;height: 100%;">
     <div class="wscn-http404">
       <div class="pic-404">
-        <img class="pic-404__parent" :src="img404" alt="404" />
-        <img class="pic-404__child left" :src="img404Cloud" alt="404" />
-        <img class="pic-404__child mid" :src="img404Cloud" alt="404" />
-        <img class="pic-404__child right" :src="img404Cloud" alt="404" />
+        <img :src="img404" alt="404" class="pic-404__parent" />
+        <img :src="img404Cloud" alt="404" class="pic-404__child left" />
+        <img :src="img404Cloud" alt="404" class="pic-404__child mid" />
+        <img :src="img404Cloud" alt="404" class="pic-404__child right" />
       </div>
       <div class="bullshit">
         <div class="bullshit__oops">出错啦!</div>
         <div class="bullshit__oops">您所访问的页面不存在</div>
         <div class="bullshit__info">请检查您输入的网址是否正确，或点击以下按钮返回系统主页</div>
-        <a href="/public" class="bullshit__return-home">返回首页</a>
+        <a class="bullshit__return-home" href="/">返回首页</a>
       </div>
-    </div>
-    <div class="copyright">版权所有
-      <a href="http://www.tidi.ac.cn/" target="_blank">中水北方勘测设计研究有限责任公司</a>
     </div>
   </div>
 </template>
@@ -27,7 +24,7 @@ import img404Cloud from '@/framework/assets/imgs/404_images/404_cloud.png'
 
 </script>
 
-<style rel="stylesheet/scss" lang="scss" scoped>
+<style lang="scss" rel="stylesheet/scss" scoped>
 .wscn-http404 {
   position: relative;
   width: 1200px;

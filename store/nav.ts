@@ -31,6 +31,7 @@ export const useTabStore = defineStore('tabStore', {
   },
   actions: {
     addHistoryTab(tab: TabType, hrefFullPath: string) {
+      // console.log('addHistoryTab', tab, hrefFullPath)
       const key = String(tab.id || tab.key)
       tab.key = key
       if (!this._historyTabSet.has(key)) {

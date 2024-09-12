@@ -51,6 +51,7 @@ import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/Su
 import { getQueryObject } from '@/framework/network/utils'
 import pinia from '@/framework/store'
 import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { isNotEmpty } from '@/framework/utils/common'
 
 
 const router = useRouter()
@@ -67,6 +68,7 @@ const toggleCollapsed = () => {
   window.dispatchEvent(resizeEvent)
 }
 const initCurrentRouteAndVar = () => {
+  // console.log('initCurrentRouteAndVar')
   let defaultLeftNavPath = ''
   let defaultTopNavPath = ''
   // allPathArray的第一部分是 MainContent， 第二部分是 TopNavPath，第三部分及其以后才是左侧菜单导航路径
@@ -79,10 +81,10 @@ const initCurrentRouteAndVar = () => {
 }
 
 const selectLeftNav = (obj: any, triggerIsFrame = true) => {
-  // console.trace('selectLeftNav', obj, navList.value)
   // tab跳转过来走name 自动走path
   let path = obj.item.name || obj.item.path
   const fullPath = `/${MAIN_CONTENT}/${path}`
+  // console.trace('selectLeftNav', obj, navList.value, fullPath)
   const query = (obj.item.query ? getQueryObject(obj.item.query) : {}) as LocationQueryRaw
   const isFrame = routeStore.routePathIsFrameMap[path]
   if (isFrame && triggerIsFrame) {
@@ -100,15 +102,20 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
 watch(
   () => routeStore.currentRouteNode,
   (value) => {
-    const selectedKey = value.key
-    keys.selectedKeys = [selectedKey]
-    const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
-    keys.openKeys = keyPath
-    // 选中左侧菜单后， 为面包屑提供数据
-    tabStore.setTitlePath(titlePath)
-    // 选中左侧菜单后，增加对应的tab信息
-    // const tabName = titlePath[titlePath.length - 1]
-    tabStore.addHistoryTab(value, value.fullPath)
+    if(value && isNotEmpty(value.component)) {
+      const selectedKey = value.key
+      keys.selectedKeys = [selectedKey]
+      const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
+      keys.openKeys = keyPath
+      // 选中左侧菜单后， 为面包屑提供数据
+      tabStore.setTitlePath(titlePath)
+      // 选中左侧菜单后，增加对应的tab信息
+      // const tabName = titlePath[titlePath.length - 1]
+      const fullPath = `/${MAIN_CONTENT}/${value.name}`
+      tabStore.addHistoryTab(value, fullPath)
+    }
+  },{
+    immediate: true
   }
 )
 
