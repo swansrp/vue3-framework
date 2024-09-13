@@ -34,7 +34,7 @@ const dragControllerDiv = () => {
   widthValue.value = side?.offsetLeft || 0
   if (resize) {
     let startX = resize.offsetLeft
-    resize.onmousedown = (e) => {
+    resize.onmousedown = () => {
       // 颜色改变提醒
       resize.style.background = "#818181"
       document.onmousemove = (e) => {

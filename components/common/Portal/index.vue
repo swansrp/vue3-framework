@@ -510,6 +510,7 @@ const props = withDefaults(defineProps<{
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
+  (e: 'selectedData', selectedData: Array<any>): void
 }>()
 const isBindTabExisted = computed(() => {
   return bindTabs.value && bindTabs.value.length > 0
@@ -1185,9 +1186,13 @@ const onFilterDropdownOpenChange = (visible: boolean) => {
 }
 
 const selectedRowKeys = ref<Array<string>>([])
-const onSelectChange = (changableRowKeys: string[]) => {
-  console.log('selectedRowKeys changed: ', changableRowKeys)
-  selectedRowKeys.value = changableRowKeys
+const onSelectChange = (changedRowKeys: any) => {
+  selectedRowKeys.value = changedRowKeys
+  const selectedData = selectedRowKeys.value.map(key => {
+    return dataSourceMap.value.get(key)
+  })
+  console.debug('selectedRowKeys changed: ', changedRowKeys, selectedData)
+  emit('selectedData', selectedData)
 }
 const handleTableChange = (pagination: { current: number, pageSize: number, total: number, size: number },
                            filter: any,

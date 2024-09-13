@@ -1,7 +1,7 @@
 <template>
   <div class="portal-button-space">
     <!-- region 左侧按钮区 -->
-    <div>
+    <div style="display: flex">
       <a-tooltip v-if="config.treeMode && !isTreeDataEmpty" placement="top">
         <template #title>
           <span>树形结构</span>
@@ -38,7 +38,7 @@
     </div>
     <!-- endregion 左侧按钮区 -->
     <!-- region 右侧按钮区 -->
-    <div>
+    <div style="display: flex">
       <slot name="right-btns"></slot>
       <a-tooltip v-if="!config.plain && config.advancedSearchButton" placement="top">
         <template #title>
