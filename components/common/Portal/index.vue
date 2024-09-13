@@ -140,14 +140,23 @@
               @row-drag-end="handleRowDragEnd">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
-                <div v-if="title.indexOf('\n') !== -1" class="table-title-cell">
+                <div
+                  v-if="title.indexOf('\n') !== -1"
+                  :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
+                  class="table-title-cell">
                   <div v-for="(item, index) in title.split('\n')" :key="index">{{ item }}</div>
                 </div>
-                <div v-else-if="title.indexOf('\\n') !== -1" class="table-title-cell">
+                <div
+                  v-else-if="title.indexOf('\\n') !== -1"
+                  :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
+                  class="table-title-cell">
                   <div v-for="(item, index) in title.split('\\n')" :key="index">{{ item }}</div>
                 </div>
                 <span v-else-if="column.dataIndex === 'index'"></span>
-                <span v-else class="table-title-cell">{{ title }}</span>
+                <span
+                  v-else
+                  :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
+                  class="table-title-cell">{{ title }}</span>
               </template>
               <!-- endregion -->
               <!-- region 单元格样式-->
@@ -446,6 +455,7 @@ import PortalAssociationModal from '@/framework/components/common/Portal/modal/P
 import { parse } from '@/framework/components/common/Portal/utils'
 import { excelExport } from "@/framework/utils/excel";
 import { name } from '@/../package.json'
+
 /**
  * @param tableId 表格ID
  * @param data 显示数据
