@@ -204,7 +204,7 @@ const handleUploadChange = (info: UploadChangeParam) => {
       emit('uploadProgress', (resp: any) => {
         updateProgress(resp.payload)
       })
-    })
+    }, false)
   } else if (status === 'error') {
     message.error(`${info.file.name} file upload failed.`)
   }

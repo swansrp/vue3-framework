@@ -184,11 +184,14 @@ const stopTimer = (data: TimerType) => {
     }
   })
 }
-const startTimer = (data: TimerType, render: Function, replace = true) => {
+const startTimer = (data: TimerType, render: Function, immediate = true, replace = true) => {
   return new Promise((resolve, reject) => {
     const animLoop = () => {
       const now = Date.now()
-      if (Date.now() - data.lastTime > data.diff) {
+      if(data.lastTime === 0 && !immediate) {
+        data.lastTime = now
+      }
+      if (now - data.lastTime > data.diff) {
         data.lastTime = now
         render()
       }
