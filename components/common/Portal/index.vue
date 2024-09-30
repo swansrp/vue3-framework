@@ -116,7 +116,7 @@
             <!-- region 表格 -->
             <s-table
               :key="config.key"
-              :columns="columns"
+              :columns="multiHeader ? multiHeadColumns : columns"
               :data-source="dataSource"
               :loading="config.loading"
               :pagination="false"
@@ -458,6 +458,7 @@ import { name } from '@/../package.json'
 
 /**
  * @param tableId 表格ID
+ * @param multiHeader 是否多重表头
  * @param data 显示数据
  * @param readOnly 不能编辑
  * @param actionWidth 操作栏宽度
@@ -478,6 +479,7 @@ import { name } from '@/../package.json'
 const props = withDefaults(defineProps<{
     baseDomain?: string,
     tableId: string,
+    multiHeader?: boolean,
     data?: Array<any>,
     readOnly?: boolean,
     actionWidth?: number,
@@ -625,6 +627,19 @@ const columnDisplayMap: Ref<Map<any, Array<ColumnType>>> = ref(new Map<any, Arra
 const columnRaw = []
 const columns = computed(() => {
   return columnArray.value.filter(item => item.checked)
+})
+const multiHeadColumns = computed(() => {
+  const res = [] as Array<any>
+  columns.value.forEach((column: ColumnType) => {
+    if (isNotEmpty(column.displayGroupName)) {
+      if (res[res.length - 1].title !== column.displayGroupName) {
+        res.push({title: column.displayGroupName, children: columnDisplayMap.value.get(column.displayGroupName)})
+      }
+    } else {
+      res.push(column)
+    }
+  })
+  return res
 })
 const dictColumnArray: Array<ColumnType> = []
 let titleColumn = {} as ColumnType
