@@ -31,20 +31,22 @@ const props = withDefaults(
     modelValue: any,
     width?: number,
     placeholder?: string,
-    disabled?: boolean
+    disabled?: boolean,
+    active?: boolean
   }>(),
   {
     modelValue: '',
     width: 350,
     placeholder: '请搜索员工信息',
-    disabled: false
+    disabled: false,
+    active: true
   }
 )
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any): void
 }>()
-const {modelValue, width, placeholder} = toRefs(props)
+const {modelValue, width, placeholder, active} = toRefs(props)
 const selectUserValue = ref({value: '', label: ''} as any)
 const staffList = ref([] as Array<any>)
 const handleInputChange = _.debounce((value: string) => getSelectOption(value), QUERY_INTERVAL)
@@ -55,7 +57,7 @@ const staffAvatar = (imgUrl: string) => {
 }
 const getSelectOption = (searchValue: string) => {
   if (searchValue) {
-    getAccountInfo([searchValue]).then((resp) => {
+    getAccountInfo([searchValue], active.value).then((resp) => {
       staffList.value.length = 0
       resp.payload.forEach((res: any) => {
         staffList.value.push({
@@ -73,7 +75,7 @@ watch(
   () => modelValue.value,
   () => {
     if (modelValue.value.value) {
-      getAccountInfo([modelValue.value.value]).then((resp) => {
+      getAccountInfo([modelValue.value.value], active.value).then((resp) => {
         staffList.value.length = 0
         resp.payload.forEach((res: any) => {
           selectUserValue.value.value = res.value
