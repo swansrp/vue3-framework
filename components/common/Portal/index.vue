@@ -1354,7 +1354,7 @@ const paginationChange = () => {
  */
 const download = () => {
   if (config.plain) {
-    excelExport(parsedDataSource.value || [], columns.value, config.title)
+    excelExport(parsedDataSource.value || [], props.multiHeader ? multiHeadColumns.value : columns.value, config.title)
   } else {
     const resolve = (resp: any) => {
       const dataArray = resp.payload || []
@@ -1363,7 +1363,7 @@ const download = () => {
           parse(dataArray[index], Number(index), column, config)
         })
       }
-      excelExport(dataArray, columns.value, config.title)
+      excelExport(dataArray, multiHeadColumns.value, columns.value, config.title)
     }
     if (config.advancedSearchAble) {
       advancedSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
