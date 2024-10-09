@@ -80,6 +80,7 @@ watch(
         resp.payload.forEach((res: any) => {
           selectUserValue.value.value = res.value
           selectUserValue.value.label = res.label
+          emit('update:modelValue', selectUserValue.value)
         })
       })
     }

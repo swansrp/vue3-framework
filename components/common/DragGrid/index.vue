@@ -38,7 +38,7 @@ const props = withDefaults(
     height: 10,
     maxCol: 12,
     fieldNames: {label: 'label', value: 'value'},
-    rowHeight: 30
+    rowHeight: 31
   }
 )
 const {modelValue, width, height, maxCol, fieldNames, rowHeight} = toRefs(props)
