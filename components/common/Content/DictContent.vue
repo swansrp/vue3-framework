@@ -52,7 +52,7 @@ const props = withDefaults(
     disable: false
   }
 )
-const {dict , treeMode, modelValue, multi} = toRefs(props)
+const {dict, treeMode, modelValue, multi} = toRefs(props)
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any, label: any): void
@@ -63,8 +63,8 @@ const dictData: Ref<Array<any>> = ref([])
 
 const selectedData: Ref<any> = ref(modelValue.value || {checked: []})
 const selectedLabel = [] as Array<any>
-const checkTreeNode = (_: string, e:{checked: boolean, node: DataNode}) => {
-  if(e.checked && !multi.value) {
+const checkTreeNode = (_: string, e: { checked: boolean, node: DataNode }) => {
+  if (e.checked && !multi.value) {
     selectedData.value.checked.length = 0
     selectedData.value.checked.push(e.node.key)
     selectedLabel.length = 0
@@ -72,11 +72,11 @@ const checkTreeNode = (_: string, e:{checked: boolean, node: DataNode}) => {
   }
 }
 const checkListNode = (arg: any) => {
-  if(!multi.value) {
+  if (!multi.value) {
     selectedData.value.checked.length = 0
     selectedData.value.checked.push(arg)
   } else {
-    if(selectedData.value.checked.indexOf(arg) === -1) {
+    if (selectedData.value.checked.indexOf(arg) === -1) {
       selectedData.value.checked.push(arg)
     } else {
       selectedData.value.checked.splice(selectedData.value.checked.indexOf(arg), 1)
@@ -91,8 +91,8 @@ watch(
   }
 )
 onMounted(() => {
-  if(treeMode.value) {
-    useTreeStore().getTree(dict.value).then(res =>  treeData.value = res)
+  if (treeMode.value) {
+    useTreeStore().getTree(dict.value).then(res => treeData.value = res)
   } else {
     dictStore().getDict(dict.value).then(res => dictData.value = res)
   }

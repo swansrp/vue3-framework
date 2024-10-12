@@ -55,10 +55,6 @@ const dragControllerDiv = () => {
     }
   }
 }
-watch(
-  () => _width.value,
-  () => console.log(_width.value)
-)
 
 onMounted(() => {
   dragControllerDiv()
