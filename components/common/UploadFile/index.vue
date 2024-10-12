@@ -12,8 +12,10 @@
       :accept="accept"
       :before-upload="beforeUpload"
       :customRequest="handleFileUpload"
-      :max-count="1"
-      name="file"
+      :directory="directory"
+      :max-count="multiple ? undefined : 1"
+      :multiple="multiple"
+      :name="multiple ? 'files' : 'file'"
       style="margin-top: 30px"
       @change="handleUploadChange"
       @reject="reject">
@@ -34,12 +36,21 @@ import { isNumber } from 'lodash'
 import { getUploadAccepts, getUploadFileType } from '@/framework/components/common/UploadFile/utils'
 import { InboxOutlined } from '@ant-design/icons-vue'
 
-const prop = defineProps<{
+const prop =withDefaults(defineProps<{
   folder?: string,
   fileName?: string,
   url?: any,
   upload?: any,
-}>()
+  multiple?: boolean,
+  directory?: boolean
+}>(),{
+  folder: undefined,
+  fileName: undefined,
+  url: undefined,
+  upload: undefined,
+  multiple: false,
+  directory: false
+})
 const emit = defineEmits<{
   /**
    *
@@ -67,7 +78,7 @@ const closeUploadModal = () => {
   uploadDialogBox.url = null
   uploadDialogBox.show = false
 }
-const beforeUpload = (file: any) => {
+const beforeUpload = (file: any, fileList: any) => {
   const isLt20M = file.size / 1024 / 1024 < 20
   if (!isLt20M) {
     message.error('文件请小于 20MB!')
