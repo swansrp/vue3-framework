@@ -1553,12 +1553,6 @@ const init = async () => {
     console.debug(config, columnArray.value, columns.value, bindTabs.value)
 
     if (config.treeMode) {
-      const condition: QueryType = {} as QueryType
-      if (props.advanceCondition) {
-        condition.condition = {} as ConditionType
-        condition.condition.andOr = '0'
-        condition.condition.conditionList = [props.advanceCondition]
-      }
       await queryTreeData()
     }
     await Promise.all(promiseList)
@@ -1569,15 +1563,9 @@ const init = async () => {
   })
 }
 const queryTreeData = async () => {
-  const condition: QueryType = {} as QueryType
-  if (props.advanceCondition) {
-    condition.condition = {} as ConditionType
-    condition.condition.andOr = '0'
-    condition.condition.conditionList = [props.advanceCondition]
-  }
   // 外部组件调用queryData接口 尚未完成初始化
   if (config.url) {
-    await getTreeData(config.url, condition, config.baseDomain).then(res => treeData.value = res.payload || [])
+    await getTreeData(config.url, queryCondition(), config.baseDomain).then(res => treeData.value = res.payload || [])
   }
 }
 //endregion

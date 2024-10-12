@@ -73,6 +73,15 @@ function getAllParentNodes(list: any, id: any, key: any) {
   }
 }
 
+// 树的遍历之查找所有的父节点
+// list为树, id为目标节点的id, key为id匹配的字段
+function getAllNodes(list: any, callBack: Function)  {
+  for (const i in list) {
+    callBack(list[i])
+    if(list[i].children) getAllNodes(list[i].children, callBack)
+  }
+}
+
 const structureUrl = (url: string, id: string) => {
   return url + id
 }
@@ -224,6 +233,7 @@ export {
   localStorageMethods,
   isEmpty,
   isNotEmpty,
+  getAllNodes,
   getBrotherNodes,
   getAllParentNodes,
   structureUrl,
