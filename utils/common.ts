@@ -160,6 +160,19 @@ const clearFromField = (form: any, formRef: Ref) => {
   })
 }
 
+const clearFrom = (form: any, formRef?: Ref) => {
+  formRef && formRef.value && formRef.value.resetFields()
+  Object.keys(form).forEach(key => {
+    form[key] = null
+  })
+}
+
+const copyField = (src: any, dist: any) => {
+  src && Object.keys(dist).forEach(key => {
+    dist[key] = src[key]
+  })
+}
+
 const strLF2HtmlLF = (str: string) => {
   if (isNotEmpty(str) && typeof str === 'string') {
     str = str.replace(/\n|\\n/g, '<br/>')
@@ -251,5 +264,7 @@ export {
   log,
   startTimer,
   stopTimer,
-  uuid
+  uuid,
+  copyField,
+  clearFrom
 }
