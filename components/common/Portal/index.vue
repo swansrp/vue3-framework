@@ -442,7 +442,7 @@ import {
   indexColumn
 } from '@/framework/components/common/Portal/constant'
 import { AUTO } from '@/framework/utils/constant'
-import { createVNode, Ref } from 'vue'
+import { createVNode, Ref, useSlots } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
@@ -524,10 +524,11 @@ const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
   (e: 'selectedData', selectedData: Array<any>): void
 }>()
+const slots = useSlots()
+const {data} = toRefs(props)
 const isBindTabExisted = computed(() => {
   return bindTabs.value && bindTabs.value.length > 0
 })
-const {data} = toRefs(props)
 const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
 const isListMode: Ref<boolean> = ref(props.listMode)
@@ -1354,7 +1355,7 @@ const paginationChange = () => {
  */
 const download = () => {
   if (config.plain) {
-    excelExport(parsedDataSource.value || [], props.multiHeader ? multiHeadColumns.value : columns.value, config.title)
+    excelExport(parsedDataSource.value || [], props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, config.title)
   } else {
     const resolve = (resp: any) => {
       const dataArray = resp.payload || []
@@ -1517,6 +1518,10 @@ const init = async () => {
     }
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
+      if(isNotEmpty(slots.action)) {
+        actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
+        columnArray.value.push(actionColumn)
+      }
     } else {
       if (props.actionWidth > 0) {
         actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
