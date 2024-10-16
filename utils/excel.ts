@@ -2,6 +2,7 @@ import XLSX from "xlsx-js-style"
 import dayjs from 'dayjs'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { getTextWidth } from '@/framework/components/common/Portal/utils'
+import { isNotEmpty } from '@/framework/utils/common'
 
 /**
  * @param dataSource    使用 ant table 组件时的 data-source 数据
@@ -27,7 +28,7 @@ export const excelExport = (dataSource: any, columns: any, rawColumns: any, file
   header.push(...jsonDataToArray(columns, dataSource))
   // 列宽
   const columnWidthArray = [] as Array<any>
-  rawColumns.forEach((col:any) => {
+  rawColumns.forEach((col: any) => {
     const textWidth = getTextWidth(col.title)
     const wpx = textWidth < col.width ? textWidth : col.width
     columnWidthArray.push({wpx})
@@ -107,25 +108,27 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
       const cell_ref = XLSX.utils.encode_cell({c: C, r: R})
       // 该单元格的数据类型，只判断了数值类型、布尔类型，字符串类型，省略了其他类型
       // 自己可以翻文档加其他类型
-      if (typeof cell.v === 'number') {
-        cell.t = 'n'
-      } else if (typeof cell.v === 'boolean') {
-        cell.t = 'b'
-      } else {
-        cell.t = 's'
-      }
-
-      if (columns[C].fieldType === FIELD_TYPE.MONEY) {
-        //将有千分位的数据去掉千分位
-        cell.v = cell.v.replace(/,/g,"")
-        const value = parseFloat(cell.v)
-        if (!isNaN(value)) {
+      if (isNotEmpty(cell)) {
+        if (typeof cell.v === 'number') {
           cell.t = 'n'
-          cell.z = '#,##0.00'
+        } else if (typeof cell.v === 'boolean') {
+          cell.t = 'b'
+        } else {
+          cell.t = 's'
         }
+
+        if (columns[C].fieldType === FIELD_TYPE.MONEY) {
+          //将有千分位的数据去掉千分位
+          cell.v = cell.v.replace(/,/g, "")
+          const value = parseFloat(cell.v)
+          if (!isNaN(value)) {
+            cell.t = 'n'
+            cell.z = '#,##0.00'
+          }
+        }
+        ws[cell_ref] = cell
+        columnWidthArray[C].wpx = Math.max(columnWidthArray[C].wpx, getTextWidth(cell.v))
       }
-      ws[cell_ref] = cell
-      columnWidthArray[C].wpx = Math.max(columnWidthArray[C].wpx, getTextWidth(cell.v))
     }
   }
   if (range.s.c < 10000000) {
