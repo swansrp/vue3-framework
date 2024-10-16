@@ -175,6 +175,7 @@
                       :column="column"
                       :portal-config="config"
                       :record="record"
+                      :parsedRecord="parsedDataSource[index]"
                       name="action">
                     </slot>
                   </template>
