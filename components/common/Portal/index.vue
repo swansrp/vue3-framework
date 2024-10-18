@@ -295,8 +295,9 @@
                   @cell-update="cellUpdate"
                 />
               </template>
-              <template v-if="props.expanded" #expandedRowRender="{record}">
-                <slot :record="record" name="expandedRowRender"></slot>
+              <template v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded" #expandedRowRender="{record}">
+                <slot v-if="isNotEmpty($slots.expandedRowRender)" :record="record" name="expandedRowRender"></slot>
+                <portal-text-area-expanded v-else-if="props.textAreaInExpanded" :record="record" :columns="textAreaColumns" />
               </template>
               <template #footer>
                 <div class="pagination">
@@ -456,6 +457,7 @@ import PortalAssociationModal from '@/framework/components/common/Portal/modal/P
 import { parse } from '@/framework/components/common/Portal/utils'
 import { excelExport } from "@/framework/utils/excel";
 import { name } from '@/../package.json'
+import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 
 /**
  * @param tableId 表格ID
@@ -475,7 +477,7 @@ import { name } from '@/../package.json'
  * @param selectedTreeData 树形结构展示当前选择项
  * @param checkStrictly 树形结构选择是否完全受控
  * @param bindDefaultValue 1:N entity字段名称-字段属性
- * @param expanded 是否有展开按钮
+ * @param textAreaInExpanded 长文本自动在展开区域显示
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -498,7 +500,7 @@ const props = withDefaults(defineProps<{
     selectedTreeData?: Array<any>,
     checkStrictly?: boolean
     bindDefaultValue?: any
-    expanded?: boolean
+    textAreaInExpanded?: boolean
   }>(),
   {
     baseDomain: '/' + name,
@@ -519,7 +521,7 @@ const props = withDefaults(defineProps<{
     selectedTreeData: undefined,
     checkStrictly: false,
     bindDefaultValue: undefined,
-    expanded: false
+    textAreaInExpanded: false
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -629,6 +631,9 @@ const columnDisplayMap: Ref<Map<any, Array<ColumnType>>> = ref(new Map<any, Arra
 const columnRaw = []
 const columns = computed(() => {
   return columnArray.value.filter(item => item.checked)
+})
+const textAreaColumns = computed(() => {
+  return columnArray.value.filter(item => item.fieldType === FIELD_TYPE.TEXT_AREA)
 })
 const multiHeadColumns = computed(() => {
   const res = [] as Array<any>
