@@ -1,5 +1,6 @@
 <template>
   <a-modal
+    :maskClosable="false"
     :okText="config.modal.type === 'add' ? '保存' : '更新'"
     :open="config.modal.show"
     :title="config.modal.type === 'add' ? '新增数据' : '编辑数据'"

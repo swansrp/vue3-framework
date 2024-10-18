@@ -68,7 +68,7 @@ const uploadDialogBox: { show: boolean, uploadFileType: any, file: Array<any>, u
   file: [] as Array<any>,
   url: null
 })
-const showUploadDialogBox = (fieldType: string) => {
+const showUploadDialogBox = (fieldType = '') => {
   uploadDialogBox.url = null
   uploadDialogBox.file = []
   uploadDialogBox.show = true
