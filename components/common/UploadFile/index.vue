@@ -16,6 +16,7 @@
       :max-count="multiple ? undefined : 1"
       :multiple="multiple"
       :name="multiple ? 'files' : 'file'"
+      listType="text"
       style="margin-top: 30px"
       @change="handleUploadChange"
       @reject="reject">
@@ -24,6 +25,7 @@
       </p>
       <p class="ant-upload-text">点击或者拖拽文件至此上传</p>
     </a-upload-dragger>
+    <a-progress v-if="!multiple && _handleProgress" :percent="_handleProgress" />
   </a-modal>
 </template>
 
@@ -35,21 +37,24 @@ import { AxiosProgressEvent } from 'axios'
 import { isNumber } from 'lodash'
 import { getUploadAccepts, getUploadFileType } from '@/framework/components/common/UploadFile/utils'
 import { InboxOutlined } from '@ant-design/icons-vue'
+import { Ref } from 'vue'
 
-const prop =withDefaults(defineProps<{
+const prop = withDefaults(defineProps<{
   folder?: string,
   fileName?: string,
   url?: any,
   upload?: any,
   multiple?: boolean,
-  directory?: boolean
-}>(),{
+  directory?: boolean,
+  handleProgress?: number
+}>(), {
   folder: undefined,
   fileName: undefined,
   url: undefined,
   upload: undefined,
   multiple: false,
-  directory: false
+  directory: false,
+  handleProgress: undefined
 })
 const emit = defineEmits<{
   /**
@@ -58,6 +63,7 @@ const emit = defineEmits<{
    * @param url
    */
   (e: 'update:url', url: any): void
+  (e: 'uploadComplete'): void
   (e: 'afterConfirm'): void
 }>()
 
@@ -68,11 +74,19 @@ const uploadDialogBox: { show: boolean, uploadFileType: any, file: Array<any>, u
   file: [] as Array<any>,
   url: null
 })
+const {handleProgress} = toRefs(prop)
+const _handleProgress: Ref<number | undefined> = ref(undefined)
+watch(
+  () => handleProgress.value,
+  () => _handleProgress.value = handleProgress.value
+)
 const showUploadDialogBox = (fieldType = '') => {
   uploadDialogBox.url = null
   uploadDialogBox.file = []
   uploadDialogBox.show = true
   accept.value = getUploadAccepts(fieldType)
+  _handleProgress.value = undefined
+
 }
 const closeUploadModal = () => {
   uploadDialogBox.url = null
@@ -120,8 +134,10 @@ const confirmUploadModal = () => {
   uploadDialogBox.show = false
   emit('afterConfirm')
 }
-const handleUploadChange = () => {
-
+const handleUploadChange = (file: any) => {
+  if (file.event?.percent === 100) {
+    emit('uploadComplete')
+  }
 }
 const reject = () => {
   message.error('不支持该文件格式')
