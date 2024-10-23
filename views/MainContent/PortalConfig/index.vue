@@ -11,6 +11,15 @@
               <span>{{ item.label }}</span>
               <template v-if="selectedRole === '0'" #overlay>
                 <a-menu>
+                  <a-menu-item key="0">
+                    <a-popconfirm title="注意 即将恢复该配置到默认状态" @confirm="refreshConfig(item.value)">
+                      <a-button shape="text" size="small"> 恢复
+                        <template #icon>
+                          <UndoOutlined />
+                        </template>
+                      </a-button>
+                    </a-popconfirm>
+                  </a-menu-item>
                   <a-menu-item key="1">
                     <a-button
                       shape="text"
@@ -1063,7 +1072,7 @@ import {
   getBindRole,
   getPortalConfig,
   getPortalList,
-  importPortalConfig,
+  importPortalConfig, refreshPortalConfig,
   unbindRole,
   updatePortalColumn,
   updatePortalColumnOrder,
@@ -1079,7 +1088,8 @@ import {
   MinusCircleOutlined,
   UserOutlined,
   VerticalAlignBottomOutlined,
-  VerticalAlignTopOutlined
+  VerticalAlignTopOutlined,
+  UndoOutlined
 } from '@ant-design/icons-vue'
 import { ValueLabel } from '@/framework/utils/type'
 import { dictStore } from '@/framework/store/common'
@@ -1214,6 +1224,16 @@ const getTableConfigByName = (item: any) => {
 
 const deleteConfig = (id: any) => {
   deletePortalConfig(id || tableConfig.value.id).then(() => {
+    columnDict.length = 0
+    columnMap.clear()
+    selectedColumnId.value = ''
+    tableConfig.value = {}
+    onSearch()
+  })
+}
+
+const refreshConfig = (id: any) => {
+  refreshPortalConfig(id || tableConfig.value.id).then(() => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
