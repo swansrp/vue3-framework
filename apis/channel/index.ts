@@ -6,7 +6,7 @@ import {buildGetApiByType, buildPostApiByType} from "@/framework/apis";
 const buildPostApi = (url: string, domain: string| undefined) => buildPostApiByType(url, apiType.channel, domain)
 
 export const getSequenceChannelList = (name: string, dictName: string, domain: string | undefined) =>
-  request(buildGetApiByType('/list/label', '/web/dict', domain), {dictName, name}, {}, false, false) as Promise<any>
+  request(buildGetApiByType('/list/label', '/dict', domain), {dictName, name}, {}, false, false) as Promise<any>
 export const getSequenceChannelTable = (data: any, domain: string| undefined) =>
   request(buildPostApi('/query', domain), {}, data, false, false) as Promise<any>
 export const addSequenceChannelTable = (platform: string, domain: string| undefined) =>
