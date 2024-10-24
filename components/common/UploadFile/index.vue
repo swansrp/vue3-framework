@@ -25,7 +25,11 @@
       </p>
       <p class="ant-upload-text">点击或者拖拽文件至此上传</p>
     </a-upload-dragger>
-    <a-progress v-if="!multiple && _handleProgress" :status="_handleProgress < 0 ? 'exception' : undefined" :percent="_handleProgress" />
+    <a-progress
+      v-if="!multiple && _handleProgress"
+      :format="(percent: number) => percent?.toFixed(2) + '%'"
+      :percent="_handleProgress"
+      :status="_handleProgress < 0 ? 'exception' : undefined" />
   </a-modal>
 </template>
 
