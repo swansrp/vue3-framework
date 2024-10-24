@@ -27,7 +27,6 @@
     </a-upload-dragger>
     <a-progress
       v-if="!multiple && _handleProgress"
-      :format="(percent: number) => percent?.toFixed(2) + '%'"
       :percent="_handleProgress"
       :status="_handleProgress < 0 ? 'exception' : undefined" />
   </a-modal>
