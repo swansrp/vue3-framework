@@ -25,7 +25,7 @@
       </p>
       <p class="ant-upload-text">点击或者拖拽文件至此上传</p>
     </a-upload-dragger>
-    <a-progress v-if="!multiple && _handleProgress" :percent="_handleProgress" />
+    <a-progress v-if="!multiple && _handleProgress" :status="_handleProgress < 0 ? 'exception' : undefined" :percent="_handleProgress" />
   </a-modal>
 </template>
 
@@ -137,6 +137,8 @@ const confirmUploadModal = () => {
 const handleUploadChange = (file: any) => {
   if (file.event?.percent === 100) {
     emit('uploadComplete')
+  } else {
+    _handleProgress.value = undefined
   }
 }
 const reject = () => {
