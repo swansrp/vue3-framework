@@ -34,11 +34,17 @@ import {TableConfigType} from '@/framework/components/common/Portal/type'
 import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
 import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
+  treeCheckAble?: boolean
+  checkStrictly?: boolean
   config: TableConfigType,
   treeData: Array<DataNode>,
   selectedTreeData?: Array<any>
-}>()
+}>(),{
+  treeCheckAble: false,
+  checkStrictly: false,
+  selectedTreeData: undefined
+})
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
   (e: 'updateTree', info: AntTreeNodeDropEvent): void

@@ -10,7 +10,9 @@
           <portal-tree-mode
             v-if="isTreeMode && treeData.length"
             v-model:selected-tree-data="selectedTreeData"
+            :check-strictly="props.checkStrictly"
             :config="config"
+            :tree-check-able="props.treeCheckAble"
             :tree-data="treeData"
             @update-tree="updateTree"
             @handle-tree-selected="handleTreeSelected"
@@ -173,9 +175,9 @@
                   <template #action="{}">
                     <slot
                       :column="column"
+                      :parsedRecord="parsedDataSource[index]"
                       :portal-config="config"
                       :record="record"
-                      :parsedRecord="parsedDataSource[index]"
                       name="action">
                     </slot>
                   </template>
@@ -295,9 +297,13 @@
                   @cell-update="cellUpdate"
                 />
               </template>
-              <template v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded" #expandedRowRender="{record}">
+              <template
+                v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
+                #expandedRowRender="{record}">
                 <slot v-if="isNotEmpty($slots.expandedRowRender)" :record="record" name="expandedRowRender"></slot>
-                <portal-text-area-expanded v-else-if="props.textAreaInExpanded" :record="record" :columns="textAreaColumns" />
+                <portal-text-area-expanded
+                  v-else-if="props.textAreaInExpanded" :columns="textAreaColumns"
+                  :record="record" />
               </template>
               <template #footer>
                 <div class="pagination">
@@ -681,8 +687,10 @@ const selectedRecord = computed(() => {
 
 })
 const selectedEntityName = computed(() => {
-  if (isNotEmpty(selectedListDataItem.value) || isNotEmpty(selectedTreeDataNode.value)) {
-    return selectedListDataItem.value.label || selectedTreeDataNode.value.title
+  if (isNotEmpty(selectedListDataItem.value)) {
+    return selectedListDataItem.value.label
+  } else if (isNotEmpty(selectedTreeDataNode.value)) {
+    return selectedTreeDataNode.value.title
   } else {
     return null
   }
@@ -1524,7 +1532,7 @@ const init = async () => {
     }
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
-      if(isNotEmpty(slots.action)) {
+      if (isNotEmpty(slots.action)) {
         actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
         columnArray.value.push(actionColumn)
       }
@@ -1550,7 +1558,7 @@ const init = async () => {
           bind.defaultAdvancedCondition = JSON.parse(associate.attachCondition)
         }
         bind.defaultSortColumn = [{
-          property: associate.bindSortPrperty,
+          property: associate.bindSortProperty,
           type: associate.bindSortType
         }]
         bind.treeMode = associate.treeMode === '1'

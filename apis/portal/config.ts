@@ -7,7 +7,7 @@ const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiB
 export const getPortalList = (name: string, roleId: any) => get(buildGetApi('/list'), {name, roleId}, {}, false, false) as Promise<any>
 
 export const deletePortalConfig = (id: any) => post(buildPostApi('/config/delete'), undefined, {id}) as Promise<any>
-export const refreshPortalConfig = (id: any) => post(buildPostApi('/config/refresh'), undefined, {id}) as Promise<any>
+export const refreshPortalConfig = (name: string, roleId?: any) => post(buildPostApi('/config/refresh'), undefined, {name, roleId}) as Promise<any>
 
 export const getPortalConfig = (name: string, roleId?: any) => get(buildGetApi('/config'), {
   name,

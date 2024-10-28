@@ -1072,7 +1072,8 @@ import {
   getBindRole,
   getPortalConfig,
   getPortalList,
-  importPortalConfig, refreshPortalConfig,
+  importPortalConfig,
+  refreshPortalConfig,
   unbindRole,
   updatePortalColumn,
   updatePortalColumnOrder,
@@ -1086,10 +1087,10 @@ import {
   FilterOutlined,
   ForkOutlined,
   MinusCircleOutlined,
+  UndoOutlined,
   UserOutlined,
   VerticalAlignBottomOutlined,
-  VerticalAlignTopOutlined,
-  UndoOutlined
+  VerticalAlignTopOutlined
 } from '@ant-design/icons-vue'
 import { ValueLabel } from '@/framework/utils/type'
 import { dictStore } from '@/framework/store/common'
@@ -1233,7 +1234,7 @@ const deleteConfig = (id: any) => {
 }
 
 const refreshConfig = (id: any) => {
-  refreshPortalConfig(id || tableConfig.value.id).then(() => {
+  refreshPortalConfig((id || tableConfig.value.id), selectedRole.value).then(() => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''

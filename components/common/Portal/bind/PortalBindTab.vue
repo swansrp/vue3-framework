@@ -47,8 +47,7 @@ const prop = defineProps<{
   rowKey: string,
   bindTabs: Array<PortalBindType>
 }>()
-const {record, rowKey} = toRefs(prop)
-const bindTabs: Ref<Array<PortalBindType>> = ref(prop.bindTabs || [])
+const {record, rowKey, bindTabs} = toRefs(prop)
 const isSelectedEntity = computed(() => {
   return isNotEmpty(record.value)
 })
@@ -69,10 +68,11 @@ watch(checkedKeys, (newValue: Array<any>) => {
   }
 })
 const activeKey = ref(0)
+const baseBindCondition:Ref<ConditionListType> = ref({} as ConditionListType);
 const bindCondition: Ref<ConditionListType | undefined> = ref({} as ConditionListType)
 const bindDefaultValue = computed(() => {
-  if (bindCondition.value && bindCondition.value.value) {
-    return {[`${bindCondition.value.property}`]: bindCondition.value.value[0]}
+  if (baseBindCondition.value && baseBindCondition.value.value) {
+    return {[`${baseBindCondition.value.property}`]: baseBindCondition.value.value[0]}
   } else {
     return {}
   }
@@ -83,27 +83,26 @@ const refresh = (arg?: any) => {
     if (bindTabs.value[activeKey.value].bindType === '2') {
       getBindList()
     } else {
-      let condition = {} as ConditionListType
       if (bindTabs.value[activeKey.value].bindType === '0') {
-        condition = {
+        baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.EQUAL,
           value: [record.value[rowKey.value]]
         } as ConditionListType
       } else if (bindTabs.value[activeKey.value].bindType === '3') {
-        condition = {
+        baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.CONTAIN,
           value: [record.value[rowKey.value]]
         } as ConditionListType
       } else if (bindTabs.value[activeKey.value].bindType === '1') {
-        condition = {
+        baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.EQUAL,
           value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
         } as ConditionListType
       } else if (bindTabs.value[activeKey.value].bindType === '4') {
-        condition = {
+        baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.CONTAIN,
           value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
@@ -111,7 +110,7 @@ const refresh = (arg?: any) => {
       }
       bindCondition.value = {
         andOr: '0',
-        conditionList: [condition, bindTabs.value[activeKey.value].defaultAdvancedCondition || {} as ConditionListType]
+        conditionList: [baseBindCondition.value, bindTabs.value[activeKey.value].defaultAdvancedCondition || {} as ConditionListType]
       }
       nextTick(() => {
         if (bindTabs.value && bindTabs.value[activeKey.value].treeMode) {
@@ -168,15 +167,6 @@ watch(
   () => record.value,
   () => {
     refresh()
-  },
-  {
-    deep: true,
-    immediate: true
-  })
-watch(
-  () => prop.bindTabs,
-  () => {
-    bindTabs.value = prop.bindTabs
   },
   {
     deep: true,
