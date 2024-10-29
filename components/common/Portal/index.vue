@@ -178,6 +178,7 @@
                       :parsedRecord="parsedDataSource[index]"
                       :portal-config="config"
                       :record="record"
+                      :columns="multiHeader ? multiHeadColumns : columns"
                       name="action">
                     </slot>
                   </template>
