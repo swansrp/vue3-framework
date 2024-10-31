@@ -1,7 +1,8 @@
 import { isEmpty } from '@/framework/utils/common'
+import {isNumber} from "lodash";
 
 export const formatMoney = (money: number, fix = 2, unit = 10000) => {
-  if (isEmpty(money)) {
+  if (!isNumber(money)) {
     return '--'
   } else if (isNaN(money)) {
     return '--'
