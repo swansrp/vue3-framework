@@ -40,8 +40,10 @@ function isEmpty(data: any) {
     return data.size === 0
   } else if (typeof data === 'string') {
     return data.length === 0 || data === ''
-  } else {
+  } else if (typeof data === 'object') {
     return Object.keys(data).length === 0;
+  } else {
+    return JSON.stringify(data) === '{}'
   }
 }
 
