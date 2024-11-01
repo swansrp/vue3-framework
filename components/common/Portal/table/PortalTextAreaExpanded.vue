@@ -1,12 +1,16 @@
 <template>
   <a-tabs v-model:activeKey="activeKey">
-    <a-tab-pane v-for="(item, index) of columns" :key="index" :tab="item.title" :disabled="isEmpty(record[item.dataIndex])">
+    <a-tab-pane
+      v-for="(item, index) of columns" :key="index" :disabled="isEmpty(record[item.dataIndex])"
+      :tab="item.title">
       <div v-html="strLF2HtmlLF(record[item.dataIndex])"></div>
     </a-tab-pane>
   </a-tabs>
 </template>
 
 <script lang="ts" setup>
+import { isEmpty, isNotEmpty, strLF2HtmlLF, log } from '@/framework/utils/common'
+
 const props = withDefaults(
   defineProps<{
     record: any
@@ -15,8 +19,7 @@ const props = withDefaults(
   {}
 )
 const {record, columns} = toRefs(props)
-const activeKey = ref(0)
-import { isEmpty, strLF2HtmlLF } from '@/framework/utils/common'
+const activeKey = ref(isNotEmpty(record.value[columns.value[0].dataIndex]) ? 0 : -1)
 
 onMounted(() => {
 })

@@ -124,6 +124,7 @@
               :pagination="false"
               :range-selection="false"
               :row-selection="rowSelection"
+              :rowExpandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
               :rowKey="config.rowKey"
               :scroll="{x: getTableWidth(), y: getTableHeight()}"
               :size="config.size"
@@ -175,10 +176,10 @@
                   <template #action="{}">
                     <slot
                       :column="column"
+                      :columns="multiHeader ? multiHeadColumns : columns"
                       :parsedRecord="parsedDataSource[index]"
                       :portal-config="config"
                       :record="record"
-                      :columns="multiHeader ? multiHeadColumns : columns"
                       name="action">
                     </slot>
                   </template>
@@ -485,6 +486,7 @@ import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/P
  * @param checkStrictly 树形结构选择是否完全受控
  * @param bindDefaultValue 1:N entity字段名称-字段属性
  * @param textAreaInExpanded 长文本自动在展开区域显示
+ * @param rowExpandable 每行是否展示展开按钮
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -507,7 +509,8 @@ const props = withDefaults(defineProps<{
     selectedTreeData?: Array<any>,
     checkStrictly?: boolean
     bindDefaultValue?: any
-    textAreaInExpanded?: boolean
+    textAreaInExpanded?: boolean,
+    rowExpandable?: Function
   }>(),
   {
     baseDomain: '/' + name,
@@ -528,7 +531,8 @@ const props = withDefaults(defineProps<{
     selectedTreeData: undefined,
     checkStrictly: false,
     bindDefaultValue: undefined,
-    textAreaInExpanded: false
+    textAreaInExpanded: false,
+    rowExpandable: undefined
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -1286,6 +1290,16 @@ const getConfig = () => {
 /**
  * 获取数据
  */
+const allTextAreaColumnsNotEmpty = (record: any) => {
+  if(isNotEmpty(textAreaColumns.value)) {
+    for (let checkColumn in textAreaColumns.value) {
+      if (isNotEmpty(record[checkColumn.dataIndex])) {
+        return true
+      }
+    }
+  }
+  return false
+}
 const queryData = () => {
   // 外部组件调用queryData接口 尚未完成初始化
   if (config.url) {
