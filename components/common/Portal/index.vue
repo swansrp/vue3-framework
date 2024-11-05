@@ -196,6 +196,7 @@
                   :columns="columns"
                   :config="config"
                   :dataSummary="dataSummary"
+                  :is-expanded="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
                 />
               </template>
               <!-- endregion -->
