@@ -43,7 +43,7 @@ function isEmpty(data: any) {
   } else if (typeof data === 'object') {
     return Object.keys(data).length === 0;
   } else {
-    return JSON.stringify(data) === '{}'
+    return false
   }
 }
 

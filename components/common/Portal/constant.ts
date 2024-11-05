@@ -54,7 +54,7 @@ export const defaultColumn = {
   referenceDictOption: [] as Array<any>,
   tooltip: {placement: 'rightBottom', mouseEnterDelay: 1, overlayStyle: {}, popupStyle: {}},
   filterAble: false,
-  filterStrict: true,
+  filterStrict: false,
   sorter: false,
   checked: true,
   disabled: false,

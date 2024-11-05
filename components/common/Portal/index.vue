@@ -1292,7 +1292,7 @@ const getConfig = () => {
  */
 const allTextAreaColumnsNotEmpty = (record: any) => {
   if(isNotEmpty(textAreaColumns.value)) {
-    for (let checkColumn in textAreaColumns.value) {
+    for (let checkColumn of textAreaColumns.value) {
       if (isNotEmpty(record[checkColumn.dataIndex])) {
         return true
       }

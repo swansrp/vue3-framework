@@ -13,7 +13,7 @@
     style="width: 285px;margin-bottom: 10px;margin-left: 70px;display: block;" type="primary"
     @click="handleAddUser">绑定
   </a-button>
-  <a-card size="small" title="已绑定用户">
+  <a-card size="small" title="已绑定用户" style="height: calc(100vh - 410px)">
     <template #extra>
       <a-select v-model:value="selectPermission" style="width: 200px" placeholder="请选择权限">
         <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">

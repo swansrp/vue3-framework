@@ -42,7 +42,7 @@
         style="margin-bottom: 8px; margin-right: 5px"
       />
       <a-input-number
-        v-if="!column.filterStrict"
+        v-if="column.filterStrict"
         v-model:value="_selectedKeysRef[0]"
         style=" margin-bottom: 8px; width: 170px;"
         @change="e => handleNumberConditionChanged([e, e], column)" />
