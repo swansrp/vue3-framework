@@ -177,7 +177,7 @@
                   <template #action="{}">
                     <slot
                       :column="column"
-                      :columns="multiHeader ? multiHeadColumns : columns"
+                      :columns="columns"
                       :parsedRecord="parsedDataSource[index]"
                       :portal-config="config"
                       :record="record"
