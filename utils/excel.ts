@@ -2,7 +2,7 @@ import XLSX from "xlsx-js-style"
 import dayjs from 'dayjs'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { getTextWidth } from '@/framework/components/common/Portal/utils'
-import { isNotEmpty } from '@/framework/utils/common'
+import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 
 /**
  * @param dataSource    使用 ant table 组件时的 data-source 数据
@@ -70,7 +70,7 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
       }
       /// 构造cell对象，对所有excel单元格使用如下样式
       let cell
-      console.log(data[R][C], C, columns[C])
+      // console.log(data[R][C], C, columns[C])
       if (typeof data[R][C] === "object") { // 此处预留了自定义设置样式的功能，通过重写recursiveChildrenData方法，可为每一个单元格传入样式属性
         cell = data[R][C]
       } else {
@@ -138,7 +138,7 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
 }
 const generateExcelColumn = (columnTable: any, rowOffset: any, colOffset: any, columnDefine: any, mergeRecord: any) => {
   const columnWidth = _treeWidth(columnDefine)
-  columnTable[rowOffset][colOffset] = columnDefine.title
+  columnTable[rowOffset][colOffset] = strRemoveLF(columnDefine.title)
   if (columnDefine.children) {
     mergeRecord.push({s: {r: rowOffset, c: colOffset}, e: {r: rowOffset, c: colOffset + columnWidth - 1}})
     let tempOffSet = colOffset

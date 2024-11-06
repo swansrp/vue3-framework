@@ -22,6 +22,15 @@
       {{ dict.getLabel(column.referenceDict, record[column.dataIndex]) }}
     </a-badge-ribbon>
   </template>
+  <template
+    v-else-if="column.fieldType === FIELD_TYPE.TREE ||
+      column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE">
+    <a-badge-ribbon
+      :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
+      placement="start">
+      {{ treeDict.getLabel(column.referenceDict, record[column.dataIndex]) }}
+    </a-badge-ribbon>
+  </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
     <a-badge-ribbon
       :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
@@ -95,7 +104,7 @@
 import dayjs from 'dayjs'
 import { isNotEmpty, strLF2HtmlLF } from '@/framework/utils/common'
 import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
-import { dictStore } from '@/framework/store/common'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const prop = defineProps<{
@@ -108,6 +117,7 @@ const prop = defineProps<{
 }>()
 const {record, displayMap, config, column, index} = toRefs(prop)
 const dict = dictStore()
+const treeDict = useTreeStore()
 </script>
 
 <style lang="less" scoped>

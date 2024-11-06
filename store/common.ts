@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { getDictList, getTreeList } from '@/framework/apis/common/common'
-import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { getAllNodes, isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { ValueLabel } from '@/framework/utils/type'
 import { getConfig } from '@/framework/apis/params'
-import { getDictNameList } from '@/framework/apis/dict/dict'
+import { getAllTreeDict, getDictNameList } from '@/framework/apis/dict/dict'
 
 export const useCommonStore = defineStore('commonStore', {
   state: () => {
@@ -103,7 +103,6 @@ export const dictStore = defineStore('dictStore', {
         } else {
           return this.allDict.filter(dict => dict.value.indexOf(dictName) !== -1)
         }
-
       }
     }
   }, getters: {}
@@ -112,18 +111,45 @@ export const dictStore = defineStore('dictStore', {
 export const useTreeStore = defineStore('treeStore', {
   state: () => {
     return {
-      map: new Map() // 用于判断请求中 headers 字段中的 Authorization
+      map: new Map(),
+      allDict: [] as Array<{ value: string, label: string }>
     }
   }, actions: {
     async getTree(dictName: string) {
       const result = this.map.get(dictName)
       if (isNotEmpty(result)) {
-        return result
+        return result.data
       }
       return getTreeList(dictName).then(res => {
-        this.map.set(dictName, res.payload)
+        const valueMap = new Map()
+        const labelMap = new Map()
+        getAllNodes(res.payload, (item: any) => {
+          valueMap.set(item.value, item.label)
+          labelMap.set(item.label, item.value)
+        })
+        this.map.set(dictName, {data: res.payload, valueMap, labelMap})
         return res.payload
       })
+    }, getLabel(dictName: string, value: number | string) {
+      if (isEmpty(value)) return ''
+      const dictArray = value.toString().split(',')
+      const display = [] as Array<string>
+      dictArray.forEach((item: any) => {
+        display.push(this.map.get(dictName).valueMap.get(item))
+      })
+      return display.join(',')
+
+    }, getValue(dictName: string, label: number | string) {
+      return this.map.get(dictName).labelMap.get(label)
+    }, async getAllDict() {
+      if (isEmpty(this.allDict)) {
+        return await getAllTreeDict().then((res: any) => {
+          this.allDict = res.payload || []
+          return this.allDict
+        })
+      } else {
+        return this.allDict
+      }
     }
   }, getters: {}
 })

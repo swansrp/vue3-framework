@@ -1,14 +1,17 @@
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
-import { dictStore } from '@/framework/store/common'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isNotEmpty } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const dict = dictStore()
+const treeDict = useTreeStore()
 export const parse = (record: any, index: number, column: ColumnType, config: TableConfigType) => {
   record.index = (index + 1) + config.pageSize * (config.currentPage - 1)
   if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
     record[column.dataIndex] = dict.getLabel(column.referenceDict, record[column.dataIndex])
+  } else if (column.fieldType === FIELD_TYPE.TREE || column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+    record[column.dataIndex] = treeDict.getLabel(column.referenceDict, record[column.dataIndex])
   } else if (column.fieldType === FIELD_TYPE.DATE) {
     record[column.dataIndex] = isNotEmpty(record[column.dataIndex]) ? dayjs(record[column.dataIndex]).format('YYYY-MM-DD') : ''
   } else if (column.fieldType === FIELD_TYPE.DATETIME) {

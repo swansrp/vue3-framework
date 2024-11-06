@@ -69,6 +69,31 @@
       @click.stop="closeEditor"
     />
   </template>
+  <template
+    v-else-if="column.fieldType === FIELD_TYPE.TREE||
+      column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE">
+    <a-tree-select
+      :ref="editorRef"
+      :get-popup-container="getPopupContainer"
+      :bordered="false"
+      :tree-data="column.referenceDictOption || []"
+      allow-clear
+      style="width: 300px;"
+      tree-checkable
+      tree-default-expand-all
+      tree-node-filter-prop="label"
+      modelValue
+      default-open
+      @select="v => {
+        cellUpdate(recordIndexs[0], column.dataIndex, v)
+        modelValue = v;
+        save();
+        closeEditor()
+      }"
+      @keydown.esc="closeEditor"
+      @click.stop="closeEditor"
+    />
+  </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
     <a-date-picker
       :ref="editorRef"

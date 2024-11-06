@@ -578,7 +578,8 @@
                   columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
                   columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
                 :filter-option="filterOption"
-                :options="sysDictList"
+                :options="(columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT ||
+                  columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) ? sysDictList : sysTreeDictList"
                 :value="columnMap.get(selectedColumnId).reference"
                 placeholder="输入相关引用名称"
                 show-search
@@ -1093,7 +1094,7 @@ import {
   VerticalAlignTopOutlined
 } from '@ant-design/icons-vue'
 import { ValueLabel } from '@/framework/utils/type'
-import { dictStore } from '@/framework/store/common'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import { CellRenderArgs } from '@surely-vue/table'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { AUTO } from '@/framework/utils/constant'
@@ -1106,9 +1107,11 @@ import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant
 import { filterOption } from '@/framework/components/common/utils'
 
 const dict = dictStore()
+const treeDict = useTreeStore()
 let inputTableName: Ref<string> = ref('')
 let tableList: Ref<Array<ValueLabel>> = ref([] as Array<ValueLabel>)
 let sysDictList = reactive([] as Array<any>)
+let sysTreeDictList = reactive([] as Array<any>)
 let tableSizeDict = reactive([] as Array<ValueLabel>)
 let fieldTypeDict = reactive([] as Array<ValueLabel>)
 let mobileDisplayTypeDict = reactive([] as Array<ValueLabel>)
@@ -1444,6 +1447,9 @@ const init = async () => {
     }),
     await dict.getAllDict('').then(res => {
       sysDictList = res || []
+    }),
+    await treeDict.getAllDict().then(res => {
+      sysTreeDictList = res || []
     }),
     await getRoleList().then(res => {
       if (res.payload && res.payload.records) {

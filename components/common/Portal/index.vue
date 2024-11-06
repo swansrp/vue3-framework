@@ -418,7 +418,7 @@ import {
   updateTreePid
 } from '@/framework/apis/portal'
 import { getPortalConfig } from '@/framework/apis/portal/config'
-import { dictStore } from '@/framework/store/common'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
   ColumnType,
@@ -552,6 +552,7 @@ const isListMode: Ref<boolean> = ref(props.listMode)
 const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
 const dict = dictStore()
+const treeDict = useTreeStore()
 // region 调整表格大小
 const root: Ref = ref()
 let tableWidth: Ref<number> = ref(0)
@@ -1297,7 +1298,7 @@ const getConfig = () => {
  * 获取数据
  */
 const allTextAreaColumnsNotEmpty = (record: any) => {
-  if(isNotEmpty(textAreaColumns.value)) {
+  if (isNotEmpty(textAreaColumns.value)) {
     for (let checkColumn of textAreaColumns.value) {
       if (isNotEmpty(record[checkColumn.dataIndex])) {
         return true
@@ -1533,7 +1534,13 @@ const init = async () => {
           column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
           column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           dictColumnArray.push(column)
-          let promise = dict.getDict(column.referenceDict).then(data => column.referenceDictOption = data)
+          let promise;
+          if (column.fieldType === FIELD_TYPE.SELECT ||
+            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
+            promise = dict.getDict(column.referenceDict).then((data: any) => column.referenceDictOption = data)
+          } else {
+            promise = treeDict.getTree(column.referenceDict).then((data: any) => column.referenceDictOption = data)
+          }
           promiseList.push(promise)
         } else {
           column.entityCondition = JSON.parse(layout.entityCondition)

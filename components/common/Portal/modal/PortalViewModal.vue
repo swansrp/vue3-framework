@@ -34,6 +34,11 @@
               column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE">
             {{ dict.getLabel(column.referenceDict, config.modal.data[`${column.dataIndex}`]) }}
           </template>
+          <template
+            v-else-if="column.fieldType === FIELD_TYPE.TREE||
+              column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE">
+            {{ treeDict.getLabel(column.referenceDict, config.modal.data[`${column.dataIndex}`]) }}
+          </template>
           <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
             {{
               isNotEmpty(config.modal.data[`${column.dataIndex}`]) ?
@@ -80,7 +85,7 @@
 </template>
 
 <script lang="ts" setup>
-import { dictStore } from '@/framework/store/common'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
@@ -110,6 +115,7 @@ const emit = defineEmits<{
   (e: 'confirm'): void
 }>()
 const dict = dictStore()
+const treeDict = useTreeStore()
 </script>
 
 <style lang="less" scoped>

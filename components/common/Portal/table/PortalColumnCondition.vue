@@ -6,9 +6,23 @@
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       :options="column.referenceDictOption"
       :placeholder="'选择' + strRemoveLF(column.title)"
-      :value="selectedKeysRef"
+      :value="_selectedKeysRef"
       mode="multiple"
-      style="width: 188px; margin-bottom: 8px; display: block"
+      style="width: 300px; margin-bottom: 8px; display: block"
+      @change="e => handleSearchConditionChanged(e || [], column)"
+    />
+    <a-tree-select
+      v-else-if="column.fieldType === FIELD_TYPE.TREE || column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+      :get-popup-container="(triggerNode) => triggerNode.parentNode"
+      :placeholder="'选择' + strRemoveLF(column.title)"
+      :show-checked-strategy="TreeSelect.SHOW_PARENT"
+      :tree-data="column.referenceDictOption"
+      :value="_selectedKeysRef"
+      allow-clear
+      style="width: 300px; margin-bottom: 8px; display: block"
+      tree-checkable
+      tree-default-expand-all
+      tree-node-filter-prop="label"
       @change="e => handleSearchConditionChanged(e || [], column)"
     />
     <a-range-picker
@@ -45,7 +59,7 @@
         v-if="column.filterStrict"
         v-model:value="_selectedKeysRef[0]"
         style=" margin-bottom: 8px; width: 170px;"
-        @change="e => handleNumberConditionChanged([e, e], column)" />
+        @change="e => handleNumberConditionChanged([e, e], column)"/>
       <a-input-group
         v-else
         compact style=" margin-bottom: 8px; ">
@@ -93,7 +107,7 @@
         @click="handleSearch()"
       >
         <template #icon>
-          <search-outlined />
+          <search-outlined/>
         </template>
         搜索
       </a-button>
@@ -111,6 +125,7 @@ import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { filterOption } from '@/framework/components/common/utils'
 import { strRemoveLF } from '@/framework/utils/common'
+import { TreeSelect } from 'ant-design-vue';
 import LockSwitch from '@/framework/components/common/lockSwitch/index.vue'
 
 const prop = defineProps<{
