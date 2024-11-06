@@ -140,7 +140,8 @@
               stripe
               summary-fixed
               @change="handleTableChange"
-              @row-drag-end="handleRowDragEnd">
+              @row-drag-end="handleRowDragEnd"
+              @expand="handleExpand">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
                 <div
@@ -302,8 +303,8 @@
               </template>
               <template
                 v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
-                #expandedRowRender="{record}">
-                <slot v-if="isNotEmpty($slots.expandedRowRender)" :record="record" name="expandedRowRender"></slot>
+                #expandedRowRender="{record, index}">
+                <slot v-if="isNotEmpty($slots.expandedRowRender)" :record="record" :parseRecord="parsedDataSource[index]" name="expandedRowRender"></slot>
                 <portal-text-area-expanded
                   v-else-if="props.textAreaInExpanded" :columns="textAreaColumns"
                   :record="record" />
@@ -538,6 +539,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
   (e: 'selectedData', selectedData: Array<any>): void
+  (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
 const {data} = toRefs(props)
@@ -1269,6 +1271,9 @@ const handleRowDragEnd = () => {
     updateOrder(config.url, updateOrderData, config.baseDomain).then(() => queryData())
   })
 }
+
+const handleExpand = (expanded: boolean, record: any) => emit('expand', expanded, record)
+
 const advancedCondition = reactive({
   show: false,
   condition: {} as ConditionType,
