@@ -20,7 +20,7 @@
           </template>
         </a-list>
       </a-layout-sider>
-      <a-layout-content>
+      <a-layout-content style="min-width: 800px">
         <a-tabs v-if="showPermissionTreeTab" type="editable-card" hideAdd @change="tabChange" style="height: 100%;">
           <a-tab-pane :key="VIEW" tab="查看权限树" :closable="false">
             <a-tree
@@ -46,7 +46,7 @@
             </a-tree>
           </a-tab-pane>
           <a-tab-pane :key="LINK" tab="关联用户" :closable="false">
-            <department-and-staff-select layout-mode="vertical" :width="300" v-model:staffListValue="staffListValue" :is-multiple="true" />
+            <department-and-staff-select layout-mode="vertical" :width="700" v-model:staffListValue="staffListValue" :is-multiple="true" />
             <a-button @click="handleAddRoleUser" type="primary" style="width: 200px;margin-bottom: 10px;margin-left: 70px;">添加</a-button>
             <a-card size="small" title="已绑定用户">
               <template #extra>
