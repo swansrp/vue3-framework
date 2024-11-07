@@ -74,7 +74,7 @@ onMounted(() => {
 #resize {
   background: rgba(69, 89, 120, 0.05);
   width: 5px;
-  height: 100vh;
+  height: calc(100vh - 130px);
   cursor: w-resize;
 }
 </style>
