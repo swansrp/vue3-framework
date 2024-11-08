@@ -15,7 +15,7 @@
       v-else-if="column.fieldType === FIELD_TYPE.TREE || column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       :placeholder="'选择' + strRemoveLF(column.title)"
-      :show-checked-strategy="TreeSelect.SHOW_PARENT"
+      :show-checked-strategy="TreeSelect.SHOW_ALL"
       :tree-data="column.referenceDictOption"
       :value="_selectedKeysRef"
       allow-clear
