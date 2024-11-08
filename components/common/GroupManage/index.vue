@@ -162,6 +162,7 @@ const selectUserGroup = (_: Key[], info: any) => {
     for (let bindTab of bindTabs) {
       getAllBindListByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
         bindTab.bindData = resp.payload || []
+        bindTab.checked = []
         bindTab.bindData.forEach((item: any) => {
           bindTab.checked?.push(item[bindTab.bindDataValueField])
         })
@@ -172,7 +173,7 @@ const selectUserGroup = (_: Key[], info: any) => {
   renderBindUserFlag.value += 1
 }
 const changeTab = () => {
-  console.log(activeTabKey.value)
+
 }
 const handleChecked = (checkedValue: any, tab: any) => {
   bindReplaceBatchAttachByUrl(tab.baseUrl, currentUserGroupInfo.value.id, checkedValue || [])
