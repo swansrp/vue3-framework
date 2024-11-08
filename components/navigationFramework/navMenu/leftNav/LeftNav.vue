@@ -89,8 +89,14 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   const isFrame = routeStore.routePathIsFrameMap[path]
   if (isFrame && triggerIsFrame) {
     console.log('====== 外链 ============')
-    const routeUrl = router.resolve({path: fullPath, query})
-    window.open(routeUrl.href, '_blank')
+    const urlArray = fullPath.split('http')
+    if(urlArray.length > 1) {
+      const routeUrl = fullPath.substring(urlArray[0].length)
+      window.open(routeUrl, '_blank')
+    } else {
+      const routeUrl = router.resolve({path: fullPath, query})
+      window.open(routeUrl.href, '_blank')
+    }
   } else {
     router.push({
       path: fullPath,
