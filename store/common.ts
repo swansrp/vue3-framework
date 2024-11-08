@@ -120,7 +120,7 @@ export const useTreeStore = defineStore('treeStore', {
       if (isNotEmpty(result)) {
         return result.data
       }
-      return getTreeList(dictName).then(res => {
+      return await getTreeList(dictName).then(res => {
         const valueMap = new Map()
         const labelMap = new Map()
         getAllNodes(res.payload, (item: any) => {

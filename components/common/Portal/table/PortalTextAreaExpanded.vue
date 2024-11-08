@@ -9,7 +9,7 @@
 </template>
 
 <script lang="ts" setup>
-import { isEmpty, isNotEmpty, strLF2HtmlLF, log } from '@/framework/utils/common'
+import { isEmpty, isNotEmpty, strLF2HtmlLF } from '@/framework/utils/common'
 
 const props = withDefaults(
   defineProps<{

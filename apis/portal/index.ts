@@ -123,3 +123,36 @@ export const bindAllAttach = (entity: string, attach: string, entityId: any, att
 
 export const unbindAllAttach = (entity: string, attach: string, entityId: any, baseDomain?: string) =>
   unbindAllRequest('/' + entity + '/' + attach, entityId, baseDomain) as Promise<any>
+
+export const getAllBindListByUrl = (url: string, entityId: any, baseDomain?: string) =>
+  getAllBindListRequest(url, entityId, baseDomain) as Promise<any>
+
+export const queryBindListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
+  queryBindListRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+
+export const queryUnbindListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
+  queryUnbindListRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+
+export const bindAttachByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string) =>
+  bindRequest(url, entityId, attachId, baseDomain) as Promise<any>
+
+export const unbindAttachByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string) =>
+  unbindRequest(url, entityId, attachId, baseDomain) as Promise<any>
+
+export const bindBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
+  bindBatchRequest(url, entityId, attachIdList, baseDomain) as Promise<any>
+
+export const unbindBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
+  unbindBatchRequest(url, entityId, attachIdList, baseDomain) as Promise<any>
+
+export const bindReplaceBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
+  bindReplaceBatchRequest(url, entityId, attachIdList, baseDomain) as Promise<any>
+
+export const bindReplaceAllAttachByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
+  bindReplaceAllRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+
+export const bindAllAttachByUrl = (url: string, entityId: any, attachQuery = {} as QueryType, baseDomain?: string) =>
+  bindAllRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+
+export const unbindAllAttachByUrl = (url: string, entityId: any, baseDomain?: string) =>
+  unbindAllRequest(url, entityId, baseDomain) as Promise<any>

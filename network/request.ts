@@ -51,6 +51,8 @@ axiosInstance.interceptors.response.use(
       message.error('权限不足,请联系管理员!')
     else if (err.response.status === 500)
       message.error( '系统错误,联系管理员!')
+    else if(err.response.status === 502)
+      message.error( '服务器走神了,请稍等!')
     else
       console.log(err)
     throw new Error(err)

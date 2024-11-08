@@ -59,7 +59,7 @@
         v-if="column.filterStrict"
         v-model:value="_selectedKeysRef[0]"
         style=" margin-bottom: 8px; width: 170px;"
-        @change="e => handleNumberConditionChanged([e, e], column)"/>
+        @change="e => handleNumberConditionChanged([e, e], column)" />
       <a-input-group
         v-else
         compact style=" margin-bottom: 8px; ">
@@ -107,7 +107,7 @@
         @click="handleSearch()"
       >
         <template #icon>
-          <search-outlined/>
+          <search-outlined />
         </template>
         搜索
       </a-button>
