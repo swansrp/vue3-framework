@@ -147,7 +147,10 @@ const renderUserGroupTree = () => getUserGroupList(currentUserGroupCategoryId.va
 const getCurrentUserGroupCategory = (id: string, index: number) => {
   activateDictItem.value = index
   currentUserGroupCategoryId.value = id
-  renderUserGroupTree().then(() => hasSelectUserGroupCategory.value = true)
+  renderUserGroupTree().then(() => {
+    hasSelectUserGroupCategory.value = true
+    hasSelectUserGroup.value = false
+  })
 }
 const onSearchUserGroupCategory = renderUserGroupType
 const selectUserGroup = (_: Key[], info: any) => {
