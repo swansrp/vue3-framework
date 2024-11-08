@@ -12,7 +12,7 @@
           <template #header>
             <a-input-search
               v-model:value="inputUserGroupCategoryName" enter-button
-              placeholder="请输入用户组类别名称" @search="onSearchUserGroupCategory" />
+              placeholder="请输入用户组类别名称" @search="onSearchUserGroupCategory"/>
           </template>
         </a-list>
       </a-layout-sider>
@@ -26,14 +26,14 @@
             @select="selectUserGroup">
             <template #title="{ dataRef }">{{ dataRef.name }}</template>
           </a-tree>
-          <a-empty v-else />
+          <a-empty v-else/>
         </div>
       </a-layout-sider>
       <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper">
         <a-tabs v-model:activeKey="activeTabKey" style="margin-left: 10px" @change="changeTab">
           <a-tab-pane :key="USER" tab="用户组管理">
             <div class="tab-pane-content">
-              <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag" />
+              <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag"/>
             </div>
           </a-tab-pane>
           <template v-for="bindTab in bindTabs" :key="bindTab.tabKey">
@@ -49,7 +49,7 @@
                       :tree-data="bindTab.data">
                       <template #title="{ dataRef }">{{ dataRef.label }}</template>
                     </a-tree>
-                    <a-empty v-else />
+                    <a-empty v-else/>
                   </div>
                 </template>
                 <template v-else>
@@ -57,41 +57,25 @@
                     v-if="isNotEmpty(bindTab.data)" :key="bindTab.key" :data-source="bindTab.data" bordered
                     size="small">
                     <template #renderItem="{ item }">
-                      <a-list-item>{{ item[bindTab.bindDataDisplayField || 'label'] }}</a-list-item>
+                      <a-list-item>{{ item[bindTab.bindDataDisplayField] }}</a-list-item>
                     </template>
                   </a-list>
-                  <a-empty v-else />
+                  <a-empty v-else/>
                 </template>
               </a-tab-pane>
             </template>
             <template v-else>
               <a-tab-pane :key="bindTab.tabKey + '_view'" :tab="'查看' + bindTab.title">
-                <template v-if="bindTab.treeMode">
-                  <div class="tab-pane-content">
-                    <a-tree
-                      v-if="isNotEmpty(bindTab.bindData)"
-                      :key="bindTab.key"
-                      :defaultExpandAll="true"
-                      :show-line="true"
-                      :tree-data="bindTab.bindData">
-                      <template #title="{ dataRef }">{{
-                        dataRef[bindTab.bindDataDisplayField || 'label']
-                      }}
-                      </template>
-                    </a-tree>
-                    <a-empty v-else />
-                  </div>
-                </template>
-                <template v-else>
+                <div class="tab-pane-content">
                   <a-list
                     v-if="isNotEmpty(bindTab.bindData)" :key="bindTab.key" :data-source="bindTab.bindData"
                     bordered size="small">
                     <template #renderItem="{ item }">
-                      <a-list-item>{{ item[bindTab.bindDataDisplayField || 'label'] }}</a-list-item>
+                      <a-list-item>{{ item[bindTab.bindDataDisplayField] }}</a-list-item>
                     </template>
                   </a-list>
-                  <a-empty v-else />
-                </template>
+                  <a-empty v-else/>
+                </div>
               </a-tab-pane>
               <a-tab-pane :key="bindTab.tabKey + '_bind'" :tab="'绑定'+ bindTab.title">
                 <template v-if="bindTab.treeMode">
@@ -107,14 +91,14 @@
                       @check="handleChecked($event, bindTab)">
                       <template #title="{ dataRef }">{{ dataRef.label }}</template>
                     </a-tree>
-                    <a-empty v-else />
+                    <a-empty v-else/>
                   </div>
                 </template>
                 <template v-else>
                   <a-checkbox-group
                     v-if="isNotEmpty(bindTab.data)"
+                    v-model:value="bindTab.checked"
                     style="display: grid;"
-                    v-model="bindTab.bindData"
                     @change="handleChecked($event, bindTab)">
                     <a-checkbox
                       v-for="(item, index) in bindTab.data" :key="index"
@@ -123,7 +107,7 @@
                       <span class="normal">{{ item.label }}</span>
                     </a-checkbox>
                   </a-checkbox-group>
-                  <a-empty v-else />
+                  <a-empty v-else/>
                 </template>
               </a-tab-pane>
             </template>
@@ -175,6 +159,9 @@ const selectUserGroup = (_: Key[], info: any) => {
     for (let bindTab of bindTabs) {
       getAllBindListByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
         bindTab.bindData = resp.payload || []
+        bindTab.bindData.forEach((item: any) => {
+          bindTab.checked?.push(item[bindTab.bindDataValueField])
+        })
         bindTab.key = !bindTab.key
       })
     }
@@ -211,6 +198,7 @@ onMounted(() => {
   if (isNotEmpty(bindTabs)) {
     for (let bindTab of bindTabs) {
       bindTab.key = true
+      bindTab.checked = []
       if (isEmpty(bindTab.data)) {
         if (bindTab.dict) {
           if (bindTab.treeMode) {
