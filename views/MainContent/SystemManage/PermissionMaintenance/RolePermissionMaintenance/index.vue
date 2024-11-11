@@ -95,7 +95,6 @@ import {getCompletePermissionTree} from "@/framework/apis/admin/navEdit"
 import {DataNode} from "ant-design-vue/es/vc-tree/interface"
 import {bindRoleUserList, getRoleUserList, unbindRoleUser, unbindRoleUserList} from "@/framework/apis/admin/roleUser";
 import {ValueLabelArray} from "@/framework/utils/type";
-import {message} from "ant-design-vue";
 import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
 
 let inputRoleName: Ref<string> = ref('')
