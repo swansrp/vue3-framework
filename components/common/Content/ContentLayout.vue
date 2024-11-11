@@ -9,7 +9,20 @@
         <slot name="side"></slot>
       </div>
     </a-layout-sider>
-    <div id="resize"></div>
+    <div id="resize">
+      <a-button
+        v-if="collapsed"
+        style="position: relative;left: -15px; top: 40vh; bottom: 0; z-index: 1000" type="link"
+        @click="toggleCollapsed">
+        <RightOutlined style="color: gray" />
+      </a-button>
+      <a-button
+        v-else
+        style="position: relative;left: -25px; top: 40vh; bottom: 0; z-index: 1000" type="link"
+        @click="toggleCollapsed">
+        <LeftOutlined style="color: gray" />
+      </a-button>
+    </div>
     <a-layout-content
       style="margin-left: 10px; margin-right: 10px">
       <slot name="content"></slot>
@@ -18,6 +31,8 @@
 </template>
 
 <script lang="ts" setup>
+import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import bus from '@/framework/mitt'
 const props = withDefaults(
   defineProps<{
     width?: string
@@ -26,6 +41,9 @@ const props = withDefaults(
     width: '15%'
   }
 )
+const emit = defineEmits<{
+  (e: 'resize'): void
+}>()
 const _width = ref(props.width)
 const widthValue = ref(0)
 const dragControllerDiv = () => {
@@ -44,18 +62,33 @@ const dragControllerDiv = () => {
         startX = endX
         widthValue.value += moveLen
         _width.value = widthValue.value + 'px'
+        notifyResize()
       };
       document.onmouseup = () => {
         // 颜色恢复
         resize.style.background = ""
         document.onmousemove = null
         document.onmouseup = null
+        notifyResize()
       }
       return false
     }
   }
 }
-
+const toggleCollapsed = () => {
+  if(collapsed.value) {
+    _width.value = widthValue.value + 'px'
+  } else {
+    _width.value = '0px'
+  }
+  notifyResize()
+  collapsed.value = !collapsed.value
+}
+const collapsed = ref(false)
+const notifyResize = () => {
+  emit('resize')
+  bus.emit('portal:table:resize')
+}
 onMounted(() => {
   dragControllerDiv()
 })
