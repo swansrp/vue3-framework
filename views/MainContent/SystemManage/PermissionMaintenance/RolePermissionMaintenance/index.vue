@@ -47,7 +47,8 @@
           </a-tab-pane>
           <a-tab-pane :key="LINK" tab="关联用户" :closable="false">
             <department-and-staff-select layout-mode="vertical" :width="700" v-model:staffListValue="staffListValue" :is-multiple="true" />
-            <a-button @click="handleAddRoleUser" type="primary" style="width: 200px;margin-bottom: 10px;margin-left: 70px;">添加</a-button>
+            <a-button :disabled="staffListValue.length === 0" @click="handleAddRoleUser" type="primary" style="width: 200px;margin-bottom: 10px;margin-left: 70px;">添加</a-button>
+            <a-button :disabled="staffListValue.length === 0" @click="handleDeleteRoleUser" type="primary" style="width: 200px;margin-bottom: 10px;margin-left: 70px;">删除</a-button>
             <a-card size="small" title="已绑定用户">
               <template #extra>
                 <a-input-search v-model:value="searchUserName" @search="handleSearchUser" style="width: 200px;margin-right: 10px;" enter-button />
@@ -114,13 +115,14 @@ const staffListValue: Ref<ValueLabelArray> = ref([])
 const userList: Ref<ValueLabelArray> = ref([])
 const userListBackUp: Ref<ValueLabelArray> = ref([])
 const handleAddRoleUser = () => {
-  if(staffListValue.value.length === 0) {
-    message.error({ content: () => '请选择用户后再执行添加操作', style: { marginTop: '10vh' } })
-    return
-  }
   const entityId = currentRoleDate.value.roleId
   const userIdList = staffListValue.value.map(item => item.value)
   bindRoleUserList(entityId, userIdList).then(renderRoleUserList)
+}
+const handleDeleteRoleUser = () => {
+  const entityId = currentRoleDate.value.roleId
+  const userIdList = staffListValue.value.map(item => item.value)
+  unbindRoleUserList(entityId, userIdList).then(renderRoleUserList)
 }
 
 const handleUnbindRoleUser = (attachId: string) => {
