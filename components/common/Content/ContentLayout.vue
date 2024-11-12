@@ -33,23 +33,22 @@
 <script lang="ts" setup>
 import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 import bus from '@/framework/mitt'
+import { Ref } from 'vue'
 const props = withDefaults(
   defineProps<{
-    width?: string
+    width?: number
   }>(),
   {
-    width: '15%'
+    width: 200
   }
 )
 const emit = defineEmits<{
   (e: 'resize'): void
 }>()
-const _width = ref(props.width)
-const widthValue = ref(0)
+const _width:Ref<string|number> = ref(props.width)
+const widthValue:Ref<number> = ref(props.width)
 const dragControllerDiv = () => {
   const resize = document.getElementById("resize")
-  const side = document.getElementById("side")
-  widthValue.value = side?.offsetLeft || 0
   if (resize) {
     let startX = resize.offsetLeft
     resize.onmousedown = () => {
@@ -60,8 +59,8 @@ const dragControllerDiv = () => {
         let endX = e.clientX
         let moveLen = endX - startX
         startX = endX
-        widthValue.value += moveLen
-        _width.value = widthValue.value + 'px'
+        widthValue.value = Number(widthValue.value) + moveLen
+        _width.value = widthValue.value
         notifyResize()
       };
       document.onmouseup = () => {
@@ -77,9 +76,9 @@ const dragControllerDiv = () => {
 }
 const toggleCollapsed = () => {
   if(collapsed.value) {
-    _width.value = widthValue.value + 'px'
+    _width.value = widthValue.value
   } else {
-    _width.value = '0px'
+    _width.value = '0'
   }
   notifyResize()
   collapsed.value = !collapsed.value
