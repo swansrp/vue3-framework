@@ -1,8 +1,9 @@
 <template>
   <div :style="{flexDirection, height: wrapperHeight, marginBottom}" class="department-staff-form-wrapper">
     <div v-if="showDept">
-      <a-form-item :label="departmentInputLabel" :style="{width: inputWidth}">
+      <a-form-item :label="departmentInputLabel">
         <a-cascader
+          :style="{width: inputWidth}"
           v-model:value="localDepartmentListValue"
           :options="departmentListOption"
           :show-search="{ cascaderFilter }"
@@ -17,8 +18,9 @@
         </a-cascader>
       </a-form-item>
     </div>
-    <a-form-item :label="staffInputLabel" :style="{width: inputWidth}">
+    <a-form-item :label="staffInputLabel">
       <a-select
+        :style="{width: inputWidth}"
         ref="selectUserRef"
         v-model:value="localStaffListValue"
         :max-tag-count="staffMaxTagCount"
