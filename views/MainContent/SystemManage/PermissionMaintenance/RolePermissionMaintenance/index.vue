@@ -48,7 +48,7 @@
           <a-tab-pane :key="LINK" tab="关联用户" :closable="false">
             <department-and-staff-select layout-mode="vertical" :width="700" v-model:staffListValue="staffListValue" :is-multiple="true" />
             <a-button :disabled="staffListValue.length === 0" @click="handleAddRoleUser" type="primary" style="width: 200px;margin-bottom: 10px;margin-left: 70px;">添加</a-button>
-            <a-button :disabled="staffListValue.length === 0" @click="handleDeleteRoleUser" type="primary" style="width: 200px;margin-bottom: 10px;margin-left: 70px;">删除</a-button>
+            <a-button :disabled="staffListValue.length === 0" @click="handleDeleteRoleUser" type="primary" danger style="width: 200px;margin-bottom: 10px;margin-left: 70px;">解绑</a-button>
             <a-card size="small" title="已绑定用户">
               <template #extra>
                 <a-input-search v-model:value="searchUserName" @search="handleSearchUser" style="width: 200px;margin-right: 10px;" enter-button />
