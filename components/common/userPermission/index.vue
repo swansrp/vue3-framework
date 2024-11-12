@@ -1,21 +1,27 @@
 <template>
   <department-and-staff-select
-    v-model:staffListValue="staffListValue" v-model:departmentListValue="departmentListValue"
-    is-multiple :width="350" :staff-max-tag-count="1" layout-mode="vertical" />
-  <a-form-item label="用户权限" v-if="needDefaultPermissionSelect">
+    v-model:departmentListValue="departmentListValue" v-model:staffListValue="staffListValue"
+    :staff-max-tag-count="1" :width="500" is-multiple layout-mode="vertical" />
+  <a-form-item v-if="needDefaultPermissionSelect" label="用户权限">
     <a-select v-model:value="currentPermission" placeholder="请选择权限" style="width: 285px">
       <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
         {{ item.label }}
       </a-select-option>
     </a-select>
   </a-form-item>
-  <a-button
-    style="width: 285px;margin-bottom: 10px;margin-left: 70px;display: block;" type="primary"
-    @click="handleAddUser">绑定
-  </a-button>
-  <a-card size="small" title="已绑定用户" style="height: calc(100vh - 410px)">
+  <div style="padding-top: 4px; margin-bottom: 8px">
+    <a-button
+      :disabled="staffListValue.length === 0" style="width: 200px;margin-left: 70px;" type="primary"
+      @click="handleAddUser">添加
+    </a-button>
+    <a-button
+      :disabled="staffListValue.length === 0" danger style="width: 200px;margin-left: 70px;" type="primary"
+      @click="handleDeleteUser">解绑
+    </a-button>
+  </div>
+  <a-card size="small" style="height: calc(100vh - 410px)" title="已绑定用户">
     <template #extra>
-      <a-select v-model:value="selectPermission" style="width: 200px" placeholder="请选择权限">
+      <a-select v-model:value="selectPermission" placeholder="请选择权限" style="width: 200px">
         <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
           {{ item.label }}
         </a-select-option>
@@ -46,26 +52,26 @@
   </dialog-box>
 </template>
 
-<script setup lang="ts">
+<script lang="ts" setup>
 
 import DepartmentAndStaffSelect
   from "@/framework/components/common/departmentAndStaffSelect/DepartmentAndStaffSelect.vue";
 import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
-import {message} from "ant-design-vue";
 import {
   bindUserGroupList,
-  editUserPermission, getBindUser,
+  editUserPermission,
+  getBindUser,
   unbindAllUserGroupList,
   unbindUserGroupList
 } from "@/framework/apis/admin/userGroup";
-import {Ref} from "vue";
-import {IdName, ValueLabel, ValueLabelArray} from "@/framework/utils/type";
+import { Ref } from "vue";
+import { IdName, ValueLabel, ValueLabelArray } from "@/framework/utils/type";
 import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
 import EditUserPermission
   from "@/framework/views/MainContent/SystemManage/UserGroupMaintenance/editUserPermission/index.vue";
-import {getDictListByDictName} from "@/framework/apis/common/common";
+import { getDictListByDictName } from "@/framework/apis/common/common";
 
-const props = defineProps<{currentUserGroupInfo: IdName, renderBindUserFlag: number, needDefaultPermissionSelect?: boolean}>()
+const props = defineProps<{ currentUserGroupInfo: IdName, renderBindUserFlag: number, needDefaultPermissionSelect?: boolean }>()
 const {currentUserGroupInfo, renderBindUserFlag, needDefaultPermissionSelect} = toRefs(props)
 
 let permissionList: Ref<ValueLabelArray> = ref([])
@@ -92,13 +98,19 @@ let currentUserInfo: Ref<{ id: string, name: string, dataScope: string }> = ref(
 })
 
 const handleAddUser = () => {
-  if (staffListValue.value.length === 0) {
-    message.error({content: () => '请选择用户后再执行添加操作', style: {marginTop: '10vh'}})
-    return
-  }
   const entityId = currentUserGroupInfo.value.id
   const userIdList = staffListValue.value.map(item => item.value)
   bindUserGroupList(entityId, userIdList, currentPermission.value).then(renderBindUser)
+    .then(() => {
+      staffListValue.value = []
+      departmentListValue.value = []
+    })
+}
+
+const handleDeleteUser = () => {
+  const entityId = currentUserGroupInfo.value.id
+  const userIdList = staffListValue.value.map(item => item.value)
+  unbindAllUserGroupList(entityId, userIdList).then(renderBindUser)
     .then(() => {
       staffListValue.value = []
       departmentListValue.value = []
@@ -127,7 +139,7 @@ const handleChangePermission = (user: any) => {
 
 const handleEditUserPermission = (dataScope: string) =>
   editUserPermission(dataScope, currentUserGroupInfo.value.id, currentUserInfo.value.id)
-    .then(renderBindUser).then(() => editUserPermissionVisible.value =false)
+    .then(renderBindUser).then(() => editUserPermissionVisible.value = false)
 
 const renderBindUser = () =>
   getBindUser(currentUserGroupInfo.value.id, searchUserName.value, selectPermission.value)
