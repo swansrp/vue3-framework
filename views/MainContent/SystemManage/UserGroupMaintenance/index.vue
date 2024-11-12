@@ -55,7 +55,7 @@
           <a-button type="primary" @click="addUserGroupTreeRootNode">添加根节点</a-button>
         </div>
       </a-layout-sider>
-      <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper" style="padding: 20px">
+      <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper" style="padding: 20px;min-width: 720px">
         <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag" :need-default-permission-select="true" />
       </a-layout-content>
     </a-layout>
