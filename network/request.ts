@@ -44,7 +44,6 @@ axiosInstance.interceptors.response.use(
   }, err => {
       load.close()
     _handleTimeOut(err.response.data)
-
     if (err.response.status === 504 || err.response.status === 404)
       message.error('服务器被吃了⊙﹏⊙∥')
     else if (err.response.status === 403)
@@ -138,7 +137,17 @@ function request(apiType: ApiType,
     }
   }, err => {
     load.close()
-    message.error('后台接口错误，请联系后台管理员！')
+    const statusCode = err.message.split('status code ')[1]
+    if (statusCode === '504' || statusCode === '404')
+      message.error('服务器被吃了⊙﹏⊙∥,请联系管理员!')
+    else if (statusCode === '403')
+      message.error('权限不足,请联系管理员!')
+    else if (statusCode === '500')
+      message.error( '系统错误,联系管理员!')
+    else if(statusCode === '502')
+      message.error( '服务器走神了,请稍等!')
+    else
+      message.error('后台接口错误，请联系后台管理员！')
     throw new Error(err)
   })
 }
