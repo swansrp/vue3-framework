@@ -9,3 +9,5 @@ export const getStaffList = (deptIdList: Array<string>, name = '') => request(bu
 }, false, false) as Promise<any>
 export const getAccountInfo = (names: Array<string>, active = true) => request(buildPostApi("/search"), {active}, names, false, false) as Promise<any>
 export const getDepartmentTree = () => request(buildGetApi("/department/tree"), {}, {}, false, false) as Promise<any>
+export const getStaff = (name: any) =>
+    request(buildPostApi('/search'), {}, name, false, false) as Promise<any>
