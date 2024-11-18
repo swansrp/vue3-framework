@@ -22,4 +22,4 @@ export const unbindAllUserGroupList = (entityId: string, attachIdList: Array<str
 export const editUserPermission = (dataScope: string, groupId: string, userId: string) => request(buildPostApi("/data/scope"), {}, {dataScope, groupId, userId}, true) as Promise<any>
 
 export const getUserList = () => request(buildGetApi("/bind/list/all"), {name: 'OM'}, {}, true) as Promise<any>
-
+export const getUserGroupTree = (groupName: string) => request(buildGetApiByType("/user/group/tree"))

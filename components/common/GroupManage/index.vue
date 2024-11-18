@@ -120,10 +120,8 @@
 
 <script lang="ts" setup>
 import '@/framework/assets/css/userGroup.css'
-import { Ref } from 'vue/dist/vue'
 import { IdName, IdNameArray } from '@/framework/utils/type'
-import { getUserGroupType } from '@/framework/apis/admin/userGroup'
-import { getUserGroupList } from '@/apis/manage/manage'
+import { getUserGroupTree, getUserGroupType } from '@/framework/apis/admin/userGroup'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { Key } from 'ant-design-vue/es/table/interface'
 import { QUERY_INTERVAL, USER } from '@/framework/utils/constant'
@@ -132,6 +130,7 @@ import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import * as _ from 'lodash'
 import { bindReplaceBatchAttachByUrl, getAllBindListByUrl } from '@/framework/apis/portal'
+import { Ref } from "vue";
 
 let userGroupCategory: Ref<IdNameArray> = ref([])
 let activateDictItem: Ref<number> = ref(-1)
@@ -143,7 +142,7 @@ let hasSelectUserGroup: Ref<boolean> = ref(false)
 let currentUserGroupInfo: Ref<IdName> = ref({name: '', id: ''})
 let renderBindUserFlag: Ref<number> = ref(0)
 const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
-const renderUserGroupTree = () => getUserGroupList(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
+const renderUserGroupTree = () => getUserGroupTree(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
 const getCurrentUserGroupCategory = (id: string, index: number) => {
   activateDictItem.value = index
   currentUserGroupCategoryId.value = id
@@ -177,22 +176,22 @@ const changeTab = () => {
 }
 const handleChecked = (checkedValue: any, tab: any) => {
   bindReplaceBatchAttachByUrl(tab.baseUrl, currentUserGroupInfo.value.id, checkedValue || [])
-    .then(() => {
-      getAllBindListByUrl(tab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
-        tab.bindData = resp.payload || []
-        tab.key = !tab.key
+      .then(() => {
+        getAllBindListByUrl(tab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
+          tab.bindData = resp.payload || []
+          tab.key = !tab.key
+        })
       })
-    })
 }
 let activeTabKey: Ref<string> = ref(USER)
 
 const props = withDefaults(
-  defineProps<{
-    bindTabList?: Array<GroupBindProperty>
-  }>(),
-  {
-    bindTabList: undefined
-  }
+    defineProps<{
+      bindTabList?: Array<GroupBindProperty>
+    }>(),
+    {
+      bindTabList: undefined
+    }
 )
 const dict = dictStore()
 const treeDict = useTreeStore()
