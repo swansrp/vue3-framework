@@ -22,6 +22,7 @@
             @handle-menu-context-delete="handleMenuContextDelete">
             <template #end-action>
               <portal-mode-button
+                v-if="!modeLock"
                 :config="config"
                 :is-list-mode="isListMode"
                 :is-tree-data-empty="treeData.length === 0"
@@ -45,6 +46,7 @@
             @handle-menu-context-delete="handleMenuContextDelete">
             <template #end-action>
               <portal-mode-button
+                v-if="!modeLock"
                 :config="config"
                 :is-list-mode="isListMode"
                 :is-tree-data-empty="treeData.length === 0"
@@ -261,7 +263,7 @@
               <!-- endregion -->
               <!-- region 列搜索 -->
               <template #customFilterIcon="{ filtered }">
-                <search-outlined :style="{ color: filtered ? '#108ee9' : undefined }" />
+                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }" />
               </template>
               <template
                 #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
@@ -340,6 +342,7 @@
                       </template>
                     </a-pagination>
                     <portal-mode-button
+                      v-if="!modeLock"
                       :config="config"
                       :is-list-mode="isListMode"
                       :is-tree-data-empty="treeData.length === 0"
@@ -482,6 +485,7 @@ import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/P
  * @param query 查询函数
  * @param treeMode 是否以树形结构展示
  * @param listMode 是否以列表形式展示
+ * @param modeLock 是否锁定模式
  * @param bindTabs 显示需要绑定的数据标签
  * @param treeCheckAble 绑定操作树是否有可选框
  * @param selectedTreeData 树形结构展示当前选择项
@@ -506,6 +510,7 @@ const props = withDefaults(defineProps<{
     query?: (url: string, query: QueryType) => Promise<any>,
     treeMode?: boolean,
     listMode?: boolean,
+    modeLock?: boolean,
     bindTabs?: Array<PortalBindType>,
     treeCheckAble?: boolean,
     selectedTreeData?: Array<any>,
@@ -528,6 +533,7 @@ const props = withDefaults(defineProps<{
     query: undefined,
     treeMode: false,
     listMode: false,
+    modeLock: false,
     bindTabs: undefined,
     treeCheckAble: false,
     selectedTreeData: undefined,
@@ -943,6 +949,7 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
 const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedNodes: any, node: any, event: any }) => {
   if (e.selected) {
     selectedTreeDataNode.value = e.node
+    emit('selectedData', selectedKeys)
   }
 }
 // endregion
