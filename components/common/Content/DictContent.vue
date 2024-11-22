@@ -79,7 +79,7 @@ const selectedData: Ref<any> = ref(modelValue.value || [])
 const selectedLabel = [] as Array<any>
 const checkTreeNode = (_: string, e: { checked: boolean, node: DataNode }) => {
   if (e.checked && !multi.value) {
-    selectedData.value.length = 0
+    selectedData.value = []
     selectedData.value.push(e.node.key)
     selectedLabel.length = 0
     selectedLabel.push(e.node.label)

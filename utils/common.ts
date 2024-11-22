@@ -209,6 +209,7 @@ const stopTimer = (data: TimerType) => {
   })
 }
 const startTimer = (data: TimerType, render: Function, immediate = true, replace = true) => {
+  data.lastTime = 0
   return new Promise((resolve, reject) => {
     const animLoop = () => {
       const now = Date.now()

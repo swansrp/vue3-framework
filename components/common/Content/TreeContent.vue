@@ -45,8 +45,8 @@ const emit = defineEmits<{
 }>()
 const checkTreeNode = (_: string, e:{checked: boolean, node: DataNode}) => {
   if(e.checked && !multi.value) {
-    selectedData.value.checked.length = 0
-    selectedData.value.checked.push(e.node.key)
+    selectedData.value = []
+    selectedData.value.push(e.node.key)
     selectedLabel.length = 0
     selectedLabel.push(e.node.label)
   }
