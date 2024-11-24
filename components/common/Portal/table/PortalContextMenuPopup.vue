@@ -1,33 +1,35 @@
 <template>
-  <ul class="popup">
-    <li
-      v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
-      class="popup-item"
-      @click="() => emit('resetCell', args)">
-      <history-outlined />
-      撤销修改
-    </li>
-    <li
-      v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
-      class="popup-item"
-      @click="() => emit('saveCell', args)">
-      <save-outlined />
-      保存单元格
-    </li>
-    <li
-      v-if="!config.readOnly && prop.isRowUpdate(args.recordIndexs[0])"
-      class="popup-item"
-      @click="() => emit('saveRow', args)">
-      <delivered-procedure-outlined />
-      保存整行
-    </li>
-    <li
-      v-if="!prop.isRowUpdate(args.recordIndexs[0])"
-      class="popup-item"
-      @click="() => emit('detailRow', args)">
-      <search-outlined />
-      查看详情
-    </li>
+  <ul v-if="isNotEmpty(args.column)" class="popup">
+    <template v-if="isNotEmpty(args.recordIndexs)">
+      <li
+        v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
+        class="popup-item"
+        @click="() => emit('resetCell', args)">
+        <history-outlined />
+        撤销修改
+      </li>
+      <li
+        v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
+        class="popup-item"
+        @click="() => emit('saveCell', args)">
+        <save-outlined />
+        保存单元格
+      </li>
+      <li
+        v-if="!config.readOnly && prop.isRowUpdate(args.recordIndexs[0])"
+        class="popup-item"
+        @click="() => emit('saveRow', args)">
+        <delivered-procedure-outlined />
+        保存整行
+      </li>
+      <li
+        v-if="!prop.isRowUpdate(args.recordIndexs[0])"
+        class="popup-item"
+        @click="() => emit('detailRow', args)">
+        <search-outlined />
+        查看详情
+      </li>
+    </template>
     <li
       v-if="association"
       class="popup-item"
@@ -63,6 +65,7 @@ import {
   SearchOutlined
 } from '@ant-design/icons-vue'
 import { TableConfigType } from '@/framework/components/common/Portal/type'
+import { isNotEmpty } from "@/framework/utils/common";
 
 const prop = defineProps<{
   args: any

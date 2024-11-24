@@ -24,7 +24,7 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip v-if="!config.plain" placement="top">
+      <a-tooltip v-if="!config.plain && !config.hideRefresh" placement="top">
         <template #title>
           <span>刷新</span>
         </template>

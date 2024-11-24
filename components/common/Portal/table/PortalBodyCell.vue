@@ -1,6 +1,14 @@
 <template>
   <template v-if="(column.dataIndex === 'index')">
-    <div :style="{textAlign: 'center'}">{{ (index + 1) + config.pageSize * (config.currentPage - 1) }}</div>
+    <!-- (portalConfig: TableConfigType, column: ColumnType, record: any) -->
+    <slot
+      v-if="!displayIndex"
+      :column="column"
+      :portal-config="config"
+      :record="record"
+      name="index">
+    </slot>
+    <div v-else :style="{textAlign: 'center'}">{{ (index + 1) + config.pageSize * (config.currentPage - 1) }}</div>
   </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.SWITCH">
     <a-badge-ribbon
@@ -113,9 +121,10 @@ const prop = defineProps<{
   displayMap: any,
   index: any,
   config: TableConfigType,
-  isCellUpdate: (index: number, column: any) => boolean
+  isCellUpdate: (index: number, column: any) => boolean,
+  displayIndex: boolean
 }>()
-const {record, displayMap, config, column, index} = toRefs(prop)
+const {record, displayMap, config, column, index, displayIndex} = toRefs(prop)
 const dict = dictStore()
 const treeDict = useTreeStore()
 </script>

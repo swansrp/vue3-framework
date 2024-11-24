@@ -125,12 +125,12 @@
               :loading="config.loading"
               :pagination="false"
               :range-selection="false"
-              :row-selection="rowSelection"
-              :rowExpandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
+              :row-selection="hideRowSelection ? null : rowSelection"
+              :row-expandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
               :rowKey="config.rowKey"
               :scroll="{x: getTableWidth(), y: getTableHeight()}"
               :size="config.size"
-              :style="{width: String(tableWidth) === 'auto' ? '100%' : tableWidth + 'px'}"
+              :style="{width: autoWidth ? undefined : tableWidth + 'px'}"
               :table-id="config.tableId"
               auto-header-height
               bordered
@@ -142,21 +142,21 @@
               stripe
               summary-fixed
               @change="handleTableChange"
-              @row-drag-end="handleRowDragEnd"
-              @expand="handleExpand">
+              @expand="handleExpand"
+              @row-drag-end="handleRowDragEnd">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
                 <div
-                  v-if="title.indexOf('\n') !== -1"
+                  v-if="title?.indexOf('\n') !== -1"
                   :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
                   class="table-title-cell">
-                  <div v-for="(item, index) in title.split('\n')" :key="index">{{ item }}</div>
+                  <div v-for="(item, index) in title?.split('\n')" :key="index">{{ item }}</div>
                 </div>
                 <div
-                  v-else-if="title.indexOf('\\n') !== -1"
+                  v-else-if="title?.indexOf('\\n') !== -1"
                   :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
                   class="table-title-cell">
-                  <div v-for="(item, index) in title.split('\\n')" :key="index">{{ item }}</div>
+                  <div v-for="(item, index) in title?.split('\\n')" :key="index">{{ item }}</div>
                 </div>
                 <span v-else-if="column.dataIndex === 'index'"></span>
                 <span
@@ -168,10 +168,11 @@
               <!-- region 单元格样式-->
               <template #bodyCell="{ column, record, index }">
                 <portal-body-cell
-                  v-if="isNotEmpty($slots.action) || !config.readOnly"
+                  v-if="isNotEmpty($slots.action) || isNotEmpty($slots.index) || !config.readOnly"
                   :key="modifyCellMap.get(index + column.dataIndex).current"
                   :column="column"
                   :config="config"
+                  :display-index="isEmpty($slots.index)"
                   :display-map="modifyCellMap"
                   :index="index"
                   :is-cell-update="isCellUpdate"
@@ -184,6 +185,16 @@
                       :portal-config="config"
                       :record="record"
                       name="action">
+                    </slot>
+                  </template>
+                  <template #index="{}">
+                    <slot
+                      :column="column"
+                      :columns="columns"
+                      :parsedRecord="parsedDataSource[index]"
+                      :portal-config="config"
+                      :record="record"
+                      name="index">
                     </slot>
                   </template>
                 </portal-body-cell>
@@ -306,7 +317,9 @@
               <template
                 v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
                 #expandedRowRender="{record, index}">
-                <slot v-if="isNotEmpty($slots.expandedRowRender)" :record="record" :parseRecord="parsedDataSource[index]" name="expandedRowRender"></slot>
+                <slot
+                  v-if="isNotEmpty($slots.expandedRowRender)" :parseRecord="parsedDataSource[index]"
+                  :record="record" name="expandedRowRender"></slot>
                 <portal-text-area-expanded
                   v-else-if="props.textAreaInExpanded" :columns="textAreaColumns"
                   :record="record" />
@@ -320,7 +333,6 @@
                     <a-pagination
                       v-model:current="config.currentPage"
                       v-model:pageSize="config.pageSize"
-                      :page-size="config.pageSize"
                       :page-size-options="['10','20','30','50','100','200', '500', '1000']"
                       :show-total="total => `共 ${total} 项`"
                       :size="config.size"
@@ -471,15 +483,20 @@ import { parse } from '@/framework/components/common/Portal/utils'
 import { excelExport } from "@/framework/utils/excel";
 import { name } from '@/../package.json'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
+import { DefaultRecordType } from "ant-design-vue/es/vc-table/interface";
 
 /**
  * @param tableId 表格ID
  * @param multiHeader 是否多重表头
  * @param data 显示数据
  * @param readOnly 不能编辑
+ * @param autoWidth 自动宽度
+ * @param autoHeigth 自动高度
  * @param actionWidth 操作栏宽度
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
+ * @param hideRefresh 隐藏刷新按钮
+ * @param hideRowSelection 是否行能选择
  * @param rowAllowEdit 该行右键是否能够编辑
  * @param rowAllowDelete 该行右键是否能够删除
  * @param query 查询函数
@@ -495,53 +512,61 @@ import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/P
  * @param rowExpandable 每行是否展示展开按钮
  */
 const props = withDefaults(defineProps<{
-    baseDomain?: string,
-    tableId: string,
-    multiHeader?: boolean,
-    data?: Array<any>,
-    readOnly?: boolean,
-    actionWidth?: number,
-    advance?: boolean,
-    advanceButton?: boolean,
-    advanceCondition?: ConditionListType,
-    defaultSortColumn?: Array<QuerySortType>,
-    rowAllowEdit?: (record: any) => boolean,
-    rowAllowDelete?: (record: any) => boolean,
-    query?: (url: string, query: QueryType) => Promise<any>,
-    treeMode?: boolean,
-    listMode?: boolean,
-    modeLock?: boolean,
-    bindTabs?: Array<PortalBindType>,
-    treeCheckAble?: boolean,
-    selectedTreeData?: Array<any>,
-    checkStrictly?: boolean
-    bindDefaultValue?: any
-    textAreaInExpanded?: boolean,
-    rowExpandable?: Function
-  }>(),
-  {
-    baseDomain: '/' + name,
-    data: undefined,
-    readOnly: false,
-    actionWidth: 150,
-    advance: false,
-    advanceButton: false,
-    advanceCondition: undefined,
-    defaultSortColumn: undefined,
-    rowAllowEdit: () => true,
-    rowAllowDelete: () => true,
-    query: undefined,
-    treeMode: false,
-    listMode: false,
-    modeLock: false,
-    bindTabs: undefined,
-    treeCheckAble: false,
-    selectedTreeData: undefined,
-    checkStrictly: false,
-    bindDefaultValue: undefined,
-    textAreaInExpanded: false,
-    rowExpandable: undefined
-  })
+      baseDomain?: string,
+      tableId: string,
+      multiHeader?: boolean,
+      data?: Array<any>,
+      readOnly?: boolean,
+      autoWidth?: boolean,
+      autoHeight?: boolean,
+      actionWidth?: number,
+      advance?: boolean,
+      advanceButton?: boolean,
+      advanceCondition?: ConditionListType,
+      defaultSortColumn?: Array<QuerySortType>,
+      hideRefresh?: boolean,
+      hideRowSelection?: boolean
+      rowAllowEdit?: (record: any) => boolean,
+      rowAllowDelete?: (record: any) => boolean,
+      query?: (url: string, query: QueryType) => Promise<any>,
+      treeMode?: boolean,
+      listMode?: boolean,
+      modeLock?: boolean,
+      bindTabs?: Array<PortalBindType>,
+      treeCheckAble?: boolean,
+      selectedTreeData?: Array<any>,
+      checkStrictly?: boolean
+      bindDefaultValue?: any
+      textAreaInExpanded?: boolean,
+      rowExpandable?: (record: DefaultRecordType) => boolean
+    }>(),
+    {
+      baseDomain: '/' + name,
+      data: undefined,
+      readOnly: false,
+      autoWidth: false,
+      autoHeight: false,
+      actionWidth: 150,
+      advance: false,
+      advanceButton: false,
+      advanceCondition: undefined,
+      defaultSortColumn: undefined,
+      hideRefresh: false,
+      hideRowSelection: false,
+      rowAllowEdit: () => true,
+      rowAllowDelete: () => true,
+      query: undefined,
+      treeMode: false,
+      listMode: false,
+      modeLock: false,
+      bindTabs: undefined,
+      treeCheckAble: false,
+      selectedTreeData: undefined,
+      checkStrictly: false,
+      bindDefaultValue: undefined,
+      textAreaInExpanded: false,
+      rowExpandable: undefined
+    })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
   (e: 'selectedData', selectedData: Array<any>): void
@@ -587,9 +612,14 @@ bus.on('portal:table:resize', _.debounce(updateTableWidthAndHeight, 200))
 const config: TableConfigType = reactive({
   baseDomain: props.baseDomain,
   tableId: props.tableId,
+  url: '',
   key: 1,
-  size: '',
+  title: '',
+  size: 'default',
   rowKey: 'id',
+  nameKey: 'name',
+  parentKey: '',
+  getPopupContainer: () => {},
   loading: true,
   currentPage: 1,
   pageSize: 10,
@@ -600,6 +630,12 @@ const config: TableConfigType = reactive({
     data: {} as { [key: string]: any },
     editRowIndex: null
   } as ModalType,
+  readOnly: false,
+  summary: false,
+  treeMode: false,
+  treeDragAble: false,
+  orderMode: false,
+  treeMenuShow: false,
   saveAllButtonShow: false,
   descriptionCount: 4,
   detailWidth: '100%',
@@ -611,6 +647,7 @@ const config: TableConfigType = reactive({
   exportAble: false,
   defaultCondition: {} as ConditionListType,
   defaultSort: [] as Array<QuerySortType>,
+  hideRefresh: props.hideRefresh,
   plain: false,
   advancedSearchAble: true,
   advancedSearchButton: true
@@ -622,11 +659,11 @@ watch(props, (value, old) => {
   console.debug('propsChanged', value, old)
 })
 watch(
-  () => data.value,
-  () => {
-    config.total = data.value?.length || 0
-    initData(data.value || [])
-  }
+    () => data.value,
+    () => {
+      config.total = data.value?.length || 0
+      initData(data.value || [])
+    }
 )
 /**
  * 数据
@@ -639,10 +676,9 @@ const summaryColumns = [] as Array<string>
 const modifyCellMap = new Map<string, ModifyCellType>()
 const treeData: Ref<Array<DataNode>> = ref([])
 const listData = computed(() => {
-  const map = dataSource.value.map((value) => {
+  return dataSource.value.map((value) => {
     return {value: value[config.rowKey], label: value[config.nameKey]}
   })
-  return map
 })
 /**
  * 表头
@@ -810,7 +846,7 @@ const cellUpdate = (index: number, dataIndex: string, v: any) => {
     modifyCell.needUpdated = v !== modifyCell.original
   }
 }
-const isCellUpdate = (index: number, column: any): Boolean => {
+const isCellUpdate = (index: number, column: any): boolean => {
   let result = false
   const modifyCell = modifyCellMap.get(index + column.dataIndex)
   if (modifyCell && isNotEmpty(modifyCell)) {
@@ -819,7 +855,7 @@ const isCellUpdate = (index: number, column: any): Boolean => {
   }
   return result
 }
-const isRowUpdate = (index: number): Boolean => {
+const isRowUpdate = (index: number): boolean => {
   let result = false
   for (let column of columns.value) {
     const modifyCell = modifyCellMap.get(index + column.dataIndex)
@@ -1259,10 +1295,10 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     querySortMap.clear()
     if (isNotEmpty(column.order)) {
       querySortMap.set(column.columnKey,
-        {
-          property: column.column.dbField ? column.column.dbField : column.columnKey,
-          type: (column.order === 'ascend' ? 0 : 1)
-        })
+          {
+            property: column.column.dbField ? column.column.dbField : column.columnKey,
+            type: (column.order === 'ascend' ? 0 : 1)
+          })
     }
     queryData()
   }
@@ -1304,7 +1340,7 @@ const getConfig = () => {
 /**
  * 获取数据
  */
-const allTextAreaColumnsNotEmpty = (record: any) => {
+const allTextAreaColumnsNotEmpty = (record: DefaultRecordType) => {
   if (isNotEmpty(textAreaColumns.value)) {
     for (let checkColumn of textAreaColumns.value) {
       if (isNotEmpty(record[checkColumn.dataIndex])) {
@@ -1362,8 +1398,8 @@ const queryDataAsync = async () => {
   }
   if (config.plain) {
     return await data.value?.slice(
-      (config.currentPage - 1) * config.pageSize,
-      (config.currentPage - 1) * config.pageSize + config.pageSize
+        (config.currentPage - 1) * config.pageSize,
+        (config.currentPage - 1) * config.pageSize + config.pageSize
     ) || []
   } else {
     if (props.query) {
@@ -1380,10 +1416,10 @@ const queryDataAsync = async () => {
 const getDataSummary = async () => {
   if (config.advancedSearchAble) {
     return advancedSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
-      .then((resp: any) => dataSummary.value = resp.payload)
+        .then((resp: any) => dataSummary.value = resp.payload)
   } else {
     return generalSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
-      .then((resp: any) => dataSummary.value = resp.payload)
+        .then((resp: any) => dataSummary.value = resp.payload)
   }
 
 }
@@ -1537,13 +1573,13 @@ const init = async () => {
       column.defaultValue = layout.defaultValue
       if (isNotEmpty(column.referenceDict)) {
         if (column.fieldType === FIELD_TYPE.SELECT ||
-          column.fieldType === FIELD_TYPE.TREE ||
-          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
-          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+            column.fieldType === FIELD_TYPE.TREE ||
+            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+            column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           dictColumnArray.push(column)
           let promise;
           if (column.fieldType === FIELD_TYPE.SELECT ||
-            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
+              column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
             promise = dict.getDict(column.referenceDict).then((data: any) => column.referenceDictOption = data)
           } else {
             promise = treeDict.getTree(column.referenceDict).then((data: any) => column.referenceDictOption = data)
