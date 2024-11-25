@@ -237,7 +237,9 @@ const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?:
         percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
       }
       onProgress({percent: percent}, file)
-      setUploadProgress(percent)
+      if (isNotEmpty(prop.progress)) {
+        setUploadProgress(percent)
+      }
     }, uploadParam.value).then((resp: any) => {
       onSuccess(resp, file)
     }).catch((resp: any) => {
