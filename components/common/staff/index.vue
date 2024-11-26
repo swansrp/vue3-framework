@@ -32,21 +32,23 @@ const props = withDefaults(
     width?: number,
     placeholder?: string,
     disabled?: boolean,
-    active?: boolean
+    active?: boolean,
+    valueLabelMode?: boolean
   }>(),
   {
     modelValue: '',
     width: 350,
     placeholder: '请搜索员工信息',
     disabled: false,
-    active: true
+    active: true,
+    valueLabelMode: false
   }
 )
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any): void
 }>()
-const {modelValue, width, placeholder, active} = toRefs(props)
+const {modelValue, width, placeholder, active, valueLabelMode} = toRefs(props)
 const selectUserValue = ref({value: '', label: ''} as any)
 const staffList = ref([] as Array<any>)
 const handleInputChange = _.debounce((value: string) => getSelectOption(value), QUERY_INTERVAL)
@@ -74,15 +76,28 @@ const getSelectOption = (searchValue: string) => {
 watch(
   () => modelValue.value,
   () => {
-    if (modelValue.value.value) {
-      getAccountInfo([modelValue.value.value], active.value).then((resp) => {
-        staffList.value.length = 0
-        resp.payload.forEach((res: any) => {
-          selectUserValue.value.value = res.value
-          selectUserValue.value.label = res.label
-          emit('update:modelValue', selectUserValue.value)
+    if (valueLabelMode.value) {
+      if (modelValue.value.value) {
+        getAccountInfo([modelValue.value.value], active.value).then((resp) => {
+          staffList.value.length = 0
+          resp.payload.forEach((res: any) => {
+            selectUserValue.value.value = res.value
+            selectUserValue.value.label = res.label
+            emit('update:modelValue', selectUserValue.value)
+          })
         })
-      })
+      }
+    } else {
+      if (modelValue.value) {
+        getAccountInfo([modelValue.value], active.value).then((resp) => {
+          staffList.value.length = 0
+          resp.payload.forEach((res: any) => {
+            selectUserValue.value.value = res.value
+            selectUserValue.value.label = res.label
+            emit('update:modelValue', res.value)
+          })
+        })
+      }
     }
   },
   {
@@ -92,8 +107,13 @@ watch(
 watch(
   () => selectUserValue.value,
   () => {
-    emit('update:modelValue', selectUserValue.value)
+    if(valueLabelMode.value) {
+      emit('update:modelValue', selectUserValue.value)
+    } else {
+      emit('update:modelValue', selectUserValue.value.value)
+    }
     emit('change', selectUserValue.value)
+
   }
 )
 onMounted(() => {
