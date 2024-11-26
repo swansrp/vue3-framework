@@ -1,5 +1,8 @@
 <template>
-  <template v-if="column.fieldType === FIELD_TYPE.INPUT">
+  <template v-if="!prop.rowAllowEdit(record)">
+    <div style="width: 100%" @mouseover="doFunctions(closeEditor)">{{ modelValue }}</div>
+  </template>
+  <template v-else-if="column.fieldType === FIELD_TYPE.INPUT">
     <a-input
       :ref="editorRef"
       :get-popup-container="getPopupContainer"
@@ -74,16 +77,16 @@
       column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE">
     <a-tree-select
       :ref="editorRef"
-      :get-popup-container="getPopupContainer"
       :bordered="false"
+      :get-popup-container="getPopupContainer"
       :tree-data="column.referenceDictOption || []"
       allow-clear
+      default-open
+      modelValue
       style="width: 300px;"
       tree-checkable
       tree-default-expand-all
       tree-node-filter-prop="label"
-      modelValue
-      default-open
       @select="v => {
         cellUpdate(recordIndexs[0], column.dataIndex, v)
         modelValue = v;
@@ -172,7 +175,9 @@ const prop = defineProps<{
   closeEditor: any,
   editorRef: any,
   getPopupContainer: any,
+  record: any,
   recordIndexs: any,
+  rowAllowEdit: (args: any) => boolean
   config: TableConfigType
 }>()
 const emit = defineEmits<{

@@ -301,7 +301,7 @@
               <!-- endregion -->
               <!-- region 单元格编辑样式 -->
               <template
-                #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs }">
+                #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, record, recordIndexs }">
                 <portal-cell-editor
                   :closeEditor="closeEditor"
                   :column="column"
@@ -309,7 +309,9 @@
                   :editorRef="editorRef"
                   :getPopupContainer="getPopupContainer"
                   :modelValue="modelValue"
+                  :record="record"
                   :recordIndexs="recordIndexs"
+                  :row-allow-edit="rowAllowEdit"
                   :save="save"
                   @cell-update="cellUpdate"
                 />
@@ -525,7 +527,9 @@ const props = withDefaults(defineProps<{
       advanceCondition?: ConditionListType,
       defaultSortColumn?: Array<QuerySortType>,
       hideRefresh?: boolean,
-      hideRowSelection?: boolean
+      hideRowSelection?: boolean,
+      hideAdd?: boolean,
+      hideEdit?: boolean,
       rowAllowEdit?: (record: any) => boolean,
       rowAllowDelete?: (record: any) => boolean,
       query?: (url: string, query: QueryType) => Promise<any>,
@@ -553,6 +557,8 @@ const props = withDefaults(defineProps<{
       defaultSortColumn: undefined,
       hideRefresh: false,
       hideRowSelection: false,
+      hideAdd: false,
+      hideEdit: false,
       rowAllowEdit: () => true,
       rowAllowDelete: () => true,
       query: undefined,
@@ -641,8 +647,8 @@ const config: TableConfigType = reactive({
   detailWidth: '100%',
   addWidth: '100%',
   editWidth: '100%',
-  addModalAble: false,
-  editModalAble: false,
+  addModalAble: !props.hideAdd,
+  editModalAble: !props.hideEdit,
   importAble: false,
   exportAble: false,
   defaultCondition: {} as ConditionListType,
@@ -1545,9 +1551,9 @@ const init = async () => {
         summaryColumns.push(layout.property)
       }
       column.addShow = layout.addShow === '1'
-      if (!config.addModalAble && column.addShow) config.addModalAble = column.addShow
+      if (config.addModalAble && column.addShow) config.addModalAble = column.addShow
       column.editShow = layout.editShow === '1'
-      if (!config.editModalAble && column.editShow) config.editModalAble = column.editShow
+      if (config.editModalAble && column.editShow) config.editModalAble = column.editShow
       column.checked = layout.show === '1'
       column.displayGroupName = layout.displayGroupName
       column.detailShow = layout.detailShow === '1'
