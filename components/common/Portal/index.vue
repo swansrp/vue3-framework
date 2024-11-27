@@ -158,7 +158,7 @@
                   class="table-title-cell">
                   <div v-for="(item, index) in title?.split('\\n')" :key="index">{{ item }}</div>
                 </div>
-                <span v-else-if="column.dataIndex === 'index'"></span>
+                <span v-else-if="column.dataIndex === 'index'">{{ title }}</span>
                 <span
                   v-else
                   :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
@@ -493,8 +493,10 @@ import { DefaultRecordType } from "ant-design-vue/es/vc-table/interface";
  * @param data 显示数据
  * @param readOnly 不能编辑
  * @param autoWidth 自动宽度
- * @param autoHeigth 自动高度
+ * @param autoHeight 自动高度
  * @param actionWidth 操作栏宽度
+ * @param indexWidth 序号栏宽度
+ * @param indexTitle 序号栏标题
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
  * @param hideRefresh 隐藏刷新按钮
@@ -522,6 +524,8 @@ const props = withDefaults(defineProps<{
       autoWidth?: boolean,
       autoHeight?: boolean,
       actionWidth?: number,
+      indexWidth?: number,
+      indexTitle?: string,
       advance?: boolean,
       advanceButton?: boolean,
       advanceCondition?: ConditionListType,
@@ -551,6 +555,8 @@ const props = withDefaults(defineProps<{
       autoWidth: false,
       autoHeight: false,
       actionWidth: 150,
+      indexWidth: 80,
+      indexTitle: '序号',
       advance: false,
       advanceButton: false,
       advanceCondition: undefined,
@@ -1479,6 +1485,8 @@ const init = async () => {
     advancedCondition.columnArray = []
     summaryColumns.length = 0
     const index = _.cloneDeep(indexColumn)
+    index.width = props.indexWidth
+    index.title = props.indexTitle
     columnArray.value.push(index)
     const tableConfig = res.payload
     config.title = tableConfig.displayName
