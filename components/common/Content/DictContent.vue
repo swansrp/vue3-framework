@@ -1,51 +1,36 @@
 <template>
-  <a-tree
+  <tree-content
     v-if="treeMode"
-    :key="treeData"
-    v-model:checkedKeys="selectedData"
+    v-model="selectedData"
     :checkStrictly="props.checkStrictly"
-    :disabled="disable"
-    :tree-data="treeData"
-    checkable
-    defaultExpandAll
-    show-line
-    @check="checkTreeNode">
+    :disable="props.disabled"
+    :labelField="props.labelField"
+    :multi="props.multi"
+    treeData="treeData"
+  >
     <template #title="{ dataRef }">
       <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
       <span v-else>{{ dataRef[props.labelField] }}</span>
     </template>
-  </a-tree>
-  <a-list
-    v-else-if="!multi"
-    :data-source="dictData" :disabled="disable" bordered size="small">
-    <template #renderItem="{ item }">
-      <a-list-item
-        :class="{'activate-item': selectedData.indexOf(item.value) !== -1}"
-        @click="checkListNode(item.value)">
-        <slot v-if="$slots.title" :item="item" name="title"></slot>
-        <span v-else>{{ item[props.labelField] }}</span>
-      </a-list-item>
-    </template>
-  </a-list>
-  <a-checkbox-group
+  </tree-content>
+  <list-content
     v-else
-    v-model:value="selectedData"
-    style="display: grid;"
-    @change="handleChecked">
-    <a-checkbox
-      v-for="(item, index) in dictData" :key="index"
-      :value="item.value"
-      style="margin: 5px 0">
-      <slot v-if="$slots.title" :item="item" name="title"></slot>
-      <span v-else class="normal">{{ item[props.labelField] }}</span>
-    </a-checkbox>
-  </a-checkbox-group>
+    v-model="selectedData"
+    :disable="props.disabled"
+    :labelField="props.labelField"
+    :listData="dictData"
+    :multi="props.multi"
+  >
+    <template #title="{ dataRef }">
+      <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
+      <span v-else>{{ dataRef[props.labelField] }}</span>
+    </template>
+  </list-content>
 </template>
 
 <script lang="ts" setup>
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { Ref } from 'vue'
-import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 
 const props = withDefaults(
   defineProps<{
@@ -77,29 +62,6 @@ const dictData: Ref<Array<any>> = ref([])
 
 const selectedData: Ref<any> = ref(modelValue.value || [])
 const selectedLabel = [] as Array<any>
-const checkTreeNode = (_: string, e: { checked: boolean, node: DataNode }) => {
-  if (e.checked && !multi.value) {
-    selectedData.value = []
-    selectedData.value.push(e.node.key)
-    selectedLabel.length = 0
-    selectedLabel.push(e.node.label)
-  }
-}
-const checkListNode = (arg: any) => {
-  if (!multi.value) {
-    selectedData.value.length = 0
-    selectedData.value.push(arg)
-  } else {
-    if (selectedData.value.indexOf(arg) === -1) {
-      selectedData.value.push(arg)
-    } else {
-      selectedData.value.splice(selectedData.value.indexOf(arg), 1)
-    }
-  }
-}
-const handleChecked = (arg: any) => {
-  selectedData.value = arg || []
-}
 watch(
   () => selectedData.value,
   () => {

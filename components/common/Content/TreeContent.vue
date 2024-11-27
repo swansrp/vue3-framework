@@ -10,7 +10,8 @@
     show-line
     @check="checkTreeNode">
     <template #title="{ dataRef }">
-      <span>{{ dataRef[props.labelField] }}</span>
+      <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
+      <span v-else>{{ dataRef[props.labelField] }}</span>
     </template>
   </a-tree>
 </template>

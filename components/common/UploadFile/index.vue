@@ -76,6 +76,12 @@
       v-if="!multiple && _handleProgress"
       :percent="_handleProgress"
       :status="_handleProgress < 0 ? 'exception' : undefined" />
+    <template #footer>
+      <div v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) === -1">
+        <a-button @click="closeUploadModal">取消</a-button>
+        <a-button type="primary" @click="confirmUploadModal">确定</a-button>
+      </div>
+    </template>
   </a-modal>
 </template>
 
@@ -215,6 +221,7 @@ const showUploadDialogBox = (fieldType = '') => {
 
 }
 const closeUploadModal = () => {
+  resetUploadProgress()
   uploadDialogBox.url = null
   uploadDialogBox.show = false
 }

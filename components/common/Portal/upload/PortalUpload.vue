@@ -6,6 +6,8 @@
     :width="800"
     centered
     @cancel="closeUploadModal">
+    <a-button ghost @click="templateExport">下载模版
+    </a-button>
     <a-upload-dragger
       v-if="config.type === 'INIT'"
       v-model:fileList="config.file"
@@ -13,7 +15,7 @@
       :customRequest="handleFileUpload"
       accept=".xlsx,.xls"
       name="file"
-      style="margin-top: 30px"
+      style="margin-top: 5px"
       @change="handleUploadChange"
       @reject="reject">
       <p class="ant-upload-drag-icon">
@@ -69,8 +71,8 @@
       </div>
     </a-result>
     <template #footer>
-      <a-button @click="templateExport">下载模版</a-button>
-      <a-button @click="resetUploadProgress()">重新上传</a-button>
+      <a-button v-if="config.type === 'SUCCESS'" @click="resetUploadProgress()">重新上传</a-button>
+      <a-button v-else @click="closeUploadModal">确定</a-button>
     </template>
   </a-modal>
 </template>
