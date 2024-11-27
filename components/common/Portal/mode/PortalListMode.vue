@@ -30,7 +30,8 @@
             <template v-if="!config.readOnly">
               <a-menu-item key="2">新增记录</a-menu-item>
               <a-menu-item key="3">编辑记录</a-menu-item>
-              <a-menu-item key="4">删除记录</a-menu-item>
+              <a-menu-item key="4">复制记录</a-menu-item>
+              <a-menu-item key="5">删除记录</a-menu-item>
             </template>
           </a-menu>
         </template>
@@ -115,6 +116,7 @@ const emit = defineEmits<{
   (e: 'handleMenuContextView', recordId: any): void
   (e: 'handleMenuContextAdd', recordId: any): void
   (e: 'handleMenuContextModify', recordId: any): void
+  (e: 'handleMenuContextCopy', recordId: any): void
   (e: 'handleMenuContextDelete', recordId: any): void
 }>()
 const searchName = ref('')
@@ -134,6 +136,9 @@ const handleMenuContext = (recordId: any, menuKey: string) => {
       emit('handleMenuContextModify', recordId)
       break
     case '4':
+      emit('handleMenuContextCopy', recordId)
+      break
+    case '5':
       emit('handleMenuContextDelete', recordId)
       break
     default:

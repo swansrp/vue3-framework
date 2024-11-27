@@ -19,6 +19,7 @@
             @handle-menu-context-view="handleMenuContextView"
             @handle-menu-context-add="handleMenuContextAdd"
             @handle-menu-context-modify="handleMenuContextModify"
+            @handle-menu-context-copy="handleMenuContextCopy"
             @handle-menu-context-delete="handleMenuContextDelete">
             <template #end-action>
               <portal-mode-button
@@ -43,6 +44,7 @@
             @handle-menu-context-view="handleMenuContextView"
             @handle-menu-context-add="handleMenuContextAdd"
             @handle-menu-context-modify="handleMenuContextModify"
+            @handle-menu-context-copy="handleMenuContextCopy"
             @handle-menu-context-delete="handleMenuContextDelete">
             <template #end-action>
               <portal-mode-button
@@ -230,6 +232,7 @@
                   :row-allow-delete="rowAllowDelete"
                   :row-allow-edit="rowAllowEdit"
                   @association="associationRow"
+                  @copy-row="copyRow"
                   @reset-cell="resetCell"
                   @save-cell="saveCell"
                   @save-row="saveRow"
@@ -1028,6 +1031,13 @@ const handleMenuContextAdd = (recordId: any) => {
   config.modal.data[`${config.parentKey}`] = recordId
   openModal('add')
 }
+const handleMenuContextCopy = (recordId: any) => {
+  getById(config.url, recordId, config.baseDomain).then(resp => {
+    config.modal.data = resp.payload
+    config.modal.data[config.rowKey] = null
+    openModal('add')
+  })
+}
 const handleMenuContextModify = (recordId: any) => {
   getById(config.url, recordId, config.baseDomain).then(resp => {
     config.modal.data = resp.payload
@@ -1149,7 +1159,6 @@ const editRow = (args: any) => {
   }
   openModal('modify')
   args.hidePopup()
-
 }
 // 保存编辑详情页
 const updateEditRow = async () => {
@@ -1159,6 +1168,17 @@ const updateEditRow = async () => {
     ...dataSource.value[config.modal.editRowIndex],
     ...config.modal.data
   }, config.baseDomain)
+}
+const copyRow = (args: any) => {
+  const {id, data} = _buildRowData(args.recordIndexs[0])
+  console.debug('打开复制详情页', id, data)
+  if (data.size != 0) {
+    data.set(config.rowKey, null)
+    config.modal.data = Object.fromEntries(data)
+    config.modal.editRowIndex = args.recordIndexs[0]
+  }
+  openModal('add')
+  args.hidePopup()
 }
 const closeModal = () => {
   config.modal.show = false

@@ -45,6 +45,13 @@
       编辑记录
     </li>
     <li
+      v-if="!config.readOnly && config.addModalAble"
+      class="popup-item"
+      @click="() => emit('copyRow', args)">
+      <copy-outlined />
+      复制记录
+    </li>
+    <li
       v-if="prop.rowAllowDelete(args)"
       class="popup-item"
       @click="() => emit('deleteRow', args)">
@@ -56,6 +63,7 @@
 
 <script lang="ts" setup>
 import {
+  CopyOutlined,
   DeleteOutlined,
   DeliveredProcedureOutlined,
   DeploymentUnitOutlined,
@@ -81,6 +89,7 @@ const emit = defineEmits<{
   (e: 'saveCell', args: any): void
   (e: 'saveRow', args: any): void
   (e: 'detailRow', args: any): void
+  (e: 'copyRow', args: any): void
   (e: 'editRow', args: any): void
   (e: 'deleteRow', args: any): void
   (e: 'association', args: any): void
