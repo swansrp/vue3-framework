@@ -1247,10 +1247,15 @@ const refreshConfig = (id: any) => {
 }
 
 const saveTableConfig = (silent = true) => {
-  tableConfig.value.defaultSort = JSON.stringify([{
-    property: tableConfig.value.sortColumn,
-    type: tableConfig.value.sortType ? 0 : 1
-  }])
+  if(isNotEmpty(tableConfig.value.sortColumn)) {
+    tableConfig.value.defaultSort = JSON.stringify([{
+      property: tableConfig.value.sortColumn,
+      type: tableConfig.value.sortType ? 0 : 1
+    }])
+  } else {
+    tableConfig.value.defaultSort = '[]'
+  }
+
   updatePortalConfig(tableConfig.value, silent).then(() => onSearch())
 }
 

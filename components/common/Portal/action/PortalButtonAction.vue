@@ -62,6 +62,16 @@
           </template>
         </a-button>
       </a-tooltip>
+      <a-tooltip v-if="!config.readOnly && config.deleteSelectedButtonShow" placement="top">
+        <template #title>
+          <span>删除选定</span>
+        </template>
+        <a-button shape="circle" size="middle" style="margin-left: 3px" type="primary" @click="() => emit('deleteSelected')">
+          <template #icon>
+            <delete-outlined />
+          </template>
+        </a-button>
+      </a-tooltip>
       <a-tooltip v-if="config.importAble" placement="top">
         <template #title>
           <span>导入新增</span>
@@ -98,6 +108,7 @@ import {
   AppstoreAddOutlined,
   CloudUploadOutlined,
   ClusterOutlined,
+  DeleteOutlined,
   DownloadOutlined,
   FunnelPlotOutlined,
   ReloadOutlined,
@@ -114,6 +125,7 @@ const emit = defineEmits<{
   (e: 'addRow'): void
   (e: 'refresh'): void
   (e: 'saveAll'): void
+  (e: 'deleteSelected'): void
   (e: 'openUploadModal'): void
   (e: 'download'): void
   (e: 'queryData'): void

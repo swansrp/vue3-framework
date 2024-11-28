@@ -43,6 +43,7 @@ const commonUrl = {
   UPDATE: '/update',
   UPDATE_LIST: '/update/list',
   DELETE: '/delete',
+  DELETE_LIST: '/delete/list',
   TREE: '/advanced/tree/data',
   TREE_PID: '/pid',
   ORDER: '/order/update',
@@ -169,6 +170,12 @@ const deleteApi = (
   version = '1.0'
 ) => buildApi(domain, commonUrl.DELETE, requestMethod.POST, version, type)
 
+const deleteListApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.DELETE_LIST, requestMethod.POST, version, type)
+
 const exportDataApi = (
   type: string,
   domain: string = baseDomain,
@@ -274,6 +281,15 @@ export const deleteRequest = (
   showSuccess = true,
   showLoading = true
 ) => request(deleteApi(type, domain), {}, {id}, showSuccess, showLoading) as Promise<any>
+
+export const deleteListRequest = (
+  type: string,
+  params: object = {},
+  data: object,
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(deleteListApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
 export const updateRequest = (
   type: string,

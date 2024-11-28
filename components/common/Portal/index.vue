@@ -107,6 +107,7 @@
           @show-tree-menu="showTreeMenu"
           @add-row="addRow"
           @save-all="saveAll"
+          @delete-selected="deleteSelected"
           @open-upload-modal="openUploadModal">
           <template #left-btns>
             <slot name="left-btns"></slot>
@@ -127,8 +128,8 @@
               :loading="config.loading"
               :pagination="false"
               :range-selection="false"
-              :row-selection="hideRowSelection ? null : rowSelection"
               :row-expandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
+              :row-selection="hideRowSelection ? null : rowSelection"
               :rowKey="config.rowKey"
               :scroll="{x: getTableWidth(), y: getTableHeight()}"
               :size="config.size"
@@ -423,6 +424,7 @@ import {
   advancedSelect,
   advancedSummary,
   deleteEntity,
+  deleteEntityList,
   exportTemplate,
   generalQuery,
   generalSelect,
@@ -519,69 +521,69 @@ import { DefaultRecordType } from "ant-design-vue/es/vc-table/interface";
  * @param rowExpandable 每行是否展示展开按钮
  */
 const props = withDefaults(defineProps<{
-      baseDomain?: string,
-      tableId: string,
-      multiHeader?: boolean,
-      data?: Array<any>,
-      readOnly?: boolean,
-      autoWidth?: boolean,
-      autoHeight?: boolean,
-      actionWidth?: number,
-      indexWidth?: number,
-      indexTitle?: string,
-      advance?: boolean,
-      advanceButton?: boolean,
-      advanceCondition?: ConditionListType,
-      defaultSortColumn?: Array<QuerySortType>,
-      hideRefresh?: boolean,
-      hideRowSelection?: boolean,
-      hideAdd?: boolean,
-      hideEdit?: boolean,
-      rowAllowEdit?: (record: any) => boolean,
-      rowAllowDelete?: (record: any) => boolean,
-      query?: (url: string, query: QueryType) => Promise<any>,
-      treeMode?: boolean,
-      listMode?: boolean,
-      modeLock?: boolean,
-      bindTabs?: Array<PortalBindType>,
-      treeCheckAble?: boolean,
-      selectedTreeData?: Array<any>,
-      checkStrictly?: boolean
-      bindDefaultValue?: any
-      textAreaInExpanded?: boolean,
-      rowExpandable?: (record: DefaultRecordType) => boolean
-    }>(),
-    {
-      baseDomain: '/' + name,
-      data: undefined,
-      readOnly: false,
-      autoWidth: false,
-      autoHeight: false,
-      actionWidth: 150,
-      indexWidth: 80,
-      indexTitle: '序号',
-      advance: false,
-      advanceButton: false,
-      advanceCondition: undefined,
-      defaultSortColumn: undefined,
-      hideRefresh: false,
-      hideRowSelection: false,
-      hideAdd: false,
-      hideEdit: false,
-      rowAllowEdit: () => true,
-      rowAllowDelete: () => true,
-      query: undefined,
-      treeMode: false,
-      listMode: false,
-      modeLock: false,
-      bindTabs: undefined,
-      treeCheckAble: false,
-      selectedTreeData: undefined,
-      checkStrictly: false,
-      bindDefaultValue: undefined,
-      textAreaInExpanded: false,
-      rowExpandable: undefined
-    })
+    baseDomain?: string,
+    tableId: string,
+    multiHeader?: boolean,
+    data?: Array<any>,
+    readOnly?: boolean,
+    autoWidth?: boolean,
+    autoHeight?: boolean,
+    actionWidth?: number,
+    indexWidth?: number,
+    indexTitle?: string,
+    advance?: boolean,
+    advanceButton?: boolean,
+    advanceCondition?: ConditionListType,
+    defaultSortColumn?: Array<QuerySortType>,
+    hideRefresh?: boolean,
+    hideRowSelection?: boolean,
+    hideAdd?: boolean,
+    hideEdit?: boolean,
+    rowAllowEdit?: (record: any) => boolean,
+    rowAllowDelete?: (record: any) => boolean,
+    query?: (url: string, query: QueryType) => Promise<any>,
+    treeMode?: boolean,
+    listMode?: boolean,
+    modeLock?: boolean,
+    bindTabs?: Array<PortalBindType>,
+    treeCheckAble?: boolean,
+    selectedTreeData?: Array<any>,
+    checkStrictly?: boolean
+    bindDefaultValue?: any
+    textAreaInExpanded?: boolean,
+    rowExpandable?: (record: DefaultRecordType) => boolean
+  }>(),
+  {
+    baseDomain: '/' + name,
+    data: undefined,
+    readOnly: false,
+    autoWidth: false,
+    autoHeight: false,
+    actionWidth: 150,
+    indexWidth: 80,
+    indexTitle: '序号',
+    advance: false,
+    advanceButton: false,
+    advanceCondition: undefined,
+    defaultSortColumn: undefined,
+    hideRefresh: false,
+    hideRowSelection: false,
+    hideAdd: false,
+    hideEdit: false,
+    rowAllowEdit: () => true,
+    rowAllowDelete: () => true,
+    query: undefined,
+    treeMode: false,
+    listMode: false,
+    modeLock: false,
+    bindTabs: undefined,
+    treeCheckAble: false,
+    selectedTreeData: undefined,
+    checkStrictly: false,
+    bindDefaultValue: undefined,
+    textAreaInExpanded: false,
+    rowExpandable: undefined
+  })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
   (e: 'selectedData', selectedData: Array<any>): void
@@ -634,7 +636,8 @@ const config: TableConfigType = reactive({
   rowKey: 'id',
   nameKey: 'name',
   parentKey: '',
-  getPopupContainer: () => {},
+  getPopupContainer: () => {
+  },
   loading: true,
   currentPage: 1,
   pageSize: 10,
@@ -652,6 +655,7 @@ const config: TableConfigType = reactive({
   orderMode: false,
   treeMenuShow: false,
   saveAllButtonShow: false,
+  deleteSelectedButtonShow: false,
   descriptionCount: 4,
   detailWidth: '100%',
   addWidth: '100%',
@@ -674,11 +678,11 @@ watch(props, (value, old) => {
   console.debug('propsChanged', value, old)
 })
 watch(
-    () => data.value,
-    () => {
-      config.total = data.value?.length || 0
-      initData(data.value || [])
-    }
+  () => data.value,
+  () => {
+    config.total = data.value?.length || 0
+    initData(data.value || [])
+  }
 )
 /**
  * 数据
@@ -958,6 +962,19 @@ const saveAll = () => {
   }
   updateEntityListSelective(config.url, [...dataMap.values()], config.baseDomain).then(() => queryData())
   log('保存所有内容', dataMap)
+}
+const deleteSelected = () => {
+  Modal.confirm({
+    title: '注意',
+    icon: createVNode(ExclamationCircleOutlined),
+    content: createVNode('div', {style: 'color:red;'}, '即将删除选定' + selectedRowKeys.value.length + '个记录,请确认'),
+    onOk() {
+      deleteEntityList(config.url, [...selectedRowKeys.value], config.baseDomain).then(() => queryData())
+    },
+    onCancel() {
+
+    }
+  })
 }
 const deleteRow = (args: any) => {
   Modal.confirm({
@@ -1315,6 +1332,7 @@ const onSelectChange = (changedRowKeys: any) => {
   const selectedData = selectedRowKeys.value.map(key => {
     return dataSourceMap.value.get(key)
   })
+  if (isNotEmpty(selectedRowKeys.value)) config.deleteSelectedButtonShow = true
   console.debug('selectedRowKeys changed: ', changedRowKeys, selectedData)
   emit('selectedData', selectedData)
 }
@@ -1327,10 +1345,10 @@ const handleTableChange = (pagination: { current: number, pageSize: number, tota
     querySortMap.clear()
     if (isNotEmpty(column.order)) {
       querySortMap.set(column.columnKey,
-          {
-            property: column.column.dbField ? column.column.dbField : column.columnKey,
-            type: (column.order === 'ascend' ? 0 : 1)
-          })
+        {
+          property: column.column.dbField ? column.column.dbField : column.columnKey,
+          type: (column.order === 'ascend' ? 0 : 1)
+        })
     }
     queryData()
   }
@@ -1410,6 +1428,7 @@ const initData = (data: Array<any>) => {
     })
     parsedDataSource.value.push(parsedData)
   }
+  selectedRowKeys.value = []
 }
 const queryDataAsync = async () => {
   const resolve = (res: any) => {
@@ -1430,8 +1449,8 @@ const queryDataAsync = async () => {
   }
   if (config.plain) {
     return await data.value?.slice(
-        (config.currentPage - 1) * config.pageSize,
-        (config.currentPage - 1) * config.pageSize + config.pageSize
+      (config.currentPage - 1) * config.pageSize,
+      (config.currentPage - 1) * config.pageSize + config.pageSize
     ) || []
   } else {
     if (props.query) {
@@ -1448,10 +1467,10 @@ const queryDataAsync = async () => {
 const getDataSummary = async () => {
   if (config.advancedSearchAble) {
     return advancedSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
-        .then((resp: any) => dataSummary.value = resp.payload)
+      .then((resp: any) => dataSummary.value = resp.payload)
   } else {
     return generalSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
-        .then((resp: any) => dataSummary.value = resp.payload)
+      .then((resp: any) => dataSummary.value = resp.payload)
   }
 
 }
@@ -1607,13 +1626,13 @@ const init = async () => {
       column.defaultValue = layout.defaultValue
       if (isNotEmpty(column.referenceDict)) {
         if (column.fieldType === FIELD_TYPE.SELECT ||
-            column.fieldType === FIELD_TYPE.TREE ||
-            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
-            column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+          column.fieldType === FIELD_TYPE.TREE ||
+          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           dictColumnArray.push(column)
           let promise;
           if (column.fieldType === FIELD_TYPE.SELECT ||
-              column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
+            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
             promise = dict.getDict(column.referenceDict).then((data: any) => column.referenceDictOption = data)
           } else {
             promise = treeDict.getTree(column.referenceDict).then((data: any) => column.referenceDictOption = data)

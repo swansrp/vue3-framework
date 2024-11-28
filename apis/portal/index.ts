@@ -9,6 +9,7 @@ import {
   bindReplaceBatchRequest,
   bindRequest,
   deleteRequest,
+  deleteListRequest,
   exportDataRequest,
   exportTemplateRequest,
   generalQueryRequest,
@@ -51,6 +52,9 @@ export const updateEntityListSelective = (url: string, entity: Array<any>, baseD
 
 export const deleteEntity = (url: string, id: string, baseDomain?: string) =>
   deleteRequest('/' + url, id, baseDomain) as Promise<any>
+
+export const deleteEntityList = (url: string, id: Array<string>, baseDomain?: string) =>
+  deleteListRequest('/' + url, {}, id, baseDomain) as Promise<any>
 
 export const advancedQuery = (url: string, query: QueryType, baseDomain?: string) =>
   advancedQueryRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage, baseDomain) as Promise<any>

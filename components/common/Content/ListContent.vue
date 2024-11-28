@@ -1,7 +1,7 @@
 <template>
   <a-list
     v-if="!multi"
-    :data-source="listData" :disabled="disable" bordered size="small">
+    :data-source="_listData" :disabled="disable" bordered size="small">
     <template #renderItem="{ item }">
       <a-list-item
         :class="{'activate-item': selectedData.indexOf(item.value) !== -1}"
@@ -10,6 +10,9 @@
         <span v-else>{{ item[props.labelField] }}</span>
       </a-list-item>
     </template>
+    <template #header>
+      <a-input-search v-model:value="inputSearch" placeholder="请输入搜索" size="small" @search="onSearch" />
+    </template>
   </a-list>
   <a-checkbox-group
     v-else
@@ -17,7 +20,7 @@
     style="display: grid;"
     @change="handleChecked">
     <a-checkbox
-      v-for="(item, index) in listData" :key="index"
+      v-for="(item, index) in _listData" :key="index"
       :value="item.value"
       style="margin: 5px 0">
       <slot v-if="$slots.title" :item="item" name="title"></slot>
@@ -28,6 +31,7 @@
 
 <script lang="ts" setup>
 import { Ref } from 'vue'
+import { isNotEmpty } from '@/framework/utils/common'
 
 const props = withDefaults(
   defineProps<{
@@ -44,7 +48,17 @@ const props = withDefaults(
     disable: false
   }
 )
-const {modelValue, multi} = toRefs(props)
+const {listData, modelValue, multi, labelField} = toRefs(props)
+const _listData = ref(listData.value)
+watch(
+  () => listData.value,
+  () => _listData.value = listData.value,
+  {
+    deep: true,
+    immediate: true
+  }
+)
+const inputSearch = ref('')
 const selectedData: Ref<any> = ref(modelValue.value || [])
 const selectedLabel = [] as Array<any>
 const emit = defineEmits<{
@@ -62,6 +76,16 @@ const checkListNode = (arg: any) => {
     } else {
       selectedData.value.splice(selectedData.value.indexOf(arg), 1)
     }
+  }
+}
+const onSearch = () => {
+  debugger
+  if (isNotEmpty(inputSearch.value)) {
+    _listData.value = listData.value.filter((item: any) => {
+      return item[labelField.value].indexOf(inputSearch.value) !== -1
+    })
+  } else {
+    _listData.value = listData.value
   }
 }
 const handleChecked = (arg: any) => {

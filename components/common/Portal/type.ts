@@ -44,6 +44,8 @@ export type TableConfigType = {
   treeMenuShow: boolean,
   // 保存全部按钮是否显示,
   saveAllButtonShow: boolean,
+  // 删除选定按钮是否显示,
+  deleteSelectedButtonShow: boolean,
   // 弹框
   modal: ModalType,
   // 详情每行显示个数
