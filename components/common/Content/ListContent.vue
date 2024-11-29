@@ -10,23 +10,32 @@
         <span v-else>{{ item[props.labelField] }}</span>
       </a-list-item>
     </template>
-    <template #header>
-      <a-input-search v-model:value="inputSearch" placeholder="请输入搜索" size="small" @search="onSearch" />
+    <template v-if="searchAble" #header>
+      <a-input-search
+        v-model:value="inputSearch" placeholder="请输入搜索" size="small"
+        @search="onSearch" />
     </template>
   </a-list>
-  <a-checkbox-group
-    v-else
-    v-model:value="selectedData"
-    style="display: grid;"
-    @change="handleChecked">
-    <a-checkbox
-      v-for="(item, index) in _listData" :key="index"
-      :value="item.value"
-      style="margin: 5px 0">
-      <slot v-if="$slots.title" :item="item" name="title"></slot>
-      <span v-else class="normal">{{ item[props.labelField] }}</span>
-    </a-checkbox>
-  </a-checkbox-group>
+  <template v-else>
+    <a-input-search
+      v-if="searchAble"
+      v-model:value="inputSearch"
+      placeholder="请输入搜索"
+      size="small"
+      @search="onSearch" />
+    <a-checkbox-group
+      v-model:value="selectedData"
+      style="display: grid;"
+      @change="handleChecked">
+      <a-checkbox
+        v-for="(item, index) in _listData" :key="index"
+        :value="item.value"
+        style="margin: 5px 0">
+        <slot v-if="$slots.title" :item="item" name="title"></slot>
+        <span v-else class="normal">{{ item[props.labelField] }}</span>
+      </a-checkbox>
+    </a-checkbox-group>
+  </template>
 </template>
 
 <script lang="ts" setup>
@@ -40,15 +49,19 @@ const props = withDefaults(
     listData: Array<any>,
     labelField?: string,
     disable?: boolean
+    search?: (searchInput: any) => void
+    searchAble?: boolean
   }>(),
   {
     modelValue: '',
     multi: false,
     labelField: 'label',
-    disable: false
+    disable: false,
+    search: undefined,
+    searchAble: false
   }
 )
-const {listData, modelValue, multi, labelField} = toRefs(props)
+const {listData, modelValue, multi, labelField, search} = toRefs(props)
 const _listData = ref(listData.value)
 watch(
   () => listData.value,
@@ -78,14 +91,20 @@ const checkListNode = (arg: any) => {
     }
   }
 }
-const onSearch = () => {
-  debugger
-  if (isNotEmpty(inputSearch.value)) {
+const searchByLabel = (search: any) => {
+  if (isNotEmpty(search)) {
     _listData.value = listData.value.filter((item: any) => {
-      return item[labelField.value].indexOf(inputSearch.value) !== -1
+      return item[labelField.value].indexOf(search) !== -1
     })
   } else {
     _listData.value = listData.value
+  }
+}
+const onSearch = () => {
+  if (isNotEmpty(search.value)) {
+    search.value && search.value(inputSearch.value)
+  } else {
+    searchByLabel(inputSearch.value)
   }
 }
 const handleChecked = (arg: any) => {

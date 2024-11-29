@@ -20,6 +20,7 @@
     :labelField="props.labelField"
     :listData="dictData"
     :multi="props.multi"
+    :search-able="searchAble"
   >
     <template #title="{ dataRef }">
       <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
@@ -41,6 +42,7 @@ const props = withDefaults(
     multi?: boolean
     labelField?: string
     disable?: boolean
+    searchAble?: boolean
   }>(),
   {
     modelValue: undefined,
@@ -48,7 +50,8 @@ const props = withDefaults(
     checkStrictly: false,
     multi: false,
     labelField: 'label',
-    disable: false
+    disable: false,
+    searchAble: false
   }
 )
 const {dict, treeMode, modelValue, multi} = toRefs(props)
