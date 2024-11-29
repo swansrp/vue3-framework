@@ -62,7 +62,7 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip v-if="!config.readOnly && config.deleteSelectedButtonShow" placement="top">
+      <a-tooltip v-if="!config.readOnly && config.deleteSelectedButtonShow && config.deleteAble" placement="top">
         <template #title>
           <span>删除选定</span>
         </template>

@@ -230,8 +230,8 @@
                   :config="config"
                   :is-cell-update="isCellUpdate"
                   :is-row-update="isRowUpdate"
-                  :row-allow-delete="rowAllowDelete"
-                  :row-allow-edit="rowAllowEdit"
+                  :row-allow-delete="_rowAllowDelete"
+                  :row-allow-edit="_rowAllowEdit"
                   @association="associationRow"
                   @copy-row="copyRow"
                   @reset-cell="resetCell"
@@ -506,6 +506,9 @@ import { DefaultRecordType } from "ant-design-vue/es/vc-table/interface";
  * @param defaultSortColumn 默认排序字段
  * @param hideRefresh 隐藏刷新按钮
  * @param hideRowSelection 是否行能选择
+ * @param hideAdd 隐藏添加按钮
+ * @param hideEdit 隐藏修改按钮
+ * @param hideDelete 隐藏删除按钮
  * @param rowAllowEdit 该行右键是否能够编辑
  * @param rowAllowDelete 该行右键是否能够删除
  * @param query 查询函数
@@ -539,6 +542,7 @@ const props = withDefaults(defineProps<{
     hideRowSelection?: boolean,
     hideAdd?: boolean,
     hideEdit?: boolean,
+    hideDelete?: boolean,
     rowAllowEdit?: (record: any) => boolean,
     rowAllowDelete?: (record: any) => boolean,
     query?: (url: string, query: QueryType) => Promise<any>,
@@ -570,6 +574,7 @@ const props = withDefaults(defineProps<{
     hideRowSelection: false,
     hideAdd: false,
     hideEdit: false,
+    hideDelete: false,
     rowAllowEdit: () => true,
     rowAllowDelete: () => true,
     query: undefined,
@@ -662,6 +667,7 @@ const config: TableConfigType = reactive({
   editWidth: '100%',
   addModalAble: !props.hideAdd,
   editModalAble: !props.hideEdit,
+  deleteAble: !props.hideDelete,
   importAble: false,
   exportAble: false,
   defaultCondition: {} as ConditionListType,
@@ -1022,7 +1028,7 @@ const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedN
 }
 // endregion
 // region 编辑弹框
-const rowAllowEdit = (record: any) => {
+const _rowAllowEdit = (record: any) => {
   let allow = !config.readOnly
   allow = allow && !isRowUpdate(record.index) && config.editModalAble
   if (props.rowAllowEdit) {
@@ -1030,7 +1036,7 @@ const rowAllowEdit = (record: any) => {
   }
   return allow
 }
-const rowAllowDelete = (record: any) => {
+const _rowAllowDelete = (record: any) => {
   let allow = !config.readOnly
   allow = allow && !isRowUpdate(record.index)
   if (props.rowAllowDelete) {

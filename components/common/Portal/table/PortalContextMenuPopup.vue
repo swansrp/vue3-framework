@@ -37,27 +37,29 @@
       <deployment-unit-outlined />
       关联信息
     </li>
-    <li
-      v-if="prop.rowAllowEdit(args)"
-      class="popup-item"
-      @click="() => emit('editRow', args)">
-      <form-outlined />
-      编辑记录
-    </li>
-    <li
-      v-if="!config.readOnly && config.addModalAble"
-      class="popup-item"
-      @click="() => emit('copyRow', args)">
-      <copy-outlined />
-      复制记录
-    </li>
-    <li
-      v-if="prop.rowAllowDelete(args)"
-      class="popup-item"
-      @click="() => emit('deleteRow', args)">
-      <delete-outlined />
-      删除记录
-    </li>
+    <template v-if="!config.readOnly">
+      <li
+        v-if="prop.rowAllowEdit(args) && config.editModalAble"
+        class="popup-item"
+        @click="() => emit('editRow', args)">
+        <form-outlined />
+        编辑记录
+      </li>
+      <li
+        v-if="config.addModalAble"
+        class="popup-item"
+        @click="() => emit('copyRow', args)">
+        <copy-outlined />
+        复制记录
+      </li>
+      <li
+        v-if="prop.rowAllowDelete(args) && config.deleteAble"
+        class="popup-item"
+        @click="() => emit('deleteRow', args)">
+        <delete-outlined />
+        删除记录
+      </li>
+    </template>
   </ul>
 </template>
 
