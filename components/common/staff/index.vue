@@ -33,7 +33,7 @@ const props = withDefaults(
     placeholder?: string,
     disabled?: boolean,
     active?: boolean,
-    valueLabelMode?: boolean
+    labelInValue?: boolean
   }>(),
   {
     modelValue: '',
@@ -41,7 +41,7 @@ const props = withDefaults(
     placeholder: '请搜索员工信息',
     disabled: false,
     active: true,
-    valueLabelMode: false
+    labelInValue: false
   }
 )
 const emit = defineEmits<{
