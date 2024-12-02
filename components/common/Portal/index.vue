@@ -1037,9 +1037,8 @@ const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedN
 }
 watch(
   () => selectedListDataItem.value,
-  () => emit('selectedData', selectedListDataItem.value),
+  () => emit('selectedData', selectedListDataItem?.value),
   {
-    immediate: true,
     deep: true
   }
 )

@@ -48,7 +48,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any): void
 }>()
-const {modelValue, width, placeholder, active, valueLabelMode} = toRefs(props)
+const {modelValue, width, placeholder, active, labelInValue} = toRefs(props)
 const selectUserValue = ref({value: '', label: ''} as any)
 const staffList = ref([] as Array<any>)
 const handleInputChange = _.debounce((value: string) => getSelectOption(value), QUERY_INTERVAL)
@@ -76,7 +76,7 @@ const getSelectOption = (searchValue: string) => {
 watch(
   () => modelValue.value,
   () => {
-    if (valueLabelMode.value) {
+    if (labelInValue.value) {
       if (modelValue.value.value) {
         getAccountInfo([modelValue.value.value], active.value).then((resp) => {
           staffList.value.length = 0
@@ -107,7 +107,7 @@ watch(
 watch(
   () => selectUserValue.value,
   () => {
-    if(valueLabelMode.value) {
+    if(labelInValue.value) {
       emit('update:modelValue', selectUserValue.value)
     } else {
       emit('update:modelValue', selectUserValue.value.value)
