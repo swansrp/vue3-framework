@@ -3,7 +3,7 @@
     <a-layout v-if="isTreeMode || isListMode">
       <a-layout-sider
         v-if="layoutSiderDisplay"
-        :class="[isBindTabExisted ? 'portal-tree-wrapper':'portal-tree-bind-wrapper']"
+        :class="[isBindTabExisted ? 'portal-tree-bind-wrapper':'portal-tree-wrapper']"
         :width="isBindTabExisted ? '20%':'99%'"
       >
         <div style="margin: 10px">
@@ -565,7 +565,7 @@ const props = withDefaults(defineProps<{
     autoHeight: false,
     actionWidth: 150,
     indexWidth: 80,
-    indexTitle: '序号',
+    indexTitle: '',
     advance: false,
     advanceButton: false,
     advanceCondition: undefined,
@@ -795,14 +795,23 @@ const handleDisplayModeChange = (menuKey: any) => {
  * 树选择配置
  */
 const selectedTreeData = ref(props.selectedTreeData || [])
-watch(() => props.selectedTreeData, (data: Array<any> | undefined) => {
-  if (data !== undefined) {
-    selectedTreeData.value = data
+watch(
+  () => props.selectedTreeData,
+  (data: Array<any> | undefined) => {
+    if (data !== undefined) {
+      selectedTreeData.value = data
+    }
+  },
+  {
+    immediate: true
   }
-}, {immediate: true})
-watch(() => selectedTreeData.value, (data: Array<any>) => {
-  emit('update:selectedTreeData', data)
-})
+)
+watch(
+  () => selectedTreeData.value,
+  (data: Array<any>) => {
+    emit('update:selectedTreeData', data)
+    emit('selectedData', data)
+  })
 const selectedTreeDataNode = ref()
 /**
  * 列表选择配置
@@ -1026,6 +1035,14 @@ const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedN
     emit('selectedData', selectedKeys)
   }
 }
+watch(
+  () => selectedListDataItem.value,
+  () => emit('selectedData', selectedListDataItem.value),
+  {
+    immediate: true,
+    deep: true
+  }
+)
 // endregion
 // region 编辑弹框
 const _rowAllowEdit = (record: any) => {
@@ -1734,17 +1751,17 @@ defineExpose({queryData, queryTreeData, queryCondition, getRowSelection, getConf
   background-color: white;
   box-sizing: border-box;
   overflow: auto;
-  height: calc(100vh - 150px);
-  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
-  margin: 10px 15px;
+  height: calc(100vh - 200px);
+  // box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
 }
 
 .portal-tree-bind-wrapper {
   background-color: white;
   box-sizing: border-box;
   overflow: auto;
-  height: calc(100vh - 200px);
+  height: calc(100vh - 150px);
   box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  margin: 10px 15px;
 }
 
 .root {

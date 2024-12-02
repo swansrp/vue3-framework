@@ -120,7 +120,7 @@ const emit = defineEmits<{
   (e: 'handleMenuContextDelete', recordId: any): void
 }>()
 const searchName = ref('')
-const searchStrict = ref(true)
+const searchStrict = ref(false)
 const onListDataSearch = () => {
   emit('search', searchName.value, searchStrict.value)
 }

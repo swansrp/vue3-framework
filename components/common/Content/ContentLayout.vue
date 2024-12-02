@@ -36,7 +36,7 @@ import bus from '@/framework/mitt'
 import { Ref } from 'vue'
 const props = withDefaults(
   defineProps<{
-    width?: number
+    width?: number|string
   }>(),
   {
     width: 200
@@ -46,10 +46,11 @@ const emit = defineEmits<{
   (e: 'resize'): void
 }>()
 const _width:Ref<string|number> = ref(props.width)
-const widthValue:Ref<number> = ref(props.width)
+const widthValue:Ref<number> = ref(200)
 const dragControllerDiv = () => {
   const resize = document.getElementById("resize")
   if (resize) {
+    widthValue.value = document.getElementById("side")?.offsetWidth || 0
     let startX = resize.offsetLeft
     resize.onmousedown = () => {
       // 颜色改变提醒

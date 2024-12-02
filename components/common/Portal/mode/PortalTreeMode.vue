@@ -27,13 +27,15 @@
       </a-dropdown>
     </template>
   </a-tree>
-  <div style="margin-top: 20px"><slot name="end-action"></slot></div>
+  <div style="margin-top: 20px">
+    <slot name="end-action"></slot>
+  </div>
 </template>
 
 <script lang="ts" setup>
-import {TableConfigType} from '@/framework/components/common/Portal/type'
-import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
-import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
+import { TableConfigType } from '@/framework/components/common/Portal/type'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 
 const props = withDefaults(defineProps<{
   treeCheckAble?: boolean
@@ -41,7 +43,7 @@ const props = withDefaults(defineProps<{
   config: TableConfigType,
   treeData: Array<DataNode>,
   selectedTreeData?: Array<any>
-}>(),{
+}>(), {
   treeCheckAble: false,
   checkStrictly: false,
   selectedTreeData: undefined
@@ -62,9 +64,12 @@ watch(() => props.selectedTreeData, (data: Array<any> | undefined) => {
     selectedTreeData.value = data
   }
 }, {immediate: true})
-watch(() => selectedTreeData.value, (data: Array<any>) => {
-  emit('update:selectedTreeData', data)
-})
+watch(
+  () => selectedTreeData.value,
+  (data: Array<any>) => {
+    emit('update:selectedTreeData', data)
+  }
+)
 const handleMenuContext = (recordId: any, menuKey: string) => {
   switch (menuKey) {
     case '1':
