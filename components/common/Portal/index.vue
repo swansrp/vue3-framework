@@ -1354,7 +1354,11 @@ const onSelectChange = (changedRowKeys: any) => {
   const selectedData = selectedRowKeys.value.map(key => {
     return dataSourceMap.value.get(key)
   })
-  if (isNotEmpty(selectedRowKeys.value)) config.deleteSelectedButtonShow = true
+  if (isNotEmpty(selectedRowKeys.value)) {
+    config.deleteSelectedButtonShow = true
+  } else {
+    config.deleteSelectedButtonShow = false
+  }
   console.debug('selectedRowKeys changed: ', changedRowKeys, selectedData)
   emit('selectedData', selectedData)
 }
@@ -1450,7 +1454,7 @@ const initData = (data: Array<any>) => {
     })
     parsedDataSource.value.push(parsedData)
   }
-  selectedRowKeys.value = []
+  onSelectChange([])
 }
 const queryDataAsync = async () => {
   const resolve = (res: any) => {
