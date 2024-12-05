@@ -6,11 +6,11 @@
     :disable="props.disabled"
     :labelField="props.labelField"
     :multi="props.multi"
-    treeData="treeData"
+    :treeData="treeData"
   >
-    <template #title="{ dataRef }">
-      <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
-      <span v-else>{{ dataRef[props.labelField] }}</span>
+    <template #title="{ item }">
+      <slot v-if="$slots.title" :item="item" name="title"></slot>
+      <span v-else>{{ item && item[props.labelField] }}</span>
     </template>
   </tree-content>
   <list-content
@@ -22,9 +22,9 @@
     :multi="props.multi"
     :search-able="searchAble"
   >
-    <template #title="{ dataRef }">
-      <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
-      <span v-else>{{ dataRef[props.labelField] }}</span>
+    <template #title="{ item }">
+      <slot v-if="$slots.title" :item="item" name="title"></slot>
+      <span v-else>{{ item && item[props.labelField] }}</span>
     </template>
   </list-content>
 </template>
@@ -54,7 +54,7 @@ const props = withDefaults(
     searchAble: false
   }
 )
-const {dict, treeMode, modelValue, multi} = toRefs(props)
+const {dict, treeMode, modelValue} = toRefs(props)
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any, label: any): void
