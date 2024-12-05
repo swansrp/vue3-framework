@@ -170,41 +170,43 @@
               <!-- endregion -->
               <!-- region 单元格样式-->
               <template #bodyCell="{ column, record, index }">
-                <portal-body-cell
-                  v-if="isNotEmpty($slots.action) || isNotEmpty($slots.index) || !config.readOnly"
-                  :key="modifyCellMap.get(index + column.dataIndex).current"
-                  :column="column"
-                  :config="config"
-                  :display-index="isEmpty($slots.index)"
-                  :display-map="modifyCellMap"
-                  :index="index"
-                  :is-cell-update="isCellUpdate"
-                  :record="record">
-                  <template #action="{}">
-                    <slot
-                      :column="column"
-                      :columns="columns"
-                      :parsedRecord="parsedDataSource[index]"
-                      :portal-config="config"
-                      :record="record"
-                      name="action">
-                    </slot>
-                  </template>
-                  <template #index="{}">
-                    <slot
-                      :column="column"
-                      :columns="columns"
-                      :parsedRecord="parsedDataSource[index]"
-                      :portal-config="config"
-                      :record="record"
-                      name="index">
-                    </slot>
-                  </template>
-                </portal-body-cell>
-                <span
-                  v-else
-                  :style="{display: 'block', textAlign: column.contentAlign || 'center'}">
-                  {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span>
+                <slot :column="column" :index="index" :name="'bodyCell_' + column.dataIndex" :record="record">
+                  <portal-body-cell
+                    v-if="isNotEmpty($slots.action) || isNotEmpty($slots.index) || !config.readOnly"
+                    :key="modifyCellMap.get(index + column.dataIndex).current"
+                    :column="column"
+                    :config="config"
+                    :display-index="isEmpty($slots.index)"
+                    :display-map="modifyCellMap"
+                    :index="index"
+                    :is-cell-update="isCellUpdate"
+                    :record="record">
+                    <template #action="{}">
+                      <slot
+                        :column="column"
+                        :columns="columns"
+                        :parsedRecord="parsedDataSource[index]"
+                        :portal-config="config"
+                        :record="record"
+                        name="action">
+                      </slot>
+                    </template>
+                    <template #index="{}">
+                      <slot
+                        :column="column"
+                        :columns="columns"
+                        :parsedRecord="parsedDataSource[index]"
+                        :portal-config="config"
+                        :record="record"
+                        name="index">
+                      </slot>
+                    </template>
+                  </portal-body-cell>
+                  <span
+                    v-else
+                    :style="{display: 'block', textAlign: column.contentAlign || 'center'}">
+                    {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span>
+                </slot>
               </template>
               <!-- endregion -->
               <!-- region 总结栏样式 -->
@@ -224,23 +226,25 @@
               <!-- endregion -->
               <!-- region 右键菜单样式 -->
               <template #contextmenuPopup="args">
-                <portal-context-menu-popup
-                  :args="args"
-                  :association="isBindTabExisted"
-                  :config="config"
-                  :is-cell-update="isCellUpdate"
-                  :is-row-update="isRowUpdate"
-                  :row-allow-delete="_rowAllowDelete"
-                  :row-allow-edit="_rowAllowEdit"
-                  @association="associationRow"
-                  @copy-row="copyRow"
-                  @reset-cell="resetCell"
-                  @save-cell="saveCell"
-                  @save-row="saveRow"
-                  @detail-row="detailRow"
-                  @edit-row="editRow"
-                  @delete-row="deleteRow"
-                />
+                <slot :args="args" :name="'contextmenuPopup_' + args?.column?.dataIndex">
+                  <portal-context-menu-popup
+                    :args="args"
+                    :association="isBindTabExisted"
+                    :config="config"
+                    :is-cell-update="isCellUpdate"
+                    :is-row-update="isRowUpdate"
+                    :row-allow-delete="_rowAllowDelete"
+                    :row-allow-edit="_rowAllowEdit"
+                    @association="associationRow"
+                    @copy-row="copyRow"
+                    @reset-cell="resetCell"
+                    @save-cell="saveCell"
+                    @save-row="saveRow"
+                    @detail-row="detailRow"
+                    @edit-row="editRow"
+                    @delete-row="deleteRow"
+                  />
+                </slot>
               </template>
               <!-- endregion -->
               <!-- region 下拉搜索样式 -->
@@ -283,15 +287,20 @@
               <template
                 #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
               >
-                <portal-column-condition
-                  ref="filterDropdownRef"
-                  :clearFilters="clearFilters"
-                  :column="column"
-                  :confirm="confirm"
-                  :selectedKeysRef="selectedKeys"
-                  :setSelectedKeys="setSelectedKeys"
-                  @handle-search-condition-changed="handleSearchConditionChanged"
-                />
+                <slot
+                  :clearFilters="clearFilters" :column="column"
+                  :name="'customFilterDropdown_' + column.dataIndex" :selectedKeys="selectedKeys"
+                  :setSelectedKeys="setSelectedKeys" confirm="confirm">
+                  <portal-column-condition
+                    ref="filterDropdownRef"
+                    :clearFilters="clearFilters"
+                    :column="column"
+                    :confirm="confirm"
+                    :selectedKeysRef="selectedKeys"
+                    :setSelectedKeys="setSelectedKeys"
+                    @handle-search-condition-changed="handleSearchConditionChanged"
+                  />
+                </slot>
               </template>
               <!-- endregion -->
               <!-- region 拖拽显示样式 -->
@@ -306,19 +315,25 @@
               <!-- region 单元格编辑样式 -->
               <template
                 #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, record, recordIndexs }">
-                <portal-cell-editor
-                  :closeEditor="closeEditor"
-                  :column="column"
-                  :config="config"
-                  :editorRef="editorRef"
-                  :getPopupContainer="getPopupContainer"
+                <slot
+                  :closeEditor="closeEditor" :column="column" :editorRef="editorRef" :getPopupContainer="getPopupContainer"
                   :modelValue="modelValue"
-                  :record="record"
-                  :recordIndexs="recordIndexs"
-                  :row-allow-edit="rowAllowEdit"
-                  :save="save"
-                  @cell-update="cellUpdate"
-                />
+                  :name="'cellEditor_' + column.dataIndex" :record="record" :save="save"
+                  recordIndexs="recordIndexs">
+                  <portal-cell-editor
+                    :closeEditor="closeEditor"
+                    :column="column"
+                    :config="config"
+                    :editorRef="editorRef"
+                    :getPopupContainer="getPopupContainer"
+                    :modelValue="modelValue"
+                    :record="record"
+                    :recordIndexs="recordIndexs"
+                    :row-allow-edit="rowAllowEdit"
+                    :save="save"
+                    @cell-update="cellUpdate"
+                  />
+                </slot>
               </template>
               <template
                 v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
