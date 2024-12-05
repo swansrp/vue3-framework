@@ -9,6 +9,7 @@
       <a-tree
         :key="treeData" v-model:selectedKeys="treeSelectKey" :defaultExpandAll="true" :show-line="true"
         :tree-data="treeData"
+        style="overflow: auto; max-height: 550px"
         draggable @drop="onDrop" @select="selectTreeNode">
         <!--使用title插槽自定义a-tree的图标-->
         <template #title="{ dataRef }">
