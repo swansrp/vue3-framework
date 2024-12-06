@@ -2,7 +2,7 @@
   <s-table-summary-row v-if="config.summary && !config.plain">
     <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
       <div v-if="index === (1 + isExpanded ? 1 : 0)">总计</div>
-      <div v-else-if="index === columns.length"></div>
+      <div v-else-if="index === columns.length + 1"></div>
       <div
         v-else-if="columns[index - 1 - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.NUMBER"
         :style="{textAlign: 'center'}">

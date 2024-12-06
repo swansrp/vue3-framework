@@ -316,7 +316,8 @@
               <template
                 #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, record, recordIndexs }">
                 <slot
-                  :closeEditor="closeEditor" :column="column" :editorRef="editorRef" :getPopupContainer="getPopupContainer"
+                  :closeEditor="closeEditor" :column="column" :editorRef="editorRef"
+                  :getPopupContainer="getPopupContainer"
                   :modelValue="modelValue"
                   :name="'cellEditor_' + column.dataIndex" :record="record" :save="save"
                   recordIndexs="recordIndexs">
@@ -395,32 +396,37 @@
       <!-- endregion 数据 -->
     </template>
     <!-- region 详情框 -->
-    <portal-view-modal
-      v-if="config.modal.type === 'view'"
-      :columnDisplayMap="columnDisplayMap"
-      :config="config"
-      :dataSource="dataSource"
-      :modifyCellMap="modifyCellMap"
-      @cancel="handleModalCancel"
-      @close="handleModalClose"
-      @confirm="handleModalConfirm"
-    />
-    <portal-association-modal
-      v-else-if="config.modal.type === 'association'"
-      :bind-tabs="bindTabs"
-      :config="config"
-      @cancel="handleModalCancel"
-      @close="handleModalClose"
-      @confirm="handleModalConfirm"
-    />
-    <portal-edit-modal
-      v-else
-      v-model:config="config"
-      :columnDisplayMap="columnDisplayMap"
-      @cancel="handleModalCancel"
-      @close="handleModalClose"
-      @confirm="handleModalConfirm"
-    />
+    <slot
+      v-if="config.modal.type === 'view'" :modal="config.modal" :dataSource="dataSource" :modifyCellMap="modifyCellMap"
+      name="view">
+      <portal-view-modal
+        :columnDisplayMap="columnDisplayMap"
+        :config="config"
+        :dataSource="dataSource"
+        :modifyCellMap="modifyCellMap"
+        @cancel="handleModalCancel"
+        @close="handleModalClose"
+        @confirm="handleModalConfirm"
+      />
+    </slot>
+    <slot v-else-if="config.modal.type === 'association'" :modal="config.modal" :bindTabs="bindTabs" name="association">
+      <portal-association-modal
+        :bind-tabs="bindTabs"
+        :config="config"
+        @cancel="handleModalCancel"
+        @close="handleModalClose"
+        @confirm="handleModalConfirm"
+      />
+    </slot>
+    <slot v-else :modal="config.modal" :columnDisplayMap="columnDisplayMap" name="association">
+      <portal-edit-modal
+        v-model:config="config"
+        :columnDisplayMap="columnDisplayMap"
+        @cancel="handleModalCancel"
+        @close="handleModalClose"
+        @confirm="handleModalConfirm"
+      />
+    </slot>
     <portal-upload
       ref="portalUploadModal"
       @upload="uploadAdd"
