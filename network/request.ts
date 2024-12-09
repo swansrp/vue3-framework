@@ -1,16 +1,15 @@
 import qs from 'qs'
-import axios, { AxiosResponse } from 'axios'
-import { localStorageMethods } from '@/framework/utils/common'
+import axios, { AxiosProgressEvent, AxiosResponse } from 'axios'
+import { isEmpty, localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 import { useCommonStore } from '@/framework/store/common'
 import pinia from '@/framework/store'
-import { AxiosProgressEvent } from 'axios'
 import { baseDomain } from '@/framework/apis'
 import { navigation2Login } from '@/framework/network/login'
-import {message} from "ant-design-vue";
+import { message } from "ant-design-vue";
 import { load } from '@/framework/components/common/Loading'
 
-message.config({ maxCount: 1 })
+message.config({maxCount: 1})
 const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
 const commonStore = useCommonStore(pinia)
 const web = '/web'
@@ -42,16 +41,16 @@ axiosInstance.interceptors.response.use(
     _handleTimeOut(resp.data)
     return Promise.resolve(resp)
   }, err => {
-      load.close()
+    load.close()
     _handleTimeOut(err.response.data)
     if (err.response.status === 504 || err.response.status === 404)
       message.error('服务器被吃了⊙﹏⊙∥')
     else if (err.response.status === 403)
       message.error('权限不足,请联系管理员!')
     else if (err.response.status === 500)
-      message.error( '系统错误,联系管理员!')
-    else if(err.response.status === 502)
-      message.error( '服务器走神了,请稍等!')
+      message.error('系统错误,联系管理员!')
+    else if (err.response.status === 502)
+      message.error('服务器走神了,请稍等!')
     else
       console.log(err)
     throw new Error(err)
@@ -143,9 +142,9 @@ function request(apiType: ApiType,
     else if (statusCode === '403')
       message.error('权限不足,请联系管理员!')
     else if (statusCode === '500')
-      message.error( '系统错误,联系管理员!')
-    else if(statusCode === '502')
-      message.error( '服务器走神了,请稍等!')
+      message.error('系统错误,联系管理员!')
+    else if (statusCode === '502')
+      message.error('服务器走神了,请稍等!')
     else
       message.error('后台接口错误，请联系后台管理员！')
     throw new Error(err)
@@ -154,7 +153,7 @@ function request(apiType: ApiType,
 
 function download(
   apiType: ApiType,
-  fileName: string,
+  fileName: string | undefined,
   params: object,
   body: object) {
   message.success('开始下载……')
@@ -215,8 +214,11 @@ function upload(
 
 // download 函数部分
 
-function _download(res: AxiosResponse, fileName: string) {
-
+function _download(res: AxiosResponse, fileName: string | undefined) {
+  if (isEmpty(fileName)) {
+    const str = res.headers['content-disposition'].split('filename=')[1]
+    fileName = decodeURI(str.substring(1, str.length - 1))
+  }
   const content = res.data
   // 构造一个blob对象来处理数据
   const blob = new Blob([content])
@@ -225,7 +227,7 @@ function _download(res: AxiosResponse, fileName: string) {
   // IE10以上支持blob但是依然不支持download
   if ('download' in document.createElement('a')) { // 支持a标签download的浏览器
     const link = document.createElement('a') // 创建a标签
-    link.download = fileName // a 标签添加属性
+    link.download = fileName || window.crypto.randomUUID() // a 标签添加属性
     link.style.display = 'none'
     link.href = URL.createObjectURL(blob)
     document.body.appendChild(link)
