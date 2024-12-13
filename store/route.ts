@@ -5,7 +5,15 @@ import { MAIN_CONTENT } from '@/framework/utils/constant'
 import { NavListType } from '@/framework/components/navigationFramework/navMenu/type'
 import pinia from '@/framework/store/index'
 import { setField } from '@/framework/utils/common'
+export const getComponent = (component: string) => {
+  const modules = import.meta.glob('@/**/*.vue')
+  if (component.endsWith('.vue')) {
+    return modules[`/src${component}`]
+  } else {
+    return modules[`/src${component}/index.vue`]
+  }
 
+}
 export const useRouteStore = defineStore('routeStore', {
   state: () => {
     return {
@@ -25,14 +33,15 @@ export const useRouteStore = defineStore('routeStore', {
         this.travelRouteTree(routeTree)
         this.clearButtonNode(routeTree)
         //
-        for (let i = 0; i < routeTree.length; ++i) router.addRoute(MAIN_CONTENT, routeTree[i])
+        for (let i = 0; i < routeTree.length; ++i) {
+          router.addRoute(MAIN_CONTENT, routeTree[i])
+        }
       })
     },
     // 遍历后台所给的路由树，需要自己手动转换为vue-router可以识别的route形式
     // 需要更改name、path和component
     travelRouteTree(nodeList: any) {
       const routeStore = useRouteStore(pinia)
-      const modules = import.meta.glob('@/**/*.vue')
       const routePath2RouteTitlePathMap: { [key: string]: string } = {}
       const routePathIsFrameMap: { [key: string]: boolean } = {}
       const buttonMap = new Map()
@@ -51,11 +60,7 @@ export const useRouteStore = defineStore('routeStore', {
             parentTitlePathArray.push(node.title)
             setField(routePath2RouteTitlePathMap, parentPathArray.join('/'), parentTitlePathArray.join('/'))
             setField(routePathIsFrameMap, parentPathArray.join('/'), !!+node.isFrame)
-            if (node.component.endsWith('.vue')) {
-              node.component = modules[`/src${node.component}`]
-            } else {
-              node.component = modules[`/src${node.component}/index.vue`]
-            }
+            node.component = getComponent(node.component)
             if (node.component) {
               node.component().then((module: any) => {
                 if (node.isCache === '1') {

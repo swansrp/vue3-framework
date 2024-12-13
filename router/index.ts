@@ -1,6 +1,6 @@
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
-import { useRouteStore } from '@/framework/store/route'
+import { getComponent, useRouteStore } from '@/framework/store/route'
 import { getQueryObject } from '@/framework/network/utils'
 import { enterFirstDynamicRoute } from '@/framework/router/utils'
 import { HOME, I_MAIN_CONTENT, MAIN_CONTENT } from '@/framework/utils/constant'
@@ -52,6 +52,10 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes: staticRoutes
 })
+
+export const createStaticRoutes = (path: string, component: string) => {
+  router.addRoute({path: path, name: path, component: getComponent(component)})
+}
 
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   // console.log('enterDynamicRoute', to)
