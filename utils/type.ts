@@ -23,9 +23,7 @@ declare global {
         status: {
             code: number, msg: string, detailMsg: string
         },
-        payload: {
-            ssoLoginUrl?: string
-        }
+        payload: any
     }
 }
 
