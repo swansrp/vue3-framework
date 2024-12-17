@@ -27,7 +27,8 @@ const staticRoutes: Array<RouteRecordRaw> = [
   // 留了一个登录界面，用于管理员配置用户权限
   {
     path: '/login',
-    component: () => import('@/framework/views/Login/index.vue')
+    component: () => import('@/framework/views/Login/index.vue'),
+    meta: { public: true }
   },
   {
     path: I_MAIN_CONTENT,
@@ -54,7 +55,7 @@ const router = createRouter({
 })
 
 export const createStaticRoutes = (path: string, component: string) => {
-  router.addRoute({path: path, name: path, component: getComponent(component)})
+  router.addRoute({path: path, name: path, component: getComponent(component), meta: { public: true }})
 }
 
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
