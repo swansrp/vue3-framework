@@ -124,7 +124,7 @@ export const useTreeStore = defineStore('treeStore', {
         const valueMap = new Map()
         const labelMap = new Map()
         getAllNodes(res.payload, (item: any) => {
-          valueMap.set(item.value, item.label)
+          valueMap.set(item.value.toString(), item.label)
           labelMap.set(item.label, item.value)
         })
         this.map.set(dictName, {data: res.payload, valueMap, labelMap})
