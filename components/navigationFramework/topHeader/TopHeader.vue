@@ -6,7 +6,12 @@
     </div>
     <top-nav class="top_nav" />
     <div class="top_user">
-      <a-avatar>
+      <a-avatar v-if="isNotEmpty(userStore.avatar)">
+        <template #icon>
+          <img :src="userStore.avatar" />
+        </template>
+      </a-avatar>
+      <a-avatar v-else>
         <template #icon>
           <user-outlined />
         </template>
@@ -20,7 +25,11 @@
                 <RedoOutlined />
                 重新登录
               </a-menu-item>
-              <a-menu-item key="2">
+              <a-menu-item key="2" v-if="localLoginType">
+                <SafetyOutlined />
+                设置密码
+              </a-menu-item>
+              <a-menu-item key="3">
                 <PoweroffOutlined />
                 注销
               </a-menu-item>
@@ -34,25 +43,94 @@
         </a-dropdown>
       </div>
     </div>
+    <a-modal
+      v-model:open="modifyPasswordModal.open" cancel-text="取消" ok-text="确认" title="设置密码"
+      @ok="modifyPassword">
+      <a-form :model="modifyPasswordModal" layout="horizontal" :labelCol="{style: { width: '100px', marginTop: '4px' }}" :wrapperCol="{ span: 16 }">
+        <a-form-item
+          :rules="[
+            { required: true, message: '请输入密码' }]"
+          has-feedback
+          label="输入旧密码"
+          name="oldPassword">
+          <a-input-password
+            v-model:value="modifyPasswordModal.oldPassword" autocomplete="off" placeholder="密码" size="large"
+            type="password" />
+        </a-form-item>
+        <a-form-item
+          :rules="[
+            { required: true, message: '请输入密码' },
+            { message: '5位以上数字和字母', pattern: '^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{5,}$' },
+            { validator: lxStr, trigger: 'change' }]"
+          has-feedback
+          label="输入新密码"
+          name="password">
+          <a-input-password
+            v-model:value="modifyPasswordModal.password" autocomplete="off" placeholder="密码" size="large"
+            type="password" />
+        </a-form-item>
+        <a-form-item
+          :rules="[{ required: true, message: '两次密码不一致', pattern: new RegExp('^'+ modifyPasswordModal.password + '$') }]"
+          has-feedback
+          label="确认密码"
+          name="passwordConfirm">
+          <a-input-password
+            v-model:value="modifyPasswordModal.passwordConfirm" autocomplete="off" placeholder="确认密码"
+            size="large" type="password" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { logoff, reLogin } from "@/framework/apis/login/login"
+import { changePassword, logoff, reLogin } from "@/framework/apis/login/login"
 import { useUserStore } from "@/framework/store/user"
-import { localStorageMethods } from "@/framework/utils/common"
+import { isNotEmpty, localStorageMethods } from "@/framework/utils/common"
 import { title as projectName } from '../../../../../package.json'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from "@/framework/utils/constant"
-import { PoweroffOutlined, RedoOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons-vue"
+import { PoweroffOutlined, RedoOutlined, SettingOutlined, UserOutlined, SafetyOutlined } from "@ant-design/icons-vue"
 import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
 import { useTabStore } from "@/framework/store/nav";
 import pinia from "@/framework/store";
 import { afterLogin } from "@/framework/network/login";
-
+import { Md5 } from 'ts-md5'
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
 const router = useRouter()
+const localLoginType = import.meta.env.VITE_ssoDomain === 'localhost'
+const modifyPasswordModal = reactive({
+  open: false,
+  oldPassword: '',
+  password: '',
+  passwordConfirm: ''
+})
+const modifyPassword = () => {
+  changePassword(Md5.hashStr(modifyPasswordModal.oldPassword), Md5.hashStr(modifyPasswordModal.password), Md5.hashStr(modifyPasswordModal.passwordConfirm)).then(() => {
+    modifyPasswordModal.open = false
+  })
+}
 
+// 判断密码是否为连续的数字或字母
+const lxStr = () => {
+  const {password} = modifyPasswordModal
+  let arr = password.split('')
+  for (let i = 1; i < arr.length - 1; i++) {
+    let firstIndex = arr[i - 1].charCodeAt()
+    let secondIndex = arr[i].charCodeAt()
+    let thirdIndex = arr[i + 1].charCodeAt()
+    if ((thirdIndex === secondIndex) && (secondIndex === firstIndex)) {
+      return Promise.reject('3位相同的字母或数字')
+    }
+    if ((thirdIndex - secondIndex === 1) && (secondIndex - firstIndex === 1)) {
+      return Promise.reject('3位连续的字母或数字')
+    }
+    if ((firstIndex - secondIndex === 1) && (secondIndex - thirdIndex === 1)) {
+      return Promise.reject('3位连续的字母或数字')
+    }
+  }
+  return Promise.resolve()
+}
 const handleMenuClick = (e: any) => {
   if (e.key === '1') {
     const refreshToken = localStorageMethods.getLocalStorage(REFRESH_TOKEN)
@@ -62,6 +140,8 @@ const handleMenuClick = (e: any) => {
       afterLogin().then(() => router.replace('/')).then(() => window.location.reload())
     })
   } else if (e.key === '2') {
+    modifyPasswordModal.open = true
+  }  else if (e.key === '3') {
     logoff()
   }
 }
