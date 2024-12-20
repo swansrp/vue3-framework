@@ -107,7 +107,8 @@ export const useRouteStore = defineStore('routeStore', {
       }
     },
     isButtonEnable(buttonPath: string): boolean {
-      return this.buttonMap.get(this.currentRoutePath)?.indexOf(buttonPath) !== -1
+      const findButton = this.buttonMap.get(this.currentRoutePath)?.indexOf(buttonPath)
+      return findButton !== undefined && findButton !== -1
     },
     getKeepAliveList() {
       return this.keepAliveList

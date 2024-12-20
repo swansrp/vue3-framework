@@ -137,7 +137,7 @@ watch(() => formState.value.icon, () => {
   // 目的是更新form的验证状态，antd是根据input的change事件，更新的表单验证状态
   const changeEvent = new Event('change')
   const iconInput = document.getElementById('iconInput') as HTMLInputElement
-  iconInput.dispatchEvent(changeEvent)
+  iconInput?.dispatchEvent(changeEvent)
 })
 
 onMounted(() => (type.value === 'add_menu' || type.value === 'add_button') && resetForm())
