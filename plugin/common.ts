@@ -8,8 +8,8 @@ export default {
     app.config.globalProperties.$isEmpty = (data: any) => {
       return isEmpty(data)
     }
-    app.config.globalProperties.$log = (data: any) => {
-      return log(data)
+    app.config.globalProperties.$log = (...data: Array<any>) => {
+      return log(...data)
     }
   }
 }

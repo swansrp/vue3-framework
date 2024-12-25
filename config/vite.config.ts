@@ -87,6 +87,6 @@ export default defineConfig({
   base: './',
   server: {
     host: '0.0.0.0',
-    port: 8083 //vite项目启动时自定义端口
+    port: 8082 //vite项目启动时自定义端口
   }
 })
