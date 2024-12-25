@@ -102,6 +102,7 @@ const stepTitle = ['上传', '校验', '保存']
 const prop = withDefaults(defineProps<{
   folder?: string,
   fileName?: string,
+  useOriginalFileName?: boolean,
   url?: any,
   upload?: any,
   uploadParam?: any,
@@ -114,6 +115,7 @@ const prop = withDefaults(defineProps<{
 }>(), {
   folder: undefined,
   fileName: undefined,
+  useOriginalFileName: false,
   url: undefined,
   upload: undefined,
   uploadParam: undefined,
@@ -134,7 +136,7 @@ const emit = defineEmits<{
   (e: 'uploadComplete'): void
   (e: 'afterConfirm'): void
 }>()
-const {handleProgress, uploadParam} = toRefs(prop)
+const {handleProgress, uploadParam, useOriginalFileName} = toRefs(prop)
 const _handleProgress: Ref<number | undefined> = ref(undefined)
 watch(
   () => handleProgress.value,
@@ -260,7 +262,7 @@ const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?:
         percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
       }
       onProgress({percent: percent}, file)
-    }, getUploadFileType(file), prop.folder, prop.fileName).then((resp: any) => {
+    }, getUploadFileType(file), prop.folder, useOriginalFileName.value ? file.name : prop.fileName).then((resp: any) => {
       onSuccess(resp, file)
       uploadDialogBox.url = resp.payload.url
     })

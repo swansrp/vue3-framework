@@ -33,6 +33,8 @@ export const getUploadFileType = (file: any) => {
       return UPLOAD_FILE_TYPE.PDF
     case 'application/x-zip-compressed':
       return UPLOAD_FILE_TYPE.FILE
+    case 'audio/wav':
+      return UPLOAD_FILE_TYPE.AUDIO
     default:
       return UPLOAD_FILE_TYPE.OTHER
   }
@@ -41,11 +43,11 @@ export const getUploadFileType = (file: any) => {
 export const getUploadAccepts = (fieldType: string) => {
   switch (fieldType) {
     case FIELD_TYPE.AUDIO:
-      return '.m4a,.mp3,.wav,.wma'
+      return '.m4a,.mp3,.wav,.wma,.m3u,.flac,.aac,.ape,.ogg,.amr'
     case FIELD_TYPE.VIDEO:
       return '.mp4,.mkv,.wmv,.avi'
     case FIELD_TYPE.IMAGE:
-      return '.jpg,.png,.bmp,.gif,.jpeg'
+      return '.jpg,.png,.bmp,.gif,.jpeg,.webp,.svg,.tiff'
     default:
       return fieldType
   }
