@@ -42,7 +42,7 @@ const props = defineProps<{
 defineEmits(['update:visible'])
 
 watch(() => props.isFull, value => _isFull.value = value, {immediate: true})
-watch(() => props.visible, value => _visible.value = value)
+watch(() => props.visible, value => _visible.value = value, {immediate: true})
 watch(() => props.title, value => _title.value = value || '', {immediate: true})
 watch(() => props.iconPath, value => _iconPath.value = value || '', {immediate: true})
 watch(() => props.maskClosable, value => _maskClosable.value = !!value, {immediate: true})
@@ -63,7 +63,7 @@ watch(() => props.width, value => {
   .ant-modal-content {
     display: flex;
     flex-direction: column;
-    height: calc(100vh);
+    height: auto;
   }
 
   .ant-modal-body {
