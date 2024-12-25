@@ -1,71 +1,53 @@
 <template>
-  <div class="pre-file-cont">
-    <div v-if="type === FIELD_TYPE.IMAGE" style="position:relative;display: inline-block">
-      <template v-if="_.$isNotEmpty(props.modelValue)">
-        <div
-          style="position: absolute; top: 0; right: 0;  z-index: 999; background-color: transparent;  line-height: 0">
-          <a-dropdown>
-            <PushpinFilled style="fontSize: 7px; color: rgba(255,0,0,0.5)" />
-            <template #overlay>
-              <a-menu>
-                <a-menu-item v-if="downloadAble" key="1">
-                  <div @click="downFile">下载</div>
-                </a-menu-item>
-                <a-menu-item v-if="uploadAble" key="2">
-                  <div @click="onUpload">上传</div>
-                </a-menu-item>
-                <a-menu-item v-if="deleteAble" key="3">
-                  <div @click="emit('delete')">删除</div>
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
-        </div>
-        <a-image :height="height" :src="modelValue" :width="width" />
-      </template>
-    </div>
+  <div v-if="_.$isNotEmpty(props.modelValue)" class="pre-file-cont">
+    <a-image
+      v-if="type === FIELD_TYPE.IMAGE" :height="height" :src="modelValue" :width="width"
+      fallback="data:image/png;base64,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" />
     <template v-else>
-      <div style="position:relative;display: inline-block">
+      <template v-if="type === FIELD_TYPE.AUDIO">
         <video
-          v-if="type === FIELD_TYPE.AUDIO" ref="videoRef"
+          ref="videoRef"
           :src="modelValue" height="0" preload width="0" @pause="stopFile(false)"
           @play="playFile(false)"></video>
-        <div class="icons-box">
-          <template v-if="type === FIELD_TYPE.AUDIO">
-            <PauseOutlined
-              v-if="playing" :style="{marginLeft: '10px',color:'rgb(255,255,255)', fontSize: '16px'}"
-              @click.prevent.stop="stopFile" />
-            <CaretRightOutlined
-              v-else :style="{marginLeft: '10px',color:'rgb(255,255,255)', fontSize: '16px'}"
-              @click.prevent.stop="playFile" />
-          </template>
-        </div>
-        <div
-          v-if="_.$isNotEmpty(props.modelValue)"
-          style="position: absolute; top:24px; right: 0;  z-index: 999; background-color: transparent;  line-height: 0">
-          <a-dropdown>
-            <PushpinFilled style="fontSize: 7px; color: rgba(255,0,0,0.5)" />
-            <template #overlay>
-              <a-menu>
-                <a-menu-item v-if="downloadAble" key="1">
-                  <div @click="downFile">下载</div>
-                </a-menu-item>
-                <a-menu-item v-if="uploadAble" key="2">
-                  <div @click="onUpload">上传</div>
-                </a-menu-item>
-                <a-menu-item v-if="deleteAble" key="3">
-                  <div @click="emit('delete')">删除</div>
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
-        </div>
+      </template>
+      <div style="position: relative">
         <img
           :src="iconURL"
           :style="{width: isNaN(Number(width))?width:width+'px', height: isNaN(Number(height))?height:height+'px',objectFit:'cover'}"
           alt="file_icon_preview" />
+        <div class="icons-box">
+          <PauseOutlined
+            v-if="playing" :style="{color:'rgb(255,255,255)', fontSize: '16px'}"
+            @click.prevent.stop="stopFile" />
+          <CaretRightOutlined
+            v-else :style="{color:'rgb(255,255,255)', fontSize: '16px'}"
+            @click.prevent.stop="playFile" />
+        </div>
       </div>
+
     </template>
+    <a-badge dot>
+      <a-dropdown >
+        <div style="width: 10px; height: 10px; margin-left: -10px; background: transparent"></div>
+        <template #overlay>
+          <a-menu>
+            <a-menu-item v-if="downloadAble" @click="downFile">
+              <DownloadOutlined />
+              下载
+            </a-menu-item>
+            <a-menu-item v-if="uploadAble" @click="onUpload">
+              <UploadOutlined />
+              上传
+            </a-menu-item>
+            <a-menu-item v-if="deleteAble" @click="emit('delete')">
+              <CloseCircleOutlined />
+              删除
+            </a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
+    </a-badge>
+
     <upload-file
       v-if="uploadAble"
       ref="uploadFileModalRef"
@@ -80,7 +62,13 @@
 import { ref } from 'vue'
 import { downloadUrl } from '@/framework/network/request'
 import { getFileName } from '@/framework/utils/file'
-import { CaretRightOutlined, PauseOutlined, PushpinFilled } from '@ant-design/icons-vue'
+import {
+  CaretRightOutlined,
+  CloseCircleOutlined,
+  DownloadOutlined,
+  PauseOutlined,
+  UploadOutlined
+} from '@ant-design/icons-vue'
 import getImgUrl from '@/framework/assets/imgs/getImgUrl'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
@@ -91,7 +79,7 @@ const audioFile = getImgUrl('file/audio_icon.png')
 const ukFile = getImgUrl('file/unknown_file.png')
 const props = withDefaults(
   defineProps<{
-    type: FIELD_TYPE,
+    type: string,
     modelValue: string | null,
     width?: string | number,
     height?: string | number,
@@ -145,6 +133,7 @@ const stopFile = (flag = true) => {
 }
 
 const downFile = () => {
+  console.log('downFile')
   props.modelValue &&
   downloadUrl(props.modelValue as string, getFileName(props.modelValue as string) || 'download.file')
 }
@@ -163,6 +152,7 @@ onMounted(() => {
 <style lang="less" scoped>
 .pre-file-cont {
   display: flex;
+  justify-content: center;
 
   video {
     position: absolute;
@@ -171,11 +161,10 @@ onMounted(() => {
   .icons-box {
     margin-left: -20px;
     width: 100%;
-    height: 22px;
     position: absolute;
     left: 0;
     top: 50%;
-    transform: translateY(0%);
+    transform: translateY(-10%);
     display: flex;
     justify-content: center;
     align-items: center;
