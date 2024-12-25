@@ -564,6 +564,16 @@
               />
             </a-descriptions-item>
             <a-descriptions-item
+              v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.IMAGE"
+              :span="1"
+              label="显示样式(宽,高)">
+              <a-input
+                :value="columnMap.get(selectedColumnId).reference"
+                placeholder="显示样式(宽,高)"
+                @update:value=" v => columnMap.get(selectedColumnId).reference = v"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
               v-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.SELECT ||
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY ||
                 columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY_CONDITION ||
@@ -1256,11 +1266,11 @@ const saveTableConfig = (silent = true) => {
     tableConfig.value.defaultSort = '[]'
   }
 
-  updatePortalConfig(tableConfig.value, silent).then(() => onSearch())
+  return updatePortalConfig(tableConfig.value, silent).then(() => onSearch())
 }
 
 const saveTableColumn = (silent = true) => {
-  updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() => getPortalConfig(tableConfig.value.name, selectedRole.value))
+  return updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() => getPortalConfig(tableConfig.value.name, selectedRole.value))
 }
 
 const quickConfig = (column: any, type: string) => {
@@ -1498,7 +1508,20 @@ const getTableHeight = () => {
 const updateTableWidthAndHeight = () => {
   updateTableSize(root, tableWidth, 40, tableHeight, 275)
 }
+let saving = false
 window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
+window.addEventListener('keydown',function(event) {
+  if (event.ctrlKey || event.metaKey) { // metaKey 用于 Mac 上的 Command 键
+    if (event.key === 's' || event.keyCode === 83) { // 's' 键或键码 83
+      event.preventDefault(); // 阻止默认的保存行为
+      if(!saving) {
+        saving = true
+        saveTableColumn(false).then(() => saveTableConfig(false).then(() => saving = false))
+      }
+    }
+  }
+})
+
 //endregion
 
 </script>

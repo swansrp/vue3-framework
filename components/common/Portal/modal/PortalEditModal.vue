@@ -11,7 +11,7 @@
     @ok="() => editModalRef.validate().then(emit('confirm'))">
     <a-form ref="editModalRef" :model="config.modal.data" layout="vertical">
       <a-descriptions
-        v-for="(value, index) in columnDisplayMap"
+        v-for="(value, index) in columnDisplayEditMap"
         :key="index"
         :column="config.descriptionCount"
         :size="config.size"
@@ -24,7 +24,9 @@
           :key="column.dataIndex">
           <a-descriptions-item
             :label="strRemoveLF(column.title) + (column.required ? '(*)' : '')"
-            :span="config.modal.type === 'add' ? column.addSize : column.editSize">
+            :span="config.modal.type === 'add' ? column.addSize : column.editSize"
+            :label-style="{width: (column.detailSize) / config.descriptionCount * 30 + '%'}"
+            :content-style="{width: (column.detailSize) / config.descriptionCount * 70 + '%'}">
             <a-form-item
               :label="strRemoveLF(column.title)"
               :name="column.dataIndex"
@@ -62,6 +64,18 @@
                 :value="config.modal.data[column.dataIndex]"
                 @update:value=" v => config.modal.data[column.dataIndex] = v"
               />
+              <a-tree-select
+                v-else-if="column.fieldType === FIELD_TYPE.TREE||
+                  column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+                :bordered="false"
+                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                :tree-data="column.referenceDictOption || []"
+                allow-clear
+                modelValue
+                tree-default-expand-all
+                tree-node-filter-prop="label"
+                @select="v => config.modal.data[column.dataIndex] = v"
+              />
               <a-date-picker
                 v-else-if="column.fieldType === FIELD_TYPE.DATE"
                 :allow-clear="false"
@@ -91,15 +105,18 @@
                 @update:value=" v => config.modal.data[column.dataIndex] = v"
               />
               <div
-                v-else-if="column.fieldType === FIELD_TYPE.IMAGE">
+                v-else-if="column.fieldType === FIELD_TYPE.IMAGE || column.fieldType === FIELD_TYPE.AUDIO || 
+                  column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE">
                 <div
-                  v-if="config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
-                  style="display: flex">
-                  <a-image :src="config.modal.data[column.dataIndex]" :width="100" />
-                  <close-circle-outlined
-                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                    style="color: lightslategray; margin-left: -20px; margin-top: 5px; z-index: 999"
-                    @click="cleanUpload(column)" />
+                  v-if="_.$log('multimedia', config.modal.data[column.dataIndex]) && config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
+                  style="display: flex; justify-content: center">
+                  <multimedia
+                    :delete-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
+                    :upload-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
+                    v-model="config.modal.data[column.dataIndex]" :type="column.fieldType"
+                    :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80"
+                    :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35"
+                    @delete="cleanUpload(column)" />
                 </div>
                 <a-button
                   v-else
@@ -167,11 +184,12 @@ import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/
 import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { FormInstance } from 'ant-design-vue'
-import { CloseCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined } from '@ant-design/icons-vue'
 import { getPortalConfig } from '@/framework/apis/portal/config'
 import { dictStore } from '@/framework/store/common'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 
+const _ = getInstance()
 const uploadFileModal = ref()
 const prop = defineProps<{
   config: TableConfigType,
@@ -181,8 +199,16 @@ const {config} = toRefs(prop)
 watch(config, (config) => {
   emit('update:config', config)
 }, {deep: true})
-const columnDisplayMap = computed(() => {
-  return prop.columnDisplayMap
+const columnDisplayEditMap = computed(() => {
+  const map = new Map()
+  prop.columnDisplayMap.forEach((value, key) => {
+    const columns = value.filter(item => config.value.modal.type === 'add' ? item.addShow : item.editShow)
+    if(isNotEmpty(columns)) {
+      map.set(key, columns)
+    }
+  })
+  console.log('columnDisplayEditMap', map)
+  return map
 })
 const emit = defineEmits<{
   /**

@@ -82,7 +82,14 @@
     </a-badge-ribbon>
   </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.IMAGE">
-    <a-image :src="record[column.dataIndex]" :width="150" />
+    <multimedia
+      v-model="record[column.dataIndex]" :height="column.referenceDict?.split(',')[1] || 120"
+      :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120" />
+  </template>
+  <template
+    v-else-if="column.fieldType === FIELD_TYPE.AUDIO || column.fieldType === FIELD_TYPE.VIDEO ||
+      column.fieldType === FIELD_TYPE.FILE">
+    <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80" />
   </template>
   <template v-else-if="column.dataIndex === 'actionColumn'">
     <!-- (portalConfig: TableConfigType, column: ColumnType, record: any) -->

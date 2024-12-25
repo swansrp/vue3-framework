@@ -26,10 +26,9 @@
     <a-form-item :rules="[{ required: true, message: '请输入短信验证码!' }]" name="msgCode">
       <a-input
         v-model:value="formMsgLogin.msgCode" autocomplete="off" placeholder="短信验证码" size="large"
-        style="height: 50px;"
-        type="password">
+        style="height: 50px;">
         <template #prefix>
-          <lock-outlined />
+          <CodeOutlined />
         </template>
         <template #suffix>
           <a-button
@@ -39,7 +38,7 @@
             获取验证码
           </a-button>
           <span v-else>
-            还剩{{ countDown }}秒
+            还剩{{ countDown }}秒重发
           </span>
         </template>
       </a-input>
@@ -56,7 +55,7 @@
 import { reactive, Ref } from 'vue'
 import { isEmpty, localStorageMethods, startTimer, stopTimer } from '@/framework/utils/common'
 import { getMsgCode } from '@/framework/apis/login/login'
-import { LockOutlined, PhoneOutlined, SafetyOutlined } from '@ant-design/icons-vue'
+import { CodeOutlined, PhoneOutlined, SafetyOutlined } from '@ant-design/icons-vue'
 import { baseURL } from '@/framework/network/request'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 import { message } from 'ant-design-vue'
