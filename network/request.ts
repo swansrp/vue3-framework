@@ -239,6 +239,15 @@ function _download(res: AxiosResponse, fileName: string | undefined) {
   }
 }
 
+const downloadUrl = (fileURL: string, fileName: string) => {
+  const link = document.createElement('a') // 创建a标签
+  fileName && (link.download = fileName) // a 标签添加属性
+  link.style.display = 'none'
+  link.href = fileURL
+  link.target = '_blank'
+  link.click() // 执行下载
+}
 
-export { baseURL, get, post, request, upload, download }
+
+export { baseURL, get, post, request, upload, download, downloadUrl }
 
