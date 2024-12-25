@@ -77,10 +77,10 @@ function getAllParentNodes(list: any, id: any, key: any) {
 
 // 树的遍历之查找所有的父节点
 // list为树, id为目标节点的id, key为id匹配的字段
-function getAllNodes(list: any, callBack: Function)  {
+function getAllNodes(list: any, callBack: Function) {
   for (const i in list) {
     callBack(list[i])
-    if(list[i].children) getAllNodes(list[i].children, callBack)
+    if (list[i].children) getAllNodes(list[i].children, callBack)
   }
 }
 
@@ -195,7 +195,14 @@ const doFunctions = (...functions: Array<Function>) => {
   })
 }
 const log = (...a: Array<any>) => {
-  console.log(...a)
+  const array = new Error().stack?.split(' at ')
+  let fileName = array && array[2]
+  if (fileName?.startsWith('app.config.globalProperties')) {
+    fileName = array && array[3].split('?')[0].split('/').pop()
+  } else {
+    fileName = array && array[2].split('?')[0].split('/').pop()
+  }
+  console.log('[' + fileName + ']', ...a)
   return true
 }
 
@@ -213,14 +220,14 @@ const startTimer = (data: TimerType, render: Function, immediate = true, replace
   return new Promise((resolve, reject) => {
     const animLoop = () => {
       const now = Date.now()
-      if(data.lastTime === 0 && !immediate) {
+      if (data.lastTime === 0 && !immediate) {
         data.lastTime = now
       }
       if (now - data.lastTime > data.diff) {
         data.lastTime = now
         render()
       }
-      if(data.timer !== null) {
+      if (data.timer !== null) {
         data.timer = window.requestAnimationFrame(animLoop)
       }
       console.log('loop==== new', data)
