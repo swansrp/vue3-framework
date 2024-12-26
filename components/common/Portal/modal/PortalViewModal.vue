@@ -20,9 +20,9 @@
         v-for="column in value[1].filter(item => item.detailShow)"
         :key="column.dataIndex">
         <a-descriptions-item
-          :content-style="{width: (column.detailSize) / config.descriptionCount * 70 + '%'}"
+          :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
           :label="strRemoveLF(column.title)"
-          :label-style="{width: (column.detailSize) / config.descriptionCount * 30 + '%'}"
+          :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
           :span="column.detailSize">
           <template v-if="column.fieldType === FIELD_TYPE.SWITCH">
             <a-switch

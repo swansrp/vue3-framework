@@ -23,10 +23,10 @@
           v-for="column in value[1].filter(item => { return config.modal.type === 'add' ? item.addShow : item.editShow })"
           :key="column.dataIndex">
           <a-descriptions-item
+            :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
             :label="strRemoveLF(column.title) + (column.required ? '(*)' : '')"
-            :span="config.modal.type === 'add' ? column.addSize : column.editSize"
-            :label-style="{width: (column.detailSize) / config.descriptionCount * 30 + '%'}"
-            :content-style="{width: (column.detailSize) / config.descriptionCount * 70 + '%'}">
+            :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
+            :span="config.modal.type === 'add' ? column.addSize : column.editSize">
             <a-form-item
               :label="strRemoveLF(column.title)"
               :name="column.dataIndex"
@@ -111,11 +111,11 @@
                   v-if="_.$log('multimedia', config.modal.data[column.dataIndex]) && config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
                   style="display: flex; justify-content: center">
                   <multimedia
+                    v-model="config.modal.data[column.dataIndex]"
                     :delete-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
+                    :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35" :type="column.fieldType"
                     :upload-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
-                    v-model="config.modal.data[column.dataIndex]" :type="column.fieldType"
                     :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80"
-                    :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35"
                     @delete="cleanUpload(column)" />
                 </div>
                 <a-button
@@ -203,7 +203,7 @@ const columnDisplayEditMap = computed(() => {
   const map = new Map()
   prop.columnDisplayMap.forEach((value, key) => {
     const columns = value.filter(item => config.value.modal.type === 'add' ? item.addShow : item.editShow)
-    if(isNotEmpty(columns)) {
+    if (isNotEmpty(columns)) {
       map.set(key, columns)
     }
   })
