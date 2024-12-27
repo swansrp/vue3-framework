@@ -71,7 +71,7 @@
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                 :tree-data="column.referenceDictOption || []"
                 allow-clear
-                modelValue
+                :value="config.modal.data[column.dataIndex]"
                 tree-default-expand-all
                 tree-node-filter-prop="label"
                 @select="v => config.modal.data[column.dataIndex] = v"

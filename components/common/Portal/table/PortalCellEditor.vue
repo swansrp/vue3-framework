@@ -82,7 +82,7 @@
       :tree-data="column.referenceDictOption || []"
       allow-clear
       default-open
-      modelValue
+      :value="modelValue"
       style="width: 300px;"
       tree-checkable
       tree-default-expand-all

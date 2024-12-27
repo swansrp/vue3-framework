@@ -418,7 +418,16 @@
         @confirm="handleModalConfirm"
       />
     </slot>
-    <slot v-else :modal="config.modal" :columnDisplayMap="columnDisplayMap" name="association">
+    <slot v-else-if="config.modal.type === 'modify'" :modal="config.modal" :columnDisplayMap="columnDisplayMap" name="modify">
+      <portal-edit-modal
+        v-model:config="config"
+        :columnDisplayMap="columnDisplayMap"
+        @cancel="handleModalCancel"
+        @close="handleModalClose"
+        @confirm="handleModalConfirm"
+      />
+    </slot>
+    <slot v-else-if="config.modal.type === 'add'" :modal="config.modal" :columnDisplayMap="columnDisplayMap" name="add">
       <portal-edit-modal
         v-model:config="config"
         :columnDisplayMap="columnDisplayMap"
@@ -533,6 +542,7 @@ import { DefaultRecordType } from "ant-design-vue/es/vc-table/interface";
  * @param rowAllowEdit 该行右键是否能够编辑
  * @param rowAllowDelete 该行右键是否能够删除
  * @param query 查询函数
+ * @param showTree 默认显示树形结构
  * @param treeMode 是否以树形结构展示
  * @param listMode 是否以列表形式展示
  * @param modeLock 是否锁定模式
@@ -567,6 +577,7 @@ const props = withDefaults(defineProps<{
     rowAllowEdit?: (record: any) => boolean,
     rowAllowDelete?: (record: any) => boolean,
     query?: (url: string, query: QueryType) => Promise<any>,
+    showTree?: boolean,
     treeMode?: boolean,
     listMode?: boolean,
     modeLock?: boolean,
@@ -599,9 +610,10 @@ const props = withDefaults(defineProps<{
     rowAllowEdit: () => true,
     rowAllowDelete: () => true,
     query: undefined,
+    showTree: false,
     treeMode: false,
     listMode: false,
-    modeLock: false,
+    modeLock: true,
     bindTabs: undefined,
     treeCheckAble: false,
     selectedTreeData: undefined,
@@ -868,8 +880,8 @@ const getRowSelection = () => {
 /**
  * 树形菜单是否显示
  */
-const showTreeMenu = () => {
-  config.treeMenuShow = !config.treeMenuShow
+const showTreeMenu = (show?: boolean) => {
+  config.treeMenuShow = show || !config.treeMenuShow
   updateTableWidthAndHeight()
 }
 //endregion
@@ -1755,7 +1767,10 @@ const init = async () => {
 const queryTreeData = async () => {
   // 外部组件调用queryData接口 尚未完成初始化
   if (config.url) {
-    await getTreeData(config.url, queryCondition(), config.baseDomain).then(res => treeData.value = res.payload || [])
+    await getTreeData(config.url, queryCondition(), config.baseDomain).then(res => {
+      treeData.value = res.payload || []
+      isNotEmpty(treeData.value) && props.showTree && showTreeMenu(true)
+    })
   }
 }
 //endregion

@@ -27,7 +27,7 @@
 
     </template>
     <a-badge dot>
-      <a-dropdown >
+      <a-dropdown>
         <div style="width: 10px; height: 10px; margin-left: -10px; background: transparent"></div>
         <template #overlay>
           <a-menu>
