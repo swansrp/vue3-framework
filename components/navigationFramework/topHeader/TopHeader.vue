@@ -16,7 +16,9 @@
           <user-outlined />
         </template>
       </a-avatar>
-      <div class="top_user_name">{{ userStore.name }}</div>
+      <div style="margin-left: 5px" >
+        <marquee :content="userStore.name"  width="100" />
+      </div>
       <div class="top_user_setting">
         <a-dropdown trigger="click">
           <template #overlay>
@@ -25,7 +27,7 @@
                 <RedoOutlined />
                 重新登录
               </a-menu-item>
-              <a-menu-item key="2" v-if="localLoginType">
+              <a-menu-item v-if="localLoginType" key="2">
                 <SafetyOutlined />
                 设置密码
               </a-menu-item>
@@ -46,7 +48,10 @@
     <a-modal
       v-model:open="modifyPasswordModal.open" cancel-text="取消" ok-text="确认" title="设置密码"
       @ok="modifyPassword">
-      <a-form :model="modifyPasswordModal" layout="horizontal" :labelCol="{style: { width: '100px', marginTop: '4px' }}" :wrapperCol="{ span: 16 }">
+      <a-form
+        :labelCol="{style: { width: '100px', marginTop: '4px' }}" :model="modifyPasswordModal"
+        :wrapperCol="{ span: 16 }"
+        layout="horizontal">
         <a-form-item
           :rules="[
             { required: true, message: '请输入密码' }]"
@@ -89,12 +94,14 @@ import { useUserStore } from "@/framework/store/user"
 import { isNotEmpty, localStorageMethods } from "@/framework/utils/common"
 import { title as projectName } from '../../../../../package.json'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from "@/framework/utils/constant"
-import { PoweroffOutlined, RedoOutlined, SettingOutlined, UserOutlined, SafetyOutlined } from "@ant-design/icons-vue"
+import { PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons-vue"
 import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
 import { useTabStore } from "@/framework/store/nav";
 import pinia from "@/framework/store";
 import { afterLogin } from "@/framework/network/login";
 import { Md5 } from 'ts-md5'
+import Marquee from '@/framework/components/common/marquee/index.vue';
+
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
 const router = useRouter()
@@ -141,7 +148,7 @@ const handleMenuClick = (e: any) => {
     })
   } else if (e.key === '2') {
     modifyPasswordModal.open = true
-  }  else if (e.key === '3') {
+  } else if (e.key === '3') {
     logoff()
   }
 }
@@ -204,14 +211,6 @@ const handleMenuClick = (e: any) => {
   box-sizing: border-box;
   padding-left: 10px;
   flex: 0 0 auto;
-}
-
-.top_user_name {
-  margin-left: 10px;
-  width: 100px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 :deep(.top_user_setting .ant-btn-circle) {

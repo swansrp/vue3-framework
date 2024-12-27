@@ -45,6 +45,7 @@
                 :min="column.min"
                 :value="config.modal.data[column.dataIndex]"
                 string-mode
+                style="width: 100%"
                 @update:value=" v => config.modal.data[column.dataIndex] = v"
               />
               <a-switch
@@ -70,8 +71,8 @@
                 :bordered="false"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                 :tree-data="column.referenceDictOption || []"
-                allow-clear
                 :value="config.modal.data[column.dataIndex]"
+                allow-clear
                 tree-default-expand-all
                 tree-node-filter-prop="label"
                 @select="v => config.modal.data[column.dataIndex] = v"
@@ -106,10 +107,10 @@
               />
               <div
                 v-else-if="column.fieldType === FIELD_TYPE.IMAGE || column.fieldType === FIELD_TYPE.AUDIO || 
-                  column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE">
+                  column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE"
+                style="display: flex; justify-content: center">
                 <div
-                  v-if="_.$log('multimedia', config.modal.data[column.dataIndex]) && config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
-                  style="display: flex; justify-content: center">
+                  v-if="_.$log('multimedia', config.modal.data[column.dataIndex]) && config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])">
                   <multimedia
                     v-model="config.modal.data[column.dataIndex]"
                     :delete-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
@@ -151,6 +152,8 @@
           </a-descriptions-item>
           <a-descriptions-item
             v-if="config.modal.type === 'add' ? column.addPadding !== 0 : column.editPadding !== 0"
+            :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
+            :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
             :span="config.modal.type === 'add' ? column.addPadding : column.editPadding"
             label="" />
         </template>

@@ -24,6 +24,7 @@
       :min="column.min"
       :value="modelValue"
       string-mode="true"
+      style="width: 100%"
       @blur="doFunctions(save, closeEditor)"
       @keydown.esc="closeEditor"
       @update:value=" v => {
