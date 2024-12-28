@@ -32,12 +32,12 @@
                   <SafetyOutlined />
                   设置个人信息
                 </a-menu-item>
-                <a-menu-item key="2">
+                <a-menu-item key="3">
                   <SafetyOutlined />
                   设置密码
                 </a-menu-item>
               </template>
-              <a-menu-item key="3">
+              <a-menu-item key="4">
                 <PoweroffOutlined />
                 注销
               </a-menu-item>
