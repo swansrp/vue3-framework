@@ -10,9 +10,12 @@ export const useUserStore = defineStore('userStore', {
             self: {},
             role: {},
             name: '游客',
+            sex: '1',
             deptName: '',
             customerNumber: '',
             avatar: '',
+            nickName: '',
+            email: '',
             roleList: []
         }
     },

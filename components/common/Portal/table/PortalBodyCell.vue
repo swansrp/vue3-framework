@@ -84,7 +84,8 @@
   <template v-else-if="column.fieldType === FIELD_TYPE.IMAGE">
     <multimedia
       v-model="record[column.dataIndex]" :height="column.referenceDict?.split(',')[1] || 120"
-      :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120" />
+      :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120"
+      use-original-file-name />
   </template>
   <template
     v-else-if="column.fieldType === FIELD_TYPE.AUDIO || column.fieldType === FIELD_TYPE.VIDEO ||

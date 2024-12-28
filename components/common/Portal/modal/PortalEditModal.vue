@@ -117,6 +117,7 @@
                     :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35" :type="column.fieldType"
                     :upload-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
                     :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80"
+                    use-original-file-name
                     @delete="cleanUpload(column)" />
                 </div>
                 <a-button
