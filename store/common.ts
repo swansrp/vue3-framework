@@ -26,7 +26,7 @@ export const parameterStore = defineStore('parameterStore', {
       if (isNotEmpty(result)) {
         return result
       }
-      getConfig(parameterName).then(res => {
+      return await getConfig(parameterName).then(res => {
         this.map.set(parameterName, res.payload)
         return res.payload
       })

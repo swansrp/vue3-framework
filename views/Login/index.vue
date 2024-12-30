@@ -1,17 +1,14 @@
 <template>
   <div class="login-box fullscreen-bg">
     <div
-      style="width: 425px; height: 500px; box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5); background: rgba(255,255,255,0.3)">
+      style="width: 425px; height: 550px; box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5); background: rgba(255,255,255,0.3)">
       <div class="login-logo">
-        <img :width="40" style="margin-top: 8px" alt="登录图案" src="../../../assets/image/login/logo.png" />
+        <img :width="40" alt="登录图案" src="../../../assets/image/login/logo.png" style="margin-top: 8px" />
         <h1 class="mb-0 ml-2 text-3xl font-bold" style="padding-top: 10px; margin-left: 5px">{{ title }}</h1>
       </div>
       <a-form v-if="passwordResetMode" :model="passwordResetForm" layout="horizontal" @finish="handleInitPassword">
         <a-form-item
-          :rules="[
-            { required: true, message: '请输入密码' },
-            { message: '5位以上数字和字母', pattern: '^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{5,}$' },
-            { validator: lxStr, trigger: 'change' }]"
+          :rules="[{ validator: passwordResetValidator, trigger: 'change' }]"
           has-feedback
           label="输入密码"
           name="password">
@@ -44,51 +41,138 @@
           </a-button>
         </a-form-item>
       </a-form>
-      <a-tabs v-else v-model:activeKey="activeKey" style="padding:0 20px ">
-        <a-tab-pane key="1" tab="账号登录">
-          <a-form :model="formInline" layout="horizontal" @finish="handleSubmit">
-            <a-form-item :rules="[{ required: true, message: '请输入用户名!' }]" name="username">
-              <a-input
-                v-model:value="formInline.username" autocomplete="off" placeholder="用户名" size="large"
-                style="height: 50px;">
-                <template #prefix>
-                  <user-outlined />
-                </template>
-              </a-input>
-            </a-form-item>
-            <a-form-item :rules="[{ required: true, message: '请输入密码!' }]" name="password">
-              <a-input-password
-                v-model:value="formInline.password" autocomplete="off" placeholder="密码" size="large"
-                style="height: 50px;"
-                type="password">
-                <template #prefix>
-                  <lock-outlined />
-                </template>
-              </a-input-password>
-            </a-form-item>
-            <a-form-item :rules="[{ required: true, message: '请输入验证码!' }]" name="captcha">
-              <a-input
-                v-model:value="formInline.captcha" :maxlength="4" placeholder="验证码" size="large"
-                style="height: 50px;">
-                <template #prefix>
-                  <SafetyOutlined />
-                </template>
-                <template #suffix>
-                  <img
-                    :height="40" :src="captchaUrl" alt="验证码" class="absolute right-0 h-full cursor-pointer"
-                    @click="updateCaptchaUrl('LOGIN_CAPTCHA')" />
-                </template>
-              </a-input>
-            </a-form-item>
-            <a-form-item>
-              <a-button :loading="loading" block html-type="submit" size="large" type="primary">登录</a-button>
-            </a-form-item>
-          </a-form>
-        </a-tab-pane>
-        <a-tab-pane key="2" tab="手机登录">
-          <msg-code :key="msgCodeKey" sms-type="LOGIN_MSG_CODE" :finish="handleMsgLogin" />
-        </a-tab-pane>
-      </a-tabs>
+      <template v-else-if="registerMode">
+        <msg-code
+          v-if="registerWithPhoneNumber" v-model:form-data="registerForm" :finish="handleMsgRegister"
+          :phone-number-existed="false"
+          sms-type="REGISTER_MSG_CODE"
+          submit-text="注册并登录">
+          <a-form-item
+            :rules="[{ required: true, message: '请输入用户名!', trigger: 'change' }, { validator: userNameValidator, trigger: 'blur' }]"
+            name="userName">
+            <a-input
+              v-model:value="registerForm.loginId" autocomplete="off" placeholder="用户名" size="large"
+              style="height: 50px;">
+              <template #prefix>
+                <user-outlined />
+              </template>
+            </a-input>
+          </a-form-item>
+          <a-form-item
+            :rules="[{ validator: passwordLoginValidator, trigger: 'change' }]"
+            has-feedback
+            name="password">
+            <a-input-password
+              v-model:value="registerForm.password" autocomplete="off" placeholder="密码" size="large"
+              type="password">
+              <template #prefix>
+                <SafetyOutlined />
+              </template>
+            </a-input-password>
+          </a-form-item>
+          <template #footer>
+            <div style="display: flex;justify-content: flex-end; margin-top: -5px">
+              <a-button style="color: rgba(0,125,255,0.7)" type="text" @click="changeToLoginMode">已有账号</a-button>
+            </div>
+          </template>
+        </msg-code>
+        <a-form v-else :model="registerForm" layout="horizontal" @finish="handleRegister">
+          <a-form-item
+            :rules="[{ required: true, message: '请输入用户名!', trigger: 'change' }, { validator: userNameValidator, trigger: 'blur' }]"
+            name="loginId">
+            <a-input
+              v-model:value="registerForm.loginId" autocomplete="off" placeholder="用户名" size="large"
+              style="height: 50px;">
+              <template #prefix>
+                <user-outlined />
+              </template>
+            </a-input>
+          </a-form-item>
+          <a-form-item
+            :rules="[{ validator: passwordLoginValidator, trigger: 'change' }]"
+            has-feedback
+            name="password">
+            <a-input-password
+              v-model:value="registerForm.password" autocomplete="off" placeholder="密码" size="large"
+              style="height: 50px;" type="password">
+              <template #prefix>
+                <SafetyOutlined />
+              </template>
+            </a-input-password>
+          </a-form-item>
+          <a-form-item :rules="[{ required: true, message: '请输入验证码' }]" name="captcha">
+            <a-input
+              v-model:value="registerForm.captcha" :maxlength="4" placeholder="验证码" size="large"
+              style="height: 50px;">
+              <template #suffix>
+                <img
+                  :height="40" :src="captchaUrl" alt="验证码" class="absolute right-0 h-full cursor-pointer"
+                  @click="updateCaptchaUrl('REGISTER_CAPTCHA')" />
+              </template>
+            </a-input>
+          </a-form-item>
+          <a-form-item>
+            <a-button :loading="loading" block html-type="submit" size="large" style="margin-top: 60px" type="primary">
+              注册并登录
+            </a-button>
+          </a-form-item>
+        </a-form>
+        <div style="display: flex;justify-content: flex-end; margin-top: -5px">
+          <a-button style="color: rgba(0,125,255,0.7)" type="text" @click="changeToLoginMode">已有账号</a-button>
+        </div>
+      </template>
+      <a-badge-ribbon
+        v-else class="register-badge" color="rgba(145,190,255,55)" style="margin-top: -20px"
+        text="还没有账号">
+        <a-tabs v-model:activeKey="activeKey" style="padding:0 20px ">
+          <a-tab-pane key="1" tab="账号登录">
+            <a-form :model="formInline" layout="horizontal" @finish="handleSubmit">
+              <a-form-item :rules="[{ required: true, message: '请输入用户名!', trigger: 'change' }]" name="userName">
+                <a-input
+                  v-model:value="formInline.userName" autocomplete="off" placeholder="用户名" size="large"
+                  style="height: 50px;">
+                  <template #prefix>
+                    <user-outlined />
+                  </template>
+                </a-input>
+              </a-form-item>
+              <a-form-item :rules="[{ required: true, message: '请输入密码!', trigger: 'change' }]" name="password">
+                <a-input-password
+                  v-model:value="formInline.password" autocomplete="off" placeholder="密码" size="large"
+                  style="height: 50px;"
+                  type="password">
+                  <template #prefix>
+                    <lock-outlined />
+                  </template>
+                </a-input-password>
+              </a-form-item>
+              <a-form-item :rules="[{ required: true, message: '请输入验证码!', trigger: 'change' }]" name="captcha">
+                <a-input
+                  v-model:value="formInline.captcha" :maxlength="4" placeholder="验证码" size="large"
+                  style="height: 50px;">
+                  <template #prefix>
+                    <SafetyOutlined />
+                  </template>
+                  <template #suffix>
+                    <img
+                      :height="40" :src="captchaUrl" alt="验证码" class="absolute right-0 h-full cursor-pointer"
+                      @click="updateCaptchaUrl('LOGIN_CAPTCHA')" />
+                  </template>
+                </a-input>
+              </a-form-item>
+              <a-form-item>
+                <a-button :loading="loading" block html-type="submit" size="large" type="primary">登录</a-button>
+              </a-form-item>
+            </a-form>
+          </a-tab-pane>
+          <a-tab-pane key="2" tab="手机登录">
+            <msg-code
+              :key="msgCodeKey" v-model:form-data="msgLoginForm" :finish="handleMsgLogin"
+              :phone-number-existed="registerWithPhoneNumber?undefined:true"
+              sms-type="LOGIN_MSG_CODE" />
+          </a-tab-pane>
+        </a-tabs>
+      </a-badge-ribbon>
     </div>
     <copyright-icp />
   </div>
@@ -104,7 +188,9 @@ import {
   getToken,
   initPasswordAndLogin,
   login,
-  msgCodeLogin
+  msgCodeLogin,
+  msgCodeRegister,
+  passwordRegister
 } from '@/framework/apis/login/login'
 import { localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
@@ -112,6 +198,8 @@ import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons-vu
 import { useRouter } from 'vue-router'
 import { baseURL } from '@/framework/network/request'
 import CopyrightIcp from '@/framework/components/common/copyrightIcp/index.vue'
+import { userAlreadyExisted } from '@/framework/apis/admin/user'
+import { parameterStore } from '@/framework/store/common'
 
 const activeKey = ref('1')
 
@@ -119,33 +207,39 @@ const title: Ref<string> = ref(document.title)
 const router = useRouter()
 let captchaUrl: Ref<string> = ref('')
 let loading: Ref<boolean> = ref(false)
-const formInline = reactive({username: '', password: '', captcha: ''})
+const formInline = reactive({userName: '', password: '', captcha: ''})
 const passwordResetMode: Ref<Boolean> = ref(false)
 const passwordResetForm = reactive({password: '', passwordConfirm: '', captcha: ''})
+const registerMode: Ref<Boolean> = ref(false)
+const registerForm = reactive({phoneNumber: '', msgCode: '', captcha: '', loginId: '', password: ''})
+const registerWithPhoneNumber: Ref<boolean> = ref(false)
+const msgLoginForm = reactive({phoneNumber: '', msgCode: '', captcha: ''})
 const msgCodeKey = ref(true)
 const getCaptchaUrl = (captchaType: string) => baseURL + '/captcha.jpg?token=' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN) + '&captchaType=' + captchaType
 const updateCaptchaUrl = (captchaType: string) => captchaUrl.value = getCaptchaUrl(captchaType) + '&r=' + Math.random()
 
 const recoveryFun = (captchaType: string) => {
+  registerMode.value = false
   updateCaptchaUrl(captchaType)
   message.destroy()
   loading.value = false
 }
 
+const userNameValidator = () => {
+  if (isNotEmpty(registerForm.loginId)) {
+    return userAlreadyExisted(undefined, undefined, registerForm.loginId, undefined, undefined)
+  } else {
+    return Promise.reject('请输入用户名!')
+  }
+}
+
 const handleSubmit = () => {
-  const route = router.currentRoute.value
-  const redirect_uri = route.query ? route.query.redirect_uri ? '/' + route.query.redirect_uri : undefined : undefined
-  const {username, password, captcha} = formInline
+  const {userName, password, captcha} = formInline
   let captchaType = 'LOGIN_CAPTCHA'
   message.loading('登录中...', 0)
   loading.value = true
-  login(captcha, username, Md5.hashStr(password)).then(res => {
-    message.destroy()
-    message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
-    const {accessToken, refreshToken} = res.payload
-    localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
-    localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
-    checkLoginState().then(() => router.replace(redirect_uri || '/')).then(() => loading.value = false)
+  login(captcha, userName, Md5.hashStr(password)).then(res => {
+    afterLogin(res)
   }).catch(err => {
     if (err.message === 'AC_PASSWORD_NOT_EXISTED') {
       passwordResetMode.value = true
@@ -155,35 +249,54 @@ const handleSubmit = () => {
     recoveryFun(captchaType)
   })
 }
-const handleMsgLogin = (phoneNumber: string, msgCode: string) => {
-  const route = router.currentRoute.value
-  const redirect_uri = route.query ? route.query.redirect_uri ? '/' + route.query.redirect_uri : undefined : undefined
+const handleRegister = () => {
+  const {loginId, password, captcha} = registerForm
   message.loading('登录中...', 0)
   loading.value = true
-  return msgCodeLogin(phoneNumber, msgCode).then(res => {
-    message.destroy()
-    message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
-    const {accessToken, refreshToken} = res.payload
-    localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
-    localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
-    checkLoginState().then(() => router.replace(redirect_uri || '/')).then(() => loading.value = false)
+  return passwordRegister(captcha, loginId, Md5.hashStr(password)).then(res => {
+    afterLogin(res)
+  }).catch(() => {
+    recoveryFun('LOGIN_CAPTCHA')
+  })
+}
+const handleMsgRegister = (data: any) => {
+  message.loading('登录中...', 0)
+  loading.value = true
+  return msgCodeRegister(data).then(res => {
+    afterLogin(res)
+  }).catch(() => {
+    recoveryFun('LOGIN_CAPTCHA')
+  })
+}
+const handleMsgLogin = (data: any) => {
+  message.loading('登录中...', 0)
+  loading.value = true
+  return msgCodeLogin(data.phoneNumber, data.msgCode).then(res => {
+    afterLogin(res)
   }).catch(() => {
     msgCodeKey.value = !msgCodeKey.value
   })
 }
 
-const handleInitPassword = () => {
+const afterLogin = (res: any) => {
   const route = router.currentRoute.value
   const redirect_uri = route.query ? route.query.redirect_uri ? '/' + route.query.redirect_uri : undefined : undefined
+  message.destroy()
+  message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
+  const {accessToken, refreshToken} = res.payload
+  localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
+  localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
+  loading.value = false
+  checkLoginState().then(() => router.replace(redirect_uri || '/'))
+}
+
+const handleInitPassword = () => {
+  message.loading('登录中...', 0)
+  loading.value = true
   const {password, passwordConfirm, captcha} = passwordResetForm
-  const {username} = formInline
-  initPasswordAndLogin(username, Md5.hashStr(password), Md5.hashStr(passwordConfirm), captcha).then(res => {
-    message.destroy()
-    message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
-    const {accessToken, refreshToken} = res.payload
-    localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
-    localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
-    checkLoginState().then(() => router.replace(redirect_uri || '/')).then(() => loading.value = false)
+  const {userName} = formInline
+  initPasswordAndLogin(userName, Md5.hashStr(password), Md5.hashStr(passwordConfirm), captcha).then(res => {
+    afterLogin(res)
   }).catch(() => {
     passwordResetMode.value = false
     title.value = document.title
@@ -191,9 +304,22 @@ const handleInitPassword = () => {
   })
 }
 
+const passwordResetValidator = () => {
+  return lxStr(registerForm.password)
+}
+
+const passwordLoginValidator = () => {
+  return lxStr(registerForm.password)
+}
+
 // 判断密码是否为连续的数字或字母
-const lxStr = () => {
-  const {password} = passwordResetForm
+const lxStr = (password: string) => {
+  if (isEmpty(password)) {
+    return Promise.reject('请输入密码')
+  }
+  if (!password.match('^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{5,}$')) {
+    return Promise.reject('请输入5位以上数字和字母')
+  }
   let arr = password.split('')
   for (let i = 1; i < arr.length - 1; i++) {
     let firstIndex = arr[i - 1].charCodeAt()
@@ -212,11 +338,39 @@ const lxStr = () => {
   return Promise.resolve()
 }
 
+const changeToLoginMode = () => {
+  registerMode.value = false
+  nextTick(setRegisterButtonStyle)
+  updateCaptchaUrl('LOGIN_CAPTCHA')
+}
+const setRegisterButtonStyle = () => {
+  const registerButton = document.querySelector('.register-badge') as HTMLElement
+  registerButton?.addEventListener('click', function () {
+    registerMode.value = true
+    updateCaptchaUrl('REGISTER_CAPTCHA')
+  });
+  // 鼠标悬停事件监听器
+  registerButton?.addEventListener('mouseover', () => {
+    registerButton.style.cursor = 'pointer'
+  });
+  // 鼠标移开事件监听器
+  registerButton?.addEventListener('mouseout', function () {
+    registerButton.style.cursor = 'auto'
+  });
+}
+
 onBeforeMount(() => getToken().then((res) => {
   const {token} = res.payload
   localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
   updateCaptchaUrl('LOGIN_CAPTCHA')
 }))
+onMounted(() => {
+  setRegisterButtonStyle()
+  parameterStore().getParameter('PHONE_NUMBER_REGISTER').then(resp => {
+    registerWithPhoneNumber.value = resp === '1'
+  })
+
+})
 </script>
 
 <style lang="less" scoped>
