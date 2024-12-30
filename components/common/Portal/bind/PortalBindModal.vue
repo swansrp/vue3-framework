@@ -86,7 +86,7 @@ import { createVNode } from 'vue'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 
 const prop = defineProps<{
-  baseDomain: string
+  baseDomain?: string
   attacheEntity: string,
   title: string
 }>()

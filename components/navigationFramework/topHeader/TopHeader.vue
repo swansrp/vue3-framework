@@ -17,7 +17,7 @@
         </template>
       </a-avatar>
       <div style="margin-left: 5px">
-        <marquee :content="userStore.name" width="100" />
+        <marquee :content="userStore.name" :width="100" />
       </div>
       <div class="top_user_setting">
         <a-dropdown trigger="click">

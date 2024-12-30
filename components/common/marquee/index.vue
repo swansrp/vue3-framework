@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!marquee" class="marquee-text" :style="{width: isNaN(Number(width))?width:width+'px'}">{{ content }}</div>
+  <div v-if="!marquee" :style="{width: isNaN(Number(width))?width:width+'px'}" class="marquee-text">{{ content }}</div>
   <div v-show="marquee" ref="marqueeContainer" :style="{width: isNaN(Number(width))?width:width+'px'}" class="marquee">
     <div :style="{animationDuration: duration + 's'}" class="marquee-content">
       {{ content }}
@@ -8,10 +8,12 @@
 </template>
 
 <script lang="ts" setup>
+import { getTextWidth } from '@/framework/components/common/portal/utils'
+
 const _ = getInstance()
 const props = withDefaults(
   defineProps<{
-    width?: string | number
+    width?: number
     duration?: number
     delay?: number
     content: string
@@ -19,7 +21,7 @@ const props = withDefaults(
   {
     duration: 20,
     delay: 3,
-    width: '100px'
+    width: 100
   }
 )
 const marqueeContainer = ref()
@@ -39,8 +41,8 @@ const startAnimationRender = () => {
   if (marqueeContainer.value) {
     const scrollContent = marqueeContainer.value.querySelector('.marquee-content') as any
     scrollContent.style.animationPlayState = 'running'
-    const containerWidth = marqueeContainer.value.offsetWidth
-    const contentWidth = scrollContent.scrollWidth
+    const containerWidth = Number(width.value)
+    const contentWidth = getTextWidth(content.value)
     if (isNotEmpty(stopTimer)) {
       clearTimeout(stopTimer)
     }
