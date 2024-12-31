@@ -7,18 +7,18 @@
         v-else-if="columns[index - 1 - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.NUMBER"
         :style="{textAlign: 'center'}">
         {{
-          dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex] || '--'
+          _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex] || '--')
         }}
       </div>
       <div
         v-else-if="columns[index - 1 - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.MONEY"
         :style="{textAlign: 'center'}">
         {{
-          formatMoney(dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex], Number(columns[index - 1 - (isExpanded ? 1 : 0)].referenceDict?.split(',')[0]), Number(columns[index - 1 - (isExpanded ? 1 : 0)].referenceDict?.split(',')[1]))
+          _.$isEmpty(dataSummary) ? '--' : (formatMoney(dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex], Number(columns[index - 1 - (isExpanded ? 1 : 0)].referenceDict?.split(',')[0]), Number(columns[index - 1 - (isExpanded ? 1 : 0)].referenceDict?.split(',')[1])))
         }}
       </div>
       <div v-else :style="{textAlign: 'center'}"> {{
-        dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex] || '--'
+        _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex] || '--')
       }}
       </div>
     </s-table-summary-cell>
@@ -28,19 +28,18 @@
 <script lang="ts" setup>
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { formatMoney } from '../../../../utils/formatter'
-
+const _ = getInstance()
 const props = withDefaults(
   defineProps<{
     config: TableConfigType
     columns: Array<ColumnType>,
-    dataSummary: { [key: string]: any },
+    dataSummary: { [key: string]: any } | null,
     isExpanded: boolean
   }>(),
   {}
 )
 const {config, columns, dataSummary} = toRefs(props)
-onMounted(() => {
-})
+onMounted(() => {})
 </script>
 
 <style lang="less" scoped></style>
