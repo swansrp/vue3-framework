@@ -13,6 +13,7 @@
             ref="bindPortal"
             :query="queryBindListFunc"
             :table-id="attacheEntity"
+            :row-drag-end="rowDragEnd"
             read-only>
             <!-- :advance-condition="entityDialogBox.column.entityCondition"-->
             <template #action="{ portalConfig, column, record }">
@@ -88,7 +89,8 @@ import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 const prop = defineProps<{
   baseDomain?: string
   attacheEntity: string,
-  title: string
+  title: string,
+  rowDragEnd?: (data: Array<any>) => void
 }>()
 const {attacheEntity, title} = toRefs(prop)
 const bindPortal = ref()

@@ -146,7 +146,7 @@
               summary-fixed
               @change="handleTableChange"
               @expand="handleExpand"
-              @row-drag-end="handleRowDragEnd">
+              @row-drag-end="rowDragEnd(dataSource) || handleRowDragEnd">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
                 <div
@@ -553,6 +553,7 @@ import { DefaultRecordType } from "ant-design-vue/es/vc-table/interface";
  * @param bindDefaultValue 1:N entity字段名称-字段属性
  * @param textAreaInExpanded 长文本自动在展开区域显示
  * @param rowExpandable 每行是否展示展开按钮
+ * @param rowDragEnd 行拖拽结束
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -588,6 +589,7 @@ const props = withDefaults(defineProps<{
     bindDefaultValue?: any
     textAreaInExpanded?: boolean,
     rowExpandable?: (record: DefaultRecordType) => boolean
+    rowDragEnd?: (data: Array<any>) => void
   }>(),
   {
     baseDomain: '/' + name,
@@ -620,7 +622,8 @@ const props = withDefaults(defineProps<{
     checkStrictly: false,
     bindDefaultValue: undefined,
     textAreaInExpanded: false,
-    rowExpandable: undefined
+    rowExpandable: undefined,
+    rowDragEnd: undefined
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
