@@ -1,19 +1,19 @@
 <template>
   <dialog-box
     v-model:visible="bindDialogBox.show"
-    :title="title + '授权'"
+    :title="title + actionText"
     is-full>
     <a-tabs
       v-model:activeKey="bindDialogBox.tab"
       type="card"
       @change="handleTabChanged">
-      <a-tab-pane key="0" :tab="'已授权' + title">
+      <a-tab-pane key="0" :tab="'已' + actionText + title">
         <div style="height: calc(100vh - 200px);">
           <Portal
             ref="bindPortal"
             :query="queryBindListFunc"
-            :table-id="attacheEntity"
             :row-drag-end="rowDragEnd"
+            :table-id="attacheEntity"
             read-only>
             <!-- :advance-condition="entityDialogBox.column.entityCondition"-->
             <template #action="{ portalConfig, column, record }">
@@ -22,7 +22,7 @@
           </Portal>
         </div>
       </a-tab-pane>
-      <a-tab-pane key="1" :tab="'未授权' + title">
+      <a-tab-pane key="1" :tab="'未' + actionText + title">
         <div style="height: calc(100vh - 200px);">
           <Portal
             ref="unbindPortal"
@@ -31,7 +31,7 @@
             read-only>
             <!-- :advance-condition="entityDialogBox.column.entityCondition"-->
             <template #action="{ portalConfig, column, record }">
-              <a-button type="text" @click="bind(portalConfig, column, record)">授权</a-button>
+              <a-button type="text" @click="bind(portalConfig, column, record)">{{ actionText }}</a-button>
             </template>
           </Portal>
         </div>
@@ -55,12 +55,12 @@
         <template v-if="bindDialogBox.tab === '1'">
           <a-button
             :disabled="isEmpty(unbindPortal?.getRowSelection())" style="margin-right: 5px;" type="primary"
-            @click="bindSelected">授权选中
+            @click="bindSelected">{{ actionText + '选中' }}
           </a-button>
-          <a-button type="primary" @click="bindAll">授权全部</a-button>
+          <a-button type="primary" @click="bindAll">{{ actionText + '全部' }}</a-button>
         </template>
         <template v-if="bindDialogBox.tab === '2'">
-          <a-button type="primary" @click="bindReplace">选中替换授权</a-button>
+          <a-button type="primary" @click="bindReplace">{{ '选中替换' + actionText }}</a-button>
         </template>
       </template>
     </a-tabs>
@@ -86,12 +86,15 @@ import { Modal } from 'ant-design-vue'
 import { createVNode } from 'vue'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 
-const prop = defineProps<{
+const prop = withDefaults(defineProps<{
   baseDomain?: string
   attacheEntity: string,
   title: string,
+  actionText?: string
   rowDragEnd?: (data: Array<any>) => void
-}>()
+}>(), {
+  actionText: '授权'
+})
 const {attacheEntity, title} = toRefs(prop)
 const bindPortal = ref()
 const unbindPortal = ref()
@@ -127,9 +130,9 @@ const unbindSelected = () => {
 }
 const bindAll = () => {
   Modal.confirm({
-    title: '将所有' + title.value + '进行授权',
+    title: '将所有' + title.value + '进行' + prop.actionText,
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '注意: 单次授权数量大于60000条可能会失败'),
+    content: createVNode('div', {style: 'color:red;'}, '注意: 单次' + prop.actionText + '数量大于60000条可能会失败'),
     onOk() {
       bindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, unbindPortal.value.queryCondition(), prop.baseDomain)
         .then(unbindPortal.value.queryData)
@@ -142,9 +145,9 @@ const bindAll = () => {
 }
 const unbindAll = () => {
   Modal.confirm({
-    title: '将所有' + title.value + '授权取消',
+    title: '将所有' + title.value + prop.actionText + '取消',
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '注意: 所有授权信息将被清除'),
+    content: createVNode('div', {style: 'color:red;'}, '注意: 所有' + prop.actionText + '信息将被清除'),
     onOk() {
       unbindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, prop.baseDomain)
         .then(bindPortal.value.queryData)
@@ -157,9 +160,9 @@ const unbindAll = () => {
 const bindReplace = () => {
   if (isNotEmpty(allPortal.value.getRowSelection())) {
     Modal.confirm({
-      title: '将选中' + title.value + '进行授权的',
+      title: '将选中' + title.value + '进行' + prop.actionText + '的',
       icon: createVNode(ExclamationCircleOutlined),
-      content: createVNode('div', {style: 'color:red;'}, '注意: 原有授权信息将被清除'),
+      content: createVNode('div', {style: 'color:red;'}, '注意: 原有' + prop.actionText + '信息将被清除'),
       onOk() {
         bindReplaceBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.getRowSelection(), prop.baseDomain)
           .then(allPortal.value.queryData)
@@ -170,9 +173,9 @@ const bindReplace = () => {
     })
   } else {
     Modal.confirm({
-      title: '将授权全部符合当前条件的' + title.value,
+      title: '将' + prop.actionText + '全部符合当前条件的' + title.value,
       icon: createVNode(ExclamationCircleOutlined),
-      content: createVNode('div', {style: 'color:red;'}, '注意: 原有授权信息将被清除,单次授权数量大于60000条可能会失败'),
+      content: createVNode('div', {style: 'color:red;'}, '注意: 原有' + prop.actionText + '信息将被清除,单次' + prop.actionText + '数量大于60000条可能会失败'),
       onOk() {
         bindReplaceAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.queryCondition(), prop.baseDomain)
           .then(allPortal.value.queryData)

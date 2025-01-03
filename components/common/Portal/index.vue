@@ -1730,7 +1730,7 @@ const init = async () => {
     }
 
     // 首列支持拖拽
-    columnArray.value[0].rowDrag = tableConfig.tableDrag === '1'
+    columnArray.value[0].rowDrag = ( tableConfig.tableDrag === '1' && config.orderMode) || props.rowDragEnd !== undefined
 
     // 关联配置
     if (isNotEmpty(tableConfig.associates) && isEmpty(bindTabs.value)) {
