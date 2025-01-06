@@ -385,7 +385,7 @@ onMounted(() => {
 
 .login-box {
   display: flex;
-  padding-top: 200px;
+  padding-top: 10vh;
   flex-direction: column;
   align-items: center;
 
