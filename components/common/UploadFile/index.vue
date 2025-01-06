@@ -7,7 +7,7 @@
     centered
     @cancel="closeUploadModal"
     @ok="confirmUploadModal">
-    <a-button v-if="isNotEmpty(template) && isNotEmpty(templateName)" ghost @click="template(templateName)">下载模版
+    <a-button v-if="isNotEmpty(_template) && isNotEmpty(templateName)" ghost @click="_template(templateName)">下载模版
     </a-button>
     <a-upload-dragger
       v-if="config.type === 'INIT'"
@@ -97,6 +97,7 @@ import { isNotEmpty, startTimer, stopTimer } from '@/framework/utils/common'
 import { UploadModalType } from '@/framework/components/common/Portal/type'
 import { TimerType } from '@/framework/utils/type'
 import { Ref } from 'vue'
+import { downloadTemplate, getUploadParseProgress, uploadParse } from '@/framework/apis/upload'
 
 const stepTitle = ['上传', '校验', '保存']
 const prop = withDefaults(defineProps<{
@@ -112,6 +113,7 @@ const prop = withDefaults(defineProps<{
   multiple?: boolean,
   directory?: boolean,
   handleProgress?: number
+  excelParseUrl?: string
 }>(), {
   folder: undefined,
   fileName: undefined,
@@ -124,7 +126,8 @@ const prop = withDefaults(defineProps<{
   progress: undefined,
   multiple: false,
   directory: false,
-  handleProgress: undefined
+  handleProgress: undefined,
+  excelParseUrl: undefined
 })
 const emit = defineEmits<{
   /**
@@ -136,11 +139,27 @@ const emit = defineEmits<{
   (e: 'uploadComplete'): void
   (e: 'afterConfirm'): void
 }>()
-const {handleProgress, uploadParam, useOriginalFileName} = toRefs(prop)
+const {handleProgress, uploadParam, useOriginalFileName, excelParseUrl} = toRefs(prop)
 const _handleProgress: Ref<number | undefined> = ref(undefined)
+const _progress = ref(prop.progress)
+const _upload = ref(prop.upload)
+const _template = ref(prop.template)
 watch(
   () => handleProgress.value,
   () => _handleProgress.value = handleProgress.value
+)
+watch(
+  () => excelParseUrl.value,
+  () => {
+      if (excelParseUrl.value) {
+        _progress.value = _progress.value ? _progress.value : getUploadParseProgress(excelParseUrl.value)
+        _upload.value = _upload.value ? _upload.value : uploadParse(excelParseUrl.value)
+        _template.value = _template.value ? _template.value : downloadTemplate(excelParseUrl.value)
+      }
+  },
+  {
+    immediate:true
+  }
 )
 const accept = ref('')
 const uploadDialogBox: { show: boolean, uploadFileType: any, file: Array<any>, url: string | null } = reactive({
@@ -239,14 +258,14 @@ const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?:
   const {file, onProgress, onSuccess, onError} = data
   let formData = new FormData()
   formData.append('file', file)
-  if (prop.upload) {
-    prop.upload(formData, (progressEvent: AxiosProgressEvent) => {
+  if (_upload.value) {
+    _upload.value(formData, (progressEvent: AxiosProgressEvent) => {
       let percent = 0
       if (isNumber(progressEvent.total)) {
         percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
       }
       onProgress({percent: percent}, file)
-      if (isNotEmpty(prop.progress)) {
+      if (isNotEmpty(_progress.value))  {
         setUploadProgress(percent)
       }
     }, uploadParam.value).then((resp: any) => {
@@ -276,9 +295,9 @@ const confirmUploadModal = () => {
 const handleUploadChange = (file: any) => {
   if (file.event?.percent === 100) {
     emit('uploadComplete')
-    if (isNotEmpty(prop.progress)) {
+    if (isNotEmpty(_progress.value)) {
       startTimer(uploadProgressTimer, () => {
-        prop.progress().then((resp: any) => updateProgress(resp.payload))
+        _progress.value().then((resp: any) => updateProgress(resp.payload))
       }, false)
     }
   } else {
