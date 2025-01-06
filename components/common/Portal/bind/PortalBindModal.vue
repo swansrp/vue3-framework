@@ -12,12 +12,16 @@
           <Portal
             ref="bindPortal"
             :query="queryBindListFunc"
-            :row-drag-end="rowDragEnd"
-            :table-id="attacheEntity"
+            :row-drag-end="handleRowDragEnd"
+            :table-id="attachEntity"
             read-only>
             <!-- :advance-condition="entityDialogBox.column.entityCondition"-->
             <template #action="{ portalConfig, column, record }">
               <a-button type="text" @click="unbind(portalConfig, column, record)">取消</a-button>
+              <slot :column="column" :portalConfig="portalConfig" :record="record" name="action"></slot>
+            </template>
+            <template #right-btns>
+              <slot name="bind-right-btns"></slot>
             </template>
           </Portal>
         </div>
@@ -26,8 +30,9 @@
         <div style="height: calc(100vh - 200px);">
           <Portal
             ref="unbindPortal"
+            :advance-condition="attachCondition"
             :query="queryUnbindListFunc"
-            :table-id="attacheEntity"
+            :table-id="attachEntity"
             read-only>
             <!-- :advance-condition="entityDialogBox.column.entityCondition"-->
             <template #action="{ portalConfig, column, record }">
@@ -40,7 +45,10 @@
         <div style="height: calc(100vh - 200px);">
           <Portal
             ref="allPortal"
-            :table-id="attacheEntity"
+            :action-width="0"
+            :advance-condition="attachCondition"
+            :query="queryAttachListFunc"
+            :table-id="attachEntity"
             read-only />
         </div>
       </a-tab-pane>
@@ -75,6 +83,7 @@ import {
   bindBatchAttach,
   bindReplaceAllAttach,
   bindReplaceBatchAttach,
+  queryAttachList,
   queryBindList,
   queryUnbindList,
   unbindAllAttach,
@@ -85,32 +94,36 @@ import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { Modal } from 'ant-design-vue'
 import { createVNode } from 'vue'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 const prop = withDefaults(defineProps<{
   baseDomain?: string
-  attacheEntity: string,
+  entity: string
+  attachEntity: string,
   title: string,
   actionText?: string
-  rowDragEnd?: (data: Array<any>) => void
+  rowDragEnd?: (data: Array<any>, currentPage: number, pageSize: number, entityRecord: any) => Promise<any>
+  attachCondition?: ConditionListType
 }>(), {
   actionText: '授权'
 })
-const {attacheEntity, title} = toRefs(prop)
+const {entity, attachEntity, title} = toRefs(prop)
 const bindPortal = ref()
 const unbindPortal = ref()
 const allPortal = ref()
-const bindDialogBox: { show: boolean, entityName: string, entityId: any, tab: string, attachName: string } = reactive({
+const bindDialogBox: { show: boolean, entityName: string, entityId: any, tab: string, attachName: string, entityRecord: any } = reactive({
   show: false,
-  entityName: '',
+  entityName: entity.value,
   entityId: null,
   tab: '0',
-  attachName: attacheEntity.value
+  attachName: attachEntity.value,
+  entityRecord: null
 })
-const showBindDialogBox = (entityName: string, entityId: any) => {
+const showBindDialogBox = (entityId: any, record: any) => {
   bindDialogBox.tab = '0'
-  bindDialogBox.entityName = entityName
   bindDialogBox.entityId = entityId
   bindDialogBox.show = true
+  bindDialogBox.entityRecord = record
 }
 const bind = (portalConfig: TableConfigType, column: ColumnType, record: any) => {
   bindAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, record[portalConfig.rowKey], prop.baseDomain)
@@ -192,6 +205,9 @@ const queryBindListFunc = async (url: string, query: QueryType) => {
 const queryUnbindListFunc = async (url: string, query: QueryType) => {
   return queryUnbindList(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, query, prop.baseDomain)
 }
+const queryAttachListFunc = async (url: string, query: QueryType) => {
+  return queryAttachList(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, query, prop.baseDomain)
+}
 const handleTabChanged = (activeKey: string) => {
   bindDialogBox.tab = activeKey
   if (activeKey === '0') {
@@ -202,7 +218,16 @@ const handleTabChanged = (activeKey: string) => {
     allPortal.value?.queryData()
   }
 }
-defineExpose({showBindDialogBox})
+const handleRowDragEnd = (dataSource: any, currentPage: number, pageSize: number) => {
+  nextTick(() => {
+    prop.rowDragEnd && prop.rowDragEnd(dataSource, currentPage, pageSize, bindDialogBox.entityRecord)
+      .then(() => bindPortal.value.queryData())
+  })
+}
+const queryBindData = () => {
+  bindPortal.value.queryData()
+}
+defineExpose({showBindDialogBox, queryBindData})
 </script>
 
 <style scoped>

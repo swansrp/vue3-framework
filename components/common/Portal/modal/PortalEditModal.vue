@@ -8,7 +8,7 @@
     :wrap-class-name="(config.modal.type === 'add' ? config.addWidth==='100%' : config.editWidth==='100%') ? 'full-modal' : ''"
     @cancel="() => emit('cancel')"
     @close="() => emit('close')"
-    @ok="() => editModalRef.validate().then(emit('confirm'))">
+    @ok="() => editModalRef.validate().then(() => emit('confirm')).catch(() => {})">
     <a-form ref="editModalRef" :model="config.modal.data" layout="vertical">
       <a-descriptions
         v-for="(value, index) in columnDisplayEditMap"
@@ -110,7 +110,7 @@
                   column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE"
                 style="display: flex; justify-content: center">
                 <div
-                  v-if="_.$log('multimedia', config.modal.data[column.dataIndex]) && config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])">
+                  v-if="config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])">
                   <multimedia
                     v-model="config.modal.data[column.dataIndex]"
                     :delete-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"

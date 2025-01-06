@@ -146,7 +146,7 @@
               summary-fixed
               @change="handleTableChange"
               @expand="handleExpand"
-              @row-drag-end="rowDragEnd(dataSource) || handleRowDragEnd">
+              @row-drag-end="rowDragEnd(dataSource, config.currentPage, config.pageSize) || handleRowDragEnd">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
                 <div
@@ -202,10 +202,22 @@
                       </slot>
                     </template>
                   </portal-body-cell>
-                  <span
-                    v-else
-                    :style="{display: 'block', textAlign: column.contentAlign || 'center'}">
-                    {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span>
+                  <template v-else>
+                    <template v-if="column.fieldType === FIELD_TYPE.IMAGE">
+                      <multimedia
+                        v-model="record[column.dataIndex]" :height="column.referenceDict?.split(',')[1] || 120"
+                        :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120"
+                        use-original-file-name />
+                    </template>
+                    <template
+                      v-else-if="column.fieldType === FIELD_TYPE.AUDIO || column.fieldType === FIELD_TYPE.VIDEO ||
+                        column.fieldType === FIELD_TYPE.FILE">
+                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80" />
+                    </template>
+                    <span
+                      v-else
+                      :style="{display: 'block', textAlign: column.contentAlign || 'center'}">
+                      {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span></template>
                 </slot>
               </template>
               <!-- endregion -->
@@ -397,7 +409,7 @@
     </template>
     <!-- region 详情框 -->
     <slot
-      v-if="config.modal.type === 'view'" :modal="config.modal" :dataSource="dataSource" :modifyCellMap="modifyCellMap"
+      v-if="config.modal.type === 'view'" :dataSource="dataSource" :modal="config.modal" :modifyCellMap="modifyCellMap"
       name="view">
       <portal-view-modal
         :columnDisplayMap="columnDisplayMap"
@@ -409,7 +421,7 @@
         @confirm="handleModalConfirm"
       />
     </slot>
-    <slot v-else-if="config.modal.type === 'association'" :modal="config.modal" :bindTabs="bindTabs" name="association">
+    <slot v-else-if="config.modal.type === 'association'" :bindTabs="bindTabs" :modal="config.modal" name="association">
       <portal-association-modal
         :bind-tabs="bindTabs"
         :config="config"
@@ -418,7 +430,9 @@
         @confirm="handleModalConfirm"
       />
     </slot>
-    <slot v-else-if="config.modal.type === 'modify'" :modal="config.modal" :columnDisplayMap="columnDisplayMap" name="modify">
+    <slot
+      v-else-if="config.modal.type === 'modify'" :columnDisplayMap="columnDisplayMap" :modal="config.modal"
+      name="modify">
       <portal-edit-modal
         v-model:config="config"
         :columnDisplayMap="columnDisplayMap"
@@ -427,7 +441,7 @@
         @confirm="handleModalConfirm"
       />
     </slot>
-    <slot v-else-if="config.modal.type === 'add'" :modal="config.modal" :columnDisplayMap="columnDisplayMap" name="add">
+    <slot v-else-if="config.modal.type === 'add'" :columnDisplayMap="columnDisplayMap" :modal="config.modal" name="add">
       <portal-edit-modal
         v-model:config="config"
         :columnDisplayMap="columnDisplayMap"
@@ -589,7 +603,7 @@ const props = withDefaults(defineProps<{
     bindDefaultValue?: any
     textAreaInExpanded?: boolean,
     rowExpandable?: (record: DefaultRecordType) => boolean
-    rowDragEnd?: (data: Array<any>) => void
+    rowDragEnd?: (data: Array<any>, currentPage: number, pageSize: number) => void
   }>(),
   {
     baseDomain: '/' + name,
@@ -1730,7 +1744,7 @@ const init = async () => {
     }
 
     // 首列支持拖拽
-    columnArray.value[0].rowDrag = ( tableConfig.tableDrag === '1' && config.orderMode) || props.rowDragEnd !== undefined
+    columnArray.value[0].rowDrag = (tableConfig.tableDrag === '1' && config.orderMode) || props.rowDragEnd !== undefined
 
     // 关联配置
     if (isNotEmpty(tableConfig.associates) && isEmpty(bindTabs.value)) {

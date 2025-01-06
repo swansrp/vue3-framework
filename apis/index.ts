@@ -54,6 +54,7 @@ const commonUrl = {
   BIND_ALL_LIST: '/bind/list',
   BIND_LIST: '/bind/advanced/query',
   UNBIND_LIST: '/unbind/advanced/query',
+  ATTACH_LIST: '/attach/advanced/query',
   BIND: '/bind',
   BIND_BATCH: '/bind/batch',
   UNBIND: '/unbind',
@@ -61,7 +62,9 @@ const commonUrl = {
   BIND_REPLACE: '/replace',
   BIND_REPLACE_ALL: '/advanced/replace',
   BIND_ALL: '/bind/all',
-  UNBIND_ALL: '/unbind/all'
+  UNBIND_ALL: '/unbind/all',
+  BIND_INFO: '/bind/info',
+  BIND_INFO_LIST: '/bind/info/list'
 }
 
 const buildApi = (
@@ -218,6 +221,12 @@ const unbindListApi = (
   version = '1.0'
 ) => buildApi(domain, commonUrl.UNBIND_LIST, requestMethod.POST, version, type)
 
+const attachListApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.ATTACH_LIST, requestMethod.POST, version, type)
+
 const bindApi = (
   type: string,
   domain: string = baseDomain,
@@ -265,6 +274,18 @@ const unbindAllApi = (
   domain: string = baseDomain,
   version = '1.0'
 ) => buildApi(domain, commonUrl.UNBIND_ALL, requestMethod.POST, version, type)
+
+const bindInfoApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.BIND_INFO, requestMethod.POST, version, type)
+
+const bindInfoListApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.BIND_INFO_LIST, requestMethod.POST, version, type)
 
 export const addRequest = (
   type: string,
@@ -474,6 +495,13 @@ export const queryUnbindListRequest = (
   domain: string = baseDomain
 ) => request(unbindListApi(type, domain), {}, {entityId, ...query}) as Promise<any>
 
+export const queryAttachListRequest = (
+  type: string,
+  entityId: any,
+  query: QueryType,
+  domain: string = baseDomain
+) => request(attachListApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+
 export const bindRequest = (
   type: string,
   entityId: any,
@@ -528,6 +556,25 @@ export const unbindAllRequest = (
   entityId: any,
   domain: string = baseDomain
 ) => request(unbindAllApi(type, domain), {}, {entityId}) as Promise<any>
+
+export const bindInfoRequest = (
+  type: string,
+  entityId: any,
+  attachId: any,
+  data: any,
+  strict: boolean,
+  domain: string = baseDomain
+) => request(bindInfoApi(type, domain), {entityId, strict}, {attachId, data}) as Promise<any>
+
+export const bindInfoListRequest = (
+  type: string,
+  entityId: any,
+  data: Array<any>,
+  strict: boolean,
+  domain: string = baseDomain
+) => request(bindInfoListApi(type, domain), {entityId, strict}, data) as Promise<any>
+
+
 export {
   apiType,
   baseDomain,

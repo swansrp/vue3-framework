@@ -28,7 +28,7 @@ import {
   updateListRequest,
   updateOrderRequest,
   updateRequest,
-  updateTreePidRequest
+  updateTreePidRequest, queryAttachListRequest, bindInfoRequest, bindInfoListRequest
 } from '@/framework/apis'
 import { QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 
@@ -104,6 +104,9 @@ export const queryBindList = (entity: string, attach: string, entityId: any, att
 export const queryUnbindList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
   queryUnbindListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain) as Promise<any>
 
+export const queryAttachList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
+  queryAttachListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain) as Promise<any>
+
 export const bindAttach = (entity: string, attach: string, entityId: any, attachId: any, baseDomain?: string) =>
   bindRequest('/' + entity + '/' + attach, entityId, attachId, baseDomain) as Promise<any>
 
@@ -128,6 +131,12 @@ export const bindAllAttach = (entity: string, attach: string, entityId: any, att
 export const unbindAllAttach = (entity: string, attach: string, entityId: any, baseDomain?: string) =>
   unbindAllRequest('/' + entity + '/' + attach, entityId, baseDomain) as Promise<any>
 
+export const updateBindInfo = (entity: string, attach: string, entityId: any, attachId: any, data: any, strict = true, baseDomain?: string) =>
+  bindInfoRequest('/' + entity + '/' + attach, entityId, attachId, data, strict, baseDomain) as Promise<any>
+
+export const updateBindInfoList = (entity: string, attach: string, entityId: any, data: Array<any>, strict = true, baseDomain?: string) =>
+  bindInfoListRequest('/' + entity + '/' + attach, entityId, data, strict, baseDomain) as Promise<any>
+
 export const getAllBindListByUrl = (url: string, entityId: any, baseDomain?: string) =>
   getAllBindListRequest(url, entityId, baseDomain) as Promise<any>
 
@@ -136,6 +145,9 @@ export const queryBindListByUrl = (url: string, entityId: any, attachQuery: Quer
 
 export const queryUnbindListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
   queryUnbindListRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+
+export const queryAttachListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
+  queryAttachListRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
 
 export const bindAttachByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string) =>
   bindRequest(url, entityId, attachId, baseDomain) as Promise<any>
