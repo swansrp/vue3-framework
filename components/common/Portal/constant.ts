@@ -8,6 +8,7 @@ export const indexColumn = {
   showMenu: 'hover',
   align: 'center',
   fixed: 'left',
+  autoHeight: true,
   editable: false,
   resizable: false,
   rowDrag: false,
