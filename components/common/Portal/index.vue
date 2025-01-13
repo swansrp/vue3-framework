@@ -1355,7 +1355,6 @@ const getGeneralCondition = () => {
     }
   }
   if (props.advanceCondition && isNotEmpty(props.advanceCondition)) {
-    console.log('==========================', props.advanceCondition)
     if (isNotEmpty(queryCondition.conditionList)) {
       queryCondition.conditionList = [...queryCondition.conditionList, ...props.advanceCondition.conditionList]
     } else {
@@ -1619,7 +1618,7 @@ const init = async () => {
     }
     config.url = tableConfig.url
     config.summary = tableConfig.summary === '1'
-    config.advancedSearchAble = tableConfig.advanced === '1' || props.advance
+    config.advancedSearchAble = tableConfig.advanced === '1' && props.advance
     config.advancedSearchButton = config.advancedSearchAble && props.advanceButton
     config.treeMode = isNotEmpty(tableConfig.pidColumn) && isEmpty(data.value)
     config.parentKey = tableConfig.pidColumn

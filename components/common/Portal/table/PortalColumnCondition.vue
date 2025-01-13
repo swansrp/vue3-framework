@@ -147,10 +147,7 @@ watch(column, (column) => {
 const _selectedKeysRef = ref(selectedKeysRef.value)
 watch(
   () => selectedKeysRef.value,
-  () => {
-    console.log(' selectedKeysRef.value', selectedKeysRef.value)
-    _selectedKeysRef.value = selectedKeysRef.value
-  }
+  () => _selectedKeysRef.value = selectedKeysRef.value
 )
 const handleSearchConditionChanged = (value: any, column: any) => {
   setSelectedKeys.value(value)
@@ -162,14 +159,14 @@ const handleNumberConditionChanged = (value: any, column: any) => {
   let right
 
   if (column.fieldType === FIELD_TYPE.PERCENT) {
-    left = value[0] !== undefined ? value[0] === 0 ? 0 : value[0] * column.referenceDict.split(',')[1] / 100 : Number.MIN_VALUE
-    right = value[1] !== undefined ? value[1] === 0 ? 0 : value[1] * column.referenceDict.split(',')[1] / 100 : Number.MAX_VALUE
+    left = value[0] !== undefined ? value[0] === 0 ? 0 : value[0] * column.referenceDict.split(',')[1] / 100 : -Number.MAX_SAFE_INTEGER
+    right = value[1] !== undefined ? value[1] === 0 ? 0 : value[1] * column.referenceDict.split(',')[1] / 100 : Number.MAX_SAFE_INTEGER
   } else if (column.fieldType === FIELD_TYPE.MONEY) {
-    left = value[0] !== undefined ? value[0] === 0 ? 0 : value[0] * column.referenceDict.split(',')[1] : Number.MIN_VALUE
-    right = value[1] !== undefined ? value[1] === 0 ? 0 : value[1] * column.referenceDict.split(',')[1] : Number.MAX_VALUE
+    left = value[0] !== undefined ? value[0] === 0 ? 0 : value[0] * column.referenceDict.split(',')[1] : -Number.MAX_SAFE_INTEGER
+    right = value[1] !== undefined ? value[1] === 0 ? 0 : value[1] * column.referenceDict.split(',')[1] : Number.MAX_SAFE_INTEGER
   } else {
-    left = value[0] === 0 ? 0 : value[0] || Number.MIN_VALUE
-    right = value[1] === 0 ? 0 : value[1] || Number.MAX_VALUE
+    left = value[0] === 0 ? 0 : value[0] || -Number.MAX_SAFE_INTEGER
+    right = value[1] === 0 ? 0 : value[1] || Number.MAX_SAFE_INTEGER
   }
   console.log(' handleNumberConditionChanged', column, value, [left, right])
   emit('handleSearchConditionChanged', [left, right], column.dataIndex, column)

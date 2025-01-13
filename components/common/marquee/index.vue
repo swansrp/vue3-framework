@@ -27,7 +27,6 @@ const props = withDefaults(
 const marqueeContainer = ref()
 const {content, width, duration, delay} = toRefs(props)
 const marquee = ref(false)
-let initTimer = null as any
 let startTimer = null as any
 let stopTimer = null as any
 const initAnimationRender = () => {
@@ -62,7 +61,7 @@ const stopAnimationRender = () => {
     if (isNotEmpty(startTimer)) {
       clearTimeout(startTimer)
     }
-    initTimer = setTimeout(initAnimationRender, delay.value * 500)
+    setTimeout(initAnimationRender, delay.value * 500)
   }
 }
 onMounted(() => {
