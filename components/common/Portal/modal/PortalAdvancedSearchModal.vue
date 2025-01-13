@@ -33,15 +33,15 @@ const props = withDefaults(
 )
 const {advancedCondition} = toRefs(props)
 const emit = defineEmits<{
-  (e: 'confirm'): void
+  (e: 'confirm', condition: ConditionType): void
 }>()
 const advancedConditionDrawClose = () => {
   advancedCondition.value.show = false
 }
 const handleAdvancedConditionConfirm = (condition: ConditionType) => {
   advancedCondition.value.condition = condition
-  console.log('getAdvancedCondition', advancedCondition)
-  emit('confirm')
+  console.log('getAdvancedCondition', advancedCondition.value.condition)
+  emit('confirm', advancedCondition.value.condition)
   advancedConditionDrawClose()
 }
 watch(

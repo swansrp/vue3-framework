@@ -39,10 +39,25 @@ const props = defineProps<{
   footer?: boolean,
 }>()
 
-defineEmits(['update:visible'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: any): void
+  (e: 'open'): void
+  (e: 'close'): void
+}>()
 
 watch(() => props.isFull, value => _isFull.value = value, {immediate: true})
-watch(() => props.visible, value => _visible.value = value, {immediate: true})
+watch(() => props.visible, value => {
+    _visible.value = value
+    if (value) {
+      emit('open')
+    } else {
+      emit('close')
+    }
+  },
+  {
+    immediate: true
+  }
+)
 watch(() => props.title, value => _title.value = value || '', {immediate: true})
 watch(() => props.iconPath, value => _iconPath.value = value || '', {immediate: true})
 watch(() => props.maskClosable, value => _maskClosable.value = !!value, {immediate: true})
@@ -63,7 +78,7 @@ watch(() => props.width, value => {
   .ant-modal-content {
     display: flex;
     flex-direction: column;
-    height: auto;
+    height: calc(100vh);
   }
 
   .ant-modal-body {
