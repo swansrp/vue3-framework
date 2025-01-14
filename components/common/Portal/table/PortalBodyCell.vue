@@ -106,7 +106,8 @@
       :color="isCellUpdate(index, column) ? 'red' : 'rgba(0,0,0,0)'" class="modify-badge"
       placement="start">
       <div
-        :style="{textAlign: column.contentAlign || 'left',
+        :style="{display: 'block',
+                 textAlign: column.contentAlign || 'left',
                  textOverflow: 'ellipsis',
                  whiteSpace: 'nowrap',
                  overflow: 'hidden',

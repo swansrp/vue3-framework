@@ -216,8 +216,16 @@
                     </template>
                     <span
                       v-else
-                      :style="{display: 'block', textAlign: column.contentAlign || 'center'}">
-                      {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}</span></template>
+                      :style="column.tooltip ? {display: 'block',
+                                                textAlign: column.contentAlign || 'left',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                height: '100%'} :
+                        {display: 'block', textAlign: column.contentAlign || 'center'}">
+                      {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}
+                    </span>
+                  </template>
                 </slot>
               </template>
               <!-- endregion -->
@@ -536,6 +544,7 @@ import { name } from '@/../package.json'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import { DefaultRecordType } from "ant-design-vue/es/vc-table/interface";
 
+const __ = getInstance()
 /**
  * @param tableId 表格ID
  * @param multiHeader 是否多重表头
@@ -732,6 +741,7 @@ watch(props, (value, old) => {
     config.readOnly = value.readOnly
   }
   console.debug('propsChanged', value, old)
+  queryData()
 })
 watch(
   () => data.value,
@@ -1559,24 +1569,44 @@ const paginationChange = () => {
  * 导出
  */
 const download = () => {
-  if (config.plain) {
-    excelExport(parsedDataSource.value || [], props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, config.title)
-  } else {
-    const resolve = (resp: any) => {
-      const dataArray = resp.payload || []
-      for (let index in dataArray) {
-        columnArray.value.forEach((column: ColumnType) => {
-          parse(dataArray[index], Number(index), column, config)
-        })
-      }
-      excelExport(dataArray, multiHeadColumns.value, columns.value, config.title)
-    }
-    if (config.advancedSearchAble) {
-      advancedSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
+  const downloadFunc = () => {
+    if (config.plain) {
+      excelExport(parsedDataSource.value || [], props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, config.title)
     } else {
-      generalSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
+      const resolve = (resp: any) => {
+        const dataArray = resp.payload || []
+        for (let index in dataArray) {
+          columnArray.value.forEach((column: ColumnType) => {
+            parse(dataArray[index], Number(index), column, config)
+          })
+        }
+        excelExport(dataArray, multiHeadColumns.value, columns.value, config.title)
+      }
+      if (config.advancedSearchAble) {
+        advancedSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
+      } else {
+        generalSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
+      }
     }
   }
+  if(config.total > 1000) {
+    Modal.confirm({
+      title: '下载数据量过大',
+      icon: createVNode(ExclamationCircleOutlined),
+      content: createVNode('div', {}, '注意: 单次下载数量'+config.total+'条可能会失败, 请设置恰当条件'),
+      okText: '确定',
+      cancelText: '继续下载',
+      onOk() {
+
+      },
+      onCancel() {
+        downloadFunc()
+      }
+    })
+  } else {
+    downloadFunc()
+  }
+
 }
 /**
  * 刷新
