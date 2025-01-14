@@ -1652,7 +1652,7 @@ const init = async () => {
     }
     config.url = tableConfig.url
     config.summary = tableConfig.summary === '1'
-    config.advancedSearchAble = tableConfig.advanced === '1' && props.advance
+    config.advancedSearchAble = tableConfig.advanced === '1' || props.advance
     config.advancedSearchButton = config.advancedSearchAble && props.advanceButton
     config.treeMode = isNotEmpty(tableConfig.pidColumn) && isEmpty(data.value)
     config.parentKey = tableConfig.pidColumn
