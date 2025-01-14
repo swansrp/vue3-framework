@@ -8,7 +8,7 @@
 </template>
 
 <script lang="ts" setup>
-import { getTextWidth } from '@/framework/components/common/portal/utils'
+import { getTextWidth } from '@/framework/components/common/Portal/utils'
 
 const _ = getInstance()
 const props = withDefaults(
