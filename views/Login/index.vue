@@ -305,7 +305,7 @@ const handleInitPassword = () => {
 }
 
 const passwordResetValidator = () => {
-  return lxStr(registerForm.password)
+  return lxStr(passwordResetForm.password)
 }
 
 const passwordLoginValidator = () => {
@@ -314,6 +314,7 @@ const passwordLoginValidator = () => {
 
 // 判断密码是否为连续的数字或字母
 const lxStr = (password: string) => {
+  console.log('lxStr', password)
   if (isEmpty(password)) {
     return Promise.reject('请输入密码')
   }
