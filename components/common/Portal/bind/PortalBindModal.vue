@@ -6,6 +6,7 @@
     <a-tabs
       v-model:activeKey="bindDialogBox.tab"
       type="card"
+      destroy-inactive-tab-pane
       @change="handleTabChanged">
       <a-tab-pane key="0" :tab="'已' + actionText + title">
         <div style="height: calc(100vh - 200px);">
