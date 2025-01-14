@@ -550,6 +550,7 @@ const __ = getInstance()
  * @param multiHeader 是否多重表头
  * @param data 显示数据
  * @param readOnly 不能编辑
+ * @param pageSize 每页显示条数
  * @param autoWidth 自动宽度
  * @param autoHeight 自动高度
  * @param actionWidth 操作栏宽度
@@ -584,6 +585,7 @@ const props = withDefaults(defineProps<{
     multiHeader?: boolean,
     data?: Array<any>,
     readOnly?: boolean,
+    pageSize?: number
     autoWidth?: boolean,
     autoHeight?: boolean,
     actionWidth?: number,
@@ -618,6 +620,7 @@ const props = withDefaults(defineProps<{
     baseDomain: '/' + name,
     data: undefined,
     readOnly: false,
+    pageSize: 10,
     autoWidth: false,
     autoHeight: false,
     actionWidth: 150,
@@ -704,7 +707,7 @@ const config: TableConfigType = reactive({
   },
   loading: true,
   currentPage: 1,
-  pageSize: 10,
+  pageSize: props.pageSize,
   total: 100,
   modal: {
     show: false,
@@ -736,6 +739,7 @@ const config: TableConfigType = reactive({
   advancedSearchAble: true,
   advancedSearchButton: true
 } as TableConfigType)
+
 watch(props, (value, old) => {
   if (value.readOnly != old.readOnly) {
     config.readOnly = value.readOnly
@@ -1381,7 +1385,7 @@ const initQueryCondition = () => {
   if (isListMode.value) {
     config.pageSize = 15
   } else {
-    config.pageSize = 10
+    config.pageSize = props.pageSize
   }
   queryConditionMap.clear()
   querySortMap.clear()
