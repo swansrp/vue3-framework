@@ -751,7 +751,10 @@ watch(
   () => data.value,
   () => {
     config.total = data.value?.length || 0
-    initData(data.value || [])
+    data.value && initData(data.value || [])
+  },
+  {
+    immediate: true
   }
 )
 /**

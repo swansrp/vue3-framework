@@ -28,7 +28,12 @@ import {
   updateListRequest,
   updateOrderRequest,
   updateRequest,
-  updateTreePidRequest, queryAttachListRequest, bindInfoRequest, bindInfoListRequest
+  updateTreePidRequest,
+  queryAttachListRequest,
+  bindInfoRequest,
+  bindInfoListRequest,
+  generalCountRequest,
+  advancedCountRequest
 } from '@/framework/apis'
 import { QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 
@@ -68,11 +73,17 @@ export const generalSelect = (url: string, query: QueryType, baseDomain?: string
 export const generalSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string) =>
   generalSummaryRequest('/' + url, query.conditionList, query.sortList, columns, baseDomain) as Promise<any>
 
+export const generalCount = (url: string, query: QueryType, baseDomain?: string) =>
+  generalCountRequest('/' + url, query.conditionList, query.sortList, baseDomain) as Promise<any>
+
 export const advancedSelect = (url: string, query: QueryType, baseDomain?: string) =>
   advancedSelectRequest('/' + url, query.condition, query.sortList, baseDomain) as Promise<any>
 
 export const advancedSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string) =>
   advancedSummaryRequest('/' + url, query.condition, query.sortList, columns, baseDomain) as Promise<any>
+
+export const advancedCount = (url: string, query: QueryType, baseDomain?: string) =>
+  advancedCountRequest('/' + url, query.condition, query.sortList, baseDomain) as Promise<any>
 
 export const getTreeData = (url: string, query: QueryType, baseDomain?: string) =>
   getTreeDataRequest('/' + url, query, baseDomain) as Promise<any>

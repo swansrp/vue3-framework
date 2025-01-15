@@ -37,9 +37,11 @@ const commonUrl = {
   GENERAL_QUERY: '/general/query',
   GENERAL_SELECT: '/general/select',
   GENERAL_SUMMARY: '/general/summary',
+  GENERAL_COUNT: '/general/count',
   ADVANCED_QUERY: '/advanced/query',
   ADVANCED_SELECT: '/advanced/select',
   ADVANCED_SUMMARY: '/advanced/summary',
+  ADVANCED_COUNT: '/advanced/count',
   UPDATE: '/update',
   UPDATE_LIST: '/update/list',
   DELETE: '/delete',
@@ -131,6 +133,12 @@ const generalSummaryApi = (
   version = '1.0'
 ) => buildApi(domain, commonUrl.GENERAL_SUMMARY, requestMethod.POST, version, type)
 
+const generalCountApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.GENERAL_COUNT, requestMethod.POST, version, type)
+
 const advancedQueryApi = (
   type: string,
   domain: string = baseDomain,
@@ -148,6 +156,12 @@ const advancedSummaryApi = (
   domain: string = baseDomain,
   version = '1.0'
 ) => buildApi(domain, commonUrl.ADVANCED_SUMMARY, requestMethod.POST, version, type)
+
+const advancedCountApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.ADVANCED_COUNT, requestMethod.POST, version, type)
 
 const addApi = (
   type: string,
@@ -372,6 +386,18 @@ export const generalSummaryRequest = (
   columns
 }, showSuccess, showLoading) as Promise<any>
 
+export const generalCountRequest = (
+  type: string,
+  conditionList: Array<any>,
+  sortList: Array<QuerySortType>,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(generalCountApi(type, domain), {}, {
+  conditionList,
+  sortList,
+}, showSuccess, showLoading) as Promise<any>
+
 export const advancedQueryRequest = (
   type: string,
   condition: ConditionType,
@@ -412,6 +438,18 @@ export const advancedSummaryRequest = (
   condition,
   sortList,
   columns
+}, showSuccess, showLoading) as Promise<any>
+
+export const advancedCountRequest = (
+  type: string,
+  condition: ConditionType,
+  sortList: Array<QuerySortType>,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(advancedCountApi(type, domain), {}, {
+  condition,
+  sortList
 }, showSuccess, showLoading) as Promise<any>
 
 export const getByIdRequest = (
