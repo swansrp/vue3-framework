@@ -57,7 +57,7 @@
               />
             </template>
           </portal-list-mode>
-          <a-empty v-else/>
+          <a-empty v-else />
         </div>
       </a-layout-sider>
       <a-layout-content
@@ -67,7 +67,7 @@
           <caret-right-outlined
             :rotate="layoutSiderDisplay ? 180 : 0"
             style="color: #1677ff;font-size: 15px;margin-right: 5px"
-            @click="handleLayoutSiderDisplay"/>
+            @click="handleLayoutSiderDisplay" />
           <span>{{ selectedEntityName }}</span>
         </div>
         <portal-bind-tab
@@ -75,7 +75,7 @@
           :bind-tabs="bindTabs"
           :entity-name="props.tableId"
           :record="selectedRecord"
-          :row-key="config.rowKey"/>
+          :row-key="config.rowKey" />
       </a-layout-content>
     </a-layout>
     <template v-else>
@@ -91,7 +91,7 @@
           :draggable="!config.readOnly && config.treeDragAble"
           :show-line="true"
           :tree-data="treeData"
-          @drop="updateTree"/>
+          @drop="updateTree" />
       </div>
       <!-- endregion 树形配置 -->
       <!-- region 数据 -->
@@ -207,12 +207,12 @@
                       <multimedia
                         v-model="record[column.dataIndex]" :height="column.referenceDict?.split(',')[1] || 120"
                         :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120"
-                        use-original-file-name/>
+                        use-original-file-name />
                     </template>
                     <template
                       v-else-if="column.fieldType === FIELD_TYPE.AUDIO || column.fieldType === FIELD_TYPE.VIDEO ||
                         column.fieldType === FIELD_TYPE.FILE">
-                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80"/>
+                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80" />
                     </template>
                     <span
                       v-else
@@ -269,8 +269,8 @@
               <!-- endregion -->
               <!-- region 下拉搜索样式 -->
               <template #menuIcon="{ column, filtered }">
-                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'"/>
-                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'"/>
+                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'" />
+                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'" />
               </template>
               <template
                 #menuPopup="{ column }">
@@ -302,7 +302,7 @@
               <!-- endregion -->
               <!-- region 列搜索 -->
               <template #customFilterIcon="{ filtered }">
-                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }"/>
+                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }" />
               </template>
               <template
                 #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
@@ -325,7 +325,7 @@
               <!-- endregion -->
               <!-- region 拖拽显示样式 -->
               <template #rowDragGhost="{ record, icon, preTargetInfo, nextTargetInfo }">
-                <component :is="icon"/>
+                <component :is="icon" />
                 <span style="color: gray">
                   dragging from {{ record[config.nameKey] }} to
                   {{ preTargetInfo?.record[config.nameKey] || nextTargetInfo?.record[config.nameKey] }}
@@ -364,7 +364,7 @@
                   :record="record" name="expandedRowRender"></slot>
                 <portal-text-area-expanded
                   v-else-if="props.textAreaInExpanded" :columns="textAreaColumns"
-                  :record="record"/>
+                  :record="record" />
               </template>
               <template #footer>
                 <div class="pagination">
@@ -386,7 +386,7 @@
                       <template #itemRender="{ type, originalElement }">
                         <a v-if="type === 'prev'">&lt;</a>
                         <a v-else-if="type === 'next'">&gt;</a>
-                        <component :is="originalElement" v-else/>
+                        <component :is="originalElement" v-else />
                       </template>
                       <template #buildOptionText="prop">
                         <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
@@ -491,8 +491,8 @@ import {
   updateOrder,
   updateTreePid
 } from '@/framework/apis/portal'
-import {getPortalConfig} from '@/framework/apis/portal/config'
-import {dictStore, useTreeStore} from '@/framework/store/common'
+import { getPortalConfig } from '@/framework/apis/portal/config'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import * as _ from 'lodash'
 import {
   ColumnType,
@@ -527,22 +527,22 @@ import {
   getDefaultFilterType,
   indexColumn
 } from '@/framework/components/common/Portal/constant'
-import {AUTO} from '@/framework/utils/constant'
-import {createVNode, Ref, useSlots} from 'vue'
-import {message, Modal} from 'ant-design-vue'
-import {AntTreeNodeDropEvent} from 'ant-design-vue/es/tree'
-import {getDroppedData} from '@/framework/hooks/antTreeDropSort'
-import {DataNode} from 'ant-design-vue/es/vc-tree/interface'
-import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
-import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import {PortalBindType} from '@/framework/components/common/Portal/bind/type'
+import { AUTO } from '@/framework/utils/constant'
+import { createVNode, Ref, useSlots } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import bus from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
-import {parse} from '@/framework/components/common/Portal/utils'
-import {excelExport} from '@/framework/utils/excel'
-import {name} from '@/../package.json'
+import { parse } from '@/framework/components/common/Portal/utils'
+import { excelExport } from '@/framework/utils/excel'
+import { name } from '@/../package.json'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
-import {DefaultRecordType} from 'ant-design-vue/es/vc-table/interface'
+import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
 
 const __ = getInstance()
 /**
@@ -708,7 +708,7 @@ const config: TableConfigType = reactive({
   loading: true,
   currentPage: 1,
   pageSize: props.pageSize,
-  total: 100,
+  total: props.data ? props.data.length : 0,
   modal: {
     show: false,
     type: undefined,
@@ -1831,10 +1831,7 @@ watch(
   () => data.value,
   () => {
     config.total = data.value?.length || 0
-    data.value && initData(data.value || [])
-  },
-  {
-    immediate: true
+    initData(data.value || [])
   }
 )
 
