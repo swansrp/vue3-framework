@@ -1,5 +1,5 @@
 <template>
-  <a-layout>
+  <a-layout style="width: 100%; overflow:auto;">
     <a-layout-sider
       id="side"
       :width="_width"
@@ -14,29 +14,31 @@
         v-if="collapsed"
         style="position: relative;left: -15px; top: 40vh; bottom: 0; z-index: 1000" type="link"
         @click="toggleCollapsed">
-        <RightOutlined style="color: gray" />
+        <RightOutlined style="color: gray"/>
       </a-button>
       <a-button
         v-else
         style="position: relative;left: -25px; top: 40vh; bottom: 0; z-index: 1000" type="link"
         @click="toggleCollapsed">
-        <LeftOutlined style="color: gray" />
+        <LeftOutlined style="color: gray"/>
       </a-button>
     </div>
     <a-layout-content
-      style="margin-left: 10px; margin-right: 10px">
+      style="margin-left: 10px; margin-right: 10px; height: 100%; overflow: auto">
       <slot name="content"></slot>
     </a-layout-content>
   </a-layout>
+
 </template>
 
 <script lang="ts" setup>
-import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import {LeftOutlined, RightOutlined} from '@ant-design/icons-vue'
 import bus from '@/framework/mitt'
-import { Ref } from 'vue'
+import {Ref} from 'vue'
+
 const props = withDefaults(
   defineProps<{
-    width?: number|string
+    width?: number | string
   }>(),
   {
     width: 200
@@ -45,16 +47,16 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'resize'): void
 }>()
-const _width:Ref<string|number> = ref(props.width)
-const widthValue:Ref<number> = ref(200)
+const _width: Ref<string | number> = ref(props.width)
+const widthValue: Ref<number> = ref(200)
 const dragControllerDiv = () => {
-  const resize = document.getElementById("resize")
+  const resize = document.getElementById('resize')
   if (resize) {
-    widthValue.value = document.getElementById("side")?.offsetWidth || 0
+    widthValue.value = document.getElementById('side')?.offsetWidth || 0
     let startX = resize.offsetLeft
     resize.onmousedown = () => {
       // 颜色改变提醒
-      resize.style.background = "#818181"
+      resize.style.background = '#818181'
       document.onmousemove = (e) => {
         // 计算并应用位移量
         let endX = e.clientX
@@ -63,10 +65,10 @@ const dragControllerDiv = () => {
         widthValue.value = Number(widthValue.value) + moveLen
         _width.value = widthValue.value
         notifyResize()
-      };
+      }
       document.onmouseup = () => {
         // 颜色恢复
-        resize.style.background = ""
+        resize.style.background = ''
         document.onmousemove = null
         document.onmouseup = null
         notifyResize()
@@ -76,7 +78,7 @@ const dragControllerDiv = () => {
   }
 }
 const toggleCollapsed = () => {
-  if(collapsed.value) {
+  if (collapsed.value) {
     _width.value = widthValue.value
   } else {
     _width.value = '0'
@@ -99,7 +101,7 @@ onMounted(() => {
   background-color: white;
   box-sizing: border-box;
   overflow: auto;
-  height: calc(100vh - 150px);
+  height: calc(100% - 20px);
   box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
   margin: 10px 15px;
 }
@@ -107,7 +109,7 @@ onMounted(() => {
 #resize {
   background: rgba(69, 89, 120, 0.05);
   width: 5px;
-  height: calc(100vh - 130px);
+  height: 100%;
   cursor: w-resize;
 }
 </style>
