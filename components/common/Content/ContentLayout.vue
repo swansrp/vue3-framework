@@ -1,5 +1,5 @@
 <template>
-  <a-layout style="width: 100%; overflow:auto;">
+  <a-layout style="width: 100%; overflow:auto; height: calc(100vh - 130px)">
     <a-layout-sider
       id="side"
       :width="_width"
