@@ -14,13 +14,13 @@
         v-if="collapsed"
         style="position: relative;left: -15px; top: 40vh; bottom: 0; z-index: 1000" type="link"
         @click="toggleCollapsed">
-        <RightOutlined style="color: gray"/>
+        <RightOutlined style="color: gray" />
       </a-button>
       <a-button
         v-else
         style="position: relative;left: -25px; top: 40vh; bottom: 0; z-index: 1000" type="link"
         @click="toggleCollapsed">
-        <LeftOutlined style="color: gray"/>
+        <LeftOutlined style="color: gray" />
       </a-button>
     </div>
     <a-layout-content

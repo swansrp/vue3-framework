@@ -1569,7 +1569,20 @@ const paginationChange = () => {
 const download = () => {
   const downloadFunc = () => {
     if (config.plain) {
-      excelExport(parsedDataSource.value || [], props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, config.title)
+      let exportDataArray
+      if (isNotEmpty(data.value)) {
+        exportDataArray = []
+        for (let index in data.value) {
+          const parsedData = _.cloneDeep(data.value[Number(index)])
+          columnArray.value.forEach((column: ColumnType) => {
+            parse(parsedData, Number(index), column, config)
+          })
+          exportDataArray.push(parsedData)
+        }
+      } else {
+        exportDataArray = [...parsedDataSource.value]
+      }
+      excelExport(exportDataArray, props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, config.title)
     } else {
       const resolve = (resp: any) => {
         const dataArray = resp.payload || []
