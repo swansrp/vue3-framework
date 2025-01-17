@@ -516,84 +516,108 @@ export const importAddProgressRequest = (
 export const getAllBindListRequest = (
   type: string,
   entityId: any,
-  domain: string = baseDomain
-) => request(bindAllListApi(type, domain), {entityId}, {}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindAllListApi(type, domain), {entityId}, {}, showSuccess, showLoading) as Promise<any>
 
 export const queryBindListRequest = (
   type: string,
   entityId: any,
   query: QueryType,
-  domain: string = baseDomain
-) => request(bindListApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindListApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
 
 export const queryUnbindListRequest = (
   type: string,
   entityId: any,
   query: QueryType,
-  domain: string = baseDomain
-) => request(unbindListApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(unbindListApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
 
 export const queryAttachListRequest = (
   type: string,
   entityId: any,
   query: QueryType,
-  domain: string = baseDomain
-) => request(attachListApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(attachListApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
 
 export const bindRequest = (
   type: string,
   entityId: any,
   attachId: any,
-  domain: string = baseDomain
-) => request(bindApi(type, domain), {}, {attachId, entityId}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindApi(type, domain), {}, {attachId, entityId}, showSuccess, showLoading) as Promise<any>
 
 export const unbindRequest = (
   type: string,
   entityId: any,
   attachId: any,
-  domain: string = baseDomain
-) => request(unbindApi(type, domain), {}, {attachId, entityId}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(unbindApi(type, domain), {}, {attachId, entityId}, showSuccess, showLoading) as Promise<any>
 
 export const bindBatchRequest = (
   type: string,
   entityId: any,
   attachIdList: Array<any>,
-  domain: string = baseDomain
-) => request(bindBatchApi(type, domain), {}, {attachIdList, entityId}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindBatchApi(type, domain), {}, {attachIdList, entityId}, showSuccess, showLoading) as Promise<any>
 
 export const unbindBatchRequest = (
   type: string,
   entityId: any,
   attachIdList: Array<any>,
-  domain: string = baseDomain
-) => request(unbindBatchApi(type, domain), {}, {attachIdList, entityId}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(unbindBatchApi(type, domain), {}, {attachIdList, entityId}, showSuccess, showLoading) as Promise<any>
 
 export const bindReplaceAllRequest = (
   type: string,
   entityId: any,
   query: QueryType,
-  domain: string = baseDomain
-) => request(bindReplaceAllApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindReplaceAllApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
 
 export const bindReplaceBatchRequest = (
   type: string,
   entityId: any,
   attachIdList: Array<any>,
-  domain: string = baseDomain
-) => request(bindReplaceApi(type, domain), {}, {entityId, attachIdList}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindReplaceApi(type, domain), {}, {entityId, attachIdList}, showSuccess, showLoading) as Promise<any>
 
 export const bindAllRequest = (
   type: string,
   entityId: any,
   query: QueryType,
-  domain: string = baseDomain
-) => request(bindAllApi(type, domain), {}, {entityId, ...query}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindAllApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
 
 export const unbindAllRequest = (
   type: string,
   entityId: any,
-  domain: string = baseDomain
-) => request(unbindAllApi(type, domain), {}, {entityId}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(unbindAllApi(type, domain), {}, {entityId}, showSuccess, showLoading) as Promise<any>
 
 export const bindInfoRequest = (
   type: string,
@@ -601,16 +625,20 @@ export const bindInfoRequest = (
   attachId: any,
   data: any,
   strict: boolean,
-  domain: string = baseDomain
-) => request(bindInfoApi(type, domain), {entityId, strict}, {attachId, data}) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindInfoApi(type, domain), {entityId, strict}, {attachId, data}, showSuccess, showLoading) as Promise<any>
 
 export const bindInfoListRequest = (
   type: string,
   entityId: any,
   data: Array<any>,
   strict: boolean,
-  domain: string = baseDomain
-) => request(bindInfoListApi(type, domain), {entityId, strict}, data) as Promise<any>
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(bindInfoListApi(type, domain), {entityId, strict}, data, showSuccess, showLoading) as Promise<any>
 
 
 export {

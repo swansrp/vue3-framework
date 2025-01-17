@@ -37,62 +37,62 @@ import {
 } from '@/framework/apis'
 import { QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 
-export const getById = (url: string, id: string, baseDomain?: string) =>
-  getByIdRequest('/' + url, id, baseDomain) as Promise<any>
+export const getById = (url: string, id: string, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  getByIdRequest('/' + url, id, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const addEntity = (url: string, entity: object, baseDomain?: string) =>
-  addRequest('/' + url, entity, baseDomain) as Promise<any>
+export const addEntity = (url: string, entity: object, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  addRequest('/' + url, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateEntity = (url: string, entity: object, baseDomain?: string) =>
-  updateRequest('/' + url, {strict: true}, entity, baseDomain) as Promise<any>
+export const updateEntity = (url: string, entity: object, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  updateRequest('/' + url, {strict: true}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateEntitySelective = (url: string, entity: object, baseDomain?: string) =>
-  updateRequest('/' + url, {strict: false}, entity, baseDomain) as Promise<any>
+export const updateEntitySelective = (url: string, entity: object, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  updateRequest('/' + url, {strict: false}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateEntityList = (url: string, entity: Array<any>, baseDomain?: string) =>
-  updateListRequest('/' + url, {strict: true}, entity, baseDomain) as Promise<any>
+export const updateEntityList = (url: string, entity: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  updateListRequest('/' + url, {strict: true}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateEntityListSelective = (url: string, entity: Array<any>, baseDomain?: string) =>
-  updateListRequest('/' + url, {strict: false}, entity, baseDomain) as Promise<any>
+export const updateEntityListSelective = (url: string, entity: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  updateListRequest('/' + url, {strict: false}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const deleteEntity = (url: string, id: string, baseDomain?: string) =>
-  deleteRequest('/' + url, id, baseDomain) as Promise<any>
+export const deleteEntity = (url: string, id: string, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  deleteRequest('/' + url, id, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const deleteEntityList = (url: string, id: Array<string>, baseDomain?: string) =>
-  deleteListRequest('/' + url, {}, id, baseDomain) as Promise<any>
+export const deleteEntityList = (url: string, id: Array<string>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  deleteListRequest('/' + url, {}, id, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedQuery = (url: string, query: QueryType, baseDomain?: string) =>
-  advancedQueryRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage, baseDomain) as Promise<any>
+export const advancedQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  advancedQueryRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const generalQuery = (url: string, query: QueryType, baseDomain?: string) =>
-  generalQueryRequest('/' + url, query.conditionList, query.sortList, query.pageSize, query.currentPage, baseDomain) as Promise<any>
+export const generalQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  generalQueryRequest('/' + url, query.conditionList, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const generalSelect = (url: string, query: QueryType, baseDomain?: string) =>
-  generalSelectRequest('/' + url, query.conditionList, query.sortList, baseDomain) as Promise<any>
+export const generalSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  generalSelectRequest('/' + url, query.conditionList, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const generalSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string) =>
-  generalSummaryRequest('/' + url, query.conditionList, query.sortList, columns, baseDomain) as Promise<any>
+export const generalSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  generalSummaryRequest('/' + url, query.conditionList, query.sortList, columns, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const generalCount = (url: string, query: QueryType, baseDomain?: string) =>
-  generalCountRequest('/' + url, query.conditionList, query.sortList, baseDomain) as Promise<any>
+export const generalCount = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  generalCountRequest('/' + url, query.conditionList, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedSelect = (url: string, query: QueryType, baseDomain?: string) =>
-  advancedSelectRequest('/' + url, query.condition, query.sortList, baseDomain) as Promise<any>
+export const advancedSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  advancedSelectRequest('/' + url, query.condition, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string) =>
-  advancedSummaryRequest('/' + url, query.condition, query.sortList, columns, baseDomain) as Promise<any>
+export const advancedSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  advancedSummaryRequest('/' + url, query.condition, query.sortList, columns, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedCount = (url: string, query: QueryType, baseDomain?: string) =>
-  advancedCountRequest('/' + url, query.condition, query.sortList, baseDomain) as Promise<any>
+export const advancedCount = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  advancedCountRequest('/' + url, query.condition, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const getTreeData = (url: string, query: QueryType, baseDomain?: string) =>
-  getTreeDataRequest('/' + url, query, baseDomain) as Promise<any>
+export const getTreeData = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  getTreeDataRequest('/' + url, query, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateTreePid = (url: string, data: UpdatePidType, baseDomain?: string) =>
-  updateTreePidRequest('/' + url, data, baseDomain) as Promise<any>
+export const updateTreePid = (url: string, data: UpdatePidType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  updateTreePidRequest('/' + url, data, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateOrder = (url: string, data: Array<UpdateOrderType>, baseDomain?: string) =>
-  updateOrderRequest('/' + url, data, baseDomain) as Promise<any>
+export const updateOrder = (url: string, data: Array<UpdateOrderType>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  updateOrderRequest('/' + url, data, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const exportData = (url: string, name: string, query: QueryType, fileName: string, baseDomain?: string) =>
   exportDataRequest('/' + url, name, query, fileName, baseDomain) as Promise<any>
@@ -106,80 +106,80 @@ export const importAdd = (url: string, name: string, file: object, onUploadProgr
 export const importAddProgress = (url: string, name: string, baseDomain?: string) =>
   importAddProgressRequest('/' + url, name, baseDomain) as Promise<any>
 
-export const getAllBindList = (entity: string, attach: string, entityId: any, baseDomain?: string) =>
-  getAllBindListRequest('/' + entity + '/' + attach, entityId, baseDomain) as Promise<any>
+export const getAllBindList = (entity: string, attach: string, entityId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  getAllBindListRequest('/' + entity + '/' + attach, entityId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const queryBindList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  queryBindListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain) as Promise<any>
+export const queryBindList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  queryBindListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const queryUnbindList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  queryUnbindListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain) as Promise<any>
+export const queryUnbindList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  queryUnbindListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const queryAttachList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  queryAttachListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain) as Promise<any>
+export const queryAttachList = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  queryAttachListRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindAttach = (entity: string, attach: string, entityId: any, attachId: any, baseDomain?: string) =>
-  bindRequest('/' + entity + '/' + attach, entityId, attachId, baseDomain) as Promise<any>
+export const bindAttach = (entity: string, attach: string, entityId: any, attachId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindRequest('/' + entity + '/' + attach, entityId, attachId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const unbindAttach = (entity: string, attach: string, entityId: any, attachId: any, baseDomain?: string) =>
-  unbindRequest('/' + entity + '/' + attach, entityId, attachId, baseDomain) as Promise<any>
+export const unbindAttach = (entity: string, attach: string, entityId: any, attachId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  unbindRequest('/' + entity + '/' + attach, entityId, attachId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
-  bindBatchRequest('/' + entity + '/' + attach, entityId, attachIdList, baseDomain) as Promise<any>
+export const bindBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindBatchRequest('/' + entity + '/' + attach, entityId, attachIdList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const unbindBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
-  unbindBatchRequest('/' + entity + '/' + attach, entityId, attachIdList, baseDomain) as Promise<any>
+export const unbindBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  unbindBatchRequest('/' + entity + '/' + attach, entityId, attachIdList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindReplaceBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
-  bindReplaceBatchRequest('/' + entity + '/' + attach, entityId, attachIdList, baseDomain) as Promise<any>
+export const bindReplaceBatchAttach = (entity: string, attach: string, entityId: any, attachIdList: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindReplaceBatchRequest('/' + entity + '/' + attach, entityId, attachIdList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindReplaceAllAttach = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  bindReplaceAllRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain) as Promise<any>
+export const bindReplaceAllAttach = (entity: string, attach: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindReplaceAllRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindAllAttach = (entity: string, attach: string, entityId: any, attachQuery = {} as QueryType, baseDomain?: string) =>
-  bindAllRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain) as Promise<any>
+export const bindAllAttach = (entity: string, attach: string, entityId: any, attachQuery = {} as QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindAllRequest('/' + entity + '/' + attach, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const unbindAllAttach = (entity: string, attach: string, entityId: any, baseDomain?: string) =>
-  unbindAllRequest('/' + entity + '/' + attach, entityId, baseDomain) as Promise<any>
+export const unbindAllAttach = (entity: string, attach: string, entityId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  unbindAllRequest('/' + entity + '/' + attach, entityId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateBindInfo = (entity: string, attach: string, entityId: any, attachId: any, data: any, strict = true, baseDomain?: string) =>
-  bindInfoRequest('/' + entity + '/' + attach, entityId, attachId, data, strict, baseDomain) as Promise<any>
+export const updateBindInfo = (entity: string, attach: string, entityId: any, attachId: any, data: any, strict = true, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindInfoRequest('/' + entity + '/' + attach, entityId, attachId, data, strict, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const updateBindInfoList = (entity: string, attach: string, entityId: any, data: Array<any>, strict = true, baseDomain?: string) =>
-  bindInfoListRequest('/' + entity + '/' + attach, entityId, data, strict, baseDomain) as Promise<any>
+export const updateBindInfoList = (entity: string, attach: string, entityId: any, data: Array<any>, strict = true, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindInfoListRequest('/' + entity + '/' + attach, entityId, data, strict, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const getAllBindListByUrl = (url: string, entityId: any, baseDomain?: string) =>
-  getAllBindListRequest(url, entityId, baseDomain) as Promise<any>
+export const getAllBindListByUrl = (url: string, entityId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  getAllBindListRequest(url, entityId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const queryBindListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  queryBindListRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+export const queryBindListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  queryBindListRequest(url, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const queryUnbindListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  queryUnbindListRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+export const queryUnbindListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  queryUnbindListRequest(url, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const queryAttachListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  queryAttachListRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+export const queryAttachListByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  queryAttachListRequest(url, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindAttachByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string) =>
-  bindRequest(url, entityId, attachId, baseDomain) as Promise<any>
+export const bindAttachByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindRequest(url, entityId, attachId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const unbindAttachByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string) =>
-  unbindRequest(url, entityId, attachId, baseDomain) as Promise<any>
+export const unbindAttachByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  unbindRequest(url, entityId, attachId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
-  bindBatchRequest(url, entityId, attachIdList, baseDomain) as Promise<any>
+export const bindBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindBatchRequest(url, entityId, attachIdList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const unbindBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
-  unbindBatchRequest(url, entityId, attachIdList, baseDomain) as Promise<any>
+export const unbindBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  unbindBatchRequest(url, entityId, attachIdList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindReplaceBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string) =>
-  bindReplaceBatchRequest(url, entityId, attachIdList, baseDomain) as Promise<any>
+export const bindReplaceBatchAttachByUrl = (url: string, entityId: any, attachIdList: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindReplaceBatchRequest(url, entityId, attachIdList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindReplaceAllAttachByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string) =>
-  bindReplaceAllRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+export const bindReplaceAllAttachByUrl = (url: string, entityId: any, attachQuery: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindReplaceAllRequest(url, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const bindAllAttachByUrl = (url: string, entityId: any, attachQuery = {} as QueryType, baseDomain?: string) =>
-  bindAllRequest(url, entityId, attachQuery, baseDomain) as Promise<any>
+export const bindAllAttachByUrl = (url: string, entityId: any, attachQuery = {} as QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindAllRequest(url, entityId, attachQuery, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const unbindAllAttachByUrl = (url: string, entityId: any, baseDomain?: string) =>
-  unbindAllRequest(url, entityId, baseDomain) as Promise<any>
+export const unbindAllAttachByUrl = (url: string, entityId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  unbindAllRequest(url, entityId, baseDomain, showSuccess, showLoading) as Promise<any>
