@@ -2,6 +2,8 @@
   <grid-layout
     v-model:layout="list"
     :row-height="rowHeight"
+    :col-num="maxCol"
+    :isDraggable="isDraggable"
   >
     <grid-item
       v-for="item in list"
@@ -32,13 +34,15 @@ const props = withDefaults(
     maxCol?: number
     fieldNames?: any
     rowHeight?: number
+    isDraggable?: boolean
   }>(),
   {
     width: 3,
     height: 10,
     maxCol: 12,
     fieldNames: {label: 'label', value: 'value'},
-    rowHeight: 31
+    rowHeight: 31,
+    isDraggable: true
   }
 )
 const {modelValue, width, height, maxCol, fieldNames, rowHeight} = toRefs(props)
@@ -88,10 +92,8 @@ function movedEvent(i: string, newX: number) {
       }
     }
     console.log('===MOVED===', map.get(i).x, map.get(i).y, list.value)
-
     const position = getPosition(map.get(i).node.x, map.get(i).node.y)
     console.log("position: ", position, "direction: ", map.get(i).direction)
-
     if (map.get(i).direction > 0) {
       for (let index = 0; index < map.get(i).node.position; index++) {
         const {x, y} = positionMap.get(index)
