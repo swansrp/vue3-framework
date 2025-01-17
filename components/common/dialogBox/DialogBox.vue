@@ -40,7 +40,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: any): void
+  (e: 'update:visible', value: any): void
   (e: 'open'): void
   (e: 'close'): void
 }>()
