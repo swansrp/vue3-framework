@@ -25,7 +25,7 @@
         </div>
       </div>
     </template>
-    <a-badge dot>
+    <a-badge dot v-if="deleteAble || downloadAble">
       <a-dropdown>
         <div style="width: 10px; height: 10px; margin-left: -10px; background: transparent"></div>
         <template #overlay>
