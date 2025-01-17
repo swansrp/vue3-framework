@@ -221,7 +221,6 @@ const updateCaptchaUrl = (captchaType: string) => captchaUrl.value = getCaptchaU
 const recoveryFun = (captchaType: string) => {
   registerMode.value = false
   updateCaptchaUrl(captchaType)
-  message.destroy()
   loading.value = false
 }
 
@@ -281,7 +280,6 @@ const handleMsgLogin = (data: any) => {
 const afterLogin = (res: any) => {
   const route = router.currentRoute.value
   const redirect_uri = route.query ? route.query.redirect_uri ? '/' + route.query.redirect_uri : undefined : undefined
-  message.destroy()
   message.success({content: () => '登录成功！正在继续转跳，请稍后...', style: {marginTop: '10vh'}})
   const {accessToken, refreshToken} = res.payload
   localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
