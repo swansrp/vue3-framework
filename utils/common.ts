@@ -254,6 +254,10 @@ const uuid = () => {
   });
 }
 
+const parseCssValue = (value: string | number = 'auto', unit = 'px') => {
+  return (value === 'auto') ? value : isNaN(Number(value)) ? value : Number(value) + unit
+}
+
 
 export {
   localStorageMethods,
@@ -279,5 +283,6 @@ export {
   stopTimer,
   uuid,
   copyField,
-  clearFrom
+  clearFrom,
+  parseCssValue
 }
