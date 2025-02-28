@@ -41,7 +41,6 @@ export const excel = (dataSource: any, columns: any, rawColumns: any) => {
   const ws = aoa_to_sheet(header, columnHeight, rawColumns, columnWidthArray)
   // 列宽
   ws['!cols'] = [...columnWidthArray]
-  console.log(ws['!cols'])
   ws['!merges'] = mergeRecord
   // 头部冻结
   ws["!freeze"] = {
