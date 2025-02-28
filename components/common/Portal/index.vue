@@ -235,6 +235,7 @@
                   :columns="columns"
                   :config="config"
                   :dataSummary="dataSummary"
+                  :hide-row-selection="hideRowSelection"
                   :is-expanded="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
                 />
               </template>

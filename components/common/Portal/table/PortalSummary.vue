@@ -2,23 +2,23 @@
   <s-table-summary-row v-if="config.summary && !config.plain">
     <s-table-summary-cell v-for="index of columns.length" :key="index" :index="index">
       <div v-if="index === (1 + isExpanded ? 1 : 0)">总计</div>
-      <div v-else-if="index === columns.length + 1"></div>
+      <div v-else-if="index === columns.length + (hideRowSelection ? 0 : 1)"></div>
       <div
-        v-else-if="columns[index - 1 - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.NUMBER"
+        v-else-if="columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.NUMBER"
         :style="{textAlign: 'center'}">
         {{
-          _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex] || '--')
+          _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex] || '--')
         }}
       </div>
       <div
-        v-else-if="columns[index - 1 - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.MONEY"
+        v-else-if="columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.MONEY"
         :style="{textAlign: 'center'}">
         {{
-          _.$isEmpty(dataSummary) ? '--' : (formatMoney(dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex], Number(columns[index - 1 - (isExpanded ? 1 : 0)].referenceDict?.split(',')[0]), Number(columns[index - 1 - (isExpanded ? 1 : 0)].referenceDict?.split(',')[1])))
+          _.$isEmpty(dataSummary) ? '--' : (formatMoney(dataSummary[columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex], Number(columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].referenceDict?.split(',')[0]), Number(columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].referenceDict?.split(',')[1])))
         }}
       </div>
       <div v-else :style="{textAlign: 'center'}"> {{
-        _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - 1 - (isExpanded ? 1 : 0)].dataIndex] || '--')
+        _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex] || '--')
       }}
       </div>
     </s-table-summary-cell>
@@ -35,10 +35,11 @@ const props = withDefaults(
     columns: Array<ColumnType>,
     dataSummary: { [key: string]: any } | null,
     isExpanded: boolean
+    hideRowSelection: boolean
   }>(),
   {}
 )
-const {config, columns, dataSummary} = toRefs(props)
+const {config, columns, dataSummary, isExpanded, hideRowSelection} = toRefs(props)
 onMounted(() => {})
 </script>
 
