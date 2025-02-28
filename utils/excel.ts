@@ -10,6 +10,11 @@ import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
  * @param fileName      excel导出时的文件名
  */
 export const excelExport = (dataSource: any, columns: any, rawColumns: any, fileName: string) => {
+  const wb = excel(dataSource, columns, rawColumns)
+  XLSX.writeFile(wb, fileName + '-' + dayjs().format('YYYYMMDDHHmmss') + ".xlsx")
+}
+
+export const excel = (dataSource: any, columns: any, rawColumns: any) => {
   const columnHeight = _columnHeight(columns)
   const columnWidth = _columnWidth(columns)
   const header = [] as Array<any>
@@ -48,7 +53,7 @@ export const excelExport = (dataSource: any, columns: any, rawColumns: any, file
   }
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, "sheet1")
-  XLSX.writeFile(wb, fileName + '-' + dayjs().format('YYYYMMDDHHmmss') + ".xlsx")
+  return wb
 }
 const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray: Array<any>) => {
   const ws = {}
