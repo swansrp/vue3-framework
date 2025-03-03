@@ -36,6 +36,10 @@
     border: none;
 }
 
+:deep(.surely-table-thead .surely-table-cell) {
+    border-right: 1px solid var(--surely-table-border-color) !important;
+}
+
 :deep(.surely-table-row) {
     color: #fff;
     background: #0E3D55 !important;
