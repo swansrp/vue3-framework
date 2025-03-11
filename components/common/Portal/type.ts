@@ -238,7 +238,8 @@ export enum FILTER_TYPE {
   BETWEEN,
   NOT_BETWEEN,
   CONTAIN,
-  CONTAIN_IN
+  CONTAIN_IN,
+  SELECT_APPLY = 99
 }
 
 export enum FIELD_TYPE {
