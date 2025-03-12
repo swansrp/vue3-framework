@@ -685,8 +685,8 @@ const updateTableWidthAndHeight = () => {
   console.debug('updateTableWidthAndHeight')
   updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 225)
 }
-window.addEventListener('resize', _.debounce(updateTableWidthAndHeight, 200))
-bus.on('portal:table:resize', _.debounce(updateTableWidthAndHeight, 200))
+const _updateTableSize = _.debounce(updateTableWidthAndHeight, 200)
+
 //endregion
 
 
@@ -1834,6 +1834,8 @@ const queryTreeData = async () => {
 //endregion
 
 onMounted(() => {
+  window.addEventListener('resize', _updateTableSize)
+  bus.on('portal:table:resize', _updateTableSize)
   init().then(data => initData(data))
 })
 watch(() => props.tableId, value => {
@@ -1848,6 +1850,23 @@ watch(
     initData(data.value || [])
   }
 )
+onUnmounted(() => {
+  console.log('onUnmounted')
+  dataSource.value.length = 0
+  parsedDataSource.value.length = 0
+  dataSourceMap.value.clear()
+  dataSummary.value = {}
+  summaryColumns.length = 0
+  modifyCellMap.clear()
+  treeData.value.length = 0
+  columnArray.value.length = 0
+  columnDisplayMap.value.clear()
+  columnRaw.length = 0
+  dictColumnArray.length = 0
+  titleColumn = {} as ColumnType
+  window.removeEventListener('resize', _updateTableSize)
+  bus.off('portal:table:resize')
+})
 
 defineExpose({queryData, queryTreeData, queryCondition, getRowSelection, getConfig})
 </script>
