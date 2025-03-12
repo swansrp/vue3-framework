@@ -1086,7 +1086,8 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
       pid
     }, config.baseDomain)
   }
-  return queryDataAsync()
+  const condition = queryCondition()
+  return queryDataAsync(condition)
 }
 const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedNodes: any, node: any, event: any }) => {
   if (e.selected) {
@@ -1487,13 +1488,14 @@ const allTextAreaColumnsNotEmpty = (record: DefaultRecordType) => {
 const queryData = () => {
   // 外部组件调用queryData接口 尚未完成初始化
   if (config.url) {
+   const condition = queryCondition()
     if (config.treeMode) {
       queryTreeData()
     }
     if (config.summary) {
-      getDataSummary()
+      getDataSummary(condition)
     }
-    queryDataAsync().then(data => {
+    queryDataAsync(condition).then(data => {
       initData(data)
     })
   }
@@ -1514,7 +1516,7 @@ const initData = (data: Array<any>) => {
   }
   onSelectChange([])
 }
-const queryDataAsync = async () => {
+const queryDataAsync = async (condition: QueryType) => {
   const resolve = (res: any) => {
     config.total = res.payload.total
     const data = []
@@ -1538,22 +1540,22 @@ const queryDataAsync = async () => {
     ) || []
   } else {
     if (props.query) {
-      return await props.query(config.url, queryCondition()).then(resolve)
+      return await props.query(config.url, condition).then(resolve)
     } else {
       if (config.advancedSearchAble) {
-        return await advancedQuery(config.url, queryCondition(), config.baseDomain).then(resolve)
+        return await advancedQuery(config.url, condition, config.baseDomain).then(resolve)
       } else {
-        return await generalQuery(config.url, queryCondition(), config.baseDomain).then(resolve)
+        return await generalQuery(config.url, condition, config.baseDomain).then(resolve)
       }
     }
   }
 }
-const getDataSummary = async () => {
+const getDataSummary = async (condition: QueryType) => {
   if (config.advancedSearchAble) {
-    return advancedSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
+    return advancedSummary(config.url, condition, summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   } else {
-    return generalSummary(config.url, queryCondition(), summaryColumns, config.baseDomain)
+    return generalSummary(config.url, condition, summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   }
 
@@ -1816,10 +1818,11 @@ const init = async () => {
       await queryTreeData()
     }
     await Promise.all(promiseList)
+    const condition = queryCondition()
     if (config.summary) {
-      await getDataSummary()
+      await getDataSummary(condition)
     }
-    return await queryDataAsync()
+    return await queryDataAsync(condition)
   })
 }
 const queryTreeData = async () => {
@@ -1851,7 +1854,6 @@ watch(
   }
 )
 onUnmounted(() => {
-  console.log('onUnmounted')
   dataSource.value.length = 0
   parsedDataSource.value.length = 0
   dataSourceMap.value.clear()
