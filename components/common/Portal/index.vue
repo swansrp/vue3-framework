@@ -149,23 +149,25 @@
               @row-drag-end="rowDragEnd(dataSource, config.currentPage, config.pageSize) || handleRowDragEnd">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
-                <div
-                  v-if="title?.indexOf('\n') !== -1"
-                  :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
-                  class="table-title-cell">
-                  <div v-for="(item, index) in title?.split('\n')" :key="index">{{ item }}</div>
-                </div>
-                <div
-                  v-else-if="title?.indexOf('\\n') !== -1"
-                  :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
-                  class="table-title-cell">
-                  <div v-for="(item, index) in title?.split('\\n')" :key="index">{{ item }}</div>
-                </div>
-                <span v-else-if="column.dataIndex === 'index'">{{ title }}</span>
-                <span
-                  v-else
-                  :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
-                  class="table-title-cell">{{ title }}</span>
+                <slot :column="column" :name="'headerCell_' + column.dataIndex" :title="title">
+                  <div
+                    v-if="title?.indexOf('\n') !== -1"
+                    :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
+                    class="table-title-cell">
+                    <div v-for="(item, index) in title?.split('\n')" :key="index">{{ item }}</div>
+                  </div>
+                  <div
+                    v-else-if="title?.indexOf('\\n') !== -1"
+                    :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
+                    class="table-title-cell">
+                    <div v-for="(item, index) in title?.split('\\n')" :key="index">{{ item }}</div>
+                  </div>
+                  <span v-else-if="column.dataIndex === 'index'">{{ title }}</span>
+                  <span
+                    v-else
+                    :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
+                    class="table-title-cell">{{ title }}</span>
+                </slot>
               </template>
               <!-- endregion -->
               <!-- region 单元格样式-->
@@ -579,6 +581,7 @@ const __ = getInstance()
  * @param textAreaInExpanded 长文本自动在展开区域显示
  * @param rowExpandable 每行是否展示展开按钮
  * @param rowDragEnd 行拖拽结束
+ * @param columnFilter 列过滤方法
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -616,6 +619,7 @@ const props = withDefaults(defineProps<{
     textAreaInExpanded?: boolean,
     rowExpandable?: (record: DefaultRecordType) => boolean
     rowDragEnd?: (data: Array<any>, currentPage: number, pageSize: number) => void
+    columnFilter?: (column: ColumnType) => boolean
   }>(),
   {
     baseDomain: '/' + name,
@@ -650,7 +654,8 @@ const props = withDefaults(defineProps<{
     bindDefaultValue: undefined,
     textAreaInExpanded: false,
     rowExpandable: undefined,
-    rowDragEnd: undefined
+    rowDragEnd: undefined,
+    columnFilter: (column: ColumnType) => column.checked
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -658,7 +663,7 @@ const emit = defineEmits<{
   (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
-const {data} = toRefs(props)
+const {data, columnFilter} = toRefs(props)
 const isBindTabExisted = computed(() => {
   return bindTabs.value && bindTabs.value.length > 0
 })
@@ -771,7 +776,7 @@ const columnArray: Ref<Array<ColumnType>> = ref([] as Array<ColumnType>)
 const columnDisplayMap: Ref<Map<any, Array<ColumnType>>> = ref(new Map<any, Array<ColumnType>>())
 const columnRaw = []
 const columns = computed(() => {
-  return columnArray.value.filter(item => item.checked)
+  return columnArray.value.filter(item => columnFilter.value(item))
 })
 const textAreaColumns = computed(() => {
   return columnArray.value.filter(item => item.fieldType === FIELD_TYPE.TEXT_AREA)
