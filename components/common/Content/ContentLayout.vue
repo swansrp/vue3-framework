@@ -1,5 +1,5 @@
 <template>
-  <a-layout style="width: 100%; overflow:auto; height: calc(100vh - 130px)">
+  <a-layout :style="{width: '100%', overflow:'auto', height: props.height}">
     <a-layout-sider
       id="side"
       :width="_width"
@@ -39,9 +39,11 @@ import {Ref} from 'vue'
 const props = withDefaults(
   defineProps<{
     width?: number | string
+    height?: number | string
   }>(),
   {
-    width: 200
+    width: 200,
+    height: 'calc(100vh - 130px)'
   }
 )
 const emit = defineEmits<{
