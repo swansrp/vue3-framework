@@ -11,7 +11,7 @@
           :ref="(arg) => bindPortalRefMap.set(key, arg)"
           v-model:selectedTreeData="checkedKeys"
           :action-width="0"
-          :advance-condition="bindCondition"
+          :advance-condition="bindConditionMap.get(key)"
           :bind-default-value="bindDefaultValue"
           :bind-tabs="bindTabs[activeKey].bindTabs"
           :default-sort-column="bindTabs[activeKey].defaultSortColumn"
@@ -69,7 +69,7 @@ watch(checkedKeys, (newValue: Array<any>) => {
 })
 const activeKey = ref(0)
 const baseBindCondition:Ref<ConditionListType> = ref({} as ConditionListType);
-const bindCondition: Ref<ConditionListType | undefined> = ref({} as ConditionListType)
+const bindConditionMap: Ref = ref(new Map())
 const bindDefaultValue = computed(() => {
   if (baseBindCondition.value && baseBindCondition.value.value) {
     return {[`${baseBindCondition.value.property}`]: baseBindCondition.value.value[0]}
@@ -108,17 +108,17 @@ const refresh = (arg?: any) => {
           value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
         } as ConditionListType
       }
-      bindCondition.value = {
+      bindConditionMap.value.set(activeKey.value, {
         andOr: '0',
         conditionList: [baseBindCondition.value, bindTabs.value[activeKey.value].defaultAdvancedCondition || {} as ConditionListType]
-      }
-      nextTick(() => {
-        if (bindTabs.value && bindTabs.value[activeKey.value].treeMode) {
-          bindPortalRefMap.get(arg || activeKey.value).queryTreeData()
-        } else {
-          bindPortalRefMap.get(arg || activeKey.value).queryData()
-        }
       })
+      // nextTick(() => {
+      //   if (bindTabs.value && bindTabs.value[activeKey.value].treeMode) {
+      //     bindPortalRefMap.get(arg || activeKey.value).queryTreeData()
+      //   } else {
+      //     bindPortalRefMap.get(arg || activeKey.value).queryData()
+      //   }
+      // })
     }
   }
 }
