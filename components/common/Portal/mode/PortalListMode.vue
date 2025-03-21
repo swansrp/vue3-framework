@@ -19,13 +19,15 @@
   >
     <template #bodyCell="{ column, record}">
       <a-dropdown :trigger="['contextmenu']">
-        <div
-          :style="{textAlign: column.contentAlign || 'left',
-                   textOverflow: 'ellipsis',
-                   whiteSpace: 'nowrap',
-                   overflow: 'hidden',
-                   height: '100%'}">{{ record[`${column.dataIndex}`] }}
-        </div>
+        <slot name="display" :record="record">
+          <div
+            :style="{textAlign: column.contentAlign || 'left',
+                     textOverflow: 'ellipsis',
+                     whiteSpace: 'nowrap',
+                     overflow: 'hidden',
+                     height: '100%'}">{{ record[`${column.dataIndex}`] }}
+          </div>
+        </slot>
         <template #overlay>
           <a-menu @click="({ key: menuKey }) => handleMenuContext(record.value, menuKey)">
             <a-menu-item key="1">查看详情</a-menu-item>
@@ -153,7 +155,7 @@ const handleRowDragEnd = () => {
     let updateOrderData: any = []
     dataSource.value.forEach((node: any, index: number) => {
       updateOrderData.push({
-        id: node[config.value.rowKey],
+        id: node.value,
         showOrder: (index + 1) + config.value.pageSize * (config.value.currentPage - 1)
       })
     })

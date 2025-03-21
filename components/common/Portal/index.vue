@@ -47,6 +47,9 @@
             @handle-menu-context-modify="handleMenuContextModify"
             @handle-menu-context-copy="handleMenuContextCopy"
             @handle-menu-context-delete="handleMenuContextDelete">
+            <template #display="{record}">
+              <slot name="list-mode-display" :record="record.record"></slot>
+            </template>
             <template #end-action>
               <portal-mode-button
                 v-if="!modeLock"
@@ -767,7 +770,7 @@ const modifyCellMap = new Map<string, ModifyCellType>()
 const treeData: Ref<Array<DataNode>> = ref([])
 const listData = computed(() => {
   return dataSource.value.map((value) => {
-    return { value: value[config.rowKey], label: value[config.nameKey] }
+    return { value: value[config.rowKey], label: value[config.nameKey], record: value }
   })
 })
 /**
