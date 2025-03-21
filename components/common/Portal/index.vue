@@ -41,6 +41,7 @@
             class="list-mode-table"
             @search="onListDataSearch"
             @cell-click="(event, params) => selectedListDataItem = params.record"
+            @row-drag-end="_updateOrder"
             @handle-menu-context-view="handleMenuContextView"
             @handle-menu-context-add="handleMenuContextAdd"
             @handle-menu-context-modify="handleMenuContextModify"
@@ -146,7 +147,7 @@
               summary-fixed
               @change="handleTableChange"
               @expand="handleExpand"
-              @row-drag-end="rowDragEnd(dataSource, config.currentPage, config.pageSize) || handleRowDragEnd">
+              @row-drag-end="() => isNotEmpty(rowDragEnd) ? rowDragEnd(dataSource, config.currentPage, config.pageSize) : handleRowDragEnd()">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
                 <slot :column="column" :name="'headerCell_' + column.dataIndex" :title="title">
@@ -504,7 +505,7 @@ import {
   ModifyCellType,
   QuerySortType,
   QueryType,
-  TableConfigType
+  TableConfigType, UpdateOrderType
 } from '@/framework/components/common/Portal/type'
 import {
   BarsOutlined,
@@ -592,7 +593,7 @@ const props = withDefaults(defineProps<{
     pageSize?: number
     autoWidth?: boolean,
     autoHeight?: boolean,
-    actionWidth?: number,
+    actionWidth?: number | string,
     indexWidth?: number,
     indexTitle?: string,
     advance?: boolean,
@@ -663,7 +664,7 @@ const emit = defineEmits<{
   (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
-const {data, columnFilter} = toRefs(props)
+const { data, columnFilter } = toRefs(props)
 const isBindTabExisted = computed(() => {
   return bindTabs.value && bindTabs.value.length > 0
 })
@@ -766,7 +767,7 @@ const modifyCellMap = new Map<string, ModifyCellType>()
 const treeData: Ref<Array<DataNode>> = ref([])
 const listData = computed(() => {
   return dataSource.value.map((value) => {
-    return {value: value[config.rowKey], label: value[config.nameKey]}
+    return { value: value[config.rowKey], label: value[config.nameKey] }
   })
 })
 /**
@@ -786,7 +787,7 @@ const multiHeadColumns = computed(() => {
   columns.value.forEach((column: ColumnType) => {
     if (isNotEmpty(column.displayGroupName)) {
       if (res[res.length - 1].title !== column.displayGroupName) {
-        res.push({title: column.displayGroupName, children: columnDisplayMap.value.get(column.displayGroupName)})
+        res.push({ title: column.displayGroupName, children: columnDisplayMap.value.get(column.displayGroupName) })
       }
     } else {
       res.push(column)
@@ -971,7 +972,7 @@ const saveCell = (args: any) => {
       [modifyCell.dataIndex]: modifyCell.current,
       [config.rowKey]: modifyCell.id
     }, config.baseDomain).then(() => queryData())
-    log('保存单元格内容', {[args.column.dataIndex]: modifyCell.current, [config.rowKey]: modifyCell.id})
+    log('保存单元格内容', { [args.column.dataIndex]: modifyCell.current, [config.rowKey]: modifyCell.id })
   }
   args.hidePopup()
 }
@@ -995,7 +996,7 @@ const resetRow = (index: any) => {
   log('撤销行数据修改')
 }
 const saveRow = (args: any) => {
-  let {id, data} = _buildUpdatedRowData(args.recordIndexs[0])
+  let { id, data } = _buildUpdatedRowData(args.recordIndexs[0])
   if (data.size != 0) {
     data.set(config.rowKey, id)
     log('保存行内容', data)
@@ -1015,7 +1016,7 @@ const _buildUpdatedRowData = (index: any) => {
       id = modifyCell.id
     }
   }
-  return {id, data}
+  return { id, data }
 }
 const _buildRowData = (index: any) => {
   let id
@@ -1027,12 +1028,12 @@ const _buildRowData = (index: any) => {
       id = modifyCell.id
     }
   }
-  return {id, data}
+  return { id, data }
 }
 const saveAll = () => {
   const dataMap = new Map<number, Map<String, any>>()
   for (let index = 0; index < dataSource.value.length; index++) {
-    let {id, data} = _buildUpdatedRowData(index)
+    let { id, data } = _buildUpdatedRowData(index)
     if (data.size != 0) {
       data.set(config.rowKey, id)
       log('保存行内容' + index, data)
@@ -1046,7 +1047,7 @@ const deleteSelected = () => {
   Modal.confirm({
     title: '注意',
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '即将删除选定' + selectedRowKeys.value.length + '个记录,请确认'),
+    content: createVNode('div', { style: 'color:red;' }, '即将删除选定' + selectedRowKeys.value.length + '个记录,请确认'),
     onOk() {
       deleteEntityList(config.url, [...selectedRowKeys.value], config.baseDomain).then(() => queryData())
     },
@@ -1059,7 +1060,7 @@ const deleteRow = (args: any) => {
   Modal.confirm({
     title: '注意',
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '即将删除该记录,请确认'),
+    content: createVNode('div', { style: 'color:red;' }, '即将删除该记录,请确认'),
     onOk() {
       const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
       if (modifyCell) {
@@ -1082,7 +1083,7 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
 
   let updateOrderData: any = []
   brotherNodes.forEach((node: any, index: number) => {
-    updateOrderData.push({id: node.key, showOrder: index})
+    updateOrderData.push({ id: node.key, showOrder: index })
   })
   await updateOrder(config.url, updateOrderData, config.baseDomain)
   if (info.dragNode.pid !== pid) {
@@ -1132,7 +1133,12 @@ const handleMenuContextView = (recordId: any) => {
   })
 }
 const handleMenuContextAdd = (recordId: any) => {
-  config.modal.data[`${config.parentKey}`] = recordId
+  config.modal.data[`${ config.parentKey }`] = recordId
+  for (let column of columnArray.value) {
+    if(column.addShow && isNotEmpty(column.defaultValue)) {
+      config.modal.data[column.dataIndex] = column.defaultValue
+    }
+  }
   openModal('add')
 }
 const handleMenuContextCopy = (recordId: any) => {
@@ -1152,7 +1158,7 @@ const handleMenuContextDelete = (recordId: any) => {
   Modal.confirm({
     title: '注意',
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '即将删除该记录,请确认'),
+    content: createVNode('div', { style: 'color:red;' }, '即将删除该记录,请确认'),
     onOk() {
       deleteEntity(config.url, recordId, config.baseDomain).then(() => queryData())
     },
@@ -1201,7 +1207,7 @@ const handleModalClose = () => {
 }
 // 查看行数据关联信息
 const associationRow = (args: any) => {
-  const {data} = _buildRowData(args.recordIndexs[0])
+  const { data } = _buildRowData(args.recordIndexs[0])
   config.modal.data = Object.fromEntries(data)
   if (data.size != 0) {
     config.modal.editRowIndex = args.recordIndexs[0]
@@ -1212,7 +1218,7 @@ const associationRow = (args: any) => {
 // 查看行数据详情
 const detailRow = (args: any) => {
   console.debug(modifyCellMap, args.recordIndexs[0])
-  const {data} = _buildRowData(args.recordIndexs[0])
+  const { data } = _buildRowData(args.recordIndexs[0])
   config.modal.data = Object.fromEntries(data)
   if (data.size != 0) {
     config.modal.editRowIndex = args.recordIndexs[0]
@@ -1227,6 +1233,11 @@ const addRow = () => {
     config.modal.data = props.bindDefaultValue
   } else {
     config.modal.data = {}
+  }
+  for (let column of columnArray.value) {
+    if(column.addShow && isNotEmpty(column.defaultValue)) {
+      config.modal.data[column.dataIndex] = column.defaultValue
+    }
   }
   console.log(config.modal.data)
   config.modal.editRowIndex = null
@@ -1254,7 +1265,7 @@ const uploadAddProgress = (onSuccess: Function) => {
 }
 // 打开编辑详情页
 const editRow = (args: any) => {
-  const {id, data} = _buildRowData(args.recordIndexs[0])
+  const { id, data } = _buildRowData(args.recordIndexs[0])
   console.debug('打开编辑详情页', id, data)
   if (data.size != 0) {
     data.set(config.rowKey, id)
@@ -1274,7 +1285,7 @@ const updateEditRow = async () => {
   }, config.baseDomain)
 }
 const copyRow = (args: any) => {
-  const {id, data} = _buildRowData(args.recordIndexs[0])
+  const { id, data } = _buildRowData(args.recordIndexs[0])
   console.debug('打开复制详情页', id, data)
   if (data.size != 0) {
     data.set(config.rowKey, null)
@@ -1452,8 +1463,12 @@ const handleRowDragEnd = () => {
         showOrder: (index + 1) + config.pageSize * (config.currentPage - 1)
       })
     })
-    updateOrder(config.url, updateOrderData, config.baseDomain).then(() => queryData())
+    _updateOrder(updateOrderData)
   })
+}
+
+const _updateOrder = (data: Array<UpdateOrderType>) => {
+  updateOrder(config.url, data, config.baseDomain).then(() => queryData())
 }
 
 const handleExpand = (expanded: boolean, record: any) => emit('expand', expanded, record)
@@ -1493,7 +1508,7 @@ const allTextAreaColumnsNotEmpty = (record: DefaultRecordType) => {
 const queryData = () => {
   // 外部组件调用queryData接口 尚未完成初始化
   if (config.url) {
-   const condition = queryCondition()
+    const condition = queryCondition()
     if (config.treeMode) {
       queryTreeData()
     }
@@ -1514,7 +1529,7 @@ const initData = (data: Array<any>) => {
     const parsedData = _.cloneDeep(data[index])
     dataSourceMap.value.set(data[index][config.rowKey], data[index])
     columnArray.value.forEach((column: ColumnType) => {
-      initCellData(Number(index), column.dataIndex, data[index][`${column.dataIndex}`], data[index][`${config.rowKey}`])
+      initCellData(Number(index), column.dataIndex, data[index][`${ column.dataIndex }`], data[index][`${ config.rowKey }`])
       parse(parsedData, Number(index), column, config)
     })
     parsedDataSource.value.push(parsedData)
@@ -1527,8 +1542,8 @@ const queryDataAsync = async (condition: QueryType) => {
     const data = []
     for (let record of res.payload.records) {
       for (let dictColumn of dictColumnArray) {
-        if (typeof record[`${dictColumn.dataIndex}`] === 'number') {
-          record[`${dictColumn.dataIndex}`] = String(record[`${dictColumn.dataIndex}`])
+        if (typeof record[`${ dictColumn.dataIndex }`] === 'number') {
+          record[`${ dictColumn.dataIndex }`] = String(record[`${ dictColumn.dataIndex }`])
         }
       }
       if (config.rowKey === AUTO_UUID_ROW_KEY) {
@@ -1781,12 +1796,12 @@ const init = async () => {
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
       if (isNotEmpty(slots.action)) {
-        actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
+        actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
       }
     } else {
-      if (props.actionWidth > 0) {
-        actionColumn.width = props.actionWidth ? props.actionWidth : actionColumn.width
+      if (Number(props.actionWidth) > 0) {
+        actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
       }
     }
@@ -1875,7 +1890,7 @@ onUnmounted(() => {
   bus.off('portal:table:resize')
 })
 
-defineExpose({queryData, queryTreeData, queryCondition, getRowSelection, getConfig})
+defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig })
 </script>
 <style lang="less" scoped>
 .portal-tree-wrapper {

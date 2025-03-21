@@ -1,6 +1,7 @@
 <template>
   <s-table
     :columns="[{
+      rowDrag: config.orderMode && !config.readOnly,
       title: titleColumn.title,
       align: 'center',
       dataIndex: 'label',
@@ -14,6 +15,7 @@
     rowKey="value"
     size="small"
     @cell-click="(event: MouseEvent, params: CellRenderArgs) => emit('cellClick', event, params)"
+    @row-drag-end="handleRowDragEnd"
   >
     <template #bodyCell="{ column, record}">
       <a-dropdown :trigger="['contextmenu']">
@@ -88,16 +90,16 @@
 
 <script lang="ts" setup>
 import { CellRenderArgs } from '@surely-vue/table'
-import { ColumnType, TableConfigType } from '@/framework/components/common/Portal/type'
+import { ColumnType, TableConfigType, UpdateOrderType } from '@/framework/components/common/Portal/type'
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 
 const prop = defineProps<{
   config: TableConfigType,
   titleColumn: ColumnType,
   dataSource: Array<any>,
-  paginationChange: Function
+  paginationChange: Function,
 }>()
-const {config} = toRefs(prop)
+const {dataSource, config} = toRefs(prop)
 const emit = defineEmits<{
   /**
    * 根据名称查找数据
@@ -113,6 +115,7 @@ const emit = defineEmits<{
    * @param params
    */
   (e: 'cellClick', event: MouseEvent, params: CellRenderArgs): void
+  (e: 'rowDragEnd', data: Array<UpdateOrderType>): void
   (e: 'handleMenuContextView', recordId: any): void
   (e: 'handleMenuContextAdd', recordId: any): void
   (e: 'handleMenuContextModify', recordId: any): void
@@ -144,6 +147,18 @@ const handleMenuContext = (recordId: any, menuKey: string) => {
     default:
       break
   }
+}
+const handleRowDragEnd = () => {
+  nextTick(() => {
+    let updateOrderData: any = []
+    dataSource.value.forEach((node: any, index: number) => {
+      updateOrderData.push({
+        id: node[config.value.rowKey],
+        showOrder: (index + 1) + config.value.pageSize * (config.value.currentPage - 1)
+      })
+    })
+    emit('rowDragEnd', updateOrderData)
+  })
 }
 </script>
 
