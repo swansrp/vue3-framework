@@ -87,6 +87,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, '../../../src')
     }
   },
+  optimizeDeps: {
+    include: [
+      'brace',
+    ],
+    exclude: [],
+  },
   // 不加入这部分代码，surely table会报错
   css: {
     preprocessorOptions: {
