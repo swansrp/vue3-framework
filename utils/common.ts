@@ -14,10 +14,10 @@ dayjs.extend(isLeapYear)
 dayjs.extend(isoWeeksInYear)
 
 const localStorageMethods = {
-  getLocalStorage(key: string) {
+  getLocalStorage(key: string, defaultValue = '') {
     const value = window.localStorage.getItem(localStoragePrefix + key)
     if (!value || value === '') {
-      return ''
+      return defaultValue
     }
     return value
   }, removeLocalStorage(key: string) {
