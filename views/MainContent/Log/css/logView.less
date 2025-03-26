@@ -1,0 +1,121 @@
+@marginSize: 5px;
+@borderRadius: 20px;
+@bgColor: #ffffff;
+@tipBgColor: rgba(200, 200, 200, 0.1);
+@textColor: #0c0c0c;
+@requestIdColor: #026ed8;
+@levelColor: #0c0c0c;
+@classAndMethodColor: #535050;
+@contentColor: #000000;
+
+.search-bar {
+  margin: @marginSize 0;
+  display: flex;
+}
+
+.time-query-row {
+  display: flex;
+  align-items: center; // 水平排列并对齐
+  justify-content: flex-start; // 左右对齐
+  width: 100%;
+}
+
+.log-container {
+  height: 95%;
+  overflow-y: auto;
+  border-radius: @borderRadius;
+  padding: @marginSize;
+  background: @bgColor;
+}
+
+.log-list {
+  //white-space: pre-wrap;
+}
+
+.log-item {
+  font-family: monospace;
+}
+
+.spinClass {
+  height: 100%;
+}
+
+.empty {
+  text-align: center;
+  color: #999;
+  height: 100px;
+}
+
+.createTimeCss {
+  text-decoration: underline;
+  color: @textColor;
+}
+
+.requestIdCss {
+  color: @requestIdColor;
+  margin-left: 5px;
+  font-weight: bolder;
+}
+
+.levelCss {
+  margin-left: 5px;
+}
+
+//.tip:hover .classAndMethodCss {
+//  display: inline-block;
+//}
+//.classAndMethodCss {
+//  display: none;
+//  position: absolute;
+//  color: @classAndMethodColor;
+//  font-style: oblique;
+//
+//}
+
+.tip {
+  margin-top: 1px;
+  padding: @marginSize;
+  background: @tipBgColor;
+  border-radius: 5px;
+  height: 30px;
+  line-height: 30px; /* 设置行高为与高度相同，使文本垂直居中 */
+  overflow: hidden;
+}
+.createTimeCss:hover {
+  cursor: pointer;
+}
+
+.contentCss {
+  color: @contentColor;
+  margin-left: 2px;
+  //white-space: pre-wrap;
+  //line-height: 1.3;
+  //white-space: nowrap
+
+}
+.error {
+  color: red;    /* 错误时红色 */
+}
+
+.warn {
+  color: orange; /* 警告时橙色 */
+}
+
+.info {
+  color: rgba(0,0,0,1);
+}
+
+.debug {
+  color: rgba(0,0,0,0.8);
+}
+
+.trace {
+  color: rgba(0,0,0,0.5);
+}
+
+.expand-btn{
+  //position: absolute; /* 使按钮脱离正常文档流 */
+  right: 5px; /* 将按钮定位到容器的最右侧 */
+  top: 15px;
+  transform: translateY(-50%); /* 确保按钮垂直居中 */
+}
