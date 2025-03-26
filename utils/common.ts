@@ -258,6 +258,18 @@ const parseCssValue = (value: string | number = 'auto', unit = 'px') => {
   return (value === 'auto') ? value : isNaN(Number(value)) ? value : Number(value) + unit
 }
 
+const scrollToBottom = (container: Ref, force = false) => {
+  if (container.value) {
+    const scrollContainer = container.value
+    const scrollTop = scrollContainer.scrollTop
+    const scrollHeight = scrollContainer.scrollHeight
+    const offsetHeight = scrollContainer.offsetHeight
+    if (scrollTop + offsetHeight === scrollHeight || force) {
+      container.value.scrollTop = container.value.scrollHeight
+    }
+  }
+}
+
 
 export {
   localStorageMethods,
@@ -284,5 +296,6 @@ export {
   uuid,
   copyField,
   clearFrom,
-  parseCssValue
+  parseCssValue,
+  scrollToBottom
 }
