@@ -26,16 +26,16 @@ import 'brace/snippets/sql'
 import 'brace/theme/github.js'
 import 'brace/theme/chrome.js'
 import { message } from 'ant-design-vue'
-import { format } from 'sql-formatter';
+import { format } from 'sql-formatter'
 
 const props = withDefaults(
-    defineProps<{
-      show: boolean
-      sql: string
-    }>(),
-    {
-      show: false
-    }
+  defineProps<{
+    show: boolean
+    sql: string
+  }>(),
+  {
+    show: false
+  }
 )
 const emit = defineEmits<{
   (e: 'update:show', value: any): void
@@ -43,8 +43,8 @@ const emit = defineEmits<{
 const { show, sql } = toRefs(props)
 const _show = ref(show.value)
 watch(
-    () => show.value,
-    () => _show.value = show.value
+  () => show.value,
+  () => _show.value = show.value
 )
 
 const onCopy = async () => {
@@ -61,17 +61,17 @@ const data = computed(() => {
   for (let i = statementStartIndex; i < textVa.length; i++) {
     if (textVa[i] == "\n") {
       statementEndIndex = i
-      break;
+      break
     }
   }
-  let statementStr = textVa.substring(statementStartIndex + "Preparing: ".length, statementEndIndex);
+  let statementStr = textVa.substring(statementStartIndex + "Preparing: ".length, statementEndIndex)
   //获取参数
   const parametersStartIndex = textVa.indexOf('Parameters: ')
   let parametersEndIndex = textVa.length - 1
   for (let i = parametersStartIndex; i < textVa.length; i++) {
     if (textVa[i] == "\n") {
       parametersEndIndex = i
-      break;
+      break
     }
   }
   let _parametersStr = textVa.substring(parametersStartIndex + "Parameters: ".length, parametersEndIndex)
@@ -89,7 +89,7 @@ const data = computed(() => {
       statementStr = statementStr.replace("?", tempStr.trim())
     }
   }
-  return format(statementStr,{ language: 'mysql' })
+  return format(statementStr, { language: 'mysql' })
 })
 
 

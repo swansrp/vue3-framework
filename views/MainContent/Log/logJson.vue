@@ -3,6 +3,7 @@
     :open="_show"
     destroy-on-close
     placement="right"
+    size="large"
     title="JSON格式化"
     @close="emit('update:show', false)"
   >
@@ -27,13 +28,13 @@ import 'brace/theme/chrome.js'
 import { message } from 'ant-design-vue'
 
 const props = withDefaults(
-    defineProps<{
-      show: boolean
-      data: string
-    }>(),
-    {
-      show: false
-    }
+  defineProps<{
+    show: boolean
+    data: string
+  }>(),
+  {
+    show: false
+  }
 )
 const emit = defineEmits<{
   (e: 'update:show', value: any): void
@@ -41,8 +42,8 @@ const emit = defineEmits<{
 const { show, data } = toRefs(props)
 const _show = ref(show.value)
 watch(
-    () => show.value,
-    () => _show.value = show.value
+  () => show.value,
+  () => _show.value = show.value
 )
 
 const onCopy = async () => {

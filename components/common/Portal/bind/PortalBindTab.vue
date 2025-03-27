@@ -77,7 +77,7 @@ const bindDefaultValue = computed(() => {
     return {}
   }
 })
-const refresh = (arg?: any) => {
+const refresh = () => {
   if (bindTabs.value && isNotEmpty(record.value)) {
     console.log('refresh', bindTabs.value, record.value, rowKey.value)
     if (bindTabs.value[activeKey.value].bindType === '2') {
@@ -122,8 +122,8 @@ const refresh = (arg?: any) => {
     }
   }
 }
-const handleTabChanged = (arg: any) => {
-  refresh(arg)
+const handleTabChanged = () => {
+  refresh()
 }
 const bindAll = () => {
   Modal.confirm({

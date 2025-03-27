@@ -2,7 +2,7 @@ import { isNotEmpty } from '@/framework/utils/common'
 
 export const json = (log: string): any => {
   try {
-    if(isNotEmpty(log)) {
+    if (isNotEmpty(log)) {
       return JSON.parse(log)
     }
     return false
@@ -12,13 +12,13 @@ export const json = (log: string): any => {
 }
 export const isJson = (log: string) => {
   const res = json(log)
-  if(res) {
+  if (res) {
     return JSON.stringify(res, null, 2)
   }
   return false
 }
 
-export const isSQL = (log: string ) => {
+export const isSQL = (log: string) => {
   return log.startsWith('==>  Preparing: ')
 }
 

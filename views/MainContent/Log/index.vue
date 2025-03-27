@@ -121,6 +121,7 @@
                   <a-menu @click="handleContextMenuClick($event, log)">
                     <a-menu-item key="json">JSON格式化</a-menu-item>
                     <a-menu-item v-if="isSQL(log.content)" key="sql">SQL格式化</a-menu-item>
+                    <a-menu-item v-if="isNotEmpty(data)" key="clear">清空</a-menu-item>
                   </a-menu>
                 </template>
                 <div>
@@ -204,7 +205,7 @@ const indicator = h(LoadingOutlined, {
 const labelCol = { style: { width: '150px' } }
 const wrapperCol = { span: 14 }
 const environmentOptions = ref([
-  { label: "预生产", value: "local" },
+  { label: "预生产", value: "pre" },
   { label: "生产", value: "prod" }
 ])
 const levelOptions = ref([])
@@ -280,14 +281,15 @@ const getLog = async (refresh = false) => {
     }
     req.endAt = dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')
   }
+  const forceScrollToBottom = (data.value.size === 0)
   await props.fetch(req).then((resp: any) => handleLogData(resp, refresh)).finally(() => {
     loading.value = false
-    scrollToBottom(logContainer)
+    scrollToBottom(logContainer, forceScrollToBottom)
   })
 }
 const onChangeEnvType = () => {
   logStore.setEnvType(logStore.envType)
-  getLog().then(() => scrollToBottom(logContainer,true))
+  getLog().then(() => scrollToBottom(logContainer, true))
 }
 const onChangelogLevel = () => {
   logStore.setLogLevel(logStore.logLevel)
@@ -308,9 +310,6 @@ const handleMenuClick = (arg: any) => {
 // 右键功能
 const handleContextMenuClick = (arg: any, log: LogInfo) => {
   switch (arg.key) {
-    case 'context':
-      queryByRequestId(log.requestId)
-      break
     case 'json':
       const jsonContent = isJson(log.content)
       if (jsonContent) {
@@ -324,7 +323,7 @@ const handleContextMenuClick = (arg: any, log: LogInfo) => {
       sqlData.value = ''
       const info = data.value.get(log.logId)
       if (info) {
-        for (let [key, value] of data.value) {
+        for (let [_, value] of data.value) {
           if (value.log.threadName === info.log.threadName &&
             value.log.requestId === info.log.requestId &&
             value.log.logSeq > info.log.logSeq) {
@@ -339,6 +338,9 @@ const handleContextMenuClick = (arg: any, log: LogInfo) => {
       } else {
         messageApi.error('不包含SQL字符串')
       }
+      break
+    case 'clear':
+      data.value.clear()
       break
     default:
       break
@@ -364,7 +366,7 @@ const treeDict = useTreeStore()
 
 onMounted(() => {
   getLog(false).then(() => {
-    scrollToBottom(logContainer,true)
+    scrollToBottom(logContainer, true)
     if (intervalSelected.value !== 0) {
       refreshInterval = setInterval(() => {
         getLog(true) // 每秒钟执行一次 fetchLogs

@@ -1,9 +1,10 @@
 <template>
+  <context-holder />
   <a-drawer
     :open="_show"
     destroy-on-close
-    placement="bottom"
     height="100vh"
+    placement="bottom"
     title="上下文"
     @close="emit('update:show', false)"
   >
@@ -124,7 +125,7 @@ const handleContextMenuClick = (arg: any, log: any) => {
       sqlData.value = ''
       const info = data.value.get(log.logId)
       if (info) {
-        for (let [key, value] of data.value) {
+        for (let [_, value] of data.value) {
           if (value.log.threadName === info.log.threadName &&
             value.log.requestId === info.log.requestId &&
             value.log.logSeq > info.log.logSeq) {
