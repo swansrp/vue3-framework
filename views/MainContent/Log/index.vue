@@ -186,10 +186,14 @@ import { expandLog, formatDate, getLogLevelClass, isJson, isSQL } from './logUti
 
 const props = withDefaults(
   defineProps<{
-    fetch?: Function
+    fetch?: Function,
+    levelDict?: string,
+    platformDict?: string
   }>(),
   {
-    fetch: queryLog
+    fetch: queryLog,
+    levelDict: 'LOG_LEVEL_DICT',
+    platformDict: 'LOG_MODULE_TREE_DICT'
   }
 )
 
@@ -374,8 +378,8 @@ onMounted(() => {
       }, intervalTimeValue[intervalSelected.value] * 1000)
     }
   })
-  dict.getDict('LOG_LEVEL_DICT').then((data: any) => levelOptions.value = data)
-  treeDict.getTree('LOG_MODULE_TREE_DICT').then((data: any) => platformOptions.value = data)
+  dict.getDict(props.levelDict).then((data: any) => levelOptions.value = data)
+  treeDict.getTree(props.platformDict).then((data: any) => platformOptions.value = data)
 })
 // 在组件销毁时清除定时器
 onBeforeUnmount(() => {
