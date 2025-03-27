@@ -13,7 +13,7 @@
             placeholder="选择平台"
             show-search
             style="width: 200px"
-            @change="getLog().then(() => scrollToBottom(true))"
+            @change="getLog().then(() => scrollToBottom(logContainer,true))"
             @select="logStore.setModuleId"
           />
         </a-form-item>
