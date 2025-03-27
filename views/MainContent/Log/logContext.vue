@@ -24,7 +24,7 @@
       <div class="log-list">
         <div
           v-for="({expand, log}, index) in data.values()" :key="index"
-          :style="{height: expand ? '30px' : 'auto'}"
+          :style="{height: expand === false ? 'auto' : '30px'}"
           class="log-item tip">
           <a-dropdown :trigger="['contextmenu']">
             <template #overlay>
