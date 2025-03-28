@@ -10,11 +10,12 @@
           <a-tree-select
             v-model:value="logStore.moduleId"
             :tree-data="platformOptions"
+            multiple
             placeholder="选择平台"
             show-search
             style="width: 200px"
-            @change="getLog().then(() => scrollToBottom(logContainer,true))"
-            @select="logStore.setModuleId"
+            tree-checkable
+            @change="onChangeEnvTypeModule"
           />
         </a-form-item>
         <a-form-item label="环境">
@@ -37,6 +38,16 @@
             style="width: 200px"
             @change="onChangelogLevel"
           />
+        </a-form-item>
+        <a-form-item label="除外词条">
+          <log-filter
+            :local-storage-key="BLOCK_LOG" title="除外词条" width="180"
+            @change="getLog().then(() => scrollToBottom(logContainer, true))" />
+        </a-form-item>
+        <a-form-item label="过滤词条">
+          <log-filter
+            :local-storage-key="FILTER_LOG" title="过滤词条" width="180"
+            @change="getLog().then(() => scrollToBottom(logContainer, true))" />
         </a-form-item>
       </a-form>
     </template>
@@ -176,13 +187,15 @@ import dayjs from "dayjs"
 import { LogBoardReq } from "@/framework/apis/log/logBoardReq"
 import { queryLog } from "@/framework/apis/log/log"
 import { dictStore, useTreeStore } from "@/framework/store/common"
-import { isNotEmpty, scrollToBottom, strLF2HtmlLF } from '@/framework/utils/common'
+import { isNotEmpty, localStorageMethods, scrollToBottom, strLF2HtmlLF } from '@/framework/utils/common'
 import { useLogStore } from '../../../store/log'
 import { message } from 'ant-design-vue'
 import LogContextDraw from './logContext.vue'
 import LogJsonDraw from './logJson.vue'
 import LogSqlDraw from './logSql.vue'
+import LogFilter from './logFilter.vue'
 import { expandLog, formatDate, getLogLevelClass, isJson, isSQL } from './logUtil'
+import { BLOCK_LOG, FILTER_LOG } from '@/framework/store/log/constant'
 
 const props = withDefaults(
   defineProps<{
@@ -263,11 +276,19 @@ const handleLogData = (resp: any, refresh = false) => {
   if (!refresh) {
     data.value.clear()
   }
+  const blockLog = JSON.parse(localStorageMethods.getLocalStorage(BLOCK_LOG, JSON.stringify([])))
+  const filterLog = JSON.parse(localStorageMethods.getLocalStorage(FILTER_LOG, JSON.stringify([])))
   for (let index = resp.payload.length - 1; index >= 0; index--) {
     const log = resp.payload[index]
     log.content = strLF2HtmlLF(log.content)
     if (!data.value.has(log.logId)) {
-      data.value.set(log.logId, { expand: log.content.length > EXPAND_WIDTH ? true : null, log })
+      const block = blockLog.filter((tag: any) => log.content.indexOf(tag) !== -1)
+      if (block.length === 0) {
+        const filter = filterLog.filter((tag: any) => log.content.indexOf(tag) !== -1)
+        if (filterLog.length === 0 || filter.length !== 0) {
+          data.value.set(log.logId, { expand: log.content.length > EXPAND_WIDTH ? true : null, log })
+        }
+      }
     }
   }
 }
@@ -291,6 +312,10 @@ const getLog = async (refresh = false) => {
     loading.value = false
     scrollToBottom(logContainer, forceScrollToBottom)
   })
+}
+const onChangeEnvTypeModule = () => {
+  logStore.setModuleId(logStore.moduleId)
+  getLog().then(() => scrollToBottom(logContainer, true))
 }
 const onChangeEnvType = () => {
   logStore.setEnvType(logStore.envType)

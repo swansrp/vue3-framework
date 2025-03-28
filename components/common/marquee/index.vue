@@ -1,6 +1,6 @@
 <template>
-  <div v-if="!marquee" :style="{width: isNaN(Number(width))?width:width+'px'}" class="marquee-text">{{ content }}</div>
-  <div v-show="marquee" ref="marqueeContainer" :style="{width: isNaN(Number(width))?width:width+'px'}" class="marquee">
+  <div v-if="!marquee" :style="{width: parseCssValue(width)}" class="marquee-text">{{ content }}</div>
+  <div v-show="marquee" ref="marqueeContainer" :style="{width: parseCssValue(width)}" class="marquee">
     <div :style="{animationDuration: duration + 's'}" class="marquee-content">
       {{ content }}
     </div>
@@ -9,11 +9,12 @@
 
 <script lang="ts" setup>
 import { getTextWidth } from '@/framework/components/common/Portal/utils'
+import { parseCssValue } from '@/framework/utils/common'
 
 const _ = getInstance()
 const props = withDefaults(
   defineProps<{
-    width?: number
+    width?: string | number
     duration?: number
     delay?: number
     content: string
@@ -25,7 +26,7 @@ const props = withDefaults(
   }
 )
 const marqueeContainer = ref()
-const {content, width, duration, delay} = toRefs(props)
+const { content, width, duration, delay } = toRefs(props)
 const marquee = ref(false)
 let startTimer = null as any
 let stopTimer = null as any

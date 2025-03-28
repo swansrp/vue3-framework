@@ -24,7 +24,7 @@ export const isSQL = (log: string) => {
 
 // 格式化日期
 export const formatDate = (date: Date) => {
-  return date.toLocaleString() // 可以根据需求调整日期格式
+  return date?.toLocaleString() // 可以根据需求调整日期格式
 }
 export const expandLog = (info: any) => {
   if (info && info.expand !== null) {

@@ -6,14 +6,14 @@ import { ENV_TYPE, LOG_LEVEL, MODULE_ID } from './constant'
 export const useLogStore = defineStore('log', {
   state: () => {
     return {
-      moduleId: localStorageMethods.getLocalStorage(MODULE_ID, ''),
+      moduleId: JSON.parse(localStorageMethods.getLocalStorage(MODULE_ID, JSON.stringify([]))),
       envType: localStorageMethods.getLocalStorage(ENV_TYPE, 'prod'),
       logLevel: JSON.parse(localStorageMethods.getLocalStorage(LOG_LEVEL, JSON.stringify(['DEBUG', 'INFO', 'WARN', 'ERROR']))),
       timeRange: [null as Dayjs | null, null as Dayjs | null]
     }
   },
   getters: {
-    getModuleId: (state): string => state.moduleId,
+    getModuleId: (state): Array<string> => state.moduleId,
     getEnvType: (state): string => state.envType,
     getLogLevel: (state): Array<string> => state.logLevel,
     getTimeRange: (state): Array<Dayjs | null> => state.timeRange,
@@ -26,8 +26,9 @@ export const useLogStore = defineStore('log', {
     })
   },
   actions: {
-    setModuleId(moduleId: string) {
-      localStorageMethods.setLocalStorage(MODULE_ID, moduleId)
+    setModuleId(moduleId: Array<string>) {
+      console.log(moduleId)
+      localStorageMethods.setLocalStorage(MODULE_ID, JSON.stringify(moduleId))
       this.moduleId = moduleId
     },
     setEnvType(envType: string) {
