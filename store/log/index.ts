@@ -27,7 +27,6 @@ export const useLogStore = defineStore('log', {
   },
   actions: {
     setModuleId(moduleId: Array<string>) {
-      console.log(moduleId)
       localStorageMethods.setLocalStorage(MODULE_ID, JSON.stringify(moduleId))
       this.moduleId = moduleId
     },
