@@ -222,7 +222,10 @@ function _download(res: AxiosResponse, fileName: string | undefined) {
   const content = res.data
   // 构造一个blob对象来处理数据
   const blob = new Blob([content])
+  downloadBlob(blob, fileName)
+}
 
+const downloadBlob = (blob: Blob, fileName: string | undefined) => {
   // 对于<a>标签，只有 Firefox 和 Chrome（内核） 支持 download 属性
   // IE10以上支持blob但是依然不支持download
   if ('download' in document.createElement('a')) { // 支持a标签download的浏览器
@@ -249,5 +252,5 @@ const downloadUrl = (fileURL: string, fileName: string) => {
 }
 
 
-export { baseURL, get, post, request, upload, download, downloadUrl }
+export { baseURL, get, post, request, upload, download, downloadBlob, downloadUrl }
 
