@@ -586,6 +586,7 @@ const __ = getInstance()
  * @param rowExpandable 每行是否展示展开按钮
  * @param rowDragEnd 行拖拽结束
  * @param columnFilter 列过滤方法
+ * @param downloadFileName 下载文件命名方法
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -624,6 +625,7 @@ const props = withDefaults(defineProps<{
     rowExpandable?: (record: DefaultRecordType) => boolean
     rowDragEnd?: (data: Array<any>, currentPage: number, pageSize: number) => void
     columnFilter?: (column: ColumnType) => boolean
+    downloadFileName?: (config: TableConfigType) => string
   }>(),
   {
     baseDomain: '/' + name,
@@ -659,7 +661,8 @@ const props = withDefaults(defineProps<{
     textAreaInExpanded: false,
     rowExpandable: undefined,
     rowDragEnd: undefined,
-    columnFilter: (column: ColumnType) => column.checked
+    columnFilter: (column: ColumnType) => column.checked,
+    downloadFileName: (config: TableConfigType) => config.title,
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -667,7 +670,7 @@ const emit = defineEmits<{
   (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
-const { data, columnFilter } = toRefs(props)
+const { data, columnFilter, downloadFileName } = toRefs(props)
 const isBindTabExisted = computed(() => {
   return bindTabs.value && bindTabs.value.length > 0
 })
@@ -1251,7 +1254,7 @@ const saveAddRow = async () => {
 }
 // 模版下载
 const templateExport = () => {
-  exportTemplate(config.url, config.tableId, config.title + '-模版' + '.xlsx', config.baseDomain)
+  exportTemplate(config.url, config.tableId, downloadFileName.value(config) + '-模版' + '.xlsx', config.baseDomain)
 }
 const portalUploadModal = ref()
 // 上传弹框
@@ -1608,7 +1611,7 @@ const download = () => {
       } else {
         exportDataArray = [...parsedDataSource.value]
       }
-      excelExport(exportDataArray, props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, config.title)
+      excelExport(exportDataArray, props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, downloadFileName.value(config))
     } else {
       const resolve = (resp: any) => {
         const dataArray = resp.payload || []
@@ -1617,7 +1620,7 @@ const download = () => {
             parse(dataArray[index], Number(index), column, config)
           })
         }
-        excelExport(dataArray, multiHeadColumns.value, columns.value, config.title)
+        excelExport(dataArray, multiHeadColumns.value, columns.value, downloadFileName.value(config))
       }
       if (config.advancedSearchAble) {
         advancedSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
