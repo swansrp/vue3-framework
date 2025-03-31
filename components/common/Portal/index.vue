@@ -1634,7 +1634,7 @@ const download = () => {
       title: '下载数据量过大',
       icon: createVNode(ExclamationCircleOutlined),
       content: createVNode('div', {}, '注意: 单次下载数量' + config.total + '条可能会失败, 请设置恰当条件'),
-      okText: '确定',
+      okText: '取消',
       cancelText: '继续下载',
       onOk() {
 
