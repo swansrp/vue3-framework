@@ -73,7 +73,7 @@ export const generalQuery = (url: string, query: QueryType, baseDomain?: string,
 export const generalSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
   generalSelectRequest('/' + url, query.conditionList, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const generalSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+export const generalSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = false) =>
   generalSummaryRequest('/' + url, query.conditionList, query.sortList, columns, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const generalCount = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
@@ -82,7 +82,7 @@ export const generalCount = (url: string, query: QueryType, baseDomain?: string,
 export const advancedSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
   advancedSelectRequest('/' + url, query.condition, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+export const advancedSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = false) =>
   advancedSummaryRequest('/' + url, query.condition, query.sortList, columns, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const advancedCount = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
