@@ -47,6 +47,9 @@ const commonUrl = {
   DELETE: '/delete',
   DELETE_LIST: '/delete/list',
   TREE: '/advanced/tree/data',
+  TREE_PARENT: '/tree/parent',
+  TREE_CHILDREN: '/tree/children',
+  TREE_BROTHERS: '/tree/brothers',
   TREE_PID: '/pid',
   ORDER: '/order/update',
   EXPORT_DATA: '/advanced/query/export',
@@ -102,6 +105,24 @@ const getTreeApi = (
   domain: string = baseDomain,
   version = '1.0'
 ) => buildApi(domain, commonUrl.TREE, requestMethod.POST, version, type)
+
+const getTreeParentApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.TREE_PARENT, requestMethod.GET, version, type)
+
+const getTreeChildrenApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.TREE_CHILDREN, requestMethod.GET, version, type)
+
+const getTreeBrothersApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.TREE_BROTHERS, requestMethod.GET, version, type)
 
 const updateTreePidApi = (
   type: string,
@@ -467,6 +488,30 @@ export const getTreeDataRequest = (
   showSuccess = false,
   showLoading = true
 ) => request(getTreeApi(type, domain), {}, query, showSuccess, showLoading) as Promise<any>
+
+export const getTreeParentDataRequest = (
+  type: string,
+  id: any,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = true
+) => request(getTreeParentApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
+
+export const getTreeChildrenDataRequest = (
+  type: string,
+  id: any,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = true
+) => request(getTreeChildrenApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
+
+export const getTreeBrothersDataRequest = (
+  type: string,
+  id: any,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = true
+) => request(getTreeBrothersApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
 
 export const updateTreePidRequest = (
   type: string,

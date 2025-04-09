@@ -1,25 +1,33 @@
 import {
   addRequest,
+  advancedCountRequest,
   advancedQueryRequest,
   advancedSelectRequest,
   advancedSummaryRequest,
   bindAllRequest,
   bindBatchRequest,
+  bindInfoListRequest,
+  bindInfoRequest,
   bindReplaceAllRequest,
   bindReplaceBatchRequest,
   bindRequest,
-  deleteRequest,
   deleteListRequest,
+  deleteRequest,
   exportDataRequest,
   exportTemplateRequest,
+  generalCountRequest,
   generalQueryRequest,
   generalSelectRequest,
   generalSummaryRequest,
   getAllBindListRequest,
   getByIdRequest,
+  getTreeBrothersDataRequest,
+  getTreeChildrenDataRequest,
   getTreeDataRequest,
+  getTreeParentDataRequest,
   importAddProgressRequest,
   importAddRequest,
+  queryAttachListRequest,
   queryBindListRequest,
   queryUnbindListRequest,
   unbindAllRequest,
@@ -28,12 +36,7 @@ import {
   updateListRequest,
   updateOrderRequest,
   updateRequest,
-  updateTreePidRequest,
-  queryAttachListRequest,
-  bindInfoRequest,
-  bindInfoListRequest,
-  generalCountRequest,
-  advancedCountRequest
+  updateTreePidRequest
 } from '@/framework/apis'
 import { QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 
@@ -44,16 +47,16 @@ export const addEntity = (url: string, entity: object, baseDomain?: string, show
   addRequest('/' + url, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const updateEntity = (url: string, entity: object, baseDomain?: string, showSuccess = true, showLoading = true) =>
-  updateRequest('/' + url, {strict: true}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
+  updateRequest('/' + url, { strict: true }, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const updateEntitySelective = (url: string, entity: object, baseDomain?: string, showSuccess = true, showLoading = true) =>
-  updateRequest('/' + url, {strict: false}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
+  updateRequest('/' + url, { strict: false }, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const updateEntityList = (url: string, entity: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
-  updateListRequest('/' + url, {strict: true}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
+  updateListRequest('/' + url, { strict: true }, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const updateEntityListSelective = (url: string, entity: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
-  updateListRequest('/' + url, {strict: false}, entity, baseDomain, showSuccess, showLoading) as Promise<any>
+  updateListRequest('/' + url, { strict: false }, entity, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const deleteEntity = (url: string, id: string, baseDomain?: string, showSuccess = true, showLoading = true) =>
   deleteRequest('/' + url, id, baseDomain, showSuccess, showLoading) as Promise<any>
@@ -61,10 +64,10 @@ export const deleteEntity = (url: string, id: string, baseDomain?: string, showS
 export const deleteEntityList = (url: string, id: Array<string>, baseDomain?: string, showSuccess = true, showLoading = true) =>
   deleteListRequest('/' + url, {}, id, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+export const advancedQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false) =>
   advancedQueryRequest('/' + url, query.condition, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const generalQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+export const generalQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false) =>
   generalQueryRequest('/' + url, query.conditionList, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const generalSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
@@ -85,8 +88,17 @@ export const advancedSummary = (url: string, query: QueryType, columns: Array<st
 export const advancedCount = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
   advancedCountRequest('/' + url, query.condition, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const getTreeData = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
+export const getTreeData = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false) =>
   getTreeDataRequest('/' + url, query, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const getTreeParentData = (url: string, id: any, baseDomain?: string, showSuccess = true, showLoading = false) =>
+  getTreeParentDataRequest('/' + url, id, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const getTreeChildrenData = (url: string, id: any, baseDomain?: string, showSuccess = true, showLoading = false) =>
+  getTreeChildrenDataRequest('/' + url, id, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const getTreeBrothersData = (url: string, id: any, baseDomain?: string, showSuccess = true, showLoading = false) =>
+  getTreeBrothersDataRequest('/' + url, id, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const updateTreePid = (url: string, data: UpdatePidType, baseDomain?: string, showSuccess = true, showLoading = true) =>
   updateTreePidRequest('/' + url, data, baseDomain, showSuccess, showLoading) as Promise<any>
