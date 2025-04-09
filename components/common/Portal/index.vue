@@ -38,6 +38,7 @@
             :data-source="listData"
             :pagination-change="paginationChange"
             :title-column="titleColumn"
+            :row-selection="hideRowSelection ? null : rowSelection"
             class="list-mode-table"
             @search="onListDataSearch"
             @cell-click="(event, params) => selectedListDataItem = params.record"
@@ -570,8 +571,10 @@ const __ = getInstance()
  * @param hideAdd 隐藏添加按钮
  * @param hideEdit 隐藏修改按钮
  * @param hideDelete 隐藏删除按钮
+ * @param hideAssociation 隐藏关联信息
  * @param rowAllowEdit 该行右键是否能够编辑
  * @param rowAllowDelete 该行右键是否能够删除
+ * @param rowSelectProps 行选择属性配置函数
  * @param query 查询函数
  * @param showTree 默认显示树形结构
  * @param treeMode 是否以树形结构展示
@@ -609,8 +612,10 @@ const props = withDefaults(defineProps<{
     hideAdd?: boolean,
     hideEdit?: boolean,
     hideDelete?: boolean,
+    hideAssociation?: boolean,
     rowAllowEdit?: (record: any) => boolean,
     rowAllowDelete?: (record: any) => boolean,
+    rowSelectProps?: (record: any) => any
     query?: (url: string, query: QueryType) => Promise<any>,
     showTree?: boolean,
     treeMode?: boolean,
@@ -646,8 +651,10 @@ const props = withDefaults(defineProps<{
     hideAdd: false,
     hideEdit: false,
     hideDelete: false,
+    hideAssociation: false,
     rowAllowEdit: () => true,
     rowAllowDelete: () => true,
+    rowSelectProps: undefined,
     query: undefined,
     showTree: false,
     treeMode: false,
@@ -670,9 +677,9 @@ const emit = defineEmits<{
   (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
-const { data, columnFilter, downloadFileName } = toRefs(props)
+const { data, columnFilter, downloadFileName, rowSelectProps, hideAssociation } = toRefs(props)
 const isBindTabExisted = computed(() => {
-  return bindTabs.value && bindTabs.value.length > 0
+  return !hideAssociation.value && bindTabs.value && bindTabs.value.length > 0
 })
 const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
@@ -909,7 +916,8 @@ const rowSelection = computed(() => {
       Table.SELECTION_ALL,
       Table.SELECTION_INVERT,
       Table.SELECTION_NONE
-    ]
+    ],
+    getCheckboxProps: rowSelectProps.value
   }
 })
 const getRowSelection = () => {
@@ -1092,7 +1100,7 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
     updateOrderData.push({ id: node.key, showOrder: index })
   })
   await updateOrder(config.url, updateOrderData, config.baseDomain)
-  if (info.dragNode.pid !== pid) {
+  if (info.dragNode.parent?.key !== pid) {
     await updateTreePid(config.url, {
       id: dragKey,
       pid
