@@ -898,7 +898,7 @@ const selectedListDataItem = ref()
 const onListDataSearch = (searchName: string, searchStrict: boolean) => {
   const condition = {
     property: config.nameKey,
-    value: [searchName],
+    value: [searchName?.trim()],
     relation: getDefaultFilterType(FIELD_TYPE.INPUT, searchStrict)
   } as ConditionListType
   queryConditionMap.set(config.nameKey, condition)

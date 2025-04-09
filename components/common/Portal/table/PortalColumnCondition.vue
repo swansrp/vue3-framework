@@ -95,7 +95,7 @@
         v-model:value="_selectedKeysRef[0]"
         :placeholder="(column.filterStrict ? '' : '模糊') + '搜索 ' + strRemoveLF(column.title)"
         style="width: 170px; margin-bottom: 8px; display: block"
-        @change="e => handleSearchConditionChanged(e.target.value ? [e.target.value] : [], column)"
+        @change="e => handleSearchConditionChanged(e.target.value ? [e.target.value.trim()] : [], column)"
         @press-enter="handleSearch()"
       />
     </div>
