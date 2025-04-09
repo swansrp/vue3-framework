@@ -902,6 +902,7 @@ const onListDataSearch = (searchName: string, searchStrict: boolean) => {
     relation: getDefaultFilterType(FIELD_TYPE.INPUT, searchStrict)
   } as ConditionListType
   queryConditionMap.set(config.nameKey, condition)
+  config.currentPage = 1
   queryData()
 }
 /**
