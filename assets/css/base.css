@@ -41,3 +41,11 @@ body {
     width: 100%;
 }
 
+.center {
+    display: flex;
+    align-items: center;
+    text-align: center; /* 水平居中文字 */
+    justify-content: center; /* Flexbox方式让文字在按钮内垂直居中 */
+    width: 100%;
+}
+
