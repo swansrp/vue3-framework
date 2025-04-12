@@ -4,6 +4,7 @@
     :col-num="maxCol"
     :isDraggable="isDraggable"
     :row-height="rowHeight"
+    @layout-updated="movedEvent"
   >
     <grid-item
       v-for="item in list"
@@ -15,7 +16,6 @@
       :x="item.x"
       :y="item.y"
       @move="moveEvent"
-      @moved="movedEvent"
     >
       <slot :item="item" name="render"></slot>
     </grid-item>
@@ -27,23 +27,23 @@ import { LayoutItem } from 'grid-layout-plus/src/helpers/types'
 
 const list = ref([] as Array<any>)
 const props = withDefaults(
-  defineProps<{
-    modelValue: any
-    width?: number
-    height?: number
-    maxCol?: number
-    fieldNames?: any
-    rowHeight?: number
-    isDraggable?: boolean
-  }>(),
-  {
-    width: 3,
-    height: 10,
-    maxCol: 12,
-    fieldNames: { label: 'label', value: 'value' },
-    rowHeight: 31,
-    isDraggable: true
-  }
+    defineProps<{
+      modelValue: any
+      width?: number
+      height?: number
+      maxCol?: number
+      fieldNames?: any
+      rowHeight?: number
+      isDraggable?: boolean
+    }>(),
+    {
+      width: 3,
+      height: 10,
+      maxCol: 12,
+      fieldNames: { label: 'label', value: 'value' },
+      rowHeight: 31,
+      isDraggable: true
+    }
 )
 const { modelValue, width, height, maxCol, fieldNames, rowHeight } = toRefs(props)
 const emit = defineEmits<{
@@ -65,7 +65,7 @@ const getNode = (position: number, data: any, x: number, y: number) => {
 }
 const map = new Map()
 const positionMap = new Map()
-
+let currentMovedNode: {i: string, newX: number, newY: number} | null = null;
 function moveEvent(i: string, newX: number, newY: number) {
   if (map.get(i).y > newY) {
     map.get(i).direction = -1
@@ -80,9 +80,12 @@ function moveEvent(i: string, newX: number, newY: number) {
       map.get(i).direction = 0
     }
   }
+  currentMovedNode = { i, newX, newY }
 }
 
-function movedEvent(i: string, newX: number) {
+function movedEvent() {
+  if(!currentMovedNode) return
+  const { i, newX } = currentMovedNode
   nextTick(() => {
     if (map.get(i).direction !== 0) {
       if (map.get(i).direction > 0) {
@@ -91,30 +94,42 @@ function movedEvent(i: string, newX: number) {
         map.get(i).node.x = Math.floor(newX / width.value) * width.value
       }
     }
-    console.log('===MOVED===', map.get(i).x, map.get(i).y, list.value)
-    const position = getPosition(map.get(i).node.x, map.get(i).node.y)
-    console.log("position: ", position, "direction: ", map.get(i).direction)
+
+    let position = getPosition(map.get(i).node.x, map.get(i).node.y)
+    if(position >= list.value.length) {
+      position = list.value.length - 1
+      if(map.get(i).node.position === list.value.length - 1) {
+        map.get(i).node.x = map.get(i).x
+        map.get(i).node.y = map.get(i).y
+      } else {
+        const { x, y } = positionMap.get(position)
+        map.get(i).node.x = x
+        map.get(i).node.y = y
+      }
+    }
+    console.log(0, i, map.get(i).node.label, '(' + map.get(i).x + ', ' + map.get(i).y + ')->(' + map.get(i).node.x + ', ' + map.get(i).node.y + ') ',
+        map.get(i).node.position + '->' + position + " " + "direction: " + map.get(i).direction)
     if (map.get(i).direction > 0) {
       for (let index = 0; index < map.get(i).node.position; index++) {
         const { x, y } = positionMap.get(index)
-        console.log(positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
-          positionMap.get(index).position + '->' + index)
+        console.log(1, index, positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
+            positionMap.get(index).position + '->' + index)
         positionMap.get(index).x = x
         positionMap.get(index).y = y
         positionMap.get(index).position = index
       }
       for (let index = map.get(i).node.position; index < position; index++) {
         const { x, y } = map.get(positionMap.get(index).i)
-        console.log(positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
-          positionMap.get(index).position + '->' + index)
+        console.log(2, index + 1, positionMap.get(index + 1).label, '(' + positionMap.get(index + 1).x + ', ' + positionMap.get(index + 1).y + ')->(' + x + ', ' + y + ') ',
+            positionMap.get(index + 1).position + '->' + index)
         positionMap.get(index + 1).x = x
         positionMap.get(index + 1).y = y
         positionMap.get(index + 1).position = index
       }
       for (let index = position + 1; index < list.value.length; index++) {
         const { x, y } = positionMap.get(index)
-        console.log(positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
-          positionMap.get(index).position + '->' + index)
+        console.log(3, index, positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
+            positionMap.get(index).position + '->' + index)
         positionMap.get(index).x = x
         positionMap.get(index).y = y
         positionMap.get(index).position = index
@@ -122,31 +137,31 @@ function movedEvent(i: string, newX: number) {
     } else {
       for (let index = 0; index < position; index++) {
         const { x, y } = positionMap.get(index)
-        console.log(positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
-          positionMap.get(index).position + '->' + index)
+        console.log(4, index, positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
+            positionMap.get(index).position + '->' + index)
         positionMap.get(index).x = x
         positionMap.get(index).y = y
         positionMap.get(index).position = index
       }
       for (let index = map.get(i).node.position; index > position; index--) {
         const { x, y } = map.get(positionMap.get(index).i)
-        console.log(positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
-          positionMap.get(index).position + '->' + index)
+        console.log(5, index - 1, positionMap.get(index - 1).label, '(' + positionMap.get(index - 1).x + ', ' + positionMap.get(index - 1).y + ')->(' + x + ', ' + y + ') ',
+            positionMap.get(index - 1).position + '->' + index)
         positionMap.get(index - 1).x = x
         positionMap.get(index - 1).y = y
         positionMap.get(index - 1).position = index
       }
       for (let index = map.get(i).node.position + 1; index < list.value.length; index++) {
         const { x, y } = positionMap.get(index)
-        console.log(positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
-          positionMap.get(index).position + '->' + index)
+        console.log(6, index, positionMap.get(index).label, '(' + positionMap.get(index).x + ', ' + positionMap.get(index).y + ')->(' + x + ', ' + y + ') ',
+            positionMap.get(index).position + '->' + index)
         positionMap.get(index).x = x
         positionMap.get(index).y = y
         positionMap.get(index).position = index
       }
     }
 
-    map.get(i).node.position = getPosition(map.get(i).node.x, map.get(i).node.y)
+    map.get(i).node.position = position
     positionMap.clear()
     list.value.forEach((node: any) => {
       positionMap.set(node.position, node)
@@ -160,10 +175,11 @@ function movedEvent(i: string, newX: number) {
       const { x, y } = getLocation(index)
       map.set(node.i, { node, x, y })
       list.value.push(node)
-      modelValue.value.push(node)
+      modelValue.value.push(node.data)
     }
     emit('update:modelValue', modelValue.value)
     emit('moved', modelValue.value)
+    currentMovedNode = null
   })
 }
 
@@ -191,11 +207,11 @@ const forceUpdate = () => {
   }
 }
 watch(
-  () => modelValue.value,
-  () => forceUpdate(),
-  {
-    immediate: true
-  }
+    () => modelValue.value,
+    () => forceUpdate(),
+    {
+      immediate: true
+    }
 )
 onMounted(() => {
 })
