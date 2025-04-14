@@ -8,19 +8,30 @@
     destroyOnClose
     @cancel="$emit('update:visible', false)">
     <slot></slot>
-    <template v-if="_title" #title>
-      <div class="dialog-title">
-        <img v-if="_iconPath" :src="_iconPath" alt="" class="icon-img" />
-        {{ _title }}
-      </div>
+    <template #title>
+      <slot name="title">
+        <div v-if="_title" ref="modalTitleRef" class="dialog-title">
+          <img v-if="_iconPath" :src="_iconPath" alt="" class="icon-img" />
+          {{ _title }}
+        </div>
+      </slot>
     </template>
     <template #footer>
-      <slot v-if="props.footer" name="footer"></slot>
-      <div v-else></div>
+      <slot name="footer">
+        <slot v-if="props.footer" name="footer"></slot>
+        <div v-else></div>
+      </slot>
+    </template>
+    <template v-if="!_isFull && draggable" #modalRender="{ originVNode }">
+      <div :style="transformStyle">
+        <component :is="originVNode" />
+      </div>
     </template>
   </a-modal>
 </template>
 <script lang="ts" setup>
+import { computed, CSSProperties, ref, watch, watchEffect } from 'vue'
+import { useDraggable } from '@vueuse/core'
 
 let _visible = ref(false)
 let _title = ref('具体内容')
@@ -29,23 +40,34 @@ let _iconPath = ref('')
 let _width = ref<string | number | undefined>('100%')
 let _maskClosable = ref(false)
 
-const props = defineProps<{
-  title: string,
-  visible: boolean,
-  isFull?: boolean,
-  iconPath?: string,
-  width?: number | undefined
-  maskClosable?: boolean,
-  footer?: boolean,
-}>()
-
+const props = withDefaults(
+  defineProps<{
+    title?: string,
+    visible: boolean,
+    draggable?: boolean,
+    isFull?: boolean,
+    iconPath?: string,
+    width?: number | string
+    maskClosable?: boolean,
+    footer?: boolean,
+  }>(),
+  {
+    title: '',
+    draggable: false,
+    isFull: false,
+    iconPath: '',
+    width: '100%',
+    maskClosable: false,
+    footer: false
+  }
+)
 const emit = defineEmits<{
   (e: 'update:visible', value: any): void
   (e: 'open'): void
   (e: 'close'): void
 }>()
 
-watch(() => props.isFull, value => _isFull.value = value, {immediate: true})
+watch(() => props.isFull, value => _isFull.value = value, { immediate: true })
 watch(() => props.visible, value => {
     _visible.value = value
     if (value) {
@@ -58,13 +80,58 @@ watch(() => props.visible, value => {
     immediate: true
   }
 )
-watch(() => props.title, value => _title.value = value || '', {immediate: true})
-watch(() => props.iconPath, value => _iconPath.value = value || '', {immediate: true})
-watch(() => props.maskClosable, value => _maskClosable.value = !!value, {immediate: true})
+watch(() => props.title, value => _title.value = value || '', { immediate: true })
+watch(() => props.iconPath, value => _iconPath.value = value || '', { immediate: true })
+watch(() => props.maskClosable, value => _maskClosable.value = !!value, { immediate: true })
 watch(() => props.width, value => {
   if (!_isFull.value && _width.value) _width.value = value
-}, {immediate: true})
-
+}, { immediate: true })
+/** 拖拽 */
+const transformStyle = computed<CSSProperties>(() => {
+  return {
+    transform: `translate(${ transformX.value }px, ${ transformY.value }px)`
+  }
+})
+const modalTitleRef = ref<HTMLElement>()
+const { x, y, isDragging } = useDraggable(modalTitleRef)
+const startX = ref<number>(0)
+const startY = ref<number>(0)
+const startedDrag = ref(false)
+const transformX = ref(0)
+const transformY = ref(0)
+const preTransformX = ref(0)
+const preTransformY = ref(0)
+const dragRect = ref({ left: 0, right: 0, top: 0, bottom: 0 })
+watch([x, y], () => {
+  if (!startedDrag.value) {
+    startX.value = x.value
+    startY.value = y.value
+    const bodyRect = document.body.getBoundingClientRect()
+    const titleRect = modalTitleRef.value.getBoundingClientRect()
+    dragRect.value.right = bodyRect.width - titleRect.width
+    dragRect.value.bottom = bodyRect.height - titleRect.height
+    preTransformX.value = transformX.value
+    preTransformY.value = transformY.value
+  }
+  startedDrag.value = true
+})
+watch(isDragging, () => {
+  if (!isDragging) {
+    startedDrag.value = false
+  }
+})
+watchEffect(() => {
+  if (startedDrag.value) {
+    transformX.value =
+      preTransformX.value +
+      Math.min(Math.max(dragRect.value.left, x.value), dragRect.value.right) -
+      startX.value
+    transformY.value =
+      preTransformY.value +
+      Math.min(Math.max(dragRect.value.top, y.value), dragRect.value.bottom) -
+      startY.value
+  }
+})
 </script>
 <style lang="scss">
 .full-modal {
@@ -93,6 +160,7 @@ watch(() => props.width, value => {
 .dialog-title {
   display: flex;
   align-items: center;
+  cursor: move;
 }
 
 .icon-img {
