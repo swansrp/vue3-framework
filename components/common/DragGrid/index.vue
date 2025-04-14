@@ -4,7 +4,7 @@
     :col-num="maxCol"
     :isDraggable="isDraggable"
     :row-height="rowHeight"
-    @layout-updated="movedEvent"
+    @layout-updated="layoutUpdated"
   >
     <grid-item
       v-for="item in list"
@@ -83,7 +83,8 @@ function moveEvent(i: string, newX: number, newY: number) {
   currentMovedNode = { i, newX, newY }
 }
 
-function movedEvent() {
+function layoutUpdated() {
+  console.log('layout-updated', currentMovedNode)
   if(!currentMovedNode) return
   const { i, newX } = currentMovedNode
   nextTick(() => {
