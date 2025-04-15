@@ -21,8 +21,8 @@ export const useLogStore = defineStore('log', {
       moduleId: state.moduleId,
       envType: state.envType,
       logLevel: state.logLevel,
-      startAt: state.timeRange && state.timeRange[0]?.format('YYYY-MM-DD HH:mm:ss'),
-      endAt: state.timeRange && state.timeRange[1]?.format('YYYY-MM-DD HH:mm:ss')
+      startAt: state.timeRange && state.timeRange[0]?.format('YYYY-MM-DD HH:mm:ss.SSS'),
+      endAt: state.timeRange && state.timeRange[1]?.format('YYYY-MM-DD HH:mm:ss.SSS')
     })
   },
   actions: {
