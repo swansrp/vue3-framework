@@ -1324,7 +1324,7 @@ const uploadTableConfig = () => {
   uploadTableConfigRef.value.showUploadDialogBox('.dat')
 }
 const importTableConfig = (file: any, onUploadProgress: any) => {
-  return importPortalConfig(file, onUploadProgress)
+  return importPortalConfig(tableConfig.value.name, selectedRole.value, file, onUploadProgress)
 }
 
 const associateDialogBox = reactive({

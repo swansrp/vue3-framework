@@ -21,7 +21,7 @@ export const exportPortalConfig = (configName: string, roleId: string, fileName:
   roleId
 }, {}) as Promise<any>
 
-export const importPortalConfig = (file: object, onUploadProgress: Function) => upload(buildPostApi('/config/import'), {}, file, onUploadProgress) as Promise<any>
+export const importPortalConfig = (name: string, roleId: string, file: object, onUploadProgress: Function) => upload(buildPostApi('/config/import'), {name, roleId}, file, onUploadProgress) as Promise<any>
 
 export const updatePortalColumnOrder = (idOrderReq: any) => post(buildPostApi('/column/order'), undefined, idOrderReq) as Promise<any>
 
