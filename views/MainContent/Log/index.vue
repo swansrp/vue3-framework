@@ -142,9 +142,7 @@
                     placement="topLeft">
                     <span
                       :class="[isNotEmpty(log.requestId) ? 'createTimeCss' : '', getLogLevelClass(log.logLevel)]"
-                      @click="queryByRequestId(log.requestId)">{{
-                        formatDate(log.createTime)
-                      }}</span>
+                      @click="queryByRequestId(log)">{{ formatDate(log.createTime) }}</span>
                   </a-tooltip>
                   <a-button size="small" type="text" @click="expandLog(data.get(log.logId))">
                     <template #icon>
@@ -255,27 +253,34 @@ const jsonData = ref('')
 const showSql = ref(false)
 const sqlData = ref('')
 
-const queryByRequestId = (requestId: any) => {
-  contextData.value.clear()
-  let req: LogBoardReq = {
-    ...logStore.getAllParams,
-    requestId: requestId,
-    startAt: undefined,
-    endAt: undefined,
-    logLevel: [],
-  }
-  props.fetch(req).then((resp: any) => {
-    for (let index = resp.payload.length - 1; index >= 0; index--) {
-      const log = resp.payload[index]
-      log.content = strLF2HtmlLF(log.content)
-      contextData.value.set(log.logId, { expand: log.content.length > EXPAND_WIDTH ? true : null, log })
+const queryByRequestId = (log: any) => {
+  if (isNotEmpty(log.requestId)) {
+    const requestId = log.requestId
+    contextData.value.clear()
+    let req: LogBoardReq = {
+      ...logStore.getAllParams,
+      requestId: requestId,
+      startAt: undefined,
+      endAt: undefined,
+      logLevel: []
     }
-    showContextLog.value = true
-  })
+    props.fetch(req).then((resp: any) => {
+      for (let index = resp.payload.length - 1; index >= 0; index--) {
+        const log = resp.payload[index]
+        log.content = strLF2HtmlLF(log.content)
+        contextData.value.set(log.logId, {expand: log.content.length > EXPAND_WIDTH ? true : null, log})
+      }
+      showContextLog.value = true
+    })
+  }
 }
 const handleLogData = (resp: any, refresh = false) => {
   if (!refresh) {
     data.value.clear()
+  }
+  if(resp.payload?.length > 5000) {
+    messageApi.error({content: () => '日志过多,无法解析'})
+    return
   }
   const blockLog = JSON.parse(localStorageMethods.getLocalStorage(BLOCK_LOG, JSON.stringify([])))
   const filterLog = JSON.parse(localStorageMethods.getLocalStorage(FILTER_LOG, JSON.stringify([])))
@@ -327,6 +332,15 @@ const onChangelogLevel = () => {
   getLog().then(() => scrollToBottom(logContainer, true))
 }
 const onChangeTimeRange = () => {
+  if(logStore.timeRange[0] != null || logStore.timeRange[1] != null) {
+    intervalSelected.value = 0
+    if(refreshInterval) {
+      clearInterval(refreshInterval)
+      refreshInterval = null
+    }
+  } else {
+    intervalSelected.value = 3
+  }
   getLog().then(() => scrollToBottom(logContainer, true))
 }
 // 添加状态变量控制实时刷新
