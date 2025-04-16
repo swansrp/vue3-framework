@@ -261,7 +261,8 @@ const queryByRequestId = (requestId: any) => {
     ...logStore.getAllParams,
     requestId: requestId,
     startAt: undefined,
-    endAt: undefined
+    endAt: undefined,
+    logLevel: [],
   }
   props.fetch(req).then((resp: any) => {
     for (let index = resp.payload.length - 1; index >= 0; index--) {

@@ -9,6 +9,13 @@
     @close="emit('update:show', false)"
   >
     <template #extra>
+      <a-checkbox
+        v-model:checked="state.checkAll"
+        :indeterminate="state.indeterminate"
+        @change="onCheckAllChange"
+      >ALL
+      </a-checkbox>
+      <a-checkbox-group v-model:value="state.checkedList" :options="plainOptions" />
       <a-button
         style="margin-left: 10px;"
         type="primary"
@@ -23,7 +30,8 @@
     <div ref="logContainer" class="log-container">
       <div class="log-list">
         <div
-          v-for="({expand, log}, index) in data.values()" :key="index"
+          v-for="({expand, log}, index) in dataSource"
+          :key="index"
           :style="{height: expand === false ? 'auto' : '30px'}"
           class="log-item tip">
           <a-dropdown :trigger="['contextmenu']">
@@ -86,6 +94,13 @@ const emit = defineEmits<{
 }>()
 const { show, data } = toRefs(props)
 const _show = ref(show.value)
+const dataSource = computed(() => {
+  const log = [] as Array<any>
+  data.value.forEach((value: any) => {
+    state.checkedList.indexOf(value.log.logLevel) !== -1 ? log.push(value) : log.length
+  })
+  return log
+})
 watch(
   () => show.value,
   () => _show.value = show.value
@@ -145,6 +160,26 @@ const handleContextMenuClick = (arg: any, log: any) => {
       break
   }
 }
+// 日志等级过滤
+const plainOptions = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL']
+const state = reactive({
+  indeterminate: false,
+  checkAll: true,
+  checkedList: ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL']
+})
+const onCheckAllChange = (e: any) => {
+  Object.assign(state, {
+    checkedList: e.target.checked ? plainOptions : [],
+    indeterminate: false
+  })
+}
+watch(
+  () => state.checkedList,
+  val => {
+    state.indeterminate = !!val.length && val.length < plainOptions.length
+    state.checkAll = val.length === plainOptions.length
+  }
+)
 onMounted(() => {
 })
 </script>
