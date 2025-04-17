@@ -385,7 +385,12 @@ const handleContextMenuClick = (arg: any, log: LogInfo) => {
       }
       break
     case 'clear':
-      data.value.clear()
+      if(data.value.size > 0) {
+        const array = [...data.value.values()]
+        const lastLog = array[array.length - 1]?.log
+        logStore.setTimeRange([dayjs(lastLog.createTime), dayjs()])
+        data.value.clear()
+      }
       break
     default:
       break
