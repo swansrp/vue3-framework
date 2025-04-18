@@ -1409,11 +1409,7 @@ const queryConditionMap = reactive(new Map<String, ConditionListType>())
 const querySortMap = reactive(new Map<String, QuerySortType>())
 const initQueryCondition = () => {
   config.currentPage = 1
-  if (isListMode.value) {
-    config.pageSize = 15
-  } else {
-    config.pageSize = props.pageSize
-  }
+  config.pageSize = props.pageSize
   queryConditionMap.clear()
   querySortMap.clear()
 }
@@ -2059,12 +2055,6 @@ list模式样式
 .activate-item {
   background-color: #e6f7ff;
   border-right: 3px solid #1890ff;
-}
-
-.list-mode-table {
-  :deep(.surely-table-header) {
-    height: 0 !important;
-  }
 }
 
 </style>

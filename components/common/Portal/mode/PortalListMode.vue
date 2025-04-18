@@ -2,14 +2,13 @@
   <s-table
     :columns="[{
       rowDrag: config.orderMode && !config.readOnly,
-      title: titleColumn.title,
       align: 'center',
       dataIndex: 'label',
       tooltip: {placement: 'rightBottom', mouseEnterDelay: 0.5}
     }]"
+    :show-header="isNotEmpty(rowSelection)"
     :data-source="dataSource"
     :pagination="false"
-    :scroll="{y: 680}"
     bordered
     :row-selection="rowSelection"
     :range-selection="isEmpty(rowSelection) ? 'single' : false"
@@ -95,7 +94,7 @@
 import { CellRenderArgs } from '@surely-vue/table'
 import { ColumnType, TableConfigType, UpdateOrderType } from '@/framework/components/common/Portal/type'
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons-vue'
-import { isEmpty } from '@/framework/utils/common'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 const prop = defineProps<{
   config: TableConfigType,
   titleColumn: ColumnType,
