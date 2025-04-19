@@ -388,7 +388,7 @@ const handleContextMenuClick = (arg: any, log: LogInfo) => {
       if(data.value.size > 0) {
         const array = [...data.value.values()]
         const lastLog = array[array.length - 1]?.log
-        logStore.setTimeRange([dayjs(lastLog.createTime), dayjs()])
+        logStore.setTimeRange([dayjs(lastLog.createTime), null])
         data.value.clear()
       }
       break
