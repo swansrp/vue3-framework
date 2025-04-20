@@ -202,7 +202,9 @@ export type ColumnType = {
   // 新增是否显示
   addShow: boolean,
   // 编辑是否显示
-  editShow: boolean
+  editShow: boolean,
+  // 是否汇总
+  summary: boolean
   // endregion
 
 }

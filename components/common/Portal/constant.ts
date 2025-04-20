@@ -63,7 +63,8 @@ export const defaultColumn = {
   addShow: false,
   detailSize: 1,
   addSize: 1,
-  editSize: 1
+  editSize: 1,
+  summary: false
 } as ColumnType
 
 export const getDefaultFilterType = (fieldType: FIELD_TYPE, strict = false) => {

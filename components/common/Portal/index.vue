@@ -473,6 +473,11 @@
       @template-export="templateExport"
       @upload-progress="uploadAddProgress"
     />
+    <portal-statistic-modal
+      v-model:show="statisticShow"
+      :config="config"
+      :columns="columns"
+    />
     <!-- endregion -->
   </div>
 </template>
@@ -551,6 +556,7 @@ import { excelExport } from '@/framework/utils/excel'
 import { name } from '@/../package.json'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
+import PortalStatisticModal from '@/framework/components/common/Portal/modal/PortalStatisticModal.vue'
 
 const __ = getInstance()
 /**
@@ -564,6 +570,9 @@ const __ = getInstance()
  * @param actionWidth 操作栏宽度
  * @param indexWidth 序号栏宽度
  * @param indexTitle 序号栏标题
+ * @param advance 是否支持高级查询(需要having查询时不能支持高级查询)
+ * @param advanceButton 是否显示高级查询按钮
+ * @param statisticButton 是否显示统计按钮
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
  * @param hideRefresh 隐藏刷新按钮
@@ -605,6 +614,7 @@ const props = withDefaults(defineProps<{
     indexTitle?: string,
     advance?: boolean,
     advanceButton?: boolean,
+    statisticButton?: boolean,
     advanceCondition?: ConditionListType,
     defaultSortColumn?: Array<QuerySortType>,
     hideRefresh?: boolean,
@@ -644,6 +654,7 @@ const props = withDefaults(defineProps<{
     indexTitle: '',
     advance: false,
     advanceButton: false,
+    statisticButton: true,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
     hideRefresh: false,
@@ -684,6 +695,7 @@ const isBindTabExisted = computed(() => {
 const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
 const isListMode: Ref<boolean> = ref(props.listMode)
+const statisticShow: Ref<boolean> = ref(props.statisticButton)
 const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
 const dict = dictStore()
@@ -1746,6 +1758,7 @@ const init = async () => {
       column.sorter = layout.sortAble === '1' && !config.plain
       if (layout.summaryAble === '1') {
         summaryColumns.push(layout.property)
+        column.summary = true
       }
       column.addShow = layout.addShow === '1'
       if (config.addModalAble && column.addShow) config.addModalAble = column.addShow

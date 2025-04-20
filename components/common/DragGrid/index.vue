@@ -24,7 +24,7 @@
 
 <script lang="ts" setup>
 import { LayoutItem } from 'grid-layout-plus/src/helpers/types'
-
+import {GridItem, GridLayout} from 'grid-layout-plus'
 const list = ref([] as Array<any>)
 const props = withDefaults(
     defineProps<{
