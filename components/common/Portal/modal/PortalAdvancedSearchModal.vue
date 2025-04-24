@@ -1,17 +1,19 @@
 <template>
   <!-- region 高级筛选 -->
   <a-drawer
-    :open="advancedCondition.show"
+    v-model:open="advancedCondition.show"
     :width="1050"
     placement="right"
     title="高级筛选"
     @close="advancedConditionDrawClose"
   >
     <template #extra>
-      <div></div>
+      <slot name="extra">
+      </slot>
     </template>
     <advanced-search
       :key="key"
+      :advanced="advanced"
       :columns="advancedCondition.columnArray"
       :condition="advancedCondition.condition"
       :ok-text="advancedCondition.okText"
@@ -24,14 +26,17 @@
 <script lang="ts" setup>
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 
-let key = 0;
+let key = 0
 const props = withDefaults(
   defineProps<{
-    advancedCondition: any
+    advancedCondition: any,
+    advanced?: boolean
   }>(),
-  {}
+  {
+    advanced: true
+  }
 )
-const {advancedCondition} = toRefs(props)
+const { advancedCondition } = toRefs(props)
 const emit = defineEmits<{
   (e: 'confirm', condition: ConditionType): void
 }>()
@@ -46,7 +51,10 @@ const handleAdvancedConditionConfirm = (condition: ConditionType) => {
 }
 watch(
   () => advancedCondition.value,
-  () => key++,
+  () => {
+    console.log(advancedCondition.value)
+    key++
+  },
   {
     deep: true
   }

@@ -1,6 +1,6 @@
 <template>
   <div id="advancedSearch" :style="{width}">
-    <Entity v-model:condition="advancedCondition" class="search-item" />
+    <Entity v-model:condition="advancedCondition" :advanced="advanced" class="search-item" />
   </div>
   <a-button style="margin-left: 15px" type="primary" @click="getCondition">{{ okText }}</a-button>
   <a-button style="margin-left: 15px" type="primary" @click="resetCondition">{{ resetText }}</a-button>
@@ -26,12 +26,14 @@ const props = withDefaults(defineProps<{
       okText?: string,
       resetText?: string,
       condition?: ConditionType
+      advanced?: boolean
     }>(),
     {
       okText: '查询',
       width: 1000,
       resetText: '重置',
-      condition: () => ({conditionList: [genEmptyCondition()], andOr: AND})
+      condition: () => ({conditionList: [genEmptyCondition()], andOr: AND}),
+      advanced: true
     }
 )
 const {okText, resetText, condition} = toRefs(props)

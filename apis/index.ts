@@ -38,10 +38,12 @@ const commonUrl = {
   GENERAL_SELECT: '/general/select',
   GENERAL_SUMMARY: '/general/summary',
   GENERAL_COUNT: '/general/count',
+  GENERAL_STATISTIC: '/general/statistic',
   ADVANCED_QUERY: '/advanced/query',
   ADVANCED_SELECT: '/advanced/select',
   ADVANCED_SUMMARY: '/advanced/summary',
   ADVANCED_COUNT: '/advanced/count',
+  ADVANCED_STATISTIC: '/advanced/statistic',
   UPDATE: '/update',
   UPDATE_LIST: '/update/list',
   DELETE: '/delete',
@@ -78,7 +80,7 @@ const buildApi = (
   method: Method,
   version = '1.0',
   type: string
-) => ({baseDomain, url: type + url, method, version})
+) => ({ baseDomain, url: type + url, method, version })
 
 const buildGetApiByType = (
   url: string,
@@ -160,6 +162,12 @@ const generalCountApi = (
   version = '1.0'
 ) => buildApi(domain, commonUrl.GENERAL_COUNT, requestMethod.POST, version, type)
 
+const generalStatisticApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.GENERAL_STATISTIC, requestMethod.POST, version, type)
+
 const advancedQueryApi = (
   type: string,
   domain: string = baseDomain,
@@ -183,6 +191,12 @@ const advancedCountApi = (
   domain: string = baseDomain,
   version = '1.0'
 ) => buildApi(domain, commonUrl.ADVANCED_COUNT, requestMethod.POST, version, type)
+
+const advancedStatisticApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.GENERAL_STATISTIC, requestMethod.POST, version, type)
 
 const addApi = (
   type: string,
@@ -336,7 +350,7 @@ export const deleteRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(deleteApi(type, domain), {}, {id}, showSuccess, showLoading) as Promise<any>
+) => request(deleteApi(type, domain), {}, { id }, showSuccess, showLoading) as Promise<any>
 
 export const deleteListRequest = (
   type: string,
@@ -416,7 +430,23 @@ export const generalCountRequest = (
   showLoading = false
 ) => request(generalCountApi(type, domain), {}, {
   conditionList,
-  sortList,
+  sortList
+}, showSuccess, showLoading) as Promise<any>
+
+export const generalStatisticRequest = (
+  type: string,
+  conditionList: Array<any>,
+  sort: 0 | 1 | null,
+  groupByColumn: Array<string>,
+  statisticColumn: string,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(generalStatisticApi(type, domain), {}, {
+  conditionList,
+  sort,
+  groupByColumn,
+  statisticColumn
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedQueryRequest = (
@@ -473,13 +503,29 @@ export const advancedCountRequest = (
   sortList
 }, showSuccess, showLoading) as Promise<any>
 
+export const advancedStatisticRequest = (
+  type: string,
+  condition: ConditionType,
+  sort: 0 | 1 | null,
+  groupByColumn: Array<string>,
+  statisticColumn: string,
+  domain: string = baseDomain,
+  showSuccess = false,
+  showLoading = false
+) => request(advancedStatisticApi(type, domain), {}, {
+  condition,
+  sort,
+  groupByColumn,
+  statisticColumn
+}, showSuccess, showLoading) as Promise<any>
+
 export const getByIdRequest = (
   type: string,
   id: string,
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = true
-) => request(getByIdApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
+) => request(getByIdApi(type, domain), { id }, {}, showSuccess, showLoading) as Promise<any>
 
 export const getTreeDataRequest = (
   type: string,
@@ -495,7 +541,7 @@ export const getTreeParentDataRequest = (
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = true
-) => request(getTreeParentApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
+) => request(getTreeParentApi(type, domain), { id }, {}, showSuccess, showLoading) as Promise<any>
 
 export const getTreeChildrenDataRequest = (
   type: string,
@@ -503,7 +549,7 @@ export const getTreeChildrenDataRequest = (
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = true
-) => request(getTreeChildrenApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
+) => request(getTreeChildrenApi(type, domain), { id }, {}, showSuccess, showLoading) as Promise<any>
 
 export const getTreeBrothersDataRequest = (
   type: string,
@@ -511,7 +557,7 @@ export const getTreeBrothersDataRequest = (
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = true
-) => request(getTreeBrothersApi(type, domain), {id}, {}, showSuccess, showLoading) as Promise<any>
+) => request(getTreeBrothersApi(type, domain), { id }, {}, showSuccess, showLoading) as Promise<any>
 
 export const updateTreePidRequest = (
   type: string,
@@ -535,14 +581,14 @@ export const exportDataRequest = (
   data: QueryType,
   fileName: string,
   domain: string = baseDomain
-) => download(exportDataApi(type, domain), fileName, {name: params}, data) as Promise<any>
+) => download(exportDataApi(type, domain), fileName, { name: params }, data) as Promise<any>
 
 export const exportTemplateRequest = (
   type: string,
   params: string,
   fileName: string,
   domain: string = baseDomain
-) => download(exportTemplateApi(type, domain), fileName, {name: params}, {}) as Promise<any>
+) => download(exportTemplateApi(type, domain), fileName, { name: params }, {}) as Promise<any>
 
 export const importAddRequest = (
   type: string,
@@ -550,13 +596,13 @@ export const importAddRequest = (
   body: object,
   onUploadProgress: Function,
   domain: string = baseDomain
-) => upload(importAddDataApi(type, domain), {name: params}, body, onUploadProgress) as Promise<any>
+) => upload(importAddDataApi(type, domain), { name: params }, body, onUploadProgress) as Promise<any>
 
 export const importAddProgressRequest = (
   type: string,
   params: string,
   domain: string = baseDomain
-) => request(importAddProgressApi(type, domain), {name: params}, {}, false, false, true) as Promise<any>
+) => request(importAddProgressApi(type, domain), { name: params }, {}, false, false, true) as Promise<any>
 
 export const getAllBindListRequest = (
   type: string,
@@ -564,7 +610,7 @@ export const getAllBindListRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindAllListApi(type, domain), {entityId}, {}, showSuccess, showLoading) as Promise<any>
+) => request(bindAllListApi(type, domain), { entityId }, {}, showSuccess, showLoading) as Promise<any>
 
 export const queryBindListRequest = (
   type: string,
@@ -573,7 +619,7 @@ export const queryBindListRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindListApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
+) => request(bindListApi(type, domain), {}, { entityId, ...query }, showSuccess, showLoading) as Promise<any>
 
 export const queryUnbindListRequest = (
   type: string,
@@ -582,7 +628,7 @@ export const queryUnbindListRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(unbindListApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
+) => request(unbindListApi(type, domain), {}, { entityId, ...query }, showSuccess, showLoading) as Promise<any>
 
 export const queryAttachListRequest = (
   type: string,
@@ -591,7 +637,7 @@ export const queryAttachListRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(attachListApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
+) => request(attachListApi(type, domain), {}, { entityId, ...query }, showSuccess, showLoading) as Promise<any>
 
 export const bindRequest = (
   type: string,
@@ -600,7 +646,7 @@ export const bindRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindApi(type, domain), {}, {attachId, entityId}, showSuccess, showLoading) as Promise<any>
+) => request(bindApi(type, domain), {}, { attachId, entityId }, showSuccess, showLoading) as Promise<any>
 
 export const unbindRequest = (
   type: string,
@@ -609,7 +655,7 @@ export const unbindRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(unbindApi(type, domain), {}, {attachId, entityId}, showSuccess, showLoading) as Promise<any>
+) => request(unbindApi(type, domain), {}, { attachId, entityId }, showSuccess, showLoading) as Promise<any>
 
 export const bindBatchRequest = (
   type: string,
@@ -618,7 +664,7 @@ export const bindBatchRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindBatchApi(type, domain), {}, {attachIdList, entityId}, showSuccess, showLoading) as Promise<any>
+) => request(bindBatchApi(type, domain), {}, { attachIdList, entityId }, showSuccess, showLoading) as Promise<any>
 
 export const unbindBatchRequest = (
   type: string,
@@ -627,7 +673,7 @@ export const unbindBatchRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(unbindBatchApi(type, domain), {}, {attachIdList, entityId}, showSuccess, showLoading) as Promise<any>
+) => request(unbindBatchApi(type, domain), {}, { attachIdList, entityId }, showSuccess, showLoading) as Promise<any>
 
 export const bindReplaceAllRequest = (
   type: string,
@@ -636,7 +682,7 @@ export const bindReplaceAllRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindReplaceAllApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
+) => request(bindReplaceAllApi(type, domain), {}, { entityId, ...query }, showSuccess, showLoading) as Promise<any>
 
 export const bindReplaceBatchRequest = (
   type: string,
@@ -645,7 +691,7 @@ export const bindReplaceBatchRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindReplaceApi(type, domain), {}, {entityId, attachIdList}, showSuccess, showLoading) as Promise<any>
+) => request(bindReplaceApi(type, domain), {}, { entityId, attachIdList }, showSuccess, showLoading) as Promise<any>
 
 export const bindAllRequest = (
   type: string,
@@ -654,7 +700,7 @@ export const bindAllRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindAllApi(type, domain), {}, {entityId, ...query}, showSuccess, showLoading) as Promise<any>
+) => request(bindAllApi(type, domain), {}, { entityId, ...query }, showSuccess, showLoading) as Promise<any>
 
 export const unbindAllRequest = (
   type: string,
@@ -662,7 +708,7 @@ export const unbindAllRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(unbindAllApi(type, domain), {}, {entityId}, showSuccess, showLoading) as Promise<any>
+) => request(unbindAllApi(type, domain), {}, { entityId }, showSuccess, showLoading) as Promise<any>
 
 export const bindInfoRequest = (
   type: string,
@@ -673,7 +719,10 @@ export const bindInfoRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindInfoApi(type, domain), {entityId, strict}, {attachId, data}, showSuccess, showLoading) as Promise<any>
+) => request(bindInfoApi(type, domain), { entityId, strict }, {
+  attachId,
+  data
+}, showSuccess, showLoading) as Promise<any>
 
 export const bindInfoListRequest = (
   type: string,
@@ -683,7 +732,7 @@ export const bindInfoListRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(bindInfoListApi(type, domain), {entityId, strict}, data, showSuccess, showLoading) as Promise<any>
+) => request(bindInfoListApi(type, domain), { entityId, strict }, data, showSuccess, showLoading) as Promise<any>
 
 
 export {

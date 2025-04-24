@@ -4,10 +4,14 @@
     :data-source="_listData" :disabled="disable" bordered size="small">
     <template #renderItem="{ item }">
       <a-list-item
-        :class="{'activate-item': selectedData.indexOf(item.value) !== -1}"
-        @click="checkListNode(item.value)">
-        <slot v-if="$slots.title" :item="item" name="title"></slot>
-        <span v-else>{{ item[props.labelField] }}</span>
+        :class="{'activate-item':
+          labelInValue ?
+            selectedData.findIndex(data=>data.value === item[valueField]) !== -1
+            : selectedData.indexOf(item[valueField]) !== -1}"
+        @click="checkListNode(item)">
+        <slot :item="item" name="title">
+          <span>{{ item[props.labelField] }}</span>
+        </slot>
       </a-list-item>
     </template>
     <template v-if="searchAble" #header>
@@ -23,18 +27,15 @@
       placeholder="请输入搜索"
       size="small"
       @search="onSearch" />
-    <a-checkbox-group
-      v-model:value="selectedData"
-      style="display: grid;"
-      @change="handleChecked">
-      <a-checkbox
-        v-for="(item, index) in _listData" :key="index"
-        :value="item.value"
-        style="margin: 5px 0">
-        <slot v-if="$slots.title" :item="item" name="title"></slot>
-        <span v-else class="normal">{{ item[props.labelField] }}</span>
-      </a-checkbox>
-    </a-checkbox-group>
+    <a-checkbox
+      v-for="(item, index) in _listData" :key="index"
+      v-model:checked="item.checked"
+      style="width: 100%;margin-top: 10px"
+      @change="handleChecked(item)">
+      <slot :item="item" name="title">
+        <span class="normal">{{ item[props.labelField] }}</span>
+      </slot>
+    </a-checkbox>
   </template>
 </template>
 
@@ -47,21 +48,25 @@ const props = withDefaults(
     modelValue: any
     multi?: boolean,
     listData: Array<any>,
+    valueField?: string,
     labelField?: string,
     disable?: boolean
     search?: (searchInput: any) => void
     searchAble?: boolean
+    labelInValue?: boolean
   }>(),
   {
-    modelValue: '',
+    modelValue: [],
     multi: false,
+    valueField: 'value',
     labelField: 'label',
     disable: false,
     search: undefined,
-    searchAble: false
+    searchAble: false,
+    labelInValue: false
   }
 )
-const {listData, modelValue, multi, labelField, search} = toRefs(props)
+const { listData, modelValue, multi, valueField, labelField, search, labelInValue } = toRefs(props)
 const _listData = ref(listData.value)
 watch(
   () => listData.value,
@@ -73,23 +78,18 @@ watch(
 )
 const inputSearch = ref('')
 const selectedData: Ref<any> = ref(modelValue.value || [])
-const selectedLabel = [] as Array<any>
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
-  (e: 'change', value: any, label: any): void
+  (e: 'change', value: any): void
 }>()
 const checkListNode = (arg: any) => {
-  console.log('checkListNode', arg)
-  if (!multi.value) {
-    selectedData.value.length = 0
-    selectedData.value.push(arg)
+  selectedData.value.length = 0
+  if (labelInValue.value) {
+    selectedData.value.push({ value: arg[valueField.value], label: arg[labelField.value], data: arg })
   } else {
-    if (selectedData.value.indexOf(arg) === -1) {
-      selectedData.value.push(arg)
-    } else {
-      selectedData.value.splice(selectedData.value.indexOf(arg), 1)
-    }
+    selectedData.value.push(arg[valueField.value])
   }
+
 }
 const searchByLabel = (search: any) => {
   if (isNotEmpty(search)) {
@@ -108,13 +108,26 @@ const onSearch = () => {
   }
 }
 const handleChecked = (arg: any) => {
-  selectedData.value = arg || []
+  if (arg.checked) {
+    if (labelInValue.value) {
+      selectedData.value.push({ value: arg[valueField.value], label: arg[labelField.value], data: arg })
+    } else {
+      selectedData.value.push(arg[valueField.value])
+    }
+  } else {
+    if (labelInValue.value) {
+      selectedData.value.splice(selectedData.value.findIndex((item: any) => item.value === arg[valueField.value]), 1)
+    } else {
+      selectedData.value.splice(selectedData.value.findIndex((item: any) => item === arg[valueField.value]), 1)
+    }
+  }
 }
 watch(
   () => selectedData.value,
   () => {
+    console.log('selectedData.value', selectedData.value)
     emit('update:modelValue', selectedData.value)
-    emit('change', selectedData.value, selectedLabel)
+    emit('change', selectedData.value)
   },
   {
     deep: true

@@ -6,7 +6,7 @@
       </a-timeline-item>
       <template v-if="_condition.conditionList.length">
         <a-timeline-item v-for="(item, idx) in _condition.conditionList" :key="item.id">
-          <div v-if="item.isShow" class="condition-item">
+          <div v-if="item.isShow || item.isShow === undefined" class="condition-item">
             <a-tooltip placement="bottom" title="删除当前条件">
               <minus-circle-outlined style="color: red" @click="onClickDeleteCondition(item.id as number)" />
             </a-tooltip>
@@ -42,7 +42,7 @@
             <PlusSquareOutlined />
             添加条件
           </a-menu-item>
-          <a-menu-item key="2" class="menu-item">
+          <a-menu-item v-if="advanced" key="2" class="menu-item">
             <ApartmentOutlined />
             添加条件组
           </a-menu-item>
@@ -80,7 +80,7 @@ import {ConditionListType} from '@/framework/components/common/AdvancedSearch/Co
 
 const _condition: Ref = ref()
 const propertySelectOptions: Ref<Array<ValueLabel>> = ref([])
-const props = defineProps<{ condition: ConditionType | ConditionListType, index: number }>()
+const props = defineProps<{ condition: ConditionType | ConditionListType, index: number, advanced: boolean }>()
 const {index} = toRefs(props)
 
 const useAdvancedSearchStore = useAdvancedSearch(pinia)

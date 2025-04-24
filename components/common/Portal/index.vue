@@ -37,8 +37,8 @@
             :config="config"
             :data-source="listData"
             :pagination-change="paginationChange"
-            :title-column="titleColumn"
             :row-selection="hideRowSelection ? null : rowSelection"
+            :title-column="titleColumn"
             class="list-mode-table"
             @search="onListDataSearch"
             @cell-click="(event, params) => selectedListDataItem = params.record"
@@ -49,7 +49,7 @@
             @handle-menu-context-copy="handleMenuContextCopy"
             @handle-menu-context-delete="handleMenuContextDelete">
             <template #display="{record}">
-              <slot name="list-mode-display" :record="record.record"></slot>
+              <slot :record="record.record" name="list-mode-display"></slot>
             </template>
             <template #end-action>
               <portal-mode-button
@@ -376,6 +376,11 @@
               </template>
               <template #footer>
                 <div class="pagination">
+                  <a-button v-if="statisticButton" type="text" @click="statisticShow = true">
+                    <template #icon>
+                      <PieChartOutlined />
+                    </template>
+                  </a-button>
                   <div>
                     <slot name="footer-action"></slot>
                   </div>
@@ -475,8 +480,9 @@
     />
     <portal-statistic-modal
       v-model:show="statisticShow"
-      :config="config"
       :columns="columns"
+      :condition="[...queryConditionMap.values()]"
+      :config="config"
     />
     <!-- endregion -->
   </div>
@@ -514,13 +520,15 @@ import {
   ModifyCellType,
   QuerySortType,
   QueryType,
-  TableConfigType, UpdateOrderType
+  TableConfigType,
+  UpdateOrderType
 } from '@/framework/components/common/Portal/type'
 import {
   BarsOutlined,
   CaretRightOutlined,
   ExclamationCircleOutlined,
   FilterOutlined,
+  PieChartOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
 import {
@@ -654,7 +662,7 @@ const props = withDefaults(defineProps<{
     indexTitle: '',
     advance: false,
     advanceButton: false,
-    statisticButton: true,
+    statisticButton: false,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
     hideRefresh: false,
@@ -680,7 +688,7 @@ const props = withDefaults(defineProps<{
     rowExpandable: undefined,
     rowDragEnd: undefined,
     columnFilter: (column: ColumnType) => column.checked,
-    downloadFileName: (config: TableConfigType) => config.title,
+    downloadFileName: (config: TableConfigType) => config.title
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -695,7 +703,7 @@ const isBindTabExisted = computed(() => {
 const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
 const isListMode: Ref<boolean> = ref(props.listMode)
-const statisticShow: Ref<boolean> = ref(props.statisticButton)
+const statisticShow: Ref<boolean> = ref(false)
 const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
 const dict = dictStore()
@@ -1162,7 +1170,7 @@ const handleMenuContextView = (recordId: any) => {
 const handleMenuContextAdd = (recordId: any) => {
   config.modal.data[`${ config.parentKey }`] = recordId
   for (let column of columnArray.value) {
-    if(column.addShow && isNotEmpty(column.defaultValue)) {
+    if (column.addShow && isNotEmpty(column.defaultValue)) {
       config.modal.data[column.dataIndex] = column.defaultValue
     }
   }
@@ -1262,7 +1270,7 @@ const addRow = () => {
     config.modal.data = {}
   }
   for (let column of columnArray.value) {
-    if(column.addShow && isNotEmpty(column.defaultValue)) {
+    if (column.addShow && isNotEmpty(column.defaultValue)) {
       config.modal.data[column.dataIndex] = column.defaultValue
     }
   }

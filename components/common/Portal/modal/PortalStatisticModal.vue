@@ -3,22 +3,32 @@
     v-model:visible="_show"
     :title="config.title"
     is-full>
-    <content-layout :width="400" style="margin-top: 20px">
+    <content-layout :width="300" style="margin-top: 10px">
       <template #side>
         <list-content
           ref="leftRef"
-          v-model="selectedDictFields"
+          v-model="selectedDict"
           :list-data="dictFields"
-          multi />
+          label-in-value
+          @change="onDictFieldChange" />
       </template>
       <template #content>
         <a-tabs
           v-model:activeKey="activeKey"
           destroy-inactive-tab-pane
-          type="card">
+          @change="onTabChange">
           <a-tab-pane v-for="statisticTab in statisticTabs" :key="statisticTab.value" :tab="statisticTab.label">
+            <a-row
+              v-if="secondDictExpand && statisticTab.value === PERCENTAGE_TAB_KEY && selectedDict.length === 1">
+              <a-col v-for="item in secondDictMap.get(selectedDict[0].value)" :key="item.value" :span="4">
+                <a-checkbox
+                  :key="item.value" v-model:checked="item.checked" @change="onSecondDictFieldChange(item)">
+                  {{ item.label }}
+                </a-checkbox>
+              </a-col>
+            </a-row>
             <drag-grid
-              :key="selectedDictFields.length"
+              :key="statistic.length"
               ref="dragGridRef"
               v-model="statistic"
               :field-names="{value: 'value', label: 'label'}"
@@ -30,14 +40,24 @@
                 <a-card
                   :body-style="{padding: 0, height: '100%'}"
                   :head-style="{backgroundColor: '#fff'}"
-                  :title="item.data.label + '-' + statisticTab.label"
+                  :title="item.data.label"
                   size="small"
                   style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
+                  {{ item.data.echatOption }}
                   <template #extra>
-                    <a-button size="small" type="text">
-                      饼图
+                    <a-button disabled size="small" type="text" @click="onCardClick(item.data)">
                       <template #icon>
                         <FullscreenOutlined />
+                      </template>
+                    </a-button>
+                    <a-button size="small" type="text" @click="reloadCard(item.data)">
+                      <template #icon>
+                        <RedoOutlined />
+                      </template>
+                    </a-button>
+                    <a-button size="small" type="text" @click="closeCard(item.data)">
+                      <template #icon>
+                        <CloseCircleOutlined />
                       </template>
                     </a-button>
                   </template>
@@ -45,28 +65,78 @@
               </template>
             </drag-grid>
           </a-tab-pane>
+          <template #leftExtra>
+            <a-button
+              :disabled="activeKey !== PERCENTAGE_TAB_KEY || selectedDict.length !== 1"
+              style="margin-bottom: -10px"
+              type="link"
+              @click="secondDictExpand = !secondDictExpand">
+              <template #icon>
+                <MoreOutlined />
+              </template>
+            </a-button>
+          </template>
           <template #rightExtra>
-            <a-button>高级选项</a-button>
+            <a-tooltip placement="top">
+              <template #title>
+                <span>关闭所有</span>
+              </template>
+              <a-button
+                shape="circle" size="middle" type="text"
+                :disabled="statistic.length === 0"
+                @click="closeAll">
+                <template #icon>
+                  <ClearOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
+            <a-tooltip placement="top">
+              <template #title>
+                <span>高级查询</span>
+              </template>
+              <a-button
+                shape="circle" size="middle" style="margin-right: 15px;" type="text"
+                @click="advancedCondition.show = true">
+                <template #icon>
+                  <funnel-plot-outlined />
+                </template>
+              </a-button>
+            </a-tooltip>
           </template>
         </a-tabs>
       </template>
     </content-layout>
   </dialog-box>
+  <portal-advanced-search-modal
+    :advanced="false"
+    :advanced-condition="advancedCondition"
+    @confirm="onAdvancedConditionConfirm" />
 </template>
 
 <script lang="ts" setup>
-import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
-import { FullscreenOutlined } from '@ant-design/icons-vue'
+import { ColumnType, FIELD_TYPE, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
+import {
+  ClearOutlined,
+  CloseCircleOutlined,
+  FullscreenOutlined,
+  FunnelPlotOutlined,
+  MoreOutlined,
+  RedoOutlined
+} from '@ant-design/icons-vue'
+import { generalStatistic } from '@/framework/apis/portal'
 
-const PERCENTAGE_TAB_KEY = 'percentage'
-const PERCENTAGE_TAB_TITLE = '占比'
+const PERCENTAGE_TAB_KEY = ''
+const PERCENTAGE_TAB_TITLE = '分布统计'
 const props = withDefaults(
-    defineProps<{
-      show: boolean
-      config: TableConfigType
-      columns: Array<ColumnType>
-    }>(),
-    {}
+  defineProps<{
+    show: boolean
+    config: TableConfigType
+    columns: Array<ColumnType>
+    condition?: any
+  }>(),
+  {
+    condition: []
+  }
 )
 const { config, columns, show } = toRefs(props)
 const emit = defineEmits<{
@@ -74,89 +144,180 @@ const emit = defineEmits<{
 }>()
 const _show = ref(props.show)
 watch(
-    () => show.value,
-    () => _show.value = show.value,
+  () => show.value,
+  () => _show.value = show.value
 )
 watch(
-    () => _show.value,
-    () => emit('update:show', _show.value),
+  () => _show.value,
+  () => emit('update:show', _show.value)
 )
-const selectedDictFields = ref([] as Array<any>)
-const dictFields = ref([] as Array<any>)
+const selectedDict = ref([] as Array<any>)
+const dictFields = ref([] as Array<{ value: any, label: any, checked: boolean }>)
+const secondDictMap = ref(new Map<String, Array<{ value: any, label: any, checked: boolean }>>())
+const secondDictExpand = ref(false)
 const statisticTabs = ref([{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }] as Array<{
   value: string,
   label: string
 }>)
 const statisticData = ref(new Map<string, Array<{ value: string, label: string, echatOption: any }>>())
+const advancedCondition = reactive({
+  show: false,
+  condition: {},
+  columnArray: [] as Array<any>,
+  okText: '查询'
+})
+watch (
+  () => props.condition,
+  () => advancedCondition.condition = isNotEmpty(props.condition) ? { conditionList: [...props.condition], andOr: '0', } : {},
+)
+const formatTitle = (title: string) => {
+  if (title.indexOf('\n') !== -1) {
+    return title.replace('\n', '')
+  } else if (title.indexOf('\\n') !== -1) {
+    return title.replace('\\n', '')
+  } else {
+    return title
+  }
+}
 watch(
-    () => columns.value,
-    () => {
-      if (isNotEmpty(columns.value)) {
-        statisticTabs.value.length = 0
-        dictFields.value.length = 0
-        statisticData.value.clear()
-        statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
-        statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
-        columns.value.forEach(column => {
-          if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
-              column.fieldType === FIELD_TYPE.TREE || column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
-            dictFields.value.push({ value: column.dataIndex, label: column.title })
-            // 数量占比
-            statisticData.value.get(PERCENTAGE_TAB_KEY)?.push({
-              value: column.dataIndex,
-              label: column.title,
-              echatOption: {}
-            })
-          }
-          if (column.summary) {
-            statisticData.value.set(column.dataIndex, [] as Array<{ value: string, label: string, echatOption: any }>)
-            statisticTabs.value.push({ value: column.dataIndex, label: column.title })
-            columns.value.forEach(summary => {
-              if (summary.fieldType === FIELD_TYPE.SELECT || summary.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
-                  summary.fieldType === FIELD_TYPE.TREE || summary.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
-                statisticData.value.get(column.dataIndex)?.push({
-                  value: summary.dataIndex,
-                  label: summary.title,
-                  echatOption: {}
-                })
-              }
-            })
-          }
-        })
-      }
-    },
-    {
-      deep: true,
-      immediate: true
+  () => columns.value,
+  () => {
+    if (isNotEmpty(columns.value)) {
+      statisticTabs.value.length = 0
+      dictFields.value.length = 0
+      secondDictMap.value.clear()
+      advancedCondition.columnArray.length = 0
+      statisticData.value.clear()
+      statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
+      statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
+      columns.value.forEach(column => {
+        if (column.disabled || column.checked === false || column.customFilterDropdown === false) return
+        // 高级查询字段
+        advancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
+        secondDictMap.value.set(column.dataIndex, [{
+          value: PERCENTAGE_TAB_KEY,
+          label: PERCENTAGE_TAB_TITLE,
+          checked: true
+        }])
+        // 字典字段
+        if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
+          dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
+          columns.value.forEach(item => {
+            if (item.disabled || item.checked === false || item.customFilterDropdown === false || item.dataIndex === column.dataIndex) return
+            if (item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.TREE) {
+              secondDictMap.value.get(column.dataIndex)?.push({
+                value: item.dataIndex,
+                label: formatTitle(item.title),
+                checked: false
+              })
+            }
+          })
+        }
+        if (column.summary) {
+          statisticTabs.value.push({ value: column.dataIndex, label: column.title })
+        }
+      })
     }
+  },
+  {
+    deep: true,
+    immediate: true
+  }
 )
 const statistic = ref([] as Array<{ value: string, label: string, echatOption: any }>)
 const activeKey = ref(PERCENTAGE_TAB_KEY)
-watch(
-    () => [selectedDictFields.value, activeKey.value],
-    () => {
-      if(selectedDictFields.value)
-        if (isNotEmpty(selectedDictFields.value)) {
-          if (statisticData.value.get(activeKey.value)) {
-            statistic.value = statisticData.value.get(activeKey.value)?.filter(item => selectedDictFields.value.indexOf(item.value) !== -1) || []
+const onDictFieldChange = (value: any) => {
+  if(isNotEmpty(value)) {
+    const dictValue = value[0].value
+    const tabIndex = statisticTabs.value.findIndex(item => item.value === activeKey.value)
+    if (tabIndex > -1) {
+      const tabLabel = statisticTabs.value[tabIndex].label
+      if (statistic.value.findIndex(item => item.value === dictValue) === -1) {
+        generalStatistic(config.value.url, advancedCondition.condition as QueryType, dictValue.split(','), activeKey.value).then(resp => {
+          statistic.value.unshift({
+            value: dictValue,
+            label: value[0].label + '-' + tabLabel,
+            echatOption: resp.payload
+          })
+          if (activeKey.value === PERCENTAGE_TAB_KEY) {
+            secondDictMap.value.get(value[0].value)![0].checked = true
           }
-        } else {
-          statistic.value = []
-        }
-      console.log('statistic.value', statistic.value)
-    },
-    {
-      deep: true,
-      immediate: true
+          console.log(secondDictMap.value, secondDictMap.value.get(value[0]))
+        })
+
+      }
     }
-)
+  }
+}
+const onTabChange = (key: string) => {
+  selectedDict.value.length = 0
+  console.log('onTabChange', key)
+}
+const onSecondDictFieldChange = (value: any) => {
+  const tabIndex = statisticTabs.value.findIndex(item => item.value === activeKey.value)
+  if (tabIndex > -1) {
+    const tabLabel = statisticTabs.value[tabIndex].label
+    const selectedFieldValue = selectedDict.value[0].value + ',' + value.value
+    let selectedFieldLabel: string
+    if(value.value === PERCENTAGE_TAB_KEY) {
+      selectedFieldLabel = selectedDict.value[0].label + '-' + tabLabel
+    } else {
+      selectedFieldLabel = selectedDict.value[0].label + '-' + value.label + '-' + tabLabel
+    }
+    const index = statistic.value.findIndex(item => item.value === selectedFieldValue)
+    if (value.checked) {
+      (index === -1) && generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, selectedFieldValue.split(','), activeKey.value).then(resp => {
+        statistic.value.unshift({
+          value: selectedFieldValue,
+          label: selectedFieldLabel,
+          echatOption: resp.payload
+        })
+      })
+    } else {
+      (index !== -1) && statistic.value.splice(index, 1)
+    }
+  }
+}
+const onCardClick = (arg: any) => {
+  console.log('onCardClick', arg)
+}
+const reloadCard = (arg: any) => {
+  console.log('reloadCard', arg)
+}
+const remove = (index: any) => {
+  const removedItem = statistic.value.splice(index, 1)
+  const dict = removedItem[0].value.split(',')
+  const secondDict = dict[1] || ''
+  const list = secondDictMap.value.get(dict[0])
+  if (list) {
+    const secondIndex = list.findIndex(item => item.value === secondDict)
+    if (secondIndex > -1) {
+      list[secondIndex].checked = false
+    }
+  }
+}
+const closeCard = (arg: any) => {
+  const index = statistic.value.findIndex(item => item.value === arg.value)
+  remove(index)
+}
+const closeAll = () => {
+  const count = statistic.value.length
+  for (let index = 0; index < count; index++)  {
+    remove(statistic.value.length - 1)
+  }
+}
 const computedGrid = computed(() => {
-  if (statistic.value.length <= 4) return { height: 15, rowHeight: 23, width: 30, maxCol: 60 }
-  if (statistic.value.length <= 9) return { height: 11, rowHeight: 20.5, width: 20, maxCol: 60 }
-  if (statistic.value.length <= 16) return { height: 9, rowHeight: 19, width: 15, maxCol: 60 }
-  if (statistic.value.length <= 25) return { height: 8, rowHeight: 17, width: 12, maxCol: 60 }
-  else return { height: 8, rowHeight: 17, width: 12, maxCol: 60 }
+  if (statistic.value.length == 1) return { height: 14, rowHeight: 40, width: 60, maxCol: 60 }
+  if (statistic.value.length <= 2) return { height: 14, rowHeight: 40, width: 30, maxCol: 60 }
+  if (statistic.value.length <= 4) return { height: 10, rowHeight: 40, width: 30, maxCol: 60 }
+  if (statistic.value.length <= 9) return { height: 7, rowHeight: 40, width: 20, maxCol: 60 }
+  if (statistic.value.length <= 16) return { height: 7, rowHeight: 40, width: 15, maxCol: 60 }
+  else return { height: 7, rowHeight: 40, width: 15, maxCol: 60 }
 })
+const onAdvancedConditionConfirm = (arg: any) => {
+  console.log('====onAdvancedConditionConfirm=====', arg)
+  console.log('====onAdvancedConditionConfirm=====', advancedCondition)
+}
 
 onMounted(() => {
 

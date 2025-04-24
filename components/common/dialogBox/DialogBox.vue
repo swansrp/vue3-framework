@@ -5,6 +5,7 @@
     :mask-closable="_maskClosable"
     :width="_width"
     :wrap-class-name="_isFull ? 'full-modal' : 'box-modal'"
+    :z-index="_isFull ? 999 : 1000"
     destroyOnClose
     @cancel="$emit('update:visible', false)">
     <slot></slot>

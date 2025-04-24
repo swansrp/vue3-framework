@@ -110,7 +110,7 @@ watch(() => props.property,
 )
 watch(() => props.relation, () => {
   // 关系选择值
-  relationValue.value = props.relation
+  relationValue.value = props.relation && String(props.relation)
 }, {immediate: true})
 watch(() => props.value, () => {
   // console.log('props.value', props.value)
