@@ -43,7 +43,10 @@
                   :title="item.data.label"
                   size="small"
                   style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
-                  {{ item.data.echatOption }}
+                  <double-metric
+                    :data="item.data.echatOption"
+                    :inner-dict="dictMap.get(item.data.value.split(',')[0])"
+                    :outer-dict="dictMap.get(item.data.value.split(',')[1])" />
                   <template #extra>
                     <a-button disabled size="small" type="text" @click="onCardClick(item.data)">
                       <template #icon>
@@ -82,8 +85,8 @@
                 <span>关闭所有</span>
               </template>
               <a-button
-                shape="circle" size="middle" type="text"
-                :disabled="statistic.length === 0"
+                :disabled="statistic.length === 0" shape="circle" size="middle"
+                type="text"
                 @click="closeAll">
                 <template #icon>
                   <ClearOutlined />
@@ -124,19 +127,21 @@ import {
   RedoOutlined
 } from '@ant-design/icons-vue'
 import { generalStatistic } from '@/framework/apis/portal'
+import DoubleMetric from '../dashboard/doubleMetric/index.vue'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 
 const PERCENTAGE_TAB_KEY = ''
 const PERCENTAGE_TAB_TITLE = '分布统计'
 const props = withDefaults(
-  defineProps<{
-    show: boolean
-    config: TableConfigType
-    columns: Array<ColumnType>
-    condition?: any
-  }>(),
-  {
-    condition: []
-  }
+    defineProps<{
+      show: boolean
+      config: TableConfigType
+      columns: Array<ColumnType>
+      condition?: any
+    }>(),
+    {
+      condition: []
+    }
 )
 const { config, columns, show } = toRefs(props)
 const emit = defineEmits<{
@@ -144,15 +149,18 @@ const emit = defineEmits<{
 }>()
 const _show = ref(props.show)
 watch(
-  () => show.value,
-  () => _show.value = show.value
+    () => show.value,
+    () => _show.value = show.value
 )
 watch(
-  () => _show.value,
-  () => emit('update:show', _show.value)
+    () => _show.value,
+    () => emit('update:show', _show.value)
 )
+const dict = dictStore()
+const treeDict = useTreeStore()
 const selectedDict = ref([] as Array<any>)
 const dictFields = ref([] as Array<{ value: any, label: any, checked: boolean }>)
+const dictMap = ref(new Map())
 const secondDictMap = ref(new Map<String, Array<{ value: any, label: any, checked: boolean }>>())
 const secondDictExpand = ref(false)
 const statisticTabs = ref([{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }] as Array<{
@@ -166,9 +174,12 @@ const advancedCondition = reactive({
   columnArray: [] as Array<any>,
   okText: '查询'
 })
-watch (
-  () => props.condition,
-  () => advancedCondition.condition = isNotEmpty(props.condition) ? { conditionList: [...props.condition], andOr: '0', } : {},
+watch(
+    () => props.condition,
+    () => advancedCondition.condition = isNotEmpty(props.condition) ? {
+      conditionList: [...props.condition],
+      andOr: '0',
+    } : {},
 )
 const formatTitle = (title: string) => {
   if (title.indexOf('\n') !== -1) {
@@ -180,60 +191,67 @@ const formatTitle = (title: string) => {
   }
 }
 watch(
-  () => columns.value,
-  () => {
-    if (isNotEmpty(columns.value)) {
-      statisticTabs.value.length = 0
-      dictFields.value.length = 0
-      secondDictMap.value.clear()
-      advancedCondition.columnArray.length = 0
-      statisticData.value.clear()
-      statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
-      statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
-      columns.value.forEach(column => {
-        if (column.disabled || column.checked === false || column.customFilterDropdown === false) return
-        // 高级查询字段
-        advancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
-        secondDictMap.value.set(column.dataIndex, [{
-          value: PERCENTAGE_TAB_KEY,
-          label: PERCENTAGE_TAB_TITLE,
-          checked: true
-        }])
-        // 字典字段
-        if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
-          dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
-          columns.value.forEach(item => {
-            if (item.disabled || item.checked === false || item.customFilterDropdown === false || item.dataIndex === column.dataIndex) return
-            if (item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.TREE) {
-              secondDictMap.value.get(column.dataIndex)?.push({
-                value: item.dataIndex,
-                label: formatTitle(item.title),
-                checked: false
-              })
+    () => columns.value,
+    () => {
+      if (isNotEmpty(columns.value)) {
+        statisticTabs.value.length = 0
+        dictFields.value.length = 0
+        dictMap.value.clear()
+        secondDictMap.value.clear()
+        advancedCondition.columnArray.length = 0
+        statisticData.value.clear()
+        statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
+        statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
+        columns.value.forEach(column => {
+          if (column.disabled || column.checked === false || column.customFilterDropdown === false) return
+          // 高级查询字段
+          advancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
+          secondDictMap.value.set(column.dataIndex, [{
+            value: PERCENTAGE_TAB_KEY,
+            label: PERCENTAGE_TAB_TITLE,
+            checked: true
+          }])
+          // 字典字段
+          if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
+            dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
+            if (column.fieldType === FIELD_TYPE.SELECT) {
+              dictMap.value.set(column.dataIndex, dict.map.get(column.referenceDict))
+            } else {
+              dictMap.value.set(column.dataIndex, treeDict.map.get(column.referenceDict))
             }
-          })
-        }
-        if (column.summary) {
-          statisticTabs.value.push({ value: column.dataIndex, label: column.title })
-        }
-      })
+            columns.value.forEach(item => {
+              if (item.disabled || item.checked === false || item.customFilterDropdown === false || item.dataIndex === column.dataIndex) return
+              if (item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.TREE) {
+                secondDictMap.value.get(column.dataIndex)?.push({
+                  value: item.dataIndex,
+                  label: formatTitle(item.title),
+                  checked: false
+                })
+              }
+            })
+          }
+          if (column.summary) {
+            statisticTabs.value.push({ value: column.dataIndex, label: column.title })
+          }
+        })
+      }
+      console.log('22222', dictMap.value)
+    },
+    {
+      deep: true,
+      immediate: true
     }
-  },
-  {
-    deep: true,
-    immediate: true
-  }
 )
 const statistic = ref([] as Array<{ value: string, label: string, echatOption: any }>)
 const activeKey = ref(PERCENTAGE_TAB_KEY)
 const onDictFieldChange = (value: any) => {
-  if(isNotEmpty(value)) {
+  if (isNotEmpty(value)) {
     const dictValue = value[0].value
     const tabIndex = statisticTabs.value.findIndex(item => item.value === activeKey.value)
     if (tabIndex > -1) {
       const tabLabel = statisticTabs.value[tabIndex].label
       if (statistic.value.findIndex(item => item.value === dictValue) === -1) {
-        generalStatistic(config.value.url, advancedCondition.condition as QueryType, dictValue.split(','), activeKey.value).then(resp => {
+        generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, dictValue.split(','), activeKey.value).then(resp => {
           statistic.value.unshift({
             value: dictValue,
             label: value[0].label + '-' + tabLabel,
@@ -242,7 +260,7 @@ const onDictFieldChange = (value: any) => {
           if (activeKey.value === PERCENTAGE_TAB_KEY) {
             secondDictMap.value.get(value[0].value)![0].checked = true
           }
-          console.log(secondDictMap.value, secondDictMap.value.get(value[0]))
+          console.log('onDictFieldChange', value, secondDictMap.value, secondDictMap.value.get(value[0]))
         })
 
       }
@@ -259,7 +277,7 @@ const onSecondDictFieldChange = (value: any) => {
     const tabLabel = statisticTabs.value[tabIndex].label
     const selectedFieldValue = selectedDict.value[0].value + ',' + value.value
     let selectedFieldLabel: string
-    if(value.value === PERCENTAGE_TAB_KEY) {
+    if (value.value === PERCENTAGE_TAB_KEY) {
       selectedFieldLabel = selectedDict.value[0].label + '-' + tabLabel
     } else {
       selectedFieldLabel = selectedDict.value[0].label + '-' + value.label + '-' + tabLabel
@@ -302,7 +320,7 @@ const closeCard = (arg: any) => {
 }
 const closeAll = () => {
   const count = statistic.value.length
-  for (let index = 0; index < count; index++)  {
+  for (let index = 0; index < count; index++) {
     remove(statistic.value.length - 1)
   }
 }

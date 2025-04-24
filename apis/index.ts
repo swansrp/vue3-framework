@@ -437,7 +437,7 @@ export const generalStatisticRequest = (
   type: string,
   conditionList: Array<any>,
   sort: 0 | 1 | null,
-  groupByColumn: Array<string>,
+  metricColumn: Array<string>,
   statisticColumn: string,
   domain: string = baseDomain,
   showSuccess = false,
@@ -445,7 +445,7 @@ export const generalStatisticRequest = (
 ) => request(generalStatisticApi(type, domain), {}, {
   conditionList,
   sort,
-  groupByColumn,
+  metricColumn,
   statisticColumn
 }, showSuccess, showLoading) as Promise<any>
 
@@ -507,7 +507,7 @@ export const advancedStatisticRequest = (
   type: string,
   condition: ConditionType,
   sort: 0 | 1 | null,
-  groupByColumn: Array<string>,
+  metricColumn: Array<string>,
   statisticColumn: string,
   domain: string = baseDomain,
   showSuccess = false,
@@ -515,7 +515,7 @@ export const advancedStatisticRequest = (
 ) => request(advancedStatisticApi(type, domain), {}, {
   condition,
   sort,
-  groupByColumn,
+  metricColumn,
   statisticColumn
 }, showSuccess, showLoading) as Promise<any>
 
