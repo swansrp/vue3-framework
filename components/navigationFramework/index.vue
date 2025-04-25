@@ -24,6 +24,7 @@ import { useWindowStore } from '@/framework/store/window'
 import {useSlots} from "vue"
 import pinia from "@/framework/store"
 import {useTabStore} from "@/framework/store/nav";
+import { title } from '../../../../package.json'
 
 const slots = useSlots()
 // 根据插槽判断是否需要左侧导航及面包屑导航等
@@ -32,8 +33,18 @@ const tabStore = useTabStore(pinia)
 const {isNeedNav} = toRefs(tabStore)
 const store = useWindowStore(pinia)
 const getWindowHeight = () => store.updateWindowHeight(window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight)
-
+const router = useRouter()
 onMounted(() => {
+  const {MODE} = import.meta.env
+  let env = ''
+  if (MODE === 'development') env = '测试--'
+  else if (MODE === 'pre') env = '预生产--'
+  document.title = env + title
+  if(!isNeedNav.value && router.currentRoute.value.meta.title) {
+    document.title = env + router.currentRoute.value.meta.title
+  } else {
+    document.title = env + title
+  }
   // 初始化store中的windowHeight
   getWindowHeight()
   // 使用lodash的防抖函数，防止store.windowHeight的频繁改动

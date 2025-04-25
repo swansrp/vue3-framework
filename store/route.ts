@@ -52,6 +52,8 @@ export const useRouteStore = defineStore('routeStore', {
           node.name = node.path
           // antd menu key 是 string类型
           node.key = node.key.toString()
+          // 页面标题
+          node.meta = { title: node.title }
           // 页面中的按钮权限
           if (node.menuType === 3) {
             buttonMap.set(parentPathArray.join('/'), [...(buttonMap.get(parentPathArray.join('/')) || []), node.path])
