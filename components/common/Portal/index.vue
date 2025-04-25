@@ -1543,7 +1543,7 @@ const queryData = () => {
     if (config.treeMode) {
       queryTreeData()
     }
-    if (config.summary) {
+    if (config.summary && !config.plain) {
       getDataSummary(condition)
     }
     queryDataAsync(condition).then(data => {
@@ -1871,7 +1871,7 @@ const init = async () => {
     }
     await Promise.all(promiseList)
     const condition = queryCondition()
-    if (config.summary) {
+    if (config.summary && !config.plain) {
       await getDataSummary(condition)
     }
     return await queryDataAsync(condition)
