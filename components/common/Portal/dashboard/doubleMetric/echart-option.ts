@@ -1,10 +1,6 @@
 import icon from './assets/imgs/prodution-icon.svg'
+import { NameValue } from '../type'
 
-export interface NameValue {
-  name: string,
-  value: number,
-  itemStyle?: Object
-}
 
 export interface DoubleMetricDataType {
   innerData: Array<NameValue>,
@@ -37,7 +33,6 @@ export const processDoubleMetricData = (data: any, innerDictMap: any, outerDictM
     item.subData.forEach((subItem: any) => subItem.parentName = item.name)
     outerData.push(...item.subData)
   })
-  console.log('processDoubleMetricData', innerMap, innerData, outerData)
   return { innerData, outerData }
 }
 

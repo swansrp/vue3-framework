@@ -4,7 +4,8 @@
 </template>
 
 <script lang="ts" setup>
-import { DoubleMetricDataType, getEchartsDoubleMetricOption, NameValue, processDoubleMetricData } from './echart-option'
+import { NameValue } from '../type'
+import { DoubleMetricDataType, getEchartsDoubleMetricOption, processDoubleMetricData } from './echart-option'
 import { getInitEchart, setEchartsOptionsAndResize } from "../../utils"
 const props = defineProps<{ index: any, data: Array<any>, innerDict: any, outerDict: any }>()
 const {index, data, innerDict, outerDict} = toRefs(props)

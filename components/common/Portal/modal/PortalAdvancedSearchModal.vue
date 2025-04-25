@@ -45,14 +45,14 @@ const advancedConditionDrawClose = () => {
 }
 const handleAdvancedConditionConfirm = (condition: ConditionType) => {
   advancedCondition.value.condition = condition
-  console.log('getAdvancedCondition', advancedCondition.value.condition)
+  console.debug('getAdvancedCondition', advancedCondition.value.condition)
   emit('confirm', advancedCondition.value.condition)
   advancedConditionDrawClose()
 }
 watch(
   () => advancedCondition.value,
   () => {
-    console.log(advancedCondition.value)
+    console.debug(advancedCondition.value)
     key++
   },
   {
