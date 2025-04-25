@@ -1365,7 +1365,7 @@ const getAdvancedCondition = () => {
       }
     }
   }
-  console.log('queryConditionMap', queryConditionMap)
+  console.debug('queryConditionMap', queryConditionMap)
   if (isNotEmpty(queryConditionMap)) {
     if (isNotEmpty(queryCondition.condition)) {
       queryCondition.condition = {
@@ -1407,7 +1407,7 @@ const getGeneralCondition = () => {
   if (isNotEmpty(querySortMap)) {
     queryCondition.sortList = [...querySortMap.values()]
   }
-  console.log('queryConditionMap', queryConditionMap)
+  console.debug('queryConditionMap', queryConditionMap)
   if (isNotEmpty(queryConditionMap)) {
     if (isNotEmpty(queryCondition.conditionList)) {
       queryCondition.conditionList = [...queryCondition.conditionList, ...queryConditionMap.values()]

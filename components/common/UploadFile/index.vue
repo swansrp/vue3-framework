@@ -247,7 +247,7 @@ const closeUploadModal = () => {
   uploadDialogBox.show = false
 }
 const beforeUpload = (file: any, fileList: any) => {
-  console.trace(file, fileList)
+  console.debug(file, fileList)
   const isLt20M = file.size / 1024 / 1024 < 20
   if (!isLt20M) {
     message.error('文件请小于 20MB!')

@@ -90,7 +90,7 @@ function layoutReady(): void {
   })
 }
 function layoutUpdated() {
-  console.log('layout-updated', currentMovedNode)
+  console.debug('layout-updated', currentMovedNode)
   if(!currentMovedNode) return
   const { i, newX } = currentMovedNode
   nextTick(() => {
