@@ -557,7 +557,7 @@ import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
-import bus from '@/framework/mitt'
+import bus, {PORTAL_RESIZE} from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 import { parse } from '@/framework/components/common/Portal/utils'
 import { excelExport } from '@/framework/utils/excel'
@@ -871,7 +871,7 @@ const selectedEntityName = computed(() => {
 })
 const handleLayoutSiderDisplay = () => {
   layoutSiderDisplay.value = !layoutSiderDisplay.value
-  bus.emit('portal:table:resize')
+  bus.emit(PORTAL_RESIZE)
 }
 const handleDisplayModeChange = (menuKey: any) => {
   switch (menuKey) {
@@ -1890,7 +1890,7 @@ const queryTreeData = async () => {
 
 onMounted(() => {
   window.addEventListener('resize', _updateTableSize)
-  bus.on('portal:table:resize', _updateTableSize)
+  bus.on(PORTAL_RESIZE, _updateTableSize)
   init().then(data => initData(data))
 })
 watch(() => props.tableId, value => {
@@ -1919,7 +1919,7 @@ onUnmounted(() => {
   dictColumnArray.length = 0
   titleColumn = {} as ColumnType
   window.removeEventListener('resize', _updateTableSize)
-  bus.off('portal:table:resize')
+  bus.off(PORTAL_RESIZE)
 })
 
 defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig })

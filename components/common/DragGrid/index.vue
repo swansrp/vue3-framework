@@ -5,6 +5,7 @@
     :isDraggable="isDraggable"
     :row-height="rowHeight"
     @layout-updated="layoutUpdated"
+    @layout-ready="layoutReady"
   >
     <grid-item
       v-for="item in list"
@@ -25,6 +26,7 @@
 <script lang="ts" setup>
 import { LayoutItem } from 'grid-layout-plus/src/helpers/types'
 import {GridItem, GridLayout} from 'grid-layout-plus'
+import bus, {DRAG_GRID_RESIZE} from '@/framework/mitt'
 const list = ref([] as Array<any>)
 const props = withDefaults(
     defineProps<{
@@ -82,7 +84,11 @@ function moveEvent(i: string, newX: number, newY: number) {
   }
   currentMovedNode = { i, newX, newY }
 }
-
+function layoutReady(): void {
+  nextTick(() => {
+    bus.emit(DRAG_GRID_RESIZE);
+  })
+}
 function layoutUpdated() {
   console.log('layout-updated', currentMovedNode)
   if(!currentMovedNode) return
@@ -181,6 +187,7 @@ function layoutUpdated() {
     emit('update:modelValue', modelValue.value)
     emit('moved', modelValue.value)
     currentMovedNode = null
+    bus.emit(DRAG_GRID_RESIZE);
   })
 }
 

@@ -107,7 +107,7 @@ export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMet
               padding: [-5, 3, 0, -10],
             },
             bd: {
-              color: '#fff',
+              color: '#333',
               align: 'center',
               padding: [0, 5, -4, 5],
               fontSize: 12,

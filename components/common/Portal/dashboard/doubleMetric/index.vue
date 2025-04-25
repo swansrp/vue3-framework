@@ -1,14 +1,13 @@
 <template>
-  <div id="double-circular" :style="{zIndex: 1-showNoData, opacity: 1-showNoData}"></div>
+  <div :id="'double-circular-'+index" class="double-circular-css" :style="{zIndex: 1-showNoData, opacity: 1-showNoData}"></div>
   <div :style="{zIndex: showNoData, opacity: showNoData}" class="double-circular-no-data">暂无数据</div>
 </template>
 
 <script lang="ts" setup>
 import { DoubleMetricDataType, getEchartsDoubleMetricOption, NameValue, processDoubleMetricData } from './echart-option'
-import { getInitEchart, setEchartsOptionsAndResize } from "@/dashboard-framework/utils/common"
-
-const props = defineProps<{ data: Array<any>, innerDict: any, outerDict: any }>()
-const { data, innerDict, outerDict } = toRefs(props)
+import { getInitEchart, setEchartsOptionsAndResize } from "../../utils"
+const props = defineProps<{ index: any, data: Array<any>, innerDict: any, outerDict: any }>()
+const {index, data, innerDict, outerDict} = toRefs(props)
 const showNoData = computed(() => data.value.length ? 0 : 1)
 const _data = ref({} as DoubleMetricDataType)
 const innerColorList = ['rgba(61, 188, 190, 1)', 'rgba(43, 142, 243, 1)', 'rgba(206, 178, 31, 1)']
@@ -17,7 +16,7 @@ const renderRadar = () => {
   watch(
       () => props.data,
       () => {
-        const chart = getInitEchart('double-circular')
+        const chart = getInitEchart('double-circular-' + index.value)
         if (data.value.length) {
           _data.value = processDoubleMetricData(data.value, innerDict.value.valueMap, outerDict.value?.valueMap)
           const option = getEchartsDoubleMetricOption(_data.value)
@@ -47,6 +46,7 @@ const renderRadar = () => {
           Object.keys(option.legend.selected).forEach((key: string) => !selectedLabelSet.has(key) && (option.legend.selected[key as keyof typeof option.legend.selected] = false))
           // 重新绘图，更新双环图
           setEchartsOptionsAndResize(chart, option as any)
+
         })
       },
       {
@@ -59,10 +59,10 @@ onMounted(renderRadar)
 </script>
 
 <style scoped>
-#double-circular {
+.double-circular-css {
   position: absolute;
-  top: -2px;
-  height: calc(100% - 5px);
+  top: 40px;
+  height: calc(100% - 40px);
   width: 100%;
 }
 

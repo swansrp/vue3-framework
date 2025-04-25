@@ -44,6 +44,7 @@
                   size="small"
                   style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
                   <double-metric
+                    :index="item.i"
                     :data="item.data.echatOption"
                     :inner-dict="dictMap.get(item.data.value.split(',')[0])"
                     :outer-dict="dictMap.get(item.data.value.split(',')[1])" />
