@@ -137,7 +137,7 @@ import { generalStatistic } from '@/framework/apis/portal'
 import SingleMetric from '../dashboard/singleMetric/index.vue'
 import DoubleMetric from '../dashboard/doubleMetric/index.vue'
 import { dictStore, useTreeStore } from '@/framework/store/common'
-import { isEmpty, log } from '@/framework/utils/common'
+import { isEmpty } from '@/framework/utils/common'
 const PERCENTAGE_TAB_KEY = ''
 const PERCENTAGE_TAB_TITLE = '分布统计'
 const props = withDefaults(

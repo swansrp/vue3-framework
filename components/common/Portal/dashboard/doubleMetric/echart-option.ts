@@ -1,5 +1,5 @@
 import icon from './assets/imgs/prodution-icon.svg'
-import { NameValue } from '../type'
+import { colorList, NameValue } from '../type'
 
 
 export interface DoubleMetricDataType {
@@ -18,7 +18,7 @@ export const processDoubleMetricData = (data: any, innerDictMap: any, outerDictM
     const outerDictLabel = outerDictValue==='NULL' ? '未知' : outerDictMap?.get(String(outerDictValue))
     const inner = innerMap.get(innerDictValue)
     if (isEmpty(inner)) {
-      innerMap.set(innerDictValue[0], {
+      innerMap.set(innerDictValue, {
         name: innerDictLabel,
         value: item.statistic,
         subData: outerDictLabel ? [{ name: outerDictLabel, value: item.statistic }] : []
@@ -30,9 +30,13 @@ export const processDoubleMetricData = (data: any, innerDictMap: any, outerDictM
   })
   innerMap.forEach((item: any) => {
     innerData.push({name: item.name, value: item.value})
-    item.subData.forEach((subItem: any) => subItem.parentName = item.name)
+    item.subData.forEach((subItem: any) => {
+      subItem.parentName = item.name
+      subItem.itemStyle = { color: colorList[Math.floor(Math.random() * 9 % 9)] }
+    })
     outerData.push(...item.subData)
   })
+  innerData.forEach((item, index: number) => index < 10 && (item.itemStyle = { color: colorList[index] }))
   return { innerData, outerData }
 }
 

@@ -1,5 +1,5 @@
 import { setEchartsOptionsAndResize } from "../../utils"
-import { NameValue } from '../type'
+import { colorList, NameValue } from '../type'
 import { formatPercent } from '@/framework/utils/formatter'
 
 export const processSingleMetricData = (data: any, dict: any): Array<NameValue> => {
@@ -14,8 +14,7 @@ export const processSingleMetricData = (data: any, dict: any): Array<NameValue> 
 }
 export const echartsPie = (myChart: any, data: Array<NameValue>) => {
   let hoveredIndex = -1
-  const colorList = ["#FFD15C", "#0783FA", "#07D1FA", "#20E6A4"]
-  data.forEach((item: any, index: number) => index < 4 && (item.itemStyle = { color: colorList[index] }))
+  data.forEach((item: any, index: number) => index < 10 && (item.itemStyle = { color: colorList[index] }))
   const series = getPie3DSeries(data)
   const option = getPie3DOption(series, data)
   setEchartsOptionsAndResize(myChart, option, true)

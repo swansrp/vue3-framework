@@ -11,8 +11,6 @@ const props = defineProps<{ index: any, data: Array<any>, innerDict: any, outerD
 const {index, data, innerDict, outerDict} = toRefs(props)
 const showNoData = computed(() => data.value.length ? 0 : 1)
 const _data = ref({} as DoubleMetricDataType)
-const innerColorList = ['rgba(61, 188, 190, 1)', 'rgba(43, 142, 243, 1)', 'rgba(206, 178, 31, 1)']
-const outerColorList = ['rgba(61, 188, 190, 1)', 'rgba(61, 188, 190, 0.4)', 'rgba(43, 142, 243, 1)', 'rgba(43, 142, 243, 0.4)', 'rgba(206, 178, 31, 1)', 'rgba(206, 178, 31, 0.4)']
 const renderRadar = () => {
   watch(
       () => props.data,
