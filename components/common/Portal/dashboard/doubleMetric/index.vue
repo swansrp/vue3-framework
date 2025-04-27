@@ -7,8 +7,8 @@
 import { NameValue } from '../type'
 import { DoubleMetricDataType, getEchartsDoubleMetricOption, processDoubleMetricData } from './echart-option'
 import { getInitEchart, setEchartsOptionsAndResize } from "../../utils"
-const props = defineProps<{ index: any, data: Array<any>, innerDict: any, outerDict: any }>()
-const {index, data, innerDict, outerDict} = toRefs(props)
+const props = defineProps<{ index: any, data: Array<any>, rewriteLabelMap: Map<string,string>, innerDict: any, outerDict: any }>()
+const {index, data, rewriteLabelMap, innerDict, outerDict} = toRefs(props)
 const showNoData = computed(() => data.value.length ? 0 : 1)
 const _data = ref({} as DoubleMetricDataType)
 const renderRadar = () => {
@@ -17,7 +17,7 @@ const renderRadar = () => {
       () => {
         const chart = getInitEchart('double-circular-' + index.value)
         if (data.value.length) {
-          _data.value = processDoubleMetricData(data.value, innerDict.value.valueMap, outerDict.value?.valueMap)
+          _data.value = processDoubleMetricData(index.value, data.value, rewriteLabelMap.value, innerDict.value.valueMap, outerDict.value?.valueMap)
           const option = getEchartsDoubleMetricOption(_data.value)
           setEchartsOptionsAndResize(chart, option as any)
         } else chart.clear()
