@@ -52,6 +52,7 @@
                     v-else
                     :data="item.data.echatOption"
                     :index="item.i"
+                    :rewriteLabelMap="rewriteLabelMap"
                     :inner-dict="dictMap.get(item.data.value.split(',')[0])"
                     :outer-dict="dictMap.get(item.data.value.split(',')[1])" />
                   <template #extra>
@@ -182,6 +183,10 @@ const advancedCondition = reactive({
   columnArray: [] as Array<any>,
   okText: '查询'
 })
+const rewriteLabelMap = ref(new Map())
+//需要重写label的字典集合
+const rewriteDictSet = new Set(['BOOLEAN_DICT']);
+
 watch(
   () => props.condition,
   () => advancedCondition.condition = isNotEmpty(props.condition) ? {
@@ -219,6 +224,9 @@ watch(
           label: PERCENTAGE_TAB_TITLE,
           checked: true
         }])
+        if (rewriteDictSet.has(column.referenceDict)) {
+          rewriteLabelMap.value.set(column.dataIndex, column.title)
+        }
         // 字典字段
         if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
           dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
