@@ -703,7 +703,7 @@ const isBindTabExisted = computed(() => {
 const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
 const isListMode: Ref<boolean> = ref(props.listMode)
-const statisticShow: Ref<boolean> = ref(true)
+const statisticShow: Ref<boolean> = ref(false)
 const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
 const dict = dictStore()

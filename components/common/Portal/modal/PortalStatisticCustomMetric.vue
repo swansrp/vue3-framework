@@ -1,29 +1,31 @@
 <template>
-  <!-- region 高级筛选 -->
   <a-drawer
     v-model:open="advancedCondition.show"
-    :width="1050"
-    placement="right"
-    title="高级筛选"
+    :width="950"
+    placement="left"
+    title="设置数据条目条件"
     @close="advancedConditionDrawClose"
   >
     <template #extra>
       <slot name="extra">
       </slot>
     </template>
+    <a-form-item label="数据条目名称">
+      <a-input v-model:value="advancedCondition.name" @press-enter="(arg) => advancedCondition.name = arg" />
+    </a-form-item>
     <advanced-search
       :key="key"
+      :width="900"
       :advanced="advanced"
       :columns="advancedCondition.columnArray"
       :condition="advancedCondition.condition"
       :ok-text="advancedCondition.okText"
       @get-condition="handleAdvancedConditionConfirm" />
   </a-drawer>
-
-  <!-- endregion -->
 </template>
 
 <script lang="ts" setup>
+
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 
 let key = 0
@@ -60,4 +62,4 @@ onMounted(() => {
 })
 </script>
 
-<style lang="less" scoped></style>
+<style scoped lang="less"></style>

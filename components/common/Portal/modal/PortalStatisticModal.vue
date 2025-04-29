@@ -19,21 +19,80 @@
               @change="onDictFieldChange" />
           </a-tab-pane>
           <a-tab-pane key="2" tab="自定义">
-            <div
-              class="add-option-cont"
-              style="margin-left: 10px" @click="addCustomMetric">
-              <PlusOutlined />
+            <div style="display: flex;justify-content: end">
+              <a-select v-model:value="customMetric" style="width: 200px; margin-right: 10px" placeholder="请选择分类指标" allow-clear>
+                <a-select-option v-for="item in dictFields" :key="item.value" :value="item.value">{{ item.label }}</a-select-option>
+              </a-select>
+              <a-tooltip placement="top">
+                <template #title>
+                  <span>添加数据条目</span>
+                </template>
+                <a-button style="margin-right: 2px" @click="addCustomMetric">
+                  <template #icon>
+                    <PlusOutlined />
+                  </template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip placement="top">
+                <template #title>
+                  <span>清空数据条目</span>
+                </template>
+                <a-button @click="cleanCustomMetric">
+                  <template #icon>
+                    <ClearOutlined />
+                  </template>
+                </a-button>
+              </a-tooltip>
             </div>
             <drag-grid
               ref="customMetricDragGridRef"
-              v-model="customMetric"
+              :key="customMetricCondition.length"
+              v-model="customMetricCondition"
               :field-names="{value: 'value', label: 'label'}"
-              :height="80"
+              :height="4"
               :max-col="1"
-              :rowHeight="80"
+              :rowHeight="4"
               :width="1">
               <template #render="{ item }">
-                {{ item }}
+                <a-card
+                  :body-style="{padding: 0, height: '100%'}"
+                  :head-style="{backgroundColor: '#fff'}"
+                  :title="item.data.label"
+                  size="small"
+                  style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
+                  <template #extra>
+                    <a-tooltip placement="top">
+                      <template #title>
+                        <span>复制</span>
+                      </template>
+                      <a-button size="small" type="text" @click="copyCustomMetric(item.data)">
+                        <template #icon>
+                          <CopyOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
+                    <a-tooltip placement="top">
+                      <template #title>
+                        <span>编辑</span>
+                      </template>
+                      <a-button size="small" type="text" @click="editCustomMetric(item.data)">
+                        <template #icon>
+                          <EditOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
+                    <a-tooltip placement="top">
+                      <template #title>
+                        <span>删除</span>
+                      </template>
+                      <a-button size="small" type="text" @click="deleteCustomMetric(item.data)">
+                        <template #icon>
+                          <DeleteOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
+                  </template>
+                </a-card>
               </template>
             </drag-grid>
           </a-tab-pane>
@@ -149,6 +208,9 @@
     :advanced="false"
     :advanced-condition="advancedCondition"
     @confirm="onAdvancedConditionConfirm" />
+  <portal-statistic-custom-metric
+    :advanced-condition="metricAdvancedCondition"
+    @confirm="onMetricConditionConfirm" />
 </template>
 
 <script lang="ts" setup>
@@ -156,6 +218,9 @@ import { ColumnType, FIELD_TYPE, QueryType, TableConfigType } from '@/framework/
 import {
   ClearOutlined,
   CloseCircleOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  EditOutlined,
   FullscreenOutlined,
   FunnelPlotOutlined,
   MoreOutlined,
@@ -166,20 +231,21 @@ import { generalStatistic } from '@/framework/apis/portal'
 import SingleMetric from '../dashboard/singleMetric/index.vue'
 import DoubleMetric from '../dashboard/doubleMetric/index.vue'
 import { dictStore, useTreeStore } from '@/framework/store/common'
-import { isEmpty } from '@/framework/utils/common'
+import { isEmpty, uuid } from '@/framework/utils/common'
+import PortalStatisticCustomMetric from '@/framework/components/common/Portal/modal/PortalStatisticCustomMetric.vue'
 
 const PERCENTAGE_TAB_KEY = ''
 const PERCENTAGE_TAB_TITLE = '分布统计'
 const props = withDefaults(
-    defineProps<{
-      show: boolean
-      config: TableConfigType
-      columns: Array<ColumnType>
-      condition?: any
-    }>(),
-    {
-      condition: []
-    }
+  defineProps<{
+    show: boolean
+    config: TableConfigType
+    columns: Array<ColumnType>
+    condition?: any
+  }>(),
+  {
+    condition: []
+  }
 )
 const { config, columns, show } = toRefs(props)
 const emit = defineEmits<{
@@ -187,12 +253,12 @@ const emit = defineEmits<{
 }>()
 const _show = ref(props.show)
 watch(
-    () => show.value,
-    () => _show.value = show.value
+  () => show.value,
+  () => _show.value = show.value
 )
 watch(
-    () => _show.value,
-    () => emit('update:show', _show.value)
+  () => _show.value,
+  () => emit('update:show', _show.value)
 )
 const dict = dictStore()
 const treeDict = useTreeStore()
@@ -212,16 +278,24 @@ const advancedCondition = reactive({
   columnArray: [] as Array<any>,
   okText: '查询'
 })
+const metricAdvancedCondition = reactive({
+  id: '',
+  name: '',
+  show: false,
+  condition: {},
+  columnArray: [] as Array<any>,
+  okText: '确定'
+})
 const rewriteLabelMap = ref(new Map())
 //需要重写label的字典集合
-const rewriteDictSet = new Set(['BOOLEAN_DICT']);
+const rewriteDictSet = new Set(['BOOLEAN_DICT'])
 
 watch(
-    () => props.condition,
-    () => advancedCondition.condition = isNotEmpty(props.condition) ? {
-      conditionList: [...props.condition],
-      andOr: '0'
-    } : {}
+  () => props.condition,
+  () => advancedCondition.condition = isNotEmpty(props.condition) ? {
+    conditionList: [...props.condition],
+    andOr: '0'
+  } : {}
 )
 const formatTitle = (title: string) => {
   if (title.indexOf('\n') !== -1) {
@@ -233,58 +307,60 @@ const formatTitle = (title: string) => {
   }
 }
 watch(
-    () => columns.value,
-    () => {
-      if (isNotEmpty(columns.value)) {
-        statisticTabs.value.length = 0
-        dictFields.value.length = 0
-        dictMap.value.clear()
-        secondDictMap.value.clear()
-        advancedCondition.columnArray.length = 0
-        statisticData.value.clear()
-        statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
-        statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
-        columns.value.forEach(column => {
-          if (column.disabled || column.checked === false || column.customFilterDropdown === false) return
-          // 高级查询字段
-          advancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
-          secondDictMap.value.set(column.dataIndex, [{
-            value: PERCENTAGE_TAB_KEY,
-            label: PERCENTAGE_TAB_TITLE,
-            checked: true
-          }])
-          if (rewriteDictSet.has(column.referenceDict)) {
-            rewriteLabelMap.value.set(column.dataIndex, column.title)
+  () => columns.value,
+  () => {
+    if (isNotEmpty(columns.value)) {
+      statisticTabs.value.length = 0
+      dictFields.value.length = 0
+      dictMap.value.clear()
+      secondDictMap.value.clear()
+      advancedCondition.columnArray.length = 0
+      metricAdvancedCondition.columnArray.length = 0
+      statisticData.value.clear()
+      statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
+      statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
+      columns.value.forEach(column => {
+        if (column.disabled || column.checked === false || column.customFilterDropdown === false) return
+        // 高级查询字段
+        advancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
+        metricAdvancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
+        secondDictMap.value.set(column.dataIndex, [{
+          value: PERCENTAGE_TAB_KEY,
+          label: PERCENTAGE_TAB_TITLE,
+          checked: true
+        }])
+        if (rewriteDictSet.has(column.referenceDict)) {
+          rewriteLabelMap.value.set(column.dataIndex, column.title)
+        }
+        // 字典字段
+        if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
+          dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
+          if (column.fieldType === FIELD_TYPE.SELECT) {
+            dictMap.value.set(column.dataIndex, dict.map.get(column.referenceDict))
+          } else {
+            dictMap.value.set(column.dataIndex, treeDict.map.get(column.referenceDict))
           }
-          // 字典字段
-          if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
-            dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
-            if (column.fieldType === FIELD_TYPE.SELECT) {
-              dictMap.value.set(column.dataIndex, dict.map.get(column.referenceDict))
-            } else {
-              dictMap.value.set(column.dataIndex, treeDict.map.get(column.referenceDict))
+          columns.value.forEach(item => {
+            if (item.disabled || item.checked === false || item.customFilterDropdown === false || item.dataIndex === column.dataIndex) return
+            if (item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.TREE) {
+              secondDictMap.value.get(column.dataIndex)?.push({
+                value: item.dataIndex,
+                label: formatTitle(item.title),
+                checked: false
+              })
             }
-            columns.value.forEach(item => {
-              if (item.disabled || item.checked === false || item.customFilterDropdown === false || item.dataIndex === column.dataIndex) return
-              if (item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.TREE) {
-                secondDictMap.value.get(column.dataIndex)?.push({
-                  value: item.dataIndex,
-                  label: formatTitle(item.title),
-                  checked: false
-                })
-              }
-            })
-          }
-          if (column.summary) {
-            statisticTabs.value.push({ value: column.dataIndex, label: column.title })
-          }
-        })
-      }
-    },
-    {
-      deep: true,
-      immediate: true
+          })
+        }
+        if (column.summary) {
+          statisticTabs.value.push({ value: column.dataIndex, label: column.title })
+        }
+      })
     }
+  },
+  {
+    deep: true,
+    immediate: true
+  }
 )
 const statistic = ref([] as Array<{ value: string, label: string, echatOption: any }>)
 const activeKey = ref(PERCENTAGE_TAB_KEY)
@@ -386,17 +462,41 @@ const metricActiveKey = ref('1')
 const onMetricTabChange = () => {
   console.log('onMetricTabChange')
 }
-const customMetric = ref([{ value: '1', label: '小合同' }, { value: '2', label: '大合同' }] as Array<any>)
+const customMetricCondition = ref([] as Array<any>)
+const customMetric = ref('')
+const onMetricConditionConfirm = (arg: any) => {
+  const metric = {value: metricAdvancedCondition.id, label:  metricAdvancedCondition.name, condition:  metricAdvancedCondition.condition}
+  customMetricCondition.value.push(metric)
+}
 const addCustomMetric = () => {
-
+  const index = customMetricCondition.value.length
+  metricAdvancedCondition.id = uuid()
+  metricAdvancedCondition.name = '自定义指标' + (index ? index + 1 : '')
+  metricAdvancedCondition.condition = {}
+  metricAdvancedCondition.show = true
 }
-const deleteCustomMetric = () => {
+const deleteCustomMetric = (metric: any) => {
+  const index = customMetricCondition.value.findIndex((item:any) => item.id === metric.id)
+  customMetricCondition.value.splice(index, 1)
 }
-const editCustomMetric = () => {
+const editCustomMetric = (metric: any) => {
+  metricAdvancedCondition.id = metric.value
+  metricAdvancedCondition.name = metric.label
+  metricAdvancedCondition.condition = metric.condition
+  metricAdvancedCondition.show = true
+}
+const copyCustomMetric = (metric: any) => {
+  const index = customMetricCondition.value.findIndex((item:any) => item.id === metric.id)
+  metricAdvancedCondition.id = customMetricCondition.value[index].value
+  metricAdvancedCondition.name = customMetricCondition.value[index].label
+  metricAdvancedCondition.condition = customMetricCondition.value[index].condition
+  metricAdvancedCondition.show = true
 }
 const confirmCustomMetric = () => {
+
 }
 const cleanCustomMetric = () => {
+  customMetricCondition.value.length = 0
 }
 
 onMounted(() => {
@@ -405,6 +505,18 @@ onMounted(() => {
 </script>
 
 
-<style scoped>
-
+<style lang="less" scoped>
+.add-option-cont {
+  display: inline-block;
+  width: calc(100% - 15px);
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 5px 5px 5px rgb(201, 201, 201);
+  vertical-align: bottom;
+  font-size: 15px;
+  text-align: center;
+  align-items: center;
+  color: #ccc;
+  cursor: pointer;
+}
 </style>
