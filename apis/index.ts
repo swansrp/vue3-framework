@@ -438,6 +438,7 @@ export const generalStatisticRequest = (
   conditionList: Array<any>,
   sort: 0 | 1 | null,
   metricColumn: Array<string>,
+  metricCondition: Array<any>,
   statisticColumn: string,
   domain: string = baseDomain,
   showSuccess = false,
@@ -446,6 +447,7 @@ export const generalStatisticRequest = (
   conditionList,
   sort,
   metricColumn,
+  metricCondition,
   statisticColumn
 }, showSuccess, showLoading) as Promise<any>
 
@@ -508,6 +510,7 @@ export const advancedStatisticRequest = (
   condition: ConditionType,
   sort: 0 | 1 | null,
   metricColumn: Array<string>,
+  metricCondition: Array<any>,
   statisticColumn: string,
   domain: string = baseDomain,
   showSuccess = false,
@@ -516,6 +519,7 @@ export const advancedStatisticRequest = (
   condition,
   sort,
   metricColumn,
+  metricCondition,
   statisticColumn
 }, showSuccess, showLoading) as Promise<any>
 

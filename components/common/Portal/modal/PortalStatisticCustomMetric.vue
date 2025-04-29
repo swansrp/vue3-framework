@@ -11,7 +11,7 @@
       </slot>
     </template>
     <a-form-item label="数据条目名称">
-      <a-input v-model:value="advancedCondition.name" @press-enter="(arg) => advancedCondition.name = arg" />
+      <a-input v-model:value="advancedCondition.name" @press-enter="(arg: any) => advancedCondition.name = arg" />
     </a-form-item>
     <advanced-search
       :key="key"
@@ -40,7 +40,7 @@ const props = withDefaults(
 )
 const { advancedCondition } = toRefs(props)
 const emit = defineEmits<{
-  (e: 'confirm', condition: ConditionType): void
+  (e: 'confirm', condition: ConditionType, name: string): void
 }>()
 const advancedConditionDrawClose = () => {
   advancedCondition.value.show = false
@@ -48,9 +48,12 @@ const advancedConditionDrawClose = () => {
 const handleAdvancedConditionConfirm = (condition: ConditionType) => {
   advancedCondition.value.condition = condition
   console.debug('getAdvancedCondition', advancedCondition.value.condition)
-  emit('confirm', advancedCondition.value.condition)
-  advancedConditionDrawClose()
+  nextTick(() => {
+    emit('confirm', advancedCondition.value.condition, advancedCondition.value.name)
+    advancedConditionDrawClose()
+  })
 }
+
 watch(
   () => advancedCondition.value,
   () => key++,

@@ -19,82 +19,87 @@
               @change="onDictFieldChange" />
           </a-tab-pane>
           <a-tab-pane key="2" tab="自定义">
-            <div style="display: flex;justify-content: end">
-              <a-select v-model:value="customMetric" style="width: 200px; margin-right: 10px" placeholder="请选择分类指标" allow-clear>
-                <a-select-option v-for="item in dictFields" :key="item.value" :value="item.value">{{ item.label }}</a-select-option>
-              </a-select>
-              <a-tooltip placement="top">
-                <template #title>
-                  <span>添加数据条目</span>
-                </template>
-                <a-button style="margin-right: 2px" @click="addCustomMetric">
-                  <template #icon>
-                    <PlusOutlined />
+            <div style="height: 100%">
+              <div style="display: flex;justify-content: end">
+                <a-select v-model:value="customMetric" style="width: 200px; margin-right: 10px" placeholder="请选择分类指标" allow-clear>
+                  <a-select-option v-for="item in dictFields" :key="item.value" :value="item.value">{{ item.label }}</a-select-option>
+                </a-select>
+                <a-tooltip placement="top">
+                  <template #title>
+                    <span>添加数据条目</span>
                   </template>
-                </a-button>
-              </a-tooltip>
-              <a-tooltip placement="top">
-                <template #title>
-                  <span>清空数据条目</span>
-                </template>
-                <a-button @click="cleanCustomMetric">
-                  <template #icon>
-                    <ClearOutlined />
+                  <a-button style="margin-right: 2px" @click="addCustomMetric">
+                    <template #icon>
+                      <PlusOutlined />
+                    </template>
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip placement="top">
+                  <template #title>
+                    <span>清空数据条目</span>
                   </template>
-                </a-button>
-              </a-tooltip>
+                  <a-button @click="cleanCustomMetric">
+                    <template #icon>
+                      <ClearOutlined />
+                    </template>
+                  </a-button>
+                </a-tooltip>
+              </div>
+              <drag-grid
+                ref="customMetricDragGridRef"
+                :key="customMetricCondition.length"
+                v-model="customMetricCondition"
+                :field-names="{value: 'value', label: 'label'}"
+                :height="4"
+                :max-col="1"
+                :rowHeight="4"
+                :width="1">
+                <template #render="{ item }">
+                  <a-card
+                    :body-style="{padding: 0, height: '100%'}"
+                    :head-style="{backgroundColor: '#fff'}"
+                    :title="item.data.label"
+                    size="small"
+                    style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
+                    <template #extra>
+                      <a-tooltip placement="top">
+                        <template #title>
+                          <span>编辑</span>
+                        </template>
+                        <a-button size="small" type="text" @click="editCustomMetric(item.data)">
+                          <template #icon>
+                            <EditOutlined />
+                          </template>
+                        </a-button>
+                      </a-tooltip>
+                      <a-tooltip placement="top">
+                        <template #title>
+                          <span>复制</span>
+                        </template>
+                        <a-button size="small" type="text" @click="copyCustomMetric(item.data)">
+                          <template #icon>
+                            <CopyOutlined />
+                          </template>
+                        </a-button>
+                      </a-tooltip>
+                      <a-tooltip placement="top">
+                        <template #title>
+                          <span>删除</span>
+                        </template>
+                        <a-button size="small" type="text" @click="deleteCustomMetric(item.data)">
+                          <template #icon>
+                            <DeleteOutlined />
+                          </template>
+                        </a-button>
+                      </a-tooltip>
+                    </template>
+                  </a-card>
+                </template>
+              </drag-grid>
             </div>
-            <drag-grid
-              ref="customMetricDragGridRef"
-              :key="customMetricCondition.length"
-              v-model="customMetricCondition"
-              :field-names="{value: 'value', label: 'label'}"
-              :height="4"
-              :max-col="1"
-              :rowHeight="4"
-              :width="1">
-              <template #render="{ item }">
-                <a-card
-                  :body-style="{padding: 0, height: '100%'}"
-                  :head-style="{backgroundColor: '#fff'}"
-                  :title="item.data.label"
-                  size="small"
-                  style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
-                  <template #extra>
-                    <a-tooltip placement="top">
-                      <template #title>
-                        <span>复制</span>
-                      </template>
-                      <a-button size="small" type="text" @click="copyCustomMetric(item.data)">
-                        <template #icon>
-                          <CopyOutlined />
-                        </template>
-                      </a-button>
-                    </a-tooltip>
-                    <a-tooltip placement="top">
-                      <template #title>
-                        <span>编辑</span>
-                      </template>
-                      <a-button size="small" type="text" @click="editCustomMetric(item.data)">
-                        <template #icon>
-                          <EditOutlined />
-                        </template>
-                      </a-button>
-                    </a-tooltip>
-                    <a-tooltip placement="top">
-                      <template #title>
-                        <span>删除</span>
-                      </template>
-                      <a-button size="small" type="text" @click="deleteCustomMetric(item.data)">
-                        <template #icon>
-                          <DeleteOutlined />
-                        </template>
-                      </a-button>
-                    </a-tooltip>
-                  </template>
-                </a-card>
-              </template>
-            </drag-grid>
+            <div class="center">
+              <a-button type="primary" :disabled="customMetricCondition.length === 0" style="margin: 10px" @click="confirmMetricCondition">生成指标图</a-button>
+            </div>
           </a-tab-pane>
         </a-tabs>
       </template>
@@ -227,13 +232,15 @@ import {
   PlusOutlined,
   RedoOutlined
 } from '@ant-design/icons-vue'
-import { generalStatistic } from '@/framework/apis/portal'
+import { generalStatistic, advancedStatistic } from '@/framework/apis/portal'
 import SingleMetric from '../dashboard/singleMetric/index.vue'
 import DoubleMetric from '../dashboard/doubleMetric/index.vue'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, uuid } from '@/framework/utils/common'
 import PortalStatisticCustomMetric from '@/framework/components/common/Portal/modal/PortalStatisticCustomMetric.vue'
 
+const dragGridRef = ref()
+const customMetricDragGridRef = ref()
 const PERCENTAGE_TAB_KEY = ''
 const PERCENTAGE_TAB_TITLE = '分布统计'
 const props = withDefaults(
@@ -282,6 +289,7 @@ const metricAdvancedCondition = reactive({
   id: '',
   name: '',
   show: false,
+  type: '' as 'add' | 'update' | 'copy' | '',
   condition: {},
   columnArray: [] as Array<any>,
   okText: '确定'
@@ -362,7 +370,7 @@ watch(
     immediate: true
   }
 )
-const statistic = ref([] as Array<{ value: string, label: string, echatOption: any }>)
+const statistic = ref([] as Array<{ value: string, label: string, metricColumn: Array<any>, metricCondition: Array<any>, statisticColumn: string, echatOption: any }>)
 const activeKey = ref(PERCENTAGE_TAB_KEY)
 const onDictFieldChange = (value: any) => {
   console.log('onDictFieldChange', value)
@@ -371,19 +379,21 @@ const onDictFieldChange = (value: any) => {
     const tabIndex = statisticTabs.value.findIndex(item => item.value === activeKey.value)
     if (tabIndex > -1) {
       const tabLabel = statisticTabs.value[tabIndex].label
-      if (statistic.value.findIndex(item => item.value === dictValue) === -1) {
-        generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, dictValue.split(','), activeKey.value).then(resp => {
+      if (statistic.value.findIndex(item => (item.value === dictValue && item.statisticColumn === activeKey.value)) === -1) {
+        generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, dictValue.split(','), [], activeKey.value).then(resp => {
           statistic.value.unshift({
             value: dictValue,
             label: value[0].label + '-' + tabLabel,
-            echatOption: resp.payload
+            echatOption: resp.payload,
+            metricColumn: dictValue.split(','),
+            metricCondition: [],
+            statisticColumn: activeKey.value
           })
           if (activeKey.value === PERCENTAGE_TAB_KEY) {
             secondDictMap.value.get(value[0].value)![0].checked = true
           }
           console.log('onDictFieldChange', value, secondDictMap.value, secondDictMap.value.get(value[0]))
         })
-
       }
     }
   }
@@ -403,13 +413,16 @@ const onSecondDictFieldChange = (value: any) => {
     } else {
       selectedFieldLabel = selectedDict.value[0].label + '-' + value.label + '-' + tabLabel
     }
-    const index = statistic.value.findIndex(item => item.value === selectedFieldValue)
+    const index = statistic.value.findIndex(item => item.value === selectedFieldValue && item.statisticColumn === activeKey.value)
     if (value.checked) {
-      (index === -1) && generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, selectedFieldValue.split(','), activeKey.value).then(resp => {
+      (index === -1) && generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, selectedFieldValue.split(','), [], activeKey.value).then(resp => {
         statistic.value.unshift({
           value: selectedFieldValue,
           label: selectedFieldLabel,
-          echatOption: resp.payload
+          echatOption: resp.payload,
+          metricColumn: selectedFieldValue.split(','),
+          metricCondition: [],
+          statisticColumn: activeKey.value
         })
       })
     } else {
@@ -464,41 +477,61 @@ const onMetricTabChange = () => {
 }
 const customMetricCondition = ref([] as Array<any>)
 const customMetric = ref('')
-const onMetricConditionConfirm = (arg: any) => {
+const onMetricConditionConfirm = () => {
   const metric = {value: metricAdvancedCondition.id, label:  metricAdvancedCondition.name, condition:  metricAdvancedCondition.condition}
-  customMetricCondition.value.push(metric)
+  if(metricAdvancedCondition.type === 'add' || metricAdvancedCondition.type === 'copy') {
+    customMetricCondition.value.push(metric)
+  }else{
+    const index = customMetricCondition.value.findIndex((item:any) => item.value === metricAdvancedCondition.id)
+    console.log(index,customMetricCondition.value[index])
+    customMetricCondition.value[index].label = metricAdvancedCondition.name
+    customMetricCondition.value[index].condition = metricAdvancedCondition.condition
+    customMetricDragGridRef.value.forceUpdate()
+  }
 }
 const addCustomMetric = () => {
   const index = customMetricCondition.value.length
   metricAdvancedCondition.id = uuid()
   metricAdvancedCondition.name = '自定义指标' + (index ? index + 1 : '')
   metricAdvancedCondition.condition = {}
+  metricAdvancedCondition.type = 'add'
   metricAdvancedCondition.show = true
 }
 const deleteCustomMetric = (metric: any) => {
-  const index = customMetricCondition.value.findIndex((item:any) => item.id === metric.id)
+  const index = customMetricCondition.value.findIndex((item:any) => item.value === metric.value)
   customMetricCondition.value.splice(index, 1)
 }
 const editCustomMetric = (metric: any) => {
   metricAdvancedCondition.id = metric.value
   metricAdvancedCondition.name = metric.label
   metricAdvancedCondition.condition = metric.condition
+  metricAdvancedCondition.type = 'update'
   metricAdvancedCondition.show = true
 }
 const copyCustomMetric = (metric: any) => {
-  const index = customMetricCondition.value.findIndex((item:any) => item.id === metric.id)
-  metricAdvancedCondition.id = customMetricCondition.value[index].value
+  const index = customMetricCondition.value.findIndex((item:any) => item.value === metric.value)
+  metricAdvancedCondition.id = uuid()
   metricAdvancedCondition.name = customMetricCondition.value[index].label
   metricAdvancedCondition.condition = customMetricCondition.value[index].condition
+  metricAdvancedCondition.type = 'copy'
   metricAdvancedCondition.show = true
-}
-const confirmCustomMetric = () => {
-
 }
 const cleanCustomMetric = () => {
   customMetricCondition.value.length = 0
 }
-
+const confirmMetricCondition = () => {
+  generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, [customMetric.value], customMetricCondition.value, activeKey.value).then(resp => {
+    statistic.value.unshift({
+      value: uuid(),
+      label: '自定义指标',
+      echatOption: resp.payload,
+      metricColumn: [customMetric.value],
+      metricCondition: customMetricCondition.value,
+      statisticColumn: activeKey.value
+    })
+  })
+  console.log('confirmMetricCondition', customMetric.value, customMetricCondition.value, activeKey.value)
+}
 onMounted(() => {
 
 })
