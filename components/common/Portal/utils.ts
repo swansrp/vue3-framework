@@ -3,8 +3,6 @@ import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isNotEmpty } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
-import * as echarts from "echarts";
-import bus, {DRAG_GRID_RESIZE} from '@/framework/mitt'
 const dict = dictStore()
 const treeDict = useTreeStore()
 export const parse = (record: any, index: number, column: ColumnType, config: TableConfigType) => {
@@ -42,17 +40,4 @@ export const getTextWidth = (text: string) => {
     maxWidth = maxWidth > width ? maxWidth : width
   })
   return maxWidth
-}
-
-export const setEchartsOptionsAndResize = (chart: echarts.ECharts, option: echarts.EChartsOption, notMerge = false) => {
-  chart.setOption(option, notMerge)
-  bus.on(DRAG_GRID_RESIZE, () => {
-    chart.resize()
-  })
-  window.addEventListener('resize', () => chart.resize())
-}
-export const getInitEchart = (elementId: string) => {
-  const chart = echarts.getInstanceByDom(document.getElementById(elementId) as HTMLDivElement)
-  if (chart) return chart
-  return echarts.init(document.getElementById(elementId))
 }

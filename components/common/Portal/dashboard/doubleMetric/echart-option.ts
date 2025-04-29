@@ -1,6 +1,6 @@
 import icon from './assets/imgs/prodution-icon.svg'
-import { colorList, NameValue } from '../type'
-
+import { NameValue } from '../type'
+import { colorList } from '../utils'
 
 export interface DoubleMetricDataType {
   innerData: Array<NameValue>,
@@ -14,12 +14,12 @@ export const processDoubleMetricData = (index: any, data: any, rewriteLabelMap: 
   data.forEach((item: any) => {
     const innerDictValue = item.metric.split(',')[0]
     const outerDictValue = item.metric.split(',')[1]
-    let innerDictLabel = innerDictValue==='NULL' ? '未知' : innerDictMap.get(String(innerDictValue))
-    let outerDictLabel = outerDictValue==='NULL' ? '未知' : outerDictMap?.get(String(outerDictValue))
+    let innerDictLabel = innerDictValue === 'NULL' ? '未知' : innerDictMap.get(String(innerDictValue))
+    let outerDictLabel = outerDictValue === 'NULL' ? '未知' : outerDictMap?.get(String(outerDictValue))
     //重写label
-    const [innerKey, outerKey] = index.split(',');
-    innerDictLabel = rewriteLabelMap.get(innerKey) ? `[${rewriteLabelMap.get(innerKey)}]${innerDictLabel}` : innerDictLabel;
-    outerDictLabel = outerKey && rewriteLabelMap.get(outerKey) ? `[${rewriteLabelMap.get(outerKey)}]${outerDictLabel}` : outerDictLabel;
+    const [innerKey, outerKey] = index.split(',')
+    innerDictLabel = rewriteLabelMap.get(innerKey) ? `[${ rewriteLabelMap.get(innerKey) }]${ innerDictLabel }` : innerDictLabel
+    outerDictLabel = outerKey && rewriteLabelMap.get(outerKey) ? `[${ rewriteLabelMap.get(outerKey) }]${ outerDictLabel }` : outerDictLabel
     const inner = innerMap.get(innerDictValue)
     if (isEmpty(inner)) {
       innerMap.set(innerDictValue, {
@@ -33,7 +33,7 @@ export const processDoubleMetricData = (index: any, data: any, rewriteLabelMap: 
     }
   })
   innerMap.forEach((item: any) => {
-    innerData.push({name: item.name, value: item.value})
+    innerData.push({ name: item.name, value: item.value })
     item.subData.forEach((subItem: any) => {
       subItem.parentName = item.name
       subItem.itemStyle = { color: colorList[Math.floor(Math.random() * 9 % 9)] }
@@ -60,10 +60,10 @@ export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMet
       }]
     },
     tooltip: {
-      trigger: 'item' ,
-      formatter({data: {value, name, parentName}, marker}:any){
-        if (parentName) return `${marker}${parentName}<br/>${name}: ${value}`
-        else return `${marker}${name}: ${value}`
+      trigger: 'item',
+      formatter({ data: { value, name, parentName }, marker }: any) {
+        if (parentName) return `${ marker }${ parentName }<br/>${ name }: ${ value }`
+        else return `${ marker }${ name }: ${ value }`
       }
     },
     legend: {
@@ -79,7 +79,7 @@ export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMet
         fontFamily: 'Noto Sans SC'
       },
       data: ['签订成功', '签订中', '跟踪中'],
-      selected: {'签订成功': true, '签订中': true, '跟踪中': true}
+      selected: { '签订成功': true, '签订中': true, '跟踪中': true }
     },
     series: [
       {
@@ -90,7 +90,7 @@ export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMet
         data: innerData,
         itemStyle: {
           borderColor: '#00042D',
-          borderWidth : 3
+          borderWidth: 3
         },
         startAngle: 180,
         zlevel: 1,
@@ -107,7 +107,7 @@ export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMet
             hr: {
               backgroundColor: 'inherit',
               borderRadius: 100,
-              padding: [-5, 3, 0, -10],
+              padding: [-5, 3, 0, -10]
             },
             bd: {
               color: '#333',
@@ -120,7 +120,7 @@ export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMet
         },
         itemStyle: {
           borderColor: '#00042D',
-          borderWidth : 3
+          borderWidth: 3
         },
         labelLine: {
           lineStyle: {

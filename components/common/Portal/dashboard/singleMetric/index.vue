@@ -7,7 +7,7 @@
 <script lang="ts" setup>
 import 'echarts-gl'
 import { echartsPie, processSingleMetricData } from './echart-option'
-import { getInitEchart } from "../../utils"
+import { getInitEchart } from "../utils"
 
 const props = defineProps<{ index: any, data: Array<any>, dict: any }>()
 const { index, data, dict } = toRefs(props)
@@ -20,9 +20,9 @@ const renderRadar = () => {
     () => data.value,
     () => {
       if (data.value && data.value.length) {
-        let chart = getInitEchart('pie-3d-'+index.value)
+        let chart = getInitEchart('pie-3d-' + index.value)
         if (chart) chart.dispose()
-        chart = getInitEchart('pie-3d-'+index.value)
+        chart = getInitEchart('pie-3d-' + index.value)
         const _data = processSingleMetricData(data.value, dict.value)
         echartsPie(chart, _data)
       }

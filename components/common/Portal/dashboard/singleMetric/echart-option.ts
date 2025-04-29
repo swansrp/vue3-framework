@@ -1,12 +1,12 @@
-import { setEchartsOptionsAndResize } from "../../utils"
-import { colorList, NameValue } from '../type'
+import { colorList, setEchartsOptionsAndResize } from "../utils"
+import { NameValue } from '../type'
 import { formatPercent } from '@/framework/utils/formatter'
 
 export const processSingleMetricData = (data: any, dict: any): Array<NameValue> => {
   const result = [] as Array<NameValue>
-  if(data.length) {
+  if (data.length) {
     data.forEach((item: any) => {
-      const name = item.metric==='NULL' ? '未知' : dict.valueMap.get(String(item.metric))
+      const name = item.metric === 'NULL' ? '未知' : dict.valueMap.get(String(item.metric))
       result.push({ name, value: item.statistic })
     })
   }
@@ -75,9 +75,9 @@ const getPie3DSeries = (pieData: Array<NameValue>) => {
       name: pieData[i].name,
       type: "surface",
       parametric: true,
-      wireframe: {show: false},
+      wireframe: { show: false },
       pieData: pieData[i],
-      pieStatus: {selected: false, hovered: false, k: k},
+      pieStatus: { selected: false, hovered: false, k: k },
       radius: "50%",
       center: ["10", "10%"],
       itemStyle: pieData[i].itemStyle
@@ -99,11 +99,11 @@ const getPie3DSeries = (pieData: Array<NameValue>) => {
 const getPie3DOption = (series: any, data: Array<any>) => {
   const option = {
     tooltip: {
-      formatter: ({seriesIndex, seriesName, color}: any) => {
+      formatter: ({ seriesIndex, seriesName, color }: any) => {
         const bfb = ((option.series[seriesIndex].pieData.endRatio - option.series[seriesIndex].pieData.startRatio) * 100).toFixed(2)
-        return (`${seriesName}<br/>
-            <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${color}"></span>
-            <span style="font-weight: bold;">${data.find((item: any) => item.name === seriesName)!.value}</span>(占比${bfb}%)`)
+        return (`${ seriesName }<br/>
+            <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${ color }"></span>
+            <span style="font-weight: bold;">${ data.find((item: any) => item.name === seriesName)!.value }</span>(占比${ bfb }%)`)
       }
     },
     legend: {
@@ -121,9 +121,9 @@ const getPie3DOption = (series: any, data: Array<any>) => {
         return name + ' ' + item!.value + '(' + formatPercent(item!.endRatio - item!.startRatio, 2, 1) + ')'
       }
     },
-    xAxis3D: {min: -1, max: 1},
-    yAxis3D: {min: -1, max: 1},
-    zAxis3D: {min: -1, max: 1},
+    xAxis3D: { min: -1, max: 1 },
+    yAxis3D: { min: -1, max: 1 },
+    zAxis3D: { min: -1, max: 1 },
     grid3D: {
       show: false, boxHeight: 13, //圆环的高度
       left: 0, top: -40, //3d饼图的位置
