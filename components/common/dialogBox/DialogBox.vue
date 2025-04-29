@@ -33,7 +33,9 @@
 <script lang="ts" setup>
 import { computed, CSSProperties, ref, watch, watchEffect } from 'vue'
 import { useDraggable } from '@vueuse/core'
+import { useRouteStore } from '@/framework/store/route'
 
+const routerStore = useRouteStore()
 let _visible = ref(false)
 let _title = ref('具体内容')
 let _isFull = ref(false)
@@ -87,6 +89,11 @@ watch(() => props.maskClosable, value => _maskClosable.value = !!value, { immedi
 watch(() => props.width, value => {
   if (!_isFull.value && _width.value) _width.value = value
 }, { immediate: true })
+watch(
+  () => _visible.value,
+  () => routerStore.blockReturn(_visible.value, () => _visible.value = false),
+  { immediate: true }
+)
 /** 拖拽 */
 const transformStyle = computed<CSSProperties>(() => {
   return {

@@ -5,6 +5,7 @@ import { MAIN_CONTENT } from '@/framework/utils/constant'
 import { NavListType } from '@/framework/components/navigationFramework/navMenu/type'
 import pinia from '@/framework/store/index'
 import { setField } from '@/framework/utils/common'
+import { RouteLocationNormalized } from 'vue-router'
 export const getComponent = (component: string) => {
   const modules = import.meta.glob('@/**/*.vue')
   if (component.endsWith('.vue')) {
@@ -22,7 +23,11 @@ export const useRouteStore = defineStore('routeStore', {
       routePath2RouteTitlePathMap: {} as { [key: string]: string },
       routePathIsFrameMap: {} as { [key: string]: boolean },
       buttonMap: new Map,
-      keepAliveList: [] as Array<string>
+      keepAliveList: [] as Array<string>,
+      _blockReturn: false,
+      _blockReturnHandler: () => {},
+      lastRoute: {} as RouteLocationNormalized,
+      currentRoute: {} as RouteLocationNormalized,
     }
   }, actions: {
     async getDynamicRouteAction() {
@@ -114,7 +119,24 @@ export const useRouteStore = defineStore('routeStore', {
     },
     getKeepAliveList() {
       return this.keepAliveList
-    }
+    },
+    blockReturn(block: boolean, handler?: () => void) {
+      if (block && handler) {
+        this._blockReturnHandler = handler
+      } else {
+        this._blockReturnHandler = () => {}
+      }
+      this._blockReturn = block
+    },
+    blockReturnHandler() {
+      this._blockReturnHandler()
+    },
+    setLastRoute(route: RouteLocationNormalized) {
+      this.lastRoute = route
+    },
+    setCurrentRoute(route: RouteLocationNormalized) {
+      this.currentRoute = route
+    },
   }, getters: {
     currentRouteNode(state) {
       return state.dynamicRouteMap[router.currentRoute.value.fullPath.slice(MAIN_CONTENT.length + 2).split('?')[0]]
@@ -125,7 +147,9 @@ export const useRouteStore = defineStore('routeStore', {
       return (this.currentRoutePath as unknown as string).split('?')[0].split('/')[0]
     }, currentLeftNav() {
       return (this.currentRoutePath as unknown as string).split('?')[0].split('/').slice(1).join('/')
-    }
-
+    },
+    getLastRoute: (state) => state.lastRoute,
+    getCurrentRoute: (state) => state.currentRoute,
+    isBlockReturn: (state) => state._blockReturn
   }
 })

@@ -100,29 +100,28 @@ watch(() => store.tabActivateKey,
 
 watch(() => store._historyTabArray.length, () => tabs.value = store._historyTabArray)
 
-
-// 监听浏览器的返回按钮
-window.addEventListener('popstate', (event) => {
-  // 路由守卫的return重定向，也会触发这个事件，但是此处只需要监听浏览器返回按钮的点击事件
-  // 所以需要使用event.state区分到底是谁触发的这个事件，路由守卫的重定向触发时，event.state会为null
-  if (!event.state) return
-  // 如果只有一个，就保持跳转到当前界面，相当于在浏览器返回上一个页面后，再跳转回来
-  // 此时我也不知道所谓的返回到上一个页面是啥，但是只要再跳回来，就相当于没有跳啦
-  if (historyPath.length === 1) {
-    const key = historyPath[0]
-    activeKey.value = key
-    changeActivateKey(key)
-  }
-  else {
-    // 需要弹出两次，第一次弹出当前页面对应的key；第二次才是上一次的界面对应的key
-    historyPath.pop()
-    const key = historyPath.pop() as string
-    // 需要为tabs设定激活的key，这样才能使对应tab高亮
-    activeKey.value = key
-    // 更改路由、左侧及顶部导航
-    changeActivateKey(key)
-  }
-}, false)
+/** 暂时删除这个监听 */
+// // 监听浏览器的返回按钮
+// window.addEventListener('popstate', (event) => {
+//   // 路由守卫的return重定向，也会触发这个事件，但是此处只需要监听浏览器返回按钮的点击事件
+//   // 所以需要使用event.state区分到底是谁触发的这个事件，路由守卫的重定向触发时，event.state会为null
+//   if (!event.state) return
+//   // 如果只有一个，就保持跳转到当前界面，相当于在浏览器返回上一个页面后，再跳转回来
+//   // 此时我也不知道所谓的返回到上一个页面是啥，但是只要再跳回来，就相当于没有跳啦
+//   if (historyPath.length === 1) {
+//     const key = historyPath[0]
+//     activeKey.value = key
+//     changeActivateKey(key)
+//   } else {
+//     // 需要弹出两次，第一次弹出当前页面对应的key；第二次才是上一次的界面对应的key
+//     historyPath.pop()
+//     const key = historyPath.pop() as string
+//     // 需要为tabs设定激活的key，这样才能使对应tab高亮
+//     activeKey.value = key
+//     // 更改路由、左侧及顶部导航
+//     changeActivateKey(key)
+//   }
+// }, false)
 </script>
 
 <style>

@@ -69,6 +69,13 @@ export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocati
   const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
   tabStore.isNeedNav = !currentPageIsFrame
 
+  if (routeStore.getLastRoute.fullPath === to.fullPath && routeStore.isBlockReturn) {
+    routeStore.blockReturnHandler()
+    next(false)
+    return
+  }
+  routeStore.setLastRoute(from)
+  routeStore.setCurrentRoute(to)
   // 设定MainContent组件的默认路由为第一个动态路由
   if (to.path === '/' || to.path === I_MAIN_CONTENT || to.path === `${I_MAIN_CONTENT}/`) {
     const leftNavPath = enterFirstDynamicRoute()
