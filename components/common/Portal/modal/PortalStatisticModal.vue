@@ -246,6 +246,7 @@ import DoubleMetric from '../dashboard/doubleMetric/index.vue'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, uuid } from '@/framework/utils/common'
 import PortalStatisticCustomMetric from '@/framework/components/common/Portal/modal/PortalStatisticCustomMetric.vue'
+import _ from "lodash";
 
 const dragGridRef = ref()
 const customMetricDragGridRef = ref()
@@ -486,7 +487,7 @@ const onMetricTabChange = () => {
   console.log('onMetricTabChange')
 }
 const customMetricCondition = ref([] as Array<any>)
-const customMetric = ref('')
+const customMetric = ref(undefined as any)
 const onMetricConditionConfirm = () => {
   const metric = {
     value: metricAdvancedCondition.id,
@@ -524,9 +525,10 @@ const editCustomMetric = (metric: any) => {
 }
 const copyCustomMetric = (metric: any) => {
   const index = customMetricCondition.value.findIndex((item: any) => item.value === metric.value)
+  const count = customMetricCondition.value.length
   metricAdvancedCondition.id = uuid()
-  metricAdvancedCondition.name = customMetricCondition.value[index].label
-  metricAdvancedCondition.condition = customMetricCondition.value[index].condition
+  metricAdvancedCondition.name = '自定义指标' + (count ? count + 1 : '')
+  metricAdvancedCondition.condition = _.cloneDeep(customMetricCondition.value[index].condition)
   metricAdvancedCondition.type = 'copy'
   metricAdvancedCondition.show = true
 }
@@ -534,12 +536,13 @@ const cleanCustomMetric = () => {
   customMetricCondition.value.length = 0
 }
 const confirmMetricCondition = () => {
-  generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, [customMetric.value], customMetricCondition.value, activeKey.value).then(resp => {
+  generalStatistic(config.value.url, advancedCondition.condition as QueryType, null,
+      customMetric.value ? [customMetric.value] : [], customMetricCondition.value, activeKey.value).then(resp => {
     statistic.value.unshift({
       value: uuid(),
       label: '自定义指标',
       echatOption: resp.payload,
-      metricColumn: [customMetric.value],
+      metricColumn:customMetric.value ? [customMetric.value] : [],
       metricCondition: customMetricCondition.value,
       statisticColumn: activeKey.value
     })

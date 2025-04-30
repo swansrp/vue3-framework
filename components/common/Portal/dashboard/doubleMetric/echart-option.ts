@@ -14,12 +14,12 @@ export const processDoubleMetricData = (index: any, data: any, rewriteLabelMap: 
   data.forEach((item: any) => {
     const innerDictValue = item.metric.split(',')[0]
     const outerDictValue = item.metric.split(',')[1]
-    let innerDictLabel = innerDictValue === 'NULL' ? '未知' : innerDictMap.get(String(innerDictValue))
-    let outerDictLabel = outerDictValue === 'NULL' ? '未知' : outerDictMap?.get(String(outerDictValue))
+    let innerDictLabel = innerDictValue==='NULL' ? '未知' : innerDictMap.get(String(innerDictValue))
+    let outerDictLabel = outerDictValue==='NULL' ? '未知' : outerDictMap?.get(String(outerDictValue))
     //重写label
-    const [innerKey, outerKey] = index.split(',')
-    innerDictLabel = rewriteLabelMap.get(innerKey) ? `[${ rewriteLabelMap.get(innerKey) }]${ innerDictLabel }` : innerDictLabel
-    outerDictLabel = outerKey && rewriteLabelMap.get(outerKey) ? `[${ rewriteLabelMap.get(outerKey) }]${ outerDictLabel }` : outerDictLabel
+    const [innerKey, outerKey] = index.split(',');
+    innerDictLabel = rewriteLabelMap.get(innerKey) ? `[${rewriteLabelMap.get(innerKey)}]${innerDictLabel}` : innerDictLabel;
+    outerDictLabel = outerKey && rewriteLabelMap.get(outerKey) ? `[${rewriteLabelMap.get(outerKey)}]${outerDictLabel}` : outerDictLabel;
     const inner = innerMap.get(innerDictValue)
     if (isEmpty(inner)) {
       innerMap.set(innerDictValue, {
@@ -45,6 +45,11 @@ export const processDoubleMetricData = (index: any, data: any, rewriteLabelMap: 
 }
 
 export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMetricDataType) => {
+  const legendData = innerData.map((item: any) => item.name)
+  const legendSelected: Record<string, boolean> = {}
+  innerData.forEach(item => {
+    legendSelected[item.name] = true
+  })
   outerData = outerData.filter((item: any) => item.value)
   return {
     graphic: {
@@ -75,11 +80,11 @@ export const getEchartsDoubleMetricOption = ({ innerData, outerData }: DoubleMet
       itemWidth: 12,
       textStyle: {
         fontSize: '12px',
-        color: '#C6D1DB',
+        color: '#00042D',
         fontFamily: 'Noto Sans SC'
       },
-      data: ['签订成功', '签订中', '跟踪中'],
-      selected: { '签订成功': true, '签订中': true, '跟踪中': true }
+      data: legendData,
+      selected: legendSelected
     },
     series: [
       {
