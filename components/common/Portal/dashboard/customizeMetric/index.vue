@@ -1,35 +1,66 @@
 <template>
-  <div style="height: 100%; width: 100%;" :id="'bar-3d-'+index"></div>
+  <div :id="'bar-3d-'+index" :style="{zIndex: 1-showNoData, opacity: 1-showNoData}" class="bar-3d-css"></div>
+  <div :style="{zIndex: showNoData, opacity: showNoData}" class="bar-3d-no-data">暂无数据</div>
 </template>
 
-<script setup lang="ts">
+<script lang="ts" setup>
 import { getEchartsBar3dOption } from './echart-option'
-import { getInitEchart, setEchartsOptionsAndResize } from "@/dashboard-framework/utils/common"
-import { Bar3dDataType } from '@/framework/components/common/Portal/dashboard/type'
+import { MetricStatisticType } from '@/framework/components/common/Portal/dashboard/type'
+import {
+  disposeEcharts,
+  getInitEchart,
+  setEchartsOptionsAndResize
+} from '@/framework/components/common/Portal/dashboard/utils'
 
-const props = defineProps<{ index: any, data: Bar3dDataType, isPercent?: boolean, typeName: string }>()
-const { index, data, isPercent, typeName } = toRefs(props)
-const showNoData = computed(() => data.value.amount.length ? 0 : 1)
+const props = defineProps<{ index: any, data: Array<MetricStatisticType>, isPercent?: boolean, dict: any, }>()
+const { index, data, isPercent, dict } = toRefs(props)
+const showNoData = computed(() => data.value.length ? 0 : 1)
+let chart: any = null
 const emit = defineEmits<{
   (e: 'click', categoryId: string): void
 }>()
 const renderRadar = () => {
-  watch(() => props.data, () => {
-    if (showNoData) {
-      const chart = getInitEchart('bar-3d-' + index.value)
-      const option = getEchartsBar3dOption(data.value, isPercent.value || false, typeName.value) as any
-      setEchartsOptionsAndResize(chart, option)
-      chart.off('click')
-      chart.on('click', (params: any) => {
-        emit('click', data.value.categoryId[params.dataIndex])
-      })
-    }
-  })
+  watch(
+    () => props.data,
+    () => {
+      if (showNoData) {
+        chart = getInitEchart('bar-3d-' + index.value)
+        const option = getEchartsBar3dOption(data.value, isPercent.value || false) as any
+        console.log('bar-3d', option)
+        setEchartsOptionsAndResize(chart, option)
+      }
+    },
+    {
+      immediate: true
+    })
 }
 
 onMounted(renderRadar)
+onUnmounted(() => {
+  if (chart) {
+    chart.off('click')
+    disposeEcharts(chart)
+  }
+})
 </script>
 
-<style scoped>
+<style lang="less" scoped>
+.bar-3d-css {
+  position: absolute;
+  top: 40px;
+  height: calc(100% - 40px);
+  width: 100%;
+}
 
+.bar-3d-no-data {
+  height: 100%;
+  width: 100%;
+  float: left;
+  color: #fff;
+  font-size: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+}
 </style>

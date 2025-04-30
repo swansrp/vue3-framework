@@ -6,12 +6,12 @@
 </template>
 
 <script lang="ts" setup>
-import { NameValue } from '../type'
+import { MetricStatisticType, NameValue } from '../type'
 import { DoubleMetricDataType, getEchartsDoubleMetricOption, processDoubleMetricData } from './echart-option'
 import { disposeEcharts, getInitEchart, setEchartsOptionsAndResize } from "../utils"
 
-const props = defineProps<{ index: any, data: Array<any>, rewriteLabelMap: Map<string, string>, innerDict: any, outerDict: any }>()
-const { index, data, rewriteLabelMap, innerDict, outerDict } = toRefs(props)
+const props = defineProps<{ index: any, data: Array<MetricStatisticType>, categoryInLabel: Map<string, string>, innerDict: any, outerDict: any }>()
+const { index, data, categoryInLabel, innerDict, outerDict } = toRefs(props)
 const showNoData = computed(() => data.value.length ? 0 : 1)
 const _data = ref({} as DoubleMetricDataType)
 let chart: any = null
@@ -21,7 +21,7 @@ const renderRadar = () => {
       () => {
         const chart = getInitEchart('double-circular-' + index.value)
         if (data.value.length) {
-          _data.value = processDoubleMetricData(index.value, data.value, rewriteLabelMap.value, innerDict.value.valueMap, outerDict.value?.valueMap)
+          _data.value = processDoubleMetricData(index.value, data.value, categoryInLabel.value, innerDict.value.valueMap, outerDict.value?.valueMap)
           const option = getEchartsDoubleMetricOption(_data.value)
           setEchartsOptionsAndResize(chart, option as any)
         } else chart.clear()

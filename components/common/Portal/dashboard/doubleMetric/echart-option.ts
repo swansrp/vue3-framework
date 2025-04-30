@@ -1,5 +1,5 @@
 import icon from './assets/imgs/prodution-icon.svg'
-import { NameValue } from '../type'
+import { MetricStatisticType, NameValue } from '../type'
 import { colorList } from '../utils'
 
 export interface DoubleMetricDataType {
@@ -7,19 +7,19 @@ export interface DoubleMetricDataType {
   outerData: Array<NameValue>
 }
 
-export const processDoubleMetricData = (index: any, data: any, rewriteLabelMap: Map<string, string>, innerDictMap: any, outerDictMap: any): DoubleMetricDataType => {
+export const processDoubleMetricData = (index: any, data: Array<MetricStatisticType>, categoryInLabel: Map<string, string>, innerDictMap: any, outerDictMap: any): DoubleMetricDataType => {
   const innerData = [] as Array<any>
   const outerData = [] as Array<any>
   const innerMap = new Map<String, { name: string, value: number, subData: Array<any> }>()
-  data.forEach((item: any) => {
+  data.forEach((item: MetricStatisticType) => {
     const innerDictValue = item.metric.split(',')[0]
     const outerDictValue = item.metric.split(',')[1]
     let innerDictLabel = innerDictValue==='NULL' ? '未知' : innerDictMap.get(String(innerDictValue))
     let outerDictLabel = outerDictValue==='NULL' ? '未知' : outerDictMap?.get(String(outerDictValue))
     //重写label
     const [innerKey, outerKey] = index.split(',');
-    innerDictLabel = rewriteLabelMap.get(innerKey) ? `[${rewriteLabelMap.get(innerKey)}]${innerDictLabel}` : innerDictLabel;
-    outerDictLabel = outerKey && rewriteLabelMap.get(outerKey) ? `[${rewriteLabelMap.get(outerKey)}]${outerDictLabel}` : outerDictLabel;
+    innerDictLabel = categoryInLabel.get(innerKey) ? `[${categoryInLabel.get(innerKey)}]${innerDictLabel}` : innerDictLabel;
+    outerDictLabel = outerKey && categoryInLabel.get(outerKey) ? `[${categoryInLabel.get(outerKey)}]${outerDictLabel}` : outerDictLabel;
     const inner = innerMap.get(innerDictValue)
     if (isEmpty(inner)) {
       innerMap.set(innerDictValue, {

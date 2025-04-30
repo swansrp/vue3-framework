@@ -8,8 +8,9 @@
 import 'echarts-gl'
 import { echartsPie, processSingleMetricData } from './echart-option'
 import { disposeEcharts, getInitEchart } from "../utils"
+import { MetricStatisticType } from '@/framework/components/common/Portal/dashboard/type'
 
-const props = defineProps<{ index: any, data: Array<any>, dict: any }>()
+const props = defineProps<{ index: any, data: Array<MetricStatisticType>, dict: any }>()
 let chart: any = null
 const { index, data, dict } = toRefs(props)
 const showNoData = computed(() => {

@@ -1,11 +1,11 @@
 import { colorList, setEchartsOptionsAndResize } from "../utils"
-import { NameValue } from '../type'
+import { MetricStatisticType, NameValue } from '../type'
 import { formatPercent } from '@/framework/utils/formatter'
 
-export const processSingleMetricData = (data: any, dict: any): Array<NameValue> => {
+export const processSingleMetricData = (data: Array<MetricStatisticType>, dict: any): Array<NameValue> => {
   const result = [] as Array<NameValue>
   if (data.length) {
-    data.forEach((item: any) => {
+    data.forEach((item: MetricStatisticType) => {
       const name = item.metric === 'NULL' ? '未知' : dict.valueMap.get(String(item.metric))
       result.push({ name, value: item.statistic })
     })

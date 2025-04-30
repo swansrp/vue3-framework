@@ -142,18 +142,26 @@
                   :title="item.data.label"
                   size="small"
                   style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
-                  <single-metric
-                    v-if="isEmpty(dictMap.get(item.data.value.split('-')[0].split(',')[1]))"
-                    :data="item.data.echatOption"
-                    :dict="dictMap.get(item.data.value.split('-')[0].split(',')[0])"
-                    :index="item.i" />
-                  <double-metric
-                    v-else
-                    :data="item.data.echatOption"
-                    :index="item.i"
-                    :inner-dict="dictMap.get(item.data.value.split('-')[0].split(',')[0])"
-                    :outer-dict="dictMap.get(item.data.value.split('-')[0].split(',')[1])"
-                    :rewriteLabelMap="rewriteLabelMap" />
+                  <template v-if="isEmpty(item.data.metricCondition)">
+                    <single-metric
+                      v-if="isEmpty(dictMap.get(item.data.value.split('-')[0].split(',')[1]))"
+                      :data="item.data.echatOption"
+                      :dict="dictMap.get(item.data.value.split('-')[0].split(',')[0])"
+                      :index="item.i" />
+                    <double-metric
+                      v-else
+                      :data="item.data.echatOption"
+                      :index="item.i"
+                      :inner-dict="dictMap.get(item.data.value.split('-')[0].split(',')[0])"
+                      :outer-dict="dictMap.get(item.data.value.split('-')[0].split(',')[1])"
+                      :category-In-Label="rewriteLabelMap" />
+                  </template>
+                  <template v-else>
+                    <customize-metric
+                      :index="item.i"
+                      :data="item.data.echatOption"
+                      :dict="isEmpty(item.data.metricColumn) ? undefined : dictMap.get(item.data.metricColumn[0])" />
+                  </template>
                   <template #extra>
                     <a-button disabled size="small" type="text" @click="onCardClick(item.data)">
                       <template #icon>
@@ -243,6 +251,7 @@ import {
 import { generalStatistic } from '@/framework/apis/portal'
 import SingleMetric from '../dashboard/singleMetric/index.vue'
 import DoubleMetric from '../dashboard/doubleMetric/index.vue'
+import CustomizeMetric from '../dashboard/customizeMetric/index.vue'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, uuid } from '@/framework/utils/common'
 import PortalStatisticCustomMetric from '@/framework/components/common/Portal/modal/PortalStatisticCustomMetric.vue'
