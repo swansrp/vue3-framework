@@ -8,17 +8,18 @@
 <script lang="ts" setup>
 import { NameValue } from '../type'
 import { DoubleMetricDataType, getEchartsDoubleMetricOption, processDoubleMetricData } from './echart-option'
-import { getInitEchart, setEchartsOptionsAndResize } from "../utils"
+import { disposeEcharts, getInitEchart, setEchartsOptionsAndResize } from "../utils"
 
 const props = defineProps<{ index: any, data: Array<any>, rewriteLabelMap: Map<string, string>, innerDict: any, outerDict: any }>()
 const { index, data, rewriteLabelMap, innerDict, outerDict } = toRefs(props)
 const showNoData = computed(() => data.value.length ? 0 : 1)
 const _data = ref({} as DoubleMetricDataType)
+let chart: any = null
 const renderRadar = () => {
   watch(
     () => props.data,
     () => {
-      const chart = getInitEchart('double-circular-' + index.value)
+      chart = getInitEchart('double-circular-' + index.value)
       if (data.value.length) {
         _data.value = processDoubleMetricData(index.value, data.value, rewriteLabelMap.value, innerDict.value.valueMap, outerDict.value?.valueMap)
         const option = getEchartsDoubleMetricOption(_data.value)
@@ -58,6 +59,12 @@ const renderRadar = () => {
   )
 }
 onMounted(renderRadar)
+onUnmounted(() => {
+  if (chart) {
+    chart.off('legendselectchanged')
+    disposeEcharts(chart)
+  }
+})
 </script>
 
 <style scoped>

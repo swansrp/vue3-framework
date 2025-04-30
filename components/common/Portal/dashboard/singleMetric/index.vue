@@ -7,9 +7,10 @@
 <script lang="ts" setup>
 import 'echarts-gl'
 import { echartsPie, processSingleMetricData } from './echart-option'
-import { getInitEchart } from "../utils"
+import { disposeEcharts, getInitEchart } from "../utils"
 
 const props = defineProps<{ index: any, data: Array<any>, dict: any }>()
+let chart: any = null
 const { index, data, dict } = toRefs(props)
 const showNoData = computed(() => {
   const sumValue = data.value.reduce((pre: number, cur: any) => pre + cur.statistic, 0)
@@ -20,8 +21,6 @@ const renderRadar = () => {
     () => data.value,
     () => {
       if (data.value && data.value.length) {
-        let chart = getInitEchart('pie-3d-' + index.value)
-        if (chart) chart.dispose()
         chart = getInitEchart('pie-3d-' + index.value)
         const _data = processSingleMetricData(data.value, dict.value)
         echartsPie(chart, _data)
@@ -33,7 +32,12 @@ const renderRadar = () => {
     })
 }
 onMounted(renderRadar)
-
+onUnmounted(() => {
+  if (chart) {
+    chart.off("mouseover")
+    disposeEcharts(chart)
+  }
+})
 </script>
 
 <style lang="less" scoped>

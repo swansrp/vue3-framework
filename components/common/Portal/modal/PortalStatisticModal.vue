@@ -21,8 +21,13 @@
           <a-tab-pane key="2" tab="自定义">
             <div style="height: 100%">
               <div style="display: flex;justify-content: end">
-                <a-select v-model:value="customMetric" style="width: 200px; margin-right: 10px" placeholder="请选择分类指标" allow-clear>
-                  <a-select-option v-for="item in dictFields" :key="item.value" :value="item.value">{{ item.label }}</a-select-option>
+                <a-select
+                  v-model:value="customMetric" allow-clear
+                  placeholder="请选择分类指标" style="width: 200px; margin-right: 10px">
+                  <a-select-option v-for="item in dictFields" :key="item.value" :value="item.value">{{
+                    item.label
+                  }}
+                  </a-select-option>
                 </a-select>
                 <a-tooltip placement="top">
                   <template #title>
@@ -46,8 +51,8 @@
                 </a-tooltip>
               </div>
               <drag-grid
-                ref="customMetricDragGridRef"
                 :key="customMetricCondition.length"
+                ref="customMetricDragGridRef"
                 v-model="customMetricCondition"
                 :field-names="{value: 'value', label: 'label'}"
                 :height="4"
@@ -98,7 +103,10 @@
               </drag-grid>
             </div>
             <div class="center">
-              <a-button type="primary" :disabled="customMetricCondition.length === 0" style="margin: 10px" @click="confirmMetricCondition">生成指标图</a-button>
+              <a-button
+                :disabled="customMetricCondition.length === 0" style="margin: 10px" type="primary"
+                @click="confirmMetricCondition">生成指标图
+              </a-button>
             </div>
           </a-tab-pane>
         </a-tabs>
@@ -135,16 +143,16 @@
                   size="small"
                   style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
                   <single-metric
-                    v-if="isEmpty(dictMap.get(item.data.value.split(',')[1]))"
+                    v-if="isEmpty(dictMap.get(item.data.value.split('-')[0].split(',')[1]))"
                     :data="item.data.echatOption"
-                    :dict="dictMap.get(item.data.value.split(',')[0])"
+                    :dict="dictMap.get(item.data.value.split('-')[0].split(',')[0])"
                     :index="item.i" />
                   <double-metric
                     v-else
                     :data="item.data.echatOption"
                     :index="item.i"
-                    :inner-dict="dictMap.get(item.data.value.split(',')[0])"
-                    :outer-dict="dictMap.get(item.data.value.split(',')[1])"
+                    :inner-dict="dictMap.get(item.data.value.split('-')[0].split(',')[0])"
+                    :outer-dict="dictMap.get(item.data.value.split('-')[0].split(',')[1])"
                     :rewriteLabelMap="rewriteLabelMap" />
                   <template #extra>
                     <a-button disabled size="small" type="text" @click="onCardClick(item.data)">
@@ -232,7 +240,7 @@ import {
   PlusOutlined,
   RedoOutlined
 } from '@ant-design/icons-vue'
-import { generalStatistic, advancedStatistic } from '@/framework/apis/portal'
+import { generalStatistic } from '@/framework/apis/portal'
 import SingleMetric from '../dashboard/singleMetric/index.vue'
 import DoubleMetric from '../dashboard/doubleMetric/index.vue'
 import { dictStore, useTreeStore } from '@/framework/store/common'
@@ -379,10 +387,10 @@ const onDictFieldChange = (value: any) => {
     const tabIndex = statisticTabs.value.findIndex(item => item.value === activeKey.value)
     if (tabIndex > -1) {
       const tabLabel = statisticTabs.value[tabIndex].label
-      if (statistic.value.findIndex(item => (item.value === dictValue && item.statisticColumn === activeKey.value)) === -1) {
+      if (statistic.value.findIndex(item => (item.value === (dictValue + '-' + activeKey.value))) === -1) {
         generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, dictValue.split(','), [], activeKey.value).then(resp => {
           statistic.value.unshift({
-            value: dictValue,
+            value: dictValue + '-' + activeKey.value,
             label: value[0].label + '-' + tabLabel,
             echatOption: resp.payload,
             metricColumn: dictValue.split(','),
@@ -413,11 +421,11 @@ const onSecondDictFieldChange = (value: any) => {
     } else {
       selectedFieldLabel = selectedDict.value[0].label + '-' + value.label + '-' + tabLabel
     }
-    const index = statistic.value.findIndex(item => item.value === selectedFieldValue && item.statisticColumn === activeKey.value)
+    const index = statistic.value.findIndex(item => item.value === (selectedFieldValue + '-' + activeKey.value))
     if (value.checked) {
       (index === -1) && generalStatistic(config.value.url, advancedCondition.condition as QueryType, null, selectedFieldValue.split(','), [], activeKey.value).then(resp => {
         statistic.value.unshift({
-          value: selectedFieldValue,
+          value: selectedFieldValue + '-' + activeKey.value,
           label: selectedFieldLabel,
           echatOption: resp.payload,
           metricColumn: selectedFieldValue.split(','),
@@ -457,6 +465,8 @@ const closeAll = () => {
   for (let index = 0; index < count; index++) {
     remove(statistic.value.length - 1)
   }
+  selectedDict.value.length = 0
+  secondDictMap.value.forEach((item: any) => item.forEach((i: any) => i.checked = false))
 }
 const computedGrid = computed(() => {
   if (statistic.value.length == 1) return { height: 14, rowHeight: 40, width: 60, maxCol: 60 }
@@ -478,12 +488,16 @@ const onMetricTabChange = () => {
 const customMetricCondition = ref([] as Array<any>)
 const customMetric = ref('')
 const onMetricConditionConfirm = () => {
-  const metric = {value: metricAdvancedCondition.id, label:  metricAdvancedCondition.name, condition:  metricAdvancedCondition.condition}
-  if(metricAdvancedCondition.type === 'add' || metricAdvancedCondition.type === 'copy') {
+  const metric = {
+    value: metricAdvancedCondition.id,
+    label: metricAdvancedCondition.name,
+    condition: metricAdvancedCondition.condition
+  }
+  if (metricAdvancedCondition.type === 'add' || metricAdvancedCondition.type === 'copy') {
     customMetricCondition.value.push(metric)
-  }else{
-    const index = customMetricCondition.value.findIndex((item:any) => item.value === metricAdvancedCondition.id)
-    console.log(index,customMetricCondition.value[index])
+  } else {
+    const index = customMetricCondition.value.findIndex((item: any) => item.value === metricAdvancedCondition.id)
+    console.log(index, customMetricCondition.value[index])
     customMetricCondition.value[index].label = metricAdvancedCondition.name
     customMetricCondition.value[index].condition = metricAdvancedCondition.condition
     customMetricDragGridRef.value.forceUpdate()
@@ -498,7 +512,7 @@ const addCustomMetric = () => {
   metricAdvancedCondition.show = true
 }
 const deleteCustomMetric = (metric: any) => {
-  const index = customMetricCondition.value.findIndex((item:any) => item.value === metric.value)
+  const index = customMetricCondition.value.findIndex((item: any) => item.value === metric.value)
   customMetricCondition.value.splice(index, 1)
 }
 const editCustomMetric = (metric: any) => {
@@ -509,7 +523,7 @@ const editCustomMetric = (metric: any) => {
   metricAdvancedCondition.show = true
 }
 const copyCustomMetric = (metric: any) => {
-  const index = customMetricCondition.value.findIndex((item:any) => item.value === metric.value)
+  const index = customMetricCondition.value.findIndex((item: any) => item.value === metric.value)
   metricAdvancedCondition.id = uuid()
   metricAdvancedCondition.name = customMetricCondition.value[index].label
   metricAdvancedCondition.condition = customMetricCondition.value[index].condition

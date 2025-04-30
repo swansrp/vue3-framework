@@ -18,6 +18,7 @@ export const echartsPie = (myChart: any, data: Array<NameValue>) => {
   const series = getPie3DSeries(data)
   const option = getPie3DOption(series, data)
   setEchartsOptionsAndResize(myChart, option, true)
+  myChart.off("mouseover")
   myChart.on("mouseover", function (params: any) {
     // 准备重新渲染扇形所需的参数
     let isSelected
