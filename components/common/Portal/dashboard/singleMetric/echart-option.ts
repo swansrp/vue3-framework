@@ -108,7 +108,7 @@ const getPie3DOption = (series: any, data: Array<any>) => {
       }
     },
     legend: {
-      bottom: 7, itemGap: 20, icon: 'rect', itemHeight: 6, itemWidth: 12, width: 320,
+      top: 10,right:0, itemGap: 20, icon: 'rect', itemHeight: 6, itemWidth: 12, width: 320,
       textStyle: {
         fontSize: '14px',
         color: '#333333',
