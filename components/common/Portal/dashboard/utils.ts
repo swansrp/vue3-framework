@@ -4,12 +4,16 @@ import bus, { DRAG_GRID_RESIZE } from '@/framework/mitt'
 export const colorList = ['#3775F6', '#FFC371', '#FF7C11', '#7031DE', '#485F9B', '#4BC290', '#33BFCF', '#FD716D', '#B8764B', '#948DE0']
 export const setEchartsOptionsAndResize = (chart: echarts.ECharts, option: echarts.EChartsOption, notMerge = false) => {
   chart.setOption(option, notMerge)
+  // @ts-ignore
   bus.on(DRAG_GRID_RESIZE, chart.resize)
+  // @ts-ignore
   window.addEventListener('resize', chart.resize)
 }
 export const disposeEcharts = (chart: echarts.ECharts) => {
   if(chart) {
+    // @ts-ignore
     bus.off(DRAG_GRID_RESIZE, chart.resize)
+    // @ts-ignore
     window.removeEventListener('resize', chart.resize)
   }
 

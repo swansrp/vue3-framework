@@ -19,6 +19,7 @@
           </div>
           <template v-if="item.conditionList && item.conditionList.length">
             <ConditionList
+              :advanced="advanced"
               :condition="_condition.conditionList[idx]"
               :index="idx"
               @delete-current-condition-list="deleteCurrentConditionList" />
@@ -58,16 +59,16 @@
 </template>
 
 <script lang="ts" setup>
-import {Ref} from 'vue'
-import {MenuProps} from 'ant-design-vue'
-import {ValueLabel} from '@/framework/utils/type'
-import {genEmptyCondition} from './funs'
-import {ConditionType} from '../type'
+import { Ref } from 'vue'
+import { MenuProps } from 'ant-design-vue'
+import { ValueLabel } from '@/framework/utils/type'
+import { genEmptyCondition } from './funs'
+import { ConditionType } from '../type'
 import pinia from '@/framework/store'
 import Condition from '../Condition/index.vue'
 import AndOrSelect from '../AndOrSelect/index.vue'
 import ConditionList from '../ConditionList/index.vue'
-import {useAdvancedSearch} from '@/framework/store/AdvancedSearch'
+import { useAdvancedSearch } from '@/framework/store/AdvancedSearch'
 import {
   ApartmentOutlined,
   DownOutlined,
@@ -75,13 +76,13 @@ import {
   PlusCircleOutlined,
   PlusSquareOutlined
 } from '@ant-design/icons-vue'
-import {ConditionListType} from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 
 const _condition: Ref = ref()
 const propertySelectOptions: Ref<Array<ValueLabel>> = ref([])
 const props = defineProps<{ condition: ConditionType | ConditionListType, index: number, advanced: boolean }>()
-const {index} = toRefs(props)
+const { index } = toRefs(props)
 
 const useAdvancedSearchStore = useAdvancedSearch(pinia)
 const emit = defineEmits(['update:condition', 'deleteCurrentConditionList'])
@@ -100,7 +101,7 @@ const deleteCurrentConditionList = (idx: number) => {
 }
 
 
-const handleAddMenuClick: MenuProps['onClick'] = ({key}) => {
+const handleAddMenuClick: MenuProps['onClick'] = ({ key }) => {
   if (+key === 1) {
     _condition.value.conditionList.push(genEmptyCondition())
   } else if (+key === 2) {
@@ -113,7 +114,7 @@ const handleAddMenuClick: MenuProps['onClick'] = ({key}) => {
 
 onBeforeMount(() => propertySelectOptions.value = useAdvancedSearchStore.getConditionLabelValueTypeOption())
 
-watch(() => props.condition, () => _condition.value = props.condition, {immediate: true})
+watch(() => props.condition, () => _condition.value = props.condition, { immediate: true })
 
 </script>
 
