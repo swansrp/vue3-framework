@@ -18,7 +18,7 @@
       placeholder="请输入属性值"
       @change="$emit('update:conditionContentValue', value)" />
     <a-select
-      v-else-if="type === FIELD_TYPE.SELECT"
+      v-else-if="type === FIELD_TYPE.SELECT || type === FIELD_TYPE.SELECT_MULTI_IN_ONE"
       v-model:value="value"
       :options="type4Options"
       class="full-width"
@@ -72,7 +72,7 @@ const emit = defineEmits(['update:conditionContentValue'])
 const onDayChange = (day: [any, any]) => emit('update:conditionContentValue', day)
 
 const getOption = () => {
-  if (type.value === FIELD_TYPE.SELECT && reference && reference.value) {
+  if ((type.value === FIELD_TYPE.SELECT || type.value === FIELD_TYPE.SELECT_MULTI_IN_ONE) && reference && reference.value) {
     type4Options.value = reference.value
   }
 }
