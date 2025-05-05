@@ -1,5 +1,5 @@
 import * as echarts from 'echarts'
-import { amountFilter, calcArrayMaxValue, getEchartsLinearGradient } from "../utils"
+import { calcArrayMaxValue, colorList, getEchartsLinearGradient } from "../utils"
 import { MetricStatisticType } from "../type"
 import { formatPercent } from '@/framework/utils/formatter'
 
@@ -71,15 +71,73 @@ const buildShapeObj = (api: any) => {
 
 export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercent: boolean) => {
   const yAxisSplitNumber = 5
+  // 类型
+  const category = data.map(item => item.metricLabel)
+  // 每个类型数据总值
+  const amountSum = data.map((item: MetricStatisticType) => item.statistic)
+  // 数据最大值
+  const dataMax = calcArrayMaxValue(amountSum)
+  // 数据总值
+  const dataSum = amountSum.reduce((pre: number, cur: number) => pre + +cur, 0)
+  // 每个类型占比
+  const amountPercent = data.map(item => item.statistic / dataSum * 100)
+
+  // 分级数值
+  const metricValue = [] as Array<Array<number>>
+  // 分级名称
+  const metricLabel = [] as Array<string>
+  // 绘图用累加和
+  const amount = [] as Array<Array<number>>
+  // 分级占比
+  const percent = [] as Array<Array<number>>
   const length = data[0].children.length
-  const amount = data.map(item => item.statistic)
-  console.log(amount)
-  const category = data.map(item => item.metric)
-  const amountMax = calcArrayMaxValue(amount)
-  const amountSum = amount.reduce((pre: number, cur: number) => pre + +cur, 0)
-  const percentList = amount.map((item: number) => {
-    return formatPercent(item / amountSum * 100, 2)
-  })
+  const customOptions = [] as Array<any>
+
+  const colorIndex = Math.floor(Math.random() * colorList.length % colorList.length)
+  if (length === 0) {
+    metricValue[0] = data.map(item => item.statistic)
+    amount[0] = data.map(item => item.statistic)
+    customOptions.push(buildCustomOption(amount[0], colorList[colorIndex], 0))
+  } else {
+    amount[0] = [] as Array<number>
+    percent[0] = [] as Array<number>
+    metricValue[0] = [] as Array<number>
+    metricLabel[0] = data[0].children[0].metricLabel
+    for (let j = 0; j < data.length; j++) {
+      metricValue[0][j] = data[j].children[0].statistic
+      amount[0][j] = data[j].children[0].statistic
+      percent[0][j] = data[j].children[0].statistic / amountSum[j] * 100
+    }
+    for (let i = 1; i < length; i++) {
+      amount[i] = [] as Array<number>
+      percent[i] = [] as Array<number>
+      metricValue[i] = [] as Array<number>
+      metricLabel[i] = data[0].children[i].metricLabel
+      for (let j = 0; j < data.length; j++) {
+        metricValue[i][j] = data[j].children[i].statistic
+        amount[i][j] = data[j].children[i].statistic + amount[i - 1][j]
+        percent[i][j] = data[j].children[i].statistic / amountSum[j] * 100
+      }
+    }
+    for (let i = 0; i < length; i++) {
+      const customData = [] as Array<number>
+      for (let j = 0; j < data.length; j++) {
+        customData.push(amount[i][j])
+      }
+      customOptions.push(buildCustomOption(customData, colorList[Math.floor(i % 10)], length - i))
+    }
+  }
+
+  console.log('类型:', category)
+  console.log('每个类型数据总值:', amountSum)
+  console.log('数据最大值:', dataMax)
+  console.log('数据总值:', dataSum)
+  console.log('每个类型占比:', amountPercent)
+  console.log('分级数值:', metricValue)
+  console.log('分级显示:', metricLabel)
+  console.log('分级占比:', percent)
+  console.log('分级累积数值:', amount)
+
   return ({
     tooltip: {
       trigger: 'axis',
@@ -94,10 +152,22 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
       formatter: (params: any) => {
         const buildDotDom = (color: string) =>
           `<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${ color }"></span>`
-        const dotHtml = buildDotDom('#FFD15C')
-        const dotHtml2 = buildDotDom('#0783FA')
-        // return `${ params[0].axisValue }</br>${ dotHtml } ${ params[2].data }</br>${ dotHtml2 } ${ amountFilter(params[0].data) }`
-        return `${ params[0].axisValue }`
+        let display
+        if(length === 0) {
+          display = buildDotDom(colorList[colorIndex]) + params[0].axisValue
+          for(let i = 0; i < params.length - 1; i++) {
+            display += ':'
+            display += (metricValue[0][params[i].dataIndex] + (isPercent ? '(' + formatPercent(amountPercent[params[i].dataIndex]) +  ')' : ''))
+          }
+        } else {
+          display = params[0].axisValue
+          for(let i = 0; i < params.length - 1; i++) {
+            display += '</br>'
+            display += (buildDotDom(colorList[i]) + metricLabel[i]) + ':' + metricValue[i][params[i].dataIndex] + '(' + formatPercent(percent[i][params[i].dataIndex]) +  ')'
+          }
+        }
+
+        return `${display}`
       }
     },
     grid: {
@@ -128,8 +198,8 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
       {
         type: "value",
         min: 0,
-        max: amountMax,
-        interval: amountMax / yAxisSplitNumber,
+        max: dataMax,
+        interval: dataMax / yAxisSplitNumber,
         splitNumber: yAxisSplitNumber,
         nameTextStyle: {
           padding: [0, 0, 0, 5],
@@ -149,37 +219,7 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
       }
     ],
     series: [
-      {
-        type: 'custom',
-        data: amount,
-        renderItem: (_: any, api: any) => {
-          return {
-            type: 'group',
-            children: [
-              {
-                type: 'CubeLeft',
-                shape: buildShapeObj(api),
-                style: { fill: getEchartsLinearGradient('#0E3C69', '#0E336E') }
-              },
-              {
-                type: 'CubeRight',
-                shape: buildShapeObj(api),
-                style: { fill: getEchartsLinearGradient('#2A8BEF', '#15418C') }
-              },
-              {
-                type: 'CubeTopLeft',
-                shape: buildShapeObj(api),
-                style: { fill: '#2484BA' }
-              },
-              {
-                type: 'CubeTopRight',
-                shape: buildShapeObj(api),
-                style: { fill: '#2D9DD6' }
-              }
-            ]
-          }
-        }
-      },
+      ...customOptions,
       {
         type: 'bar',
         zlevel: 6,
@@ -188,11 +228,50 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
           position: 'top',
           fontSize: 14,
           offset: [0, -5],
-          formatter: (params: any) => amount[params.dataIndex]
+          formatter: (params: any) => formatPercent(amountPercent[params.dataIndex])
         },
         itemStyle: { color: 'transparent' },
-        data: amount
+        data: amountSum
       }
     ]
   })
+}
+const buildAlphaColor = (color: any, a=100) => {
+  return color.replace('100)', a+')')
+}
+const buildCustomOption = (data: Array<number>, color: string, zlevel: number) => {
+  console.log('buildCustomOption====', data, color)
+  return {
+    type: 'custom',
+    data: data,
+    zlevel,
+    renderItem: (_: any, api: any) => {
+      console.log(_)
+      return {
+        type: 'group',
+        children: [
+          {
+            type: 'CubeLeft',
+            shape: buildShapeObj(api),
+            style: { fill: getEchartsLinearGradient(buildAlphaColor(color,90), buildAlphaColor(color, 0.1)) }
+          },
+          {
+            type: 'CubeRight',
+            shape: buildShapeObj(api),
+            style: { fill: getEchartsLinearGradient(buildAlphaColor(color, 90), buildAlphaColor(color, 0.1)) }
+          },
+          {
+            type: 'CubeTopLeft',
+            shape: buildShapeObj(api),
+            style: { fill: buildAlphaColor(color) }
+          },
+          {
+            type: 'CubeTopRight',
+            shape: buildShapeObj(api),
+            style: { fill: buildAlphaColor(color) }
+          }
+        ]
+      }
+    }
+  }
 }

@@ -2,12 +2,11 @@ import { colorList, setEchartsOptionsAndResize } from "../utils"
 import { MetricStatisticType, NameValue } from '../type'
 import { formatPercent } from '@/framework/utils/formatter'
 
-export const processSingleMetricData = (data: Array<MetricStatisticType>, dict: any): Array<NameValue> => {
+export const processSingleMetricData = (data: Array<MetricStatisticType>): Array<NameValue> => {
   const result = [] as Array<NameValue>
   if (data.length) {
     data.forEach((item: MetricStatisticType) => {
-      const name = item.metric === 'NULL' ? '未知' : dict.valueMap.get(String(item.metric))
-      result.push({ name, value: item.statistic })
+      result.push({ name: item.metricLabel, value: item.statistic })
     })
   }
   return result
@@ -104,7 +103,7 @@ const getPie3DOption = (series: any, data: Array<any>) => {
         const bfb = ((option.series[seriesIndex].pieData.endRatio - option.series[seriesIndex].pieData.startRatio) * 100).toFixed(2)
         return (`${ seriesName }<br/>
             <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${ color }"></span>
-            <span style="font-weight: bold;">${ data.find((item: any) => item.name === seriesName)!.value }</span>(占比${ bfb }%)`)
+            <span style="font-weight: bold;">${ data.find((item: any) => item.name === seriesName)!.value }</span>(${ bfb }%)`)
       }
     },
     legend: {

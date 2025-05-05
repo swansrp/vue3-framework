@@ -1,13 +1,14 @@
 import * as echarts from 'echarts'
 import bus, { DRAG_GRID_RESIZE } from '@/framework/mitt'
+import _ from 'lodash'
 
-export const colorList = ['#3775F6', '#FFC371', '#FF7C11', '#7031DE', '#485F9B', '#4BC290', '#33BFCF', '#FD716D', '#B8764B', '#948DE0']
+export const colorList = ['rgba(55,117,246,100)', 'rgba(255,195,113,100)', 'rgba(255,124,17,100)', 'rgba(112,49,222,100)', 'rgba(72,95,155,100)', 'rgba(72,95,155,100)', 'rgba(51,191,207,100)', 'rgba(253,113,109,100)', 'rgba(184,118,75,100)', 'rgba(148,141,224,100)']
 export const setEchartsOptionsAndResize = (chart: echarts.ECharts, option: echarts.EChartsOption, notMerge = false) => {
   chart.setOption(option, notMerge)
   // @ts-ignore
   bus.on(DRAG_GRID_RESIZE, chart.resize)
   // @ts-ignore
-  window.addEventListener('resize', chart.resize)
+  window.addEventListener('resize', _.debounce(chart.resize, 50))
 }
 export const disposeEcharts = (chart: echarts.ECharts) => {
   if(chart) {

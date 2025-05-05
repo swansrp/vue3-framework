@@ -10,9 +10,9 @@ import { echartsPie, processSingleMetricData } from './echart-option'
 import { disposeEcharts, getInitEchart } from "../utils"
 import { MetricStatisticType } from '@/framework/components/common/Portal/dashboard/type'
 
-const props = defineProps<{ index: any, data: Array<MetricStatisticType>, dict: any }>()
+const props = defineProps<{ index: any, data: Array<MetricStatisticType> }>()
 let chart: any = null
-const { index, data, dict } = toRefs(props)
+const { index, data } = toRefs(props)
 const showNoData = computed(() => {
   const sumValue = data.value.reduce((pre: number, cur: any) => pre + cur.statistic, 0)
   return 1 - (+!!sumValue)
@@ -23,7 +23,7 @@ const renderRadar = () => {
     () => {
       if (data.value && data.value.length) {
         chart = getInitEchart('pie-3d-' + index.value)
-        const _data = processSingleMetricData(data.value, dict.value)
+        const _data = processSingleMetricData(data.value)
         echartsPie(chart, _data)
       }
     },

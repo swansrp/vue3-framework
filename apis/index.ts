@@ -196,7 +196,7 @@ const advancedStatisticApi = (
   type: string,
   domain: string = baseDomain,
   version = '1.0'
-) => buildApi(domain, commonUrl.GENERAL_STATISTIC, requestMethod.POST, version, type)
+) => buildApi(domain, commonUrl.ADVANCED_STATISTIC, requestMethod.POST, version, type)
 
 const addApi = (
   type: string,
@@ -437,9 +437,10 @@ export const generalStatisticRequest = (
   type: string,
   conditionList: Array<any>,
   sort: 0 | 1 | null,
-  metricColumn: Array<string>,
+  metricColumn: Array<{column: string, dictMap: any}>,
   metricCondition: Array<any>,
   statisticColumn: string,
+  majorCondition = '0',
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false
@@ -448,7 +449,8 @@ export const generalStatisticRequest = (
   sort,
   metricColumn,
   metricCondition,
-  statisticColumn
+  statisticColumn,
+  majorCondition,
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedQueryRequest = (
@@ -509,9 +511,10 @@ export const advancedStatisticRequest = (
   type: string,
   condition: ConditionType,
   sort: 0 | 1 | null,
-  metricColumn: Array<string>,
+  metricColumn: Array<{column: string, dictMap: any}>,
   metricCondition: Array<any>,
   statisticColumn: string,
+  majorCondition = '0',
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false
@@ -520,7 +523,8 @@ export const advancedStatisticRequest = (
   sort,
   metricColumn,
   metricCondition,
-  statisticColumn
+  statisticColumn,
+  majorCondition
 }, showSuccess, showLoading) as Promise<any>
 
 export const getByIdRequest = (

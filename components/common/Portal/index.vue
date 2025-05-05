@@ -376,7 +376,7 @@
               </template>
               <template #footer>
                 <div class="pagination">
-                  <a-button v-if="statisticButton" type="text" @click="statisticShow = true">
+                  <a-button v-if="_statisticButton" type="text" @click="statisticShow = true">
                     <template #icon>
                       <PieChartOutlined />
                     </template>
@@ -725,7 +725,7 @@ const updateTableWidthAndHeight = () => {
   updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 225)
 }
 const _updateTableSize = _.debounce(updateTableWidthAndHeight, 200)
-
+const _statisticButton = ref(false)
 //endregion
 
 
@@ -1870,6 +1870,7 @@ const init = async () => {
       await queryTreeData()
     }
     await Promise.all(promiseList)
+    _statisticButton.value = props.statisticButton
     const condition = queryCondition()
     if (config.summary && !config.plain) {
       await getDataSummary(condition)

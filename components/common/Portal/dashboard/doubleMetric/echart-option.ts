@@ -1,4 +1,4 @@
-import icon from './assets/imgs/prodution-icon.svg'
+import icon from './assets/imgs/double-metric-icon.svg'
 import { MetricStatisticType, NameValue } from '../type'
 import { colorList } from '../utils'
 
@@ -7,38 +7,20 @@ export interface DoubleMetricDataType {
   outerData: Array<NameValue>
 }
 
-export const processDoubleMetricData = (index: any, data: Array<MetricStatisticType>, categoryInLabel: Map<string, string>, innerDictMap: any, outerDictMap: any): DoubleMetricDataType => {
+export const processDoubleMetricData = (data: Array<MetricStatisticType>): DoubleMetricDataType => {
   const innerData = [] as Array<any>
   const outerData = [] as Array<any>
-  const innerMap = new Map<String, { name: string, value: number, subData: Array<any> }>()
   data.forEach((item: MetricStatisticType) => {
-    const innerDictValue = item.metric.split(',')[0]
-    const outerDictValue = item.metric.split(',')[1]
-    let innerDictLabel = innerDictValue==='NULL' ? '未知' : innerDictMap.get(String(innerDictValue))
-    let outerDictLabel = outerDictValue==='NULL' ? '未知' : outerDictMap?.get(String(outerDictValue))
-    //重写label
-    const [innerKey, outerKey] = index.split(',');
-    innerDictLabel = categoryInLabel.get(innerKey) ? `[${categoryInLabel.get(innerKey)}]${innerDictLabel}` : innerDictLabel;
-    outerDictLabel = outerKey && categoryInLabel.get(outerKey) ? `[${categoryInLabel.get(outerKey)}]${outerDictLabel}` : outerDictLabel;
-    const inner = innerMap.get(innerDictValue)
-    if (isEmpty(inner)) {
-      innerMap.set(innerDictValue, {
-        name: innerDictLabel,
-        value: item.statistic,
-        subData: outerDictLabel ? [{ name: outerDictLabel, value: item.statistic }] : []
+    innerData.push({ name: item.metricLabel, value: item.statistic })
+    let index = Math.floor(Math.random() * 9 % 9)
+    item.children.forEach(child => {
+      outerData.push({
+        name: child.metricLabel,
+        value: child.statistic,
+        itemStyle: { color: colorList[index++] },
+        parentName: item.metricLabel
       })
-    } else {
-      inner && (inner.value += item.statistic)
-      outerDictLabel && inner?.subData.push({ name: outerDictLabel, value: item.statistic })
-    }
-  })
-  innerMap.forEach((item: any) => {
-    innerData.push({ name: item.name, value: item.value })
-    item.subData.forEach((subItem: any) => {
-      subItem.parentName = item.name
-      subItem.itemStyle = { color: colorList[Math.floor(Math.random() * 9 % 9)] }
     })
-    outerData.push(...item.subData)
   })
   innerData.forEach((item, index: number) => index < 10 && (item.itemStyle = { color: colorList[index] }))
   return { innerData, outerData }

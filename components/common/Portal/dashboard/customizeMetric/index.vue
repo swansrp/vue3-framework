@@ -25,12 +25,12 @@ const renderRadar = () => {
     () => {
       if (showNoData) {
         chart = getInitEchart('bar-3d-' + index.value)
-        const option = getEchartsBar3dOption(data.value, isPercent.value || false) as any
-        console.log('bar-3d', option)
+        const option = getEchartsBar3dOption(data.value, isPercent.value || false, dict) as any
         setEchartsOptionsAndResize(chart, option)
       }
     },
     {
+      deep: true,
       immediate: true
     })
 }
