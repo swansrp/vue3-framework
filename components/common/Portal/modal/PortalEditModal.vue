@@ -6,6 +6,7 @@
     :title="config.modal.type === 'add' ? '新增数据' : '编辑数据'"
     :width="config.modal.type === 'add' ? config.addWidth : config.editWidth"
     :wrap-class-name="(config.modal.type === 'add' ? config.addWidth==='100%' : config.editWidth==='100%') ? 'full-modal' : ''"
+    :z-index="999"
     @cancel="() => emit('cancel')"
     @close="() => emit('close')"
     @ok="() => editModalRef.validate().then(() => emit('confirm')).catch(() => {})">

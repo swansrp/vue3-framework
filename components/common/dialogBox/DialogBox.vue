@@ -111,7 +111,7 @@ const preTransformX = ref(0)
 const preTransformY = ref(0)
 const dragRect = ref({ left: 0, right: 0, top: 0, bottom: 0 })
 watch([x, y], () => {
-  if (!startedDrag.value) {
+  if (!startedDrag.value && modalTitleRef.value) {
     startX.value = x.value
     startY.value = y.value
     const bodyRect = document.body.getBoundingClientRect()
