@@ -21,7 +21,9 @@
           <a-tab-pane key="2" tab="自定义">
             <div style="height: 100%">
               <div style="display: flex;justify-content: end">
-                <a-switch v-model:checked="majorCondition" checked-children="主" un-checked-children="次" checked-value="0" un-checked-value="1" style="margin-top: 5px; margin-right: 3px;" />
+                <a-switch
+                  v-model:checked="majorCondition" checked-children="主" checked-value="0"
+                  style="margin-top: 5px; margin-right: 3px;" un-checked-children="次" un-checked-value="1" />
                 <a-select
                   v-model:value="customMetric" allow-clear
                   placeholder="请选择分类指标" style="width: 200px; margin-right: 10px">
@@ -252,22 +254,22 @@ import CustomizeMetric from '../dashboard/customizeMetric/index.vue'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, uuid } from '@/framework/utils/common'
 import PortalStatisticCustomMetric from '@/framework/components/common/Portal/modal/PortalStatisticCustomMetric.vue'
-import _ from "lodash";
+import _ from "lodash"
 
 const dragGridRef = ref()
 const customMetricDragGridRef = ref()
 const PERCENTAGE_TAB_KEY = ''
 const PERCENTAGE_TAB_TITLE = '分布统计'
 const props = withDefaults(
-    defineProps<{
-      show: boolean
-      config: TableConfigType
-      columns: Array<ColumnType>
-      condition?: any
-    }>(),
-    {
-      condition: []
-    }
+  defineProps<{
+    show: boolean
+    config: TableConfigType
+    columns: Array<ColumnType>
+    condition?: any
+  }>(),
+  {
+    condition: []
+  }
 )
 const { config, columns, show } = toRefs(props)
 const emit = defineEmits<{
@@ -275,12 +277,12 @@ const emit = defineEmits<{
 }>()
 const _show = ref(props.show)
 watch(
-    () => show.value,
-    () => _show.value = show.value
+  () => show.value,
+  () => _show.value = show.value
 )
 watch(
-    () => _show.value,
-    () => emit('update:show', _show.value)
+  () => _show.value,
+  () => emit('update:show', _show.value)
 )
 const dict = dictStore()
 const treeDict = useTreeStore()
@@ -314,11 +316,11 @@ const rewriteLabelMap = ref(new Map())
 const rewriteDictSet = new Set(['BOOLEAN_DICT'])
 
 watch(
-    () => props.condition,
-    () => advancedCondition.condition = isNotEmpty(props.condition) ? {
-      conditionList: [...props.condition],
-      andOr: '0'
-    } : {}
+  () => props.condition,
+  () => advancedCondition.condition = isNotEmpty(props.condition) ? {
+    conditionList: [...props.condition],
+    andOr: '0'
+  } : {}
 )
 const formatTitle = (title: string) => {
   if (title.indexOf('\n') !== -1) {
@@ -330,67 +332,67 @@ const formatTitle = (title: string) => {
   }
 }
 watch(
-    () => columns.value,
-    () => {
-      if (isNotEmpty(columns.value)) {
-        statisticTabs.value.length = 0
-        dictFields.value.length = 0
-        dictMap.value.clear()
-        secondDictMap.value.clear()
-        advancedCondition.columnArray.length = 0
-        metricAdvancedCondition.columnArray.length = 0
-        statisticData.value.clear()
-        statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
-        statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
-        columns.value.forEach(column => {
-          if (column.disabled || column.checked === false || column.customFilterDropdown === false) return
-          // 高级查询字段
-          advancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
-          metricAdvancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
-          secondDictMap.value.set(column.dataIndex, [{
-            value: PERCENTAGE_TAB_KEY,
-            label: PERCENTAGE_TAB_TITLE,
-            checked: true
-          }])
-          if (rewriteDictSet.has(column.referenceDict)) {
-            rewriteLabelMap.value.set(column.dataIndex, column.title)
+  () => columns.value,
+  () => {
+    if (isNotEmpty(columns.value)) {
+      statisticTabs.value.length = 0
+      dictFields.value.length = 0
+      dictMap.value.clear()
+      secondDictMap.value.clear()
+      advancedCondition.columnArray.length = 0
+      metricAdvancedCondition.columnArray.length = 0
+      statisticData.value.clear()
+      statisticData.value.set(PERCENTAGE_TAB_KEY, [] as Array<{ value: string, label: string, echatOption: any }>)
+      statisticTabs.value = [{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TITLE }]
+      columns.value.forEach(column => {
+        if (column.disabled || column.checked === false || column.customFilterDropdown === false) return
+        // 高级查询字段
+        advancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
+        metricAdvancedCondition.columnArray.push({ ...column, title: formatTitle(column.title) })
+        secondDictMap.value.set(column.dataIndex, [{
+          value: PERCENTAGE_TAB_KEY,
+          label: PERCENTAGE_TAB_TITLE,
+          checked: true
+        }])
+        if (rewriteDictSet.has(column.referenceDict)) {
+          rewriteLabelMap.value.set(column.dataIndex, column.title)
+        }
+        // 字典字段
+        if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
+          dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
+          if (column.fieldType === FIELD_TYPE.SELECT) {
+            dictMap.value.set(column.dataIndex, dict.map.get(column.referenceDict))
+          } else {
+            dictMap.value.set(column.dataIndex, treeDict.map.get(column.referenceDict))
           }
-          // 字典字段
-          if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.TREE) {
-            dictFields.value.push({ value: column.dataIndex, label: formatTitle(column.title), checked: false })
-            if (column.fieldType === FIELD_TYPE.SELECT) {
-              dictMap.value.set(column.dataIndex, dict.map.get(column.referenceDict))
-            } else {
-              dictMap.value.set(column.dataIndex, treeDict.map.get(column.referenceDict))
+          columns.value.forEach(item => {
+            if (item.disabled || item.checked === false || item.customFilterDropdown === false || item.dataIndex === column.dataIndex) return
+            if (item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.TREE) {
+              secondDictMap.value.get(column.dataIndex)?.push({
+                value: item.dataIndex,
+                label: formatTitle(item.title),
+                checked: false
+              })
             }
-            columns.value.forEach(item => {
-              if (item.disabled || item.checked === false || item.customFilterDropdown === false || item.dataIndex === column.dataIndex) return
-              if (item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.TREE) {
-                secondDictMap.value.get(column.dataIndex)?.push({
-                  value: item.dataIndex,
-                  label: formatTitle(item.title),
-                  checked: false
-                })
-              }
-            })
-          }
-          if (column.summary) {
-            statisticTabs.value.push({ value: column.dataIndex, label: column.title })
-          }
-        })
-      }
-    },
-    {
-      deep: true,
-      immediate: true
+          })
+        }
+        if (column.summary) {
+          statisticTabs.value.push({ value: column.dataIndex, label: column.title })
+        }
+      })
     }
+  },
+  {
+    deep: true,
+    immediate: true
+  }
 )
 const statistic = ref([] as Array<{
   value: string,
   label: string,
   metricColumn: Array<any>,
   metricCondition: Array<any>,
-  statisticColumn: string,
+  statisticColumn: { value: string, label: string },
   majorCondition?: string,
   echatOption: any
 }>)
@@ -422,7 +424,7 @@ const onDictFieldChange = (value: any) => {
             echatOption: resp.payload,
             metricColumn: metricColumn,
             metricCondition: [],
-            statisticColumn: activeKey.value
+            statisticColumn: { value: activeKey.value, label: tabLabel }
           })
           if (activeKey.value === PERCENTAGE_TAB_KEY) {
             secondDictMap.value.get(value[0].value)![0].checked = true
@@ -431,18 +433,18 @@ const onDictFieldChange = (value: any) => {
         }
         if (config.value.advancedSearchAble) {
           advancedStatistic(config.value.url,
-              advancedCondition.condition as QueryType,
-              null,
-              metricColumn,
-              [],
-              activeKey.value).then(resolve)
+            advancedCondition.condition as QueryType,
+            null,
+            metricColumn,
+            [],
+            [{ value: activeKey.value, label: tabLabel }]).then(resolve)
         } else {
           generalStatistic(config.value.url,
-              advancedCondition.condition as QueryType,
-              null,
-              metricColumn,
-              [],
-              activeKey.value).then(resolve)
+            advancedCondition.condition as QueryType,
+            null,
+            metricColumn,
+            [],
+            [{ value: activeKey.value, label: tabLabel }]).then(resolve)
         }
       }
     }
@@ -476,23 +478,23 @@ const onSecondDictFieldChange = (value: any) => {
             echatOption: resp.payload,
             metricColumn: metricColumn,
             metricCondition: [],
-            statisticColumn: activeKey.value
+            statisticColumn: { value: activeKey.value, label: tabLabel }
           })
         }
         if (config.value.advancedSearchAble) {
           advancedStatistic(config.value.url,
-              advancedCondition.condition as QueryType,
-              null,
-              metricColumn,
-              [],
-              activeKey.value).then(resolve)
+            advancedCondition.condition as QueryType,
+            null,
+            metricColumn,
+            [],
+            [{ value: activeKey.value, label: tabLabel }]).then(resolve)
         } else {
           generalStatistic(config.value.url,
-              advancedCondition.condition as QueryType,
-              null,
-              metricColumn,
-              [],
-              activeKey.value).then(resolve)
+            advancedCondition.condition as QueryType,
+            null,
+            metricColumn,
+            [],
+            [{ value: activeKey.value, label: tabLabel }]).then(resolve)
         }
       }
     } else {
@@ -602,25 +604,36 @@ const confirmMetricCondition = () => {
     column: customMetric.value,
     dictMap: getDictValueMap(customMetric.value)
   }] : []
+  const tabIndex = statisticTabs.value.findIndex(item => item.value === activeKey.value)
+  const tabLabel = statisticTabs.value[tabIndex].label
   const resolve = (resp: any) => {
     statistic.value.unshift({
       value: uuid(),
-      label: '自定义指标',
+      label: tabLabel,
       echatOption: resp.payload,
       metricColumn: metricColumn,
       metricCondition: customMetricCondition.value,
       majorCondition: majorCondition.value,
-      statisticColumn: activeKey.value
+      statisticColumn: { value: activeKey.value, label: tabLabel }
     })
   }
-  if(config.value.advancedSearchAble) {
+  if (!config.value.advancedSearchAble) {
     advancedStatistic(config.value.url, advancedCondition.condition as QueryType, null,
-        metricColumn, customMetricCondition.value, activeKey.value, majorCondition.value).then(resolve)
+      metricColumn, customMetricCondition.value, [{
+        value: activeKey.value,
+        label: tabLabel
+      }], majorCondition.value).then(resolve)
   } else {
     generalStatistic(config.value.url, advancedCondition.condition as QueryType, null,
-        metricColumn, customMetricCondition.value, activeKey.value, majorCondition.value).then(resolve)
+      metricColumn, customMetricCondition.value, [{
+        value: activeKey.value,
+        label: tabLabel
+      }], majorCondition.value).then(resolve)
   }
-  console.log('confirmMetricCondition', customMetric.value, customMetricCondition.value, activeKey.value)
+  console.log('confirmMetricCondition', customMetric.value, customMetricCondition.value, {
+    value: activeKey.value,
+    label: tabLabel
+  })
 }
 onMounted(() => {
 
