@@ -1,8 +1,10 @@
-import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
+import { ColumnType, FIELD_TYPE, FILTER_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isNotEmpty } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+
 const dict = dictStore()
 const treeDict = useTreeStore()
 export const parse = (record: any, index: number, column: ColumnType, config: TableConfigType) => {
@@ -40,4 +42,12 @@ export const getTextWidth = (text: string) => {
     maxWidth = maxWidth > width ? maxWidth : width
   })
   return maxWidth
+}
+
+export const buildCondition = (dtField?: string | null, relation?: FILTER_TYPE | null, data?: Array<any>) => {
+  return {
+    property: dtField && dtField,
+    relation: relation && relation,
+    value: data && [...data]
+  } as ConditionListType
 }
