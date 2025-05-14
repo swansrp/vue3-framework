@@ -70,17 +70,18 @@ const buildShapeObj = (api: any) => {
 }
 
 export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercent: boolean) => {
+  console.log('====getEchartsBar3dOption====', data)
   const yAxisSplitNumber = 5
   // 类型
   const category = data.map(item => item.metricLabel)
   // 每个类型数据总值
-  const amountSum = data.map((item: MetricStatisticType) => item.statistic)
+  const amountSum = data.map((item: MetricStatisticType) => item.children[0].statistic)
   // 数据最大值
   const dataMax = calcArrayMaxValue(amountSum)
   // 数据总值
   const dataSum = amountSum.reduce((pre: number, cur: number) => pre + +cur, 0)
   // 每个类型占比
-  const amountPercent = data.map(item => item.statistic / dataSum * 100)
+  const amountPercent = data.map(item => item.children[0].statistic / dataSum * 100)
 
   // 分级数值
   const metricValue = [] as Array<Array<number>>
@@ -90,33 +91,33 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
   const amount = [] as Array<Array<number>>
   // 分级占比
   const percent = [] as Array<Array<number>>
-  const length = data[0].children.length
+  const length = data[0].children[0].children.length
   const customOptions = [] as Array<any>
 
   const colorIndex = Math.floor(Math.random() * colorList.length % colorList.length)
   if (length === 0) {
-    metricValue[0] = data.map(item => item.statistic)
-    amount[0] = data.map(item => item.statistic)
+    metricValue[0] = data.map(item => item.children[0].statistic)
+    amount[0] = data.map(item => item.children[0].statistic)
     customOptions.push(buildCustomOption(amount[0], colorList[colorIndex], 0))
   } else {
     amount[0] = [] as Array<number>
     percent[0] = [] as Array<number>
     metricValue[0] = [] as Array<number>
-    metricLabel[0] = data[0].children[0].metricLabel
+    metricLabel[0] = data[0].children[0].children[0].metricLabel
     for (let j = 0; j < data.length; j++) {
-      metricValue[0][j] = data[j].children[0].statistic
-      amount[0][j] = data[j].children[0].statistic
-      percent[0][j] = data[j].children[0].statistic / amountSum[j] * 100
+      metricValue[0][j] = data[j].children[0].children[0].statistic
+      amount[0][j] = data[j].children[0].children[0].statistic
+      percent[0][j] = data[j].children[0].children[0].statistic / amountSum[j] * 100
     }
     for (let i = 1; i < length; i++) {
       amount[i] = [] as Array<number>
       percent[i] = [] as Array<number>
       metricValue[i] = [] as Array<number>
-      metricLabel[i] = data[0].children[i].metricLabel
+      metricLabel[i] = data[0].children[0].children[i].metricLabel
       for (let j = 0; j < data.length; j++) {
-        metricValue[i][j] = data[j].children[i].statistic
-        amount[i][j] = data[j].children[i].statistic + amount[i - 1][j]
-        percent[i][j] = data[j].children[i].statistic / amountSum[j] * 100
+        metricValue[i][j] = data[j].children[0].children[i].statistic
+        amount[i][j] = data[j].children[0].children[i].statistic + amount[i - 1][j]
+        percent[i][j] = data[j].children[0].children[i].statistic / amountSum[j] * 100
       }
     }
     for (let i = 0; i < length; i++) {
@@ -240,13 +241,11 @@ const buildAlphaColor = (color: any, a=100) => {
   return color.replace('100)', a+')')
 }
 const buildCustomOption = (data: Array<number>, color: string, zlevel: number) => {
-  console.log('buildCustomOption====', data, color)
   return {
     type: 'custom',
     data: data,
     zlevel,
     renderItem: (_: any, api: any) => {
-      console.log(_)
       return {
         type: 'group',
         children: [

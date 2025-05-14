@@ -81,7 +81,7 @@ export const generalSummary = (url: string, query: QueryType, columns: Array<str
 export const generalCount = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
   generalCountRequest('/' + url, query.conditionList, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const generalStatistic = (url: string, query: QueryType, sort: 0 | 1 | null, metricColumn: Array<{column: string, dictMap: any}>, metricCondition: Array<any>, statisticColumn: Array<{value: string, label: string}>, majorCondition='0', baseDomain?: string, showSuccess = true, showLoading = true) =>
+export const generalStatistic = (url: string, query: QueryType, sort: 0 | 1 | null, metricColumn: Array<{column: string, dictMap: any}>, metricCondition: Array<any>, statisticColumn: Array<{value: string, label: string}>, majorCondition='1', baseDomain?: string, showSuccess = true, showLoading = true) =>
   generalStatisticRequest('/' + url, query.conditionList, sort, metricColumn, metricCondition, statisticColumn, majorCondition, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const advancedSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
@@ -93,7 +93,7 @@ export const advancedSummary = (url: string, query: QueryType, columns: Array<st
 export const advancedCount = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
   advancedCountRequest('/' + url, query.condition, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedStatistic = (url: string, query: QueryType, sort: 0 | 1 | null, metricColumn: Array<{column: string, dictMap: any}>, metricCondition: Array<any>, statisticColumn: Array<{value: string, label: string}>,  majorCondition='0', baseDomain?: string, showSuccess = true, showLoading = true) =>
+export const advancedStatistic = (url: string, query: QueryType, sort: 0 | 1 | null, metricColumn: Array<{column: string, dictMap: any}>, metricCondition: Array<any>, statisticColumn: Array<{value: string, label: string}>,  majorCondition='1', baseDomain?: string, showSuccess = true, showLoading = true) =>
   advancedStatisticRequest('/' + url, query.condition, sort, metricColumn, metricCondition, statisticColumn, majorCondition, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const getTreeData = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false) =>

@@ -158,7 +158,6 @@
                   <template v-else>
                     <customize-metric
                       :data="item.data.echatOption"
-                      :dict="isEmpty(item.data.metricColumn) ? undefined : dictMap.get(item.data.metricColumn[0])"
                       :index="item.i" />
                   </template>
                   <template #extra>
@@ -450,7 +449,7 @@ const onDictFieldChange = (value: any) => {
     }
   }
 }
-const onTabChange = (key: string) => {
+const onTabChange = (key: any) => {
   selectedDict.value.length = 0
   console.log('onTabChange', key)
 }

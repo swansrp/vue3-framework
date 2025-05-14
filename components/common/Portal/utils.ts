@@ -4,6 +4,7 @@ import { isNotEmpty } from '@/framework/utils/common'
 import dayjs from 'dayjs'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { MetricStatisticType } from '@/framework/components/common/Portal/dashboard/type'
 
 const dict = dictStore()
 const treeDict = useTreeStore()
@@ -50,4 +51,19 @@ export const buildCondition = (dtField?: string | null, relation?: FILTER_TYPE |
     relation: relation && relation,
     value: data && [...data]
   } as ConditionListType
+}
+
+export const parseCustomerConditionStatistic = (statisticResList: Array<MetricStatisticType>): any => {
+  const result = {} as any
+  statisticResList.forEach(item => {
+    if(isNotEmpty(item.children)) {
+      result[item.metric] = {} as any
+      item.children.forEach(child => {
+        result[item.metric][child.metric] = child.statistic
+      })
+    } else {
+      result[item.metric] = item.statistic
+    }
+  })
+  return result
 }

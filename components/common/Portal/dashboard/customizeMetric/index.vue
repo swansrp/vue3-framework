@@ -12,8 +12,8 @@ import {
   setEchartsOptionsAndResize
 } from '@/framework/components/common/Portal/dashboard/utils'
 
-const props = defineProps<{ index: any, data: Array<MetricStatisticType>, isPercent?: boolean, dict: any, }>()
-const { index, data, isPercent, dict } = toRefs(props)
+const props = defineProps<{ index: any, data: Array<MetricStatisticType>, isPercent?: boolean }>()
+const { index, data, isPercent } = toRefs(props)
 const showNoData = computed(() => data.value.length ? 0 : 1)
 let chart: any = null
 const emit = defineEmits<{
@@ -25,7 +25,7 @@ const renderRadar = () => {
     () => {
       if (showNoData) {
         chart = getInitEchart('bar-3d-' + index.value)
-        const option = getEchartsBar3dOption(data.value, isPercent.value || false, dict) as any
+        const option = getEchartsBar3dOption(data.value, isPercent.value || false) as any
         setEchartsOptionsAndResize(chart, option)
       }
     },
