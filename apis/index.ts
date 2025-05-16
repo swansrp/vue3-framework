@@ -381,6 +381,7 @@ export const updateListRequest = (
 
 export const generalQueryRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   conditionList: Array<any>,
   sortList: Array<any>,
   pageSize: number,
@@ -389,6 +390,7 @@ export const generalQueryRequest = (
   showSuccess = false,
   showLoading = true
 ) => request(generalQueryApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   conditionList,
   sortList,
   pageSize,
@@ -397,18 +399,21 @@ export const generalQueryRequest = (
 
 export const generalSelectRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   conditionList: Array<any>,
   sortList: Array<QuerySortType>,
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false
 ) => request(generalSelectApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   conditionList,
   sortList
 }, showSuccess, showLoading) as Promise<any>
 
 export const generalSummaryRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   conditionList: Array<any>,
   sortList: Array<QuerySortType>,
   columns: Array<string>,
@@ -416,6 +421,7 @@ export const generalSummaryRequest = (
   showSuccess = false,
   showLoading = false
 ) => request(generalSummaryApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   conditionList,
   sortList,
   columns
@@ -423,18 +429,21 @@ export const generalSummaryRequest = (
 
 export const generalCountRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   conditionList: Array<any>,
   sortList: Array<QuerySortType>,
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false
 ) => request(generalCountApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   conditionList,
   sortList
 }, showSuccess, showLoading) as Promise<any>
 
 export const generalStatisticRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   conditionList: Array<any>,
   sort: 0 | 1 | null,
   metricColumn: Array<{column: string, dictMap: any}>,
@@ -445,6 +454,7 @@ export const generalStatisticRequest = (
   showSuccess = false,
   showLoading = false
 ) => request(generalStatisticApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   conditionList,
   sort,
   metricColumn,
@@ -455,6 +465,7 @@ export const generalStatisticRequest = (
 
 export const advancedQueryRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   condition: ConditionType,
   sortList: Array<QuerySortType>,
   pageSize: number,
@@ -463,6 +474,7 @@ export const advancedQueryRequest = (
   showSuccess = false,
   showLoading = false
 ) => request(advancedQueryApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
   sortList,
   pageSize,
@@ -471,18 +483,21 @@ export const advancedQueryRequest = (
 
 export const advancedSelectRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   condition: ConditionType,
   sortList: Array<QuerySortType>,
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false
 ) => request(advancedSelectApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
   sortList
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedSummaryRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   condition: ConditionType,
   sortList: Array<QuerySortType>,
   columns: Array<string>,
@@ -490,6 +505,7 @@ export const advancedSummaryRequest = (
   showSuccess = false,
   showLoading = false
 ) => request(advancedSummaryApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
   sortList,
   columns
@@ -497,18 +513,21 @@ export const advancedSummaryRequest = (
 
 export const advancedCountRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   condition: ConditionType,
   sortList: Array<QuerySortType>,
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false
 ) => request(advancedCountApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
   sortList
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedStatisticRequest = (
   type: string,
+  selectColumnCondition=new Map<string, any>(),
   condition: ConditionType,
   sort: 0 | 1 | null,
   metricColumn: Array<{column: string, dictMap: any}>,
@@ -519,6 +538,7 @@ export const advancedStatisticRequest = (
   showSuccess = false,
   showLoading = false
 ) => request(advancedStatisticApi(type, domain), {}, {
+  selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
   sort,
   metricColumn,

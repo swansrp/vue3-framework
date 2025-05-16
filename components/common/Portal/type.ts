@@ -292,6 +292,7 @@ export type QuerySortType = {
 
 export type QueryType = {
   condition: ConditionType,
+  selectColumnCondition?: Map<string, any>,
   conditionList: Array<ConditionListType>,
   sortList: Array<QuerySortType>
   currentPage: number,

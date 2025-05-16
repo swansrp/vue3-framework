@@ -581,6 +581,7 @@ const __ = getInstance()
  * @param advance 是否支持高级查询(需要having查询时不能支持高级查询)
  * @param advanceButton 是否显示高级查询按钮
  * @param statisticButton 是否显示统计按钮
+ * @param selectColumnCondition 动态字段条件
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
  * @param hideRefresh 隐藏刷新按钮
@@ -623,6 +624,7 @@ const props = withDefaults(defineProps<{
     advance?: boolean,
     advanceButton?: boolean,
     statisticButton?: boolean,
+    selectColumnCondition?: Map<string, string>,
     advanceCondition?: ConditionListType,
     defaultSortColumn?: Array<QuerySortType>,
     hideRefresh?: boolean,
@@ -663,6 +665,7 @@ const props = withDefaults(defineProps<{
     advance: false,
     advanceButton: false,
     statisticButton: false,
+    selectColumnCondition: undefined,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
     hideRefresh: false,
@@ -1514,11 +1517,16 @@ const advancedCondition = reactive({
 
 //region 常用功能函数
 const queryCondition = () => {
+  let query: QueryType
   if (config.advancedSearchAble) {
-    return getAdvancedCondition()
+    query = getAdvancedCondition()
   } else {
-    return getGeneralCondition()
+    query = getGeneralCondition()
   }
+  if (isNotEmpty(props.selectColumnCondition)) {
+    query = {...query, selectColumnCondition: props.selectColumnCondition}
+  }
+  return query
 }
 const getConfig = () => {
   return config
@@ -1606,6 +1614,7 @@ const getDataSummary = async (condition: QueryType) => {
     return advancedSummary(config.url, condition, summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   } else {
+    console.log('getDataSummary', condition)
     return generalSummary(config.url, condition, summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   }
