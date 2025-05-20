@@ -10,8 +10,8 @@
       <div class="bullshit">
         <div class="bullshit__oops">出错啦!</div>
         <div class="bullshit__oops">您所访问的页面不存在</div>
-        <div class="bullshit__info">请检查您输入的网址是否正确，或点击以下按钮返回系统主页</div>
-        <a class="bullshit__return-home" href="/">返回首页</a>
+        <div class="bullshit__info">请检查您输入的网址是否正确</div>
+        <!--        <a class="bullshit__return-home" href="/">返回首页</a>-->
       </div>
     </div>
   </div>
@@ -28,7 +28,7 @@ import img404Cloud from '@/framework/assets/imgs/404_images/404_cloud.png'
 .wscn-http404 {
   position: relative;
   width: 1200px;
-  margin: 20px auto 60px;
+  margin: 100px auto 60px;
   padding: 0 100px;
   overflow: hidden;
   .pic-404 {
