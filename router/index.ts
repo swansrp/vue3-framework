@@ -59,7 +59,7 @@ export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
 }
 
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  console.trace('enterDynamicRoute', enableEnterFirstDynamicRoute)
+  // console.trace('enterDynamicRoute', enableEnterFirstDynamicRoute)
   // 根据是否进入Home页，判断是否需要展示左侧导航菜单
   // 当然，这样判断是不好的，没有考虑顶部导航没有左侧导航的情况
   tabStore.isNeedLeftNav = to.path !== `${I_MAIN_CONTENT}/${HOME}`

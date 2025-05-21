@@ -1,6 +1,6 @@
 <template>
   <top-header class="top" v-if="isNeedNav" />
-  <div class="content" v-if="needLeftNav">
+  <div class="content" v-if="needLeftNav" :style="{display: isNeedNav ? 'flex' : 'auto'}">
     <left-nav class="left-nav" :style="{display: isNeedNav ? 'block' : 'none'}" />
     <div class="content-body" :style="{ backgroundColor: isNeedNav ? '#fff' : 'transparent'}">
       <history-tab v-if="isNeedNav" />
@@ -61,7 +61,6 @@ onMounted(() => {
 .content {
   flex: 1 0 auto;
   width: 100%;
-  display: flex;
 }
 .left-nav {
   flex: 0 0 auto;
