@@ -151,7 +151,12 @@ const initLeftNavList = () => {
           genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
         } else {
           // console.log('getObjectByLeftNavPath', routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')])
-          getObjectByLeftNavPath(routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')])
+          const query = router.currentRoute.value.fullPath.split('?')[1]
+          const currentNode = routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')]
+          if(isNotEmpty(query)) {
+            currentNode.query = query
+          }
+          getObjectByLeftNavPath(currentNode)
         }
       }
       // 否则，默认选中第一个叶子节点
@@ -177,7 +182,7 @@ mitt.on(CHANGE_TAB, () => {
 })
 
 onMounted(() => {
-  initCurrentRouteAndVar()
+  // initCurrentRouteAndVar()
   initLeftNavList()
 })
 
