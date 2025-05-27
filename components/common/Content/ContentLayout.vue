@@ -33,7 +33,7 @@
 
 <script lang="ts" setup>
 import {LeftOutlined, RightOutlined} from '@ant-design/icons-vue'
-import bus from '@/framework/mitt'
+import bus, { PORTAL_RESIZE } from '@/framework/mitt'
 import {Ref} from 'vue'
 
 const props = withDefaults(
@@ -91,7 +91,7 @@ const toggleCollapsed = () => {
 const collapsed = ref(false)
 const notifyResize = () => {
   emit('resize')
-  bus.emit('portal:table:resize')
+  bus.emit(PORTAL_RESIZE)
 }
 onMounted(() => {
   dragControllerDiv()
