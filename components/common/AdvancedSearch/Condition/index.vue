@@ -16,6 +16,7 @@
       v-model:condition-content-value="conditionContentValue"
       :reference="conditionReference"
       :type="conditionType"
+      :relation="relationValue"
       :width="350" />
   </div>
 </template>
@@ -41,9 +42,9 @@ const props = defineProps<{
 }>()
 
 // 字段选择值
-const propertyValue: Ref<number | string | undefined | null> = ref()
+const propertyValue: Ref<any> = ref()
 // 字段下拉列表
-const {propertySelectOptions} = toRefs(props)
+const { propertySelectOptions } = toRefs(props)
 
 // 关系选择值
 const relationValue: Ref<number | string | undefined | null> = ref()
@@ -58,10 +59,15 @@ const conditionReference: Ref<ValueLabel[]> = ref([])
 const conditionType: Ref = ref('')
 const conditionTypeTemp: Ref = ref('')
 
+const propertySelectMap = computed(() => {
+  const map = new Map()
+  propertySelectOptions.value?.forEach((item: any) => map.set(item.value, item))
+  return map
+})
 
 const onPropertyChange = (_property: SelectValue, option: any) => {
   console.log('onPropertyChange', option)
-  const {fieldType, referenceDictOption} = option
+  const { fieldType, referenceDictOption } = option
   const relations = getRelation(fieldType)
   conditionReference.value = referenceDictOption
   conditionTypeTemp.value = fieldType
@@ -73,7 +79,11 @@ const onPropertyChange = (_property: SelectValue, option: any) => {
 
 const onConditionChange = () => {
   console.log('onConditionChange')
-  conditionType.value = conditionTypeTemp.value
+  if (isNotEmpty(conditionTypeTemp.value)) {
+    conditionType.value = conditionTypeTemp.value
+  } else {
+    conditionType.value = propertyValue.value && propertySelectMap.value.get(propertyValue.value)?.fieldType
+  }
   emit('update:relation', relationValue.value)
 }
 
@@ -81,7 +91,7 @@ const render = () => {
   if (isNotEmpty(props.propertySelectOptions)) {
     const propertySelectArray = props.propertySelectOptions.filter((item) => item.value === propertyValue.value)
     if (isNotEmpty(propertySelectArray)) {
-      const {fieldType, referenceDictOption} = propertySelectArray[0]
+      const { fieldType, referenceDictOption } = propertySelectArray[0]
       const relations = getRelation(fieldType)
       // 内容下拉列表
       conditionReference.value = referenceDictOption
@@ -106,21 +116,21 @@ watch(() => props.property,
     propertyValue.value = props.property
     render()
   },
-  {immediate: true}
+  { immediate: true }
 )
 watch(() => props.relation, () => {
   // 关系选择值
   relationValue.value = props.relation && String(props.relation)
-}, {immediate: true})
+}, { immediate: true })
 watch(() => props.value, () => {
   // console.log('props.value', props.value)
   // 内容值
   conditionContentValue.value = props.value
-}, {immediate: true})
+}, { immediate: true })
 watch(() => props.propertySelectOptions, () => {
   // console.log(' props.propertySelectOptions', props.propertySelectOptions)
   render()
-}, {immediate: true})
+}, { immediate: true })
 
 </script>
 
