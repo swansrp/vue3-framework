@@ -147,7 +147,7 @@
                   style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
                   <template v-if="isEmpty(item.data.metricCondition)">
                     <single-metric
-                      v-if="isEmpty(dictMap.get(item.data.value.split('-')[0].split(',')[1]))"
+                      v-if="isEmpty(dictMap.get(item.data.value.split('###')[0].split(',')[1]))"
                       :data="item.data.echatOption"
                       :index="item.i" />
                     <double-metric
@@ -297,7 +297,7 @@ const statisticTabs = ref([{ value: PERCENTAGE_TAB_KEY, label: PERCENTAGE_TAB_TI
 const statisticData = ref(new Map<string, Array<{ value: string, label: string, echatOption: any }>>())
 const advancedCondition = reactive({
   show: false,
-  condition: {},
+  condition: {} as any,
   columnArray: [] as Array<any>,
   okText: '查询'
 })
@@ -432,14 +432,14 @@ const onDictFieldChange = (value: any) => {
         }
         if (config.value.advancedSearchAble) {
           advancedStatistic(config.value.url,
-            advancedCondition.condition as QueryType,
+            getAdvancedQuery() as QueryType,
             null,
             metricColumn,
             [],
             [{ value: activeKey.value, label: tabLabel }]).then(resolve)
         } else {
           generalStatistic(config.value.url,
-            advancedCondition.condition as QueryType,
+            getGeneralQuery() as QueryType,
             null,
             metricColumn,
             [],
@@ -482,14 +482,14 @@ const onSecondDictFieldChange = (value: any) => {
         }
         if (config.value.advancedSearchAble) {
           advancedStatistic(config.value.url,
-            advancedCondition.condition as QueryType,
+            getAdvancedQuery() as QueryType,
             null,
             metricColumn,
             [],
             [{ value: activeKey.value, label: tabLabel }]).then(resolve)
         } else {
           generalStatistic(config.value.url,
-            advancedCondition.condition as QueryType,
+            getGeneralQuery() as QueryType,
             null,
             metricColumn,
             [],
@@ -616,14 +616,14 @@ const confirmMetricCondition = () => {
       statisticColumn: { value: activeKey.value, label: tabLabel }
     })
   }
-  if (!config.value.advancedSearchAble) {
-    advancedStatistic(config.value.url, advancedCondition.condition as QueryType, null,
+  if (config.value.advancedSearchAble) {
+    advancedStatistic(config.value.url, getAdvancedQuery() as QueryType, null,
       metricColumn, customMetricCondition.value, [{
         value: activeKey.value,
         label: tabLabel
       }], majorCondition.value).then(resolve)
   } else {
-    generalStatistic(config.value.url, advancedCondition.condition as QueryType, null,
+    generalStatistic(config.value.url, getGeneralQuery() as QueryType, null,
       metricColumn, customMetricCondition.value, [{
         value: activeKey.value,
         label: tabLabel
@@ -633,6 +633,30 @@ const confirmMetricCondition = () => {
     value: activeKey.value,
     label: tabLabel
   })
+}
+const getGeneralQuery = () => {
+  let condition = advancedCondition.condition
+  if (isNotEmpty(config.value.defaultCondition)) {
+    condition = { conditionList: [...advancedCondition.condition.conditionList, ...config.value.defaultCondition.conditionList] }
+  }
+  return condition
+}
+const getAdvancedQuery = () => {
+  if (isNotEmpty(config.value.defaultCondition)) {
+    return {
+      condition: {
+        conditionList: [advancedCondition.condition, config.value.defaultCondition],
+        andOr: '0'
+      }
+    }
+  } else {
+    return {
+      condition: {
+        conditionList: [advancedCondition.condition],
+        andOr: '0'
+      }
+    }
+  }
 }
 onMounted(() => {
 
