@@ -34,7 +34,7 @@
           class="site-input-right"
           placeholder="小于等于"
           style="width: 100px; text-align: center"
-          @change="onDayChange"
+          @change="onNumberChange"
         />
       </a-input-group>
       <a-input
