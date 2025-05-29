@@ -104,7 +104,6 @@ import { Ref } from 'vue'
 import { ValueLabel } from '@/framework/utils/type'
 import { FIELD_TYPE, FILTER_TYPE } from "@/framework/components/common/Portal/type"
 import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
-import { isNotEmpty } from '@/framework/utils/common'
 
 
 const value: Ref = ref()
@@ -129,8 +128,8 @@ const onDayTimeChange = (day: [any, any]) => {
 }
 
 const onNumberChange = () => {
-  const left = valueArray.value[0] === 0 ? 0 : valueArray.value[0] || -Number.MAX_SAFE_INTEGER
-  const right = valueArray.value[1] === 0 ? 0 : valueArray.value[1] || Number.MAX_SAFE_INTEGER
+  const left = valueArray.value[0] === 0 ? 0 : valueArray.value[0]
+  const right = valueArray.value[1] === 0 ? 0 : valueArray.value[1]
   emit('update:conditionContentValue', [left, right])
 }
 
@@ -143,12 +142,8 @@ const getOption = () => {
 watch(() => props.type, getOption, { immediate: true })
 watch(() => props.reference, getOption, { immediate: true })
 watch(() => props.conditionContentValue, () => {
-  if (type.value === FIELD_TYPE.DATE || type.value === FIELD_TYPE.DATETIME) {
-    valueArray.value = props.conditionContentValue
-  } else {
-    if (isNotEmpty(props.conditionContentValue)) value.value = props.conditionContentValue![0]
-    else value.value = undefined
-  }
+  valueArray.value = Array.isArray(props.conditionContentValue) ? props.conditionContentValue : []
+  value.value = Array.isArray(props.conditionContentValue) ? (props.conditionContentValue[0]) : undefined
 }, { immediate: true })
 
 </script>
