@@ -147,7 +147,7 @@
                   style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
                   <template v-if="isEmpty(item.data.metricCondition)">
                     <single-metric
-                      v-if="isEmpty(dictMap.get(item.data.value.split('###')[0].split(',')[1]))"
+                      v-if="isEmpty(dictMap.get(item.data.value.split('-')[0].split(',')[1]))"
                       :data="item.data.echatOption"
                       :index="item.i" />
                     <double-metric
