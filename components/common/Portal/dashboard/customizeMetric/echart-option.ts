@@ -156,15 +156,15 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
         let display
         if(length === 0) {
           display = buildDotDom(colorList[colorIndex]) + params[0].axisValue
-          for(let i = 0; i < params.length - 1; i++) {
+          for(let i = params.length - 2; i >= 0; i--) {
             display += ':'
             display += (metricValue[0][params[i].dataIndex] + (isPercent ? '(' + formatPercent(amountPercent[params[i].dataIndex]) +  ')' : ''))
           }
         } else {
           display = params[0].axisValue
-          for(let i = 0; i < params.length - 1; i++) {
+          for(let i = params.length - 2; i >= 0; i--) {
             display += '</br>'
-            display += (buildDotDom(colorList[i]) + metricLabel[i]) + ':' + metricValue[i][params[i].dataIndex] + '(' + formatPercent(percent[i][params[i].dataIndex]) +  ')'
+            display += (buildDotDom(colorList[Math.floor(i % 10)]) + metricLabel[i]) + ':' + metricValue[i][params[i].dataIndex] + '(' + formatPercent(percent[i][params[i].dataIndex]) +  ')'
           }
         }
 

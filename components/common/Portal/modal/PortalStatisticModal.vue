@@ -140,6 +140,7 @@
               :width="computedGrid.width">
               <template #render="{ item }">
                 <a-card
+                  :key="item.key"
                   :body-style="{padding: 0, height: '100%'}"
                   :head-style="{backgroundColor: '#fff'}"
                   :title="item.data.label"
@@ -161,21 +162,36 @@
                       :index="item.i" />
                   </template>
                   <template #extra>
-                    <a-button disabled size="small" type="text" @click="onCardClick(item.data)">
-                      <template #icon>
-                        <FullscreenOutlined />
+                    <a-tooltip placement="top">
+                      <template #title>
+                        <span>全屏</span>
                       </template>
-                    </a-button>
-                    <a-button size="small" type="text" @click="reloadCard(item.data)">
-                      <template #icon>
-                        <RedoOutlined />
+                      <a-button disabled size="small" type="text" @click="onCardClick(item.data)">
+                        <template #icon>
+                          <FullscreenOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
+                    <a-tooltip placement="top">
+                      <template #title>
+                        <span>刷新</span>
                       </template>
-                    </a-button>
-                    <a-button size="small" type="text" @click="closeCard(item.data)">
-                      <template #icon>
-                        <CloseCircleOutlined />
+                      <a-button size="small" type="text" @click="reloadCard(item.data)">
+                        <template #icon>
+                          <RedoOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
+                    <a-tooltip placement="top">
+                      <template #title>
+                        <span>关闭</span>
                       </template>
-                    </a-button>
+                      <a-button size="small" type="text" @click="closeCard(item.data)">
+                        <template #icon>
+                          <CloseCircleOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
                   </template>
                 </a-card>
               </template>
@@ -387,6 +403,7 @@ watch(
   }
 )
 const statistic = ref([] as Array<{
+  key: boolean
   value: string,
   label: string,
   metricColumn: Array<any>,
@@ -418,12 +435,14 @@ const onDictFieldChange = (value: any) => {
         const metricColumn = [{ column: dictValue, dictMap: getDictValueMap(dictValue) }]
         const resolve = (resp: any) => {
           statistic.value.unshift({
-            value: dictValue + '-' + activeKey.value,
+            key: true,
+            value: dictValue + ',-' + activeKey.value,
             label: value[0].label + '-' + tabLabel,
             echatOption: resp.payload,
             metricColumn: metricColumn,
             metricCondition: [],
             statisticColumn: { value: activeKey.value, label: tabLabel }
+
           })
           if (activeKey.value === PERCENTAGE_TAB_KEY) {
             secondDictMap.value.get(value[0].value)![0].checked = true
@@ -454,6 +473,7 @@ const onTabChange = (key: any) => {
   console.log('onTabChange', key)
 }
 const onSecondDictFieldChange = (value: any) => {
+  console.log('onSecondDictFieldChange', value)
   const tabIndex = statisticTabs.value.findIndex(item => item.value === activeKey.value)
   if (tabIndex > -1) {
     const tabLabel = statisticTabs.value[tabIndex].label
@@ -467,11 +487,13 @@ const onSecondDictFieldChange = (value: any) => {
     const index = statistic.value.findIndex(item => item.value === (selectedFieldValue + '-' + activeKey.value))
     if (value.checked) {
       if (index === -1) {
-        const metricColumn = selectedFieldValue.split(',').map(item => {
-          return { column: item, dictMap: getDictValueMap(item) }
+        const metricColumn = [] as Array<any>
+        selectedFieldValue.split(',').forEach((item: any) => {
+          isNotEmpty(item) && metricColumn.push({ column: item, dictMap: getDictValueMap(item) })
         })
         const resolve = (resp: any) => {
           statistic.value.unshift({
+            key: true,
             value: selectedFieldValue + '-' + activeKey.value,
             label: selectedFieldLabel,
             echatOption: resp.payload,
@@ -505,12 +527,30 @@ const onCardClick = (arg: any) => {
   console.log('onCardClick', arg)
 }
 const reloadCard = (arg: any) => {
-  console.log('reloadCard', arg)
+  const resolve = (resp: any) => {
+    arg.echatOption = resp.payload
+    arg.key = !arg.key
+  }
+  if (config.value.advancedSearchAble) {
+    advancedStatistic(config.value.url,
+      getAdvancedQuery() as QueryType,
+      null,
+      arg.metricColumn,
+      arg.metricCondition,
+      [arg.statisticColumn]).then(resolve)
+  } else {
+    generalStatistic(config.value.url,
+      getGeneralQuery() as QueryType,
+      null,
+      arg.metricColumn,
+      arg.metricCondition,
+      [arg.statisticColumn]).then(resolve)
+  }
 }
 const remove = (index: any) => {
   const removedItem = statistic.value.splice(index, 1)
   const dict = removedItem[0].value.split(',')
-  const secondDict = dict[1] || ''
+  const secondDict = (dict[1] || '').split('-')[0]
   const list = secondDictMap.value.get(dict[0])
   if (list) {
     const secondIndex = list.findIndex(item => item.value === secondDict)
@@ -520,6 +560,7 @@ const remove = (index: any) => {
   }
 }
 const closeCard = (arg: any) => {
+  console.log('closeCard', arg)
   const index = statistic.value.findIndex(item => item.value === arg.value)
   remove(index)
 }
@@ -539,9 +580,10 @@ const computedGrid = computed(() => {
   if (statistic.value.length <= 16) return { height: 7, rowHeight: 40, width: 15, maxCol: 60 }
   else return { height: 7, rowHeight: 40, width: 15, maxCol: 60 }
 })
-const onAdvancedConditionConfirm = (arg: any) => {
-  console.log('====onAdvancedConditionConfirm=====', arg)
-  console.log('====onAdvancedConditionConfirm=====', advancedCondition)
+const onAdvancedConditionConfirm = () => {
+  statistic.value.forEach((item: any) => {
+    reloadCard(item)
+  })
 }
 
 const metricActiveKey = ref('1')
@@ -607,6 +649,7 @@ const confirmMetricCondition = () => {
   const tabLabel = statisticTabs.value[tabIndex].label
   const resolve = (resp: any) => {
     statistic.value.unshift({
+      key: true,
       value: uuid(),
       label: tabLabel,
       echatOption: resp.payload,
