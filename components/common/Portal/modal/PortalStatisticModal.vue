@@ -162,13 +162,33 @@
                       :index="item.i" />
                   </template>
                   <template #extra>
-                    <a-tooltip placement="top">
+                    <a-tooltip v-if="item.data.sort === 0" placement="top">
                       <template #title>
-                        <span>全屏</span>
+                        <span>正序</span>
                       </template>
-                      <a-button disabled size="small" type="text" @click="onCardClick(item.data)">
+                      <a-button size="small" type="text" @click="reloadCard(item.data, 1)">
                         <template #icon>
-                          <FullscreenOutlined />
+                          <SortAscendingOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
+                    <a-tooltip v-else-if="item.data.sort === 1" placement="top">
+                      <template #title>
+                        <span>倒序</span>
+                      </template>
+                      <a-button size="small" type="text" @click="reloadCard(item.data, null)">
+                        <template #icon>
+                          <SortDescendingOutlined />
+                        </template>
+                      </a-button>
+                    </a-tooltip>
+                    <a-tooltip v-else placement="top">
+                      <template #title>
+                        <span>默认顺序</span>
+                      </template>
+                      <a-button size="small" type="text" @click="reloadCard(item.data, 0)">
+                        <template #icon>
+                          <SwapOutlined :rotate="90" />
                         </template>
                       </a-button>
                     </a-tooltip>
@@ -256,7 +276,9 @@ import {
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
-  FullscreenOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
+  SwapOutlined,
   FunnelPlotOutlined,
   MoreOutlined,
   PlusOutlined,
@@ -406,6 +428,7 @@ const statistic = ref([] as Array<{
   key: boolean
   value: string,
   label: string,
+  sort: 0 | 1 | null,
   metricColumn: Array<any>,
   metricCondition: Array<any>,
   statisticColumn: { value: string, label: string },
@@ -438,6 +461,7 @@ const onDictFieldChange = (value: any) => {
             key: true,
             value: dictValue + ',-' + activeKey.value,
             label: value[0].label + '-' + tabLabel,
+            sort: null,
             echatOption: resp.payload,
             metricColumn: metricColumn,
             metricCondition: [],
@@ -496,6 +520,7 @@ const onSecondDictFieldChange = (value: any) => {
             key: true,
             value: selectedFieldValue + '-' + activeKey.value,
             label: selectedFieldLabel,
+            sort: null,
             echatOption: resp.payload,
             metricColumn: metricColumn,
             metricCondition: [],
@@ -523,28 +548,28 @@ const onSecondDictFieldChange = (value: any) => {
     }
   }
 }
-const onCardClick = (arg: any) => {
-  console.log('onCardClick', arg)
-}
-const reloadCard = (arg: any) => {
+const reloadCard = (arg: any, sort = 0 as 0 | 1 | null) => {
   const resolve = (resp: any) => {
     arg.echatOption = resp.payload
     arg.key = !arg.key
+    arg.sort = sort
   }
   if (config.value.advancedSearchAble) {
     advancedStatistic(config.value.url,
       getAdvancedQuery() as QueryType,
-      null,
+      sort,
       arg.metricColumn,
       arg.metricCondition,
-      [arg.statisticColumn]).then(resolve)
+      [arg.statisticColumn],
+      arg.majorCondition).then(resolve)
   } else {
     generalStatistic(config.value.url,
       getGeneralQuery() as QueryType,
-      null,
+      sort,
       arg.metricColumn,
       arg.metricCondition,
-      [arg.statisticColumn]).then(resolve)
+      [arg.statisticColumn],
+      arg.majorCondition).then(resolve)
   }
 }
 const remove = (index: any) => {
@@ -652,6 +677,7 @@ const confirmMetricCondition = () => {
       key: true,
       value: uuid(),
       label: tabLabel,
+      sort: null,
       echatOption: resp.payload,
       metricColumn: metricColumn,
       metricCondition: customMetricCondition.value,
