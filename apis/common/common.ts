@@ -10,5 +10,5 @@ export const getDictList = (dictName: string, domain = baseDomain) => request(bu
 export const getTreeList = (dictName: string, domain = baseDomain) => request(buildGetApi('/tree', domain), {dictName}, {}, false, false) as Promise<any>
 export const getDictListByDictName = (dictName: string, targetVar: Ref, domain = baseDomain) => getDictList(dictName, domain).then(res => targetVar.value = res.payload)
 export const uploadFile = (file: object, onUploadProgress: Function, type?: UPLOAD_FILE_TYPE, folder?: string, fileName?: string) => upload(buildPostApi('/oss'), {
-    folder, type, fileName
+  folder, type, fileName
 }, file, onUploadProgress) as Promise<any>

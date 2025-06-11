@@ -68,20 +68,20 @@ const _handleTimeOut = function (data: ResponseDataType) {
 }
 
 function get(apiType: ApiType,
-             params: object = {},
-             data: object = {},
-             showSuccess = false,
-             showLoading = true,
-             showErr = true) {
+  params: object = {},
+  data: object = {},
+  showSuccess = false,
+  showLoading = true,
+  showErr = true) {
   return request(apiType, params, data, showSuccess, showLoading, showErr)
 }
 
 function post(apiType: ApiType,
-              params: object = {},
-              data: object = {},
-              showSuccess = true,
-              showLoading = true,
-              showErr = true) {
+  params: object = {},
+  data: object = {},
+  showSuccess = true,
+  showLoading = true,
+  showErr = true) {
   return request(apiType, params, data, showSuccess, showLoading, showErr)
 }
 
@@ -92,11 +92,11 @@ function post(apiType: ApiType,
 // showLoading 是否需要在等待期间显示转菊花
 // showErr 是否显示错误提示信息
 function request(apiType: ApiType,
-                 params: object = {},
-                 body: object = {},
-                 showSuccess = false,
-                 showLoading = true,
-                 showErr = true) {
+  params: object = {},
+  body: object = {},
+  showSuccess = false,
+  showLoading = true,
+  showErr = true) {
   return axiosInstance({
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,

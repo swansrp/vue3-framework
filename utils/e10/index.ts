@@ -1,8 +1,8 @@
 export const invoke = (funcName: string, arg: any) => {
   if ((window as any).weapp?.inE10APP() || (window as any).weapp?.inE10Pc()) {
-    ;(window as any).weapp?.ready(() => {
+    (window as any).weapp?.ready(() => {
       if ((window as any).weapp.checkJsApi(funcName)) {
-        ;(window as any).weapp.invoke(funcName, arg)
+        (window as any).weapp.invoke(funcName, arg)
       }
     })
   }

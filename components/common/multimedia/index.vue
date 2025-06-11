@@ -59,17 +59,12 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { downloadUrl } from '@/framework/network/request'
-import { getFileName } from '@/framework/utils/file'
-import {
-  CaretRightOutlined,
-  CloseCircleOutlined,
-  DownloadOutlined,
-  PauseOutlined
-} from '@ant-design/icons-vue'
+import {ref} from 'vue'
+import {downloadUrl} from '@/framework/network/request'
+import {getFileName} from '@/framework/utils/file'
+import {CaretRightOutlined, CloseCircleOutlined, DownloadOutlined, PauseOutlined} from '@ant-design/icons-vue'
 import getImgUrl from '@/framework/assets/imgs/getImgUrl'
-import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 
 const uploadUrl = ref('')
 const _ = getInstance()
@@ -141,8 +136,7 @@ const stopFile = (flag = true) => {
 
 const downFile = () => {
   console.log('downFile')
-  props.modelValue &&
-  downloadUrl(props.modelValue as string, getFileName(props.modelValue as string) || 'download.file')
+  props.modelValue && downloadUrl(props.modelValue as string, getFileName(props.modelValue as string) || 'download.file')
 }
 const emit = defineEmits<{
   (e: 'delete'): void
