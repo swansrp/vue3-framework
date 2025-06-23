@@ -572,6 +572,7 @@ const __ = getInstance()
  * @param multiHeader 是否多重表头
  * @param data 显示数据
  * @param readOnly 不能编辑
+ * @param currentPage 当前页码
  * @param pageSize 每页显示条数
  * @param autoWidth 自动宽度
  * @param autoHeight 自动高度
@@ -615,6 +616,7 @@ const props = withDefaults(defineProps<{
     multiHeader?: boolean,
     data?: Array<any>,
     readOnly?: boolean,
+    currentPage?: number,
     pageSize?: number
     autoWidth?: boolean,
     autoHeight?: boolean,
@@ -656,6 +658,7 @@ const props = withDefaults(defineProps<{
     baseDomain: '/' + name,
     data: undefined,
     readOnly: false,
+    currentPage: 1,
     pageSize: 10,
     autoWidth: false,
     autoHeight: false,
@@ -749,7 +752,7 @@ const config: TableConfigType = reactive({
   getPopupContainer: () => {
   },
   loading: true,
-  currentPage: 1,
+  currentPage: props.currentPage,
   pageSize: props.pageSize,
   total: props.data ? props.data.length : 0,
   modal: {
@@ -788,6 +791,8 @@ watch(props, (value, old) => {
     config.readOnly = value.readOnly
   }
   console.debug('propsChanged', value, old)
+  config.pageSize = value.pageSize
+  config.currentPage = value.currentPage
   queryData()
 })
 
