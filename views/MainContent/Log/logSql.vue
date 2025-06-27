@@ -57,7 +57,7 @@ const data = computed(() => {
   const textVa = sql.value
   // 获取带问号的SQL语句
   const statementStartIndex = textVa.indexOf('Preparing: ')
-  let statementEndIndex = textVa.length - 1
+  let statementEndIndex = textVa.length
   for (let i = statementStartIndex; i < textVa.length; i++) {
     if (textVa[i] == "\n") {
       statementEndIndex = i
