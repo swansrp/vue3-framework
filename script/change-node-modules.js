@@ -42,6 +42,20 @@ const crackSurely = () => {
         });
       }
     })
+    fs.readFile(surelyPath + file, 'utf8', (err, data) => {
+      if (err) throw err;
+      const newStart = data.indexOf('case 1:new Function')
+      const newEnd = data.indexOf('}var t,l;n.value.isTrial&&')
+      if(newStart !== -1) {
+        let modifiedData = data.replace(data.substring(newStart, newEnd), '');
+        modifiedData = modifiedData.replace('n.value.isTrial&&', 'n.value.isTrial&&false&&');
+        modifiedData = modifiedData.replace('Powered by Surely Vue', '');
+        fs.writeFile(surelyPath + file, modifiedData, 'utf8', err => {
+          if (err) throw err;
+          console.log(file + '5.0版本文件内容已成功修改!');
+        });
+      }
+    })
   })
 }
 // endregion

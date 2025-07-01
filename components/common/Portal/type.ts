@@ -132,7 +132,9 @@ export type ColumnType = {
   // 是否不可选择是否显示
   disabled: boolean,
   // 是否选中(选择是否显示)
-  checked: boolean
+  checked: boolean,
+  // 顺序
+  order: number,
   // endregion
 
   // region 筛选查询

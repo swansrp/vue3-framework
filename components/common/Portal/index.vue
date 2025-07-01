@@ -151,6 +151,7 @@
               summary-fixed
               @change="handleTableChange"
               @expand="handleExpand"
+              @column-drag-end="handleColumnDragEnd"
               @row-drag-end="() => isNotEmpty(rowDragEnd) ? rowDragEnd(dataSource, config.currentPage, config.pageSize) : handleRowDragEnd()">
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
@@ -818,7 +819,7 @@ const columnArray: Ref<Array<ColumnType>> = ref([] as Array<ColumnType>)
 const columnDisplayMap: Ref<Map<any, Array<ColumnType>>> = ref(new Map<any, Array<ColumnType>>())
 const columnRaw = []
 const columns = computed(() => {
-  return columnArray.value.filter(item => columnFilter.value(item))
+  return columnArray.value.filter(item => columnFilter.value(item)).sort((a: ColumnType, b: ColumnType) => a.order - b.order)
 })
 const textAreaColumns = computed(() => {
   return columnArray.value.filter(item => item.fieldType === FIELD_TYPE.TEXT_AREA)
@@ -1506,6 +1507,20 @@ const handleRowDragEnd = () => {
   })
 }
 
+const handleColumnDragEnd = (arg: { column: ColumnType, targetColumn: ColumnType }) => {
+  console.log('handleColumnDragEnd',arg.column.order, arg.targetColumn.order)
+  console.log('handleColumnDragEnd==before', columnArray.value)
+  const itemToMove = columnArray.value.find((item:ColumnType) => item.dataIndex === arg.column.dataIndex);
+  if (!itemToMove) return
+  const remainingItems = columnArray.value.filter((item:ColumnType) => item.dataIndex !== arg.column.dataIndex);
+  remainingItems.splice(arg.targetColumn.order - 1, 0, itemToMove);
+  remainingItems.forEach((item, index) => {
+    item.order = index + 1;
+  });
+  console.log('handleColumnDragEnd==after', columnArray.value)
+}
+
+
 const _updateOrder = (data: Array<UpdateOrderType>) => {
   updateOrder(config.url, data, config.baseDomain).then(() => queryData())
 }
@@ -1755,9 +1770,10 @@ const init = async () => {
     }
 
     let promiseList = []
-
+    let order = 1
     for (let layout of tableConfig.columns) {
       const column = _.cloneDeep(defaultColumn)
+      column.order = order++
       column.title = layout.displayName
       column.dataIndex = layout.property
       column.dbField = layout.dbField
