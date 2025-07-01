@@ -100,6 +100,8 @@ export type UploadModalType = {
 }
 
 export type ColumnType = {
+  // 为了入库记录该column属于哪个表
+  tableId: string,
   // region 基础显示样式
   // 标题
   title: string,

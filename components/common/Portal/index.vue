@@ -566,6 +566,7 @@ import { name } from '@/../package.json'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
 import PortalStatisticModal from '@/framework/components/common/Portal/modal/PortalStatisticModal.vue'
+import { db } from '@/framework/components/common/Portal/db'
 
 const __ = getInstance()
 /**
@@ -1507,7 +1508,7 @@ const handleRowDragEnd = () => {
   })
 }
 
-const handleColumnDragEnd = (arg: { column: ColumnType, targetColumn: ColumnType }) => {
+const handleColumnDragEnd = async (arg: { column: ColumnType, targetColumn: ColumnType }) => {
   console.log('handleColumnDragEnd',arg.column.order, arg.targetColumn.order)
   console.log('handleColumnDragEnd==before', columnArray.value)
   const itemToMove = columnArray.value.find((item:ColumnType) => item.dataIndex === arg.column.dataIndex);
@@ -1517,7 +1518,9 @@ const handleColumnDragEnd = (arg: { column: ColumnType, targetColumn: ColumnType
   remainingItems.forEach((item, index) => {
     item.order = index + 1;
   });
-  console.log('handleColumnDragEnd==after', columnArray.value)
+  for (const column of columnArray.value) {
+    await db.insertOrUpdate('portalColumn',column)
+  }
 }
 
 
@@ -1773,6 +1776,7 @@ const init = async () => {
     let order = 1
     for (let layout of tableConfig.columns) {
       const column = _.cloneDeep(defaultColumn)
+      column.tableId = config.tableId
       column.order = order++
       column.title = layout.displayName
       column.dataIndex = layout.property
