@@ -86,11 +86,12 @@ class Database extends Dexie {
 
   async insert(tableName: any, obj: any) {
     const entity = this.validateItem(tableName, obj)
-    return entity && this.getTable(tableName).add(this.validateItem(tableName, obj))
+    return entity && this.getTable(tableName).add(entity)
   }
 
-  async deleteById(tableName: any, id: any) {
-    return this.getTable(tableName).delete(id)
+  async deleteById(tableName: any, obj: any) {
+    const primaryKey = this.getPrimaryKeyObj(tableName, obj)
+    return this.getTable(tableName).delete(primaryKey)
   }
 
   async deleteByProperty(tableName: any, property: any, data: any) {
@@ -99,7 +100,7 @@ class Database extends Dexie {
 
   async update(tableName: any, obj: any) {
     const entity = this.validateItem(tableName, obj)
-    return entity && this.getTable(tableName).update(this.getPrimaryKeyObj(tableName, obj), this.validateItem(tableName, obj))
+    return entity && this.getTable(tableName).update(this.getPrimaryKeyObj(tableName, obj), entity)
   }
 
   async insertOrUpdate(tableName: any, obj: any) {
