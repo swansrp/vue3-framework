@@ -288,9 +288,14 @@
                   <div class="menu-popup-container">
                     <ul class="menu-popup">
                       <li class="menu-popup-item" style="border-bottom: 1px solid #f0f0f0">
-                        <a-checkbox v-model:checked="checkedAll" :indeterminate="indeterminate">
+                        <a-checkbox v-model:checked="checkedAll" :indeterminate="indeterminate" style="margin: 2px;">
                           全选 / 取消选择
                         </a-checkbox>
+                        <a-tooltip placement="right" title="恢复默认">
+                          <a-button type="ghost" size="small" @click="handleColumnReset">
+                            <RedoOutlined />
+                          </a-button>
+                        </a-tooltip>
                       </li>
                       <template v-for="col in columnArray" :key="col.key">
                         <li class="menu-popup-item">
@@ -298,6 +303,7 @@
                             v-model:checked="col.checked"
                             :disabled="!!col.disabled"
                             style="width: 100%"
+                            @change="handleColumnChecked"
                           >
                             {{ col.title }}
                           </a-checkbox>
@@ -530,7 +536,8 @@ import {
   ExclamationCircleOutlined,
   FilterOutlined,
   PieChartOutlined,
-  SearchOutlined
+  SearchOutlined,
+  RedoOutlined
 } from '@ant-design/icons-vue'
 import {
   doFunctions,
@@ -788,16 +795,6 @@ const config: TableConfigType = reactive({
   advancedSearchButton: true
 } as TableConfigType)
 
-watch(props, (value, old) => {
-  if (value.readOnly != old.readOnly) {
-    config.readOnly = value.readOnly
-  }
-  console.debug('propsChanged', value, old)
-  config.pageSize = value.pageSize
-  config.currentPage = value.currentPage
-  queryData()
-})
-
 /**
  * 数据
  */
@@ -818,7 +815,7 @@ const listData = computed(() => {
  */
 const columnArray: Ref<Array<ColumnType>> = ref([] as Array<ColumnType>)
 const columnDisplayMap: Ref<Map<any, Array<ColumnType>>> = ref(new Map<any, Array<ColumnType>>())
-const columnRaw = []
+const columnRaw = [] as Array<ColumnType>
 const columns = computed(() => {
   return columnArray.value.filter(item => columnFilter.value(item)).sort((a: ColumnType, b: ColumnType) => a.order - b.order)
 })
@@ -1508,21 +1505,32 @@ const handleRowDragEnd = () => {
   })
 }
 
-const handleColumnDragEnd = async (arg: { column: ColumnType, targetColumn: ColumnType }) => {
-  console.log('handleColumnDragEnd',arg.column.order, arg.targetColumn.order)
-  console.log('handleColumnDragEnd==before', columnArray.value)
-  const itemToMove = columnArray.value.find((item:ColumnType) => item.dataIndex === arg.column.dataIndex);
-  if (!itemToMove) return
-  const remainingItems = columnArray.value.filter((item:ColumnType) => item.dataIndex !== arg.column.dataIndex);
-  remainingItems.splice(arg.targetColumn.order - 1, 0, itemToMove);
-  remainingItems.forEach((item, index) => {
-    item.order = index + 1;
-  });
-  for (const column of columnArray.value) {
-    await db.insertOrUpdate('portalColumn',column)
-  }
+const handleColumnDragEnd = (arg: { column: ColumnType, targetColumn: ColumnType }) => {
+  nextTick(async () => {
+    const itemToMove = columnArray.value.find((item:ColumnType) => item.dataIndex === arg.column.dataIndex);
+    if (!itemToMove) return
+    const remainingItems = columnArray.value.filter((item:ColumnType) => item.dataIndex !== arg.column.dataIndex);
+    remainingItems.splice(arg.targetColumn.order - 1, 0, itemToMove);
+    remainingItems.forEach((item, index) => {
+      item.order = index + 1;
+    })
+    for (const column of columnArray.value) {
+      column.tableId && await db.update('portalColumn',column)
+    }
+    columnArray.value.sort((a, b) => a.order - b.order)
+  })
 }
 
+const handleColumnReset = async () => {
+  await db.deleteByProperty('portalColumn', 'tableId', config.tableId)
+  refresh()
+}
+
+const handleColumnChecked = async () => {
+  for (const column of columnArray.value) {
+    column.tableId && await db.update('portalColumn', column)
+  }
+}
 
 const _updateOrder = (data: Array<UpdateOrderType>) => {
   updateOrder(config.url, data, config.baseDomain).then(() => queryData())
@@ -1637,7 +1645,6 @@ const getDataSummary = async (condition: QueryType) => {
     return advancedSummary(config.url, condition, summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   } else {
-    console.log('getDataSummary', condition)
     return generalSummary(config.url, condition, summaryColumns, config.baseDomain)
       .then((resp: any) => dataSummary.value = resp.payload)
   }
@@ -1719,6 +1726,28 @@ const init = async () => {
   console.debug(props)
   updateTableWidthAndHeight()
   initQueryCondition()
+  await initConfig()
+  watch(props, (value, old) => {
+    if (value.readOnly != old.readOnly) {
+      config.readOnly = value.readOnly
+    }
+    console.debug('propsChanged', value, old)
+    config.pageSize = value.pageSize
+    config.currentPage = value.currentPage
+    queryData()
+  })
+
+  if (config.treeMode) {
+    await queryTreeData()
+  }
+  _statisticButton.value = props.statisticButton
+  const condition = queryCondition()
+  if (config.summary && !config.plain) {
+    await getDataSummary(condition)
+  }
+  return await queryDataAsync(condition)
+}
+const initConfig = async () => {
   return await getPortalConfig(config.tableId).then(async res => {
     dictColumnArray.length = 0
     columnArray.value.length = 0
@@ -1729,6 +1758,7 @@ const init = async () => {
     index.width = props.indexWidth
     index.title = props.indexTitle
     columnArray.value.push(index)
+    columnRaw.push(_.cloneDeep(index))
     const tableConfig = res.payload
     config.title = tableConfig.displayName
     config.size = tableConfig.size
@@ -1773,11 +1803,12 @@ const init = async () => {
     }
 
     let promiseList = []
-    let order = 1
+    // 第一位是标题栏
+    const customerColumns = db.reflectToPrimaryKeyMap('portalColumn', await db.selectAll('portalColumn', 'order'))
+    let order = 2
     for (let layout of tableConfig.columns) {
       const column = _.cloneDeep(defaultColumn)
       column.tableId = config.tableId
-      column.order = order++
       column.title = layout.displayName
       column.dataIndex = layout.property
       column.dbField = layout.dbField
@@ -1850,25 +1881,31 @@ const init = async () => {
       if (column.dataIndex === config.nameKey) {
         titleColumn = column
       }
+
       if (layout.enable === '1') {
+        // 本地库同步
+        syncLocalDb(column, customerColumns, order++)
         columnArray.value.push(column)
         if (isEmpty(columnDisplayMap.value.get(column.displayGroupName))) {
           columnDisplayMap.value.set(column.displayGroupName, [])
         }
         columnDisplayMap.value.get(column.displayGroupName)?.push(column)
       }
-      columnRaw.push(column)
+      columnRaw.push(_.cloneDeep(column))
     }
+    columnArray.value.sort((a, b) => a.order - b.order)
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
       if (isNotEmpty(slots.action)) {
         actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
+        columnRaw.push(_.cloneDeep(actionColumn))
       }
     } else {
       if (Number(props.actionWidth) > 0) {
         actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
+        columnRaw.push(_.cloneDeep(actionColumn))
       }
     }
 
@@ -1899,18 +1936,21 @@ const init = async () => {
     console.log('init finish')
     config.key = config.key + 1
     console.debug(config, columnArray.value, columns.value, bindTabs.value)
-
-    if (config.treeMode) {
-      await queryTreeData()
-    }
-    await Promise.all(promiseList)
-    _statisticButton.value = props.statisticButton
-    const condition = queryCondition()
-    if (config.summary && !config.plain) {
-      await getDataSummary(condition)
-    }
-    return await queryDataAsync(condition)
+    return await Promise.all(promiseList)
   })
+}
+const syncLocalDb = (column: ColumnType, customerColumns: Map<any, any>, order: number) => {
+  if(customerColumns) {
+    const customerColumn = customerColumns.get(db.getPrimaryKey('portalColumn', column))
+    if(customerColumn) {
+      column.order = customerColumn.order
+      column.checked = customerColumn.checked
+    } else {
+      column.order = customerColumns.size + order
+    }
+  } else {
+    column.order = order
+  }
 }
 const queryTreeData = async () => {
   // 外部组件调用queryData接口 尚未完成初始化
