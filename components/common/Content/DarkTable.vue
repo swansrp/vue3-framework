@@ -13,9 +13,8 @@
           <div class="title">{{ router.currentRoute.value.meta.title }}</div>
           <div class="dialog-info">
             <portal
-              :key="tableKey"
               :action-width="0"
-              :advance="false"
+              :advance="advance"
               :advance-condition="advanceCondition"
               :base-domain="baseDomain"
               :current-page="currentPage"
@@ -52,17 +51,18 @@ const props = withDefaults(
     downloadFileName?: string
     defaultSortColumn?: Array<QuerySortType>
     condition?: Array<ConditionListType>
+    advance?: boolean
   }>(),
   {
     width: 260,
     baseDomain: undefined,
     downloadFileName: undefined,
     condition: [] as any,
-    defaultSortColumn: undefined
+    defaultSortColumn: undefined,
+    advance: false
   }
 )
-const tableKey = ref(false)
-const { width, condition } = toRefs(props)
+const { width, condition, advance } = toRefs(props)
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
 }>()
