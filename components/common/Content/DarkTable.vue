@@ -26,11 +26,13 @@
               hide-refresh
               hide-row-selection
               multi-header>
-              <template #left-btns>
-                <slot name="left-btns"></slot>
-              </template>
-              <template #right-btns>
-                <slot name="right-btns"></slot>
+              <!-- 转发所有具名插槽 -->
+              <template
+                v-for="(slotFn, name) in $slots"
+                :key="name"
+                #[name]="slotProps"
+              >
+                <component :is="slotFn" v-bind="slotProps" />
               </template>
             </portal>
           </div>
