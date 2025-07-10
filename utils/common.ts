@@ -230,7 +230,6 @@ const startTimer = (data: TimerType, render: Function, immediate = true, replace
       if (data.timer !== null) {
         data.timer = window.requestAnimationFrame(animLoop)
       }
-      console.log('loop==== new', data)
     }
     if (data.timer != null) {
       if (replace) {

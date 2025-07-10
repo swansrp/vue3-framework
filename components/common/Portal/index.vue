@@ -674,7 +674,7 @@ const props = withDefaults(defineProps<{
     actionWidth: 150,
     indexWidth: 80,
     indexTitle: '',
-    advance: false,
+    advance: true,
     advanceButton: false,
     statisticButton: false,
     selectColumnCondition: undefined,

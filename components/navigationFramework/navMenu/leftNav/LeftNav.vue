@@ -67,6 +67,7 @@ const toggleCollapsed = () => {
   let resizeEvent = new Event('resize')
   window.dispatchEvent(resizeEvent)
 }
+/*
 const initCurrentRouteAndVar = () => {
   // console.log('initCurrentRouteAndVar')
   let defaultLeftNavPath = ''
@@ -79,6 +80,7 @@ const initCurrentRouteAndVar = () => {
     router.push(`/${MAIN_CONTENT}/${defaultTopNavPath}/${defaultLeftNavPath}`)
   }
 }
+*/
 
 const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   // tab跳转过来走name 自动走path

@@ -45,6 +45,7 @@
 <script lang="ts" setup>
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { QuerySortType } from '@/framework/components/common/Portal/type'
+import { Ref } from 'vue'
 
 /**
  * 左侧筛选栏只需要写 a-descriptions-item
