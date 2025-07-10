@@ -41,7 +41,6 @@
 </template>
 
 <script lang="ts" setup>
-import { Ref } from 'vue/dist/vue'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { QuerySortType } from '@/framework/components/common/Portal/type'
 
