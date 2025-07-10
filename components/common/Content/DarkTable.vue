@@ -21,10 +21,18 @@
               :default-sort-column="defaultSortColumn"
               :download-file-name="getDownloadFileName"
               :page-size="50"
+              :select-column-condition="selectColumnCondition"
+              :table-id="tableId"
               hide-refresh
               hide-row-selection
-              multi-header
-              table-id="centralizedPurchaseApply" />
+              multi-header>
+              <template #left-btns>
+                <slot name="left-btns"></slot>
+              </template>
+              <template #right-btns>
+                <slot name="right-btns"></slot>
+              </template>
+            </portal>
           </div>
         </div>
       </template>
@@ -46,12 +54,14 @@ const getDownloadFileName = () => {
 }
 const props = withDefaults(
   defineProps<{
+    tableId: string
     width?: number | string
     baseDomain?: string
     downloadFileName?: string
     defaultSortColumn?: Array<QuerySortType>
     condition?: Array<ConditionListType>
     advance?: boolean
+    selectColumnCondition?: Map<string, any>
   }>(),
   {
     width: 260,
@@ -59,13 +69,11 @@ const props = withDefaults(
     downloadFileName: undefined,
     condition: [] as any,
     defaultSortColumn: undefined,
-    advance: false
+    advance: false,
+    selectColumnCondition: undefined
   }
 )
-const { width, condition, advance } = toRefs(props)
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: any): void
-}>()
+const { tableId, width, baseDomain, condition, advance, selectColumnCondition } = toRefs(props)
 const currentPage: Ref<number> = ref(1)
 const advanceCondition = computed(() => {
   currentPage.value = 1
@@ -78,6 +86,11 @@ onMounted(() => {
 
 <style lang="less" scoped src="@/framework/components/common/Portal/css/dark.css"></style>
 <style lang="less" scoped>
+:deep(.ant-select-clear) {
+  background-color: rgb(21, 76, 121) !important;
+  color: white !important;
+}
+
 :deep(.ant-select-selector) {
   background-color: rgb(21, 76, 121) !important;
 
