@@ -30,8 +30,7 @@
               <template
                 v-for="(slotFn, name) in $slots"
                 :key="name"
-                #[name]="slotProps"
-              >
+                #[name]="slotProps">
                 <component :is="slotFn" v-bind="slotProps" />
               </template>
             </portal>
