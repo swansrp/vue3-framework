@@ -43,6 +43,7 @@
 
 <script setup>
 import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import bus, {PORTAL_RESIZE} from '@/framework/mitt'
 
 const props = defineProps({
   visible: Boolean,
@@ -70,6 +71,7 @@ watch(
   })
 
 const shiftStyle = computed(() => {
+  bus.emit(PORTAL_RESIZE)
   if (!props.visible) return {}
   return props.placement === 'left'
     ? { marginLeft: drawerWidth.value + 'px' }
