@@ -269,6 +269,27 @@ const scrollToBottom = (container: Ref, force = false) => {
   }
 }
 
+const getTextWidth = (text: string, split = true, size = 1.6) => {
+  const textArray = text?.toString().split(/\n|\\n/g) || []
+  let maxWidth = 0
+  textArray.forEach((item) => {
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d') as any
+    let width
+    if(split) {
+      if (item.length > 25) {
+        width = context.measureText(item.substring(0, 14)).width * size
+      } else {
+        width = context.measureText(item.substring(0, 25)).width * size
+      }
+    } else {
+      width = context.measureText(item).width * size
+    }
+    maxWidth = maxWidth > width ? maxWidth : width
+  })
+  return maxWidth
+}
+
 
 export {
   localStorageMethods,
@@ -296,5 +317,6 @@ export {
   copyField,
   clearFrom,
   parseCssValue,
-  scrollToBottom
+  scrollToBottom,
+  getTextWidth
 }

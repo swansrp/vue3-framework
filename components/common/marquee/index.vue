@@ -1,15 +1,17 @@
 <template>
-  <div v-if="!marquee" :style="{width: parseCssValue(width)}" class="marquee-text">{{ content }}</div>
-  <div v-show="marquee" ref="marqueeContainer" :style="{width: parseCssValue(width)}" class="marquee">
-    <div :style="{animationDuration: duration + 's'}" class="marquee-content">
-      {{ content }}
+  <div @click="emit('click')">
+    <div v-if="!marquee" :style="{width: parseCssValue(width)}" class="marquee-text">{{ content }}</div>
+    <div v-show="marquee" ref="marqueeContainer" :style="{width: parseCssValue(width)}" class="marquee">
+      <div :style="{animationDuration: duration + 's'}" class="marquee-content">
+        {{ content }}
+      </div>
     </div>
   </div>
+
 </template>
 
 <script lang="ts" setup>
-import { getTextWidth } from '@/framework/components/common/Portal/utils'
-import { parseCssValue } from '@/framework/utils/common'
+import { getTextWidth, parseCssValue } from '@/framework/utils/common'
 
 const _ = getInstance()
 const props = withDefaults(
@@ -17,16 +19,22 @@ const props = withDefaults(
     width?: string | number
     duration?: number
     delay?: number
+    // 字体变粗时,汉字占位宽度会变宽,所以需要根据字体大小动态计算宽度
+    fontSize?: number
     content: string
   }>(),
   {
     duration: 20,
     delay: 3,
-    width: 100
+    width: 100,
+    fontSize: 1.6
   }
 )
+const { content, width, duration, delay, fontSize } = toRefs(props)
+const emit = defineEmits<{
+  (e: 'click'): void
+}>()
 const marqueeContainer = ref()
-const { content, width, duration, delay } = toRefs(props)
 const marquee = ref(false)
 let startTimer = null as any
 let stopTimer = null as any
@@ -42,7 +50,7 @@ const startAnimationRender = () => {
     const scrollContent = marqueeContainer.value.querySelector('.marquee-content') as any
     scrollContent.style.animationPlayState = 'running'
     const containerWidth = Number(width.value)
-    const contentWidth = getTextWidth(content.value)
+    const contentWidth = getTextWidth(content.value, false, fontSize.value)
     if (isNotEmpty(stopTimer)) {
       clearTimeout(stopTimer)
     }
@@ -72,8 +80,10 @@ onMounted(() => {
 
 <style lang="less" scoped>
 .marquee-text {
-  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1
 }
 
 .marquee {
