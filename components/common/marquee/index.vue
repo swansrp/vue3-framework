@@ -1,7 +1,7 @@
 <template>
   <div @click="emit('click')">
-    <div v-if="!marquee" :style="{width: parseCssValue(width)}" class="marquee-text">{{ content }}</div>
-    <div v-show="marquee" ref="marqueeContainer" :style="{width: parseCssValue(width)}" class="marquee">
+    <div v-if="!marquee" :style="{maxWidth: parseCssValue(width), width: parseCssValue(width)}" class="marquee-text">{{ content }}</div>
+    <div v-show="marquee" ref="marqueeContainer" :style="{maxWidth: parseCssValue(width), width: parseCssValue(width)}" class="marquee">
       <div :style="{animationDuration: duration + 's'}" class="marquee-content">
         {{ content }}
       </div>
@@ -17,6 +17,7 @@ const _ = getInstance()
 const props = withDefaults(
   defineProps<{
     width?: string | number
+    maxWidth?: string | number
     duration?: number
     delay?: number
     // 字体变粗时,汉字占位宽度会变宽,所以需要根据字体大小动态计算宽度
@@ -26,7 +27,8 @@ const props = withDefaults(
   {
     duration: 20,
     delay: 3,
-    width: 100,
+    width: 'auto',
+    maxWidth: 'auto',
     fontSize: 1.6
   }
 )
