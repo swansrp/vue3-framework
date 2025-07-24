@@ -1,7 +1,7 @@
 <template>
   <div @click="emit('click')">
-    <div v-if="!marquee" :style="{maxWidth: parseCssValue(width), width: parseCssValue(width)}" class="marquee-text">{{ content }}</div>
-    <div v-show="marquee" ref="marqueeContainer" :style="{maxWidth: parseCssValue(width), width: parseCssValue(width)}" class="marquee">
+    <div v-if="!marquee" :style="{maxWidth: parseCssValue(maxWidth), width: parseCssValue(width)}" class="marquee-text">{{ content }}</div>
+    <div v-show="marquee" ref="marqueeContainer" :style="{maxWidth: parseCssValue(maxWidth), width: parseCssValue(width)}" class="marquee">
       <div :style="{animationDuration: duration + 's'}" class="marquee-content">
         {{ content }}
       </div>
