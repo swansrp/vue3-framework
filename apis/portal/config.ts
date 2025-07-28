@@ -46,3 +46,5 @@ export const bindRole = (roleId: any, templateRoleId: any) => post(buildPostApi(
 }) as Promise<any>
 
 export const unbindRole = (roleId: any) => post(buildPostApi('/role/unbind'), {}, {roleId}) as Promise<any>
+
+export const getSql = (url: any) => get(buildGetApiByType(url + '/sql'), {}, {}) as Promise<any>

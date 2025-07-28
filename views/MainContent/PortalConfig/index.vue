@@ -114,7 +114,15 @@
     <!-- region 右侧编辑栏 -->
     <div v-if="isNotEmpty(tableConfig.name)" class="table-config">
       <!-- region 表格整体配置 -->
-      <a-descriptions :column="10" :title="tableConfig.displayName" bordered layout="vertical" size="small">
+      <a-descriptions :column="10" bordered layout="vertical" size="small">
+        <template #title>
+          <div style="display: flex">
+            <div>{{ tableConfig.displayName }}</div>
+            <ConsoleSqlOutlined
+              style="font-size: 12px; color: #2a64a6; margin-left: 5px; margin-bottom: 5px; align-self: flex-end"
+              @click="onSqlShow" />
+          </div>
+        </template>
         <template #extra>
           <a-button style="margin-right: 10px" type="primary" @click="exportTableConfig()">导出配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="uploadTableConfig()">导入配置</a-button>
@@ -1068,6 +1076,7 @@
     <portal-advanced-search-modal
       :advanced-condition="defaultCondition"
       @confirm="saveDefaultCondition" />
+    <sql-draw v-model:show="showSql" :sql="sqlData" />
   </div>
 </template>
 <script lang="ts" setup>
@@ -1082,7 +1091,7 @@ import {
   exportPortalConfig,
   getBindRole,
   getPortalConfig,
-  getPortalList,
+  getPortalList, getSql,
   importPortalConfig,
   refreshPortalConfig,
   unbindRole,
@@ -1101,7 +1110,8 @@ import {
   UndoOutlined,
   UserOutlined,
   VerticalAlignBottomOutlined,
-  VerticalAlignTopOutlined
+  VerticalAlignTopOutlined,
+  ConsoleSqlOutlined
 } from '@ant-design/icons-vue'
 import { ValueLabel } from '@/framework/utils/type'
 import { dictStore, useTreeStore } from '@/framework/store/common'
@@ -1115,7 +1125,7 @@ import dayjs from 'dayjs'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import { filterOption } from '@/framework/components/common/utils'
-
+import SqlDraw from './sqlDraw.vue'
 const dict = dictStore()
 const treeDict = useTreeStore()
 let inputTableName: Ref<string> = ref('')
@@ -1159,6 +1169,8 @@ let copyConfigModal = reactive({
   configDescription: '',
   title: ''
 })
+const showSql:Ref<boolean> = ref(false)
+const sqlData:Ref<string> = ref('')
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
 }
@@ -1521,7 +1533,12 @@ window.addEventListener('keydown',function(event) {
     }
   }
 })
-
+const onSqlShow = () => {
+  getSql(tableConfig.value.url).then((resp: any) => {
+    sqlData.value = resp.payload
+    showSql.value = true
+  })
+}
 //endregion
 
 </script>
