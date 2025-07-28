@@ -1534,7 +1534,7 @@ window.addEventListener('keydown',function(event) {
   }
 })
 const onSqlShow = () => {
-  getSql(tableConfig.value.url).then((resp: any) => {
+  getSql(tableConfig.value.name).then((resp: any) => {
     sqlData.value = resp.payload
     showSql.value = true
   })

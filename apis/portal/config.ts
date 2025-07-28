@@ -4,10 +4,16 @@ import { apiType, baseDomain, buildGetApiByType, buildPostApiByType } from '@/fr
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.portal + '/admin', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.portal + '/admin', domain)
 
-export const getPortalList = (name: string, roleId: any) => get(buildGetApi('/list'), {name, roleId}, {}, false, false) as Promise<any>
+export const getPortalList = (name: string, roleId: any) => get(buildGetApi('/list'), {
+  name,
+  roleId
+}, {}, false, false) as Promise<any>
 
-export const deletePortalConfig = (id: any) => post(buildPostApi('/config/delete'), undefined, {id}) as Promise<any>
-export const refreshPortalConfig = (name: string, roleId?: any) => post(buildPostApi('/config/refresh'), undefined, {name, roleId}) as Promise<any>
+export const deletePortalConfig = (id: any) => post(buildPostApi('/config/delete'), undefined, { id }) as Promise<any>
+export const refreshPortalConfig = (name: string, roleId?: any) => post(buildPostApi('/config/refresh'), undefined, {
+  name,
+  roleId
+}) as Promise<any>
 
 export const getPortalConfig = (name: string, roleId?: any) => get(buildGetApi('/config'), {
   name,
@@ -21,7 +27,10 @@ export const exportPortalConfig = (configName: string, roleId: string, fileName:
   roleId
 }, {}) as Promise<any>
 
-export const importPortalConfig = (name: string, roleId: string, file: object, onUploadProgress: Function) => upload(buildPostApi('/config/import'), {name, roleId}, file, onUploadProgress) as Promise<any>
+export const importPortalConfig = (name: string, roleId: string, file: object, onUploadProgress: Function) => upload(buildPostApi('/config/import'), {
+  name,
+  roleId
+}, file, onUploadProgress) as Promise<any>
 
 export const updatePortalColumnOrder = (idOrderReq: any) => post(buildPostApi('/column/order'), undefined, idOrderReq) as Promise<any>
 
@@ -45,6 +54,6 @@ export const bindRole = (roleId: any, templateRoleId: any) => post(buildPostApi(
   templateRoleId
 }) as Promise<any>
 
-export const unbindRole = (roleId: any) => post(buildPostApi('/role/unbind'), {}, {roleId}) as Promise<any>
+export const unbindRole = (roleId: any) => post(buildPostApi('/role/unbind'), {}, { roleId }) as Promise<any>
 
-export const getSql = (url: any) => get(buildGetApiByType(url + '/sql'), {}, {}) as Promise<any>
+export const getSql = (name: any) => get(buildGetApi('/config/sql'), { name }, {}) as Promise<any>
