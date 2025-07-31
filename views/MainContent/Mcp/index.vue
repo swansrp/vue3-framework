@@ -57,7 +57,7 @@ const mcpList: Ref<Array<any>> = ref([])
 const toggleEdit = async (item: any) => {
   if (item.editing) {
     // 保存状态，模拟 API 请求
-    await updateMcpDescription(endpoint.value, type.value, item.name, item.tempDescription)
+    await updateMcpDescription(endpoint.value, type.value, item.name, item.tempDescription, baseUrl.value)
     item.description = item.tempDescription
   } else {
     // 进入编辑状态，临时保存当前内容
@@ -65,17 +65,19 @@ const toggleEdit = async (item: any) => {
   }
   item.editing = !item.editing
 }
-
-
+const baseUrl: Ref<string|undefined> = ref(undefined)
+const { currentRoute } = useRouter()
+const route = currentRoute.value
 onMounted(async () => {
-  await getMcpEndpoint().then((resp: any) => {
+  route.query && route.query.shareId && (baseUrl.value =  route.query.baseUrl as string)
+  await getMcpEndpoint(baseUrl.value).then((resp: any) => {
     mcpEndpoint.value = resp.payload
     endpoint.value = mcpEndpoint.value[0].value
   })
   await dict.getDict('MCP_TYPE_DICT').then(res => mcpType.value = res)
   watch(
     () => [endpoint.value, type.value],
-    () => getMcpList(endpoint.value, type.value).then((resp: any) => {
+    () => getMcpList(endpoint.value, type.value, baseUrl.value).then((resp: any) => {
       mcpList.value = resp.payload
     }),
     {

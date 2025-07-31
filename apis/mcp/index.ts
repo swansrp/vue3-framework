@@ -4,12 +4,12 @@ import { baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/a
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, '/sys/mcp/config', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, '/sys/mcp/config', domain)
 
-export const getMcpEndpoint = () => get(buildGetApi('/endpoint'), undefined, undefined, false, false, false)
-export const getMcpList = (endpoint: string, type: string) => get(buildGetApi(''), {
+export const getMcpEndpoint = (baseUrl = baseDomain) => get(buildGetApi('/endpoint', baseUrl), undefined, undefined, false, false, false)
+export const getMcpList = (endpoint: string, type: string, baseUrl = baseDomain) => get(buildGetApi('', baseUrl), {
   endpoint,
   type
 }, undefined, false, false, false)
-export const updateMcpDescription = (endPoint: string, type: string, name: string, description: string) => post(buildPostApi('/description'), undefined, {
+export const updateMcpDescription = (endPoint: string, type: string, name: string, description: string, baseUrl = baseDomain) => post(buildPostApi('/description', baseUrl), undefined, {
   endPoint,
   type,
   name,
