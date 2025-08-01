@@ -4,6 +4,7 @@ import { getAllNodes, isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { ValueLabel } from '@/framework/utils/type'
 import { getConfig } from '@/framework/apis/params'
 import { getAllTreeDict, getDictNameList } from '@/framework/apis/dict/dict'
+import { baseDomain } from '@/framework/apis'
 
 export const useCommonStore = defineStore('commonStore', {
   state: () => {
@@ -41,12 +42,12 @@ export const dictStore = defineStore('dictStore', {
       allDict: [] as Array<{ value: string, label: string }>
     }
   }, actions: {
-    async getDict(dictName: string) {
+    async getDict(dictName: string, baseUrl = baseDomain) {
       const result = this.map.get(dictName)
       if (isNotEmpty(result)) {
         return result.data
       }
-      return await getDictList(dictName).then(res => {
+      return await getDictList(dictName, baseUrl).then(res => {
         const valueMap = new Map()
         const labelMap = new Map()
 
@@ -115,12 +116,12 @@ export const useTreeStore = defineStore('treeStore', {
       allDict: [] as Array<{ value: string, label: string }>
     }
   }, actions: {
-    async getTree(dictName: string) {
+    async getTree(dictName: string, baseUrl = baseDomain) {
       const result = this.map.get(dictName)
       if (isNotEmpty(result)) {
         return result.data
       }
-      return await getTreeList(dictName).then(res => {
+      return await getTreeList(dictName, baseUrl).then(res => {
         const valueMap = new Map()
         const labelMap = new Map()
         getAllNodes(res.payload, (item: any) => {
