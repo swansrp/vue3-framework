@@ -733,7 +733,7 @@ const getTableWidth = () => {
 }
 const getTableHeight = () => {
   if (tableHeight.value == undefined) return AUTO
-  return tableHeight.value
+  return tableHeight.value < 350 ? 350 : tableHeight.value
 }
 const updateTableWidthAndHeight = () => {
   console.debug('updateTableWidthAndHeight')
