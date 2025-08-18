@@ -617,6 +617,7 @@ const __ = getInstance()
  * @param rowExpandable 每行是否展示展开按钮
  * @param rowDragEnd 行拖拽结束
  * @param columnFilter 列过滤方法
+ * @param columnDisplayCustom 列显示自定义方法
  * @param downloadFileName 下载文件命名方法
  */
 const props = withDefaults(defineProps<{
@@ -661,6 +662,7 @@ const props = withDefaults(defineProps<{
     rowExpandable?: (record: DefaultRecordType) => boolean
     rowDragEnd?: (data: Array<any>, currentPage: number, pageSize: number) => void
     columnFilter?: (column: ColumnType) => boolean
+    columnDisplayCustom?: any
     downloadFileName?: (config: TableConfigType) => string
   }>(),
   {
@@ -703,6 +705,7 @@ const props = withDefaults(defineProps<{
     rowExpandable: undefined,
     rowDragEnd: undefined,
     columnFilter: (column: ColumnType) => column.checked,
+    columnDisplayCustom: new Map<string, string>(),
     downloadFileName: (config: TableConfigType) => config.title
   })
 const emit = defineEmits<{
@@ -711,7 +714,7 @@ const emit = defineEmits<{
   (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
-const { data, columnFilter, downloadFileName, rowSelectProps, hideAssociation } = toRefs(props)
+const { data, columnFilter, downloadFileName, rowSelectProps, hideAssociation, columnDisplayCustom } = toRefs(props)
 const isBindTabExisted = computed(() => {
   return !hideAssociation.value && bindTabs.value && bindTabs.value.length > 0
 })
@@ -815,7 +818,7 @@ const listData = computed(() => {
  */
 const columnArray: Ref<Array<ColumnType>> = ref([] as Array<ColumnType>)
 const columnDisplayMap: Ref<Map<any, Array<ColumnType>>> = ref(new Map<any, Array<ColumnType>>())
-const columnRaw = [] as Array<ColumnType>
+const columnRaw = new Map<string, ColumnType>()
 const columns = computed(() => {
   return columnArray.value.filter(item => columnFilter.value(item)).sort((a: ColumnType, b: ColumnType) => a.order - b.order)
 })
@@ -1758,7 +1761,7 @@ const initConfig = async () => {
     index.width = props.indexWidth
     index.title = props.indexTitle
     columnArray.value.push(index)
-    columnRaw.push(_.cloneDeep(index))
+    columnRaw.set(index.dataIndex ,_.cloneDeep(index))
     const tableConfig = res.payload
     config.title = tableConfig.displayName
     config.size = tableConfig.size
@@ -1891,7 +1894,7 @@ const initConfig = async () => {
         }
         columnDisplayMap.value.get(column.displayGroupName)?.push(column)
       }
-      columnRaw.push(_.cloneDeep(column))
+      columnRaw.set(column.dataIndex ,_.cloneDeep(column))
     }
     columnArray.value.sort((a, b) => a.order - b.order)
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
@@ -1899,13 +1902,13 @@ const initConfig = async () => {
       if (isNotEmpty(slots.action)) {
         actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
-        columnRaw.push(_.cloneDeep(actionColumn))
+        columnRaw.set(actionColumn.dataIndex ,_.cloneDeep(actionColumn))
       }
     } else {
       if (Number(props.actionWidth) > 0) {
         actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
-        columnRaw.push(_.cloneDeep(actionColumn))
+        columnRaw.set(actionColumn.dataIndex ,_.cloneDeep(actionColumn))
       }
     }
 
@@ -1980,6 +1983,17 @@ watch(
     initData(data.value || [])
   }
 )
+watch(
+  () => columnDisplayCustom.value,
+  () => {
+    columnArray.value.forEach((column: ColumnType) => {
+      column.title = columnDisplayCustom.value.get(column.dataIndex) || columnRaw.get(column.dataIndex)?.title || column.title
+    })
+  },
+  {
+    deep: true
+  }
+)
 onUnmounted(() => {
   dataSource.value.length = 0
   parsedDataSource.value.length = 0
@@ -1990,7 +2004,7 @@ onUnmounted(() => {
   treeData.value.length = 0
   columnArray.value.length = 0
   columnDisplayMap.value.clear()
-  columnRaw.length = 0
+  columnRaw.clear()
   dictColumnArray.length = 0
   titleColumn = {} as ColumnType
   window.removeEventListener('resize', _updateTableSize)
