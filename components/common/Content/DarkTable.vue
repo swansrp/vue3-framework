@@ -22,6 +22,7 @@
               :download-file-name="getDownloadFileName"
               :page-size="50"
               :select-column-condition="selectColumnCondition"
+              :show-loading="showLoading"
               :table-id="tableId"
               hide-refresh
               hide-row-selection
@@ -63,6 +64,7 @@ const props = withDefaults(
     condition?: Array<ConditionListType>
     advance?: boolean
     selectColumnCondition?: Map<string, any>
+    showLoading?: boolean
   }>(),
   {
     width: 260,
@@ -71,10 +73,11 @@ const props = withDefaults(
     condition: [] as any,
     defaultSortColumn: undefined,
     advance: false,
-    selectColumnCondition: undefined
+    selectColumnCondition: undefined,
+    showLoading: false
   }
 )
-const { tableId, width, baseDomain, condition, advance, selectColumnCondition } = toRefs(props)
+const { tableId, width, baseDomain, condition, advance, selectColumnCondition, showLoading } = toRefs(props)
 const currentPage: Ref<number> = ref(1)
 const advanceCondition = computed(() => {
   currentPage.value = 1

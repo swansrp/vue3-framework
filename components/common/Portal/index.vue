@@ -619,6 +619,7 @@ const __ = getInstance()
  * @param columnFilter 列过滤方法
  * @param columnDisplayCustom 列显示自定义方法
  * @param downloadFileName 下载文件命名方法
+ * @param showLoading 查询时是否显示加载中
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -664,6 +665,7 @@ const props = withDefaults(defineProps<{
     columnFilter?: (column: ColumnType) => boolean
     columnDisplayCustom?: any
     downloadFileName?: (config: TableConfigType) => string
+    showLoading?: boolean
   }>(),
   {
     baseDomain: '/' + name,
@@ -706,7 +708,8 @@ const props = withDefaults(defineProps<{
     rowDragEnd: undefined,
     columnFilter: (column: ColumnType) => column.checked,
     columnDisplayCustom: new Map<string, string>(),
-    downloadFileName: (config: TableConfigType) => config.title
+    downloadFileName: (config: TableConfigType) => config.title,
+    showLoading: false
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -714,7 +717,7 @@ const emit = defineEmits<{
   (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
-const { data, columnFilter, downloadFileName, rowSelectProps, hideAssociation, columnDisplayCustom } = toRefs(props)
+const { data, columnFilter, downloadFileName, rowSelectProps, hideAssociation, columnDisplayCustom, showLoading } = toRefs(props)
 const isBindTabExisted = computed(() => {
   return !hideAssociation.value && bindTabs.value && bindTabs.value.length > 0
 })
@@ -1636,9 +1639,9 @@ const queryDataAsync = async (condition: QueryType) => {
       return await props.query(config.url, condition).then(resolve)
     } else {
       if (config.advancedSearchAble) {
-        return await advancedQuery(config.url, condition, config.baseDomain).then(resolve)
+        return await advancedQuery(config.url, condition, config.baseDomain, true, showLoading.value).then(resolve)
       } else {
-        return await generalQuery(config.url, condition, config.baseDomain).then(resolve)
+        return await generalQuery(config.url, condition, config.baseDomain, true, showLoading.value).then(resolve)
       }
     }
   }
