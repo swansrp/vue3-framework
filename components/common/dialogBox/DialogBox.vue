@@ -69,9 +69,9 @@ const emit = defineEmits<{
   (e: 'open'): void
   (e: 'close'): void
 }>()
-
+const { visible } = toRefs(props)
 watch(() => props.isFull, value => _isFull.value = value, { immediate: true })
-watch(() => props.visible, value => {
+watch(() => visible.value, value => {
     _visible.value = value
     if (value) {
       emit('open')
@@ -91,8 +91,13 @@ watch(() => props.width, value => {
 }, { immediate: true })
 watch(
   () => _visible.value,
-  () => routerStore.blockReturn(_visible.value, () => _visible.value = false),
-  { immediate: true }
+  () => {
+    routerStore.blockReturn(_visible.value, () => {
+      _visible.value = false
+      emit('update:visible', false)
+    }),
+      { immediate: true }
+  }
 )
 /** 拖拽 */
 const transformStyle = computed<CSSProperties>(() => {
