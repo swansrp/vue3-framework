@@ -45,7 +45,7 @@ export const dictStore = defineStore('dictStore', {
     async getDict(dictName: string, baseUrl = baseDomain) {
       const result = this.map.get(dictName)
       if (isNotEmpty(result)) {
-        return result.data
+        return result.data.filter((dict:any) => dict.show !== '0')
       }
       return await getDictList(dictName, baseUrl).then(res => {
         const valueMap = new Map()
@@ -59,7 +59,7 @@ export const dictStore = defineStore('dictStore', {
           labelMap.set(data.label, data.value)
         })
         this.map.set(dictName, {data: res.payload, valueMap, labelMap})
-        return res.payload
+        return res.payload.filter((dict:any) => dict.show !== '0')
       })
     }, async getLabelAsync(dictName: string, value: number | string) {
       const dict = this.map.get(dictName)
