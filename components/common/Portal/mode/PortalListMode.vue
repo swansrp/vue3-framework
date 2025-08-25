@@ -14,7 +14,6 @@
     :range-selection="isEmpty(rowSelection) ? 'single' : false"
     rowKey="value"
     size="small"
-    @cell-click="(event: MouseEvent, params: CellRenderArgs) => emit('cellClick', event, params)"
     @row-drag-end="handleRowDragEnd"
   >
     <template #bodyCell="{ column, record}">
@@ -91,7 +90,6 @@
 </template>
 
 <script lang="ts" setup>
-import { CellRenderArgs } from '@surely-vue/table'
 import { ColumnType, TableConfigType, UpdateOrderType } from '@/framework/components/common/Portal/type'
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
@@ -112,13 +110,6 @@ const emit = defineEmits<{
    * @param searchStrict 精确/模糊查找
    */
   (e: 'search', searchName: string, searchStrict: boolean): void
-  /**
-   * 点击列表选中单元格
-   * @param e
-   * @param event
-   * @param params
-   */
-  (e: 'cellClick', event: MouseEvent, params: CellRenderArgs): void
   (e: 'rowDragEnd', data: Array<UpdateOrderType>): void
   (e: 'handleMenuContextView', recordId: any): void
   (e: 'handleMenuContextAdd', recordId: any): void

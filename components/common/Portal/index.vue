@@ -41,7 +41,6 @@
             :title-column="titleColumn"
             class="list-mode-table"
             @search="onListDataSearch"
-            @cell-click="(event, params) => selectedListDataItem = params.record"
             @row-drag-end="_updateOrder"
             @handle-menu-context-view="handleMenuContextView"
             @handle-menu-context-add="handleMenuContextAdd"
@@ -62,7 +61,7 @@
               />
             </template>
           </portal-list-mode>
-          <a-empty v-else />
+          <a-empty v-else/>
         </div>
       </a-layout-sider>
       <a-layout-content
@@ -72,7 +71,7 @@
           <caret-right-outlined
             :rotate="layoutSiderDisplay ? 180 : 0"
             style="color: #1677ff;font-size: 15px;margin-right: 5px"
-            @click="handleLayoutSiderDisplay" />
+            @click="handleLayoutSiderDisplay"/>
           <span>{{ selectedEntityName }}</span>
         </div>
         <portal-bind-tab
@@ -80,7 +79,7 @@
           :bind-tabs="bindTabs"
           :entity-name="props.tableId"
           :record="selectedRecord"
-          :row-key="config.rowKey" />
+          :row-key="config.rowKey"/>
       </a-layout-content>
     </a-layout>
     <template v-else>
@@ -96,7 +95,7 @@
           :draggable="!config.readOnly && config.treeDragAble"
           :show-line="true"
           :tree-data="treeData"
-          @drop="updateTree" />
+          @drop="updateTree"/>
       </div>
       <!-- endregion 树形配置 -->
       <!-- region 数据 -->
@@ -215,12 +214,12 @@
                       <multimedia
                         v-model="record[column.dataIndex]" :height="column.referenceDict?.split(',')[1] || 120"
                         :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120"
-                        use-original-file-name />
+                        use-original-file-name/>
                     </template>
                     <template
                       v-else-if="column.fieldType === FIELD_TYPE.AUDIO || column.fieldType === FIELD_TYPE.VIDEO ||
                         column.fieldType === FIELD_TYPE.FILE">
-                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80" />
+                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80"/>
                     </template>
                     <span
                       v-else
@@ -278,8 +277,8 @@
               <!-- endregion -->
               <!-- region 下拉搜索样式 -->
               <template #menuIcon="{ column, filtered }">
-                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'" />
-                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'" />
+                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'"/>
+                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'"/>
               </template>
               <template
                 #menuPopup="{ column }">
@@ -292,8 +291,8 @@
                           全选 / 取消选择
                         </a-checkbox>
                         <a-tooltip placement="right" title="恢复默认">
-                          <a-button type="ghost" size="small" @click="handleColumnReset">
-                            <RedoOutlined />
+                          <a-button size="small" type="ghost" @click="handleColumnReset">
+                            <RedoOutlined/>
                           </a-button>
                         </a-tooltip>
                       </li>
@@ -317,7 +316,7 @@
               <!-- endregion -->
               <!-- region 列搜索 -->
               <template #customFilterIcon="{ filtered }">
-                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }" />
+                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }"/>
               </template>
               <template
                 #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
@@ -340,7 +339,7 @@
               <!-- endregion -->
               <!-- region 拖拽显示样式 -->
               <template #rowDragGhost="{ record, icon, preTargetInfo, nextTargetInfo }">
-                <component :is="icon" />
+                <component :is="icon"/>
                 <span style="color: gray">
                   dragging from {{ record[config.nameKey] }} to
                   {{ preTargetInfo?.record[config.nameKey] || nextTargetInfo?.record[config.nameKey] }}
@@ -379,13 +378,13 @@
                   :record="record" name="expandedRowRender"></slot>
                 <portal-text-area-expanded
                   v-else-if="props.textAreaInExpanded" :columns="textAreaColumns"
-                  :record="record" />
+                  :record="record"/>
               </template>
               <template #footer>
                 <div class="pagination">
                   <a-button v-if="_statisticButton" type="text" @click="statisticShow = true">
                     <template #icon>
-                      <PieChartOutlined />
+                      <PieChartOutlined/>
                     </template>
                   </a-button>
                   <div>
@@ -406,7 +405,7 @@
                       <template #itemRender="{ type, originalElement }">
                         <a v-if="type === 'prev'">&lt;</a>
                         <a v-else-if="type === 'next'">&gt;</a>
-                        <component :is="originalElement" v-else />
+                        <component :is="originalElement" v-else/>
                       </template>
                       <template #buildOptionText="prop">
                         <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
@@ -536,8 +535,8 @@ import {
   ExclamationCircleOutlined,
   FilterOutlined,
   PieChartOutlined,
-  SearchOutlined,
-  RedoOutlined
+  RedoOutlined,
+  SearchOutlined
 } from '@ant-design/icons-vue'
 import {
   doFunctions,
@@ -565,7 +564,7 @@ import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
-import bus, {PORTAL_RESIZE} from '@/framework/mitt'
+import bus, { PORTAL_RESIZE } from '@/framework/mitt'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 import { parse } from '@/framework/components/common/Portal/utils'
 import { excelExport } from '@/framework/utils/excel'
@@ -594,6 +593,7 @@ const __ = getInstance()
  * @param selectColumnCondition 动态字段条件
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
+ * @param multiSelect 是否多选
  * @param hideRefresh 隐藏刷新按钮
  * @param hideRowSelection 是否行能选择
  * @param hideAdd 隐藏添加按钮
@@ -640,6 +640,7 @@ const props = withDefaults(defineProps<{
     selectColumnCondition?: Map<string, string>,
     advanceCondition?: ConditionListType,
     defaultSortColumn?: Array<QuerySortType>,
+    multiSelect?: boolean,
     hideRefresh?: boolean,
     hideRowSelection?: boolean,
     hideAdd?: boolean,
@@ -684,6 +685,7 @@ const props = withDefaults(defineProps<{
     selectColumnCondition: undefined,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
+    multiSelect: false,
     hideRefresh: false,
     hideRowSelection: false,
     hideAdd: false,
@@ -717,7 +719,11 @@ const emit = defineEmits<{
   (e: 'expand', expanded: boolean, record: any): void
 }>()
 const slots = useSlots()
-const { data, columnFilter, downloadFileName, rowSelectProps, hideAssociation, columnDisplayCustom, showLoading } = toRefs(props)
+const {
+  data, columnFilter, downloadFileName, rowSelectProps, hideAssociation,
+  columnDisplayCustom, showLoading,
+  hideAdd, hideEdit, hideDelete, hideRefresh
+} = toRefs(props)
 const isBindTabExisted = computed(() => {
   return !hideAssociation.value && bindTabs.value && bindTabs.value.length > 0
 })
@@ -788,14 +794,14 @@ const config: TableConfigType = reactive({
   detailWidth: '100%',
   addWidth: '100%',
   editWidth: '100%',
-  addModalAble: !props.hideAdd,
-  editModalAble: !props.hideEdit,
-  deleteAble: !props.hideDelete,
+  addModalAble: !hideAdd.value,
+  editModalAble: !hideEdit.value,
+  deleteAble: !hideDelete.value,
   importAble: false,
   exportAble: false,
   defaultCondition: {} as ConditionListType,
   defaultSort: [] as Array<QuerySortType>,
-  hideRefresh: props.hideRefresh,
+  hideRefresh: hideRefresh.value,
   plain: false,
   advancedSearchAble: true,
   advancedSearchButton: true
@@ -864,8 +870,8 @@ const indeterminate = computed(() => {
 })
 const selectedRecord = computed(() => {
   if (isListMode && isNotEmpty(selectedListDataItem.value)) {
-    console.log('selectedRecord', dataSourceMap.value, selectedListDataItem.value, dataSourceMap.value.get(selectedListDataItem.value.value))
-    return dataSourceMap.value.get(selectedListDataItem.value.value)
+    console.debug('selectedRecord', dataSourceMap.value, selectedListDataItem.value[0][config.rowKey], dataSourceMap.value.get(selectedListDataItem.value[0][config.rowKey]))
+    return dataSourceMap.value.get(selectedListDataItem.value[0][config.rowKey])
   } else if (isTreeMode && isNotEmpty(selectedTreeDataNode.value)) {
     return dataSourceMap.value.get(selectedTreeDataNode.value.key)
   } else {
@@ -951,6 +957,8 @@ const rowSelection = computed(() => {
       Table.SELECTION_INVERT,
       Table.SELECTION_NONE
     ],
+    allowCancelRadio: true,
+    type: props.multiSelect ? 'checkbox' : 'radio',
     getCheckboxProps: rowSelectProps.value
   }
 })
@@ -1473,6 +1481,9 @@ const onSelectChange = (changedRowKeys: any) => {
   const selectedData = selectedRowKeys.value.map(key => {
     return dataSourceMap.value.get(key)
   })
+  if (isListMode.value) {
+    selectedListDataItem.value = selectedData || []
+  }
   if (isNotEmpty(selectedRowKeys.value)) {
     config.deleteSelectedButtonShow = true
   } else {
@@ -1513,15 +1524,15 @@ const handleRowDragEnd = () => {
 
 const handleColumnDragEnd = (arg: { column: ColumnType, targetColumn: ColumnType }) => {
   nextTick(async () => {
-    const itemToMove = columnArray.value.find((item:ColumnType) => item.dataIndex === arg.column.dataIndex);
+    const itemToMove = columnArray.value.find((item: ColumnType) => item.dataIndex === arg.column.dataIndex)
     if (!itemToMove) return
-    const remainingItems = columnArray.value.filter((item:ColumnType) => item.dataIndex !== arg.column.dataIndex);
-    remainingItems.splice(arg.targetColumn.order - 1, 0, itemToMove);
+    const remainingItems = columnArray.value.filter((item: ColumnType) => item.dataIndex !== arg.column.dataIndex)
+    remainingItems.splice(arg.targetColumn.order - 1, 0, itemToMove)
     remainingItems.forEach((item, index) => {
-      item.order = index + 1;
+      item.order = index + 1
     })
     for (const column of columnArray.value) {
-      column.tableId && await db.update('portalColumn',column)
+      column.tableId && await db.update('portalColumn', column)
     }
     columnArray.value.sort((a, b) => a.order - b.order)
   })
@@ -1561,7 +1572,7 @@ const queryCondition = () => {
     query = getGeneralCondition()
   }
   if (isNotEmpty(props.selectColumnCondition)) {
-    query = {...query, selectColumnCondition: props.selectColumnCondition}
+    query = { ...query, selectColumnCondition: props.selectColumnCondition }
   }
   return query
 }
@@ -1764,7 +1775,7 @@ const initConfig = async () => {
     index.width = props.indexWidth
     index.title = props.indexTitle
     columnArray.value.push(index)
-    columnRaw.set(index.dataIndex ,_.cloneDeep(index))
+    columnRaw.set(index.dataIndex, _.cloneDeep(index))
     const tableConfig = res.payload
     config.title = tableConfig.displayName
     config.size = tableConfig.size
@@ -1897,7 +1908,7 @@ const initConfig = async () => {
         }
         columnDisplayMap.value.get(column.displayGroupName)?.push(column)
       }
-      columnRaw.set(column.dataIndex ,_.cloneDeep(column))
+      columnRaw.set(column.dataIndex, _.cloneDeep(column))
     }
     columnArray.value.sort((a, b) => a.order - b.order)
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
@@ -1905,13 +1916,13 @@ const initConfig = async () => {
       if (isNotEmpty(slots.action)) {
         actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
-        columnRaw.set(actionColumn.dataIndex ,_.cloneDeep(actionColumn))
+        columnRaw.set(actionColumn.dataIndex, _.cloneDeep(actionColumn))
       }
     } else {
       if (Number(props.actionWidth) > 0) {
         actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         columnArray.value.push(actionColumn)
-        columnRaw.set(actionColumn.dataIndex ,_.cloneDeep(actionColumn))
+        columnRaw.set(actionColumn.dataIndex, _.cloneDeep(actionColumn))
       }
     }
 
@@ -1946,9 +1957,9 @@ const initConfig = async () => {
   })
 }
 const syncLocalDb = (column: ColumnType, customerColumns: Map<any, any>, order: number) => {
-  if(customerColumns) {
+  if (customerColumns) {
     const customerColumn = customerColumns.get(db.getPrimaryKey('portalColumn', column))
-    if(customerColumn) {
+    if (customerColumn) {
       column.order = customerColumn.order
       column.checked = customerColumn.checked
     } else {
@@ -1995,6 +2006,15 @@ watch(
   },
   {
     deep: true
+  }
+)
+watch(
+  () => [hideAdd.value, hideEdit.value, hideDelete.value, hideRefresh.value],
+  () => {
+    config.hideRefresh = hideRefresh.value
+    config.addModalAble = !hideAdd.value
+    config.deleteAble = !hideDelete.value
+    config.editModalAble = !hideEdit.value
   }
 )
 onUnmounted(() => {

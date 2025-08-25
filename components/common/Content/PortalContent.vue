@@ -12,7 +12,7 @@
   <portal
     v-else
     ref="portalRef"
-    :hide-row-selection="!multi"
+    :single-select="!multi"
     :row-select-props="rowSelectProps"
     :table-id="tableId"
     check-strictly="check-strictly"
@@ -96,9 +96,9 @@ const onSelectedData = (data: any) => {
     } else {
       if (isNotEmpty(data)) {
         if (labelInValue.value) {
-          selectedData.value = [{ value: data[valueField.value], label: data[labelField.value] }]
+          selectedData.value = [{ value: data[0][valueField.value], label: data[0][labelField.value] }]
         } else {
-          selectedData.value = [data[valueField.value]]
+          selectedData.value = [data[0][valueField.value]]
         }
       } else {
         selectedData.value = []
