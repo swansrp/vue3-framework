@@ -12,13 +12,13 @@
     <div id="resize">
       <a-button
         v-if="collapsed"
-        style="position: relative;left: -20px; top: 40vh; bottom: 0; z-index: 1000" type="link"
+        style="position: relative;left: -20px; top: 40vh; bottom: 0; z-index: 999" type="link"
         @click="toggleCollapsed">
         <RightOutlined class="resize-button-right" style="color: gray" />
       </a-button>
       <a-button
         v-else
-        style="position: relative;left: -22px; top: 40vh; bottom: 0; z-index: 1000" type="link"
+        style="position: relative;left: -22px; top: 40vh; bottom: 0; z-index: 999" type="link"
         @click="toggleCollapsed">
         <LeftOutlined class="resize-button-left" style="color: gray" />
       </a-button>
