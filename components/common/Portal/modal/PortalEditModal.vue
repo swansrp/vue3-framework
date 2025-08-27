@@ -273,7 +273,7 @@ const handleAdvanceSearchConfirm = () => {
 const dict = dictStore()
 const showEntityConditionDialogBox = (column: ColumnType, condition: string) => {
   advancedCondition.currentColumn = column
-  return getPortalConfig(config.value.modal.data[column.referenceDict]).then(async res => {
+  return getPortalConfig(column.referenceDict).then(async res => {
     const columnArray = res.payload.columns || []
     advancedCondition.columnArray = [] as Array<ColumnType>
     const promiseList = [] as Array<Promise<any>>

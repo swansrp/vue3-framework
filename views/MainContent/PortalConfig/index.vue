@@ -628,7 +628,7 @@
               <a-select
                 v-else-if="columnMap.get(selectedColumnId).fieldType === FIELD_TYPE.ENTITY_CONDITION"
                 :filter-option="filterOption"
-                :options="log(columnDict) && columnDict"
+                :options="tableList"
                 :value="columnMap.get(selectedColumnId).reference"
                 placeholder="输入存放实体名称字段"
                 show-search
