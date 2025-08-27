@@ -61,7 +61,7 @@
               />
             </template>
           </portal-list-mode>
-          <a-empty v-else/>
+          <a-empty v-else />
         </div>
       </a-layout-sider>
       <a-layout-content
@@ -71,7 +71,7 @@
           <caret-right-outlined
             :rotate="layoutSiderDisplay ? 180 : 0"
             style="color: #1677ff;font-size: 15px;margin-right: 5px"
-            @click="handleLayoutSiderDisplay"/>
+            @click="handleLayoutSiderDisplay" />
           <span>{{ selectedEntityName }}</span>
         </div>
         <portal-bind-tab
@@ -79,7 +79,7 @@
           :bind-tabs="bindTabs"
           :entity-name="props.tableId"
           :record="selectedRecord"
-          :row-key="config.rowKey"/>
+          :row-key="config.rowKey" />
       </a-layout-content>
     </a-layout>
     <template v-else>
@@ -95,7 +95,7 @@
           :draggable="!config.readOnly && config.treeDragAble"
           :show-line="true"
           :tree-data="treeData"
-          @drop="updateTree"/>
+          @drop="updateTree" />
       </div>
       <!-- endregion 树形配置 -->
       <!-- region 数据 -->
@@ -214,12 +214,12 @@
                       <multimedia
                         v-model="record[column.dataIndex]" :height="column.referenceDict?.split(',')[1] || 120"
                         :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120"
-                        use-original-file-name/>
+                        use-original-file-name />
                     </template>
                     <template
                       v-else-if="column.fieldType === FIELD_TYPE.AUDIO || column.fieldType === FIELD_TYPE.VIDEO ||
                         column.fieldType === FIELD_TYPE.FILE">
-                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80"/>
+                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80" />
                     </template>
                     <span
                       v-else
@@ -277,8 +277,8 @@
               <!-- endregion -->
               <!-- region 下拉搜索样式 -->
               <template #menuIcon="{ column, filtered }">
-                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'"/>
-                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'"/>
+                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'" />
+                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'" />
               </template>
               <template
                 #menuPopup="{ column }">
@@ -292,7 +292,7 @@
                         </a-checkbox>
                         <a-tooltip placement="right" title="恢复默认">
                           <a-button size="small" type="ghost" @click="handleColumnReset">
-                            <RedoOutlined/>
+                            <RedoOutlined />
                           </a-button>
                         </a-tooltip>
                       </li>
@@ -316,7 +316,7 @@
               <!-- endregion -->
               <!-- region 列搜索 -->
               <template #customFilterIcon="{ filtered }">
-                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }"/>
+                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }" />
               </template>
               <template
                 #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
@@ -339,7 +339,7 @@
               <!-- endregion -->
               <!-- region 拖拽显示样式 -->
               <template #rowDragGhost="{ record, icon, preTargetInfo, nextTargetInfo }">
-                <component :is="icon"/>
+                <component :is="icon" />
                 <span style="color: gray">
                   dragging from {{ record[config.nameKey] }} to
                   {{ preTargetInfo?.record[config.nameKey] || nextTargetInfo?.record[config.nameKey] }}
@@ -378,13 +378,13 @@
                   :record="record" name="expandedRowRender"></slot>
                 <portal-text-area-expanded
                   v-else-if="props.textAreaInExpanded" :columns="textAreaColumns"
-                  :record="record"/>
+                  :record="record" />
               </template>
               <template #footer>
                 <div class="pagination">
                   <a-button v-if="_statisticButton" type="text" @click="statisticShow = true">
                     <template #icon>
-                      <PieChartOutlined/>
+                      <PieChartOutlined />
                     </template>
                   </a-button>
                   <div>
@@ -405,7 +405,7 @@
                       <template #itemRender="{ type, originalElement }">
                         <a v-if="type === 'prev'">&lt;</a>
                         <a v-else-if="type === 'next'">&gt;</a>
-                        <component :is="originalElement" v-else/>
+                        <component :is="originalElement" v-else />
                       </template>
                       <template #buildOptionText="prop">
                         <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
@@ -593,7 +593,7 @@ const __ = getInstance()
  * @param selectColumnCondition 动态字段条件
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
- * @param multiSelect 是否多选
+ * @param singleSelect 是否单选
  * @param hideRefresh 隐藏刷新按钮
  * @param hideRowSelection 是否行能选择
  * @param hideAdd 隐藏添加按钮
@@ -640,7 +640,7 @@ const props = withDefaults(defineProps<{
     selectColumnCondition?: Map<string, string>,
     advanceCondition?: ConditionListType,
     defaultSortColumn?: Array<QuerySortType>,
-    multiSelect?: boolean,
+    singleSelect?: boolean,
     hideRefresh?: boolean,
     hideRowSelection?: boolean,
     hideAdd?: boolean,
@@ -685,7 +685,7 @@ const props = withDefaults(defineProps<{
     selectColumnCondition: undefined,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
-    multiSelect: false,
+    singleSelect: true,
     hideRefresh: false,
     hideRowSelection: false,
     hideAdd: false,
@@ -958,7 +958,7 @@ const rowSelection = computed(() => {
       Table.SELECTION_NONE
     ],
     allowCancelRadio: true,
-    type: props.multiSelect ? 'checkbox' : 'radio',
+    type: props.singleSelect ? 'radio' : 'checkbox',
     getCheckboxProps: rowSelectProps.value
   }
 })
