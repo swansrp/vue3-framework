@@ -1081,7 +1081,7 @@
 </template>
 <script lang="ts" setup>
 import { Ref } from 'vue'
-import { isEmpty, isNotEmpty, log, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
+import { isEmpty, isNotEmpty, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from "@/framework/components/common/Portal/type"
 import {
   bindRole,
