@@ -685,7 +685,7 @@ const props = withDefaults(defineProps<{
     selectColumnCondition: undefined,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
-    singleSelect: true,
+    singleSelect: false,
     hideRefresh: false,
     hideRowSelection: false,
     hideAdd: false,
