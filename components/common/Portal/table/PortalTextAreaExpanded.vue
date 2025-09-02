@@ -2,7 +2,7 @@
   <a-tabs v-model:activeKey="activeKey">
     <a-tab-pane
       v-for="(item, index) of columns" :key="index" :disabled="isEmpty(record[item.dataIndex])"
-      :tab="item.title">
+      :tab="strLF2HtmlLF(item.title)">
       <div v-html="strLF2HtmlLF(record[item.dataIndex])"></div>
     </a-tab-pane>
   </a-tabs>
