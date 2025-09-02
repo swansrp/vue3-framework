@@ -522,6 +522,7 @@ import * as _ from 'lodash'
 import {
   ColumnType,
   FIELD_TYPE,
+  FILTER_TYPE,
   ModalType,
   ModifyCellType,
   QuerySortType,
@@ -1455,12 +1456,27 @@ const initQueryCondition = () => {
   querySortMap.clear()
 }
 
-const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, column: any) => {
-  const condition = {
-    property: dataIndex as string,
-    value: selectedKeys as Array<any>,
-    relation: getDefaultFilterType(column.fieldType, column.filterStrict)
-  } as ConditionListType
+const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, relation: any, filterStrict: boolean) => {
+  console.log("handleSearchConditionChanged", selectedKeys, dataIndex, relation, filterStrict)
+  const condition = {} as ConditionListType
+  if (relation === FILTER_TYPE.BETWEEN && !filterStrict) {
+    condition.andOr = '0'
+    condition.conditionList = [
+      {
+        property: dataIndex,
+        value: [selectedKeys[0]],
+        relation: FILTER_TYPE.GREATER
+      } as ConditionListType,
+      {
+        property: dataIndex,
+        value: [selectedKeys[1]],
+        relation: FILTER_TYPE.LESS
+      } as ConditionListType]
+  } else {
+    condition.property = dataIndex
+    condition.value = selectedKeys
+    condition.relation = relation
+  }
   if (isNotEmpty(selectedKeys)) {
     queryConditionMap.set(dataIndex as string, condition)
   } else {

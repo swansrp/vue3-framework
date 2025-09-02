@@ -54,18 +54,13 @@
       <lock-switch
         v-model="column.filterStrict"
         style="margin-bottom: 8px; margin-right: 5px"
+        @click="() => handleNumberConditionChanged([_selectedKeysRef[0], _selectedKeysRef[1]], column)"
       />
-      <a-input-number
-        v-if="column.filterStrict"
-        v-model:value="_selectedKeysRef[0]"
-        style=" margin-bottom: 8px; width: 170px;"
-        @change="e => handleNumberConditionChanged([e, e], column)" />
       <a-input-group
-        v-else
         compact style=" margin-bottom: 8px; ">
         <a-input-number
           v-model:value="_selectedKeysRef[0]"
-          placeholder="大于等于"
+          :placeholder="column.filterStrict ? '大于等于' : '大于'"
           style="width: 100px; text-align: center"
           @change="e => handleNumberConditionChanged([e, _selectedKeysRef[1]], column)"
         />
@@ -78,7 +73,7 @@
         <a-input-number
           v-model:value="_selectedKeysRef[1]"
           class="site-input-right"
-          placeholder="小于等于"
+          :placeholder="column.filterStrict ? '小于等于' : '小于'"
           style="width: 100px; text-align: center"
           @change="e => handleNumberConditionChanged([_selectedKeysRef[0], e], column)"
         />
@@ -100,17 +95,25 @@
       />
     </div>
     <div style="display: flex; justify-content: center">
-      <a-button
-        size="small"
-        style="width: 90px; margin-right: 8px;"
-        type="primary"
-        @click="handleSearch()"
-      >
-        <template #icon>
-          <search-outlined />
+      <a-dropdown :trigger="['contextmenu']">
+        <a-button
+          size="small"
+          style="width: 90px; margin-right: 8px;"
+          type="primary"
+          @click="handleSearch()"
+        >
+          <template #icon>
+            <search-outlined />
+          </template>
+          搜索
+        </a-button>
+        <template #overlay>
+          <a-menu @click="({ key: menuKey }) => handleNullSearch(menuKey, column)">
+            <a-menu-item key="1">查询为空</a-menu-item>
+            <a-menu-item key="0">查询非空</a-menu-item>
+          </a-menu>
         </template>
-        搜索
-      </a-button>
+      </a-dropdown>
       <a-button
         size="small" style="width: 90px"
         @click="handleReset(column)">
@@ -121,12 +124,13 @@
 </template>
 
 <script lang="ts" setup>
-import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { filterOption } from '@/framework/components/common/utils'
 import { strRemoveLF } from '@/framework/utils/common'
 import { TreeSelect } from 'ant-design-vue';
 import LockSwitch from '@/framework/components/common/lockSwitch/index.vue'
+import { getDefaultFilterType } from '@/framework/components/common/Portal/constant'
 
 const prop = defineProps<{
   column: any,
@@ -136,7 +140,7 @@ const prop = defineProps<{
   clearFilters: any
 }>()
 const emit = defineEmits<{
-  (e: 'handleSearchConditionChanged', selectedKeys: any, dataIndex: any, column: any): void
+  (e: 'handleSearchConditionChanged', selectedKeys: any, dataIndex: any, relation: any, filterStrict: boolean): void
   (e: 'update:column', column: any): void
 }>()
 const {column, setSelectedKeys, selectedKeysRef, confirm, clearFilters} = toRefs(prop)
@@ -151,7 +155,7 @@ watch(
 )
 const handleSearchConditionChanged = (value: any, column: any) => {
   setSelectedKeys.value(value)
-  emit('handleSearchConditionChanged', value, column.dataIndex, column)
+  emit('handleSearchConditionChanged', value, column.dataIndex, getDefaultFilterType(column.fieldType, column.filterStrict), column.filterStrict)
 }
 const handleNumberConditionChanged = (value: any, column: any) => {
   setSelectedKeys.value(value)
@@ -169,9 +173,18 @@ const handleNumberConditionChanged = (value: any, column: any) => {
     right = value[1] === 0 ? 0 : value[1] || Number.MAX_SAFE_INTEGER
   }
   console.log(' handleNumberConditionChanged', column, value, [left, right])
-  emit('handleSearchConditionChanged', [left, right], column.dataIndex, column)
+  emit('handleSearchConditionChanged', [left, right], column.dataIndex, getDefaultFilterType(column.fieldType, column.filterStrict), column.filterStrict)
 }
 const handleSearch = () => {
+  confirm.value()
+}
+const handleNullSearch = (key: string, column: any) => {
+  if (column.value.fieldType === FIELD_TYPE.DATE) {
+    setSelectedKeys.value([null, null])
+  } else {
+    setSelectedKeys.value([])
+  }
+  emit('handleSearchConditionChanged', [null], column.value.dataIndex, key === '1' ?  FILTER_TYPE.NULL : FILTER_TYPE.NOT_NULL, column.filterStrict)
   confirm.value()
 }
 const handleReset = (column: any) => {
