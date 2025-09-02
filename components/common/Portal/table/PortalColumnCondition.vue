@@ -179,12 +179,13 @@ const handleSearch = () => {
   confirm.value()
 }
 const handleNullSearch = (key: string, column: any) => {
-  if (column.value.fieldType === FIELD_TYPE.DATE) {
+  console.log('handleNullSearch', column)
+  if (column.fieldType === FIELD_TYPE.DATE) {
     setSelectedKeys.value([null, null])
   } else {
-    setSelectedKeys.value([])
+    setSelectedKeys.value([null])
   }
-  emit('handleSearchConditionChanged', [null], column.value.dataIndex, key === '1' ?  FILTER_TYPE.NULL : FILTER_TYPE.NOT_NULL, column.filterStrict)
+  emit('handleSearchConditionChanged', [null], column.dataIndex, key === '1' ?  FILTER_TYPE.NULL : FILTER_TYPE.NOT_NULL, column.filterStrict)
   confirm.value()
 }
 const handleReset = (column: any) => {
