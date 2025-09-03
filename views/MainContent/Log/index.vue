@@ -57,6 +57,7 @@
         <a-input
           v-model:value="searchText"
           placeholder="输入关键字进行搜索"
+          @press-enter="getLog"
           style="width: 1500px;"
         />
         <!-- 第二行：时间查询和查询按钮 -->

@@ -13,6 +13,8 @@
           <div class="title">{{ router.currentRoute.value.meta.title }}</div>
           <div class="dialog-info">
             <portal
+              column-display-custom=""
+              v-bind="$attrs"
               :action-width="0"
               :advance="advance"
               :advance-condition="advanceCondition"
@@ -26,6 +28,7 @@
               :table-id="tableId"
               hide-refresh
               hide-row-selection
+              text-area-in-expanded
               multi-header>
               <!-- 转发所有具名插槽 -->
               <template
@@ -111,6 +114,25 @@ onMounted(() => {
   }
 }
 
+:deep(.ant-picker) {
+  background-color: rgb(21, 76, 121) !important;
+  .ant-picker-input {
+    background-color: rgb(21, 76, 121) !important;
+
+    input {
+      color: white !important;
+    }
+
+    input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .ant-picker-suffix {
+      color: white !important;
+    }
+  }
+}
+
 :deep(.ant-descriptions .ant-descriptions-row >th) {
   padding-bottom: 12px;
 }
@@ -130,6 +152,24 @@ onMounted(() => {
 :deep(.ant-descriptions-item-label) {
   color: white;
 }
+
+:deep(.surely-table-row-expand-icon-cell) {
+  color: white;
+}
+
+
+:deep(.surely-table-row-expand-icon.surely-table-row-expand-icon-collapsed) {
+  color: rgba(21, 76, 121);
+}
+
+:deep(.surely-table-row-expand-icon.surely-table-row-expand-icon-collapsed.surely-table-row-expand-icon-disabled) {
+  color: rgba(21, 76, 121, 0.4);
+}
+
+:deep(.surely-table-row-expand-icon.surely-table-row-expand-icon-expanded) {
+  color: rgba(21, 76, 121);
+}
+
 
 .desc-wrapper {
   height: calc(100vh - 40px);
