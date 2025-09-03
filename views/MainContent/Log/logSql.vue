@@ -5,7 +5,6 @@
     placement="right"
     size="large"
     title="SQL格式化"
-    @close="emit('update:show', false)"
   >
     <template #extra>
       <a-button style="margin-right: 8px" @click="emit('update:show', false)">关闭</a-button>
@@ -45,6 +44,11 @@ const _show = ref(show.value)
 watch(
   () => show.value,
   () => _show.value = show.value
+)
+
+watch(
+  () => _show.value,
+  () => emit('update:show', _show.value)
 )
 
 const onCopy = async () => {
