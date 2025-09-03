@@ -5,8 +5,8 @@
     is-full>
     <a-tabs
       v-model:activeKey="bindDialogBox.tab"
-      type="card"
       destroy-inactive-tab-pane
+      type="card"
       @change="handleTabChanged">
       <a-tab-pane key="0" :tab="'已' + actionText + title">
         <div style="height: calc(100vh - 200px);">
@@ -108,7 +108,10 @@ const prop = withDefaults(defineProps<{
 }>(), {
   actionText: '授权'
 })
-const {entity, attachEntity, title} = toRefs(prop)
+const { entity, attachEntity, title } = toRefs(prop)
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
 const bindPortal = ref()
 const unbindPortal = ref()
 const allPortal = ref()
@@ -146,7 +149,7 @@ const bindAll = () => {
   Modal.confirm({
     title: '将所有' + title.value + '进行' + prop.actionText,
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '注意: 单次' + prop.actionText + '数量大于60000条可能会失败'),
+    content: createVNode('div', { style: 'color:red;' }, '注意: 单次' + prop.actionText + '数量大于60000条可能会失败'),
     onOk() {
       bindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, unbindPortal.value.queryCondition(), prop.baseDomain)
         .then(unbindPortal.value.queryData)
@@ -161,7 +164,7 @@ const unbindAll = () => {
   Modal.confirm({
     title: '将所有' + title.value + prop.actionText + '取消',
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '注意: 所有' + prop.actionText + '信息将被清除'),
+    content: createVNode('div', { style: 'color:red;' }, '注意: 所有' + prop.actionText + '信息将被清除'),
     onOk() {
       unbindAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, prop.baseDomain)
         .then(bindPortal.value.queryData)
@@ -176,7 +179,7 @@ const bindReplace = () => {
     Modal.confirm({
       title: '将选中' + title.value + '进行' + prop.actionText + '的',
       icon: createVNode(ExclamationCircleOutlined),
-      content: createVNode('div', {style: 'color:red;'}, '注意: 原有' + prop.actionText + '信息将被清除'),
+      content: createVNode('div', { style: 'color:red;' }, '注意: 原有' + prop.actionText + '信息将被清除'),
       onOk() {
         bindReplaceBatchAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.getRowSelection(), prop.baseDomain)
           .then(allPortal.value.queryData)
@@ -189,7 +192,7 @@ const bindReplace = () => {
     Modal.confirm({
       title: '将' + prop.actionText + '全部符合当前条件的' + title.value,
       icon: createVNode(ExclamationCircleOutlined),
-      content: createVNode('div', {style: 'color:red;'}, '注意: 原有' + prop.actionText + '信息将被清除,单次' + prop.actionText + '数量大于60000条可能会失败'),
+      content: createVNode('div', { style: 'color:red;' }, '注意: 原有' + prop.actionText + '信息将被清除,单次' + prop.actionText + '数量大于60000条可能会失败'),
       onOk() {
         bindReplaceAllAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, allPortal.value.queryCondition(), prop.baseDomain)
           .then(allPortal.value.queryData)
@@ -228,7 +231,15 @@ const handleRowDragEnd = (dataSource: any, currentPage: number, pageSize: number
 const queryBindData = () => {
   bindPortal.value.queryData()
 }
-defineExpose({showBindDialogBox, queryBindData})
+
+watch(
+  () => bindDialogBox.show,
+  () => {
+    if (!bindDialogBox.show) {
+      emit('close')
+    }
+  })
+defineExpose({ showBindDialogBox, queryBindData })
 </script>
 
 <style scoped>
