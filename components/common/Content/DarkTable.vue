@@ -279,7 +279,7 @@ onMounted(() => {
 
   .title {
     margin-top: 12px;
-    line-height: 55px;
+    line-height: 35px;
     color: #fff;
     font-size: 35px;
     font-weight: 700;
@@ -289,8 +289,6 @@ onMounted(() => {
     display: flex;
     justify-content: center;
     font-family: 'Noto Sans SC', serif;
-    background: url("imgs/title-bg.svg") no-repeat;
-    background-size: 100% 100%;
   }
 
   .dialog-info {
