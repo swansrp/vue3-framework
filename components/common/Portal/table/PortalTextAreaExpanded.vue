@@ -19,7 +19,18 @@ const props = withDefaults(
   {}
 )
 const { record, columns } = toRefs(props)
-const activeKey = ref(isNotEmpty(record.value[columns.value[0].dataIndex]) ? 0 : -1)
+
+// 查找第一个不为空的tab页作为默认激活页
+const getFirstNonEmptyTabIndex = () => {
+  for (let i = 0; i < columns.value.length; i++) {
+    if (isNotEmpty(record.value[columns.value[i].dataIndex])) {
+      return i
+    }
+  }
+  return 0 // 如果所有tab都为空，默认显示第一个
+}
+
+const activeKey = ref(getFirstNonEmptyTabIndex())
 
 onMounted(() => {
 })
