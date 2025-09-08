@@ -7,31 +7,36 @@
         :width="isBindTabExisted ? '20%':'99%'"
       >
         <div style="margin: 10px">
-          <portal-tree-mode
-            v-if="isTreeMode && treeData.length"
-            v-model:selected-tree-data="selectedTreeData"
-            :check-strictly="props.checkStrictly"
-            :config="config"
-            :tree-check-able="props.treeCheckAble"
-            :tree-data="treeData"
-            @update-tree="updateTree"
-            @handle-tree-selected="handleTreeSelected"
-            @handle-menu-context-view="handleMenuContextView"
-            @handle-menu-context-add="handleMenuContextAdd"
-            @handle-menu-context-modify="handleMenuContextModify"
-            @handle-menu-context-copy="handleMenuContextCopy"
-            @handle-menu-context-delete="handleMenuContextDelete">
-            <template #end-action>
-              <portal-mode-button
-                v-if="!modeLock"
-                :config="config"
-                :is-list-mode="isListMode"
-                :is-tree-data-empty="treeData.length === 0"
-                :is-tree-mode="isTreeMode"
-                @on-display-changed="handleDisplayModeChange"
-              />
-            </template>
-          </portal-tree-mode>
+          <template v-if="isTreeMode">
+            <portal-tree-mode
+              v-if="treeData.length"
+              v-model:selected-tree-data="selectedTreeData"
+              :check-strictly="props.checkStrictly"
+              :config="config"
+              :tree-check-able="props.treeCheckAble"
+              :tree-data="treeData"
+              @update-tree="updateTree"
+              @handle-tree-selected="handleTreeSelected"
+              @handle-menu-context-view="handleMenuContextView"
+              @handle-menu-context-add="handleMenuContextAdd"
+              @handle-menu-context-modify="handleMenuContextModify"
+              @handle-menu-context-copy="handleMenuContextCopy"
+              @handle-menu-context-delete="handleMenuContextDelete">
+              <template #end-action>
+                <portal-mode-button
+                  v-if="!modeLock"
+                  :config="config"
+                  :is-list-mode="isListMode"
+                  :is-tree-data-empty="treeData.length === 0"
+                  :is-tree-mode="isTreeMode"
+                  @on-display-changed="handleDisplayModeChange"
+                />
+              </template>
+            </portal-tree-mode>
+            <div v-else style="display: flex; justify-content: flex-end">
+              <a-button size="small" type="primary" @click="handleMenuContextAdd(null)">新增根节点</a-button>
+            </div>
+          </template>
           <portal-list-mode
             v-else-if="isListMode"
             :config="config"
@@ -1191,12 +1196,7 @@ const handleMenuContextView = (recordId: any) => {
 }
 const handleMenuContextAdd = (recordId: any) => {
   config.modal.data[`${ config.parentKey }`] = recordId
-  for (let column of columnArray.value) {
-    if (column.addShow && isNotEmpty(column.defaultValue)) {
-      config.modal.data[column.dataIndex] = column.defaultValue
-    }
-  }
-  openModal('add')
+  addRow()
 }
 const handleMenuContextCopy = (recordId: any) => {
   getById(config.url, recordId, config.baseDomain).then(resp => {
@@ -1286,6 +1286,7 @@ const detailRow = (args: any) => {
 // 添加数据
 const addRow = () => {
   openModal('add')
+
   if (props.bindDefaultValue) {
     config.modal.data = props.bindDefaultValue
   } else {
@@ -1296,7 +1297,7 @@ const addRow = () => {
       config.modal.data[column.dataIndex] = column.defaultValue
     }
   }
-  console.log(config.modal.data)
+  console.log('addRow', config.modal.data)
   config.modal.editRowIndex = null
 }
 // 保存添加数据

@@ -11,7 +11,7 @@
     <slot></slot>
     <template #title>
       <slot name="title">
-        <div v-if="_title" ref="modalTitleRef" class="dialog-title">
+        <div v-if="_title" ref="modalTitleRef" class="dialog-title" :style="{ cursor: draggable ? 'move' : 'auto'}">
           <img v-if="_iconPath" :src="_iconPath" alt="" class="icon-img" />
           {{ _title }}
         </div>
@@ -173,7 +173,6 @@ watchEffect(() => {
 .dialog-title {
   display: flex;
   align-items: center;
-  cursor: move;
 }
 
 .icon-img {

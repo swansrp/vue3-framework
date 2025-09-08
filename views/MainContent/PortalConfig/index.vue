@@ -127,6 +127,7 @@
           <a-button style="margin-right: 10px" type="primary" @click="exportTableConfig()">导出配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="uploadTableConfig()">导入配置</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="associateTableConfig()">关联配置</a-button>
+          <a-button style="margin-right: 10px" type="primary" @click="indicatorModalShow = true">统计指标</a-button>
           <a-button style="margin-right: 10px" type="primary" @click="saveTableConfig(false)">保存</a-button>
         </template>
         <a-descriptions-item
@@ -1077,6 +1078,10 @@
       :advanced-condition="defaultCondition"
       @confirm="saveDefaultCondition" />
     <sql-draw v-model:show="showSql" :sql="sqlData" />
+    <indicator-modal
+      v-model:show="indicatorModalShow"
+      :dict="entityColumnDict"
+      :config="tableConfig" />
   </div>
 </template>
 <script lang="ts" setup>
@@ -1126,6 +1131,7 @@ import UploadFile from '@/framework/components/common/UploadFile/index.vue'
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import { filterOption } from '@/framework/components/common/utils'
 import SqlDraw from './sqlDraw.vue'
+import IndicatorModal from './indicatorModal.vue'
 const dict = dictStore()
 const treeDict = useTreeStore()
 let inputTableName: Ref<string> = ref('')
@@ -1171,6 +1177,7 @@ let copyConfigModal = reactive({
 })
 const showSql:Ref<boolean> = ref(false)
 const sqlData:Ref<string> = ref('')
+const indicatorModalShow:Ref<boolean> = ref(false)
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
 }

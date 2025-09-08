@@ -93,6 +93,8 @@ const handleMenuContext = (recordId: any, menuKey: string) => {
 }
 </script>
 
-<style scoped>
-
+<style scoped lang="less">
+:deep(.ant-dropdown-menu-item) {
+  min-width: 80px;
+}
 </style>
