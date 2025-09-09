@@ -208,11 +208,6 @@ const handleAddCancel = (modal: any) => {
   addFormRef.value?.resetForm()
 }
 
-const initModifyFormData = (data: any) => {
-  console.log('initModifyFormData', data)
-  modifyFormRef.value?.initFormData(data)
-}
-
 const handleModifySubmit = async (modal: any) => {
   try {
     modifyModal.loading = true

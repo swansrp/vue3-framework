@@ -283,7 +283,7 @@ const previewData = computed(() => {
     originalDictItem: item
   }))
 })
-const columnDictMap = new Map()
+
 watch(
   () => config.value,
   () => {

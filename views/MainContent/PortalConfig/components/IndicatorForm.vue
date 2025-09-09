@@ -150,7 +150,7 @@
 import { FormInstance } from 'ant-design-vue'
 import type { Rule } from 'ant-design-vue/es/form'
 import { DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { isNotEmpty } from '@/framework/utils/common'
 import { dictStore } from '@/framework/store/common'
 import { ColumnType, FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'

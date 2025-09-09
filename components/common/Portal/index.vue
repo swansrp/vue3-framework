@@ -489,10 +489,8 @@
       @template-export="templateExport"
       @upload-progress="uploadAddProgress"
     />
-    <portal-statistic-modal
+    <portal-dashboard-modal
       v-model:show="statisticShow"
-      :columns="columns"
-      :condition="[...queryConditionMap.values()]"
       :config="config"
     />
     <!-- endregion -->
@@ -577,7 +575,7 @@ import { excelExport } from '@/framework/utils/excel'
 import { name } from '@/../package.json'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
-import PortalStatisticModal from '@/framework/components/common/Portal/modal/PortalStatisticModal.vue'
+import PortalDashboardModal from '@/framework/components/common/Portal/dashboard/index.vue'
 import { db } from '@/framework/components/common/Portal/db'
 
 const __ = getInstance()

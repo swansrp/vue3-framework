@@ -4,14 +4,14 @@ import {
   advancedQueryRequest,
   advancedSelectRequest,
   advancedStatisticRequest,
-  advancedSummaryRequest,
+  advancedSummaryRequest, apiType,
   bindAllRequest,
   bindBatchRequest,
   bindInfoListRequest,
   bindInfoRequest,
   bindReplaceAllRequest,
   bindReplaceBatchRequest,
-  bindRequest,
+  bindRequest, buildGetApiByType,
   deleteListRequest,
   deleteRequest,
   exportDataRequest,
@@ -41,6 +41,7 @@ import {
   updateTreePidRequest
 } from '@/framework/apis'
 import { QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
+import { get } from '@/framework/network/request'
 
 export const getById = (url: string, id: string, baseDomain?: string, showSuccess = true, showLoading = true) =>
   getByIdRequest('/' + url, id, baseDomain, showSuccess, showLoading) as Promise<any>
@@ -203,3 +204,5 @@ export const bindAllAttachByUrl = (url: string, entityId: any, attachQuery = {} 
 
 export const unbindAllAttachByUrl = (url: string, entityId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
   unbindAllRequest(url, entityId, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const getIndicatorConfig = (name: string) => get(buildGetApiByType('portal/indicator/group/indicator/tree'), {tableId: name}) as Promise<any>

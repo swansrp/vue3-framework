@@ -1901,16 +1901,6 @@ const getTotalItemCount = (folderData: any): number => {
   return count
 }
 
-// 获取简短标签（移除文件夹前缀）
-const getShortLabel = (label: string) => {
-  const parts = label.split("-");
-  if (parts.length > 1) {
-    // 返回除第一部分外的所有部分
-    return parts.slice(1).join("-");
-  }
-  return label;
-};
-
 // 高亮搜索文字
 const highlightSearchText = (text: string) => {
   const searchTerm = inputTableName.value.trim();
