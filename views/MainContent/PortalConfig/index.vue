@@ -338,7 +338,7 @@
           </div>
         </a-descriptions-item>
 
-                <a-descriptions-item :span="1" label="总结栏">
+        <a-descriptions-item :span="1" label="总结栏">
           <a-switch
             v-model:checked="tableConfig.summary"
             checkedValue="1"
@@ -1324,7 +1324,7 @@ import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant
 import { filterOption } from '@/framework/components/common/utils'
 import SqlDraw from './sqlDraw.vue'
 import IndicatorModal from './indicatorModal.vue'
-import FolderComponent from './component/FolderComponent.vue'
+import FolderComponent from './components/FolderComponent.vue'
 
 const dict = dictStore()
 const treeDict = useTreeStore()

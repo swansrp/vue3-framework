@@ -1596,6 +1596,9 @@ const queryCondition = () => {
 const getConfig = () => {
   return config
 }
+const getData = () => {
+  return dataSource.value
+}
 /**
  * 获取数据
  */
@@ -2051,7 +2054,7 @@ onUnmounted(() => {
   bus.off(PORTAL_RESIZE)
 })
 
-defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig })
+defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig, getData })
 </script>
 <style lang="less" scoped>
 .portal-tree-wrapper {
