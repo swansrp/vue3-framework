@@ -2,36 +2,68 @@
   <div class="right-panel">
     <div class="config-header">
       <div class="config-header-content">
-        <a-button type="text" size="small" @click="toggleLeftPanel" class="collapse-btn">
+        <a-button
+          class="collapse-btn"
+          size="small"
+          type="text"
+          @click="toggleLeftPanel"
+        >
           <MenuFoldOutlined v-if="!leftPanelCollapsed" />
           <MenuUnfoldOutlined v-else />
         </a-button>
         <h3>配置面板</h3>
       </div>
-      <a-button type="primary" @click="generateChart" :disabled="!firstDimension">
-        生成图表
-      </a-button>
+      <div class="action-buttons">
+        <a-button
+          :disabled="!hasAnyConfiguration"
+          class="reset-btn"
+          size="small"
+          title="重置配置"
+          type="text"
+          @click="resetConfiguration"
+        >
+          <ReloadOutlined />
+        </a-button>
+        <a-button
+          :disabled="!firstDimension"
+          type="primary"
+          @click="generateChart"
+        >
+          生成图表
+        </a-button>
+      </div>
     </div>
 
     <div class="config-content">
       <!-- 维度选择 -->
-      <DimensionSelector v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
-        :filter-dimension="filterDimension" @dimension-changed="onDimensionChanged" />
+      <DimensionSelector
+        v-model:first-dimension="firstDimension"
+        v-model:second-dimension="secondDimension"
+        :filter-dimension="filterDimension"
+        @dimension-changed="onDimensionChanged"
+      />
 
       <!-- 全局筛选条件 -->
-      <FilterCondition v-model:filter-dimension="filterDimension" v-model:selected-filter-items="selectedFilterItems" />
+      <FilterCondition
+        v-model:filter-dimension="filterDimension"
+        v-model:selected-filter-items="selectedFilterItems"
+      />
 
       <!-- 数据配置 -->
-      <DataConfiguration v-model:data-metrics="dataMetrics" :first-dimension="firstDimension"
-        :second-dimension="secondDimension" :available-data-types="availableDataTypes"
-        @update-metric-field="updateMetricField" />
+      <DataConfiguration
+        v-model:data-metrics="dataMetrics"
+        :available-data-types="availableDataTypes"
+        :first-dimension="firstDimension"
+        :second-dimension="secondDimension"
+        @update-metric-field="updateMetricField"
+      />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons-vue'
+import { computed, ref } from 'vue'
+import { MenuFoldOutlined, MenuUnfoldOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import DimensionSelector from './DimensionSelector.vue'
 import FilterCondition from './FilterCondition.vue'
@@ -86,7 +118,7 @@ const props = defineProps<{
 
 // Emits
 const emit = defineEmits<{
-  'toggleLeftPanel': []
+  'toggleLeftPanel': [status?: boolean]
   'update:firstDimension': [dimension: IndicatorGroup | null]
   'update:secondDimension': [dimension: IndicatorGroup | null]
   'update:filterDimension': [dimension: IndicatorGroup | null]
@@ -107,6 +139,15 @@ const secondDimension = ref(props.secondDimension)
 const filterDimension = ref(props.filterDimension)
 const selectedFilterItems = ref([...props.selectedFilterItems])
 const dataMetrics = ref([...props.dataMetrics])
+
+// 计算属性 - 判断是否有任何配置
+const hasAnyConfiguration = computed(() => {
+  return !!(firstDimension.value ||
+    secondDimension.value ||
+    filterDimension.value ||
+    selectedFilterItems.value.length > 0 ||
+    dataMetrics.value.length > 0)
+})
 
 // 监听props变化并同步到本地状态
 const syncPropsToLocal = () => {
@@ -204,6 +245,40 @@ const generateChart = () => {
   })
 }
 
+// 重置配置方法
+const resetConfiguration = () => {
+  // 重置所有配置到初始状态
+  firstDimension.value = null
+  secondDimension.value = null
+  filterDimension.value = null
+  selectedFilterItems.value = []
+
+  // 默认添加分布统计数据配置
+  const defaultDataMetric: DataMetricUI = {
+    id: `metric_${ Date.now() }`,
+    dataName: '分布统计',
+    dataField: 'distribution_statistics',
+    chartType: 'bar',
+    color: '#1890ff',
+    yAxisPosition: 'left',
+    stackGroup: 'stack1',
+    unit: '',
+    itemColors: {}
+  }
+
+  dataMetrics.value = [defaultDataMetric]
+
+  // 发出更新事件通知父组件
+  emit('update:firstDimension', null)
+  emit('update:secondDimension', null)
+  emit('update:filterDimension', null)
+  emit('update:selectedFilterItems', [])
+  emit('update:dataMetrics', [defaultDataMetric])
+  emit('toggleLeftPanel', false)
+
+  message.success('配置已重置，默认使用分布统计')
+}
+
 // 颜色生成函数
 const defaultColors = ref<string[]>([
   '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
@@ -250,7 +325,7 @@ const generateDistinctColors = (count: number): string[] => {
 syncPropsToLocal()
 </script>
 
-<style scoped lang="less">
+<style lang="less" scoped>
 .right-panel {
   width: 350px;
   background: white;
@@ -286,6 +361,49 @@ syncPropsToLocal()
       margin: 0;
       font-size: 16px;
       font-weight: 600;
+    }
+
+    .action-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .reset-btn {
+        color: #8c8c8c;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+          color: #1890ff;
+          background-color: #e6f7ff;
+        }
+
+        &:disabled {
+          color: #d9d9d9;
+          cursor: not-allowed;
+        }
+      }
+
+      .ant-btn {
+        &:not(.ant-btn-primary) {
+          color: #595959;
+
+          &:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
+          }
+
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+      }
     }
   }
 

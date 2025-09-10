@@ -6,19 +6,38 @@
 
     <div class="panel-content">
       <!-- 搜索框 -->
-      <a-input v-model:value="searchKeyword" class="search-input" placeholder="搜索指标项">
+      <a-input
+        v-model:value="searchKeyword"
+        class="search-input"
+        placeholder="搜索指标项"
+      >
         <template #prefix>
           <SearchOutlined />
         </template>
       </a-input>
 
       <!-- 指标树 -->
-      <a-directory-tree v-model:expandedKeys="expandedKeys" :allow-drop="() => false" :draggable="true"
-        :tree-data="treeDataFormatted" class="indicator-tree" showIcon @dragend="onDragEnd" @dragenter="onDragEnter"
-        @dragover="onDragOver" @dragstart="onDragStart">
+      <a-directory-tree
+        v-model:expandedKeys="expandedKeys"
+        :allow-drop="() => false"
+        :draggable="true"
+        :tree-data="treeDataFormatted"
+        class="indicator-tree"
+        showIcon
+        @dragend="onDragEnd"
+        @dragenter="onDragEnter"
+        @dragover="onDragOver"
+        @dragstart="onDragStart"
+      >
         <template #title="{ title, key, isLeaf, items }">
-          <span :data-is-leaf="isLeaf" :data-items="JSON.stringify(items || [])" :data-key="key" :data-title="title"
-            v-html="isLeaf ? getHighlightedText(title) : title">
+          <span
+            :class="{ 'no-items': !items || items.length === 0 }"
+            :data-is-leaf="isLeaf"
+            :data-items="JSON.stringify(items || [])"
+            :data-key="key"
+            :data-title="title"
+            v-html="title"
+          >
           </span>
         </template>
       </a-directory-tree>
@@ -27,9 +46,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRefs, watch } from 'vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
-import { isEmpty } from '@/framework/utils/common'
 
 // 接口定义
 interface IndicatorItem {
@@ -61,7 +79,7 @@ const props = defineProps<{
   collapsed: boolean
   indicatorTreeData: IndicatorGroup[]
 }>()
-
+const { indicatorTreeData } = toRefs(props)
 // Emits
 const emit = defineEmits<{
   dragStart: [data: DragData]
@@ -72,117 +90,213 @@ const emit = defineEmits<{
 const searchKeyword = ref('')
 const expandedKeys = ref<string[]>([])
 
-// 拖拽状态管理
-let dragData: DragData | null = null
+// 递归转换树数据，标识叶子节点
+const convertTreeData = (data: IndicatorGroup[]): any[] => {
+  return data.map(node => {
+    const isLeaf = (node.items && node.items.length > 0) || (node.children && node.children.length === 0)
+    const converted: any = {
+      key: node.key,
+      title: node.title,
+      isLeaf,
+      items: node.items || [],
+      color: node.color
+    }
 
-// 搜索过滤 - 只搜索指标层级，不搜索指标项
-const filteredTreeData = computed(() => {
-  if (!searchKeyword.value.trim()) {
-    return props.indicatorTreeData
+    // 只有非叶子节点才有children
+    if (!isLeaf && node.children && node.children.length > 0) {
+      converted.children = convertTreeData(node.children)
+    }
+
+    return converted
+  })
+}
+
+// 递归搜索叶子节点
+const searchLeafNodes = (nodes: any[], keyword: string): { matchedNodes: any[], expandKeys: string[] } => {
+  const matchedNodes: any[] = []
+  const expandKeys: string[] = []
+
+  const search = (nodeList: any[], parentKeys: string[] = []): any[] => {
+    return nodeList.map(node => {
+      const currentPath = [...parentKeys, node.key]
+
+      // 安全检查 title 字段
+      const nodeTitle = node.title || ''
+
+      // 如果是叶子节点且匹配搜索关键词
+      if (node.isLeaf && nodeTitle.toLowerCase().includes(keyword.toLowerCase())) {
+        // 高亮匹配的文本
+        const highlightedTitle = nodeTitle.replace(
+          new RegExp(`(${keyword})`, 'gi'),
+          '<span style="color: red; font-weight: bold;">$1</span>'
+        )
+
+        const matchedNode = {
+          ...node,
+          title: highlightedTitle
+        }
+
+        matchedNodes.push(matchedNode)
+        // 添加所有祖先节点的key到展开列表
+        expandKeys.push(...parentKeys)
+
+        return matchedNode
+      }
+
+      // 如果不是叶子节点，递归搜索子节点
+      if (!node.isLeaf && node.children && Array.isArray(node.children)) {
+        const searchedChildren = search(node.children, currentPath)
+        const hasMatchedChildren = searchedChildren.some(child =>
+          matchedNodes.some(matched => matched.key === child.key)
+        )
+
+        // 如果子节点有匹配项，保留该父节点
+        if (hasMatchedChildren) {
+          return {
+            ...node,
+            children: searchedChildren.filter(child =>
+              child.isLeaf ? matchedNodes.some(matched => matched.key === child.key) :
+                child.children && Array.isArray(child.children) && child.children.length > 0
+            )
+          }
+        }
+      }
+
+      return null
+    }).filter(Boolean)
   }
 
-  const keyword = searchKeyword.value.toLowerCase()
-  const filtered: IndicatorGroup[] = []
+  search(nodes)
+  return { matchedNodes, expandKeys: [...new Set(expandKeys)] }
+}
 
-  props.indicatorTreeData.forEach((group) => {
-    const matchedChildren: IndicatorGroup[] = []
+// 存储过滤后的树数据
+const filteredTreeData = ref<any[]>([])
 
-    group.children?.forEach((indicator) => {
-      // 只检查指标名称是否匹配，不检查指标项
-      const indicatorMatches = indicator.title.toLowerCase().includes(keyword)
+// 获取所有包含items的节点及其祖先节点的keys用于默认展开
+const getAllExpandableKeys = (nodes: any[], parentKeys: string[] = []): string[] => {
+  const expandKeys: string[] = []
 
-      // 只有指标名称匹配才包含该指标
-      if (indicatorMatches) {
-        matchedChildren.push(indicator)
+  const collectKeys = (nodeList: any[], ancestors: string[] = []) => {
+    nodeList.forEach(node => {
+      const currentPath = [...ancestors, node.key]
+
+      // 如果当前节点有items且不为空，展开所有祖先节点
+      if (node.items && Array.isArray(node.items) && node.items.length > 0) {
+        expandKeys.push(...ancestors)
+      }
+
+      // 如果有子节点，递归处理
+      if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+        // 如果子节点中有包含items的节点，也要展开当前节点
+        const hasItemsInChildren = node.children.some((child: any) =>
+          child.items && Array.isArray(child.items) && child.items.length > 0
+        )
+        if (hasItemsInChildren) {
+          expandKeys.push(...ancestors, node.key)
+        }
+
+        collectKeys(node.children, currentPath)
       }
     })
+  }
 
-    if (matchedChildren.length > 0) {
-      filtered.push({
-        ...group,
-        children: matchedChildren
-      })
-    }
-  })
+  collectKeys(nodes, parentKeys)
+  return [...new Set(expandKeys)] // 去重
+}
 
-  return filtered
-})
+// 更新树数据的函数
+const updateTreeData = () => {
+  try {
+    const baseTreeData = convertTreeData(indicatorTreeData.value || [])
 
-// 将树数据转换为Ant Design Vue Tree组件格式，只显示两层结构（分组-指标）
-const treeDataFormatted = computed(() => {
-  return filteredTreeData.value.map(group => ({
-    key: group.key,
-    title: group.title,
-    isLeaf: false,
-    children: group.children?.map(indicator => ({
-      key: indicator.key,
-      title: indicator.title,
-      isLeaf: indicator.isLeaf,
-      items: indicator.items
-    }))
-  }))
-})
-
-// 监听搜索关键词变化，自动展开匹配的节点 - 只展开到指标层级
-watch(
-  searchKeyword,
-  (newKeyword) => {
-    if (!newKeyword.trim()) {
-      // 如果搜索框为空，展开所有一级节点
-      expandedKeys.value = props.indicatorTreeData.map((item) => item.key)
+    if (!searchKeyword.value.trim()) {
+      filteredTreeData.value = baseTreeData
+      // 默认展开所有包含items的节点及其祖先节点
+      expandedKeys.value = getAllExpandableKeys(baseTreeData)
       return
     }
 
-    const keyword = newKeyword.toLowerCase()
-    const newExpandedKeys: string[] = []
+    const { matchedNodes, expandKeys } = searchLeafNodes(baseTreeData, searchKeyword.value.trim())
 
-    props.indicatorTreeData.forEach((group) => {
-      // 检查该分组下是否有匹配的指标
-      const hasMatchedChildren = group.children?.some((indicator) => {
-        return indicator.title.toLowerCase().includes(keyword)
-      })
+    // 更新展开的keys
+    expandedKeys.value = expandKeys
 
-      if (hasMatchedChildren) {
-        newExpandedKeys.push(group.key)
-      }
-    })
-
-    expandedKeys.value = newExpandedKeys
-  },
-  { immediate: true }
-)
-
-// 监听props变化，初始展开所有节点
-watch(
-  () => props.indicatorTreeData,
-  (newData) => {
-    if (newData && newData.length > 0) {
-      expandedKeys.value = newData.map((item) => item.key)
+    // 重新构建树结构，只包含搜索结果的路径
+    const buildFilteredTree = (nodes: any[]): any[] => {
+      return nodes.map(node => {
+        if (node.isLeaf) {
+          // 如果是叶子节点，检查是否在匹配列表中
+          const matchedNode = matchedNodes.find(matched => matched.key === node.key)
+          return matchedNode || null
+        } else {
+          // 如果不是叶子节点，递归检查子节点
+          if (node.children && Array.isArray(node.children)) {
+            const filteredChildren = buildFilteredTree(node.children).filter(Boolean)
+            if (filteredChildren.length > 0) {
+              return {
+                ...node,
+                children: filteredChildren
+              }
+            }
+          }
+        }
+        return null
+      }).filter(Boolean)
     }
-  },
-  { immediate: true }
-)
 
-// 生成高亮文本（仅对叶子节点）
-const getHighlightedText = (text: string) => {
-  if (!searchKeyword.value.trim()) {
-    return text
+    filteredTreeData.value = buildFilteredTree(baseTreeData)
+  } catch (error) {
+    console.error('更新树数据时发生错误:', error)
+    filteredTreeData.value = []
   }
-
-  const keyword = searchKeyword.value.trim()
-  // 使用正则表达式匹配关键字，忽略大小写
-  const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-  return text.replace(regex, '<span style="color: #ff4d4f; font-weight: 600;">$1</span>')
 }
+
+// 计算格式化的树数据（纯函数，无副作用）
+const treeDataFormatted = computed(() => filteredTreeData.value)
+
+// 监听搜索关键词和指标数据变化
+watch(
+  () => searchKeyword.value, () => {
+    updateTreeData()
+  }, { immediate: true })
+watch(
+  () => indicatorTreeData.value, () => {
+    updateTreeData()
+  }, { immediate: true, deep: true })
+
+// 拖拽状态管理
+let dragData: DragData | null = null
+
+// 组件生命周期管理
+let cleanupGlobalListeners: (() => void) | null = null
+
+onMounted(() => {
+  cleanupGlobalListeners = setupGlobalDragListeners()
+})
+
+onUnmounted(() => {
+  if (cleanupGlobalListeners) {
+    cleanupGlobalListeners()
+  }
+})
 
 // 拖拽事件处理
 const onDragStart = (info: any) => {
   console.log('拖拽开始:', info)
-  const { node } = info
+  const { event, node } = info
 
-  if (isEmpty(node.items)) {
-    // 只允许拖拽叶子节点（指标）
-    console.log('非叶子节点，拒绝拖拽')
+  if (!node.items || node.items.length === 0) {
+    // items为空，完全禁止拖拽
+    console.log('items为空，拒绝拖拽')
+
+    // 禁止默认事件和事件冒泡
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+    }
+
     return false
   }
 
@@ -209,17 +323,56 @@ const onDragEnter = (info: any) => {
 // 拖拽悬停在树组件上时的处理
 const onDragOver = (info: any) => {
   console.log('拖拽悬停在树组件上:', info)
-  // 设置禁止放置的鼠标样式
-  document.body.style.cursor = 'not-allowed'
   return false
 }
 
-// 拖拽结束事件，重置鼠标指针
+// 拖拽结束事件，重置状态
 const onDragEnd = () => {
-  console.log('拖拽结束，重置鼠标指针')
-  document.body.style.cursor = 'default'
+  console.log('拖拽结束')
   dragData = null
   emit('dragEnd')
+}
+
+// 全局拖拽事件监听器
+const setupGlobalDragListeners = () => {
+  // 监听所有拖拽相关事件
+  const handleGlobalDragEvent = (e: DragEvent) => {
+    const target = e.target as HTMLElement
+    const treeNode = target.closest('.ant-tree-treenode')
+
+    if (treeNode) {
+      const titleElement = treeNode.querySelector('[data-items]')
+      if (titleElement) {
+        const itemsData = titleElement.getAttribute('data-items')
+        try {
+          const items = JSON.parse(itemsData || '[]')
+          if (!items || items.length === 0) {
+            // items为空，禁止所有拖拽事件
+            e.preventDefault()
+            e.stopPropagation()
+            e.stopImmediatePropagation()
+            return false
+          }
+        } catch (err) {
+          console.error('解析items数据失败:', err)
+        }
+      }
+    }
+  }
+
+  // 添加全局监听器
+  document.addEventListener('dragstart', handleGlobalDragEvent, true)
+  document.addEventListener('drag', handleGlobalDragEvent, true)
+  document.addEventListener('dragenter', handleGlobalDragEvent, true)
+  document.addEventListener('dragover', handleGlobalDragEvent, true)
+
+  // 返回清理函数
+  return () => {
+    document.removeEventListener('dragstart', handleGlobalDragEvent, true)
+    document.removeEventListener('drag', handleGlobalDragEvent, true)
+    document.removeEventListener('dragenter', handleGlobalDragEvent, true)
+    document.removeEventListener('dragover', handleGlobalDragEvent, true)
+  }
 }
 </script>
 
@@ -256,10 +409,18 @@ const onDragEnd = () => {
     .search-input {
       margin-bottom: 16px;
     }
+  }
 
-    .indicator-tree {
-      // 指标树样式
+  :deep(.ant-tree-title) {
+    span.no-items[data-is-leaf="true"] {
+      cursor: not-allowed;
+    }
+
+    span[data-is-leaf="false"] {
+      cursor: not-allowed;
     }
   }
 }
+
+
 </style>

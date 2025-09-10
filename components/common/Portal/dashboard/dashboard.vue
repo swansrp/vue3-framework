@@ -1,16 +1,25 @@
 <template>
   <div class="hr-indicator-dashboard">
     <!-- 左侧指标树面板 -->
-    <IndicatorTreePanel
-      :collapsed="leftPanelCollapsed" :indicator-tree-data="indicatorTreeData"
-      @drag-start="onDragStart" @drag-end="onDragEnd" />
+    <indicator-tree-panel
+      :collapsed="leftPanelCollapsed"
+      :indicator-tree-data="indicatorTreeData"
+      @drag-start="onDragStart"
+      @drag-end="onDragEnd"
+    />
 
     <!-- 右侧配置面板 -->
-    <ConfigPanel
-      :left-panel-collapsed="leftPanelCollapsed" v-model:first-dimension="firstDimension"
-      v-model:second-dimension="secondDimension" v-model:filter-dimension="filterDimension"
-      v-model:selected-filter-items="selectedFilterItems" v-model:data-metrics="dataMetrics"
-      :available-data-types="availableDataTypes" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart" />
+    <config-panel
+      v-model:data-metrics="dataMetrics"
+      v-model:filter-dimension="filterDimension"
+      v-model:first-dimension="firstDimension"
+      v-model:second-dimension="secondDimension"
+      v-model:selected-filter-items="selectedFilterItems"
+      :available-data-types="availableDataTypes"
+      :left-panel-collapsed="leftPanelCollapsed"
+      @toggle-left-panel="toggleLeftPanel"
+      @generate-chart="generateChart"
+    />
 
     <!-- 中间展示区域 -->
     <ChartDisplayArea
@@ -20,20 +29,24 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, provide, onMounted, toRefs, nextTick } from 'vue'
+import { onMounted, provide, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { getIndicatorConfig } from '@/framework/apis/portal'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
-import { DimensionIndicatorsFilter, IndicatorGroup as TalentIndicatorGroup, DataMetric, ConditionGroup } from './universalChart/AdvancedStatisticReq'
+import {
+  ConditionGroup,
+  DataMetric,
+  DimensionIndicatorsFilter,
+  IndicatorGroup as TalentIndicatorGroup
+} from '../../../../../views/dashboard/hr/talentReview/DimensionIndicatorsFilter'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 // 导入子组件
 import IndicatorTreePanel from './components/IndicatorTreePanel.vue'
 import ConfigPanel from './components/ConfigPanel.vue'
 import ChartDisplayArea from './components/ChartDisplayArea.vue'
-import { getPortalConfig } from "@/framework/apis/portal/config";
+import { getPortalConfig } from "@/framework/apis/portal/config"
 import { useRouter } from 'vue-router'
-import { isEmpty } from '@/framework/utils/common'
 
 // 接口定义
 interface IndicatorItem {
@@ -129,8 +142,12 @@ const chartDisplayAreaRef = ref()
 const dimensionIndicatorsFilter = ref<DimensionIndicatorsFilter | undefined>(undefined)
 
 // 事件处理
-const toggleLeftPanel = () => {
-  leftPanelCollapsed.value = !leftPanelCollapsed.value
+const toggleLeftPanel = (status: boolean) => {
+  if (status === undefined) {
+    leftPanelCollapsed.value = !leftPanelCollapsed.value
+  } else {
+    leftPanelCollapsed.value = status
+  }
 }
 
 const onDragStart = (data: DragData) => {
@@ -143,7 +160,7 @@ const onDragEnd = () => {
 
 // 转换函数：将IndicatorGroup转换为TalentIndicatorGroup
 const convertToTalentIndicatorGroup = (group: IndicatorGroup | null): TalentIndicatorGroup | null => {
-  if (!group) return null;
+  if (!group) return null
 
   return {
     groupName: group.title,
@@ -156,8 +173,8 @@ const convertToTalentIndicatorGroup = (group: IndicatorGroup | null): TalentIndi
         andOr: '0' as '0' | '1'
       }
     })) || []
-  };
-};
+  }
+}
 
 // 转换函数：将DataMetricUI转换为DataMetric
 const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
@@ -181,13 +198,13 @@ const convertToConditionGroup = (filterItems: string[]): ConditionGroup => {
     relation: null,
     conditionList: [],
     andOr: '0'
-  }));
+  }))
 
   return {
     conditionList: conditionList,
     andOr: '0'
-  };
-};
+  }
+}
 
 const generateChart = async (chartData?: {
   firstDimension: IndicatorGroup | null,
@@ -209,26 +226,26 @@ const generateChart = async (chartData?: {
   // 校验规则1: 存在二级维度时，不能选择饼图
   if (secondDimension.value) {
     // 有二级维度时，不能选择饼图
-    const pieChartMetrics = dataMetrics.value.filter(metric => metric.chartType === 'pie');
+    const pieChartMetrics = dataMetrics.value.filter(metric => metric.chartType === 'pie')
     if (pieChartMetrics.length > 0) {
-      message.error('存在二级维度时，不能选择饼图');
-      return;
+      message.error('存在二级维度时，不能选择饼图')
+      return
     }
   }
 
   // 校验规则2: 当数据选择的堆叠组一致时，必须确保选择的坐标轴位置也一致
-  const stackGroups = new Map<string, string>(); // stackGroup -> yAxisPosition
+  const stackGroups = new Map<string, string>() // stackGroup -> yAxisPosition
   for (const metric of dataMetrics.value) {
     if (metric.stackGroup && metric.stackGroup !== 'single') {
       if (stackGroups.has(metric.stackGroup)) {
         // 如果已经有这个堆叠组，检查坐标轴位置是否一致
         if (stackGroups.get(metric.stackGroup) !== metric.yAxisPosition) {
-          message.error(`堆叠组 "${metric.stackGroup}" 的数据必须使用相同的坐标轴位置`);
-          return;
+          message.error(`堆叠组 "${ metric.stackGroup }" 的数据必须使用相同的坐标轴位置`)
+          return
         }
       } else {
         // 记录这个堆叠组的坐标轴位置
-        stackGroups.set(metric.stackGroup, metric.yAxisPosition);
+        stackGroups.set(metric.stackGroup, metric.yAxisPosition)
       }
     }
   }
@@ -261,7 +278,7 @@ const generateChart = async (chartData?: {
     secondDimension: secondDimensionConverted, // 二级维度可以为null
     filterConditions: convertToConditionGroup(selectedFilterItems.value),
     dataMetrics: dataMetrics.value.map(convertToDataMetric)
-  };
+  }
 
   // 更新维度指标过滤器数据
   dimensionIndicatorsFilter.value = filterData;
@@ -291,8 +308,8 @@ const onChartGenerated = (data: any) => {
   console.log('图表生成成功，数据:', data)
 }
 
-const { currentRoute } = useRouter();
-const route = currentRoute.value;
+const { currentRoute } = useRouter()
+const route = currentRoute.value
 
 // 组件挂载时加载数据
 onMounted(async () => {
@@ -302,15 +319,13 @@ onMounted(async () => {
   try {
 
     await getIndicatorConfig(tableId.value).then(resp => indicatorTreeData.value = resp.payload)
-
-    console.log('转换后的数据:', indicatorTreeData.value)
     availableDataTypes.value.push({
       dataName: '分布统计',
-      dataField: '',
+      dataField: ''
     })
     const resp: any = await getPortalConfig(tableId.value)
     resp.payload.columns.forEach((column: any) => {
-      if (column.show === '0') return;
+      if (column.show === '0') return
       if (column.fieldType === FIELD_TYPE.MONEY) {
         availableDataTypes.value.push({
           dataName: column.displayName,
@@ -321,7 +336,7 @@ onMounted(async () => {
       if (column.fieldType === FIELD_TYPE.NUMBER) {
         availableDataTypes.value.push({
           dataName: column.displayName,
-          dataField: column.property,
+          dataField: column.property
         })
       }
     })

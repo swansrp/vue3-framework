@@ -2,48 +2,48 @@
   <div class="dimension-section">
     <div class="section-header" @click="toggleCollapse">
       <h4>维度选择</h4>
-      <a-button type="text" size="small" class="collapse-btn">
+      <a-button class="collapse-btn" size="small" type="text">
         <DownOutlined v-if="!collapsed" />
         <RightOutlined v-else />
       </a-button>
     </div>
-    
+
     <div v-show="!collapsed" class="section-content">
       <!-- 一级维度 -->
       <div class="dimension-item">
         <div class="dimension-header">
           <span>一级维度（横坐标）</span>
           <span class="required">*</span>
-          <a-button 
+          <a-button
             v-if="firstDimension"
-            type="text" 
-            size="small" 
-            @click="clearFirstDimension"
             class="clear-btn"
+            size="small"
+            type="text"
+            @click="clearFirstDimension"
           >
             清空
           </a-button>
         </div>
-        <div 
-          class="drop-zone compact"
+        <div
           :class="{ 
             'has-content': firstDimension, 
             'drag-over': dragOverFirst,
             'drag-forbidden': dragOverFirst && dragData && isDuplicateDimension(dragData.value?.key || '', 'first')
           }"
-          @dragover.prevent="onDragOverFirst"
+          class="drop-zone compact"
           @dragleave="onDragLeaveFirst"
           @drop="onDropFirstDimension"
+          @dragover.prevent="onDragOverFirst"
         >
           <!-- 禁止拖入的视觉提示 -->
-          <div 
-            v-if="dragOverFirst && dragData && isDuplicateDimension(dragData.value?.key || '', 'first')" 
+          <div
+            v-if="dragOverFirst && dragData && isDuplicateDimension(dragData.value?.key || '', 'first')"
             class="drop-forbidden-overlay"
           >
             <div class="forbidden-icon">✕</div>
             <div class="forbidden-text">禁止重复选择</div>
           </div>
-          
+
           <!-- 正常状态显示 -->
           <template v-else>
             <div v-if="!firstDimension" class="drop-placeholder">
@@ -58,46 +58,46 @@
           </template>
         </div>
       </div>
-      
+
       <!-- 二级维度 -->
       <div class="dimension-item">
         <div class="dimension-header">
           <span>二级维度（数据集）</span>
           <span v-if="!firstDimension" class="dimension-tip">需先选择一级维度</span>
-          <a-button 
+          <a-button
             v-if="secondDimension"
-            type="text" 
-            size="small" 
-            @click="clearSecondDimension"
             class="clear-btn"
+            size="small"
+            type="text"
+            @click="clearSecondDimension"
           >
             清空
           </a-button>
         </div>
-        <div 
-          class="drop-zone compact"
+        <div
           :class="{ 
             'has-content': secondDimension, 
             'drag-over': dragOverSecond && firstDimension,
             'drag-forbidden': (dragOverSecond && dragData && isDuplicateDimension(dragData.value?.key || '', 'second')) || !firstDimension,
             'disabled': !firstDimension
           }"
-          @dragover.prevent="onDragOverSecond"
+          class="drop-zone compact"
           @dragleave="onDragLeaveSecond"
           @drop="onDropSecondDimension"
+          @dragover.prevent="onDragOverSecond"
         >
           <!-- 禁止拖入的视觉提示 -->
-          <div 
-            v-if="dragOverSecond && dragData && isDuplicateDimension(dragData.value?.key || '', 'second')" 
+          <div
+            v-if="dragOverSecond && dragData && isDuplicateDimension(dragData.value?.key || '', 'second')"
             class="drop-forbidden-overlay"
           >
             <div class="forbidden-icon">✕</div>
             <div class="forbidden-text">禁止重复选择</div>
           </div>
-          
+
           <!-- 正常状态显示 -->
           <template v-else>
-            <div v-if="!secondDimension" class="drop-placeholder">
+            <div v-if="!secondDimension" :class="{ 'warning-hint': !firstDimension }" class="drop-placeholder">
               {{ firstDimension ? '拖拽指标到此处（可选）' : '请先选择一级维度' }}
             </div>
             <div v-else class="dimension-content">
@@ -114,7 +114,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, inject } from 'vue'
+import { inject, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
 
@@ -188,15 +188,15 @@ const presetColors = [
 // 拖拽悬停事件
 const onDragOverFirst = (e: DragEvent) => {
   e.preventDefault()
-  
+
   // 如果已经检查过，直接返回，避免频闪
   if (dragOverFirstChecked) {
     return
   }
-  
+
   dragOverFirst.value = true
   dragOverFirstChecked = true
-  
+
   // 检查是否允许放置
   if (dragData?.value && !isDuplicateDimension(dragData.value.key, 'first')) {
     document.body.style.cursor = 'copy'
@@ -211,12 +211,12 @@ const onDragLeaveFirst = (e: DragEvent) => {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const x = e.clientX
   const y = e.clientY
-  
+
   // 如果鼠标仍在容器范围内，不触发离开事件
   if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
     return
   }
-  
+
   dragOverFirst.value = false
   dragOverFirstChecked = false // 重置检查状态
   document.body.style.cursor = 'default'
@@ -225,21 +225,21 @@ const onDragLeaveFirst = (e: DragEvent) => {
 
 const onDragOverSecond = (e: DragEvent) => {
   e.preventDefault()
-  
+
   // 如果没有一级维度，不允许拖入
   if (!props.firstDimension) {
     document.body.style.cursor = 'not-allowed'
     return
   }
-  
+
   // 如果已经检查过，直接返回，避免频闪
   if (dragOverSecondChecked) {
     return
   }
-  
+
   dragOverSecond.value = true
   dragOverSecondChecked = true
-  
+
   // 检查是否允许放置
   if (dragData?.value && !isDuplicateDimension(dragData.value.key, 'second')) {
     document.body.style.cursor = 'copy'
@@ -254,12 +254,12 @@ const onDragLeaveSecond = (e: DragEvent) => {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const x = e.clientX
   const y = e.clientY
-  
+
   // 如果鼠标仍在容器范围内，不触发离开事件
   if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
     return
   }
-  
+
   dragOverSecond.value = false
   dragOverSecondChecked = false // 重置检查状态
   document.body.style.cursor = 'default'
@@ -277,36 +277,36 @@ const onDropFirstDimension = (e: DragEvent) => {
     console.log('错误: 没有拖拽数据')
     return
   }
-  
+
   console.log('检查重复维度:', dragData.value.key, 'first')
-  
+
   const isDuplicate = isDuplicateDimension(dragData.value.key, 'first')
   console.log('是否重复:', isDuplicate)
-  
+
   if (!isDuplicate) {
     console.log('设置一级维度:', dragData.value)
-    
+
     // 为一级维度的所有项生成不同的颜色
     const itemCount = dragData.value.items?.length || 0
     const distinctColors = generateDistinctColors(itemCount)
-    
+
     const newFirstDimension: IndicatorGroup = {
       key: dragData.value.key,
       title: dragData.value.title,
-      items: dragData.value.items?.map((item, index) => ({ 
-        ...item, 
-        color: distinctColors[index] || getRandomColor() 
+      items: dragData.value.items?.map((item, index) => ({
+        ...item,
+        color: distinctColors[index] || getRandomColor()
       })) || []
     }
-    
+
     emit('update:firstDimension', newFirstDimension)
     emit('dimensionChanged')
-    
+
     console.log('一级维度设置成功:', newFirstDimension)
   } else {
     console.log('拒绝设置: 重复维度')
     // 在放置时显示消息提示
-    message.warning(`"指标${dragData.value.title}"已在其他维度中选择，请选择其他指标`)
+    message.warning(`"指标${ dragData.value.title }"已在其他维度中选择，请选择其他指标`)
   }
 }
 
@@ -320,15 +320,15 @@ const onDropSecondDimension = (e: DragEvent) => {
     console.log('错误: 没有拖拽数据')
     return
   }
-  
+
   // 检查是否有一级维度
   if (!props.firstDimension) {
     message.warning('请先选择一级维度，再选择二级维度')
     return
   }
-  
+
   const isDuplicate = isDuplicateDimension(dragData.value.key, 'second')
-  
+
   if (!isDuplicate) {
     console.log('设置二级维度:', dragData.value)
     const newSecondDimension: IndicatorGroup = {
@@ -336,15 +336,15 @@ const onDropSecondDimension = (e: DragEvent) => {
       title: dragData.value.title,
       items: dragData.value.items?.map((item) => ({ ...item })) || []
     }
-    
+
     emit('update:secondDimension', newSecondDimension)
     emit('dimensionChanged')
-    
+
     console.log('二级维度设置成功:', newSecondDimension)
   } else {
     console.log('拒绝设置: 重复维度')
     // 在放置时显示消息提示
-    message.warning(`"指标${dragData.value.title}"已在其他维度中选择，请选择其他指标`)
+    message.warning(`"指标${ dragData.value.title }"已在其他维度中选择，请选择其他指标`)
   }
 }
 
@@ -354,7 +354,7 @@ const isDuplicateDimension = (key: string, current: 'first' | 'second' | null) =
   console.log('当前一级维度:', props.firstDimension?.key)
   console.log('当前二级维度:', props.secondDimension?.key)
   console.log('当前筛选维度:', props.filterDimension?.key)
-  
+
   if (current === 'first') {
     // 检查是否与二级维度或筛选维度重复
     const result = props.secondDimension?.key === key || props.filterDimension?.key === key
@@ -367,9 +367,9 @@ const isDuplicateDimension = (key: string, current: 'first' | 'second' | null) =
     return result
   } else {
     // 检查是否已存在于任何维度（用于拖拽开始时的检查）
-    const result = props.firstDimension?.key === key || 
-                   props.secondDimension?.key === key || 
-                   props.filterDimension?.key === key
+    const result = props.firstDimension?.key === key ||
+      props.secondDimension?.key === key ||
+      props.filterDimension?.key === key
     console.log('检查指标是否已存在于任何维度:', result)
     return result
   }
@@ -399,9 +399,9 @@ const getRandomColor = () => {
 
 const generateDistinctColors = (count: number): string[] => {
   if (count <= 0) return []
-  
+
   const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
-  
+
   if (count === 1) return [colors[0]]
   if (count <= colors.length) {
     // 如果需要的颜色数量小于等于预设颜色数量，均匀选取
@@ -422,7 +422,7 @@ const generateDistinctColors = (count: number): string[] => {
 }
 </script>
 
-<style scoped lang="less">
+<style lang="less" scoped>
 .dimension-section {
   margin-bottom: 24px;
 
@@ -457,7 +457,7 @@ const generateDistinctColors = (count: number): string[] => {
       align-items: center;
       justify-content: center;
       border-radius: 4px;
-      
+
       &:hover {
         color: #1890ff;
         background-color: #e6f7ff;
@@ -479,7 +479,7 @@ const generateDistinctColors = (count: number): string[] => {
       .required {
         color: #ff4d4f;
       }
-      
+
       .dimension-tip {
         color: #8c8c8c;
         font-size: 12px;
@@ -508,11 +508,11 @@ const generateDistinctColors = (count: number): string[] => {
         border-color: #1890ff;
         background: #f6ffed;
       }
-      
+
       &.drag-forbidden {
         border-color: #d9d9d9 !important;
         background: #f5f5f5 !important;
-        
+
         .drop-placeholder {
           opacity: 0.3;
         }
@@ -522,19 +522,19 @@ const generateDistinctColors = (count: number): string[] => {
         border-color: #52c41a;
         background: white;
       }
-      
+
       &.disabled {
         background: #f5f5f5;
         border-color: #d9d9d9;
         border-style: dashed;
         opacity: 0.6;
         cursor: not-allowed;
-        
+
         .drop-placeholder {
           color: #bfbfbf;
         }
       }
-      
+
       .drop-forbidden-overlay {
         position: absolute;
         top: 0;
@@ -549,7 +549,7 @@ const generateDistinctColors = (count: number): string[] => {
         border-radius: 4px;
         z-index: 10;
         pointer-events: none;
-        
+
         .forbidden-icon {
           font-size: 30px;
           color: #ff0000;
@@ -558,7 +558,7 @@ const generateDistinctColors = (count: number): string[] => {
           text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
           animation: pulse 1.5s ease-in-out infinite alternate;
         }
-        
+
         .forbidden-text {
           color: #ff0000;
           font-size: 14px;
@@ -573,17 +573,31 @@ const generateDistinctColors = (count: number): string[] => {
         color: #8c8c8c;
         font-size: 12px;
         width: 100%;
+
+        &.warning-hint {
+          color: #999999;
+          font-weight: 400;
+          position: relative;
+
+          &::before {
+            content: 'ᵢ';
+            margin-right: 4px;
+            font-size: 12px;
+            opacity: 0.7;
+            color: #bfbfbf;
+          }
+        }
       }
 
       .dimension-content {
         width: 100%;
-        
+
         .dimension-info-line {
           display: flex;
           justify-content: space-between;
           align-items: center;
           width: 100%;
-          
+
           .dimension-title {
             font-weight: 600;
             color: #262626;
@@ -592,7 +606,7 @@ const generateDistinctColors = (count: number): string[] => {
             overflow: hidden;
             text-overflow: ellipsis;
           }
-          
+
           .info-text {
             color: #52c41a;
             font-size: 12px;
