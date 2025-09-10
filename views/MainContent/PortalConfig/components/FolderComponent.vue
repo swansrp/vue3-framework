@@ -74,7 +74,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, getCurrentInstance } from 'vue'
+import { computed } from 'vue'
 import { CaretDownOutlined, CaretRightOutlined, FileTextOutlined, FolderOutlined } from '@ant-design/icons-vue'
 
 // 定义Props接口
@@ -250,7 +250,6 @@ const onItemMouseEnter = (e: Event) => {
 
 const onItemMouseLeave = (e: Event) => {
   const target = e.target as HTMLElement
-  const currentInstance = getCurrentInstance()
   if (props.tableConfig.name !== (e.target as any).closest('.table-item')?.querySelector('.item-label')?.title) {
     target.style.backgroundColor = 'white'
     target.style.borderRight = 'none'

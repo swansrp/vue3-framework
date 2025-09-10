@@ -6,6 +6,7 @@
         <a-button 
           type="primary" 
           size="small" 
+          :disabled="!canAddDataMetric"
           @click.stop="openDataConfig('add')"
         >
           添加数据
@@ -53,10 +54,11 @@
                   :value="metric.chartType"
                   size="small"
                   style="width: 120px"
+                  :disabled="!canChangeChartType(metric)"
                   @change="(value) => updateMetricField(metric.id, 'chartType', value)"
                 >
                   <a-select-option 
-                    v-for="option in chartTypeOptions" 
+                    v-for="option in getAvailableChartTypesForMetric(metric)" 
                     :key="option.value" 
                     :value="option.value"
                   >
@@ -177,13 +179,19 @@
           </a-form-item>
           
           <a-form-item label="图表类型" required>
-            <a-select v-model:value="editingDataMetric.chartType" placeholder="请选择图表类型">
+            <a-select 
+              v-model:value="editingDataMetric.chartType" 
+              placeholder="请选择图表类型"
+              @change="onChartTypeChange"
+            >
               <a-select-option 
-                v-for="option in chartTypeOptions" 
+                v-for="option in availableChartTypeOptions" 
                 :key="option.value" 
                 :value="option.value"
+                :disabled="option.disabled"
               >
                 {{ option.label }}
+                <span v-if="option.disabled" class="disabled-tip">({{ option.disabledReason }})</span>
               </a-select-option>
             </a-select>
           </a-form-item>
@@ -269,6 +277,13 @@ interface DataTypeOption {
   unit?: string
 }
 
+interface ChartTypeOption {
+  label: string
+  value: string
+  disabled?: boolean
+  disabledReason?: string
+}
+
 // Props
 const props = defineProps<{
   dataMetrics: DataMetricUI[]
@@ -287,10 +302,10 @@ const emit = defineEmits<{
 const collapsed = ref(false)
 
 // 配置选项
-const chartTypeOptions = ref<{ label: string; value: string }[]>([
-  { value: 'bar', label: '柱状图' },
-  { value: 'line', label: '折线图' },
-  { value: 'pie', label: '饼图' }
+const chartTypeOptions = ref<ChartTypeOption[]>([
+  { label: '柱状图', value: 'bar' },
+  { label: '折线图', value: 'line' },
+  { label: '饼图', value: 'pie' }
 ])
 
 const axisPositionOptions = ref<{ label: string; value: string }[]>([
@@ -323,6 +338,38 @@ const currentDataItemColor = computed(() => {
   return getDataItemColor(currentDataItemTarget.value.metricId, currentDataItemTarget.value.itemKey)
 })
 
+// 判断是否有饼图类型的数据指标
+const hasPieChart = computed(() => {
+  return props.dataMetrics.some(metric => metric.chartType === 'pie')
+})
+
+// 判断是否可以添加数据指标
+const canAddDataMetric = computed(() => {
+  // 如果已经有饼图类型，不允许添加新的数据指标
+  return !hasPieChart.value
+})
+
+// 获取可用的图表类型选项
+const availableChartTypeOptions = computed(() => {
+  if (!editingDataMetric.value) return chartTypeOptions.value
+  
+  const isFirstMetric = dataFormMode.value === 'add' && props.dataMetrics.length === 0
+  const isEditingFirstMetric = dataFormMode.value === 'edit' && props.dataMetrics.length === 1 && props.dataMetrics[0].id === editingDataMetric.value.id
+  
+  return chartTypeOptions.value.map(option => {
+    if (option.value === 'pie') {
+      // 饼图只允许在第一个数据指标中选择
+      const canSelectPie = isFirstMetric || isEditingFirstMetric
+      return {
+        ...option,
+        disabled: !canSelectPie,
+        disabledReason: canSelectPie ? '' : '饼图只能作为第一个数据指标'
+      }
+    }
+    return { ...option, disabled: false, disabledReason: '' }
+  })
+})
+
 // 默认颜色配置
 const defaultColors = ref<string[]>([
   '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
@@ -341,13 +388,68 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
   emit('updateMetricField', metricId, field, value)
 }
 
+// 判断是否可以修改图表类型
+const canChangeChartType = (metric: DataMetricUI): boolean => {
+  // 如果已经是饼图类型，则可以修改
+  if (metric.chartType === 'pie') return true
+  
+  // 如果已经有其他饼图类型，则不能修改为饼图
+  const otherPieCharts = props.dataMetrics.filter(m => m.id !== metric.id && m.chartType === 'pie')
+  return otherPieCharts.length === 0
+}
+
+// 获取指定数据指标可用的图表类型
+const getAvailableChartTypesForMetric = (metric: DataMetricUI) => {
+  return chartTypeOptions.value.filter(option => {
+    if (option.value === 'pie') {
+      // 饼图只允许在第一个数据指标中选择，或者当前已经是饼图
+      const isFirstMetric = props.dataMetrics.length === 1 && props.dataMetrics[0].id === metric.id
+      const isPieChart = metric.chartType === 'pie'
+      const hasOtherPieChart = props.dataMetrics.some(m => m.id !== metric.id && m.chartType === 'pie')
+      
+      return isFirstMetric || isPieChart || !hasOtherPieChart
+    }
+    return true
+  })
+}
+
+// 图表类型变化处理
+const onChartTypeChange = (value: any) => {
+  if (!editingDataMetric.value) return
+  
+  const chartType = value as string
+  
+  if (chartType === 'pie') {
+    // 如果选择饼图，检查是否已经有其他饼图
+    const existingPieChart = props.dataMetrics.find(m => 
+      m.chartType === 'pie' && m.id !== editingDataMetric.value?.id
+    )
+    
+    if (existingPieChart) {
+      message.error('只能有一个饼图类型的数据指标')
+      return
+    }
+    
+    // 如果不是第一个数据指标，不允许选择饼图
+    const isFirstMetric = dataFormMode.value === 'add' && props.dataMetrics.length === 0
+    const isEditingFirstMetric = dataFormMode.value === 'edit' && props.dataMetrics.length === 1
+    
+    if (!isFirstMetric && !isEditingFirstMetric) {
+      message.error('饼图只能作为第一个数据指标')
+      return
+    }
+  }
+  
+  editingDataMetric.value.chartType = chartType as 'bar' | 'line' | 'pie'
+}
+
 const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
   dataFormMode.value = mode
   
   if (mode === 'add') {
     editingDataMetric.value = {
       id: `metric_${Date.now()}`,
-      dataName: '',
+      dataName: '分布统计',
       dataField: '',
       chartType: 'bar',
       color: getRandomColor(),
@@ -384,12 +486,6 @@ const isDataTypeUsed = (dataField: string): boolean => {
 
 const confirmDataConfig = () => {
   if (!editingDataMetric.value) return
-  
-  // 简单验证
-  if (!editingDataMetric.value.dataField.trim()) {
-    message.warning('请选择数据类型')
-    return
-  }
   
   // 检查是否重复选择
   if (isDataTypeUsed(editingDataMetric.value.dataField)) {
@@ -430,7 +526,6 @@ const confirmDataConfig = () => {
       message.success('数据修改成功')
     }
   }
-  
   emit('update:dataMetrics', newMetrics)
   dataConfigVisible.value = false
   editingDataMetric.value = null
@@ -677,6 +772,11 @@ const toggleCollapse = () => {
   }
   
   .used-tag {
+    color: #ff4d4f;
+    font-size: 11px;
+  }
+  
+  .disabled-tip {
     color: #ff4d4f;
     font-size: 11px;
   }

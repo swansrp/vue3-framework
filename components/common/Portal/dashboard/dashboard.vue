@@ -10,11 +10,15 @@
       v-model:data-metrics="dataMetrics" v-model:filter-dimension="filterDimension"
       v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
       v-model:selected-filter-items="selectedFilterItems" :available-data-types="availableDataTypes"
-      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart" />
+      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel"
+      @generate-chart="generateChart" />
 
     <!-- 中间展示区域 -->
     <ChartDisplayArea
-      class="chart-display-area" ref="chartDisplayAreaRef" :received-data="dimensionIndicatorsFilter"
+      ref="chartDisplayAreaRef"
+      :config="config"
+      :received-data="dimensionIndicatorsFilter"
+      class="chart-display-area"
       @chart-generated="onChartGenerated" />
   </div>
 </template>
@@ -29,13 +33,13 @@ import {
   DataMetric,
   DimensionIndicatorsFilter,
   IndicatorGroup as TalentIndicatorGroup
-} from '@/framework/components/common/Portal/dashboard/universalChart/AdvancedStatisticReq'
+} from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 // 导入子组件
-import IndicatorTreePanel from './components/IndicatorTreePanel.vue'
-import ConfigPanel from './components/ConfigPanel.vue'
-import ChartDisplayArea from './components/ChartDisplayArea.vue'
+import IndicatorTreePanel from './indicator/tree/IndicatorTreePanel.vue'
+import ConfigPanel from './indicator/config/ConfigPanel.vue'
+import ChartDisplayArea from './indicator/dashboard/ChartDisplayArea.vue'
 import { getPortalConfig } from "@/framework/apis/portal/config"
 import { useRouter } from 'vue-router'
 
@@ -83,10 +87,10 @@ interface DataTypeOption {
 }
 
 const props = withDefaults(
-  defineProps<{
-    tableId?: any
-  }>(),
-  {}
+    defineProps<{
+      tableId?: any
+    }>(),
+    {}
 )
 const { tableId } = toRefs(props)
 
@@ -243,7 +247,7 @@ const generateChart = async (chartData?: {
       if (stackGroups.has(metric.stackGroup)) {
         // 如果已经有这个堆叠组，检查坐标轴位置是否一致
         if (stackGroups.get(metric.stackGroup) !== metric.yAxisPosition) {
-          message.error(`堆叠组 "${metric.stackGroup}" 的数据必须使用相同的坐标轴位置`)
+          message.error(`堆叠组 "${ metric.stackGroup }" 的数据必须使用相同的坐标轴位置`)
           return
         }
       } else {
@@ -313,7 +317,7 @@ const onChartGenerated = (data: any) => {
 
 const { currentRoute } = useRouter()
 const route = currentRoute.value
-
+const config = ref({} as any)
 // 组件挂载时加载数据
 onMounted(async () => {
   if (isEmpty(tableId.value)) {
@@ -327,7 +331,8 @@ onMounted(async () => {
       dataField: ''
     })
     const resp: any = await getPortalConfig(tableId.value)
-    resp.payload.columns.forEach((column: any) => {
+    config.value = resp.payload
+    config.value.columns.forEach((column: any) => {
       if (column.show === '0') return
       if (column.fieldType === FIELD_TYPE.MONEY) {
         availableDataTypes.value.push({

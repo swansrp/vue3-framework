@@ -15,7 +15,6 @@
       </div>
       <div class="action-buttons">
         <a-button
-          :disabled="!hasAnyConfiguration"
           class="reset-btn"
           size="small"
           title="重置配置"
@@ -62,7 +61,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { MenuFoldOutlined, MenuUnfoldOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import DimensionSelector from './DimensionSelector.vue'
@@ -140,28 +139,15 @@ const filterDimension = ref(props.filterDimension)
 const selectedFilterItems = ref([...props.selectedFilterItems])
 const dataMetrics = ref([...props.dataMetrics])
 
-// 计算属性 - 判断是否有任何配置
-const hasAnyConfiguration = computed(() => {
-  return !!(firstDimension.value ||
-    secondDimension.value ||
-    filterDimension.value ||
-    selectedFilterItems.value.length > 0 ||
-    dataMetrics.value.length > 0)
-})
-
-// 监听props变化并同步到本地状态
-const syncPropsToLocal = () => {
-  firstDimension.value = props.firstDimension
-  secondDimension.value = props.secondDimension
-  filterDimension.value = props.filterDimension
-  selectedFilterItems.value = [...props.selectedFilterItems]
-  dataMetrics.value = [...props.dataMetrics]
-}
-
 // 事件处理
 const toggleLeftPanel = () => {
   emit('toggleLeftPanel')
 }
+
+watch(
+    () => dataMetrics.value,
+    () => emit('update:dataMetrics', dataMetrics.value)
+)
 
 const onDimensionChanged = () => {
   // 维度变化时需要重新初始化数据配置的颜色
@@ -180,7 +166,6 @@ const onDimensionChanged = () => {
       // 如果只有一级维度，使用一级维度的项
       const itemCount = firstDimension.value.items.length
       const distinctColors = generateDistinctColors(itemCount)
-
       firstDimension.value.items.forEach((item, index) => {
         metric.itemColors![item.key] = distinctColors[index] || getRandomColor()
       })
@@ -209,7 +194,7 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
     }
 
     emit('update:dataMetrics', dataMetrics.value)
-    console.log('更新数据配置:', metricId, field, value)
+    console.log('更新数据配置:', metricId, field, value, dataMetrics.value)
   }
 }
 
@@ -224,6 +209,29 @@ const generateChart = () => {
   if (dataMetrics.value.length === 0) {
     message.error('请至少添加一个数据配置')
     return
+  }
+
+  // 校验饼图特殊规则：只允许一个维度和一个数据指标
+  const hasPieChart = dataMetrics.value.some(metric => metric.chartType === 'pie')
+  if (hasPieChart) {
+    // 校验是否有二级维度
+    if (secondDimension.value) {
+      message.error('饼图只支持一个维度，请取消二级维度选择')
+      return
+    }
+
+    // 校验数据指标数量
+    if (dataMetrics.value.length > 1) {
+      message.error('饼图只支持一个数据指标，请保留一个数据配置')
+      return
+    }
+
+    // 校验是否为饼图类型
+    const pieMetric = dataMetrics.value[0]
+    if (pieMetric.chartType !== 'pie') {
+      message.error('当前配置不支持混合图表类型，请保持一致的图表类型')
+      return
+    }
   }
 
   // 打印生成图表所需的数据信息
@@ -253,11 +261,11 @@ const resetConfiguration = () => {
   filterDimension.value = null
   selectedFilterItems.value = []
 
-  // 默认添加分布统计数据配置
+  //默认添加分布统计数据配置
   const defaultDataMetric: DataMetricUI = {
     id: `metric_${ Date.now() }`,
     dataName: '分布统计',
-    dataField: 'distribution_statistics',
+    dataField: '',
     chartType: 'bar',
     color: '#1890ff',
     yAxisPosition: 'left',
@@ -320,9 +328,6 @@ const generateDistinctColors = (count: number): string[] => {
     return result
   }
 }
-
-// 初始化同步
-syncPropsToLocal()
 </script>
 
 <style lang="less" scoped>

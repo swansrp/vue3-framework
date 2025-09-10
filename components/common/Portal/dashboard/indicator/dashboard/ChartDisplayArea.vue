@@ -1,7 +1,7 @@
 <template>
   <div class="chart-panel">
     <!-- 维度控制面板 -->
-    <div class="dimension-controls" v-if="chartData.length > 0">
+    <div v-if="chartData.length > 0" class="dimension-controls">
       <!-- 第一维度控制 -->
       <div class="control-item">
         <span class="control-label">显示{{ firstDimensionName }}：</span>
@@ -10,10 +10,10 @@
             {{ dimension }}
           </a-checkbox>
         </a-checkbox-group>
-        <a-button type="link" size="small" @click="toggleAllFirstDimensions">
+        <a-button size="small" type="link" @click="toggleAllFirstDimensions">
           全部选中
         </a-button>
-        <a-button type="link" size="small" @click="invertFirstDimensionsSelection">
+        <a-button size="small" type="link" @click="invertFirstDimensionsSelection">
           反选
         </a-button>
       </div>
@@ -26,10 +26,10 @@
             {{ dimension }}
           </a-checkbox>
         </a-checkbox-group>
-        <a-button type="link" size="small" @click="toggleAllSecondDimensions">
+        <a-button size="small" type="link" @click="toggleAllSecondDimensions">
           全部选中
         </a-button>
-        <a-button type="link" size="small" @click="invertSecondDimensionsSelection">
+        <a-button size="small" type="link" @click="invertSecondDimensionsSelection">
           反选
         </a-button>
       </div>
@@ -42,10 +42,10 @@
             {{ statType }}
           </a-checkbox>
         </a-checkbox-group>
-        <a-button type="link" size="small" @click="toggleAllStatisticTypes">
+        <a-button size="small" type="link" @click="toggleAllStatisticTypes">
           全部选中
         </a-button>
-        <a-button type="link" size="small" @click="invertStatisticTypesSelection">
+        <a-button size="small" type="link" @click="invertStatisticTypesSelection">
           反选
         </a-button>
       </div>
@@ -54,10 +54,10 @@
     <div class="chart-container">
       <!-- 当有数据时显示图表 -->
       <UniversalChart
-        v-if="chartData && chartData.length > 0 && receivedData" :data="filteredChartData"
-        :dataMetrics="receivedData.dataMetrics || []" :chartType="autoChartType" :title="chartTitle"
-        :subtitle="chartSubtitle" :categories="chartCategories" :loading="loading" height="100%"
-        :dimensionValueMap="dimensionValueMap" @click="handleChartClick" />
+        v-if="chartData && chartData.length > 0 && receivedData" :categories="chartCategories"
+        :chartType="autoChartType" :data="filteredChartData" :dataMetrics="receivedData.dataMetrics || []"
+        :dimensionValueMap="dimensionValueMap" :loading="loading" :subtitle="chartSubtitle" :title="chartTitle"
+        height="100%" @click="handleChartClick" />
 
       <!-- 当没有数据时显示占位符 -->
       <div v-else class="chart-placeholder">
@@ -76,28 +76,27 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { message } from 'ant-design-vue'
-
-// 显式定义组件名称（可选）
-defineOptions({
-  name: 'ChartDisplayArea'
-})
 import { BarChartOutlined } from '@ant-design/icons-vue'
 import {
-  RequestParams, DimensionIndicatorsFilter, MetricCondition, IndicatorGroup, ConvertOptions
-} from "../universalChart/AdvancedStatisticReq"
-import { advancedStatisticRequest } from '@/framework/apis/index'
-// import talentReviewDetail from './talentReviewDetail.vue'
+  ConvertOptions,
+  DimensionIndicatorsFilter,
+  IndicatorGroup,
+  MetricCondition,
+  RequestParams
+} from "@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq"
+import { advancedStatisticRequest } from '@/framework/apis'
 import type { SelectedBarInfo } from './talentReviewDetail.vue'
 import UniversalChart from './UniversalChart.vue'
-import type { ChartDataItem } from '../universalChart/ChartTypes'
+import type { ChartDataItem } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
 // Props - 接收外部传入的维度配置数据
 const props = defineProps<{
+  config: any,
   receivedData?: DimensionIndicatorsFilter
 }>()
-
+const { config, receivedData } = toRefs(props)
 // Emits
 const emit = defineEmits<{
   chartGenerated: [data: ChartDataItem[]]
@@ -119,18 +118,13 @@ const allStatisticTypes = ref<string[]>([])
 const detailModalVisible = ref(false)
 const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 
-// 使用props中的receivedData
-const receivedData = computed((): DimensionIndicatorsFilter | undefined => {
-  return props.receivedData
-})
-
 // 计算属性
 const chartTitle = computed(() => {
   return '数据分布统计'
 })
 
 const chartSubtitle = computed(() => {
-  return `按${firstDimensionName.value}、${secondDimensionName.value}和统计类型分组`
+  return `按${ firstDimensionName.value }、${ secondDimensionName.value }和统计类型分组`
 })
 
 // 获取图表分类数据（x轴）
@@ -192,12 +186,10 @@ const dimensionValueMap = computed(() => {
   const first: Record<string, string> = {}
   const second: Record<string, string> = {}
   receivedData.value?.firstDimension?.indicatorItems?.forEach(it => {
-    const code = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
-    first[it.itemName] = code.padStart(2, '0')
+    first[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
   })
   receivedData.value?.secondDimension?.indicatorItems?.forEach(it => {
-    const code = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
-    second[it.itemName] = code.padStart(2, '0')
+    second[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
   })
   return { first, second }
 })
@@ -233,7 +225,7 @@ const onBarClick = (params: any) => {
     firstDimensionName: firstDimensionName.value,
     secondDimensionName: secondDimensionName.value,
     combinedConditions: combinedConditions,
-    title: `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim}`
+    title: `${ firstDimensionName.value }: ${ firstDim } && ${ secondDimensionName.value }: ${ secondDim }`
   }
 
   // 显示弹窗
@@ -272,7 +264,7 @@ const onPieClick = (params: any) => {
     firstDimensionName: firstDimensionName.value,
     secondDimensionName: secondDimensionName.value,
     combinedConditions: combinedConditions,
-    title: `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim}`
+    title: `${ firstDimensionName.value }: ${ firstDim } && ${ secondDimensionName.value }: ${ secondDim }`
   }
 
   // 显示弹窗
@@ -311,8 +303,8 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
     firstDimensionCondition: firstDimItem.queryConditions,
     secondDimensionCondition: secondDimItem.queryConditions,
     // 附加信息：维度标识
-    firstDimensionId: `${receivedData.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
-    secondDimensionId: `${receivedData.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}`
+    firstDimensionId: `${ receivedData.value.firstDimension!.groupValue }&&${ firstDimItem.itemValue }`,
+    secondDimensionId: `${ receivedData.value.secondDimension!.groupValue }&&${ secondDimItem.itemValue }`
   }
 }
 
@@ -359,7 +351,7 @@ const toggleAllFirstDimensions = () => {
 // 第一维度反选功能
 const invertFirstDimensionsSelection = () => {
   const invertedSelection = allFirstDimensions.value.filter(
-    dimension => !visibleFirstDimensions.value.includes(dimension)
+      dimension => !visibleFirstDimensions.value.includes(dimension)
   )
   visibleFirstDimensions.value = invertedSelection
 }
@@ -376,7 +368,7 @@ const toggleAllSecondDimensions = () => {
 // 第二维度反选功能
 const invertSecondDimensionsSelection = () => {
   const invertedSelection = allSecondDimensions.value.filter(
-    dimension => !visibleSecondDimensions.value.includes(dimension)
+      dimension => !visibleSecondDimensions.value.includes(dimension)
   )
   visibleSecondDimensions.value = invertedSelection
 }
@@ -393,7 +385,7 @@ const toggleAllStatisticTypes = () => {
 // 统计类型反选功能
 const invertStatisticTypesSelection = () => {
   const invertedSelection = allStatisticTypes.value.filter(
-    statType => !visibleStatisticTypes.value.includes(statType)
+      statType => !visibleStatisticTypes.value.includes(statType)
   )
   visibleStatisticTypes.value = invertedSelection
 }
@@ -429,7 +421,7 @@ const fetchChartData = async () => {
     visibleStatisticTypes.value = []
 
     // 调用真实的API获取数据（增加防缓存标识）
-    const result = await fetchTalentStatisticData(receivedData.value, { majorCondition: `ts=${Date.now()}` });
+    const result = await fetchTalentStatisticData(receivedData.value, {});
 
     console.log('API返回结果:', result);
 
@@ -449,7 +441,7 @@ const fetchChartData = async () => {
     }
   } catch (error: any) {
     console.error('获取图表数据失败:', error);
-    message.error(`获取图表数据失败: ${error?.message || '未知错误'}`);
+    message.error(`获取图表数据失败: ${ error?.message || '未知错误' }`);
     chartData.value = [];
   } finally {
     loading.value = false;
@@ -463,12 +455,16 @@ const fetchChartData = async () => {
  * @returns MetricCondition[]
  */
 const convertDimensionToMetricCondition = (dimension: IndicatorGroup): MetricCondition[] => {
+
+  console.log('convertDimensionToMetricCondition=========', dimension)
+
+
   return dimension.indicatorItems.map(item => ({
-    value: `${dimension.groupValue}&&${item.itemValue}`, // 生成唯一标识
+    value: `${ dimension.groupValue }&&${ item.itemValue }`, // 生成唯一标识
     label: item.itemName,
     condition: {
-      andOr: (item.queryConditions.andOr ?? '0') as '0' | '1',
-      conditionList: (item.queryConditions.conditionList ?? []) as any
+      andOr: (item.queryConditions.andOr) as '0' | '1',
+      conditionList: ([...item.queryConditions.conditionList]) as any
     }
   }))
 }
@@ -480,8 +476,8 @@ const convertDimensionToMetricCondition = (dimension: IndicatorGroup): MetricCon
  * @returns RequestParams
  */
 const convertDataToCrossMetricConditions = (
-  receivedData: DimensionIndicatorsFilter,
-  options: ConvertOptions = {}
+    receivedData: DimensionIndicatorsFilter,
+    options: ConvertOptions = {}
 ): RequestParams => {
   const metricConditions: MetricCondition[] = []
 
@@ -493,7 +489,7 @@ const convertDataToCrossMetricConditions = (
 
   // 如果两个维度都存在，进行交叉组合
   if (receivedData.firstDimension && receivedData.secondDimension &&
-    receivedData.secondDimension.indicatorItems && receivedData.secondDimension.indicatorItems.length > 0) {
+      receivedData.secondDimension.indicatorItems && receivedData.secondDimension.indicatorItems.length > 0) {
     receivedData.firstDimension.indicatorItems.forEach(firstItem => {
       receivedData.secondDimension!.indicatorItems.forEach(secondItem => {
         // 合并两个维度的查询条件
@@ -504,8 +500,8 @@ const convertDataToCrossMetricConditions = (
 
         // 生成交叉组合的指标条件
         const crossMetricCondition: MetricCondition = {
-          value: `${receivedData.firstDimension!.groupValue}&&${firstItem.itemValue}&&${receivedData.secondDimension!.groupValue}&&${secondItem.itemValue}`,
-          label: `${firstItem.itemName}&&${secondItem.itemName}`,
+          value: `${ receivedData.firstDimension!.groupValue }&&${ firstItem.itemValue }&&${ receivedData.secondDimension!.groupValue }&&${ secondItem.itemValue }`,
+          label: `${ firstItem.itemName }&&${ secondItem.itemName }`,
           condition: {
             andOr: '0', // 两个维度的条件用 AND 连接
             conditionList: combinedConditionList
@@ -519,6 +515,7 @@ const convertDataToCrossMetricConditions = (
     // 如果只有一个维度（一级维度）
     if (receivedData.firstDimension) {
       const firstMetrics = convertDimensionToMetricCondition(receivedData.firstDimension)
+      console.log('==========firstMetrics', firstMetrics)
       metricConditions.push(...firstMetrics)
     }
   }
@@ -558,8 +555,8 @@ const convertDataToCrossMetricConditions = (
  * @returns Promise<any>
  */
 const fetchTalentStatisticData = async (
-  receivedData: DimensionIndicatorsFilter,
-  options: ConvertOptions = {}
+    receivedData: DimensionIndicatorsFilter,
+    options: ConvertOptions = {}
 ) => {
   try {
     // 使用交叉组合转换数据
@@ -567,14 +564,14 @@ const fetchTalentStatisticData = async (
 
     // 调用后端接口
     const response = await advancedStatisticRequest(
-      '/dc/user',
-      new Map(Object.entries(requestParams.selectColumnCondition || {})),
-      requestParams.condition,
-      requestParams.sort,
-      requestParams.metricColumn,
-      requestParams.metricCondition,
-      requestParams.statisticColumn,
-      requestParams.majorCondition
+        config.value.url,
+        new Map(Object.entries(requestParams.selectColumnCondition || {})),
+        requestParams.condition,
+        requestParams.sort,
+        requestParams.metricColumn,
+        requestParams.metricCondition,
+        requestParams.statisticColumn,
+        requestParams.majorCondition
     )
 
     console.log('后端返回的数据:', response)
@@ -602,6 +599,6 @@ defineExpose({
 })
 </script>
 
-<style scoped lang="less">
-@import '../styles/talentReview.less';
+<style lang="less" scoped>
+@import '../../styles/talentReview.less';
 </style>

@@ -7,11 +7,11 @@
         <RightOutlined v-else />
       </a-button>
     </div>
-    
+
     <div v-show="!collapsed" class="section-content">
-      <div 
+      <div
         class="drop-zone filter-drop"
-        :class="{ 
+        :class="{
           'has-content': filterDimension, 
           'drag-over': dragOverFilter
         }"
@@ -26,33 +26,33 @@
           <div class="filter-header">
             <span>{{ filterDimension?.title }}</span>
             <div class="filter-actions">
-              <a-button 
-                type="text" 
-                size="small" 
+              <a-button
+                type="text"
+                size="small"
                 @click="selectAllFilterItems"
                 class="action-btn"
               >
                 全选
               </a-button>
-              <a-button 
-                type="text" 
-                size="small" 
+              <a-button
+                type="text"
+                size="small"
                 @click="reverseFilterItems"
                 class="action-btn"
               >
                 反选
               </a-button>
-              <a-button 
-                type="text" 
-                size="small" 
+              <a-button
+                type="text"
+                size="small"
                 @click="clearAllFilterItems"
                 class="action-btn"
               >
                 全部取消
               </a-button>
-              <a-button 
-                type="text" 
-                size="small" 
+              <a-button
+                type="text"
+                size="small"
                 @click="clearFilterDimension"
                 class="clear-btn"
               >
@@ -61,8 +61,8 @@
             </div>
           </div>
           <a-checkbox-group v-model:value="localSelectedFilterItems" class="filter-items">
-            <a-checkbox 
-              v-for="item in filterDimension?.items" 
+            <a-checkbox
+              v-for="item in filterDimension?.items"
               :key="item.key"
               :value="item.key"
               class="filter-checkbox"
@@ -131,19 +131,19 @@ const localSelectedFilterItems = ref<string[]>([])
 
 // 监听props变化更新本地状态
 watch(
-  () => props.selectedFilterItems,
-  (newValue) => {
-    localSelectedFilterItems.value = [...newValue]
-  },
-  { immediate: true }
+    () => props.selectedFilterItems,
+    (newValue) => {
+      localSelectedFilterItems.value = newValue
+    },
+    { immediate: true }
 )
 
 // 监听本地状态变化更新props
 watch(
-  localSelectedFilterItems,
-  (newValue) => {
-    emit('update:selectedFilterItems', [...newValue])
-  }
+    localSelectedFilterItems,
+    (newValue) => {
+      emit('update:selectedFilterItems', newValue)
+    }
 )
 
 // 拖拽事件处理
@@ -171,7 +171,7 @@ const onDropFilterDimension = (e: DragEvent) => {
     console.log('错误: 没有拖拽数据')
     return
   }
-  
+
   // 筛选维度不检查重复，始终允许放置
   console.log('设置筛选维度:', dragData.value)
   const newFilterDimension: IndicatorGroup = {
@@ -179,7 +179,7 @@ const onDropFilterDimension = (e: DragEvent) => {
     title: dragData.value.title,
     items: dragData.value.items || []
   }
-  
+
   emit('update:filterDimension', newFilterDimension)
   emit('update:selectedFilterItems', [])
   console.log('筛选维度设置成功:', newFilterDimension)
@@ -250,7 +250,7 @@ const toggleCollapse = () => {
       align-items: center;
       justify-content: center;
       border-radius: 4px;
-      
+
       &:hover {
         color: #1890ff;
         background-color: #e6f7ff;
@@ -288,7 +288,7 @@ const toggleCollapse = () => {
 
     .filter-content {
       width: 100%;
-      
+
       .filter-header {
         display: flex;
         justify-content: space-between;
@@ -300,18 +300,18 @@ const toggleCollapse = () => {
         .filter-actions {
           display: flex;
           gap: 4px;
-          
+
           .action-btn {
             color: #1890ff;
             font-size: 11px;
             padding: 2px 6px;
             height: 24px;
-            
+
             &:hover {
               background: #f0f8ff;
             }
           }
-          
+
           .clear-btn {
             color: #000000;
             font-size: 11px;

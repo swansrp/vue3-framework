@@ -416,7 +416,7 @@ const generateConditionByDictItem = (dictItem: any) => {
     conditionList: [
       {
         property: selectedDict.value.split('###')[1], // 假设有部门ID字段
-        filterType: FILTER_TYPE.EQUAL,
+        relation: FILTER_TYPE.EQUAL,
         value: [dictItem.dictValue]
       }
     ],

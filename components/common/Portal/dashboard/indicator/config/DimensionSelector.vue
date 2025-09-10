@@ -268,7 +268,7 @@ const onDragLeaveSecond = (e: DragEvent) => {
 
 // 放置事件处理
 const onDropFirstDimension = (e: DragEvent) => {
-  console.log('放入一级维度:', e, dragData?.value)
+  console.log('放入一级维度:', dragData?.value)
   e.preventDefault()
   dragOverFirst.value = false
   document.body.style.cursor = 'default'

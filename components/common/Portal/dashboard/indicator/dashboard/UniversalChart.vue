@@ -1,15 +1,16 @@
 <template>
   <div class="universal-chart-container">
     <a-spin :spinning="loading" tip="正在加载图表数据...">
-      <div ref="chartRef" class="echarts-container" :style="{ height: height, width: width }"></div>
+      <div ref="chartRef" :style="{ height: height, width: width }" class="echarts-container"></div>
     </a-spin>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, nextTick, onBeforeUnmount, watch, computed } from 'vue'
+import { computed, defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
-import type { DataMetric, ChartDataItem } from '../universalChart/ChartTypes'
+import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 
 export default defineComponent({
   name: 'UniversalChart',
@@ -104,11 +105,11 @@ export default defineComponent({
       data.forEach(item => {
         // 处理分隔符，支持&&和@两种格式
         const parts = item.metricLabel.includes('&&')
-          ? item.metricLabel.split('&&')
-          : item.metricLabel.split('@')
+            ? item.metricLabel.split('&&')
+            : item.metricLabel.split('@')
 
         const firstDim = parts[0] || ''  // 第一维度
-        const secondDim = parts[1] || '' // 第二维度
+        const secondDim = parts[1] // 第二维度
 
         // 处理children中的细分统计
         if (item.children && item.children.length > 0) {
@@ -116,7 +117,7 @@ export default defineComponent({
             const statisticType = child.metric
 
             flattenedData.push({
-              metricLabel: `${firstDim}&&${secondDim}&&${statisticType}`,
+              metricLabel: `${ firstDim }&&${ secondDim }&&${ statisticType }`,
               statistic: child.statistic,
               statisticType: statisticType,
               firstDimension: firstDim,
@@ -135,13 +136,12 @@ export default defineComponent({
         }
       })
 
-      console.log('展开后的数据:', flattenedData)
-
       // 提取维度分组，保持原始顺序
       const firstDimensionGroups = [...new Set(flattenedData.map(item => item.firstDimension))]
-      const secondDimensionGroups = [...new Set(flattenedData.map(item => item.secondDimension))]
+      const secondDims = flattenedData.map(item => item.secondDimension).filter(item => item != null)
+      const secondDimensionGroups = isNotEmpty(secondDims) ? [...new Set(secondDims)] : []
       const statisticTypes = [...new Set(flattenedData.map(item => item.statisticType))]
-
+      console.log('展开后的数据:', flattenedData, firstDimensionGroups, secondDimensionGroups, statisticTypes)
       return {
         firstDimensionGroups,
         secondDimensionGroups,
@@ -152,6 +152,7 @@ export default defineComponent({
 
     // 生成柱状图配置
     const generateBarChartOption = (processedData: any): echarts.EChartsOption => {
+      console.log('155', props)
       const { firstDimensionGroups, secondDimensionGroups, statisticTypes, flattenedData } = processedData
 
       // 使用props.categories或默认的firstDimensionGroups
@@ -159,54 +160,52 @@ export default defineComponent({
 
       const series: any[] = []
 
-      // 生成系列数据
-      secondDimensionGroups.forEach((secondDim: string) => {
-        statisticTypes.forEach((statType: string) => {
+      // 当secondDimensionGroups为空时，只使用categories和statisticTypes生成系列
+      if (isEmpty(secondDimensionGroups)) {
+        // 没有第二维度，直接按统计类型创建系列
+        statisticTypes.forEach((statType: string, statIndex: number) => {
+
           const metric = props.dataMetrics.find(m => m.dataName === statType)
           if (!metric) return
-
-          const seriesData = categories.map((category: string) => {
+          const seriesData = categories.map((category: string, categoryIndex: number) => {
             const item = flattenedData.find((d: any) =>
-              d.firstDimension === category &&
-              d.secondDimension === secondDim &&
-              d.statisticType === statType
+                d.firstDimension === category &&
+                d.statisticType === statType
             )
-            return item ? item.statistic : 0
+            const itemColor = (props.dimensionValueMap
+                    && metric.itemColors
+                    && props.dimensionValueMap.first
+                    && metric.itemColors[props.dimensionValueMap.first[category]])
+                || metric.color
+                || `hsl(${ ((statIndex * categories.length + categoryIndex) * 30) % 360 }, 70%, 50%)`
+
+            return {
+              value: item ? item.statistic : 0,
+              itemStyle: {
+                color: itemColor
+              }
+            }
           })
 
           // 根据指标配置决定使用哪个y轴
           const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
 
-          // 使用传入的映射优先获取第二维度的编码，保证与配置一致
-          const mappedCode = props.dimensionValueMap?.second?.[secondDim]
-          // 回退：按位置生成 01/02...
-          const fallbackCode = (secondDimensionGroups.indexOf(secondDim) + 1).toString().padStart(2, '0')
-          const itemValueCode = mappedCode || fallbackCode
-
-          // 根据metric的itemColors获取颜色，优先使用itemColors配置
-          const itemColor = metric.itemColors?.[itemValueCode] ||
-            metric.color ||
-            `hsl(${(series.length * 60) % 360}, 70%, 50%)`
-
           // 通用堆叠策略：只要配置了 stackGroup，就与相同 stackGroup 且同 y 轴的系列堆叠
           const stackKey = metric.stackGroup
-            ? `${metric.stackGroup}__y${yAxisIndex}`
-            : undefined
+              ? `${ metric.stackGroup }__y${ yAxisIndex }`
+              : undefined
 
           series.push({
-            name: `${secondDim}&&${statType}`,
+            name: statType,
             type: 'bar',
             yAxisIndex,
             stack: stackKey,
             data: seriesData,
-            itemStyle: {
-              color: itemColor
-            },
             label: {
               show: true,
-              position: 'inside', // 所有标签都在柱子内部显示
+              position: 'inside',
               formatter: (params: any) => {
-                return `${params.value}`
+                return `${ params.value }`
               },
               fontSize: 10,
               color: '#fff',
@@ -220,7 +219,71 @@ export default defineComponent({
             animationDelay: (idx: number) => idx * 50
           })
         })
-      })
+      } else {
+        // 有第二维度，按原有逻辑生成系列数据
+        secondDimensionGroups.forEach((secondDim: string) => {
+          statisticTypes.forEach((statType: string) => {
+            console.log('===generateBarChartOption==', statisticTypes, statType, secondDimensionGroups, secondDim)
+            const metric = props.dataMetrics.find(m => m.dataName === statType)
+            if (!metric) return
+
+            const seriesData = categories.map((category: string) => {
+              const item = flattenedData.find((d: any) =>
+                  d.firstDimension === category &&
+                  d.secondDimension === secondDim &&
+                  d.statisticType === statType
+              )
+              return item ? item.statistic : 0
+            })
+
+            // 根据指标配置决定使用哪个y轴
+            const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
+
+            // 使用传入的映射优先获取第二维度的编码，保证与配置一致
+            const mappedCode = props.dimensionValueMap?.second?.[secondDim]
+            // 回退：按位置生成 01/02...
+            const fallbackCode = (secondDimensionGroups.indexOf(secondDim) + 1).toString().padStart(2, '0')
+            const itemValueCode = mappedCode || fallbackCode
+            console.log('====生成系列数据====', metric, itemValueCode, mappedCode, fallbackCode)
+            // 根据metric的itemColors获取颜色，优先使用itemColors配置
+            const itemColor = metric.itemColors?.[itemValueCode] ||
+                metric.color ||
+                `hsl(${ (series.length * 60) % 360 }, 70%, 50%)`
+
+            // 通用堆叠策略：只要配置了 stackGroup，就与相同 stackGroup 且同 y 轴的系列堆叠
+            const stackKey = metric.stackGroup
+                ? `${ metric.stackGroup }__y${ yAxisIndex }`
+                : undefined
+
+            series.push({
+              name: `${ secondDim }&&${ statType }`,
+              type: 'bar',
+              yAxisIndex,
+              stack: stackKey,
+              data: seriesData,
+              itemStyle: {
+                color: itemColor
+              },
+              label: {
+                show: true,
+                position: 'inside', // 所有标签都在柱子内部显示
+                formatter: (params: any) => {
+                  return `${ params.value }`
+                },
+                fontSize: 10,
+                color: '#fff',
+                fontWeight: 'bold',
+                textShadowColor: 'rgba(0,0,0,0.5)',
+                textShadowBlur: 2
+              },
+              emphasis: {
+                focus: 'series'
+              },
+              animationDelay: (idx: number) => idx * 50
+            })
+          })
+        })
+      }
 
       // 动态生成y轴配置
       const generateYAxes = () => {
@@ -234,7 +297,7 @@ export default defineComponent({
             name: leftMetrics[0].dataName,
             position: 'left',
             axisLabel: {
-              formatter: `{value}${leftMetrics[0].unit}`,
+              formatter: `{value}${ leftMetrics[0].unit }`,
               fontSize: 12
             },
             splitLine: {
@@ -274,7 +337,7 @@ export default defineComponent({
                   name: namesText,
                   position: 'right',
                   axisLabel: {
-                    formatter: `{value}${combinedUnit}`,
+                    formatter: `{value}${ combinedUnit }`,
                     fontSize: 12
                   },
                   splitLine: {
@@ -299,7 +362,7 @@ export default defineComponent({
                 position: 'right',
                 offset: (yAxes.filter((axis: any) => axis.position === 'right').length) * 60,
                 axisLabel: {
-                  formatter: `{value}${metric.unit}`,
+                  formatter: `{value}${ metric.unit }`,
                   fontSize: 12
                 },
                 splitLine: {
@@ -336,36 +399,47 @@ export default defineComponent({
             type: 'shadow'
           },
           formatter: (params: any) => {
-            let result = `<strong>${params[0].axisValue}</strong><br/>`
+            let result = `<strong>${ params[0].axisValue }</strong><br/>`
 
-            // 按统计类型分组
-            const groupedParams = params.reduce((acc: any, param: any) => {
-              const parts = param.seriesName.split('&&')
-              const secondDimension = parts[0]
-              const statType = parts[1]
+            // 判断是否有第二维度
+            const hasSecondDimension = isNotEmpty(secondDimensionGroups)
 
-              if (!acc[statType]) {
-                acc[statType] = []
-              }
-              acc[statType].push({ ...param, secondDimension })
-              return acc
-            }, {})
+            if (hasSecondDimension) {
+              // 有第二维度时，按统计类型分组
+              const groupedParams = params.reduce((acc: any, param: any) => {
+                const parts = param.seriesName.split('&&')
+                const secondDimension = parts[0]
+                const statType = parts[1]
 
-            // 为每个统计类型显示数据
-            Object.keys(groupedParams).forEach(statType => {
-              result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
+                if (!acc[statType]) {
+                  acc[statType] = []
+                }
+                acc[statType].push({ ...param, secondDimension })
+                return acc
+              }, {})
 
-              const typeParams = groupedParams[statType]
-              const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
+              // 为每个统计类型显示数据
+              Object.keys(groupedParams).forEach(statType => {
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${ statType }</strong><br/>`
 
-              typeParams.forEach((param: any) => {
-                const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
-                const unit = getUnitByStatType(statType)
-                result += `${param.marker}${param.secondDimension}: ${param.value}${unit} (${percentage}%)<br/>`
+                const typeParams = groupedParams[statType]
+                const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
+
+                typeParams.forEach((param: any) => {
+                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
+                  const unit = getUnitByStatType(statType)
+                  result += `${ param.marker }${ param.secondDimension }: ${ param.value }${ unit } (${ percentage }%)<br/>`
+                })
+
+                result += `<span style="color: #666; font-size: 12px;">小计: ${ total }${ getUnitByStatType(statType) }</span></div>`
               })
-
-              result += `<span style="color: #666; font-size: 12px;">小计: ${total}${getUnitByStatType(statType)}</span></div>`
-            })
+            } else {
+              // 没有第二维度时，直接显示每个系列的数据
+              params.forEach((param: any) => {
+                const unit = getUnitByStatType(param.seriesName)
+                result += `${ param.marker }${ param.seriesName }: ${ param.value }${ unit }<br/>`
+              })
+            }
 
             return result
           }
@@ -405,55 +479,54 @@ export default defineComponent({
 
       const series: any[] = []
 
-      // 生成系列数据
-      secondDimensionGroups.forEach((secondDim: string) => {
-        statisticTypes.forEach((statType: string) => {
+      // 当secondDimensionGroups为空时，只使用categories和statisticTypes生成系列
+      if (!isNotEmpty(secondDimensionGroups)) {
+        // 没有第二维度，直接按统计类型创建系列
+        statisticTypes.forEach((statType: string, statIndex: number) => {
           const metric = props.dataMetrics.find(m => m.dataName === statType)
           if (!metric) return
 
-          const seriesData = categories.map((category: string) => {
+          const seriesData = categories.map((category: string, categoryIndex: number) => {
             const item = flattenedData.find((d: any) =>
-              d.firstDimension === category &&
-              d.secondDimension === secondDim &&
-              d.statisticType === statType
+                d.firstDimension === category &&
+                d.statisticType === statType
             )
-            return item ? item.statistic : 0
+
+            const itemColor = (props.dimensionValueMap
+                    && metric.itemColors
+                    && props.dimensionValueMap.first
+                    && metric.itemColors[props.dimensionValueMap.first[category]])
+                || metric.color
+                || `hsl(${ ((statIndex * categories.length + categoryIndex) * 30) % 360 }, 70%, 50%)`
+
+            return {
+              value: item ? item.statistic : 0,
+              itemStyle: {
+                color: itemColor
+              }
+            }
           })
 
           const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
 
-          // 使用传入映射优先获取编码
-          const mappedCode = props.dimensionValueMap?.second?.[secondDim]
-          const fallbackCode = (secondDimensionGroups.indexOf(secondDim) + 1).toString().padStart(2, '0')
-          const itemValueCode = mappedCode || fallbackCode
-
-          // 根据itemColors获取颜色，如果没有则使用默认color或生成颜色
-          const metricCfg = props.dataMetrics.find(m => m.dataName === statType)
-          const itemColor = metricCfg?.itemColors?.[itemValueCode] ||
-            metricCfg?.color ||
-            `hsl(${(series.length * 60) % 360}, 70%, 50%)`
-
           series.push({
-            name: `${secondDim}&&${statType}`,
+            name: statType,
             type: 'line',
             yAxisIndex,
             data: seriesData,
             lineStyle: {
-              color: itemColor,
+              color: metric.color || `hsl(${ (statIndex * 60) % 360 }, 70%, 50%)`,
               width: 2
-            },
-            itemStyle: {
-              color: itemColor
             },
             symbol: 'circle',
             symbolSize: 6,
             label: {
               show: true,
               formatter: (params: any) => {
-                return `${params.value}`
+                return `${ params.value }`
               },
               fontSize: 10,
-              color: itemColor
+              color: metric.color || `hsl(${ (statIndex * 60) % 360 }, 70%, 50%)`
             },
             emphasis: {
               focus: 'series'
@@ -461,7 +534,65 @@ export default defineComponent({
             animationDelay: (idx: number) => idx * 50
           })
         })
-      })
+      } else {
+        // 有第二维度，按原有逻辑生成系列数据
+        secondDimensionGroups.forEach((secondDim: string) => {
+          statisticTypes.forEach((statType: string) => {
+            const metric = props.dataMetrics.find(m => m.dataName === statType)
+            if (!metric) return
+
+            const seriesData = categories.map((category: string) => {
+              const item = flattenedData.find((d: any) =>
+                  d.firstDimension === category &&
+                  d.secondDimension === secondDim &&
+                  d.statisticType === statType
+              )
+              return item ? item.statistic : 0
+            })
+
+            const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
+
+            // 使用传入映射优先获取编码
+            const mappedCode = props.dimensionValueMap?.second?.[secondDim]
+            const fallbackCode = (secondDimensionGroups.indexOf(secondDim) + 1).toString().padStart(2, '0')
+            const itemValueCode = mappedCode || fallbackCode
+
+            // 根据itemColors获取颜色，如果没有则使用默认color或生成颜色
+            const metricCfg = props.dataMetrics.find(m => m.dataName === statType)
+            const itemColor = metricCfg?.itemColors?.[itemValueCode] ||
+                metricCfg?.color ||
+                `hsl(${ (series.length * 60) % 360 }, 70%, 50%)`
+
+            series.push({
+              name: `${ secondDim }&&${ statType }`,
+              type: 'line',
+              yAxisIndex,
+              data: seriesData,
+              lineStyle: {
+                color: itemColor,
+                width: 2
+              },
+              itemStyle: {
+                color: itemColor
+              },
+              symbol: 'circle',
+              symbolSize: 6,
+              label: {
+                show: true,
+                formatter: (params: any) => {
+                  return `${ params.value }`
+                },
+                fontSize: 10,
+                color: itemColor
+              },
+              emphasis: {
+                focus: 'series'
+              },
+              animationDelay: (idx: number) => idx * 50
+            })
+          })
+        })
+      }
 
       // 动态生成y轴配置(与柱状图相同的逻辑)
       const generateYAxes = () => {
@@ -475,7 +606,7 @@ export default defineComponent({
             name: leftMetrics[0].dataName,
             position: 'left',
             axisLabel: {
-              formatter: `{value}${leftMetrics[0].unit}`,
+              formatter: `{value}${ leftMetrics[0].unit }`,
               fontSize: 12
             },
             splitLine: {
@@ -495,7 +626,7 @@ export default defineComponent({
               alignTicks: true,
               offset: index * 60,
               axisLabel: {
-                formatter: `{value}${metric.unit}`,
+                formatter: `{value}${ metric.unit }`,
                 fontSize: 12
               },
               splitLine: {
@@ -528,36 +659,47 @@ export default defineComponent({
         tooltip: {
           trigger: 'axis',
           formatter: (params: any) => {
-            let result = `<strong>${params[0].axisValue}</strong><br/>`
+            let result = `<strong>${ params[0].axisValue }</strong><br/>`
 
-            // 按统计类型分组
-            const groupedParams = params.reduce((acc: any, param: any) => {
-              const parts = param.seriesName.split('&&')
-              const secondDimension = parts[0]
-              const statType = parts[1]
+            // 判断是否有第二维度
+            const hasSecondDimension = isNotEmpty(secondDimensionGroups)
 
-              if (!acc[statType]) {
-                acc[statType] = []
-              }
-              acc[statType].push({ ...param, secondDimension })
-              return acc
-            }, {})
+            if (hasSecondDimension) {
+              // 有第二维度时，按统计类型分组
+              const groupedParams = params.reduce((acc: any, param: any) => {
+                const parts = param.seriesName.split('&&')
+                const secondDimension = parts[0]
+                const statType = parts[1]
 
-            // 为每个统计类型显示数据
-            Object.keys(groupedParams).forEach(statType => {
-              result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
+                if (!acc[statType]) {
+                  acc[statType] = []
+                }
+                acc[statType].push({ ...param, secondDimension })
+                return acc
+              }, {})
 
-              const typeParams = groupedParams[statType]
-              const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
+              // 为每个统计类型显示数据
+              Object.keys(groupedParams).forEach(statType => {
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${ statType }</strong><br/>`
 
-              typeParams.forEach((param: any) => {
-                const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
-                const unit = getUnitByStatType(statType)
-                result += `${param.marker}${param.secondDimension}: ${param.value}${unit} (${percentage}%)<br/>`
+                const typeParams = groupedParams[statType]
+                const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
+
+                typeParams.forEach((param: any) => {
+                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
+                  const unit = getUnitByStatType(statType)
+                  result += `${ param.marker }${ param.secondDimension }: ${ param.value }${ unit } (${ percentage }%)<br/>`
+                })
+
+                result += `<span style="color: #666; font-size: 12px;">小计: ${ total }${ getUnitByStatType(statType) }</span></div>`
               })
-
-              result += `<span style="color: #666; font-size: 12px;">小计: ${total}${getUnitByStatType(statType)}</span></div>`
-            })
+            } else {
+              // 没有第二维度时，直接显示每个系列的数据
+              params.forEach((param: any) => {
+                const unit = getUnitByStatType(param.seriesName)
+                result += `${ param.marker }${ param.seriesName }: ${ param.value }${ unit }<br/>`
+              })
+            }
 
             return result
           }
@@ -585,61 +727,41 @@ export default defineComponent({
 
     // 生成饼图配置
     const generatePieChartOption = (processedData: any): echarts.EChartsOption => {
-      const { flattenedData } = processedData
+      const { firstDimensionGroups, flattenedData } = processedData
 
-      // 饼图通常显示单一指标的原始数据分布
-      const pieMetric = props.dataMetrics[0] // 获取第一个指标作为饼图数据
-
+      // 饼图只显示一个数据指标
+      const pieMetric = props.dataMetrics[0]
       if (!pieMetric) {
         return { series: [] }
       }
 
-      // 根据数据结构处理饼图数据 - 饼图应该显示所有维度组合的数据
-      let pieData: Array<{ name: string; value: number; itemStyle?: { color: string }; firstDimension?: string; secondDimension?: string }>
+      // 使用props.categories或默认的firstDimensionGroups作为饼图的维度
+      const categories = props.categories || firstDimensionGroups
 
-      if (flattenedData.length > 0) {
-        // 使用所有维度组合数据，而不是只按第一维度聚合
-        pieData = flattenedData
-          .filter((item: any) => item.statisticType === pieMetric.dataName)
-          .map((item: any, index: number) => {
-            // 优先根据映射获取第二维度编码
-            const mappedCode = props.dimensionValueMap?.second?.[item.secondDimension]
-            const fallbackCode = (index + 1).toString().padStart(2, '0')
-            const itemValueCode = mappedCode || fallbackCode
+      // 生成饼图数据，只使用第一维度（categories）
+      const pieData = categories.map((category: string, categoryIndex: number) => {
+        // 查找该分类对应的数据
+        const item = flattenedData.find((d: any) =>
+          d.firstDimension === category &&
+          d.statisticType === pieMetric.dataName
+        )
 
-            return {
-              name: `${item.firstDimension}&&${item.secondDimension}`, // 使用完整的维度标签
-              value: item.statistic,
-              firstDimension: item.firstDimension,
-              secondDimension: item.secondDimension,
-              itemStyle: {
-                color: pieMetric.itemColors?.[itemValueCode] ||
-                  `hsl(${(index * 60) % 360}, 70%, 50%)`
-              }
-            }
-          })
-      } else {
-        // 如果没有展开数据，直接使用原始数据
-        pieData = props.data.map((item, index) => {
-          // 生成itemValue格式 01, 02, 03, 04
-          const parts = item.metricLabel.split('&&')
-          const secondDimName = parts[1] || ''
-          const mappedCode = props.dimensionValueMap?.second?.[secondDimName]
-          const fallbackCode = (index + 1).toString().padStart(2, '0')
-          const itemValueCode = mappedCode || fallbackCode
+        // 计算颜色，按照您提供的逻辑
+        const itemColor = (props.dimensionValueMap
+          && pieMetric.itemColors
+          && props.dimensionValueMap.first
+          && pieMetric.itemColors[props.dimensionValueMap.first[category]])
+          || pieMetric.color
+          || `hsl(${(categoryIndex * 30) % 360}, 70%, 50%)`
 
-          return {
-            name: item.metricLabel,
-            value: item.statistic,
-            firstDimension: parts[0] || '',
-            secondDimension: parts[1] || '',
-            itemStyle: {
-              color: pieMetric.itemColors?.[itemValueCode] ||
-                `hsl(${(index * 60) % 360}, 70%, 50%)`
-            }
+        return {
+          name: category,
+          value: item ? item.statistic : 0,
+          itemStyle: {
+            color: itemColor
           }
-        })
-      }
+        }
+      }).filter(item => item.value > 0) // 过滤掉值为0的项
 
       // 按值排序
       pieData.sort((a, b) => b.value - a.value)
@@ -657,17 +779,11 @@ export default defineComponent({
         tooltip: {
           trigger: 'item',
           formatter: (params: any) => {
-            // 使用与柱状图相同的悬浮框格式
             const unit = pieMetric.unit || ''
-            const parts = params.name.split('&&')
-            const firstDim = parts[0] || ''
-            const secondDim = parts[1] || ''
-
-            let result = `<strong>${firstDim}</strong><br/>`
+            let result = `<strong>${params.name}</strong><br/>`
             result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${pieMetric.dataName}</strong><br/>`
-            result += `${params.marker}${secondDim}: ${params.value}${unit} (${params.percent}%)<br/>`
+            result += `${params.marker}${params.name}: ${params.value}${unit} (${params.percent}%)<br/>`
             result += `<span style="color: #666; font-size: 12px;">数值: ${params.value}${unit}</span></div>`
-
             return result
           }
         },
@@ -679,12 +795,7 @@ export default defineComponent({
           formatter: (name: string) => {
             const item = pieData.find(d => d.name === name)
             const unit = pieMetric.unit || ''
-            const parts = name.split('&&')
-            const firstDim = parts[0] || ''
-            const secondDim = parts[1] || ''
-            // 显示格式：第一维度 第二维度&&指标名称: 数值单位
-            const displayName = `${firstDim} ${secondDim}&&${pieMetric.dataName}`
-            return `${displayName}: ${item?.value || 0}${unit}`
+            return `${name}: ${item?.value || 0}${unit}`
           }
         },
         series: [
@@ -704,13 +815,9 @@ export default defineComponent({
             label: {
               show: true,
               formatter: (params: any) => {
-                const parts = params.name.split('&&')
-                const firstDim = parts[0] || ''
-                const secondDim = parts[1] || ''
-                // 显示格式：第一维度 第二维度&&指标名称: 百分比
-                return `${firstDim} ${secondDim}&&${pieMetric.dataName}: ${params.percent}%`
+                return `${params.name}: ${params.percent}%`
               },
-              fontSize: 10 // 缩小字体以适应更长的标签
+              fontSize: 12
             },
             labelLine: {
               show: true
@@ -725,6 +832,7 @@ export default defineComponent({
 
     // 生成图表配置
     const generateChartOption = (processedData: any): echarts.EChartsOption => {
+      finalChartType
       // 根据智能选择的图表类型生成相应配置
       switch (finalChartType.value) {
         case 'pie':
@@ -761,8 +869,8 @@ export default defineComponent({
       }
       window.addEventListener('resize', resizeHandler)
 
-        // 保存事件监听器以便清理
-        ; (chartInstance as any)._resizeHandler = resizeHandler
+      // 保存事件监听器以便清理
+      ;(chartInstance as any)._resizeHandler = resizeHandler
 
       updateChart()
     }
@@ -799,24 +907,24 @@ export default defineComponent({
 
     // 监听数据变化
     watch(
-      () => [props.data, props.dataMetrics, props.title, props.subtitle],
-      () => {
-        if (chartInstance) {
-          updateChart()
-        }
-      },
-      { deep: true }
+        () => [props.data, props.dataMetrics, props.title, props.subtitle],
+        () => {
+          if (chartInstance) {
+            updateChart()
+          }
+        },
+        { deep: true }
     )
 
     // 监听尺寸变化
     watch(
-      () => [props.height, props.width],
-      async () => {
-        if (chartInstance) {
-          await nextTick()
-          chartInstance.resize()
+        () => [props.height, props.width],
+        async () => {
+          if (chartInstance) {
+            await nextTick()
+            chartInstance.resize()
+          }
         }
-      }
     )
 
     // 生命周期钩子
@@ -850,5 +958,5 @@ export default defineComponent({
 </script>
 
 <style lang="less" scoped>
-@import '../styles/UniversalChart.less';
+@import '../../styles/universalChart.less';
 </style>
