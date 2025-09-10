@@ -1,7 +1,7 @@
 <template>
   <div class="hr-indicator-dashboard">
     <!-- 左侧指标树面板 -->
-    <IndicatorTreePanel
+    <indicator-tree-panel
       :collapsed="leftPanelCollapsed"
       :indicator-tree-data="indicatorTreeData"
       @drag-start="onDragStart"
@@ -9,7 +9,7 @@
     />
 
     <!-- 右侧配置面板 -->
-    <ConfigPanel
+    <config-panel
       :left-panel-collapsed="leftPanelCollapsed"
       v-model:first-dimension="firstDimension"
       v-model:second-dimension="secondDimension"
@@ -260,6 +260,7 @@ const generateChart = (chartData?: {
   console.log('DimensionIndicatorsFilter数据:', dimensionIndicatorsFilter);
 
   // 生成图表配置逻辑
+  leftPanelCollapsed.value = true
   console.log('生成图表配置成功')
   message.success('图表配置生成成功')
 }

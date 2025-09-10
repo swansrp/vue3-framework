@@ -1,6 +1,6 @@
 <template>
   <a-modal
-    :visible="visible"
+    :open="visible"
     :title="title"
     @ok="confirmColorChange"
     @cancel="handleCancel"
