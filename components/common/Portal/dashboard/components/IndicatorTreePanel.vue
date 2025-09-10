@@ -3,48 +3,49 @@
     <div class="panel-header">
       <h3>指标树</h3>
     </div>
-    
+
     <div class="panel-content">
       <!-- 搜索框 -->
       <a-input
         v-model:value="searchKeyword"
-        placeholder="搜索指标项"
         class="search-input"
+        placeholder="搜索指标项"
       >
         <template #prefix>
           <SearchOutlined />
         </template>
       </a-input>
-      
+
       <!-- 指标树 -->
-      <a-tree
+      <a-directory-tree
         v-model:expandedKeys="expandedKeys"
-        :tree-data="treeDataFormatted"
-        :draggable="true"
         :allow-drop="() => false"
-        @dragstart="onDragStart"
+        :draggable="true"
+        :tree-data="treeDataFormatted"
+        class="indicator-tree"
+        showIcon
+        @dragend="onDragEnd"
         @dragenter="onDragEnter"
         @dragover="onDragOver"
-        @dragend="onDragEnd"
-        class="indicator-tree"
+        @dragstart="onDragStart"
       >
         <template #title="{ title, key, isLeaf, items }">
-          <span 
-            :data-key="key"
-            :data-title="title"
+          <span
             :data-is-leaf="isLeaf"
             :data-items="JSON.stringify(items || [])"
+            :data-key="key"
+            :data-title="title"
             v-html="isLeaf ? getHighlightedText(title) : title"
           >
           </span>
         </template>
-      </a-tree>
+      </a-directory-tree>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
 
 // 接口定义
@@ -102,17 +103,17 @@ const filteredTreeData = computed(() => {
 
   props.indicatorTreeData.forEach((group) => {
     const matchedChildren: IndicatorGroup[] = []
-    
+
     group.children?.forEach((indicator) => {
       // 只检查指标名称是否匹配，不检查指标项
       const indicatorMatches = indicator.title.toLowerCase().includes(keyword)
-      
+
       // 只有指标名称匹配才包含该指标
       if (indicatorMatches) {
         matchedChildren.push(indicator)
       }
     })
-    
+
     if (matchedChildren.length > 0) {
       filtered.push({
         ...group,
@@ -157,7 +158,7 @@ watch(
       const hasMatchedChildren = group.children?.some((indicator) => {
         return indicator.title.toLowerCase().includes(keyword)
       })
-      
+
       if (hasMatchedChildren) {
         newExpandedKeys.push(group.key)
       }
@@ -184,7 +185,7 @@ const getHighlightedText = (text: string) => {
   if (!searchKeyword.value.trim()) {
     return text
   }
-  
+
   const keyword = searchKeyword.value.trim()
   // 使用正则表达式匹配关键字，忽略大小写
   const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
@@ -195,7 +196,7 @@ const getHighlightedText = (text: string) => {
 const onDragStart = (info: any) => {
   console.log('拖拽开始:', info)
   const { node } = info
-  
+
   if (isEmpty(node.items)) {
     // 只允许拖拽叶子节点（指标）
     console.log('非叶子节点，拒绝拖拽')
@@ -209,7 +210,7 @@ const onDragStart = (info: any) => {
     isLeaf: true,
     items: node.items || []
   }
-  
+
   console.log('设置拖拽数据:', dragData)
   emit('dragStart', dragData)
   return true
@@ -239,7 +240,7 @@ const onDragEnd = () => {
 }
 </script>
 
-<style scoped lang="less">
+<style lang="less" scoped>
 .left-panel {
   width: 300px;
   background: white;

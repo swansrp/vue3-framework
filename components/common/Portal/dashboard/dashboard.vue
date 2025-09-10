@@ -85,6 +85,14 @@ interface DataTypeOption {
   unit?: string
 }
 
+const props = withDefaults(
+  defineProps<{
+    tableId?: any
+  }>(),
+  {}
+)
+const { tableId } = toRefs(props)
+
 // 左侧面板控制
 const leftPanelCollapsed = ref(false)
 
@@ -256,107 +264,24 @@ const generateChart = (chartData?: {
   message.success('图表配置生成成功')
 }
 
-// 数据转换函数
-const getDefaultCondition = (): QueryType => {
-  return {
-    selectColumnCondition: new Map<string, any>(),
-    condition: {
-      conditionList: [
-        {
-          conditionList: []
-        }
-      ],
-      andOr: '0'
-    },
-    conditionList: [],
-    sortList: [],
-    pageSize: 10,
-    currentPage: 1
-  }
-}
-
-// 数据转换函数
-const transformApiDataToTreeData = (groupData: any[], itemData: any[]): IndicatorGroup[] => {
-  const groupMap = new Map<number, any>()
-  groupData.forEach(group => {
-    groupMap.set(group.id, {
-      ...group,
-      children: [],
-      items: []
-    })
-  })
-
-  const itemsByGroupId = new Map<number, any[]>()
-  itemData.forEach(item => {
-    if (!itemsByGroupId.has(item.groupId)) {
-      itemsByGroupId.set(item.groupId, [])
-    }
-    itemsByGroupId.get(item.groupId)!.push({
-      key: item.itemValue,
-      title: item.itemName,
-      condition: item.condition
-    })
-  })
-
-  const rootGroups: IndicatorGroup[] = []
-
-  groupData.forEach(group => {
-    const groupNode: IndicatorGroup = {
-      key: group.id.toString(),
-      title: group.name,
-      children: [],
-      isLeaf: false
-    }
-
-    if (group.pid === null) {
-      rootGroups.push(groupNode)
-    } else {
-      const indicatorNode: IndicatorGroup = {
-        key: group.id.toString(),
-        title: group.name,
-        isLeaf: true,
-        items: itemsByGroupId.get(group.id) || []
-      }
-
-      const parentGroup = rootGroups.find(root => root.key === group.pid.toString())
-      if (parentGroup) {
-        parentGroup.children = parentGroup.children || []
-        parentGroup.children.push(indicatorNode)
-      }
-    }
-  })
-
-  return rootGroups
-}
 const { currentRoute } = useRouter();
 const route = currentRoute.value;
-const tableId = route.query ? route.query.tableId ? route.query.tableId : undefined : undefined
+
 // 组件挂载时加载数据
 onMounted(async () => {
+  if (isEmpty(tableId.value)) {
+    tableId.value = route.query ? (route.query.tableId ? route.query.tableId : undefined) : undefined
+  }
   try {
-    const condition = getDefaultCondition()
 
-    const [itemResponse, groupResponse] = await Promise.all([
-      advancedSelect("hr/indicator/item", condition, "/erp", true, false),
-      getGroup()
-    ])
-
-    console.log("指标数据", itemResponse.payload)
-    console.log("getGroup", groupResponse.payload)
-
-    indicatorTreeData.value = transformApiDataToTreeData(
-        groupResponse.payload || [],
-        itemResponse.payload || []
-    )
-
-    await getIndicatorConfig('DimPubUserNo').then(resp => indicatorTreeData.value = resp.payload)
+    await getIndicatorConfig(tableId.value).then(resp => indicatorTreeData.value = resp.payload)
 
     console.log('转换后的数据:', indicatorTreeData.value)
     availableDataTypes.value.push({
       dataName: '分布统计',
       dataField: '',
     })
-    const resp: any = await getPortalConfig('DimPubUserNo')
+    const resp: any = await getPortalConfig(tableId.value)
     resp.payload.columns.forEach((column: any) => {
       if (column.show === '0') return;
       if (column.fieldType === FIELD_TYPE.MONEY) {
