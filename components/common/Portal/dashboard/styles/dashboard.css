@@ -6,6 +6,14 @@
   user-select: none;
   /* 禁止选中文字 */
 }
+/* 右侧图表展示区域占满剩余空间 */
+.hr-indicator-dashboard .chart-display-area {
+  flex: 1;
+  min-width: 0;
+  /* 防止内容撑开导致溢出 */
+  display: flex;
+  flex-direction: column;
+}
 /* 全局动画效果 */
 @keyframes pulse {
   0% {

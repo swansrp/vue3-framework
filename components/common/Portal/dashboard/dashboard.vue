@@ -2,28 +2,19 @@
   <div class="hr-indicator-dashboard">
     <!-- 左侧指标树面板 -->
     <indicator-tree-panel
-      :collapsed="leftPanelCollapsed"
-      :indicator-tree-data="indicatorTreeData"
-      @drag-start="onDragStart"
-      @drag-end="onDragEnd"
-    />
+      :collapsed="leftPanelCollapsed" :indicator-tree-data="indicatorTreeData"
+      @drag-start="onDragStart" @drag-end="onDragEnd" />
 
     <!-- 右侧配置面板 -->
     <config-panel
-      v-model:data-metrics="dataMetrics"
-      v-model:filter-dimension="filterDimension"
-      v-model:first-dimension="firstDimension"
-      v-model:second-dimension="secondDimension"
-      v-model:selected-filter-items="selectedFilterItems"
-      :available-data-types="availableDataTypes"
-      :left-panel-collapsed="leftPanelCollapsed"
-      @toggle-left-panel="toggleLeftPanel"
-      @generate-chart="generateChart"
-    />
+      v-model:data-metrics="dataMetrics" v-model:filter-dimension="filterDimension"
+      v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
+      v-model:selected-filter-items="selectedFilterItems" :available-data-types="availableDataTypes"
+      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart" />
 
     <!-- 中间展示区域 -->
     <ChartDisplayArea
-      ref="chartDisplayAreaRef" :received-data="dimensionIndicatorsFilter"
+      class="chart-display-area" ref="chartDisplayAreaRef" :received-data="dimensionIndicatorsFilter"
       @chart-generated="onChartGenerated" />
   </div>
 </template>
@@ -38,7 +29,7 @@ import {
   DataMetric,
   DimensionIndicatorsFilter,
   IndicatorGroup as TalentIndicatorGroup
-} from '../../../../../views/dashboard/hr/talentReview/DimensionIndicatorsFilter'
+} from '@/framework/components/common/Portal/dashboard/universalChart/AdvancedStatisticReq'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 // 导入子组件
@@ -142,7 +133,7 @@ const chartDisplayAreaRef = ref()
 const dimensionIndicatorsFilter = ref<DimensionIndicatorsFilter | undefined>(undefined)
 
 // 事件处理
-const toggleLeftPanel = (status: boolean) => {
+const toggleLeftPanel = (status?: boolean) => {
   if (status === undefined) {
     leftPanelCollapsed.value = !leftPanelCollapsed.value
   } else {
@@ -158,6 +149,20 @@ const onDragEnd = () => {
   dragData.value = null
 }
 
+// 解析树节点上携带的条件为框架的 ConditionGroup
+const parseConditionGroup = (raw: any): ConditionGroup => {
+  if (!raw) return { conditionList: [], andOr: '0' }
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    const andOr = (obj.andOr === '1' ? '1' : '0') as '0' | '1'
+    const conditionList = Array.isArray(obj.conditionList) ? obj.conditionList : []
+    return { conditionList, andOr }
+  } catch (e) {
+    console.warn('解析条件失败，使用空条件', raw, e)
+    return { conditionList: [], andOr: '0' }
+  }
+}
+
 // 转换函数：将IndicatorGroup转换为TalentIndicatorGroup
 const convertToTalentIndicatorGroup = (group: IndicatorGroup | null): TalentIndicatorGroup | null => {
   if (!group) return null
@@ -168,10 +173,8 @@ const convertToTalentIndicatorGroup = (group: IndicatorGroup | null): TalentIndi
     indicatorItems: group.items?.map(item => ({
       itemName: item.title,
       itemValue: String(item.key), // 确保是字符串类型
-      queryConditions: {
-        conditionList: [],
-        andOr: '0' as '0' | '1'
-      }
+      // 来自指标树节点的原始条件（可能是字符串/对象），统一解析为 ConditionGroup
+      queryConditions: parseConditionGroup(item.condition)
     })) || []
   }
 }
@@ -240,7 +243,7 @@ const generateChart = async (chartData?: {
       if (stackGroups.has(metric.stackGroup)) {
         // 如果已经有这个堆叠组，检查坐标轴位置是否一致
         if (stackGroups.get(metric.stackGroup) !== metric.yAxisPosition) {
-          message.error(`堆叠组 "${ metric.stackGroup }" 的数据必须使用相同的坐标轴位置`)
+          message.error(`堆叠组 "${metric.stackGroup}" 的数据必须使用相同的坐标轴位置`)
           return
         }
       } else {

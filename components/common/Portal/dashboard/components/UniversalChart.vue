@@ -49,6 +49,11 @@ export default defineComponent({
     chartType: {
       type: String as () => 'bar' | 'line' | 'pie',
       default: 'bar'
+    },
+    // 维度名称到编码的映射，用于颜色等与配置对齐
+    dimensionValueMap: {
+      type: Object as () => { first?: Record<string, string>; second?: Record<string, string> } | undefined,
+      default: undefined
     }
   },
   emits: ['click'],
@@ -172,17 +177,21 @@ export default defineComponent({
           // 根据指标配置决定使用哪个y轴
           const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
 
-          // 查找第二维度的索引，用于获取itemColors中的颜色
-          const secondDimIndex = secondDimensionGroups.indexOf(secondDim)
-          const itemValue = (secondDimIndex + 1).toString().padStart(2, '0') // 生成 01, 02, 03, 04 格式
+          // 使用传入的映射优先获取第二维度的编码，保证与配置一致
+          const mappedCode = props.dimensionValueMap?.second?.[secondDim]
+          // 回退：按位置生成 01/02...
+          const fallbackCode = (secondDimensionGroups.indexOf(secondDim) + 1).toString().padStart(2, '0')
+          const itemValueCode = mappedCode || fallbackCode
 
           // 根据metric的itemColors获取颜色，优先使用itemColors配置
-          const itemColor = metric.itemColors?.[itemValue] ||
+          const itemColor = metric.itemColors?.[itemValueCode] ||
             metric.color ||
             `hsl(${(series.length * 60) % 360}, 70%, 50%)`
 
-          // 堆叠配置：相同stackGroup且相同y轴的系列才堆叠
-          const stackKey = metric.stackGroup ? `${metric.stackGroup}-${metric.yAxisPosition}-${secondDim}` : undefined
+          // 通用堆叠策略：只要配置了 stackGroup，就与相同 stackGroup 且同 y 轴的系列堆叠
+          const stackKey = metric.stackGroup
+            ? `${metric.stackGroup}__y${yAxisIndex}`
+            : undefined
 
           series.push({
             name: `${secondDim}&&${statType}`,
@@ -413,14 +422,15 @@ export default defineComponent({
 
           const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
 
-          // 查找第二维度的itemValue来获取正确的颜色
-          const secondDimItem = props.dataMetrics.find(m => m.dataName === statType)
-          const itemValue = secondDimensionGroups.indexOf(secondDim).toString().padStart(2, '0')
+          // 使用传入映射优先获取编码
+          const mappedCode = props.dimensionValueMap?.second?.[secondDim]
+          const fallbackCode = (secondDimensionGroups.indexOf(secondDim) + 1).toString().padStart(2, '0')
+          const itemValueCode = mappedCode || fallbackCode
 
           // 根据itemColors获取颜色，如果没有则使用默认color或生成颜色
-          const itemColor = secondDimItem?.itemColors?.[itemValue] ||
-            secondDimItem?.itemColors?.[`0${secondDimensionGroups.indexOf(secondDim) + 1}`] ||
-            secondDimItem?.color ||
+          const metricCfg = props.dataMetrics.find(m => m.dataName === statType)
+          const itemColor = metricCfg?.itemColors?.[itemValueCode] ||
+            metricCfg?.color ||
             `hsl(${(series.length * 60) % 360}, 70%, 50%)`
 
           series.push({
@@ -592,8 +602,10 @@ export default defineComponent({
         pieData = flattenedData
           .filter((item: any) => item.statisticType === pieMetric.dataName)
           .map((item: any, index: number) => {
-            // 生成itemValue格式 01, 02, 03, 04
-            const itemValue = (index + 1).toString().padStart(2, '0')
+            // 优先根据映射获取第二维度编码
+            const mappedCode = props.dimensionValueMap?.second?.[item.secondDimension]
+            const fallbackCode = (index + 1).toString().padStart(2, '0')
+            const itemValueCode = mappedCode || fallbackCode
 
             return {
               name: `${item.firstDimension}&&${item.secondDimension}`, // 使用完整的维度标签
@@ -601,7 +613,7 @@ export default defineComponent({
               firstDimension: item.firstDimension,
               secondDimension: item.secondDimension,
               itemStyle: {
-                color: pieMetric.itemColors?.[itemValue] ||
+                color: pieMetric.itemColors?.[itemValueCode] ||
                   `hsl(${(index * 60) % 360}, 70%, 50%)`
               }
             }
@@ -610,8 +622,11 @@ export default defineComponent({
         // 如果没有展开数据，直接使用原始数据
         pieData = props.data.map((item, index) => {
           // 生成itemValue格式 01, 02, 03, 04
-          const itemValue = (index + 1).toString().padStart(2, '0')
           const parts = item.metricLabel.split('&&')
+          const secondDimName = parts[1] || ''
+          const mappedCode = props.dimensionValueMap?.second?.[secondDimName]
+          const fallbackCode = (index + 1).toString().padStart(2, '0')
+          const itemValueCode = mappedCode || fallbackCode
 
           return {
             name: item.metricLabel,
@@ -619,7 +634,7 @@ export default defineComponent({
             firstDimension: parts[0] || '',
             secondDimension: parts[1] || '',
             itemStyle: {
-              color: pieMetric.itemColors?.[itemValue] ||
+              color: pieMetric.itemColors?.[itemValueCode] ||
                 `hsl(${(index * 60) % 360}, 70%, 50%)`
             }
           }

@@ -56,8 +56,8 @@
       <UniversalChart
         v-if="chartData && chartData.length > 0 && receivedData" :data="filteredChartData"
         :dataMetrics="receivedData.dataMetrics || []" :chartType="autoChartType" :title="chartTitle"
-        :subtitle="chartSubtitle" :categories="chartCategories" :loading="loading" height="500px"
-        @click="handleChartClick" />
+        :subtitle="chartSubtitle" :categories="chartCategories" :loading="loading" height="100%"
+        :dimensionValueMap="dimensionValueMap" @click="handleChartClick" />
 
       <!-- 当没有数据时显示占位符 -->
       <div v-else class="chart-placeholder">
@@ -136,7 +136,12 @@ const chartSubtitle = computed(() => {
 // 获取图表分类数据（x轴）
 const chartCategories = computed(() => {
   if (!chartData.value.length) return []
-  return [...new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
+  // 以配置的第一维度顺序为准，和后端返回的数据做交集
+  const dataCatsSet = new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))
+  const configuredOrder = receivedData.value?.firstDimension?.indicatorItems?.map(i => i.itemName) || []
+  const ordered = configuredOrder.filter(name => dataCatsSet.has(name))
+  const extras = Array.from(dataCatsSet).filter(name => !configuredOrder.includes(name))
+  return [...ordered, ...extras]
 })
 
 // 过滤后的图表数据
@@ -180,6 +185,21 @@ const autoChartType = computed(() => {
   // 从 dataMetrics 中获取第一个配置的 chartType
   const firstMetric = receivedData.value?.dataMetrics?.[0]
   return firstMetric?.chartType || 'bar'
+})
+
+// 维度名称到编码的映射，保证颜色等与配置一致
+const dimensionValueMap = computed(() => {
+  const first: Record<string, string> = {}
+  const second: Record<string, string> = {}
+  receivedData.value?.firstDimension?.indicatorItems?.forEach(it => {
+    const code = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
+    first[it.itemName] = code.padStart(2, '0')
+  })
+  receivedData.value?.secondDimension?.indicatorItems?.forEach(it => {
+    const code = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
+    second[it.itemName] = code.padStart(2, '0')
+  })
+  return { first, second }
 })
 
 // 图表点击事件处理
@@ -298,37 +318,34 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
 
 // 更新维度数据的函数
 const updateDimensionData = (data: ChartDataItem[]) => {
-  // 提取第一维度分组（用工形式）
-  const firstDimensionGroups = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[0]))]
+  // 以配置顺序为主，回退到数据中的顺序
+  const configFirst = receivedData.value?.firstDimension?.indicatorItems?.map(i => i.itemName) || []
+  const dataFirst = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[0]))]
+  const firstDimensionGroups = configFirst.length ? configFirst : dataFirst
 
-  // 提取第二维度分组（年龄分组）
-  const secondDimensionGroups = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[1]))]
+  const configSecond = receivedData.value?.secondDimension?.indicatorItems?.map(i => i.itemName) || []
+  const dataSecond = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[1]))]
+  const secondDimensionGroups = configSecond.length ? configSecond : dataSecond
 
   // 提取统计类型
   const statisticTypes = [...new Set(data.flatMap((item: any) => item.children.map((child: any) => child.metric)))]
 
-  // 更新所有维度数据，用于控制面板显示
-  if (allFirstDimensions.value.length === 0) {
-    allFirstDimensions.value = [...firstDimensionGroups]
-    visibleFirstDimensions.value = [...firstDimensionGroups]
-  }
+  // 每次重新生成图表时都刷新三组维度的“所有项”和“可见项”，避免旧选择造成过滤为空
+  allFirstDimensions.value = [...firstDimensionGroups]
+  visibleFirstDimensions.value = [...firstDimensionGroups]
 
-  if (allSecondDimensions.value.length === 0) {
-    allSecondDimensions.value = [...secondDimensionGroups]
-    visibleSecondDimensions.value = [...secondDimensionGroups]
-  }
+  allSecondDimensions.value = [...secondDimensionGroups]
+  visibleSecondDimensions.value = [...secondDimensionGroups]
 
-  if (allStatisticTypes.value.length === 0) {
-    allStatisticTypes.value = [...statisticTypes]
-    visibleStatisticTypes.value = [...statisticTypes]
-  }
+  allStatisticTypes.value = [...statisticTypes]
+  visibleStatisticTypes.value = [...statisticTypes]
 }
 
-// 关闭详情弹窗
-const closeDetailModal = () => {
-  detailModalVisible.value = false
-  selectedBarInfo.value = null
-}
+// 关闭详情弹窗（保留以备后续使用）
+// const closeDetailModal = () => {
+//   detailModalVisible.value = false
+//   selectedBarInfo.value = null
+// }
 
 // 第一维度控制
 const onFirstDimensionChange = () => {
@@ -405,8 +422,14 @@ const fetchChartData = async () => {
   try {
     console.log('开始获取图表数据，receivedData:', receivedData.value);
 
-    // 调用真实的API获取数据
-    const result = await fetchTalentStatisticData(receivedData.value);
+    // 预清理，避免上一次筛选残留对本次过滤造成影响
+    chartData.value = []
+    visibleFirstDimensions.value = []
+    visibleSecondDimensions.value = []
+    visibleStatisticTypes.value = []
+
+    // 调用真实的API获取数据（增加防缓存标识）
+    const result = await fetchTalentStatisticData(receivedData.value, { majorCondition: `ts=${Date.now()}` });
 
     console.log('API返回结果:', result);
 
@@ -443,7 +466,10 @@ const convertDimensionToMetricCondition = (dimension: IndicatorGroup): MetricCon
   return dimension.indicatorItems.map(item => ({
     value: `${dimension.groupValue}&&${item.itemValue}`, // 生成唯一标识
     label: item.itemName,
-    condition: item.queryConditions
+    condition: {
+      andOr: (item.queryConditions.andOr ?? '0') as '0' | '1',
+      conditionList: (item.queryConditions.conditionList ?? []) as any
+    }
   }))
 }
 
@@ -472,8 +498,8 @@ const convertDataToCrossMetricConditions = (
       receivedData.secondDimension!.indicatorItems.forEach(secondItem => {
         // 合并两个维度的查询条件
         const combinedConditionList = [
-          ...firstItem.queryConditions.conditionList,
-          ...secondItem.queryConditions.conditionList
+          ...((firstItem.queryConditions?.conditionList ?? []) as any),
+          ...((secondItem.queryConditions?.conditionList ?? []) as any)
         ]
 
         // 生成交叉组合的指标条件
@@ -481,7 +507,7 @@ const convertDataToCrossMetricConditions = (
           value: `${receivedData.firstDimension!.groupValue}&&${firstItem.itemValue}&&${receivedData.secondDimension!.groupValue}&&${secondItem.itemValue}`,
           label: `${firstItem.itemName}&&${secondItem.itemName}`,
           condition: {
-            andOr: "0", // 两个维度的条件用 AND 连接
+            andOr: '0', // 两个维度的条件用 AND 连接
             conditionList: combinedConditionList
           }
         }
@@ -509,8 +535,8 @@ const convertDataToCrossMetricConditions = (
   const requestParams: RequestParams = {
     selectColumnCondition: options.selectColumnCondition || {},
     condition: {
-      conditionList: (receivedData.filterConditions?.conditionList || []) as any, // 类型转换为 ConditionListType[]
-      andOr: (receivedData.filterConditions?.andOr || "0") as '0' | '1'
+      conditionList: (receivedData.filterConditions?.conditionList ?? []) as any,
+      andOr: (receivedData.filterConditions?.andOr ?? '0') as '0' | '1'
     },
     sort: options.sort ?? null,
     metricColumn: options.metricColumn || [],
@@ -571,6 +597,7 @@ defineExpose({
     allFirstDimensions.value = []
     allSecondDimensions.value = []
     allStatisticTypes.value = []
+    loading.value = false
   }
 })
 </script>
