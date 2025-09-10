@@ -35,7 +35,7 @@ export const excel = (dataSource: any, columns: any, rawColumns: any) => {
   const columnWidthArray = [] as Array<any>
   rawColumns.forEach((col: any) => {
     const textWidth = getTextWidth(col.title)
-    const wpx = textWidth < col.width ? textWidth : col.width
+    const wpx = textWidth ? (( textWidth < col.width ? textWidth : col.width ) || textWidth) : col.width
     columnWidthArray.push({wpx})
   })
   const ws = aoa_to_sheet(header, columnHeight, rawColumns, columnWidthArray)
