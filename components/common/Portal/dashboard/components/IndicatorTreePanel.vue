@@ -6,37 +6,19 @@
 
     <div class="panel-content">
       <!-- 搜索框 -->
-      <a-input
-        v-model:value="searchKeyword"
-        class="search-input"
-        placeholder="搜索指标项"
-      >
+      <a-input v-model:value="searchKeyword" class="search-input" placeholder="搜索指标项">
         <template #prefix>
           <SearchOutlined />
         </template>
       </a-input>
 
       <!-- 指标树 -->
-      <a-directory-tree
-        v-model:expandedKeys="expandedKeys"
-        :allow-drop="() => false"
-        :draggable="true"
-        :tree-data="treeDataFormatted"
-        class="indicator-tree"
-        showIcon
-        @dragend="onDragEnd"
-        @dragenter="onDragEnter"
-        @dragover="onDragOver"
-        @dragstart="onDragStart"
-      >
+      <a-directory-tree v-model:expandedKeys="expandedKeys" :allow-drop="() => false" :draggable="true"
+        :tree-data="treeDataFormatted" class="indicator-tree" showIcon @dragend="onDragEnd" @dragenter="onDragEnter"
+        @dragover="onDragOver" @dragstart="onDragStart">
         <template #title="{ title, key, isLeaf, items }">
-          <span
-            :data-is-leaf="isLeaf"
-            :data-items="JSON.stringify(items || [])"
-            :data-key="key"
-            :data-title="title"
-            v-html="isLeaf ? getHighlightedText(title) : title"
-          >
+          <span :data-is-leaf="isLeaf" :data-items="JSON.stringify(items || [])" :data-key="key" :data-title="title"
+            v-html="isLeaf ? getHighlightedText(title) : title">
           </span>
         </template>
       </a-directory-tree>
@@ -47,6 +29,7 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
+import { isEmpty } from '@/framework/utils/common'
 
 // 接口定义
 interface IndicatorItem {
