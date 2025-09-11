@@ -10,16 +10,12 @@
       v-model:data-metrics="dataMetrics" v-model:filter-dimension="filterDimension"
       v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
       v-model:selected-filter-items="selectedFilterItems" :available-data-types="availableDataTypes"
-      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel"
-      @generate-chart="generateChart" />
+      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart" />
 
     <!-- 中间展示区域 -->
     <ChartDisplayArea
-      ref="chartDisplayAreaRef"
-      :config="config"
-      :received-data="dimensionIndicatorsFilter"
-      class="chart-display-area"
-      @chart-generated="onChartGenerated" />
+      ref="chartDisplayAreaRef" :config="config" :received-data="dimensionIndicatorsFilter"
+      class="chart-display-area" @chart-generated="onChartGenerated" />
   </div>
 </template>
 
@@ -87,10 +83,10 @@ interface DataTypeOption {
 }
 
 const props = withDefaults(
-    defineProps<{
-      tableId?: any
-    }>(),
-    {}
+  defineProps<{
+    tableId?: any
+  }>(),
+  {}
 )
 const tableId = ref(props.tableId)
 
@@ -116,7 +112,7 @@ const dataMetrics = ref<DataMetricUI[]>([
     color: '#1890ff',
     yAxisPosition: 'left',
     stackGroup: 'stack1',
-    unit: '个',
+    unit: '',
     itemColors: {}
   }
 ])
@@ -198,28 +194,78 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
 };
 
 // 转换函数：将selectedFilterItems转换为ConditionGroup
-const convertToConditionGroup = (filterItems: string[]): ConditionGroup => {
-  const conditionList: ConditionListType[] = filterItems.map(item => ({
-    property: null,
-    value: [item],
-    relation: null,
-    conditionList: [],
-    andOr: '0'
-  }))
+const convertToConditionGroup = (filterItems: string[], filterDimension: IndicatorGroup | null): ConditionGroup => {
+  console.log('转换前的全局筛选条件:', {
+    filterItems,
+    filterDimension
+  })
 
-  return {
-    conditionList: conditionList,
-    andOr: '0'
+  // 如果没有筛选维度或没有选中的筛选项，返回空条件
+  if (!filterDimension || !filterItems || filterItems.length === 0) {
+    console.log('转换后的全局筛选条件(空):', {
+      conditionList: [],
+      andOr: '0'
+    })
+    return {
+      conditionList: [],
+      andOr: '0'
+    }
   }
+
+  // 根据选中的筛选项，构建条件组
+  const itemConditionGroups: ConditionListType[] = []
+
+  filterItems.forEach(itemKey => {
+    const filterItem = filterDimension.items?.find(item => item.key === itemKey)
+
+    if (filterItem && filterItem.condition) {
+      try {
+        // 解析筛选项的条件
+        const itemConditions = parseConditionGroup(filterItem.condition)
+
+        // 将每个筛选项作为一个独立的条件组
+        if (itemConditions.conditionList && itemConditions.conditionList.length > 0) {
+          // 如果只有一个条件，直接使用
+          if (itemConditions.conditionList.length === 1) {
+            itemConditionGroups.push(itemConditions.conditionList[0])
+          } else {
+            // 如果有多个条件，作为一个子条件组
+            const subConditionGroup: ConditionListType = {
+              property: null,
+              value: null,
+              relation: null,
+              conditionList: itemConditions.conditionList,
+              andOr: itemConditions.andOr // 保持原有的逻辑关系
+            }
+            itemConditionGroups.push(subConditionGroup)
+          }
+        }
+      } catch (error) {
+        console.warn('解析筛选项条件失败:', {
+          itemKey,
+          condition: filterItem.condition,
+          error
+        })
+      }
+    } else {
+      console.warn('未找到筛选项或筛选项无条件:', {
+        itemKey,
+        filterItem
+      })
+    }
+  })
+
+  const result = {
+    conditionList: itemConditionGroups,
+    andOr: '1' as '0' | '1' // 多个筛选项之间用OR连接（选择了司局级 OR 处级）
+  }
+
+  console.log('转换后的全局筛选条件:', result)
+
+  return result
 }
 
-const generateChart = async (chartData?: {
-  firstDimension: IndicatorGroup | null,
-  secondDimension: IndicatorGroup | null,
-  filterDimension: IndicatorGroup | null,
-  selectedFilterItems: string[],
-  dataMetrics: DataMetricUI[]
-}) => {
+const generateChart = async () => {
   if (!firstDimension.value) {
     message.error('请先选择一级维度（横坐标）')
     return
@@ -247,7 +293,7 @@ const generateChart = async (chartData?: {
       if (stackGroups.has(metric.stackGroup)) {
         // 如果已经有这个堆叠组，检查坐标轴位置是否一致
         if (stackGroups.get(metric.stackGroup) !== metric.yAxisPosition) {
-          message.error(`堆叠组 "${ metric.stackGroup }" 的数据必须使用相同的坐标轴位置`)
+          message.error(`堆叠组 "${metric.stackGroup}" 的数据必须使用相同的坐标轴位置`)
           return
         }
       } else {
@@ -258,18 +304,14 @@ const generateChart = async (chartData?: {
   }
 
   // 打印生成图表所需的数据信息
-  console.log('生成图表数据:', {
+  console.log('========== 生成图表数据调试信息 ==========')
+  console.log('原始配置数据:', {
     firstDimension: firstDimension.value,
     secondDimension: secondDimension.value,
     filterDimension: filterDimension.value,
     selectedFilterItems: selectedFilterItems.value,
     dataMetrics: dataMetrics.value
   })
-
-  // 如果有传递的图表数据，使用传递的数据
-  if (chartData) {
-    console.log('接收到的图表数据:', chartData)
-  }
 
   // 转换为DimensionIndicatorsFilter类型并输出
   const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value);
@@ -283,7 +325,7 @@ const generateChart = async (chartData?: {
   const filterData: DimensionIndicatorsFilter = {
     firstDimension: firstDimensionConverted,
     secondDimension: secondDimensionConverted, // 二级维度可以为null
-    filterConditions: convertToConditionGroup(selectedFilterItems.value),
+    filterConditions: convertToConditionGroup(selectedFilterItems.value, filterDimension.value),
     dataMetrics: dataMetrics.value.map(convertToDataMetric)
   }
 
@@ -291,7 +333,10 @@ const generateChart = async (chartData?: {
   dimensionIndicatorsFilter.value = filterData;
 
   // 输出DimensionIndicatorsFilter类型的数据
-  console.log('DimensionIndicatorsFilter数据:', filterData);
+  console.log('========== DimensionIndicatorsFilter转换结果 ==========')
+  console.log('完整的DimensionIndicatorsFilter数据:', filterData);
+  console.log('转换后的全局筛选条件:', filterData.filterConditions);
+  console.log('========================================================')
 
   // 等待下一个tick，确保props已经传递给子组件
   await nextTick();
@@ -356,7 +401,6 @@ onMounted(async () => {
   }
 
   window.addEventListener('dragend', () => {
-    console.log('拖拽结束')
     dragData.value = null
   })
 })

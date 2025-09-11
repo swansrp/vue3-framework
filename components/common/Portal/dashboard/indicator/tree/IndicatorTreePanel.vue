@@ -283,13 +283,9 @@ onUnmounted(() => {
 
 // 拖拽事件处理
 const onDragStart = (info: any) => {
-  console.log('拖拽开始:', info)
   const { event, node } = info
 
   if (!node.items || node.items.length === 0) {
-    // items为空，完全禁止拖拽
-    console.log('items为空，拒绝拖拽')
-
     // 禁止默认事件和事件冒泡
     if (event) {
       event.preventDefault()
@@ -308,27 +304,23 @@ const onDragStart = (info: any) => {
     items: node.items || []
   }
 
-  console.log('设置拖拽数据:', dragData)
   emit('dragStart', dragData)
   return true
 }
 
 // 拖拽进入树组件时的处理
-const onDragEnter = (info: any) => {
-  console.log('拖拽进入树组件:', info)
+const onDragEnter = () => {
   // 禁止在树组件内部放置
   return false
 }
 
 // 拖拽悬停在树组件上时的处理
-const onDragOver = (info: any) => {
-  console.log('拖拽悬停在树组件上:', info)
+const onDragOver = () => {
   return false
 }
 
 // 拖拽结束事件，重置状态
 const onDragEnd = () => {
-  console.log('拖拽结束')
   dragData = null
   emit('dragEnd')
 }

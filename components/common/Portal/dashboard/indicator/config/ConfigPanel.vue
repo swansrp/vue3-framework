@@ -2,32 +2,17 @@
   <div class="right-panel">
     <div class="config-header">
       <div class="config-header-content">
-        <a-button
-          class="collapse-btn"
-          size="small"
-          type="text"
-          @click="toggleLeftPanel"
-        >
+        <a-button class="collapse-btn" size="small" type="text" @click="toggleLeftPanel">
           <MenuFoldOutlined v-if="!leftPanelCollapsed" />
           <MenuUnfoldOutlined v-else />
         </a-button>
         <h3>配置面板</h3>
       </div>
       <div class="action-buttons">
-        <a-button
-          class="reset-btn"
-          size="small"
-          title="重置配置"
-          type="text"
-          @click="resetConfiguration"
-        >
+        <a-button class="reset-btn" size="small" title="重置配置" type="text" @click="resetConfiguration">
           <ReloadOutlined />
         </a-button>
-        <a-button
-          :disabled="!firstDimension"
-          type="primary"
-          @click="generateChart"
-        >
+        <a-button :disabled="!firstDimension" type="primary" @click="generateChart">
           生成图表
         </a-button>
       </div>
@@ -36,26 +21,17 @@
     <div class="config-content">
       <!-- 维度选择 -->
       <DimensionSelector
-        v-model:first-dimension="firstDimension"
-        v-model:second-dimension="secondDimension"
-        :filter-dimension="filterDimension"
-        @dimension-changed="onDimensionChanged"
-      />
+        v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
+        :filter-dimension="filterDimension" @dimension-changed="onDimensionChanged" />
 
       <!-- 全局筛选条件 -->
-      <FilterCondition
-        v-model:filter-dimension="filterDimension"
-        v-model:selected-filter-items="selectedFilterItems"
-      />
+      <FilterCondition v-model:filter-dimension="filterDimension" v-model:selected-filter-items="selectedFilterItems" />
 
       <!-- 数据配置 -->
       <DataConfiguration
-        v-model:data-metrics="dataMetrics"
-        :available-data-types="availableDataTypes"
-        :first-dimension="firstDimension"
-        :second-dimension="secondDimension"
-        @update-metric-field="updateMetricField"
-      />
+        v-model:data-metrics="dataMetrics" :available-data-types="availableDataTypes"
+        :first-dimension="firstDimension" :second-dimension="secondDimension"
+        @update-metric-field="updateMetricField" />
     </div>
   </div>
 </template>
@@ -145,8 +121,66 @@ const toggleLeftPanel = () => {
 }
 
 watch(
-    () => dataMetrics.value,
-    () => emit('update:dataMetrics', dataMetrics.value)
+  () => dataMetrics.value,
+  () => emit('update:dataMetrics', dataMetrics.value)
+)
+
+// 监听 filterDimension 变化
+watch(
+  () => filterDimension.value,
+  (newValue) => {
+    if (newValue !== props.filterDimension) {
+      emit('update:filterDimension', newValue)
+    }
+  }
+)
+
+// 监听 selectedFilterItems 变化
+watch(
+  () => selectedFilterItems.value,
+  (newValue) => {
+    if (JSON.stringify(newValue) !== JSON.stringify(props.selectedFilterItems)) {
+      emit('update:selectedFilterItems', [...newValue])
+    }
+  },
+  { deep: true }
+)
+
+// 监听props变化，同步本地状态
+watch(
+  () => props.filterDimension,
+  (newValue) => {
+    if (newValue !== filterDimension.value) {
+      filterDimension.value = newValue
+    }
+  }
+)
+
+watch(
+  () => props.selectedFilterItems,
+  (newValue) => {
+    if (JSON.stringify(newValue) !== JSON.stringify(selectedFilterItems.value)) {
+      selectedFilterItems.value = [...newValue]
+    }
+  }
+)
+
+watch(
+  () => props.firstDimension,
+  (newValue) => {
+    if (newValue !== firstDimension.value) {
+      firstDimension.value = newValue
+    }
+  }
+)
+
+watch(
+  () => props.secondDimension,
+  (newValue) => {
+    if (newValue !== secondDimension.value) {
+      secondDimension.value = newValue
+    }
+  }
 )
 
 const onDimensionChanged = () => {
@@ -194,7 +228,6 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
     }
 
     emit('update:dataMetrics', dataMetrics.value)
-    console.log('更新数据配置:', metricId, field, value, dataMetrics.value)
   }
 }
 
@@ -234,15 +267,6 @@ const generateChart = () => {
     }
   }
 
-  // 打印生成图表所需的数据信息
-  console.log('生成图表数据:', {
-    firstDimension: firstDimension.value,
-    secondDimension: secondDimension.value,
-    filterDimension: filterDimension.value,
-    selectedFilterItems: selectedFilterItems.value,
-    dataMetrics: dataMetrics.value
-  })
-
   // 发出生成图表事件，传递完整数据
   emit('generateChart', {
     firstDimension: firstDimension.value,
@@ -263,7 +287,7 @@ const resetConfiguration = () => {
 
   //默认添加分布统计数据配置
   const defaultDataMetric: DataMetricUI = {
-    id: `metric_${ Date.now() }`,
+    id: `metric_${Date.now()}`,
     dataName: '分布统计',
     dataField: '',
     chartType: 'bar',
