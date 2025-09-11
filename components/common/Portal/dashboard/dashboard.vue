@@ -92,7 +92,7 @@ const props = withDefaults(
     }>(),
     {}
 )
-const { tableId } = toRefs(props)
+const tableId = ref(props.tableId)
 
 // 左侧面板控制
 const leftPanelCollapsed = ref(false)

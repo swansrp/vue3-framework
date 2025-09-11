@@ -17,7 +17,7 @@
           <a-input
             v-model:value="formData.itemValue"
             :maxlength="5"
-            placeholder="请输入指标值（最多5个字）"
+            placeholder="请输入指标值（最多10个字）"
             show-count
           />
         </a-form-item>
@@ -199,7 +199,7 @@ const formData = ref<IndicatorFormData>({
 const formRules: Record<string, Rule[]> = {
   itemValue: [
     { required: true, message: '请输入指标值', trigger: 'blur' },
-    { max: 5, message: '指标值最多5个字符', trigger: 'blur' }
+    { max: 10, message: '指标值最多10个字符', trigger: 'blur' }
   ],
   itemName: [
     { required: true, message: '请输入指标名称', trigger: 'blur' },

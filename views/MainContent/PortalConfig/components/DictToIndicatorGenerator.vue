@@ -294,8 +294,11 @@ watch(
       )
     dictList.value.length = 0
     for (let item of columnArray) {
-      if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.reference)) {
-        dictList.value.push({ value: item.reference + '###' + item.property, label: item.displayName })
+      if ((item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) && isNotEmpty(item.reference)) {
+        dictList.value.push({
+          value: item.reference + '###' + item.property + '###' + item.fieldType,
+          label: item.displayName
+        })
       }
     }
   },
@@ -416,7 +419,7 @@ const generateConditionByDictItem = (dictItem: any) => {
     conditionList: [
       {
         property: selectedDict.value.split('###')[1], // 假设有部门ID字段
-        relation: FILTER_TYPE.EQUAL,
+        relation: selectedDict.value.split('###')[2] === FIELD_TYPE.SELECT ? FILTER_TYPE.EQUAL : FILTER_TYPE.CONTAIN,
         value: [dictItem.dictValue]
       }
     ],
