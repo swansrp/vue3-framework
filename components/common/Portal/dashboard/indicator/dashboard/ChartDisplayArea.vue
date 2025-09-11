@@ -19,7 +19,7 @@
       </div>
 
       <!-- 第二维度控制 -->
-      <div class="control-item">
+      <div v-if="hasSecondDimension" class="control-item">
         <span class="control-label">显示{{ secondDimensionName }}：</span>
         <a-checkbox-group v-model:value="visibleSecondDimensions" @change="onSecondDimensionChange">
           <a-checkbox v-for="dimension in allSecondDimensions" :key="dimension" :value="dimension">
@@ -120,11 +120,13 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 
 // 计算属性
 const chartTitle = computed(() => {
-  return '数据分布统计'
+  return '人员数据分布统计'
 })
 
 const chartSubtitle = computed(() => {
-  return `按${ firstDimensionName.value }、${ secondDimensionName.value }和统计类型分组`
+  return hasSecondDimension.value
+    ? `按${firstDimensionName.value}、${secondDimensionName.value}和统计类型分组`
+    : `按${firstDimensionName.value}和统计类型分组`
 })
 
 // 获取图表分类数据（x轴）
@@ -172,6 +174,12 @@ const firstDimensionName = computed(() => {
 
 const secondDimensionName = computed(() => {
   return receivedData.value?.secondDimension?.groupName || '第二维度'
+})
+
+// 是否存在可用的第二维度（仅当传入且有可选项时显示控制）
+const hasSecondDimension = computed(() => {
+  const items = receivedData.value?.secondDimension?.indicatorItems as any[] | undefined
+  return Array.isArray(items) && items.length > 0
 })
 
 // 动态从 dataMetrics 中获取图表类型
@@ -225,7 +233,7 @@ const onBarClick = (params: any) => {
     firstDimensionName: firstDimensionName.value,
     secondDimensionName: secondDimensionName.value,
     combinedConditions: combinedConditions,
-    title: `${ firstDimensionName.value }: ${ firstDim } && ${ secondDimensionName.value }: ${ secondDim }`
+    title: `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim}`
   }
 
   // 显示弹窗
@@ -264,7 +272,7 @@ const onPieClick = (params: any) => {
     firstDimensionName: firstDimensionName.value,
     secondDimensionName: secondDimensionName.value,
     combinedConditions: combinedConditions,
-    title: `${ firstDimensionName.value }: ${ firstDim } && ${ secondDimensionName.value }: ${ secondDim }`
+    title: `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim}`
   }
 
   // 显示弹窗
@@ -303,8 +311,8 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
     firstDimensionCondition: firstDimItem.queryConditions,
     secondDimensionCondition: secondDimItem.queryConditions,
     // 附加信息：维度标识
-    firstDimensionId: `${ receivedData.value.firstDimension!.groupValue }&&${ firstDimItem.itemValue }`,
-    secondDimensionId: `${ receivedData.value.secondDimension!.groupValue }&&${ secondDimItem.itemValue }`
+    firstDimensionId: `${receivedData.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
+    secondDimensionId: `${receivedData.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}`
   }
 }
 
@@ -351,7 +359,7 @@ const toggleAllFirstDimensions = () => {
 // 第一维度反选功能
 const invertFirstDimensionsSelection = () => {
   const invertedSelection = allFirstDimensions.value.filter(
-      dimension => !visibleFirstDimensions.value.includes(dimension)
+    dimension => !visibleFirstDimensions.value.includes(dimension)
   )
   visibleFirstDimensions.value = invertedSelection
 }
@@ -368,7 +376,7 @@ const toggleAllSecondDimensions = () => {
 // 第二维度反选功能
 const invertSecondDimensionsSelection = () => {
   const invertedSelection = allSecondDimensions.value.filter(
-      dimension => !visibleSecondDimensions.value.includes(dimension)
+    dimension => !visibleSecondDimensions.value.includes(dimension)
   )
   visibleSecondDimensions.value = invertedSelection
 }
@@ -385,15 +393,13 @@ const toggleAllStatisticTypes = () => {
 // 统计类型反选功能
 const invertStatisticTypesSelection = () => {
   const invertedSelection = allStatisticTypes.value.filter(
-      statType => !visibleStatisticTypes.value.includes(statType)
+    statType => !visibleStatisticTypes.value.includes(statType)
   )
   visibleStatisticTypes.value = invertedSelection
 }
 
 // 获取图表数据
 const fetchChartData = async () => {
-  console.log('开始执行fetchChartData，当前receivedData:', receivedData.value);
-  console.log('当前props.receivedData:', props.receivedData);
 
   if (!receivedData.value) {
     console.warn('receivedData 未定义，无法获取图表数据');
@@ -408,12 +414,9 @@ const fetchChartData = async () => {
     return;
   }
 
-  console.log('数据校验通过，开始加载状态');
   loading.value = true;
 
   try {
-    console.log('开始获取图表数据，receivedData:', receivedData.value);
-
     // 预清理，避免上一次筛选残留对本次过滤造成影响
     chartData.value = []
     visibleFirstDimensions.value = []
@@ -423,11 +426,8 @@ const fetchChartData = async () => {
     // 调用真实的API获取数据（增加防缓存标识）
     const result = await fetchTalentStatisticData(receivedData.value, {});
 
-    console.log('API返回结果:', result);
-
     if (result && result.payload) {
       chartData.value = result.payload;
-      console.log('成功获取图表数据:', result.payload);
 
       // 更新维度数据
       updateDimensionData(result.payload);
@@ -441,11 +441,10 @@ const fetchChartData = async () => {
     }
   } catch (error: any) {
     console.error('获取图表数据失败:', error);
-    message.error(`获取图表数据失败: ${ error?.message || '未知错误' }`);
+    message.error(`获取图表数据失败: ${error?.message || '未知错误'}`);
     chartData.value = [];
   } finally {
     loading.value = false;
-    console.log('加载状态结束');
   }
 }
 
@@ -455,17 +454,10 @@ const fetchChartData = async () => {
  * @returns MetricCondition[]
  */
 const convertDimensionToMetricCondition = (dimension: IndicatorGroup): MetricCondition[] => {
-
-  console.log('convertDimensionToMetricCondition=========', dimension)
-
-
   return dimension.indicatorItems.map(item => ({
-    value: `${ dimension.groupValue }&&${ item.itemValue }`, // 生成唯一标识
+    value: `${dimension.groupValue}&&${item.itemValue}`, // 生成唯一标识
     label: item.itemName,
-    condition: {
-      andOr: (item.queryConditions.andOr) as '0' | '1',
-      conditionList: ([...item.queryConditions.conditionList]) as any
-    }
+    condition: item.queryConditions
   }))
 }
 
@@ -476,8 +468,8 @@ const convertDimensionToMetricCondition = (dimension: IndicatorGroup): MetricCon
  * @returns RequestParams
  */
 const convertDataToCrossMetricConditions = (
-    receivedData: DimensionIndicatorsFilter,
-    options: ConvertOptions = {}
+  receivedData: DimensionIndicatorsFilter,
+  options: ConvertOptions = {}
 ): RequestParams => {
   const metricConditions: MetricCondition[] = []
 
@@ -489,7 +481,7 @@ const convertDataToCrossMetricConditions = (
 
   // 如果两个维度都存在，进行交叉组合
   if (receivedData.firstDimension && receivedData.secondDimension &&
-      receivedData.secondDimension.indicatorItems && receivedData.secondDimension.indicatorItems.length > 0) {
+    receivedData.secondDimension.indicatorItems && receivedData.secondDimension.indicatorItems.length > 0) {
     receivedData.firstDimension.indicatorItems.forEach(firstItem => {
       receivedData.secondDimension!.indicatorItems.forEach(secondItem => {
         // 合并两个维度的查询条件
@@ -500,8 +492,8 @@ const convertDataToCrossMetricConditions = (
 
         // 生成交叉组合的指标条件
         const crossMetricCondition: MetricCondition = {
-          value: `${ receivedData.firstDimension!.groupValue }&&${ firstItem.itemValue }&&${ receivedData.secondDimension!.groupValue }&&${ secondItem.itemValue }`,
-          label: `${ firstItem.itemName }&&${ secondItem.itemName }`,
+          value: `${receivedData.firstDimension!.groupValue}&&${firstItem.itemValue}&&${receivedData.secondDimension!.groupValue}&&${secondItem.itemValue}`,
+          label: `${firstItem.itemName}&&${secondItem.itemName}`,
           condition: {
             andOr: '0', // 两个维度的条件用 AND 连接
             conditionList: combinedConditionList
@@ -515,7 +507,6 @@ const convertDataToCrossMetricConditions = (
     // 如果只有一个维度（一级维度）
     if (receivedData.firstDimension) {
       const firstMetrics = convertDimensionToMetricCondition(receivedData.firstDimension)
-      console.log('==========firstMetrics', firstMetrics)
       metricConditions.push(...firstMetrics)
     }
   }
@@ -525,8 +516,6 @@ const convertDataToCrossMetricConditions = (
     console.error('无法生成有效的指标条件');
     throw new Error('无法生成有效的指标条件，请检查维度配置');
   }
-
-  console.log('生成的指标条件:', metricConditions);
 
   // 构造请求参数
   const requestParams: RequestParams = {
@@ -545,6 +534,11 @@ const convertDataToCrossMetricConditions = (
     majorCondition: options.majorCondition || ''
   }
 
+  // 添加调试信息
+  console.log('========== RequestParams构建过程 ==========')
+  console.log('完整的RequestParams:', requestParams)
+  console.log('=============================================')
+
   return requestParams
 }
 
@@ -555,8 +549,8 @@ const convertDataToCrossMetricConditions = (
  * @returns Promise<any>
  */
 const fetchTalentStatisticData = async (
-    receivedData: DimensionIndicatorsFilter,
-    options: ConvertOptions = {}
+  receivedData: DimensionIndicatorsFilter,
+  options: ConvertOptions = {}
 ) => {
   try {
     // 使用交叉组合转换数据
@@ -564,14 +558,14 @@ const fetchTalentStatisticData = async (
 
     // 调用后端接口
     const response = await advancedStatisticRequest(
-        config.value.url,
-        new Map(Object.entries(requestParams.selectColumnCondition || {})),
-        requestParams.condition,
-        requestParams.sort,
-        requestParams.metricColumn,
-        requestParams.metricCondition,
-        requestParams.statisticColumn,
-        requestParams.majorCondition
+      config.value.url,
+      new Map(Object.entries(requestParams.selectColumnCondition || {})),
+      requestParams.condition,
+      requestParams.sort,
+      requestParams.metricColumn,
+      requestParams.metricCondition,
+      requestParams.statisticColumn,
+      requestParams.majorCondition
     )
 
     console.log('后端返回的数据:', response)

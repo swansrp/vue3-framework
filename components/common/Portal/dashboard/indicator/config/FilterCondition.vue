@@ -10,15 +10,10 @@
 
     <div v-show="!collapsed" class="section-content">
       <div
-        class="drop-zone filter-drop"
-        :class="{
-          'has-content': filterDimension, 
+        class="drop-zone filter-drop" :class="{
+          'has-content': filterDimension,
           'drag-over': dragOverFilter
-        }"
-        @dragover.prevent="onDragOverFilter"
-        @dragleave="onDragLeaveFilter"
-        @drop="onDropFilterDimension"
-      >
+        }" @dragover.prevent="onDragOverFilter" @dragleave="onDragLeaveFilter" @drop="onDropFilterDimension">
         <div v-if="!filterDimension" class="drop-placeholder">
           拖拽指标到此处设置筛选条件
         </div>
@@ -26,47 +21,24 @@
           <div class="filter-header">
             <span>{{ filterDimension?.title }}</span>
             <div class="filter-actions">
-              <a-button
-                type="text"
-                size="small"
-                @click="selectAllFilterItems"
-                class="action-btn"
-              >
+              <a-button type="text" size="small" @click="selectAllFilterItems" class="action-btn">
                 全选
               </a-button>
-              <a-button
-                type="text"
-                size="small"
-                @click="reverseFilterItems"
-                class="action-btn"
-              >
+              <a-button type="text" size="small" @click="reverseFilterItems" class="action-btn">
                 反选
               </a-button>
-              <a-button
-                type="text"
-                size="small"
-                @click="clearAllFilterItems"
-                class="action-btn"
-              >
+              <a-button type="text" size="small" @click="clearAllFilterItems" class="action-btn">
                 全部取消
               </a-button>
-              <a-button
-                type="text"
-                size="small"
-                @click="clearFilterDimension"
-                class="clear-btn"
-              >
+              <a-button type="text" size="small" @click="clearFilterDimension" class="clear-btn">
                 清空
               </a-button>
             </div>
           </div>
           <a-checkbox-group v-model:value="localSelectedFilterItems" class="filter-items">
             <a-checkbox
-              v-for="item in filterDimension?.items"
-              :key="item.key"
-              :value="item.key"
-              class="filter-checkbox"
-            >
+              v-for="item in filterDimension?.items" :key="item.key" :value="item.key"
+              class="filter-checkbox">
               {{ item.title }}
             </a-checkbox>
           </a-checkbox-group>
@@ -77,8 +49,8 @@
 </template>
 
 <script lang="ts" setup>
-import {inject, ref, watch} from 'vue'
-import {DownOutlined, RightOutlined} from '@ant-design/icons-vue'
+import { inject, ref, watch } from 'vue'
+import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
 
 // 接口定义
 interface IndicatorItem {
@@ -131,19 +103,26 @@ const localSelectedFilterItems = ref<string[]>([])
 
 // 监听props变化更新本地状态
 watch(
-    () => props.selectedFilterItems,
-    (newValue) => {
-      localSelectedFilterItems.value = newValue
-    },
-    { immediate: true }
+  () => props.selectedFilterItems,
+  (newValue) => {
+    // 避免循环更新：只有当值真正不同时才更新
+    if (JSON.stringify(newValue) !== JSON.stringify(localSelectedFilterItems.value)) {
+      localSelectedFilterItems.value = [...newValue]
+    }
+  },
+  { immediate: true }
 )
 
 // 监听本地状态变化更新props
 watch(
-    localSelectedFilterItems,
-    (newValue) => {
-      emit('update:selectedFilterItems', newValue)
+  localSelectedFilterItems,
+  (newValue) => {
+    // 避免循环更新：只有当值真正不同时才emit
+    if (JSON.stringify(newValue) !== JSON.stringify(props.selectedFilterItems)) {
+      emit('update:selectedFilterItems', [...newValue])
     }
+  },
+  { deep: true }
 )
 
 // 拖拽事件处理
@@ -152,28 +131,23 @@ const onDragOverFilter = (e: DragEvent) => {
   dragOverFilter.value = true
   // 筛选维度不需要检查重复，始终允许放置
   document.body.style.cursor = 'copy'
-  console.log('悬停在筛选维度上')
 }
 
 const onDragLeaveFilter = () => {
   dragOverFilter.value = false
   document.body.style.cursor = 'default'
-  console.log('离开筛选维度')
 }
 
 const onDropFilterDimension = (e: DragEvent) => {
-  console.log('放入筛选维度:', e, dragData?.value)
   e.preventDefault()
   dragOverFilter.value = false
   document.body.style.cursor = 'default'
 
   if (!dragData?.value) {
-    console.log('错误: 没有拖拽数据')
     return
   }
 
   // 筛选维度不检查重复，始终允许放置
-  console.log('设置筛选维度:', dragData.value)
   const newFilterDimension: IndicatorGroup = {
     key: dragData.value.key,
     title: dragData.value.title,
@@ -182,7 +156,6 @@ const onDropFilterDimension = (e: DragEvent) => {
 
   emit('update:filterDimension', newFilterDimension)
   emit('update:selectedFilterItems', [])
-  console.log('筛选维度设置成功:', newFilterDimension)
 }
 
 // 筛选条件操作方法
