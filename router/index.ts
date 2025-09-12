@@ -13,10 +13,21 @@ import {
   RouteRecordRaw
 } from 'vue-router'
 
+// 开发环境添加Mock配置
+if (process.env.NODE_ENV === 'development') {
+  // 导入并初始化Mock配置
+  import('@/framework/views/MainContent/dashboard/mock').then(mockModule => {
+    console.log('Mock配置已加载并初始化')
+  }).catch(error => {
+    console.error('Mock配置加载失败:', error)
+  })
+}
+
 const tabStore = useTabStore(pinia)
 const NotFound = () => import('@/framework/views/NotFound/index.vue')
 const MainContent = () => import('@/framework/views/MainContent/index.vue')
 const Home = () => import('@/framework/views/MainContent/WelcomeHome/index.vue')
+const PersonalDashboard = () => import('@/framework/views/MainContent/dashboard/index.vue')
 let enableEnterFirstDynamicRoute = true
 
 const staticRoutes: Array<RouteRecordRaw> = [
@@ -52,6 +63,17 @@ const router = createRouter({
 
 export const createStaticRoutes = (path: string, component: string) => {
   router.addRoute({path: path, name: path, component: getComponent(component), meta: { public: true }})
+}
+
+// 添加个人仪表盘路由的函数
+export const addDashboardRoute = (tableId: string) => {
+  const path = `/dashboard/${tableId}`
+  router.addRoute(MAIN_CONTENT, {
+    path: path,
+    name: `Dashboard-${tableId}`,
+    component: PersonalDashboard,
+    props: true
+  })
 }
 
 export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
