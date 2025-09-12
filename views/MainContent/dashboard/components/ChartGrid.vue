@@ -16,10 +16,12 @@
         v-for="indicator in indicators"
         :key="indicator.id"
         class="chart-item"
-        :class="{ 'chart-item-placeholder': isDragging && draggingIndicator?.id === indicator.id }"
+        :class="{
+          'chart-item-placeholder': isDragging && draggingIndicator?.id === indicator.id,
+        }"
         :style="{
           gridColumn: `span ${Math.min(indicator.xGrid || 1, gridColumns)}`,
-          gridRow: `span ${indicator.yGrid || 1}`
+          gridRow: `span ${indicator.yGrid || 1}`,
         }"
         @mousedown="startDrag($event, indicator)"
       >
@@ -39,15 +41,23 @@
         v-if="isDragging && dragPosition"
         class="drag-placeholder"
         :style="{
-          gridColumn: `${dragPosition.col} / span ${Math.min(draggingIndicator?.xGrid || 1, gridColumns)}`,
-          gridRow: `${dragPosition.row} / span ${draggingIndicator?.yGrid || 1}`
+          gridColumn: `${dragPosition.col} / span ${Math.min(
+            draggingIndicator?.xGrid || 1,
+            gridColumns
+          )}`,
+          gridRow: `${dragPosition.row} / span ${draggingIndicator?.yGrid || 1}`,
         }"
       ></div>
     </div>
 
     <!-- 添加指标按钮 -->
     <div class="add-indicator-button">
-      <a-button type="primary" size="large" shape="circle" @click="$emit('add-indicator')">
+      <a-button
+        type="primary"
+        size="large"
+        shape="circle"
+        @click="$emit('add-indicator')"
+      >
         <PlusOutlined />
       </a-button>
     </div>
@@ -55,148 +65,151 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { BarChartOutlined, PlusOutlined } from '@ant-design/icons-vue'
-import ChartCard from './ChartCard.vue'
-import type { IndicatorTreeNode } from '../types'
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { BarChartOutlined, PlusOutlined } from "@ant-design/icons-vue";
+import ChartCard from "./ChartCard.vue";
+import type { IndicatorTreeNode } from "../types";
 
 interface Props {
-  indicators: IndicatorTreeNode[]
-  loading: boolean
+  indicators: IndicatorTreeNode[];
+  loading: boolean;
 }
 
 interface Emits {
-  (e: 'add-indicator'): void
+  (e: "add-indicator"): void;
 
-  (e: 'edit-indicator', indicator: IndicatorTreeNode): void
+  (e: "edit-indicator", indicator: IndicatorTreeNode): void;
 
-  (e: 'delete-indicator', indicatorId: string): void
+  (e: "delete-indicator", indicatorId: string): void;
 
-  (e: 'resize-indicator', indicatorId: string, xGrid: number, yGrid: number): void
+  (e: "resize-indicator", indicatorId: string, xGrid: number, yGrid: number): void;
 
-  (e: 'reorder-indicators', newOrder: IndicatorTreeNode[]): void
+  (e: "reorder-indicators", newOrder: IndicatorTreeNode[]): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   indicators: () => [],
-  loading: false
-})
+  loading: false,
+});
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
 // 拖拽状态
-const isDragging = ref(false)
-const draggingIndicator = ref<IndicatorTreeNode | null>(null)
-const dragPosition = ref<{ col: number; row: number } | null>(null)
-const gridContainerRef = ref<HTMLDivElement | null>(null)
+const isDragging = ref(false);
+const draggingIndicator = ref<IndicatorTreeNode | null>(null);
+const dragPosition = ref<{ col: number; row: number } | null>(null);
+const gridContainerRef = ref<HTMLDivElement | null>(null);
 
 // 卡片拖拽状态
-const isCardResizing = ref(false)
+const isCardResizing = ref(false);
 
 // 网格配置
-const gridColumns = 5 // 每行最多5个格子
+const gridColumns = 5; // 每行最多5个格子
 
 // 计算网格行数以适应所有卡片
 const gridRows = computed(() => {
   // 根据卡片位置和大小计算需要的行数
-  let maxRow = 1
-  props.indicators.forEach(indicator => {
-    const row = indicator.yGrid || 1
+  let maxRow = 1;
+  props.indicators.forEach((indicator) => {
+    const row = indicator.yGrid || 1;
     if (row > maxRow) {
-      maxRow = row
+      maxRow = row;
     }
-  })
-  return Math.max(maxRow, 5) // 至少5行
-})
+  });
+  return Math.max(maxRow, 5); // 至少5行
+});
 
 // 开始拖拽
 const startDrag = (e: MouseEvent, indicator: IndicatorTreeNode) => {
   // 只有在点击卡片标题栏时才允许拖拽
-  const target = e.target as HTMLElement
-  if (!target.closest('.chart-card-header')) return
+  const target = e.target as HTMLElement;
+  if (!target.closest(".chart-card-header")) return;
 
-  isDragging.value = true
-  draggingIndicator.value = indicator
+  isDragging.value = true;
+  draggingIndicator.value = indicator;
 
   const handleMouseMove = (moveEvent: MouseEvent) => {
-    if (!isDragging.value || !gridContainerRef.value) return
+    if (!isDragging.value || !gridContainerRef.value) return;
 
-    const containerRect = gridContainerRef.value.getBoundingClientRect()
-    const x = moveEvent.clientX - containerRect.left
-    const y = moveEvent.clientY - containerRect.top
+    const containerRect = gridContainerRef.value.getBoundingClientRect();
+    const x = moveEvent.clientX - containerRect.left;
+    const y = moveEvent.clientY - containerRect.top;
 
     // 计算网格位置
-    const colWidth = containerRect.width / gridColumns
-    const rowHeight = colWidth // 正方形网格，高度等于宽度
+    const colWidth = containerRect.width / gridColumns;
+    const rowHeight = colWidth; // 正方形网格，高度等于宽度
 
-    const col = Math.floor(x / colWidth) + 1
-    const row = Math.floor(y / rowHeight) + 1
+    const col = Math.floor(x / colWidth) + 1;
+    const row = Math.floor(y / rowHeight) + 1;
 
     // 确保位置在有效范围内
-    const validCol = Math.max(1, Math.min(col, gridColumns - (indicator.xGrid || 1) + 1))
-    const validRow = Math.max(1, row)
+    const validCol = Math.max(1, Math.min(col, gridColumns - (indicator.xGrid || 1) + 1));
+    const validRow = Math.max(1, row);
 
-    dragPosition.value = { col: validCol, row: validRow }
-  }
+    dragPosition.value = { col: validCol, row: validRow };
+  };
 
   const handleMouseUp = () => {
     if (isDragging.value && dragPosition.value && draggingIndicator.value) {
       // 处理拖拽结束逻辑
-      reorderIndicators(draggingIndicator.value.id, dragPosition.value)
+      reorderIndicators(draggingIndicator.value.id, dragPosition.value);
     }
 
-    isDragging.value = false
-    draggingIndicator.value = null
-    dragPosition.value = null
+    isDragging.value = false;
+    draggingIndicator.value = null;
+    dragPosition.value = null;
 
-    document.removeEventListener('mousemove', handleMouseMove)
-    document.removeEventListener('mouseup', handleMouseUp)
-  }
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  };
 
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseup', handleMouseUp)
-}
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+};
 
 // 重新排序指标
-const reorderIndicators = (indicatorId: string, position: { col: number; row: number }) => {
+const reorderIndicators = (
+  indicatorId: string,
+  position: { col: number; row: number }
+) => {
   // 简化的重新排序逻辑
   // 实际应用中需要根据position计算新的顺序
-  const newOrder = [...props.indicators]
-  const movedIndex = newOrder.findIndex(c => c.id === indicatorId)
+  const newOrder = [...props.indicators];
+  const movedIndex = newOrder.findIndex((c) => c.id === indicatorId);
 
   if (movedIndex > -1) {
-    const [movedItem] = newOrder.splice(movedIndex, 1)
+    const [movedItem] = newOrder.splice(movedIndex, 1);
     // 简单地将图表移到数组末尾
-    newOrder.push(movedItem)
-    emit('reorder-indicators', newOrder)
+    newOrder.push(movedItem);
+    emit("reorder-indicators", newOrder);
   }
-}
+};
 
 // 处理调整大小
 const handleResize = (indicatorId: string, xGrid: number, yGrid: number) => {
-  emit('resize-indicator', indicatorId, xGrid, yGrid)
-}
+  emit("resize-indicator", indicatorId, xGrid, yGrid);
+};
 
 // 卡片开始拖拽事件
 const onCardDragStart = (event: MouseEvent, indicator: IndicatorTreeNode) => {
   // 卡片开始拖拽时的处理逻辑
-  console.log('卡片开始拖拽:', indicator.id)
-}
+  console.log("卡片开始拖拽:", indicator.id);
+};
 
 // 卡片结束拖拽事件
 const onCardDragEnd = (event: MouseEvent) => {
   // 卡片结束拖拽时的处理逻辑
-  console.log('卡片结束拖拽')
-}
+  console.log("卡片结束拖拽");
+};
 
 // 生命周期
 onMounted(() => {
   // 可以在这里添加键盘事件监听等
-})
+});
 
 onUnmounted(() => {
   // 清理事件监听
-})
+});
 </script>
 
 <style lang="less" scoped>
