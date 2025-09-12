@@ -55,7 +55,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { BarChartOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import ChartCard from './ChartCard.vue'
 import type { IndicatorTreeNode } from '../types'
@@ -99,15 +99,15 @@ const gridColumns = 5 // 每行最多5个格子
 // 计算网格行数以适应所有卡片
 const gridRows = computed(() => {
   // 根据卡片位置和大小计算需要的行数
-  let maxRow = 1;
+  let maxRow = 1
   props.indicators.forEach(indicator => {
-    const row = indicator.yGrid || 1;
+    const row = indicator.yGrid || 1
     if (row > maxRow) {
-      maxRow = row;
+      maxRow = row
     }
-  });
-  return Math.max(maxRow, 5); // 至少5行
-});
+  })
+  return Math.max(maxRow, 5) // 至少5行
+})
 
 // 开始拖拽
 const startDrag = (e: MouseEvent, indicator: IndicatorTreeNode) => {
@@ -128,7 +128,7 @@ const startDrag = (e: MouseEvent, indicator: IndicatorTreeNode) => {
     // 计算网格位置
     const colWidth = containerRect.width / gridColumns
     const rowHeight = colWidth // 正方形网格，高度等于宽度
-    
+
     const col = Math.floor(x / colWidth) + 1
     const row = Math.floor(y / rowHeight) + 1
 

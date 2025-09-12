@@ -118,8 +118,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const _visible = ref(props.visible)
 watch(
-  () => _visible.value,
-  () => emit('update:visible', _visible.value)
+    () => _visible.value,
+    () => emit('update:visible', _visible.value)
 )
 const emit = defineEmits<Emits>()
 

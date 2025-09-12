@@ -11,11 +11,11 @@ Mock.setup({
 // Mock通用指标数据接口
 Mock.mock(/\/api\/portal\/dashboard\/indicator\/common/, 'get', (options: any) => {
   console.log('Mock拦截到通用指标请求:', options)
-  
+
   // 模拟处理查询参数
   const url = new URL(options.url, 'http://localhost')
   const tableId = url.searchParams.get('tableId')
-  
+
   return {
     code: 200,
     message: 'success',
@@ -27,11 +27,11 @@ Mock.mock(/\/api\/portal\/dashboard\/indicator\/common/, 'get', (options: any) =
 // Mock个人指标数据接口
 Mock.mock(/\/api\/portal\/dashboard\/indicator\/personal/, 'get', (options: any) => {
   console.log('Mock拦截到个人指标请求:', options)
-  
+
   // 模拟处理查询参数
   const url = new URL(options.url, 'http://localhost')
   const tableId = url.searchParams.get('tableId')
-  
+
   return {
     code: 200,
     message: 'success',
@@ -43,10 +43,10 @@ Mock.mock(/\/api\/portal\/dashboard\/indicator\/personal/, 'get', (options: any)
 // Mock保存指标树数据接口
 Mock.mock(/\/api\/portal\/dashboard\/indicator\/tree/, 'post', (options: any) => {
   console.log('Mock拦截到保存指标树请求:', options)
-  
+
   // 模拟处理请求体
   const body = JSON.parse(options.body || '{}')
-  
+
   return {
     code: 200,
     message: '保存成功',
@@ -57,10 +57,10 @@ Mock.mock(/\/api\/portal\/dashboard\/indicator\/tree/, 'post', (options: any) =>
 // Mock新增个人指标接口
 Mock.mock(/\/api\/portal\/dashboard\/indicator\/add/, 'post', (options: any) => {
   console.log('Mock拦截到新增个人指标请求:', options)
-  
+
   // 模拟处理请求体
   const body = JSON.parse(options.body || '{}')
-  
+
   return {
     code: 200,
     message: '新增成功',
@@ -72,10 +72,10 @@ Mock.mock(/\/api\/portal\/dashboard\/indicator\/add/, 'post', (options: any) => 
 // Mock更新个人指标接口
 Mock.mock(/\/api\/portal\/dashboard\/indicator$/, 'post', (options: any) => {
   console.log('Mock拦截到更新个人指标请求:', options)
-  
+
   // 模拟处理请求体
   const body = JSON.parse(options.body || '{}')
-  
+
   return {
     code: 200,
     message: '更新成功',
@@ -87,10 +87,10 @@ Mock.mock(/\/api\/portal\/dashboard\/indicator$/, 'post', (options: any) => {
 // Mock删除个人指标接口
 Mock.mock(/\/api\/portal\/dashboard\/indicator\/delete/, 'post', (options: any) => {
   console.log('Mock拦截到删除个人指标请求:', options)
-  
+
   // 模拟处理请求体
   const body = JSON.parse(options.body || '{}')
-  
+
   return {
     code: 200,
     message: '删除成功',

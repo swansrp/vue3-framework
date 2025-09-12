@@ -1,7 +1,7 @@
 <template>
-  <div 
-    class="chart-card" 
-    :class="{ 'chart-card-loading': loading, 'dragging': isDragging }"
+  <div
+    class="chart-card"
+    :class="{ 'chart-card-loading': loading, dragging: isDragging }"
     @mousedown="startDrag"
   >
     <!-- 卡片头部 -->
@@ -68,35 +68,29 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import {
-  BarChartOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EllipsisOutlined,
-  ReloadOutlined
-} from '@ant-design/icons-vue'
+import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import ChartDisplayArea from '@/framework/components/common/Portal/dashboard/indicator/dashboard/ChartDisplayArea.vue'
 import type { IndicatorTreeNode } from '../types'
 
 interface Props {
-  indicator: IndicatorTreeNode
-  loading: boolean
+  indicator: IndicatorTreeNode;
+  loading: boolean;
 }
 
 interface Emits {
-  (e: 'edit'): void
+  (e: 'edit'): void;
 
-  (e: 'delete'): void
+  (e: 'delete'): void;
 
-  (e: 'resize', indicatorId: string, xGrid: number, yGrid: number): void
+  (e: 'resize', indicatorId: string, xGrid: number, yGrid: number): void;
 
-  (e: 'drag-start', event: MouseEvent, indicator: IndicatorTreeNode): void
+  (e: 'drag-start', event: MouseEvent, indicator: IndicatorTreeNode): void;
 
-  (e: 'drag-end', event: MouseEvent): void
+  (e: 'drag-end', event: MouseEvent): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  indicator: () => ({}) as IndicatorTreeNode,
+  indicator: () => ({} as IndicatorTreeNode),
   loading: false
 })
 
@@ -129,9 +123,13 @@ const chartData = ref<any>(null)
 const hasData = computed(() => !!chartData.value && chartData.value.length > 0)
 
 // 监听配置变化
-watch(() => props.indicator, () => {
-  loadChartData()
-}, { deep: true })
+watch(
+    () => props.indicator,
+    () => {
+      loadChartData()
+    },
+    { deep: true }
+)
 
 // 加载图表数据
 const loadChartData = async () => {
@@ -217,7 +215,7 @@ const startResize = (direction: 'right' | 'bottom' | 'corner', event: MouseEvent
   // 添加全局事件监听器
   document.addEventListener('mousemove', onResize)
   document.addEventListener('mouseup', stopResize)
-  
+
   event.preventDefault()
 }
 
@@ -238,12 +236,15 @@ const onResize = (event: MouseEvent) => {
   }
 
   if (resizeDirection.value === 'bottom' || resizeDirection.value === 'corner') {
-    newYGrid = Math.max(1, Math.min(3, startHeight.value + Math.round(deltaY / gridUnit)))
+    newYGrid = Math.max(
+        1,
+        Math.min(3, startHeight.value + Math.round(deltaY / gridUnit))
+    )
   }
 
   // 实时更新网格大小
   emit('resize', props.indicator.id, newXGrid, newYGrid)
-  
+
   event.preventDefault()
 }
 
@@ -255,7 +256,7 @@ const stopResize = (event: MouseEvent) => {
   // 移除全局事件监听器
   document.removeEventListener('mousemove', onResize)
   document.removeEventListener('mouseup', stopResize)
-  
+
   message.success('调整大小成功')
 }
 
@@ -263,7 +264,6 @@ const stopResize = (event: MouseEvent) => {
 onMounted(() => {
   loadChartData()
 })
-
 </script>
 
 <style lang="less" scoped>
@@ -275,7 +275,6 @@ onMounted(() => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  cursor: move; // 添加拖拽手型光标
 
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -293,6 +292,7 @@ onMounted(() => {
     padding: 12px 16px;
     border-bottom: 1px solid #f0f0f0;
     background: #fafafa;
+    cursor: move; // 只在标题区域显示移动光标
 
     .header-title {
       h3 {
@@ -367,10 +367,6 @@ onMounted(() => {
     transition: opacity 0.3s;
     z-index: 10;
 
-    &:hover {
-      opacity: 1;
-    }
-
     &.right {
       top: 0;
       right: 0;
@@ -397,16 +393,16 @@ onMounted(() => {
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M14,18H12V16H14V18M10,22H8V20H10V22M10,18H8V16H10V18M6,22H4V20H6V22M6,18H4V16H6V18M2,22H0V20H2V22M2,18H0V16H2V18Z'/%3E%3C/svg%3E") no-repeat center;
       -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M14,18H12V16H14V18M10,22H8V20H10V22M10,18H8V16H10V18M6,22H4V20H6V22M6,18H4V16H6V18M2,22H0V20H2V22M2,18H0V16H2V18Z'/%3E%3C/svg%3E") no-repeat center;
     }
-  }
 
-  &:hover .resize-handle {
-    opacity: 0.7;
+    // 只有当鼠标悬停在手柄上时才显示
+    &:hover {
+      opacity: 1;
+    }
   }
 
   // 拖拽时的样式
   &.dragging {
     opacity: 0.8;
-    transform: rotate(5deg);
     z-index: 999;
   }
 }

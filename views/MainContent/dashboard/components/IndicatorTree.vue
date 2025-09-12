@@ -179,11 +179,11 @@ const personalIndicators = computed(() => props.personalIndicators)
 
 // 搜索过滤和高亮
 const filteredCommonIndicators = computed(() =>
-  filterAndHighlightTree(commonIndicators.value, searchKeyword.value)
+    filterAndHighlightTree(commonIndicators.value, searchKeyword.value)
 )
 
 const filteredPersonalIndicators = computed(() =>
-  filterAndHighlightTree(personalIndicators.value, searchKeyword.value)
+    filterAndHighlightTree(personalIndicators.value, searchKeyword.value)
 )
 
 // 监听props变化
@@ -202,10 +202,10 @@ const initializeExpandedKeys = () => {
   const allIndicators = [...props.commonIndicators, ...props.personalIndicators]
   const expandedKeys = getDefaultExpandedKeys(allIndicators)
   expandedCommonKeys.value = expandedKeys.filter(key =>
-    findNodeInTree(props.commonIndicators, key)
+      findNodeInTree(props.commonIndicators, key)
   )
   expandedPersonalKeys.value = expandedKeys.filter(key =>
-    findNodeInTree(props.personalIndicators, key)
+      findNodeInTree(props.personalIndicators, key)
   )
 }
 
@@ -261,7 +261,7 @@ const filterAndHighlightTree = (tree: IndicatorTreeNode[], keyword: string): Ind
     let itemsMatch = false
     if (node.items && node.items.length > 0) {
       itemsMatch = node.items.some(item =>
-        item.title?.toLowerCase().includes(keyword.toLowerCase())
+          item.title?.toLowerCase().includes(keyword.toLowerCase())
       )
     }
 
@@ -296,10 +296,10 @@ const filterAndHighlightTree = (tree: IndicatorTreeNode[], keyword: string): Ind
 
   // 更新展开的节点
   expandedCommonKeys.value = Array.from(keysToExpand).filter(key =>
-    findNodeInTree(commonIndicators.value, key)
+      findNodeInTree(commonIndicators.value, key)
   )
   expandedPersonalKeys.value = Array.from(keysToExpand).filter(key =>
-    findNodeInTree(personalIndicators.value, key)
+      findNodeInTree(personalIndicators.value, key)
   )
 
   return filteredTree
@@ -515,7 +515,7 @@ onUnmounted(() => {
               flex: 1;
 
               .ant-tree-title {
-                width: 100%; 
+                width: 100%;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;

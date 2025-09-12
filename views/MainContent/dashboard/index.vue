@@ -56,7 +56,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
@@ -72,15 +72,22 @@ import {
   updatePersonalIndicator
 } from './api'
 import type { IndicatorTreeNode } from './types'
+import { commonIndicatorsTestData, personalIndicatorsTestData } from './testData'
 
 // 开发环境下的测试数据
 const isDevelopment = process.env.NODE_ENV === 'development'
-import { commonIndicatorsTestData, personalIndicatorsTestData } from './testData'
 
 // 路由参数
 const { currentRoute } = useRouter()
 const route = currentRoute.value
-const tableId = computed(() => (route.query ? route.query.tableId ? route.query.tableId : undefined : undefined) as string)
+const tableId = computed(
+    () =>
+        (route.query
+            ? route.query.tableId
+                ? route.query.tableId
+                : undefined
+            : undefined) as string
+)
 
 // 页面状态
 const loading = ref(false)
@@ -105,7 +112,7 @@ const displayedIndicators = computed(() => {
   const result: IndicatorTreeNode[] = []
 
   const traverse = (nodes: IndicatorTreeNode[]) => {
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       // 如果节点需要显示，则添加到结果中
       if (node.show) {
         result.push(node)
@@ -251,13 +258,17 @@ const saveDashboardState = async () => {
 }
 
 // 处理图表调整大小
-const handleResizeIndicator = async (indicatorId: string, xGrid: number, yGrid: number) => {
+const handleResizeIndicator = async (
+    indicatorId: string,
+    xGrid: number,
+    yGrid: number
+) => {
   try {
     // 在测试环境中，模拟调整大小操作
     if (isDevelopment && tableId.value === 'test') {
       // 更新本地数据
       const updateNode = (nodes: IndicatorTreeNode[]) => {
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
           if (node.id === indicatorId) {
             node.xGrid = xGrid
             node.yGrid = yGrid
@@ -279,7 +290,7 @@ const handleResizeIndicator = async (indicatorId: string, xGrid: number, yGrid: 
 
     // 更新本地数据
     const updateNode = (nodes: IndicatorTreeNode[]) => {
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         if (node.id === indicatorId) {
           node.xGrid = xGrid
           node.yGrid = yGrid
@@ -314,7 +325,7 @@ const handleReorderIndicators = async (newOrder: IndicatorTreeNode[]) => {
       // 更新显示顺序
       newOrder.forEach((indicator, index) => {
         const updateNode = (nodes: IndicatorTreeNode[]) => {
-          nodes.forEach(node => {
+          nodes.forEach((node) => {
             if (node.id === indicator.id) {
               node.displayOrder = index
             }
@@ -336,7 +347,7 @@ const handleReorderIndicators = async (newOrder: IndicatorTreeNode[]) => {
     // 更新显示顺序
     newOrder.forEach((indicator, index) => {
       const updateNode = (nodes: IndicatorTreeNode[]) => {
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
           if (node.id === indicator.id) {
             node.displayOrder = index
           }
