@@ -106,6 +106,7 @@ const emit = defineEmits<{
     selectedFilterItems: string[],
     dataMetrics: DataMetricUI[]
   } | undefined]
+  'clearChart': []
 }>()
 
 // 本地状态
@@ -308,7 +309,8 @@ const resetConfiguration = () => {
   emit('update:dataMetrics', [defaultDataMetric])
   emit('toggleLeftPanel', false)
 
-  message.success('配置已重置，默认使用分布统计')
+  // 清除右侧图表
+  emit('clearChart')
 }
 
 // 颜色生成函数

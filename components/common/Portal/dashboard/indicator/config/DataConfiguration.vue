@@ -78,7 +78,9 @@
                 <!-- 如果有二级维度，显示二级维度的项 -->
                 <template v-if="secondDimension && secondDimension.items && secondDimension.items.length > 0">
                   <div v-for="item in secondDimension.items" :key="item.key" class="color-item">
-                    <span class="item-name">{{ item.title }}</span>
+                    <a-tooltip :title="item.title" placement="top">
+                      <span class="item-name">{{ item.title }}</span>
+                    </a-tooltip>
                     <a-button
                       class="color-picker-btn"
                       :style="{ backgroundColor: getDataItemColor(metric.id, item.key) }"
@@ -89,7 +91,9 @@
                 <template
                   v-else-if="firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension">
                   <div v-for="item in firstDimension.items" :key="item.key" class="color-item">
-                    <span class="item-name">{{ item.title }}</span>
+                    <a-tooltip :title="item.title" placement="top">
+                      <span class="item-name">{{ item.title }}</span>
+                    </a-tooltip>
                     <a-button
                       class="color-picker-btn"
                       :style="{ backgroundColor: getDataItemColor(metric.id, item.key) }"
@@ -192,6 +196,7 @@ interface DataMetricUI {
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
   unit?: string
+  unitConfig?: String
   itemColors?: Record<string, string>
 }
 
@@ -199,6 +204,7 @@ interface DataTypeOption {
   dataName: string
   dataField: string
   unit?: string
+  unitConfig?: String
 }
 
 interface ChartTypeOption {
@@ -419,6 +425,13 @@ const onDataTypeChange = (value: any) => {
     editingDataMetric.value.dataName = dataType.dataName
     editingDataMetric.value.dataField = dataType.dataField
     editingDataMetric.value.unit = dataType.unit || ''
+    editingDataMetric.value.unitConfig = dataType.unitConfig || ''
+
+    console.log('🔧 用户选择数据类型:', {
+      dataName: dataType.dataName,
+      unit: dataType.unit,
+      unitConfig: dataType.unitConfig
+    });
   }
 }
 
@@ -673,18 +686,21 @@ const toggleCollapse = () => {
 
           .color-items {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 6px 8px;
+            overflow: hidden; // 防止网格溢出
 
             .color-item {
               display: flex;
-              justify-content: space-between;
               align-items: center;
               font-size: 11px;
               padding: 4px 6px;
               background: #fafafa;
               border-radius: 4px;
               border: 1px solid #f0f0f0;
+              min-width: 0; // 确保可以收缩
+              width: 100%; // 确保占满网格列宽度
+              box-sizing: border-box; // 包含padding和border在内
 
               .item-name {
                 color: #595959;
@@ -692,6 +708,9 @@ const toggleCollapse = () => {
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+                min-width: 0; // 确保可以收缩
+                max-width: calc(100% - 26px); // 为颜色按钮预留空间
+                cursor: default; // 鼠标悬停时显示默认指针，暗示可以查看tooltip
               }
 
               .color-picker-btn {
@@ -702,7 +721,19 @@ const toggleCollapse = () => {
                 padding: 0;
                 cursor: pointer;
                 margin-left: 4px;
-                flex-shrink: 0;
+                flex-shrink: 0; // 防止按钮被压缩
+
+                &:hover {
+                  opacity: 0.8;
+                  transform: scale(1.05);
+                  transition: all 0.2s ease;
+                }
+              }
+
+              &:hover {
+                background: #f5f5f5;
+                border-color: #d9d9d9;
+                transition: all 0.2s ease;
               }
             }
           }

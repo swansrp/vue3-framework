@@ -1,54 +1,88 @@
 <template>
   <div class="chart-panel">
-    <!-- 维度控制面板 -->
+    <!-- 维度控制面板 - Tab页形式 -->
     <div v-if="chartData.length > 0" class="dimension-controls">
-      <!-- 第一维度控制 -->
-      <div class="control-item">
-        <span class="control-label">显示{{ firstDimensionName }}：</span>
-        <a-checkbox-group v-model:value="visibleFirstDimensions" @change="onFirstDimensionChange">
-          <a-checkbox v-for="dimension in allFirstDimensions" :key="dimension" :value="dimension">
-            {{ dimension }}
-          </a-checkbox>
-        </a-checkbox-group>
-        <a-button size="small" type="link" @click="toggleAllFirstDimensions">
-          全部选中
-        </a-button>
-        <a-button size="small" type="link" @click="invertFirstDimensionsSelection">
-          反选
-        </a-button>
-      </div>
+      <a-tabs v-model:activeKey="activeTabKey" size="small" type="card">
+        <!-- 第一维度控制 -->
+        <a-tab-pane key="first" :tab="firstDimensionName">
+          <template #tab>
+            <a-tooltip :title="firstDimensionName" placement="top">
+              <span class="tab-title">
+                <DatabaseOutlined /> {{ firstDimensionName }}
+              </span>
+            </a-tooltip>
+          </template>
+          <div class="tab-content">
+            <a-checkbox-group v-model:value="visibleFirstDimensions" @change="onFirstDimensionChange">
+              <a-checkbox v-for="dimension in allFirstDimensions" :key="dimension" :value="dimension">
+                <a-tooltip :title="dimension" placement="top">
+                  <span class="checkbox-text">{{ dimension }}</span>
+                </a-tooltip>
+              </a-checkbox>
+            </a-checkbox-group>
+            <div class="tab-actions">
+              <a-button size="small" type="link" @click="toggleAllFirstDimensions">
+                全部选中
+              </a-button>
+              <a-button size="small" type="link" @click="invertFirstDimensionsSelection">
+                反选
+              </a-button>
+            </div>
+          </div>
+        </a-tab-pane>
 
-      <!-- 第二维度控制 -->
-      <div v-if="hasSecondDimension" class="control-item">
-        <span class="control-label">显示{{ secondDimensionName }}：</span>
-        <a-checkbox-group v-model:value="visibleSecondDimensions" @change="onSecondDimensionChange">
-          <a-checkbox v-for="dimension in allSecondDimensions" :key="dimension" :value="dimension">
-            {{ dimension }}
-          </a-checkbox>
-        </a-checkbox-group>
-        <a-button size="small" type="link" @click="toggleAllSecondDimensions">
-          全部选中
-        </a-button>
-        <a-button size="small" type="link" @click="invertSecondDimensionsSelection">
-          反选
-        </a-button>
-      </div>
+        <!-- 第二维度控制 -->
+        <a-tab-pane v-if="hasSecondDimension" key="second" :tab="secondDimensionName">
+          <template #tab>
+            <a-tooltip :title="secondDimensionName" placement="top">
+              <span class="tab-title">
+                <AppstoreOutlined /> {{ secondDimensionName }}
+              </span>
+            </a-tooltip>
+          </template>
+          <div class="tab-content">
+            <a-checkbox-group v-model:value="visibleSecondDimensions" @change="onSecondDimensionChange">
+              <a-checkbox v-for="dimension in allSecondDimensions" :key="dimension" :value="dimension">
+                <a-tooltip :title="dimension" placement="top">
+                  <span class="checkbox-text">{{ dimension }}</span>
+                </a-tooltip>
+              </a-checkbox>
+            </a-checkbox-group>
+            <div class="tab-actions">
+              <a-button size="small" type="link" @click="toggleAllSecondDimensions">
+                全部选中
+              </a-button>
+              <a-button size="small" type="link" @click="invertSecondDimensionsSelection">
+                反选
+              </a-button>
+            </div>
+          </div>
+        </a-tab-pane>
 
-      <!-- 统计指标控制 -->
-      <div class="control-item">
-        <span class="control-label">显示统计指标：</span>
-        <a-checkbox-group v-model:value="visibleStatisticTypes" @change="onStatisticTypeChange">
-          <a-checkbox v-for="statType in allStatisticTypes" :key="statType" :value="statType">
-            {{ statType }}
-          </a-checkbox>
-        </a-checkbox-group>
-        <a-button size="small" type="link" @click="toggleAllStatisticTypes">
-          全部选中
-        </a-button>
-        <a-button size="small" type="link" @click="invertStatisticTypesSelection">
-          反选
-        </a-button>
-      </div>
+        <!-- 统计指标控制 -->
+        <a-tab-pane key="statistics" tab="统计指标">
+          <template #tab>
+            <PieChartOutlined /> 统计指标
+          </template>
+          <div class="tab-content">
+            <a-checkbox-group v-model:value="visibleStatisticTypes" @change="onStatisticTypeChange">
+              <a-checkbox v-for="statType in allStatisticTypes" :key="statType" :value="statType">
+                <a-tooltip :title="statType" placement="top">
+                  <span class="checkbox-text">{{ statType }}</span>
+                </a-tooltip>
+              </a-checkbox>
+            </a-checkbox-group>
+            <div class="tab-actions">
+              <a-button size="small" type="link" @click="toggleAllStatisticTypes">
+                全部选中
+              </a-button>
+              <a-button size="small" type="link" @click="invertStatisticTypesSelection">
+                反选
+              </a-button>
+            </div>
+          </div>
+        </a-tab-pane>
+      </a-tabs>
     </div>
 
     <div class="chart-container">
@@ -69,16 +103,16 @@
     </div>
 
     <!-- 数据详情弹窗组件 -->
-    <!-- <talentReviewDetail v-model:open="detailModalVisible" :selected-bar-info="selectedBarInfo"
+    <talentReviewDetail
+      v-model:open="detailModalVisible" :selected-bar-info="selectedBarInfo"
       @close="closeDetailModal" />
-  </div> -->
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { BarChartOutlined } from '@ant-design/icons-vue'
+import { BarChartOutlined, DatabaseOutlined, AppstoreOutlined, PieChartOutlined } from '@ant-design/icons-vue'
 import {
   ConvertOptions,
   DimensionIndicatorsFilter,
@@ -87,7 +121,7 @@ import {
   RequestParams
 } from "@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq"
 import { advancedStatisticRequest } from '@/framework/apis'
-import type { SelectedBarInfo } from './talentReviewDetail.vue'
+import type { SelectedBarInfo } from '../../type/ChartTypes'
 import UniversalChart from './UniversalChart.vue'
 import type { ChartDataItem } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
@@ -106,6 +140,18 @@ const emit = defineEmits<{
 const loading = ref(false)
 const chartData = ref<ChartDataItem[]>([])
 
+// 调试：监听receivedData变化
+watch(receivedData, (newData) => {
+  if (newData) {
+    console.log('📨 ChartDisplayArea接收到的receivedData.dataMetrics:', newData.dataMetrics?.map(m => ({
+      dataName: m.dataName,
+      dataField: m.dataField,
+      unitConfig: m.unitConfig,
+      unit: m.unit
+    })));
+  }
+}, { immediate: true, deep: true });
+
 // 维度显示控制
 const visibleFirstDimensions = ref<string[]>([])
 const allFirstDimensions = ref<string[]>([])
@@ -113,6 +159,7 @@ const visibleSecondDimensions = ref<string[]>([])
 const allSecondDimensions = ref<string[]>([])
 const visibleStatisticTypes = ref<string[]>([])
 const allStatisticTypes = ref<string[]>([])
+const activeTabKey = ref('first') // Tab的默认激活键
 
 // 弹窗相关
 const detailModalVisible = ref(false)
@@ -120,13 +167,13 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 
 // 计算属性
 const chartTitle = computed(() => {
-  return '人员数据分布统计'
+  return '数据分布统计'
 })
 
 const chartSubtitle = computed(() => {
   return hasSecondDimension.value
-    ? `按${firstDimensionName.value}、${secondDimensionName.value}和统计类型分组`
-    : `按${firstDimensionName.value}和统计类型分组`
+    ? `按${firstDimensionName.value}、${secondDimensionName.value}和统计指标分组`
+    : `按${firstDimensionName.value}和统计指标分组`
 })
 
 // 获取图表分类数据（x轴）
@@ -290,29 +337,40 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
 
   // 查找第一维度条件
   const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find((item: any) => item.itemName === firstDim)
-  // 查找第二维度条件
-  const secondDimItem = receivedData.value.secondDimension?.indicatorItems.find((item: any) => item.itemName === secondDim)
 
-  if (!firstDimItem || !secondDimItem) {
-    console.warn('未找到对应的维度条件:', { firstDim, secondDim })
+  if (!firstDimItem) {
+    console.warn('未找到第一维度条件:', { firstDim })
     return null
   }
 
-  // 合并两个维度的查询条件
-  const combinedConditionList = [
-    ...firstDimItem.queryConditions.conditionList,
-    ...secondDimItem.queryConditions.conditionList
-  ]
+  // 查找第二维度条件（如果存在第二维度）
+  const secondDimItem = hasSecondDimension.value
+    ? receivedData.value.secondDimension?.indicatorItems.find((item: any) => item.itemName === secondDim)
+    : null
+
+  // 如果有第二维度但找不到对应条件，则报错
+  if (hasSecondDimension.value && !secondDimItem) {
+    console.warn('未找到第二维度条件:', { secondDim })
+    return null
+  }
+
+  // 合并查询条件：如果有第二维度则合并，否则只使用第一维度
+  const combinedConditionList = secondDimItem
+    ? [
+      ...firstDimItem.queryConditions.conditionList,
+      ...secondDimItem.queryConditions.conditionList
+    ]
+    : [...firstDimItem.queryConditions.conditionList]
 
   return {
     andOr: "0", // 使用 AND 连接
     conditionList: combinedConditionList,
     // 附加信息：原始条件
     firstDimensionCondition: firstDimItem.queryConditions,
-    secondDimensionCondition: secondDimItem.queryConditions,
+    secondDimensionCondition: secondDimItem?.queryConditions || null,
     // 附加信息：维度标识
     firstDimensionId: `${receivedData.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
-    secondDimensionId: `${receivedData.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}`
+    secondDimensionId: secondDimItem ? `${receivedData.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}` : null
   }
 }
 
@@ -342,10 +400,10 @@ const updateDimensionData = (data: ChartDataItem[]) => {
 }
 
 // 关闭详情弹窗（保留以备后续使用）
-// const closeDetailModal = () => {
-//   detailModalVisible.value = false
-//   selectedBarInfo.value = null
-// }
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  selectedBarInfo.value = null
+}
 
 // 第一维度控制
 const onFirstDimensionChange = () => {
@@ -353,11 +411,19 @@ const onFirstDimensionChange = () => {
 }
 
 const toggleAllFirstDimensions = () => {
+  // 如果已经全选，则不做任何操作
+  if (visibleFirstDimensions.value.length === allFirstDimensions.value.length) {
+    return
+  }
   visibleFirstDimensions.value = [...allFirstDimensions.value]
 }
 
 // 第一维度反选功能
 const invertFirstDimensionsSelection = () => {
+  // 如果当前是全选状态，则不做任何操作
+  if (visibleFirstDimensions.value.length === allFirstDimensions.value.length) {
+    return
+  }
   const invertedSelection = allFirstDimensions.value.filter(
     dimension => !visibleFirstDimensions.value.includes(dimension)
   )
@@ -370,11 +436,19 @@ const onSecondDimensionChange = () => {
 }
 
 const toggleAllSecondDimensions = () => {
+  // 如果已经全选，则不做任何操作
+  if (visibleSecondDimensions.value.length === allSecondDimensions.value.length) {
+    return
+  }
   visibleSecondDimensions.value = [...allSecondDimensions.value]
 }
 
 // 第二维度反选功能
 const invertSecondDimensionsSelection = () => {
+  // 如果当前是全选状态，则不做任何操作
+  if (visibleSecondDimensions.value.length === allSecondDimensions.value.length) {
+    return
+  }
   const invertedSelection = allSecondDimensions.value.filter(
     dimension => !visibleSecondDimensions.value.includes(dimension)
   )
@@ -387,11 +461,19 @@ const onStatisticTypeChange = () => {
 }
 
 const toggleAllStatisticTypes = () => {
+  // 如果已经全选，则不做任何操作
+  if (visibleStatisticTypes.value.length === allStatisticTypes.value.length) {
+    return
+  }
   visibleStatisticTypes.value = [...allStatisticTypes.value]
 }
 
 // 统计类型反选功能
 const invertStatisticTypesSelection = () => {
+  // 如果当前是全选状态，则不做任何操作
+  if (visibleStatisticTypes.value.length === allStatisticTypes.value.length) {
+    return
+  }
   const invertedSelection = allStatisticTypes.value.filter(
     statType => !visibleStatisticTypes.value.includes(statType)
   )
