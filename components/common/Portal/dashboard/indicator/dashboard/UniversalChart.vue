@@ -85,16 +85,6 @@ export default defineComponent({
       };
     };
 
-    // 调试：打印接收到的dataMetrics
-    console.log('📋 UniversalChart接收到的dataMetrics:', props.dataMetrics?.map(m => ({
-      dataName: m.dataName,
-      dataField: m.dataField,
-      unitConfig: m.unitConfig,
-      unit: m.unit,
-      hasUnitConfig: !!m.unitConfig,
-      parsedConfig: m.unitConfig ? parseUnitConfig(m.unitConfig) : null
-    })));
-
     // Y轴格式化函数：显示整数，不保留小数位
     const formatYAxisValue = (value: number): string => {
       return Number(value).toLocaleString(undefined, {
@@ -178,7 +168,7 @@ export default defineComponent({
       const secondDims = flattenedData.map(item => item.secondDimension).filter(item => item != null)
       const secondDimensionGroups = isNotEmpty(secondDims) ? [...new Set(secondDims)] : []
       const statisticTypes = [...new Set(flattenedData.map(item => item.statisticType))]
-      console.log('展开后的数据:', flattenedData, firstDimensionGroups, secondDimensionGroups, statisticTypes)
+
       return {
         firstDimensionGroups,
         secondDimensionGroups,
@@ -232,10 +222,20 @@ export default defineComponent({
           // 根据指标配置决定使用哪个y轴
           const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
 
-          // 通用堆叠策略：只要配置了 stackGroup，就与相同 stackGroup 且同 y 轴的系列堆叠
-          const stackKey = metric.stackGroup
-            ? `${metric.stackGroup}__y${yAxisIndex}`
-            : undefined
+          // 新的堆叠策略
+          let stackKey: string | undefined = undefined
+          if (metric.stackGroup) {
+            if (metric.stackGroup === 'noStack') {
+              // 不堆叠：每个系列独立显示
+              stackKey = undefined
+            } else if (metric.stackGroup === 'selfStack') {
+              // 自堆叠：同一指标的不同维度在同一stack中
+              stackKey = `${metric.dataField}__y${yAxisIndex}`
+            } else {
+              // stack组：相同stack组的指标堆叠
+              stackKey = `${metric.stackGroup}__y${yAxisIndex}`
+            }
+          }
 
           series.push({
             name: statType,
@@ -308,10 +308,20 @@ export default defineComponent({
               metric.color ||
               `hsl(${(series.length * 60) % 360}, 70%, 50%)`
 
-            // 通用堆叠策略：只要配置了 stackGroup，就与相同 stackGroup 且同 y 轴的系列堆叠
-            const stackKey = metric.stackGroup
-              ? `${metric.stackGroup}__y${yAxisIndex}`
-              : undefined
+            // 新的堆叠策略
+            let stackKey: string | undefined = undefined
+            if (metric.stackGroup) {
+              if (metric.stackGroup === 'noStack') {
+                // 不堆叠：每个系列独立显示，第二维度并排
+                stackKey = undefined
+              } else if (metric.stackGroup === 'selfStack') {
+                // 自堆叠：同一指标的不同第二维度在同一stack中
+                stackKey = `${metric.dataField}__y${yAxisIndex}`
+              } else {
+                // stack组：相同stack组和相同第二维度的指标堆叠，不同第二维度并排
+                stackKey = `${metric.stackGroup}__${secondDim}__y${yAxisIndex}`
+              }
+            }
 
             series.push({
               name: `${secondDim}&&${statType}`,

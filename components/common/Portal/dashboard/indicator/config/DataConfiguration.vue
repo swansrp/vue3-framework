@@ -149,7 +149,10 @@
               </a-select-option>
             </a-select>
             <div class="stack-tip">
-              <small>提示：选择相同堆叠位置的数据将会显示在同一根柱子上</small>
+              <small>提示：</small><br />
+              <small>• 不堆叠：第二维度并排显示</small><br />
+              <small>• 自堆叠：该指标的第二维度堆叠显示</small><br />
+              <small>• 堆叠组：相同组且相同第二维度的指标堆叠，不同第二维度并排</small>
             </div>
           </a-form-item>
         </a-form>
@@ -244,6 +247,8 @@ const axisPositionOptions = ref<{ label: string; value: string }[]>([
 ])
 
 const stackOptions = ref<{ label: string; value: string }[]>([
+  { label: '不堆叠', value: 'noStack' },
+  { label: '自堆叠', value: 'selfStack' },
   { label: '堆叠组1', value: 'stack1' },
   { label: '堆叠组2', value: 'stack2' },
   { label: '堆叠组3', value: 'stack3' },
@@ -382,8 +387,8 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
       ? props.dataMetrics[props.dataMetrics.length - 1]
       : null
 
-    // 默认堆叠组为stack1
-    let defaultStackGroup = 'stack1'
+    // 默认堆叠组为noStack
+    let defaultStackGroup = 'noStack'
 
     // 如果上一个数据存在且有堆叠组，则选择下一个不同的堆叠组
     if (lastMetric && lastMetric.stackGroup) {
@@ -426,12 +431,6 @@ const onDataTypeChange = (value: any) => {
     editingDataMetric.value.dataField = dataType.dataField
     editingDataMetric.value.unit = dataType.unit || ''
     editingDataMetric.value.unitConfig = dataType.unitConfig || ''
-
-    console.log('🔧 用户选择数据类型:', {
-      dataName: dataType.dataName,
-      unit: dataType.unit,
-      unitConfig: dataType.unitConfig
-    });
   }
 }
 

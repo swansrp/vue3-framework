@@ -2,16 +2,42 @@
   <a-modal
     v-model:open="modalVisible" :title="selectedBarInfo?.title || '数据详情'" width="80%" :footer="null"
     @cancel="handleClose">
-    <div class="detail-content">
-      <div class="detail-info">
-        <h3>维度信息</h3>
-        <p><strong>{{ selectedBarInfo?.firstDimensionName }}:</strong> {{ selectedBarInfo?.firstDimension }}</p>
-        <p><strong>{{ selectedBarInfo?.secondDimensionName }}:</strong> {{ selectedBarInfo?.secondDimension }}</p>
+    <div class="detail-container">
+      <!-- 维度信息区域 -->
+      <div class="dimension-info-card">
+        <div class="card-header">
+          <h3>
+            <span class="info-icon">📊</span>
+            筛选条件：
+            <span class="condition-text">
+              <strong>{{ selectedBarInfo?.firstDimensionName }}:</strong> {{ selectedBarInfo?.firstDimension }}
+              <span v-if="selectedBarInfo?.secondDimensionName && selectedBarInfo?.secondDimension">
+                ，<strong>{{ selectedBarInfo?.secondDimensionName }}:</strong> {{ selectedBarInfo?.secondDimension }}
+              </span>
+              <span v-if="selectedBarInfo?.statisticType">
+                ，<strong>统计指标:</strong> {{ selectedBarInfo?.statisticType }}
+                <span v-if="selectedBarInfo?.statisticData && selectedBarInfo?.statisticData.length > 0">
+                  — {{ selectedBarInfo?.statisticData.join('、') }}
+                </span>
+              </span>
+            </span>
+          </h3>
+        </div>
       </div>
 
-      <div class="condition-info" v-if="selectedBarInfo?.combinedConditions">
-        <h3>查询条件</h3>
-        <pre>{{ JSON.stringify(selectedBarInfo.combinedConditions, null, 2) }}</pre>
+      <!-- 数据表格区域 -->
+      <div class="data-table-card">
+        <div class="card-header">
+          <h3>
+            <span class="info-icon">📋</span>
+            详细数据
+          </h3>
+        </div>
+        <div class="table-container">
+          <portal
+            tableId="DimPubUserNo" :advance-condition="condition" :advance="false" :action-width="0" hide-refresh
+            hide-row-selection />
+        </div>
       </div>
     </div>
   </a-modal>
@@ -39,37 +65,113 @@ const modalVisible = computed({
 const handleClose = () => {
   emit('close')
 }
+const condition = computed(() => {
+  // 使用 selectedBarInfo 中的 combinedConditions，按照 ConditionListType 格式返回
+  if (props.selectedBarInfo?.combinedConditions?.conditionList) {
+    return {
+      conditionList: props.selectedBarInfo.combinedConditions.conditionList
+    } as ConditionListType
+  }
+
+  return { conditionList: [] } as ConditionListType
+})
 </script>
 
 <style scoped lang="less">
-.detail-content {
-  .detail-info {
-    margin-bottom: 20px;
+.detail-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
 
-    h3 {
-      margin-bottom: 10px;
-      color: #1890ff;
-    }
+.dimension-info-card,
+.data-table-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  overflow: hidden;
+  transition: all 0.3s ease;
 
-    p {
-      margin: 5px 0;
-    }
+  &:hover {
+    border-color: #1890ff;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
   }
 
-  .condition-info {
+  .card-header {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e6f4ff 100%);
+    padding: 12px 16px;
+    border-bottom: 1px solid #e8e8e8;
+
     h3 {
-      margin-bottom: 10px;
-      color: #1890ff;
+      margin: 0;
+      color: #262626;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .info-icon {
+        font-size: 18px;
+      }
+
+      .condition-text {
+        font-weight: 400;
+        color: #595959;
+        margin-left: 8px;
+
+        strong {
+          color: #262626;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+.dimension-info-card {
+  flex-shrink: 0;
+}
+
+.data-table-card {
+  flex: 1;
+  min-height: 500px;
+
+  .table-container {
+    padding: 0;
+    height: 500px;
+    overflow: hidden;
+
+    // 确保Portal组件占满空间
+    :deep(.root) {
+      height: 100%;
+      margin: 0;
+      padding: 0;
     }
 
-    pre {
-      background: #f5f5f5;
-      padding: 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      max-height: 300px;
-      overflow-y: auto;
+    :deep(.portal-table-space) {
+      margin: 0;
+      padding: 0;
+      height: 100%;
     }
+
+    // 之前分别写了三个选择器，现在合并为一个
+    :deep(.ant-table-wrapper),
+    :deep(.ant-table),
+    :deep(.surely-table-wrapper) {
+      margin: 0;
+      padding: 0;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 1200px) {
+  .condition-text {
+    font-size: 13px;
+    margin-left: 4px;
   }
 }
 </style>
