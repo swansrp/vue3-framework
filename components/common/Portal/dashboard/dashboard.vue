@@ -114,7 +114,7 @@ const dataMetrics = ref<DataMetricUI[]>([
     chartType: 'bar',
     color: '#1890ff',
     yAxisPosition: 'left',
-    stackGroup: 'stack1',
+    stackGroup: 'noStack',
     unit: '个',
     itemColors: {}
   }
@@ -408,11 +408,6 @@ const clearChart = () => {
       console.error('清除图表失败:', error);
     }
   }
-}
-
-// 图表生成成功事件处理
-const onChartGenerated = (data: any) => {
-  console.log('图表生成成功，数据:', data)
 }
 
 const { currentRoute } = useRouter()

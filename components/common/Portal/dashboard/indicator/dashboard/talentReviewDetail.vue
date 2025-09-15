@@ -1,6 +1,6 @@
 <template>
   <a-modal
-    v-model:open="modalVisible" :title="selectedBarInfo?.title || '数据详情'" width="80%" :footer="null"
+    v-model:open="modalVisible" width="95%" :footer="null" :body-style="{ padding: '16px', height: '80vh' }"
     @cancel="handleClose">
     <div class="detail-container">
       <!-- 维度信息区域 -->
@@ -46,6 +46,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
 import type { SelectedBarInfo } from '../../type/ChartTypes'
+import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 const props = defineProps<{
   open: boolean

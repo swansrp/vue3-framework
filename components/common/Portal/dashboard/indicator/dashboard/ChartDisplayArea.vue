@@ -1,7 +1,9 @@
 <template>
   <div class="chart-panel">
     <!-- 维度控制面板 - Tab页形式 -->
-    <div v-if="chartData.length > 0" class="dimension-controls">
+    <div
+      v-if="chartData.length > 0" class="dimension-controls" @mouseenter="onControlsMouseEnter"
+      @mouseleave="onControlsMouseLeave">
       <a-tabs v-model:activeKey="activeTabKey" size="small" type="card">
         <!-- 第一维度控制 -->
         <a-tab-pane key="first" :tab="firstDimensionName">
@@ -13,7 +15,7 @@
             </a-tooltip>
           </template>
           <div class="tab-content">
-            <a-checkbox-group v-model:value="visibleFirstDimensions" @change="onFirstDimensionChange">
+            <a-checkbox-group v-model:value="visibleFirstDimensions">
               <a-checkbox v-for="dimension in allFirstDimensions" :key="dimension" :value="dimension">
                 <a-tooltip :title="dimension" placement="top">
                   <span class="checkbox-text">{{ dimension }}</span>
@@ -41,7 +43,7 @@
             </a-tooltip>
           </template>
           <div class="tab-content">
-            <a-checkbox-group v-model:value="visibleSecondDimensions" @change="onSecondDimensionChange">
+            <a-checkbox-group v-model:value="visibleSecondDimensions">
               <a-checkbox v-for="dimension in allSecondDimensions" :key="dimension" :value="dimension">
                 <a-tooltip :title="dimension" placement="top">
                   <span class="checkbox-text">{{ dimension }}</span>
@@ -65,7 +67,7 @@
             <PieChartOutlined /> 统计指标
           </template>
           <div class="tab-content">
-            <a-checkbox-group v-model:value="visibleStatisticTypes" @change="onStatisticTypeChange">
+            <a-checkbox-group v-model:value="visibleStatisticTypes">
               <a-checkbox v-for="statType in allStatisticTypes" :key="statType" :value="statType">
                 <a-tooltip :title="statType" placement="top">
                   <span class="checkbox-text">{{ statType }}</span>
@@ -88,10 +90,10 @@
     <div class="chart-container">
       <!-- 当有数据时显示图表 -->
       <UniversalChart
-        v-if="chartData && chartData.length > 0 && receivedData" :categories="chartCategories"
-        :chartType="autoChartType" :data="filteredChartData" :dataMetrics="receivedData.dataMetrics || []"
-        :dimensionValueMap="dimensionValueMap" :loading="loading" :subtitle="chartSubtitle" :title="chartTitle"
-        height="100%" @click="handleChartClick" />
+        ref="chartRef" v-if="chartData && chartData.length > 0 && receivedData"
+        :categories="chartCategories" :chartType="autoChartType" :data="filteredChartData"
+        :dataMetrics="receivedData.dataMetrics || []" :dimensionValueMap="dimensionValueMap" :loading="loading"
+        :subtitle="chartSubtitle" :title="chartTitle" height="100%" @click="handleChartClick" />
 
       <!-- 当没有数据时显示占位符 -->
       <div v-else class="chart-placeholder">
@@ -110,7 +112,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, toRefs, watch, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import { BarChartOutlined, DatabaseOutlined, AppstoreOutlined, PieChartOutlined } from '@ant-design/icons-vue'
 import {
@@ -141,16 +143,7 @@ const loading = ref(false)
 const chartData = ref<ChartDataItem[]>([])
 
 // 调试：监听receivedData变化
-watch(receivedData, (newData) => {
-  if (newData) {
-    console.log('📨 ChartDisplayArea接收到的receivedData.dataMetrics:', newData.dataMetrics?.map(m => ({
-      dataName: m.dataName,
-      dataField: m.dataField,
-      unitConfig: m.unitConfig,
-      unit: m.unit
-    })));
-  }
-}, { immediate: true, deep: true });
+watch(receivedData, () => { }, { immediate: true, deep: true });
 
 // 维度显示控制
 const visibleFirstDimensions = ref<string[]>([])
@@ -164,6 +157,10 @@ const activeTabKey = ref('first') // Tab的默认激活键
 // 弹窗相关
 const detailModalVisible = ref(false)
 const selectedBarInfo = ref<SelectedBarInfo | null>(null)
+
+// 图表实例引用
+const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
+const controlsHovered = ref(false)
 
 // 计算属性
 const chartTitle = computed(() => {
@@ -513,11 +510,6 @@ const closeDetailModal = () => {
   selectedBarInfo.value = null
 }
 
-// 第一维度控制
-const onFirstDimensionChange = () => {
-  console.log('第一维度改变:', visibleFirstDimensions.value)
-}
-
 const toggleAllFirstDimensions = () => {
   // 如果已经全选，则不做任何操作
   if (visibleFirstDimensions.value.length === allFirstDimensions.value.length) {
@@ -750,6 +742,96 @@ const fetchTalentStatisticData = async (
   } catch (error) {
     console.error('请求人才统计数据失败:', error)
     throw error
+  }
+}
+
+// 控制区域鼠标事件处理
+const onControlsMouseEnter = () => {
+  controlsHovered.value = true
+  // 如果有图表实例，尝试模拟显示第一个数据点的tooltip
+  nextTick(() => {
+    if (chartRef.value && filteredChartData.value.length > 0) {
+      // 获取第一个数据点来显示tooltip
+      const firstCategory = chartCategories.value[0]
+      const firstDataPoint = filteredChartData.value.find(item =>
+        item.metricLabel.split('&&')[0] === firstCategory
+      )
+
+      if (firstDataPoint) {
+        // 在控制区域显示汇总信息的tooltip
+        showControlsSummaryTooltip(firstCategory)
+      }
+    }
+  })
+}
+
+const onControlsMouseLeave = () => {
+  controlsHovered.value = false
+  // 隐藏tooltip
+  if (chartRef.value) {
+    hideControlsTooltip()
+  }
+}
+
+// 显示控制区域的汇总tooltip
+const showControlsSummaryTooltip = (category: string) => {
+  // 创建汇总信息
+  const relevantData = filteredChartData.value.filter(item =>
+    item.metricLabel.split('&&')[0] === category
+  )
+
+  if (relevantData.length === 0) return
+
+  let tooltipContent = `<div style="padding: 8px; background: rgba(255, 255, 255, 0.98); border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+    <strong>数据概览 - ${category}</strong><br/>`
+
+  // 按统计类型分组显示数据
+  const dataByMetric = relevantData.reduce((acc: any, item) => {
+    const parts = item.metricLabel.split('&&')
+    const statType = hasSecondDimension.value ? parts[2] || parts[1] : parts[1]
+    if (!acc[statType]) acc[statType] = []
+    acc[statType].push(item)
+    return acc
+  }, {})
+
+  Object.keys(dataByMetric).forEach(statType => {
+    const items = dataByMetric[statType]
+    const total = items.reduce((sum: number, item: any) => sum + item.metricValue, 0)
+    tooltipContent += `<div style="margin: 4px 0; color: #333;">
+      <strong>${statType}:</strong> ${total.toLocaleString()}
+    </div>`
+  })
+
+  tooltipContent += '</div>'
+
+  // 创建临时tooltip元素
+  const tooltipEl = document.createElement('div')
+  tooltipEl.innerHTML = tooltipContent
+  tooltipEl.style.cssText = `
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    pointer-events: none;
+    max-width: 400px;
+  `
+  tooltipEl.className = 'controls-summary-tooltip'
+
+  // 移除之前的tooltip
+  const existingTooltip = document.querySelector('.controls-summary-tooltip')
+  if (existingTooltip) {
+    existingTooltip.remove()
+  }
+
+  document.body.appendChild(tooltipEl)
+}
+
+// 隐藏控制区域的tooltip
+const hideControlsTooltip = () => {
+  const existingTooltip = document.querySelector('.controls-summary-tooltip')
+  if (existingTooltip) {
+    existingTooltip.remove()
   }
 }
 
