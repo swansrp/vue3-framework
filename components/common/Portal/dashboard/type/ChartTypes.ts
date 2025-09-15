@@ -78,9 +78,11 @@ export interface PieDataItem {
 // 选中柱状图信息接口
 export interface SelectedBarInfo {
   firstDimension: string
-  secondDimension: string
+  secondDimension: string | null
   firstDimensionName: string
-  secondDimensionName: string
+  secondDimensionName: string | null
+  statisticType: string
+  statisticData?: string[] // 统计指标的具体数据项
   combinedConditions: any
   title: string
 }
