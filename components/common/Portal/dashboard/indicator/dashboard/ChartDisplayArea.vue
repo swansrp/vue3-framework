@@ -263,67 +263,175 @@ const handleChartClick = (params: any) => {
 
 // 点击柱状图/折线图事件处理
 const onBarClick = (params: any) => {
-  console.log('点击柱状图参数:', params)
+  console.log('🔍 [ChartDisplayArea] 点击柱状图参数:', params)
 
-  // 获取点击的系列名称（格式："第二维度&&统计类型"）
   const seriesName = params.seriesName
-  const [secondDim] = seriesName.split('&&')
   const firstDim = params.name // x轴的值（第一维度）
 
+  let secondDim = ''
+  let statType = ''
+
+  // 判断是否有第二维度
+  if (hasSecondDimension.value && seriesName.includes('&&')) {
+    // 有第二维度：格式是 "第二维度&&统计类型"
+    const parts = seriesName.split('&&')
+    secondDim = parts[0] || ''
+    statType = parts[1] || ''
+  } else {
+    // 没有第二维度：seriesName 直接就是统计类型
+    statType = seriesName
+    secondDim = '' // 没有第二维度时设为空
+  }
+
+  console.log('🔍 [ChartDisplayArea] 解析的维度信息:', {
+    firstDim,
+    secondDim,
+    statType,
+    seriesName,
+    hasSecondDimension: hasSecondDimension.value
+  })
+
   // 获取组合条件
-  const combinedConditions = buildCombinedConditions(firstDim, secondDim)
+  const combinedConditions = hasSecondDimension.value
+    ? buildCombinedConditions(firstDim, secondDim)
+    : buildFirstDimensionConditions(firstDim)
+  console.log('🔍 [ChartDisplayArea] 构建的组合条件:', combinedConditions)
+
+  // 获取用户选中的具体指标数据项
+  let statisticData: string[] = []
+  if (hasSecondDimension.value && secondDim) {
+    // 有第二维度时，显示选中的第二维度值
+    statisticData = [secondDim]
+  } else {
+    // 没有第二维度时，显示选中的第一维度值
+    statisticData = [firstDim]
+  }
 
   // 设置选中的柱状图信息
   selectedBarInfo.value = {
     firstDimension: firstDim,
-    secondDimension: secondDim,
+    secondDimension: secondDim || null,
     firstDimensionName: firstDimensionName.value,
-    secondDimensionName: secondDimensionName.value,
+    secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
+    statisticType: statType,
+    statisticData: statisticData,
     combinedConditions: combinedConditions,
-    title: `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim}`
+    title: hasSecondDimension.value
+      ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
+      : `${firstDimensionName.value}: ${firstDim} (${statType})`
   }
+
+  console.log('🔍 [ChartDisplayArea] 设置后的 selectedBarInfo:', selectedBarInfo.value)
 
   // 显示弹窗
   detailModalVisible.value = true
+  console.log('🔍 [ChartDisplayArea] 弹窗状态设置为:', detailModalVisible.value)
 }
 
 // 点击饼图事件处理
 const onPieClick = (params: any) => {
-  console.log('点击饼图参数:', params)
+  console.log('🔍 [ChartDisplayArea] 点击饼图参数:', params)
 
-  // 饼图的数据结构现在包含完整的维度信息
-  const pieSegmentName = params.name // 饼图段的名称，格式："第一维度&&第二维度"
+  // 饼图的数据结构包含维度信息
+  const pieSegmentName = params.name // 饼图段的名称
+  let firstDim = ''
+  let secondDim = ''
+  let statType = params.seriesName || '总计'
 
-  // 解析维度信息
-  const parts = pieSegmentName.split('&&')
-  const firstDim = parts[0] || ''
-  const secondDim = parts[1] || ''
-
-  if (!firstDim || !secondDim) {
-    console.warn('饼图点击：无法解析维度信息:', { pieSegmentName })
-    return
+  // 解析维度信息（根据是否有第二维度采用不同策略）
+  if (hasSecondDimension.value && pieSegmentName.includes('&&')) {
+    // 有第二维度时，格式："第一维度&&第二维度"
+    const parts = pieSegmentName.split('&&')
+    firstDim = parts[0] || ''
+    secondDim = parts[1] || ''
+    if (!firstDim || !secondDim) {
+      console.warn('饼图点击：无法解析第二维度信息:', { pieSegmentName })
+      return
+    }
+  } else {
+    // 没有第二维度时，名称就是第一维度
+    firstDim = pieSegmentName
+    secondDim = ''
+    if (!firstDim) {
+      console.warn('饼图点击：无法解析第一维度信息:', { pieSegmentName })
+      return
+    }
   }
 
+  console.log('🔍 [ChartDisplayArea] 饼图解析结果:', {
+    firstDim,
+    secondDim,
+    statType,
+    hasSecondDimension: hasSecondDimension.value
+  })
+
   // 获取组合条件
-  const combinedConditions = buildCombinedConditions(firstDim, secondDim)
+  const combinedConditions = hasSecondDimension.value && secondDim
+    ? buildCombinedConditions(firstDim, secondDim)
+    : buildFirstDimensionConditions(firstDim)
 
   if (!combinedConditions) {
     console.warn('饼图点击：无法构建组合条件')
     return
   }
 
+  // 获取用户选中的具体指标数据项
+  let statisticData: string[] = []
+  if (hasSecondDimension.value && secondDim) {
+    // 有第二维度时，显示选中的第二维度值
+    statisticData = [secondDim]
+  } else {
+    // 没有第二维度时，显示选中的第一维度值
+    statisticData = [firstDim]
+  }
+
   // 设置选中的饼图信息
   selectedBarInfo.value = {
     firstDimension: firstDim,
-    secondDimension: secondDim,
+    secondDimension: secondDim || null,
     firstDimensionName: firstDimensionName.value,
-    secondDimensionName: secondDimensionName.value,
+    secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
+    statisticType: statType,
+    statisticData: statisticData,
     combinedConditions: combinedConditions,
-    title: `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim}`
+    title: hasSecondDimension.value && secondDim
+      ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
+      : `${firstDimensionName.value}: ${firstDim} (${statType})`
   }
+
+  console.log('🔍 [ChartDisplayArea] 设置后的饼图 selectedBarInfo:', selectedBarInfo.value)
 
   // 显示弹窗
   detailModalVisible.value = true
+}
+
+/**
+ * 构建只有第一维度的查询条件
+ */
+const buildFirstDimensionConditions = (firstDim: string) => {
+  if (!receivedData.value) {
+    console.warn('receivedData 未定义')
+    return null
+  }
+
+  // 查找第一维度条件
+  const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find((item: any) => item.itemName === firstDim)
+
+  if (!firstDimItem) {
+    console.warn('未找到第一维度条件:', { firstDim })
+    return null
+  }
+
+  return {
+    andOr: firstDimItem.queryConditions.andOr || "0",
+    conditionList: [...firstDimItem.queryConditions.conditionList],
+    // 附加信息：原始条件
+    firstDimensionCondition: firstDimItem.queryConditions,
+    secondDimensionCondition: null,
+    // 附加信息：维度标识
+    firstDimensionId: `${receivedData.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
+    secondDimensionId: null
+  }
 }
 
 /**
@@ -430,11 +538,6 @@ const invertFirstDimensionsSelection = () => {
   visibleFirstDimensions.value = invertedSelection
 }
 
-// 第二维度控制
-const onSecondDimensionChange = () => {
-  console.log('第二维度改变:', visibleSecondDimensions.value)
-}
-
 const toggleAllSecondDimensions = () => {
   // 如果已经全选，则不做任何操作
   if (visibleSecondDimensions.value.length === allSecondDimensions.value.length) {
@@ -453,11 +556,6 @@ const invertSecondDimensionsSelection = () => {
     dimension => !visibleSecondDimensions.value.includes(dimension)
   )
   visibleSecondDimensions.value = invertedSelection
-}
-
-// 统计类型控制
-const onStatisticTypeChange = () => {
-  console.log('统计类型改变:', visibleStatisticTypes.value)
 }
 
 const toggleAllStatisticTypes = () => {
@@ -617,9 +715,7 @@ const convertDataToCrossMetricConditions = (
   }
 
   // 添加调试信息
-  console.log('========== RequestParams构建过程 ==========')
   console.log('完整的RequestParams:', requestParams)
-  console.log('=============================================')
 
   return requestParams
 }
@@ -649,8 +745,6 @@ const fetchTalentStatisticData = async (
       requestParams.statisticColumn,
       requestParams.majorCondition
     )
-
-    console.log('后端返回的数据:', response)
 
     return response
   } catch (error) {

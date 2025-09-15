@@ -16,7 +16,7 @@
     <!-- 中间展示区域 -->
     <ChartDisplayArea
       ref="chartDisplayAreaRef" :config="config" :received-data="dimensionIndicatorsFilter"
-      class="chart-display-area" @chart-generated="onChartGenerated" />
+      class="chart-display-area" />
   </div>
 </template>
 
@@ -240,17 +240,6 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
   const unitConfig = metric.unitConfig; // 不设置默认值，只有金额字段才有值
   const { fix, unit: unitDivisor } = unitConfig ? parseUnitConfig(unitConfig) : { fix: 0, unit: 1 };
 
-  console.log('🔄 convertToDataMetric转换:', {
-    originalMetric: {
-      dataName: metric.dataName,
-      unitConfig: metric.unitConfig,
-      unit: metric.unit
-    },
-    convertedUnitConfig: unitConfig,
-    hasUnitConfig: !!unitConfig,
-    formatConfig: { fix, unitDivisor }
-  });
-
   return {
     dataName: metric.dataName,
     dataField: metric.dataField,
@@ -267,17 +256,9 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
 
 // 转换函数：将selectedFilterItems转换为ConditionGroup
 const convertToConditionGroup = (filterItems: string[], filterDimension: IndicatorGroup | null): ConditionGroup => {
-  console.log('转换前的全局筛选条件:', {
-    filterItems,
-    filterDimension
-  })
 
   // 如果没有筛选维度或没有选中的筛选项，返回空条件
   if (!filterDimension || !filterItems || filterItems.length === 0) {
-    console.log('转换后的全局筛选条件(空):', {
-      conditionList: [],
-      andOr: '0'
-    })
     return {
       conditionList: [],
       andOr: '0'
@@ -332,8 +313,6 @@ const convertToConditionGroup = (filterItems: string[], filterDimension: Indicat
     andOr: '1' as '0' | '1' // 多个筛选项之间用OR连接（选择了司局级 OR 处级）
   }
 
-  console.log('转换后的全局筛选条件:', result)
-
   return result
 }
 
@@ -376,7 +355,6 @@ const generateChart = async () => {
   }
 
   // 打印生成图表所需的数据信息
-  console.log('========== 生成图表数据调试信息 ==========')
   console.log('原始配置数据:', {
     firstDimension: firstDimension.value,
     secondDimension: secondDimension.value,
@@ -403,18 +381,6 @@ const generateChart = async () => {
 
   // 更新维度指标过滤器数据
   dimensionIndicatorsFilter.value = filterData;
-
-  // 输出DimensionIndicatorsFilter类型的数据
-  console.log('========== DimensionIndicatorsFilter转换结果 ==========')
-  console.log('📤 dashboard.vue创建的filterData.dataMetrics:', filterData.dataMetrics?.map(m => ({
-    dataName: m.dataName,
-    dataField: m.dataField,
-    unitConfig: m.unitConfig,
-    unit: m.unit
-  })));
-  console.log('完整的DimensionIndicatorsFilter数据:', filterData);
-  console.log('转换后的全局筛选条件:', filterData.filterConditions);
-  console.log('========================================================')
 
   // 等待下一个tick，确保props已经传递给子组件
   await nextTick();
@@ -469,11 +435,6 @@ onMounted(async () => {
     config.value.columns.forEach((column: any) => {
       if (column.show === '0') return
       if (column.fieldType === FIELD_TYPE.MONEY) {
-        console.log('🏦 MONEY字段完整信息:', {
-          displayName: column.displayName,
-          reference: column.reference,
-          referenceSplit: column.reference ? column.reference.split(",") : []
-        });
 
         // 只要是金额字段且有 reference 配置，就设置格式化配置
         if (column.reference && column.reference.trim() !== '') {
