@@ -10,7 +10,8 @@
       v-model:data-metrics="dataMetrics" v-model:filter-dimension="filterDimension"
       v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
       v-model:selected-filter-items="selectedFilterItems" :available-data-types="availableDataTypes"
-      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart" />
+      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart"
+      @clear-chart="clearChart" />
 
     <!-- 中间展示区域 -->
     <ChartDisplayArea
@@ -73,6 +74,7 @@ interface DataMetricUI {
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
   unit?: string
+  unitConfig?: string // 原始单位配置，如 "2,10000"
   itemColors?: Record<string, string>
 }
 
@@ -80,6 +82,7 @@ interface DataTypeOption {
   dataName: string
   dataField: string
   unit?: string
+  unitConfig?: string // 原始单位配置，如 "2,10000"
 }
 
 const props = withDefaults(
@@ -112,7 +115,7 @@ const dataMetrics = ref<DataMetricUI[]>([
     color: '#1890ff',
     yAxisPosition: 'left',
     stackGroup: 'stack1',
-    unit: '',
+    unit: '个',
     itemColors: {}
   }
 ])
@@ -179,8 +182,75 @@ const convertToTalentIndicatorGroup = (group: IndicatorGroup | null): TalentIndi
   }
 }
 
+// 解析单位配置函数：解析格式如"2,10000"的配置
+const parseUnitConfig = (unitConfig: string): { fix: number; unit: number; displayUnit: string } => {
+  if (!unitConfig || typeof unitConfig !== 'string') {
+    return { fix: 2, unit: 1, displayUnit: '元' };
+  }
+
+  const parts = unitConfig.split(',');
+  if (parts.length !== 2) {
+    return { fix: 2, unit: 1, displayUnit: '元' };
+  }
+
+  const fix = parseInt(parts[0], 10) || 2;
+  const unit = parseInt(parts[1], 10) || 1;
+
+  // 根据单位数值生成显示单位
+  const unitMap: Record<number, string> = {
+    1: '元',
+    10: '十元',
+    100: '百元',
+    1000: '千元',
+    10000: '万元'
+  };
+
+  const displayUnit = unitMap[unit] || `${unit}元`;
+
+  return { fix, unit, displayUnit };
+};
+
+// 单位转换函数：将数字单位转换为中文单位（保持向后兼容）
+const convertUnitToChineseUnit = (unitValue: string | number): string => {
+  if (typeof unitValue === 'string' && unitValue.includes(',')) {
+    const { displayUnit } = parseUnitConfig(unitValue);
+    return displayUnit;
+  }
+
+  const numericUnit = typeof unitValue === 'string' ? parseInt(unitValue, 10) : unitValue;
+
+  if (isNaN(numericUnit)) {
+    return unitValue?.toString() || '';
+  }
+
+  const unitMap: Record<number, string> = {
+    1: '元',
+    10: '十元',
+    100: '百元',
+    1000: '千元',
+    10000: '万元'
+  };
+
+  return unitMap[numericUnit] || `${numericUnit}元`;
+};
+
 // 转换函数：将DataMetricUI转换为DataMetric
 const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
+  // 解析单位配置以获取格式化参数
+  const unitConfig = metric.unitConfig; // 不设置默认值，只有金额字段才有值
+  const { fix, unit: unitDivisor } = unitConfig ? parseUnitConfig(unitConfig) : { fix: 0, unit: 1 };
+
+  console.log('🔄 convertToDataMetric转换:', {
+    originalMetric: {
+      dataName: metric.dataName,
+      unitConfig: metric.unitConfig,
+      unit: metric.unit
+    },
+    convertedUnitConfig: unitConfig,
+    hasUnitConfig: !!unitConfig,
+    formatConfig: { fix, unitDivisor }
+  });
+
   return {
     dataName: metric.dataName,
     dataField: metric.dataField,
@@ -189,6 +259,8 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
     yAxisPosition: metric.yAxisPosition,
     stackGroup: metric.stackGroup,
     unit: metric.unit,
+    unitConfig: unitConfig, // 使用处理后的unitConfig（金额字段有值，其他字段为undefined）
+    formatConfig: { fix, unitDivisor }, // 添加格式化配置
     itemColors: metric.itemColors || {} as Record<string, string>
   };
 };
@@ -334,6 +406,12 @@ const generateChart = async () => {
 
   // 输出DimensionIndicatorsFilter类型的数据
   console.log('========== DimensionIndicatorsFilter转换结果 ==========')
+  console.log('📤 dashboard.vue创建的filterData.dataMetrics:', filterData.dataMetrics?.map(m => ({
+    dataName: m.dataName,
+    dataField: m.dataField,
+    unitConfig: m.unitConfig,
+    unit: m.unit
+  })));
   console.log('完整的DimensionIndicatorsFilter数据:', filterData);
   console.log('转换后的全局筛选条件:', filterData.filterConditions);
   console.log('========================================================')
@@ -352,6 +430,17 @@ const generateChart = async () => {
     }
   } else {
     message.error('图表组件未找到')
+  }
+}
+
+// 清除图表方法
+const clearChart = () => {
+  if (chartDisplayAreaRef.value) {
+    try {
+      chartDisplayAreaRef.value.clearChart();
+    } catch (error) {
+      console.error('清除图表失败:', error);
+    }
   }
 }
 
@@ -380,11 +469,33 @@ onMounted(async () => {
     config.value.columns.forEach((column: any) => {
       if (column.show === '0') return
       if (column.fieldType === FIELD_TYPE.MONEY) {
-        availableDataTypes.value.push({
-          dataName: column.displayName,
-          dataField: column.property,
-          unit: column.reference.split(",")[1]
-        })
+        console.log('🏦 MONEY字段完整信息:', {
+          displayName: column.displayName,
+          reference: column.reference,
+          referenceSplit: column.reference ? column.reference.split(",") : []
+        });
+
+        // 只要是金额字段且有 reference 配置，就设置格式化配置
+        if (column.reference && column.reference.trim() !== '') {
+          const rawUnitConfig = column.reference // 使用完整的reference，格式可能是 "2,10000"、"2,1000"、"2,100" 等
+
+          const convertedUnit = convertUnitToChineseUnit(rawUnitConfig)
+
+          availableDataTypes.value.push({
+            dataName: column.displayName,
+            dataField: column.property,
+            unit: convertedUnit,
+            unitConfig: rawUnitConfig // 保存原始单位配置用于格式化
+          })
+        } else {
+          // 对于没有reference配置的金额字段，不设置 unitConfig，表示不需要特殊格式化
+          availableDataTypes.value.push({
+            dataName: column.displayName,
+            dataField: column.property,
+            unit: '元', // 默认单位
+            unitConfig: undefined // 不设置 unitConfig，表示不需要特殊格式化
+          })
+        }
       }
       if (column.fieldType === FIELD_TYPE.NUMBER) {
         availableDataTypes.value.push({

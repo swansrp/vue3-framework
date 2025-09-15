@@ -6,7 +6,9 @@ export interface DataMetric {
   color: string                       // 数据项整体颜色
   yAxisPosition: 'left' | 'right'     // 坐标轴位置（饼图不需要）
   stackGroup?: string                 // 堆叠组标识，相同值的会堆叠在一起
-  unit?: string                       // 数据单位
+  unit?: string                       // 数据单位显示文本
+  unitConfig?: string                 // 原始单位配置，如 "2,10000"
+  formatConfig?: { fix: number; unitDivisor: number }  // 格式化配置
   itemColors?: Record<string, string> // 维度项的颜色映射 {itemKey: color}
 }
 
@@ -71,4 +73,14 @@ export interface PieDataItem {
   itemStyle?: {
     color: string
   }
+}
+
+// 选中柱状图信息接口
+export interface SelectedBarInfo {
+  firstDimension: string
+  secondDimension: string
+  firstDimensionName: string
+  secondDimensionName: string
+  combinedConditions: any
+  title: string
 }

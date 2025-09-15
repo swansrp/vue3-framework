@@ -29,6 +29,9 @@
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+  max-height: 180px;
+  overflow-y: auto;
 }
 .dimension-controls .ant-checkbox-group {
   display: flex;
@@ -54,12 +57,178 @@
   min-width: 80px;
   font-size: 14px;
 }
+.dimension-controls .ant-tabs.ant-tabs-card .ant-tabs-tab {
+  border-radius: 6px 6px 0 0;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid #e2e8f0;
+  margin-right: 2px;
+  transition: all 0.2s ease;
+  max-width: 120px;
+}
+.dimension-controls .ant-tabs.ant-tabs-card .ant-tabs-tab:hover {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.2);
+  transform: translateY(-1px);
+}
+.dimension-controls .ant-tabs.ant-tabs-card .ant-tabs-tab.ant-tabs-tab-active {
+  background: white;
+  border-color: #e2e8f0;
+  border-bottom-color: white;
+  font-weight: 500;
+}
+.dimension-controls .ant-tabs.ant-tabs-card .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1e40af;
+}
+.dimension-controls .ant-tabs.ant-tabs-card .ant-tabs-tab .tab-title {
+  display: inline-block;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.dimension-controls .ant-tabs.ant-tabs-card .ant-tabs-content-holder {
+  border: 1px solid #e2e8f0;
+  border-radius: 0 8px 8px 8px;
+  background: white;
+}
+.dimension-controls .ant-tabs.ant-tabs-card .ant-tabs-tabpane {
+  padding: 0;
+}
+.dimension-controls .tab-content {
+  padding: 12px;
+  overflow: hidden;
+}
+.dimension-controls .tab-content .ant-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  background: rgba(248, 250, 252, 0.6);
+  font-size: 12px;
+  line-height: 1.3;
+  width: 110px;
+  flex-shrink: 0;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+  transform: translateY(-1px);
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper.ant-checkbox-wrapper-checked {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #1e40af;
+  font-weight: 500;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper .ant-checkbox {
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper .ant-checkbox .ant-checkbox-inner {
+  border-color: #cbd5e1;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  width: 14px;
+  height: 14px;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper .ant-checkbox .ant-checkbox-inner:hover {
+  border-color: #3b82f6;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper .ant-checkbox .ant-checkbox-inner::after {
+  width: 4.5px;
+  height: 8px;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper .ant-checkbox.ant-checkbox-checked .ant-checkbox-inner {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-color: #3b82f6;
+}
+.dimension-controls .tab-content .ant-checkbox-group .ant-checkbox-wrapper .checkbox-text {
+  display: inline-block;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: top;
+}
+@media (max-width: 900px) {
+  .dimension-controls .tab-content .ant-checkbox-wrapper {
+    width: 100px;
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+  .dimension-controls .tab-content .ant-checkbox-wrapper .checkbox-text {
+    max-width: 75px;
+  }
+}
+@media (max-width: 600px) {
+  .dimension-controls .tab-content .ant-checkbox-wrapper {
+    width: 90px;
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+  .dimension-controls .tab-content .ant-checkbox-wrapper .checkbox-text {
+    max-width: 65px;
+  }
+}
+.dimension-controls .tab-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 8px;
+}
+.dimension-controls .tab-actions .ant-btn-link {
+  padding: 2px 8px;
+  font-size: 12px;
+  height: auto;
+  line-height: 1.3;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+.dimension-controls .tab-actions .ant-btn-link:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #1e40af;
+  transform: translateY(-1px);
+}
+.dimension-controls .tab-actions .ant-btn-link:active {
+  transform: translateY(0);
+}
+.dimension-controls::-webkit-scrollbar {
+  width: 6px;
+}
+.dimension-controls::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+.dimension-controls::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+.dimension-controls::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
 .chart-content {
+  flex: 1;
   margin-top: 16px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .chart-panel {
   height: 100%;
@@ -68,14 +237,15 @@
   width: 100%;
   min-width: 0;
   padding: 8px;
+  box-sizing: border-box;
 }
 .chart-container {
   flex: 1;
-  min-height: 500px;
   width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  height: 0;
 }
 .chart-placeholder {
   height: 100%;
@@ -111,5 +281,29 @@
   }
   .chart-content {
     margin-top: 12px;
+  }
+  .dimension-controls {
+    max-height: 150px;
+    padding: 12px;
+  }
+  .dimension-controls .control-item {
+    margin-bottom: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dimension-controls .control-item .control-label {
+    min-width: auto;
+    margin-bottom: 4px;
+  }
+  .dimension-controls .control-item .ant-checkbox-group {
+    width: 100%;
+  }
+  .chart-panel {
+    padding: 4px;
+  }
+}
+@media (min-width: 1440px) {
+  .dimension-controls {
+    max-height: 200px;
   }
 }

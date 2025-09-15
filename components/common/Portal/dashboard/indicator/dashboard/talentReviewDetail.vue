@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:open="modalVisible" :title="selectedBarInfo?.title || '数据详情'" width="80%" :footer="null"
+  <a-modal
+    v-model:open="modalVisible" :title="selectedBarInfo?.title || '数据详情'" width="80%" :footer="null"
     @cancel="handleClose">
     <div class="detail-content">
       <div class="detail-info">
@@ -18,15 +19,7 @@
 
 <script lang="ts" setup>
 import { computed } from 'vue'
-
-export interface SelectedBarInfo {
-  firstDimension: string
-  secondDimension: string
-  firstDimensionName: string
-  secondDimensionName: string
-  combinedConditions: any
-  title: string
-}
+import type { SelectedBarInfo } from '../../type/ChartTypes'
 
 const props = defineProps<{
   open: boolean
