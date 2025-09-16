@@ -354,15 +354,6 @@ const generateChart = async () => {
     }
   }
 
-  // 打印生成图表所需的数据信息
-  console.log('原始配置数据:', {
-    firstDimension: firstDimension.value,
-    secondDimension: secondDimension.value,
-    filterDimension: filterDimension.value,
-    selectedFilterItems: selectedFilterItems.value,
-    dataMetrics: dataMetrics.value
-  })
-
   // 转换为DimensionIndicatorsFilter类型并输出
   const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value);
   const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value);
@@ -415,6 +406,7 @@ const route = currentRoute.value
 const config = ref({} as any)
 // 组件挂载时加载数据
 onMounted(async () => {
+
   if (isEmpty(tableId.value)) {
     tableId.value = route.query ? (route.query.tableId ? route.query.tableId : undefined) : undefined
   }
@@ -427,6 +419,8 @@ onMounted(async () => {
     })
     const resp: any = await getPortalConfig(tableId.value)
     config.value = resp.payload
+    // 确保 config 中包含正确的 tableId
+    config.value.tableId = tableId.value
     config.value.columns.forEach((column: any) => {
       if (column.show === '0') return
       if (column.fieldType === FIELD_TYPE.MONEY) {
