@@ -1,7 +1,7 @@
 <template>
   <a-modal
     v-model:open="modalVisible" width="95%" :footer="null" :body-style="{ padding: '16px', height: '90vh' }"
-    @cancel="handleClose">
+    :style="{ marginTop: '-75px' }" @cancel="handleClose">
     <div class="detail-container">
       <!-- 维度信息区域 -->
       <div class="dimension-info-card">
