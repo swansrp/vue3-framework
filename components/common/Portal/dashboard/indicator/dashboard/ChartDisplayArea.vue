@@ -1,9 +1,7 @@
 <template>
   <div class="chart-panel">
     <!-- 维度控制面板 - Tab页形式 -->
-    <div
-      v-if="chartData.length > 0" class="dimension-controls" @mouseenter="onControlsMouseEnter"
-      @mouseleave="onControlsMouseLeave">
+    <div v-if="chartData.length > 0" class="dimension-controls">
       <a-tabs v-model:activeKey="activeTabKey" size="small" type="card">
         <!-- 第一维度控制 -->
         <a-tab-pane key="first" :tab="firstDimensionName">
@@ -106,13 +104,13 @@
 
     <!-- 数据详情弹窗组件 -->
     <talentReviewDetail
-      v-model:open="detailModalVisible" :selected-bar-info="selectedBarInfo"
+      v-model:open="detailModalVisible" :selected-bar-info="selectedBarInfo" :table-id="tableId"
       @close="closeDetailModal" />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, toRefs, watch, nextTick } from 'vue'
+import { computed, ref, toRefs, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { BarChartOutlined, DatabaseOutlined, AppstoreOutlined, PieChartOutlined } from '@ant-design/icons-vue'
 import {
@@ -133,6 +131,11 @@ const props = defineProps<{
   receivedData?: DimensionIndicatorsFilter
 }>()
 const { config, receivedData } = toRefs(props)
+
+// 计算属性：从 config 中提取 tableId
+const tableId = computed(() => {
+  return config.value?.tableId || ''
+})
 // Emits
 const emit = defineEmits<{
   chartGenerated: [data: ChartDataItem[]]
@@ -160,7 +163,6 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 
 // 图表实例引用
 const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
-const controlsHovered = ref(false)
 
 // 计算属性
 const chartTitle = computed(() => {
@@ -248,8 +250,6 @@ const dimensionValueMap = computed(() => {
 
 // 图表点击事件处理
 const handleChartClick = (params: any) => {
-  console.log('图表点击事件:', params)
-
   // 根据图表类型处理点击事件
   if (autoChartType.value === 'bar' || autoChartType.value === 'line') {
     onBarClick(params)
@@ -260,7 +260,6 @@ const handleChartClick = (params: any) => {
 
 // 点击柱状图/折线图事件处理
 const onBarClick = (params: any) => {
-  console.log('🔍 [ChartDisplayArea] 点击柱状图参数:', params)
 
   const seriesName = params.seriesName
   const firstDim = params.name // x轴的值（第一维度）
@@ -280,19 +279,10 @@ const onBarClick = (params: any) => {
     secondDim = '' // 没有第二维度时设为空
   }
 
-  console.log('🔍 [ChartDisplayArea] 解析的维度信息:', {
-    firstDim,
-    secondDim,
-    statType,
-    seriesName,
-    hasSecondDimension: hasSecondDimension.value
-  })
-
   // 获取组合条件
   const combinedConditions = hasSecondDimension.value
     ? buildCombinedConditions(firstDim, secondDim)
     : buildFirstDimensionConditions(firstDim)
-  console.log('🔍 [ChartDisplayArea] 构建的组合条件:', combinedConditions)
 
   // 获取用户选中的具体指标数据项
   let statisticData: string[] = []
@@ -318,16 +308,12 @@ const onBarClick = (params: any) => {
       : `${firstDimensionName.value}: ${firstDim} (${statType})`
   }
 
-  console.log('🔍 [ChartDisplayArea] 设置后的 selectedBarInfo:', selectedBarInfo.value)
-
   // 显示弹窗
   detailModalVisible.value = true
-  console.log('🔍 [ChartDisplayArea] 弹窗状态设置为:', detailModalVisible.value)
 }
 
 // 点击饼图事件处理
 const onPieClick = (params: any) => {
-  console.log('🔍 [ChartDisplayArea] 点击饼图参数:', params)
 
   // 饼图的数据结构包含维度信息
   const pieSegmentName = params.name // 饼图段的名称
@@ -354,13 +340,6 @@ const onPieClick = (params: any) => {
       return
     }
   }
-
-  console.log('🔍 [ChartDisplayArea] 饼图解析结果:', {
-    firstDim,
-    secondDim,
-    statType,
-    hasSecondDimension: hasSecondDimension.value
-  })
 
   // 获取组合条件
   const combinedConditions = hasSecondDimension.value && secondDim
@@ -395,8 +374,6 @@ const onPieClick = (params: any) => {
       ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
       : `${firstDimensionName.value}: ${firstDim} (${statType})`
   }
-
-  console.log('🔍 [ChartDisplayArea] 设置后的饼图 selectedBarInfo:', selectedBarInfo.value)
 
   // 显示弹窗
   detailModalVisible.value = true
@@ -706,9 +683,6 @@ const convertDataToCrossMetricConditions = (
     majorCondition: options.majorCondition || ''
   }
 
-  // 添加调试信息
-  console.log('完整的RequestParams:', requestParams)
-
   return requestParams
 }
 
@@ -742,96 +716,6 @@ const fetchTalentStatisticData = async (
   } catch (error) {
     console.error('请求人才统计数据失败:', error)
     throw error
-  }
-}
-
-// 控制区域鼠标事件处理
-const onControlsMouseEnter = () => {
-  controlsHovered.value = true
-  // 如果有图表实例，尝试模拟显示第一个数据点的tooltip
-  nextTick(() => {
-    if (chartRef.value && filteredChartData.value.length > 0) {
-      // 获取第一个数据点来显示tooltip
-      const firstCategory = chartCategories.value[0]
-      const firstDataPoint = filteredChartData.value.find(item =>
-        item.metricLabel.split('&&')[0] === firstCategory
-      )
-
-      if (firstDataPoint) {
-        // 在控制区域显示汇总信息的tooltip
-        showControlsSummaryTooltip(firstCategory)
-      }
-    }
-  })
-}
-
-const onControlsMouseLeave = () => {
-  controlsHovered.value = false
-  // 隐藏tooltip
-  if (chartRef.value) {
-    hideControlsTooltip()
-  }
-}
-
-// 显示控制区域的汇总tooltip
-const showControlsSummaryTooltip = (category: string) => {
-  // 创建汇总信息
-  const relevantData = filteredChartData.value.filter(item =>
-    item.metricLabel.split('&&')[0] === category
-  )
-
-  if (relevantData.length === 0) return
-
-  let tooltipContent = `<div style="padding: 8px; background: rgba(255, 255, 255, 0.98); border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-    <strong>数据概览 - ${category}</strong><br/>`
-
-  // 按统计类型分组显示数据
-  const dataByMetric = relevantData.reduce((acc: any, item) => {
-    const parts = item.metricLabel.split('&&')
-    const statType = hasSecondDimension.value ? parts[2] || parts[1] : parts[1]
-    if (!acc[statType]) acc[statType] = []
-    acc[statType].push(item)
-    return acc
-  }, {})
-
-  Object.keys(dataByMetric).forEach(statType => {
-    const items = dataByMetric[statType]
-    const total = items.reduce((sum: number, item: any) => sum + item.metricValue, 0)
-    tooltipContent += `<div style="margin: 4px 0; color: #333;">
-      <strong>${statType}:</strong> ${total.toLocaleString()}
-    </div>`
-  })
-
-  tooltipContent += '</div>'
-
-  // 创建临时tooltip元素
-  const tooltipEl = document.createElement('div')
-  tooltipEl.innerHTML = tooltipContent
-  tooltipEl.style.cssText = `
-    position: fixed;
-    top: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    pointer-events: none;
-    max-width: 400px;
-  `
-  tooltipEl.className = 'controls-summary-tooltip'
-
-  // 移除之前的tooltip
-  const existingTooltip = document.querySelector('.controls-summary-tooltip')
-  if (existingTooltip) {
-    existingTooltip.remove()
-  }
-
-  document.body.appendChild(tooltipEl)
-}
-
-// 隐藏控制区域的tooltip
-const hideControlsTooltip = () => {
-  const existingTooltip = document.querySelector('.controls-summary-tooltip')
-  if (existingTooltip) {
-    existingTooltip.remove()
   }
 }
 

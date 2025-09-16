@@ -35,7 +35,7 @@
         </div>
         <div class="table-container">
           <portal
-            tableId="DimPubUserNo" :advance-condition="condition" :advance="false" :action-width="0" hide-refresh
+            :tableId="tableId" :advance-condition="condition" :advance="false" :action-width="0" hide-refresh
             hide-row-selection />
         </div>
       </div>
@@ -51,6 +51,7 @@ import type { ConditionListType } from '@/framework/components/common/AdvancedSe
 const props = defineProps<{
   open: boolean
   selectedBarInfo: SelectedBarInfo | null
+  tableId: string
 }>()
 
 const emit = defineEmits<{
@@ -61,6 +62,10 @@ const emit = defineEmits<{
 const modalVisible = computed({
   get: () => props.open,
   set: (value: boolean) => emit('update:open', value)
+})
+
+const tableId = computed(() => {
+  return props.tableId || ''
 })
 
 const handleClose = () => {
