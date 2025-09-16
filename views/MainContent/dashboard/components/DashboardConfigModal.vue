@@ -95,11 +95,11 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import type { IndicatorTreeNode } from '../types'
+import type { IndicatorNode } from '../types'
 
 interface Props {
   visible: boolean
-  config: IndicatorTreeNode | null
+  config: IndicatorNode | null
   mode: 'add' | 'edit'
   tableId: string
 }
@@ -107,7 +107,7 @@ interface Props {
 interface Emits {
   (e: 'update:visible', value: boolean): void
 
-  (e: 'save', config: IndicatorTreeNode): void
+  (e: 'save', config: IndicatorNode): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -180,7 +180,7 @@ const resetForm = () => {
 }
 
 // 设置表单值
-const setFormValues = (config: IndicatorTreeNode) => {
+const setFormValues = (config: IndicatorNode) => {
   formState.value.title = config.title
   formState.value.type = config.type
   formState.value.treeOrder = config.treeOrder
@@ -205,10 +205,10 @@ const handleOk = async () => {
       return
     }
 
-    const config: IndicatorTreeNode = {
-      id: (props.config as IndicatorTreeNode)?.id || Date.now().toString(),
-      pid: (props.config as IndicatorTreeNode)?.pid || '0',
-      key: (props.config as IndicatorTreeNode)?.key || Date.now().toString(),
+    const config: IndicatorNode = {
+      id: (props.config as IndicatorNode)?.id || Date.now().toString(),
+      pid: (props.config as IndicatorNode)?.pid || '0',
+      key: (props.config as IndicatorNode)?.key || Date.now().toString(),
       title: formState.value.title,
       type: formState.value.type,
       treeOrder: formState.value.treeOrder,

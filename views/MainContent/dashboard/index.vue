@@ -2,7 +2,7 @@
   <div class="personal-dashboard">
     <!-- 页面头部 -->
     <div class="dashboard-header">
-      <h1>{{ dashboardTitle }}</h1>
+      <h1>{{ currentRoute.meta.title }}</h1>
       <div class="header-actions">
         <a-button type="primary" @click="openIndicatorConfig()">
           <PlusOutlined />
@@ -22,9 +22,11 @@
         :collapsed="sidebarCollapsed"
         :common-indicators="commonIndicators"
         :personal-indicators="personalIndicators"
-        :selected-indicators="selectedIndicators"
+        :selected-common-indicators="selectedCommonIndicators"
+        :selected-personal-indicators="selectedPersonalIndicators"
         @update:collapsed="updateSidebarCollapsed"
-        @update:selected="updateSelectedIndicators"
+        @update:selected-common="updateSelectedCommonIndicators"
+        @update:selected-personal="updateSelectedPersonalIndicators"
         @add-indicator="openIndicatorConfig"
         @edit-indicator="openIndicatorConfig"
         @delete-indicator="deleteIndicator"
@@ -36,7 +38,7 @@
           :indicators="displayedIndicators"
           :loading="loading"
           @add-indicator="openIndicatorConfig"
-          @edit-indicator="openIndicatorConfig"
+          @edit-indicator="editIndicatorFromChart"
           @delete-indicator="deleteIndicator"
           @resize-indicator="handleResizeIndicator"
           @reorder-indicators="handleReorderIndicators"
@@ -47,8 +49,8 @@
     <!-- 配置弹窗 -->
     <dashboard-config-modal
       v-model:visible="configModalVisible"
-      :mode="configMode"
       :config="currentConfig"
+      :mode="configMode"
       :table-id="tableId"
       @save="saveConfig"
     />
@@ -64,15 +66,17 @@ import IndicatorTree from './components/IndicatorTree.vue'
 import ChartGrid from './components/ChartGrid.vue'
 import DashboardConfigModal from './components/DashboardConfigModal.vue'
 import {
-  addPersonalIndicator,
-  deleteIndicatorApi,
-  getCommonIndicators,
-  getPersonalIndicators,
-  saveIndicatorTree,
-  updatePersonalIndicator
+  addPersonalDashboard,
+  addPersonalStatistic,
+  deletePersonalStatistic,
+  getCommonStatistic,
+  getDashboard,
+  getPersonalStatistic,
+  updateDashboardOrder,
+  updatePersonalDashboard,
+  updatePersonalStatistic
 } from './api'
-import type { IndicatorTreeNode } from './types'
-import { commonIndicatorsTestData, personalIndicatorsTestData } from './testData'
+import type { DashboardItem, IndicatorNode } from './types'
 
 // 开发环境下的测试数据
 const isDevelopment = process.env.NODE_ENV === 'development'
@@ -81,85 +85,106 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 const { currentRoute } = useRouter()
 const route = currentRoute.value
 const tableId = computed(
-    () =>
-        (route.query
-            ? route.query.tableId
-                ? route.query.tableId
-                : undefined
-            : undefined) as string
+  () =>
+    (route.query
+      ? route.query.tableId
+        ? route.query.tableId
+        : undefined
+      : undefined) as string
 )
 
 // 页面状态
 const loading = ref(false)
 const sidebarCollapsed = ref(false)
-const dashboardTitle = ref('个人仪表盘')
-
-// 数据状态
-const commonIndicators = ref<IndicatorTreeNode[]>([])
-const personalIndicators = ref<IndicatorTreeNode[]>([])
-const selectedIndicators = ref<string[]>([])
-
-// 配置弹窗状态
 const configModalVisible = ref(false)
-const currentConfig = ref<IndicatorTreeNode | null>(null)
+const currentConfig = ref<IndicatorNode | null>(null)
 const configMode = ref<any>('add')
 
-// 组件引用
-const indicatorTreeRef = ref()
+// 数据状态
+const commonIndicators = ref<IndicatorNode[]>([])
+const personalIndicators = ref<IndicatorNode[]>([])
+const selectedCommonIndicators = ref<string[]>([])
+const selectedPersonalIndicators = ref<string[]>([])
 
-// 计算属性 - 获取需要显示的指标
-const displayedIndicators = computed(() => {
-  const result: IndicatorTreeNode[] = []
-
-  const traverse = (nodes: IndicatorTreeNode[]) => {
-    nodes.forEach((node) => {
-      // 如果节点需要显示，则添加到结果中
-      if (node.show) {
-        result.push(node)
-      }
-
-      // 递归处理子节点
-      if (node.children && node.children.length > 0) {
-        traverse(node.children)
-      }
-    })
-  }
-
-  // 合并通用指标和个人指标
-  const allIndicators = [...commonIndicators.value, ...personalIndicators.value]
-  traverse(allIndicators)
-  return result.sort((a, b) => a.displayOrder - b.displayOrder)
+// 计算属性 - 获取需要显示的指标（使用 getDashboard 的数据）
+const displayedIndicators = computed<DashboardItem[]>(() => {
+  return dashboardItems.value
 })
+// 右侧图表项
+const dashboardItems = ref<DashboardItem[]>([])
 
-// 更新页面标题
-const updateDocumentTitle = () => {
-  document.title = `${ dashboardTitle.value } - ${ tableId.value }`
+// 工具：根据 id 在树中查找节点
+const findNodeById = (nodes: IndicatorNode[], id: string): IndicatorNode | null => {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    if (n.children) {
+      const found = findNodeById(n.children, id)
+      if (found) return found
+    }
+  }
+  return null
 }
 
 // 加载仪表盘数据
 const loadDashboardData = async () => {
   try {
     loading.value = true
-    // 在开发环境中，可以使用测试数据
-    if (isDevelopment && tableId.value === 'test') {
-      // 使用测试数据
-      commonIndicators.value = commonIndicatorsTestData
-      personalIndicators.value = personalIndicatorsTestData
-      dashboardTitle.value = '测试仪表盘'
-      updateDocumentTitle()
-      return
-    }
 
-    // 并行加载通用指标和个人指标数据
-    const [commonResp, personalResp] = await Promise.all([
-      getCommonIndicators(tableId.value),
-      getPersonalIndicators(tableId.value)
+    // 并行加载通用/个人指标树与个人 dashboard 配置
+    const [commonResp, personalResp, dashboardResp] = await Promise.all([
+      getCommonStatistic(tableId.value),
+      getPersonalStatistic(tableId.value),
+      getDashboard(tableId.value)
     ])
 
     commonIndicators.value = commonResp.payload || []
     personalIndicators.value = personalResp.payload || []
 
-    updateDocumentTitle()
+    // 以 getDashboard 的顺序与大小为准，根据实际接口返回格式映射
+    const dashboardItemsData = (dashboardResp.payload || []).map((d: any) => {
+      const item = {
+        id: String(d.id ?? ''),
+        title: d.title ?? '',
+        displayOrder: Number(d.order ?? 0),
+        xGrid: Number(d.xGrid ?? d.xgrid ?? 1),
+        yGrid: Number(d.yGrid ?? d.ygrid ?? 1),
+        show: true, // 默认显示
+        commonStatistic: d.commonStatistic,
+        config: typeof d.indicator === 'string' ? (() => {
+          try {
+            return JSON.parse(d.indicator)
+          } catch {
+            return {}
+          }
+        })() : (d.indicator ?? {}),
+        indicatorId: d.statisticId
+      }
+      console.log('Dashboard item:', item.title, 'xGrid:', item.xGrid, 'yGrid:', item.yGrid)
+      return item
+    }).sort((a: DashboardItem, b: DashboardItem) => a.displayOrder - b.displayOrder)
+
+    dashboardItems.value = dashboardItemsData
+
+    // 根据 dashboard 数据中的 statisticId 选中左侧树节点
+    // 分别检查通用指标和个人指标树
+    console.log('======', dashboardItemsData)
+
+    const commonIds = dashboardItemsData
+      .filter((item: DashboardItem) => item.commonStatistic === '1')
+      .map((item: DashboardItem) => item.indicatorId)
+
+    const personalIds = dashboardItemsData
+      .filter((item: DashboardItem) => item.commonStatistic !== '1')
+      .map((item: DashboardItem) => item.indicatorId)
+
+    console.log('loadDashboardData', commonIds, personalIds)
+
+    nextTick(() => {
+      // 更新选中的指标，保持现有选中状态的基础上添加新的选中项
+      selectedCommonIndicators.value = [...new Set([...selectedCommonIndicators.value, ...commonIds])]
+      selectedPersonalIndicators.value = [...new Set([...selectedPersonalIndicators.value, ...personalIds])]
+    })
+
   } catch (error) {
     console.error('加载仪表盘数据失败:', error)
     message.error('加载数据失败，请稍后重试')
@@ -178,36 +203,52 @@ const updateSidebarCollapsed = (collapsed: boolean) => {
   sidebarCollapsed.value = collapsed
 }
 
-// 更新选中的指标
-const updateSelectedIndicators = (selected: string[]) => {
-  selectedIndicators.value = selected
+// 更新选中的通用指标
+const updateSelectedCommonIndicators = (selected: string[]) => {
+  if (selected.length !== selectedCommonIndicators.value.length ||
+    !selected.every(id => selectedCommonIndicators.value.includes(id))) {
+    selectedCommonIndicators.value = selected
+  }
+  addPersonalDashboard(selectedCommonIndicators.value)
+  console.log('updateSelectedCommonIndicators', selectedCommonIndicators.value)
+}
+
+// 更新选中的个人指标
+const updateSelectedPersonalIndicators = (selected: string[]) => {
+  if (selected.length !== selectedPersonalIndicators.value.length ||
+    !selected.every(id => selectedPersonalIndicators.value.includes(id))) {
+    selectedPersonalIndicators.value = selected
+  }
+  console.log('updateSelectedCommonIndicators', selectedPersonalIndicators.value)
 }
 
 // 打开指标配置
-const openIndicatorConfig = (config?: IndicatorTreeNode) => {
+const openIndicatorConfig = (config?: IndicatorNode) => {
   currentConfig.value = config || null
   configMode.value = config ? 'edit' : 'add'
   configModalVisible.value = true
 }
 
+// 从右侧图表编辑入口打开对应左侧指标节点
+const editIndicatorFromChart = (item: DashboardItem) => {
+  const node = findNodeById(commonIndicators.value, item.indicatorId || item.id) ||
+    findNodeById(personalIndicators.value, item.indicatorId || item.id)
+  if (node) {
+    openIndicatorConfig(node)
+  }
+}
+
 // 保存配置
-const saveConfig = async (config: IndicatorTreeNode) => {
+const saveConfig = async (config: IndicatorNode) => {
   try {
     loading.value = true
 
-    // 在测试环境中，模拟保存操作
-    if (isDevelopment && tableId.value === 'test') {
-      message.success('测试环境中配置已保存')
-      configModalVisible.value = false
-      return
-    }
-
     if (configMode.value === 'add') {
       // 新增个人指标
-      await addPersonalIndicator(tableId.value, config)
+      await addPersonalStatistic(config)
     } else {
       // 更新个人指标
-      await updatePersonalIndicator(tableId.value, config)
+      await updatePersonalStatistic(config)
     }
 
     await loadDashboardData()
@@ -223,153 +264,36 @@ const saveConfig = async (config: IndicatorTreeNode) => {
 
 // 删除指标
 const deleteIndicator = async (indicatorId: string) => {
-  try {
-    // 在测试环境中，模拟删除操作
-    if (isDevelopment && tableId.value === 'test') {
-      message.success('测试环境中指标已删除')
-      return
-    }
-
-    await deleteIndicatorApi(tableId.value, indicatorId)
-    await loadDashboardData()
-    message.success('删除成功')
-  } catch (error) {
-    console.error('删除指标失败:', error)
-    message.error('删除失败，请稍后重试')
-  }
+  await deletePersonalStatistic(indicatorId)
+  await loadDashboardData()
+  message.success('删除成功')
 }
 
-// 保存仪表盘状态
-const saveDashboardState = async () => {
+// 保存右侧图表顺序
+const saveDashboardOrder = async (newOrder: DashboardItem[]) => {
   try {
-    // 在测试环境中，模拟保存操作
-    if (isDevelopment && tableId.value === 'test') {
-      console.log('测试环境中仪表盘状态已保存')
-      return
-    }
-
-    // 合并通用指标和个人指标
-    const allIndicators = [...commonIndicators.value, ...personalIndicators.value]
-    // 保存整个指标树数据
-    await saveIndicatorTree(tableId.value, allIndicators)
+    const payload = newOrder.map((item, index) => ({ id: item.id, showOrder: index }))
+    await updateDashboardOrder(payload)
   } catch (error) {
-    console.error('保存仪表盘状态失败:', error)
+    console.error('保存图表顺序失败:', error)
   }
 }
 
 // 处理图表调整大小
 const handleResizeIndicator = async (
-    indicatorId: string,
-    xGrid: number,
-    yGrid: number
+  indicatorId: string,
+  xGrid: number,
+  yGrid: number
 ) => {
-  try {
-    // 在测试环境中，模拟调整大小操作
-    if (isDevelopment && tableId.value === 'test') {
-      // 更新本地数据
-      const updateNode = (nodes: IndicatorTreeNode[]) => {
-        nodes.forEach((node) => {
-          if (node.id === indicatorId) {
-            node.xGrid = xGrid
-            node.yGrid = yGrid
-          }
-          if (node.children) {
-            updateNode(node.children)
-          }
-        })
-      }
-
-      // 更新通用指标
-      updateNode(commonIndicators.value)
-      // 更新个人指标
-      updateNode(personalIndicators.value)
-
-      message.success('测试环境中调整大小成功')
-      return
-    }
-
-    // 更新本地数据
-    const updateNode = (nodes: IndicatorTreeNode[]) => {
-      nodes.forEach((node) => {
-        if (node.id === indicatorId) {
-          node.xGrid = xGrid
-          node.yGrid = yGrid
-        }
-        if (node.children) {
-          updateNode(node.children)
-        }
-      })
-    }
-
-    // 更新通用指标
-    updateNode(commonIndicators.value)
-    // 更新个人指标
-    updateNode(personalIndicators.value)
-
-    // 保存到服务器
-    await saveDashboardState()
-    message.success('调整大小成功')
-  } catch (error) {
-    console.error('调整大小失败:', error)
-    message.error('调整大小失败，请稍后重试')
-    // 恢复原状态
-    loadDashboardData()
-  }
+  // 保存到服务器（更新单个图表尺寸）
+  await updatePersonalDashboard({ id: indicatorId, xGrid, yGrid })
+  await loadDashboardData()
 }
 
 // 处理图表重新排序
-const handleReorderIndicators = async (newOrder: IndicatorTreeNode[]) => {
-  try {
-    // 在测试环境中，模拟重新排序操作
-    if (isDevelopment && tableId.value === 'test') {
-      // 更新显示顺序
-      newOrder.forEach((indicator, index) => {
-        const updateNode = (nodes: IndicatorTreeNode[]) => {
-          nodes.forEach((node) => {
-            if (node.id === indicator.id) {
-              node.displayOrder = index
-            }
-            if (node.children) {
-              updateNode(node.children)
-            }
-          })
-        }
-        // 更新通用指标
-        updateNode(commonIndicators.value)
-        // 更新个人指标
-        updateNode(personalIndicators.value)
-      })
-
-      message.success('测试环境中重新排序成功')
-      return
-    }
-
-    // 更新显示顺序
-    newOrder.forEach((indicator, index) => {
-      const updateNode = (nodes: IndicatorTreeNode[]) => {
-        nodes.forEach((node) => {
-          if (node.id === indicator.id) {
-            node.displayOrder = index
-          }
-          if (node.children) {
-            updateNode(node.children)
-          }
-        })
-      }
-      // 更新通用指标
-      updateNode(commonIndicators.value)
-      // 更新个人指标
-      updateNode(personalIndicators.value)
-    })
-
-    // 保存到服务器
-    await saveDashboardState()
-  } catch (error) {
-    console.error('重新排序失败:', error)
-    message.error('重新排序失败，请稍后重试')
-    // 恢复原状态
-    loadDashboardData()
-  }
+const handleReorderIndicators = async (newOrder: DashboardItem[]) => {
+  await saveDashboardOrder(newOrder)
+  await loadDashboardData()
 }
 
 // 组件挂载
@@ -377,7 +301,6 @@ onMounted(() => {
   console.log(tableId.value)
   if (tableId.value) {
     loadDashboardData()
-    updateDocumentTitle()
   }
 })
 </script>

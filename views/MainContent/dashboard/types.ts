@@ -1,30 +1,16 @@
 // 个人仪表盘类型定义
 
-// 指标树节点类型
-export interface IndicatorTreeNode {
+// 左侧：指标树 节点类型（与后端指标实体对应）
+export interface IndicatorNode {
   id: string
   pid: string
   key: string
   title: string
-  type: 'common' | 'personal' // 指标类型：通用或个人
-  treeOrder: number // 指标树的显示顺序
-  displayOrder: number // 图表页面展示顺序
-  xGrid: number // 图表card所占横向格子数
-  yGrid: number // 图表card所占纵向格子数
-  show: boolean // 图表页面是否展示
-  config: any // 用于渲染的配置参数
-  children?: IndicatorTreeNode[]
-  items?: IndicatorItem[]
+  show: boolean
+  indicator: any
+  children?: IndicatorNode[]
   isLeaf?: boolean
-}
-
-// 指标项类型
-export interface IndicatorItem {
-  id: string
-  key: string
-  title: string
-  condition?: string // 查询条件
-  isLeaf: boolean
+  items?: any[] // 添加 items 属性
 }
 
 // 图表配置类型
@@ -40,6 +26,19 @@ export interface ChartConfig {
   config: any // 图表配置参数
   url?: string // 数据源URL
   columns?: any[] // 列配置
+}
+
+// 右侧：仪表盘展示项（从指标派生，或直接由后端 dashboard 返回）
+export interface DashboardItem {
+  id: string
+  title: string
+  displayOrder: number
+  commonStatistic: string
+  xGrid: number
+  yGrid: number
+  show: boolean
+  config: any
+  indicatorId?: string
 }
 
 // 仪表盘配置类型

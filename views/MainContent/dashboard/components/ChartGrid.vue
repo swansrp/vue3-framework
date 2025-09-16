@@ -11,9 +11,17 @@
       </div>
     </div>
 
-    <div v-else class="chart-grid" ref="gridContainerRef">
+    <div
+      v-else
+      class="chart-grid"
+      ref="gridContainerRef"
+      :style="{
+        gridAutoRows: gridUnitHeight + 'px',
+        gridTemplateColumns: `repeat(${ props.gridColumns }, 1fr)`
+      }"
+    >
       <div
-        v-for="indicator in indicators"
+        v-for="indicator in localIndicators"
         :key="indicator.id"
         class="chart-item"
         :class="{
@@ -23,14 +31,20 @@
           gridColumn: `span ${Math.min(indicator.xGrid || 1, gridColumns)}`,
           gridRow: `span ${indicator.yGrid || 1}`,
         }"
+        :data-xgrid="indicator.xGrid"
+        :data-ygrid="indicator.yGrid"
         @mousedown="startDrag($event, indicator)"
       >
         <ChartCard
           :indicator="indicator"
           :loading="loading"
+          :grid-unit-width="gridUnitWidth"
+          :grid-unit-height="gridUnitHeight"
+          :grid-columns="props.gridColumns"
           @edit="$emit('edit-indicator', indicator)"
           @delete="$emit('delete-indicator', indicator.id)"
           @resize="handleResize"
+          @resize-preview="onResizePreview"
           @drag-start="onCardDragStart"
           @drag-end="onCardDragEnd"
         />
@@ -65,46 +79,54 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, nextTick } from "vue";
 import { BarChartOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import ChartCard from "./ChartCard.vue";
-import type { IndicatorTreeNode } from "../types";
-
+import type { DashboardItem } from '../types'
 interface Props {
-  indicators: IndicatorTreeNode[];
+  indicators: DashboardItem[];
   loading: boolean;
+  gridColumns?: number;
 }
 
 interface Emits {
   (e: "add-indicator"): void;
 
-  (e: "edit-indicator", indicator: IndicatorTreeNode): void;
+  (e: "edit-indicator", indicator: DashboardItem): void;
 
   (e: "delete-indicator", indicatorId: string): void;
 
   (e: "resize-indicator", indicatorId: string, xGrid: number, yGrid: number): void;
 
-  (e: "reorder-indicators", newOrder: IndicatorTreeNode[]): void;
+  (e: "reorder-indicators", newOrder: DashboardItem[]): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   indicators: () => [],
   loading: false,
+  gridColumns: 7
 });
 
 const emit = defineEmits<Emits>();
+// 本地预览用数据
+const localIndicators = ref<DashboardItem[]>([])
+watch(() => props.indicators, (val) => {
+  localIndicators.value = val.map(v => ({ ...v }))
+}, { immediate: true, deep: true })
 
 // 拖拽状态
-const isDragging = ref(false);
-const draggingIndicator = ref<IndicatorTreeNode | null>(null);
-const dragPosition = ref<{ col: number; row: number } | null>(null);
-const gridContainerRef = ref<HTMLDivElement | null>(null);
+const isDragging = ref(false)
+const draggingIndicator = ref<DashboardItem | null>(null)
+const dragPosition = ref<{ col: number; row: number } | null>(null)
+const gridContainerRef = ref<HTMLDivElement | null>(null)
+const gridUnitWidth = ref(0)
+const gridUnitHeight = ref(120)
+let resizeObserver: ResizeObserver | null = null
 
 // 卡片拖拽状态
-const isCardResizing = ref(false);
+const isCardResizing = ref(false)
 
-// 网格配置
-const gridColumns = 5; // 每行最多5个格子
+// 网格配置：由 props.gridColumns 控制
 
 // 计算网格行数以适应所有卡片
 const gridRows = computed(() => {
@@ -120,7 +142,7 @@ const gridRows = computed(() => {
 });
 
 // 开始拖拽
-const startDrag = (e: MouseEvent, indicator: IndicatorTreeNode) => {
+const startDrag = (e: MouseEvent, indicator: DashboardItem) => {
   // 只有在点击卡片标题栏时才允许拖拽
   const target = e.target as HTMLElement;
   if (!target.closest(".chart-card-header")) return;
@@ -136,14 +158,14 @@ const startDrag = (e: MouseEvent, indicator: IndicatorTreeNode) => {
     const y = moveEvent.clientY - containerRect.top;
 
     // 计算网格位置
-    const colWidth = containerRect.width / gridColumns;
-    const rowHeight = colWidth; // 正方形网格，高度等于宽度
+    const colWidth = containerRect.width / props.gridColumns;
+    const rowHeight = gridUnitHeight.value || 120;
 
     const col = Math.floor(x / colWidth) + 1;
     const row = Math.floor(y / rowHeight) + 1;
 
     // 确保位置在有效范围内
-    const validCol = Math.max(1, Math.min(col, gridColumns - (indicator.xGrid || 1) + 1));
+    const validCol = Math.max(1, Math.min(col, props.gridColumns - (indicator.xGrid || 1) + 1));
     const validRow = Math.max(1, row);
 
     dragPosition.value = { col: validCol, row: validRow };
@@ -190,8 +212,16 @@ const handleResize = (indicatorId: string, xGrid: number, yGrid: number) => {
   emit("resize-indicator", indicatorId, xGrid, yGrid);
 };
 
+// 仅用于预览的尺寸更新
+const onResizePreview = (indicatorId: string, xGrid: number, yGrid: number) => {
+  const idx = localIndicators.value.findIndex(i => i.id === indicatorId)
+  if (idx !== -1) {
+    localIndicators.value[idx] = { ...localIndicators.value[idx], xGrid, yGrid }
+  }
+}
+
 // 卡片开始拖拽事件
-const onCardDragStart = (event: MouseEvent, indicator: IndicatorTreeNode) => {
+const onCardDragStart = (event: MouseEvent, indicator: DashboardItem) => {
   // 卡片开始拖拽时的处理逻辑
   console.log("卡片开始拖拽:", indicator.id);
 };
@@ -204,11 +234,37 @@ const onCardDragEnd = (event: MouseEvent) => {
 
 // 生命周期
 onMounted(() => {
-  // 可以在这里添加键盘事件监听等
+  const calcUnits = () => {
+    if (!gridContainerRef.value) return
+    const rect = gridContainerRef.value.getBoundingClientRect()
+    gridUnitWidth.value = rect.width / props.gridColumns
+    // 使行高等于列宽，从而形成正方形网格单元
+    gridUnitHeight.value = gridUnitWidth.value
+  }
+  // 首次渲染后计算
+  nextTick(calcUnits)
+  // 监听窗口尺寸
+  window.addEventListener('resize', calcUnits)
+  // 监听容器尺寸变更（首次加载数据或侧边栏收起/展开）
+  if ('ResizeObserver' in window) {
+    resizeObserver = new ResizeObserver(() => calcUnits())
+    if (gridContainerRef.value) resizeObserver.observe(gridContainerRef.value)
+  }
+  // 指标数据变化后，等待 DOM 更新再计算
+  watch(() => props.indicators, async () => {
+    await nextTick()
+    calcUnits()
+  })
 });
 
 onUnmounted(() => {
   // 清理事件监听
+  window.removeEventListener('resize', () => {})
+  if (resizeObserver && gridContainerRef.value) {
+    resizeObserver.unobserve(gridContainerRef.value)
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
 });
 </script>
 
@@ -247,10 +303,7 @@ onUnmounted(() => {
   .chart-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr); // 5等分
-    grid-auto-rows: 1fr; // 自动行高
     gap: 16px;
-    height: calc(100% - 64px); // 减去添加按钮区域的高度
-    aspect-ratio: 5 / 5; // 保持5:5的正方形比例
 
     .chart-item {
       position: relative;

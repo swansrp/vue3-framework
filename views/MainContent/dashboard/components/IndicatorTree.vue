@@ -38,7 +38,8 @@
           </div>
           <div class="tree-wrapper">
             <a-tree
-              v-model:checkedKeys="selectedIndicators"
+              ref="commonTreeKey"
+              v-model:checkedKeys="selectedCommonIndicators"
               v-model:expandedKeys="expandedCommonKeys"
               :checkable="true"
               :selectable="false"
@@ -46,7 +47,7 @@
               :show-line="true"
               :tree-data="filteredCommonIndicators"
               block-node
-              @check="onIndicatorCheck"
+              @check="onCommonIndicatorCheck"
             >
               <template #title="{ title }">
                 <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
@@ -68,7 +69,8 @@
           </div>
           <div class="tree-wrapper">
             <a-tree
-              v-model:checkedKeys="selectedIndicators"
+              ref="personalTreeKey"
+              v-model:checkedKeys="selectedPersonalIndicators"
               v-model:expandedKeys="expandedPersonalKeys"
               :checkable="true"
               :selectable="false"
@@ -76,7 +78,7 @@
               :show-line="true"
               :tree-data="filteredPersonalIndicators"
               block-node
-              @check="onIndicatorCheck"
+              @check="onPersonalIndicatorCheck"
             >
               <template #title="{ title, isLeaf, dataRef }">
                 <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
@@ -131,23 +133,29 @@ import {
   PlusOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
-import type { IndicatorTreeNode } from '../types'
+import type { IndicatorNode } from '../types'
 
 interface Props {
   collapsed: boolean
-  commonIndicators: IndicatorTreeNode[]
-  personalIndicators: IndicatorTreeNode[]
-  selectedIndicators: string[]
+  commonIndicators: IndicatorNode[]
+  personalIndicators: IndicatorNode[]
+  selectedCommonIndicators?: string[]
+  selectedPersonalIndicators?: string[]
+  selectedIndicators?: string[]
 }
 
 interface Emits {
   (e: 'update:collapsed', value: boolean): void
 
+  (e: 'update:selected-common', value: string[]): void
+
+  (e: 'update:selected-personal', value: string[]): void
+
   (e: 'update:selected', value: string[]): void
 
   (e: 'add-indicator'): void
 
-  (e: 'edit-indicator', indicator: IndicatorTreeNode): void
+  (e: 'edit-indicator', indicator: IndicatorNode): void
 
   (e: 'delete-indicator', indicatorId: string): void
 }
@@ -156,6 +164,8 @@ const props = withDefaults(defineProps<Props>(), {
   collapsed: false,
   commonIndicators: () => [],
   personalIndicators: () => [],
+  selectedCommonIndicators: () => [],
+  selectedPersonalIndicators: () => [],
   selectedIndicators: () => []
 })
 
@@ -170,25 +180,45 @@ const searchKeyword = ref('')
 const expandedCommonKeys = ref<string[]>([])
 const expandedPersonalKeys = ref<string[]>([])
 
-// 响应式数据
-const selectedIndicators = ref<string[]>([...props.selectedIndicators])
+// 响应式数据 - 分别处理通用指标和个人指标的选中状态
+const selectedCommonIndicators = ref<string[]>([...props.selectedCommonIndicators || []])
+const selectedPersonalIndicators = ref<string[]>([...props.selectedPersonalIndicators || []])
 
 // 分离通用指标和个人指标（现在直接使用props传入的数据）
 const commonIndicators = computed(() => props.commonIndicators)
 const personalIndicators = computed(() => props.personalIndicators)
 
-// 搜索过滤和高亮
-const filteredCommonIndicators = computed(() =>
-    filterAndHighlightTree(commonIndicators.value, searchKeyword.value)
-)
+const commonTreeKey = ref(true)
+const personalTreeKey = ref(true)
 
-const filteredPersonalIndicators = computed(() =>
-    filterAndHighlightTree(personalIndicators.value, searchKeyword.value)
-)
+// 搜索过滤和高亮
+const filteredCommonIndicators = computed(() => {
+  return filterAndHighlightTree(commonIndicators.value, searchKeyword.value)
+})
+
+const filteredPersonalIndicators = computed(() => {
+  return filterAndHighlightTree(personalIndicators.value, searchKeyword.value)
+})
 
 // 监听props变化
-watch(() => props.selectedIndicators, (newVal) => {
-  selectedIndicators.value = [...newVal]
+watch(() => props.selectedCommonIndicators, (newVal) => {
+  // 只有在选中状态真正改变时才更新
+  if (newVal && (newVal.length !== selectedCommonIndicators.value.length ||
+    !newVal.every(id => selectedCommonIndicators.value.includes(id)))) {
+    selectedCommonIndicators.value = [...newVal]
+    // 强制刷新树组件
+    commonTreeKey.value = !commonTreeKey.value
+  }
+})
+
+watch(() => props.selectedPersonalIndicators, (newVal) => {
+  // 只有在选中状态真正改变时才更新
+  if (newVal && (newVal.length !== selectedPersonalIndicators.value.length ||
+    !newVal.every(id => selectedPersonalIndicators.value.includes(id)))) {
+    selectedPersonalIndicators.value = [...newVal]
+    // 强制刷新树组件
+    personalTreeKey.value = !personalTreeKey.value
+  }
 })
 
 // 监听通用指标和个人指标的变化
@@ -202,19 +232,18 @@ const initializeExpandedKeys = () => {
   const allIndicators = [...props.commonIndicators, ...props.personalIndicators]
   const expandedKeys = getDefaultExpandedKeys(allIndicators)
   expandedCommonKeys.value = expandedKeys.filter(key =>
-      findNodeInTree(props.commonIndicators, key)
+    findNodeInTree(props.commonIndicators, key)
   )
   expandedPersonalKeys.value = expandedKeys.filter(key =>
-      findNodeInTree(props.personalIndicators, key)
+    findNodeInTree(props.personalIndicators, key)
   )
 }
 
 // 获取默认应该展开的节点（有items且不为空的节点及其祖先）
-const getDefaultExpandedKeys = (tree: IndicatorTreeNode[]): string[] => {
-  const expandedKeys: string[] = []
+const getDefaultExpandedKeys = (tree: IndicatorNode[]): string[] => {
   const keysToExpand = new Set<string>()
 
-  const collectExpandableNodes = (nodes: IndicatorTreeNode[], ancestors: string[] = []) => {
+  const collectExpandableNodes = (nodes: IndicatorNode[], ancestors: string[] = []) => {
     nodes.forEach(node => {
       const currentPath = [...ancestors, node.key]
 
@@ -234,7 +263,7 @@ const getDefaultExpandedKeys = (tree: IndicatorTreeNode[]): string[] => {
 }
 
 // 在树中查找节点
-const findNodeInTree = (tree: IndicatorTreeNode[], key: string): IndicatorTreeNode | null => {
+const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | null => {
   for (const node of tree) {
     if (node.key === key) return node
     if (node.children) {
@@ -246,12 +275,12 @@ const findNodeInTree = (tree: IndicatorTreeNode[], key: string): IndicatorTreeNo
 }
 
 // 过滤和高亮树形数据
-const filterAndHighlightTree = (tree: IndicatorTreeNode[], keyword: string): IndicatorTreeNode[] => {
+const filterAndHighlightTree = (tree: IndicatorNode[], keyword: string): IndicatorNode[] => {
   if (!keyword.trim()) return tree
 
   const keysToExpand = new Set<string>()
 
-  const filterNode = (node: IndicatorTreeNode, ancestors: string[] = []): IndicatorTreeNode | null => {
+  const filterNode = (node: IndicatorNode, ancestors: string[] = []): IndicatorNode | null => {
     const currentPath = [...ancestors, node.key]
 
     // 检查节点标题是否匹配
@@ -260,13 +289,13 @@ const filterAndHighlightTree = (tree: IndicatorTreeNode[], keyword: string): Ind
     // 检查节点的items是否有匹配的
     let itemsMatch = false
     if (node.items && node.items.length > 0) {
-      itemsMatch = node.items.some(item =>
-          item.title?.toLowerCase().includes(keyword.toLowerCase())
+      itemsMatch = node.items.some((item: any) =>
+        item.title?.toLowerCase().includes(keyword.toLowerCase())
       )
     }
 
     // 递归过滤子节点
-    const filteredChildren: IndicatorTreeNode[] = []
+    const filteredChildren: IndicatorNode[] = []
     if (node.children) {
       node.children.forEach(child => {
         const filteredChild = filterNode(child, currentPath)
@@ -292,14 +321,14 @@ const filterAndHighlightTree = (tree: IndicatorTreeNode[], keyword: string): Ind
     return null
   }
 
-  const filteredTree = tree.map(node => filterNode(node)).filter(Boolean) as IndicatorTreeNode[]
+  const filteredTree = tree.map(node => filterNode(node)).filter(Boolean) as IndicatorNode[]
 
   // 更新展开的节点
   expandedCommonKeys.value = Array.from(keysToExpand).filter(key =>
-      findNodeInTree(commonIndicators.value, key)
+    findNodeInTree(commonIndicators.value, key)
   )
   expandedPersonalKeys.value = Array.from(keysToExpand).filter(key =>
-      findNodeInTree(personalIndicators.value, key)
+    findNodeInTree(personalIndicators.value, key)
   )
 
   return filteredTree
@@ -320,14 +349,24 @@ const onSearch = () => {
   // 搜索逻辑在computed中处理
 }
 
-const onIndicatorCheck = (checkedKeys: any) => {
+const onPersonalIndicatorCheck = (checkedKeys: any, e: any) => {
   const keys = Array.isArray(checkedKeys) ? checkedKeys : checkedKeys.checked
-  selectedIndicators.value = keys
-  emit('update:selected', keys)
+  selectedPersonalIndicators.value = keys
+  emit('update:selected-personal', keys)
+  // 同时更新合并的选中状态，但保持通用指标的选中状态
+  emit('update:selected', [...selectedCommonIndicators.value, ...keys])
+}
+
+const onCommonIndicatorCheck = (checkedKeys: any, e: any) => {
+  const keys = Array.isArray(checkedKeys) ? checkedKeys : checkedKeys.checked
+  selectedCommonIndicators.value = keys
+  emit('update:selected-common', keys)
+  // 同时更新合并的选中状态，但保持个人指标的选中状态
+  emit('update:selected', [...keys, ...selectedPersonalIndicators.value])
 }
 
 // 显示状态改变
-const onShowChange = (indicator: IndicatorTreeNode) => {
+const onShowChange = (indicator: IndicatorNode) => {
   // 可以在这里添加保存逻辑
   console.log('显示状态改变:', indicator.key, indicator.show)
 }
@@ -336,23 +375,23 @@ const addIndicator = () => {
   emit('add-indicator')
 }
 
-const editIndicator = (indicator: IndicatorTreeNode) => {
+const editIndicator = (indicator: IndicatorNode) => {
   emit('edit-indicator', indicator)
 }
 
-const deleteIndicator = (indicator: IndicatorTreeNode) => {
+const deleteIndicator = (indicator: IndicatorNode) => {
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除指标"${ indicator.title }"吗？`,
     okText: '确定',
     cancelText: '取消',
     onOk() {
-      emit('delete-indicator', indicator.key)
+      emit('delete-indicator', indicator.id)
     }
   })
 }
 
-const viewIndicator = (indicator: IndicatorTreeNode) => {
+const viewIndicator = (indicator: IndicatorNode) => {
   // 查看指标详情
   message.info(`查看指标：${ indicator.title }`)
 }
@@ -565,10 +604,11 @@ onUnmounted(() => {
                 }
               }
 
-              .ant-tree-checkbox {
-                margin-block-start: 0px;
-                margin-right: 8px;
-              }
+            }
+
+            .ant-tree-checkbox {
+              margin-block-start: 0px;
+              margin-right: 8px;
             }
           }
         }
