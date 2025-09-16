@@ -1,6 +1,6 @@
 <template>
   <a-modal
-    v-model:open="modalVisible" width="95%" :footer="null" :body-style="{ padding: '16px', height: '80vh' }"
+    v-model:open="modalVisible" width="95%" :footer="null" :body-style="{ padding: '16px', height: '90vh' }"
     @cancel="handleClose">
     <div class="detail-container">
       <!-- 维度信息区域 -->
@@ -143,11 +143,11 @@ const condition = computed(() => {
 
 .data-table-card {
   flex: 1;
-  min-height: 500px;
+  min-height: 700px;
 
   .table-container {
     padding: 0;
-    height: 500px;
+    height: 700px;
     overflow: hidden;
 
     // 确保Portal组件占满空间

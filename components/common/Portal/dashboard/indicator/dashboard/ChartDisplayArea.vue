@@ -103,7 +103,7 @@
     </div>
 
     <!-- 数据详情弹窗组件 -->
-    <talentReviewDetail
+    <dashboard-detail-modal
       v-model:open="detailModalVisible" :selected-bar-info="selectedBarInfo" :table-id="tableId"
       @close="closeDetailModal" />
   </div>
@@ -123,6 +123,7 @@ import {
 import { advancedStatisticRequest } from '@/framework/apis'
 import type { SelectedBarInfo } from '../../type/ChartTypes'
 import UniversalChart from './UniversalChart.vue'
+import DashboardDetailModal from './DashboardDetail.vue'
 import type { ChartDataItem } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
 // Props - 接收外部传入的维度配置数据

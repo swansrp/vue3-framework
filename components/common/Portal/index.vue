@@ -489,7 +489,7 @@
       @template-export="templateExport"
       @upload-progress="uploadAddProgress"
     />
-    <portal-dashboard-modal
+    <dashboard-modal
       v-model:show="statisticShow"
       :config="config"
     />
@@ -575,7 +575,7 @@ import { excelExport } from '@/framework/utils/excel'
 import { name } from '@/../package.json'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
-import PortalDashboardModal from '@/framework/components/common/Portal/dashboard/index.vue'
+import DashboardModal from '@/framework/components/common/Portal/dashboard/dashboardModal.vue'
 import { db } from '@/framework/components/common/Portal/db'
 
 const __ = getInstance()
