@@ -42,7 +42,7 @@
           :grid-unit-height="gridUnitHeight"
           :grid-columns="props.gridColumns"
           @edit="$emit('edit-indicator', indicator)"
-          @delete="$emit('delete-indicator', indicator.id)"
+          @delete="$emit('delete-indicator', [indicator.id])"
           @resize="handleResize"
           @resize-preview="onResizePreview"
           @drag-start="onCardDragStart"
@@ -90,11 +90,11 @@ interface Props {
 }
 
 interface Emits {
-  (e: "add-indicator"): void;
+  (e: "add-indicator", indicatorId: string[]): void;
 
   (e: "edit-indicator", indicator: DashboardItem): void;
 
-  (e: "delete-indicator", indicatorId: string): void;
+  (e: "delete-indicator", indicatorId: string[]): void;
 
   (e: "resize-indicator", indicatorId: string, xGrid: number, yGrid: number): void;
 

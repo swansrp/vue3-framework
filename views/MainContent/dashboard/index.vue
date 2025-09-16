@@ -21,6 +21,8 @@
       <indicator-tree
         :collapsed="sidebarCollapsed"
         :common-indicators="commonIndicators"
+        :expanded-common-keys="expandedCommonKeys"
+        :expanded-personal-keys="expandedPersonalKeys"
         :personal-indicators="personalIndicators"
         :selected-common-indicators="selectedCommonIndicators"
         :selected-personal-indicators="selectedPersonalIndicators"
@@ -30,6 +32,8 @@
         @add-indicator="openIndicatorConfig"
         @edit-indicator="openIndicatorConfig"
         @delete-indicator="deleteIndicator"
+        @add-dashboard="addDashboard"
+        @delete-dashboard="deleteDashboard"
       />
 
       <!-- 主体图表区域 -->
@@ -37,9 +41,9 @@
         <chart-grid
           :indicators="displayedIndicators"
           :loading="loading"
-          @add-indicator="openIndicatorConfig"
+          @add-indicator="addDashboard"
           @edit-indicator="editIndicatorFromChart"
-          @delete-indicator="deleteIndicator"
+          @delete-indicator="deleteDashboard"
           @resize-indicator="handleResizeIndicator"
           @reorder-indicators="handleReorderIndicators"
         />
@@ -68,9 +72,10 @@ import DashboardConfigModal from './components/DashboardConfigModal.vue'
 import {
   addPersonalDashboard,
   addPersonalStatistic,
+  deletePersonalDashboard,
   deletePersonalStatistic,
   getCommonStatistic,
-  getDashboard,
+  getPersonalDashboard,
   getPersonalStatistic,
   updateDashboardOrder,
   updatePersonalDashboard,
@@ -78,19 +83,16 @@ import {
 } from './api'
 import type { DashboardItem, IndicatorNode } from './types'
 
-// 开发环境下的测试数据
-const isDevelopment = process.env.NODE_ENV === 'development'
-
 // 路由参数
 const { currentRoute } = useRouter()
 const route = currentRoute.value
 const tableId = computed(
-  () =>
-    (route.query
-      ? route.query.tableId
-        ? route.query.tableId
-        : undefined
-      : undefined) as string
+    () =>
+        (route.query
+            ? route.query.tableId
+                ? route.query.tableId
+                : undefined
+            : undefined) as string
 )
 
 // 页面状态
@@ -105,6 +107,8 @@ const commonIndicators = ref<IndicatorNode[]>([])
 const personalIndicators = ref<IndicatorNode[]>([])
 const selectedCommonIndicators = ref<string[]>([])
 const selectedPersonalIndicators = ref<string[]>([])
+const expandedCommonKeys = ref<string[]>([])
+const expandedPersonalKeys = ref<string[]>([])
 
 // 计算属性 - 获取需要显示的指标（使用 getDashboard 的数据）
 const displayedIndicators = computed<DashboardItem[]>(() => {
@@ -125,6 +129,31 @@ const findNodeById = (nodes: IndicatorNode[], id: string): IndicatorNode | null 
   return null
 }
 
+// 工具：获取节点的所有父节点key
+const getParentNodeKeys = (nodes: IndicatorNode[], id: string): string[] => {
+  const result: string[] = []
+
+  const findParents = (nodes: IndicatorNode[], id: string, parents: string[]): boolean => {
+    for (const node of nodes) {
+      if (node.id === id) {
+        result.push(...parents)
+        console.log(`Found node ${ id }, parents:`, parents)
+        return true
+      }
+      if (node.children) {
+        if (findParents(node.children, id, [...parents, node.key])) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  findParents(nodes, id, [])
+  console.log(`Parent keys for node ${ id }:`, result)
+  return result
+}
+
 // 加载仪表盘数据
 const loadDashboardData = async () => {
   try {
@@ -134,57 +163,96 @@ const loadDashboardData = async () => {
     const [commonResp, personalResp, dashboardResp] = await Promise.all([
       getCommonStatistic(tableId.value),
       getPersonalStatistic(tableId.value),
-      getDashboard(tableId.value)
+      getPersonalDashboard(tableId.value)
     ])
 
     commonIndicators.value = commonResp.payload || []
     personalIndicators.value = personalResp.payload || []
 
     // 以 getDashboard 的顺序与大小为准，根据实际接口返回格式映射
-    const dashboardItemsData = (dashboardResp.payload || []).map((d: any) => {
-      const item = {
-        id: String(d.id ?? ''),
-        title: d.title ?? '',
-        displayOrder: Number(d.order ?? 0),
-        xGrid: Number(d.xGrid ?? d.xgrid ?? 1),
-        yGrid: Number(d.yGrid ?? d.ygrid ?? 1),
-        show: true, // 默认显示
-        commonStatistic: d.commonStatistic,
-        config: typeof d.indicator === 'string' ? (() => {
-          try {
-            return JSON.parse(d.indicator)
-          } catch {
-            return {}
+    const dashboardItemsData = (dashboardResp.payload || [])
+        .map((d: any) => {
+          const item = {
+            id: d.id,
+            title: d.title ?? '',
+            displayOrder: Number(d.order ?? 0),
+            xGrid: Number(d.xGrid ?? d.xgrid ?? 1),
+            yGrid: Number(d.yGrid ?? d.ygrid ?? 1),
+            show: true, // 默认显示
+            commonStatistic: d.commonStatistic,
+            config:
+                typeof d.indicator === 'string'
+                    ? (() => {
+                      try {
+                        return JSON.parse(d.indicator)
+                      } catch {
+                        return {}
+                      }
+                    })()
+                    : d.indicator ?? {},
+            indicatorId: d.statisticId
           }
-        })() : (d.indicator ?? {}),
-        indicatorId: d.statisticId
-      }
-      console.log('Dashboard item:', item.title, 'xGrid:', item.xGrid, 'yGrid:', item.yGrid)
-      return item
-    }).sort((a: DashboardItem, b: DashboardItem) => a.displayOrder - b.displayOrder)
+          console.log(
+              'Dashboard item:',
+              item.title,
+              'xGrid:',
+              item.xGrid,
+              'yGrid:',
+              item.yGrid
+          )
+          return item
+        })
+        .sort((a: DashboardItem, b: DashboardItem) => a.displayOrder - b.displayOrder)
 
     dashboardItems.value = dashboardItemsData
 
     // 根据 dashboard 数据中的 statisticId 选中左侧树节点
-    // 分别检查通用指标和个人指标树
-    console.log('======', dashboardItemsData)
-
     const commonIds = dashboardItemsData
-      .filter((item: DashboardItem) => item.commonStatistic === '1')
-      .map((item: DashboardItem) => item.indicatorId)
+        .filter((item: DashboardItem) => item.commonStatistic === '1')
+        .map((item: DashboardItem) => item.indicatorId)
 
     const personalIds = dashboardItemsData
-      .filter((item: DashboardItem) => item.commonStatistic !== '1')
-      .map((item: DashboardItem) => item.indicatorId)
+        .filter((item: DashboardItem) => item.commonStatistic !== '1')
+        .map((item: DashboardItem) => item.indicatorId)
 
-    console.log('loadDashboardData', commonIds, personalIds)
+    console.log('loadDashboardData - commonIds:', commonIds)
+    console.log('loadDashboardData - personalIds:', personalIds)
+    console.log('loadDashboardData - commonIndicators:', commonIndicators.value)
+    console.log('loadDashboardData - personalIndicators:', personalIndicators.value)
 
-    nextTick(() => {
-      // 更新选中的指标，保持现有选中状态的基础上添加新的选中项
-      selectedCommonIndicators.value = [...new Set([...selectedCommonIndicators.value, ...commonIds])]
-      selectedPersonalIndicators.value = [...new Set([...selectedPersonalIndicators.value, ...personalIds])]
+    // 更新选中的指标，保持现有选中状态的基础上添加新的选中项
+    selectedCommonIndicators.value = [
+      ...new Set([...selectedCommonIndicators.value, ...commonIds])
+    ]
+    selectedPersonalIndicators.value = [
+      ...new Set([...selectedPersonalIndicators.value, ...personalIds])
+    ]
+
+    console.log('Updated selectedCommonIndicators:', selectedCommonIndicators.value)
+    console.log('Updated selectedPersonalIndicators:', selectedPersonalIndicators.value)
+
+    // 获取需要展开的节点keys
+    const commonExpandedKeys = new Set<string>()
+    const personalExpandedKeys = new Set<string>()
+
+    // 为通用指标添加展开的节点
+    commonIds.forEach((id: string) => {
+      const parentKeys: string[] = getParentNodeKeys(commonIndicators.value, id)
+      parentKeys.forEach((key: string) => commonExpandedKeys.add(key))
     })
 
+    // 为个人指标添加展开的节点
+    personalIds.forEach((id: string) => {
+      const parentKeys: string[] = getParentNodeKeys(personalIndicators.value, id)
+      parentKeys.forEach((key: string) => personalExpandedKeys.add(key))
+    })
+
+    // 更新展开的节点keys
+    expandedCommonKeys.value = Array.from(commonExpandedKeys)
+    expandedPersonalKeys.value = Array.from(personalExpandedKeys)
+
+    console.log('Updated expandedCommonKeys:', expandedCommonKeys.value)
+    console.log('Updated expandedPersonalKeys:', expandedPersonalKeys.value)
   } catch (error) {
     console.error('加载仪表盘数据失败:', error)
     message.error('加载数据失败，请稍后重试')
@@ -205,18 +273,21 @@ const updateSidebarCollapsed = (collapsed: boolean) => {
 
 // 更新选中的通用指标
 const updateSelectedCommonIndicators = (selected: string[]) => {
-  if (selected.length !== selectedCommonIndicators.value.length ||
-    !selected.every(id => selectedCommonIndicators.value.includes(id))) {
+  if (
+      selected.length !== selectedCommonIndicators.value.length ||
+      !selected.every((id) => selectedCommonIndicators.value.includes(id))
+  ) {
     selectedCommonIndicators.value = selected
   }
-  addPersonalDashboard(selectedCommonIndicators.value)
   console.log('updateSelectedCommonIndicators', selectedCommonIndicators.value)
 }
 
 // 更新选中的个人指标
 const updateSelectedPersonalIndicators = (selected: string[]) => {
-  if (selected.length !== selectedPersonalIndicators.value.length ||
-    !selected.every(id => selectedPersonalIndicators.value.includes(id))) {
+  if (
+      selected.length !== selectedPersonalIndicators.value.length ||
+      !selected.every((id) => selectedPersonalIndicators.value.includes(id))
+  ) {
     selectedPersonalIndicators.value = selected
   }
   console.log('updateSelectedCommonIndicators', selectedPersonalIndicators.value)
@@ -231,8 +302,9 @@ const openIndicatorConfig = (config?: IndicatorNode) => {
 
 // 从右侧图表编辑入口打开对应左侧指标节点
 const editIndicatorFromChart = (item: DashboardItem) => {
-  const node = findNodeById(commonIndicators.value, item.indicatorId || item.id) ||
-    findNodeById(personalIndicators.value, item.indicatorId || item.id)
+  const node =
+      findNodeById(commonIndicators.value, item.indicatorId || item.id) ||
+      findNodeById(personalIndicators.value, item.indicatorId || item.id)
   if (node) {
     openIndicatorConfig(node)
   }
@@ -266,7 +338,42 @@ const saveConfig = async (config: IndicatorNode) => {
 const deleteIndicator = async (indicatorId: string) => {
   await deletePersonalStatistic(indicatorId)
   await loadDashboardData()
-  message.success('删除成功')
+}
+
+const addDashboard = async (indicatorIds: string[]) => {
+  console.log('Adding dashboard for indicators:', indicatorIds)
+  try {
+    // 调用API添加dashboard项
+    await addPersonalDashboard(indicatorIds)
+    // 刷新数据
+    await loadDashboardData()
+  } catch (error) {
+    console.error('添加仪表盘项失败:', error)
+    message.error('添加仪表盘项失败')
+  }
+}
+
+const deleteDashboard = async (indicatorIds: string[]) => {
+  console.log('Deleting dashboard for indicators:', indicatorIds)
+  try {
+    // 获取当前dashboard项
+    const currentItems = dashboardItems.value
+
+    // 找到需要删除的dashboard项ID
+    const itemsToDelete = currentItems
+        .filter((item) => item.indicatorId && indicatorIds.includes(item.indicatorId))
+        .map((item) => item.id)
+
+    // 删除每个匹配的dashboard项
+    const deletePromises = itemsToDelete.map((id) => deletePersonalDashboard(id))
+    await Promise.all(deletePromises)
+
+    // 刷新数据
+    await loadDashboardData()
+  } catch (error) {
+    console.error('删除仪表盘项失败:', error)
+    message.error('删除仪表盘项失败')
+  }
 }
 
 // 保存右侧图表顺序
@@ -281,9 +388,9 @@ const saveDashboardOrder = async (newOrder: DashboardItem[]) => {
 
 // 处理图表调整大小
 const handleResizeIndicator = async (
-  indicatorId: string,
-  xGrid: number,
-  yGrid: number
+    indicatorId: string,
+    xGrid: number,
+    yGrid: number
 ) => {
   // 保存到服务器（更新单个图表尺寸）
   await updatePersonalDashboard({ id: indicatorId, xGrid, yGrid })
