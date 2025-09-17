@@ -4,7 +4,7 @@
       <div class="empty-content">
         <BarChartOutlined class="empty-icon" />
         <p>暂无图表，请添加指标</p>
-        <a-button type="primary" @click="$emit('add-indicator')">
+        <a-button type="primary" @click="$emit('add-indicator', [])">
           <PlusOutlined />
           添加指标
         </a-button>
@@ -17,7 +17,7 @@
       ref="gridContainerRef"
       :style="{
         gridAutoRows: gridUnitHeight + 'px',
-        gridTemplateColumns: `repeat(${ props.gridColumns }, 1fr)`
+        gridTemplateColumns: `repeat(${props.gridColumns}, 1fr)`,
       }"
     >
       <div
@@ -28,11 +28,16 @@
           'chart-item-placeholder': isDragging && draggingIndicator?.id === indicator.id,
         }"
         :style="{
-          gridColumn: `span ${Math.min(indicator.xGrid || 1, gridColumns)}`,
-          gridRow: `span ${indicator.yGrid || 1}`,
+          gridColumn: `${indicator.xPosition} / span ${Math.min(
+            indicator.xGrid || 1,
+            gridColumns
+          )}`,
+          gridRow: `${indicator.yPosition} / span ${indicator.yGrid || 1}`,
         }"
         :data-xgrid="indicator.xGrid"
         :data-ygrid="indicator.yGrid"
+        :data-xposition="indicator.xPosition"
+        :data-yposition="indicator.yPosition"
         @mousedown="startDrag($event, indicator)"
       >
         <ChartCard
@@ -54,6 +59,7 @@
       <div
         v-if="isDragging && dragPosition"
         class="drag-placeholder"
+        :class="{ 'drag-placeholder-overlap': isDragOverlapping }"
         :style="{
           gridColumn: `${dragPosition.col} / span ${Math.min(
             draggingIndicator?.xGrid || 1,
@@ -70,7 +76,7 @@
         type="primary"
         size="large"
         shape="circle"
-        @click="$emit('add-indicator')"
+        @click="$emit('add-indicator', [])"
       >
         <PlusOutlined />
       </a-button>
@@ -79,10 +85,11 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref, watch, nextTick } from "vue";
-import { BarChartOutlined, PlusOutlined } from "@ant-design/icons-vue";
-import ChartCard from "./ChartCard.vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { BarChartOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import ChartCard from './ChartCard.vue'
 import type { DashboardItem } from '../types'
+
 interface Props {
   indicators: DashboardItem[];
   loading: boolean;
@@ -90,34 +97,39 @@ interface Props {
 }
 
 interface Emits {
-  (e: "add-indicator", indicatorId: string[]): void;
+  (e: 'add-indicator', indicatorId: string[]): void;
 
-  (e: "edit-indicator", indicator: DashboardItem): void;
+  (e: 'edit-indicator', indicator: DashboardItem): void;
 
-  (e: "delete-indicator", indicatorId: string[]): void;
+  (e: 'delete-indicator', indicatorId: string[]): void;
 
-  (e: "resize-indicator", indicatorId: string, xGrid: number, yGrid: number): void;
+  (e: 'resize-indicator', indicatorId: string, xGrid: number, yGrid: number): void;
 
-  (e: "reorder-indicators", newOrder: DashboardItem[]): void;
+  (e: 'reorder-indicators', newOrder: DashboardItem[]): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   indicators: () => [],
   loading: false,
   gridColumns: 7
-});
+})
 
-const emit = defineEmits<Emits>();
+const emit = defineEmits<Emits>()
 // 本地预览用数据
 const localIndicators = ref<DashboardItem[]>([])
-watch(() => props.indicators, (val) => {
-  localIndicators.value = val.map(v => ({ ...v }))
-}, { immediate: true, deep: true })
+watch(
+    () => props.indicators,
+    (val) => {
+      localIndicators.value = val.map((v) => ({ ...v }))
+    },
+    { immediate: true, deep: true }
+)
 
 // 拖拽状态
 const isDragging = ref(false)
 const draggingIndicator = ref<DashboardItem | null>(null)
 const dragPosition = ref<{ col: number; row: number } | null>(null)
+const isDragOverlapping = ref(false) // 新增：检测是否重叠
 const gridContainerRef = ref<HTMLDivElement | null>(null)
 const gridUnitWidth = ref(0)
 const gridUnitHeight = ref(120)
@@ -131,90 +143,167 @@ const isCardResizing = ref(false)
 // 计算网格行数以适应所有卡片
 const gridRows = computed(() => {
   // 根据卡片位置和大小计算需要的行数
-  let maxRow = 1;
+  let maxRow = 1
   props.indicators.forEach((indicator) => {
-    const row = indicator.yGrid || 1;
-    if (row > maxRow) {
-      maxRow = row;
+    const endRow = (indicator.yPosition || 1) + (indicator.yGrid || 1) - 1
+    if (endRow > maxRow) {
+      maxRow = endRow
     }
-  });
-  return Math.max(maxRow, 5); // 至少5行
-});
+  })
+  return Math.max(maxRow, 5) // 至少5行
+})
+
+// 检查拖拽位置是否与其他卡片重叠
+const checkDragOverlap = (
+    position: { col: number; row: number },
+    indicator: DashboardItem
+) => {
+  if (!indicator.xGrid || !indicator.yGrid) return false
+
+  const dragLeft = position.col
+  const dragRight = position.col + indicator.xGrid - 1
+  const dragTop = position.row
+  const dragBottom = position.row + indicator.yGrid - 1
+
+  // 检查是否与任何其他卡片重叠
+  for (const item of props.indicators) {
+    // 跳过正在拖拽的卡片本身
+    if (item.id === indicator.id) continue
+
+    if (!item.xPosition || !item.yPosition || !item.xGrid || !item.yGrid) continue
+
+    const itemLeft = item.xPosition
+    const itemRight = item.xPosition + item.xGrid - 1
+    const itemTop = item.yPosition
+    const itemBottom = item.yPosition + item.yGrid - 1
+
+    // 检查是否重叠
+    if (
+        dragLeft <= itemRight &&
+        dragRight >= itemLeft &&
+        dragTop <= itemBottom &&
+        dragBottom >= itemTop
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
+
+// 计算新卡片的位置
+const calculateNewCardPosition = (): { xPosition: number; yPosition: number } => {
+  // 找到当前所有卡片中右下角的位置
+  let maxX = 0
+  let maxY = 0
+
+  props.indicators.forEach((indicator) => {
+    const endX = (indicator.xPosition || 1) + (indicator.xGrid || 1) - 1
+    const endY = (indicator.yPosition || 1) + (indicator.yGrid || 1) - 1
+
+    if (endX > maxX) maxX = endX
+    if (endY > maxY) maxY = endY
+  })
+
+  // 如果没有卡片，从位置(1,1)开始
+  if (maxX === 0 && maxY === 0) {
+    return { xPosition: 1, yPosition: 1 }
+  }
+
+  // 如果 maxX 还没有超出网格列数，则在同一行添加
+  if (maxX < props.gridColumns) {
+    return { xPosition: maxX + 1, yPosition: 1 }
+  } else {
+    // 否则在下一行开始
+    return { xPosition: 1, yPosition: maxY + 1 }
+  }
+}
 
 // 开始拖拽
 const startDrag = (e: MouseEvent, indicator: DashboardItem) => {
   // 只有在点击卡片标题栏时才允许拖拽
-  const target = e.target as HTMLElement;
-  if (!target.closest(".chart-card-header")) return;
+  const target = e.target as HTMLElement
+  if (!target.closest('.chart-card-header')) return
 
-  isDragging.value = true;
-  draggingIndicator.value = indicator;
+  isDragging.value = true
+  draggingIndicator.value = indicator
 
   const handleMouseMove = (moveEvent: MouseEvent) => {
-    if (!isDragging.value || !gridContainerRef.value) return;
+    if (!isDragging.value || !gridContainerRef.value) return
 
-    const containerRect = gridContainerRef.value.getBoundingClientRect();
-    const x = moveEvent.clientX - containerRect.left;
-    const y = moveEvent.clientY - containerRect.top;
+    const containerRect = gridContainerRef.value.getBoundingClientRect()
+    const x = moveEvent.clientX - containerRect.left
+    const y = moveEvent.clientY - containerRect.top
 
     // 计算网格位置
-    const colWidth = containerRect.width / props.gridColumns;
-    const rowHeight = gridUnitHeight.value || 120;
+    const colWidth = containerRect.width / props.gridColumns
+    const rowHeight = gridUnitHeight.value || 120
 
-    const col = Math.floor(x / colWidth) + 1;
-    const row = Math.floor(y / rowHeight) + 1;
+    const col = Math.floor(x / colWidth) + 1
+    const row = Math.floor(y / rowHeight) + 1
 
     // 确保位置在有效范围内
-    const validCol = Math.max(1, Math.min(col, props.gridColumns - (indicator.xGrid || 1) + 1));
-    const validRow = Math.max(1, row);
+    const validCol = Math.max(1, Math.min(col, props.gridColumns))
+    const validRow = Math.max(1, row)
 
-    dragPosition.value = { col: validCol, row: validRow };
-  };
+    // 更新拖拽位置
+    const newPosition = { col: validCol, row: validRow }
+    dragPosition.value = newPosition
+
+    // 检查是否重叠
+    if (draggingIndicator.value) {
+      isDragOverlapping.value = checkDragOverlap(newPosition, draggingIndicator.value)
+    }
+  }
 
   const handleMouseUp = () => {
     if (isDragging.value && dragPosition.value && draggingIndicator.value) {
-      // 处理拖拽结束逻辑
-      reorderIndicators(draggingIndicator.value.id, dragPosition.value);
+      // 只有在没有重叠时才处理拖拽结束逻辑
+      if (!isDragOverlapping.value) {
+        reorderIndicators(draggingIndicator.value.id, dragPosition.value)
+      }
     }
 
-    isDragging.value = false;
-    draggingIndicator.value = null;
-    dragPosition.value = null;
+    isDragging.value = false
+    draggingIndicator.value = null
+    dragPosition.value = null
+    isDragOverlapping.value = false // 重置重叠状态
 
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  };
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+  }
 
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-};
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+}
 
 // 重新排序指标
 const reorderIndicators = (
-  indicatorId: string,
-  position: { col: number; row: number }
+    indicatorId: string,
+    position: { col: number; row: number }
 ) => {
-  // 简化的重新排序逻辑
-  // 实际应用中需要根据position计算新的顺序
-  const newOrder = [...props.indicators];
-  const movedIndex = newOrder.findIndex((c) => c.id === indicatorId);
+  // 创建当前指标的副本
+  const newOrder = [...props.indicators]
+  const movedIndex = newOrder.findIndex((c) => c.id === indicatorId)
 
   if (movedIndex > -1) {
-    const [movedItem] = newOrder.splice(movedIndex, 1);
-    // 简单地将图表移到数组末尾
-    newOrder.push(movedItem);
-    emit("reorder-indicators", newOrder);
+    // 更新被移动元素的位置信息
+    newOrder[movedIndex].xPosition = position.col
+    newOrder[movedIndex].yPosition = position.row
+
+    // 发出重新排序事件，但不改变数组顺序
+    emit('reorder-indicators', newOrder)
   }
-};
+}
 
 // 处理调整大小
 const handleResize = (indicatorId: string, xGrid: number, yGrid: number) => {
-  emit("resize-indicator", indicatorId, xGrid, yGrid);
-};
+  emit('resize-indicator', indicatorId, xGrid, yGrid)
+}
 
 // 仅用于预览的尺寸更新
 const onResizePreview = (indicatorId: string, xGrid: number, yGrid: number) => {
-  const idx = localIndicators.value.findIndex(i => i.id === indicatorId)
+  const idx = localIndicators.value.findIndex((i) => i.id === indicatorId)
   if (idx !== -1) {
     localIndicators.value[idx] = { ...localIndicators.value[idx], xGrid, yGrid }
   }
@@ -223,14 +312,14 @@ const onResizePreview = (indicatorId: string, xGrid: number, yGrid: number) => {
 // 卡片开始拖拽事件
 const onCardDragStart = (event: MouseEvent, indicator: DashboardItem) => {
   // 卡片开始拖拽时的处理逻辑
-  console.log("卡片开始拖拽:", indicator.id);
-};
+  console.log('卡片开始拖拽:', indicator.id)
+}
 
 // 卡片结束拖拽事件
 const onCardDragEnd = (event: MouseEvent) => {
   // 卡片结束拖拽时的处理逻辑
-  console.log("卡片结束拖拽");
-};
+  console.log('卡片结束拖拽')
+}
 
 // 生命周期
 onMounted(() => {
@@ -251,21 +340,25 @@ onMounted(() => {
     if (gridContainerRef.value) resizeObserver.observe(gridContainerRef.value)
   }
   // 指标数据变化后，等待 DOM 更新再计算
-  watch(() => props.indicators, async () => {
-    await nextTick()
-    calcUnits()
-  })
-});
+  watch(
+      () => props.indicators,
+      async () => {
+        await nextTick()
+        calcUnits()
+      }
+  )
+})
 
 onUnmounted(() => {
   // 清理事件监听
-  window.removeEventListener('resize', () => {})
+  window.removeEventListener('resize', () => {
+  })
   if (resizeObserver && gridContainerRef.value) {
     resizeObserver.unobserve(gridContainerRef.value)
     resizeObserver.disconnect()
     resizeObserver = null
   }
-});
+})
 </script>
 
 <style lang="less" scoped>
@@ -302,7 +395,6 @@ onUnmounted(() => {
 
   .chart-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr); // 5等分
     gap: 16px;
 
     .chart-item {
@@ -337,6 +429,12 @@ onUnmounted(() => {
       border: 2px dashed #1890ff;
       border-radius: 8px;
       opacity: 0.7;
+
+      // 重叠时的样式
+      &.drag-placeholder-overlap {
+        background: #fff1f0;
+        border: 2px dashed #ff4d4f;
+      }
     }
   }
 

@@ -76,8 +76,10 @@
               :show-icon="true"
               :show-line="true"
               :tree-data="filteredPersonalIndicators"
+              :draggable="true"
               block-node
               @check="onPersonalIndicatorCheck"
+              @drop="onPersonalTreeDrop"
             >
               <template #title="{ title, isLeaf, dataRef }">
                 <div
@@ -136,6 +138,7 @@ import {
   SearchOutlined
 } from '@ant-design/icons-vue'
 import type { IndicatorNode } from '../types'
+import { updateStatisticOrder, updateStatisticPid } from '../api'
 
 interface Props {
   collapsed: boolean;
@@ -166,6 +169,8 @@ interface Emits {
   (e: 'add-dashboard', indicatorIds: string[]): void;
 
   (e: 'delete-dashboard', indicatorIds: string[]): void;
+
+  (e: 'reload-data'): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -435,6 +440,182 @@ const viewIndicator = (indicator: IndicatorNode) => {
   message.info(`查看指标：${ indicator.title }`)
 }
 
+// 处理个人指标树的拖拽放下事件
+const onPersonalTreeDrop = async (info: any) => {
+  try {
+    const dropKey = info.node.key
+    const dragKey = info.dragNode.key
+    const dropPos = info.node.pos.split('-').map(Number)
+    const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1])
+
+    // 获取拖拽节点和目标节点
+    const dragNode = findNodeInTree(personalIndicators.value, dragKey)
+    const dropNode = findNodeInTree(personalIndicators.value, dropKey)
+
+    // 即使找不到节点，也要继续执行更新操作，确保UI的一致性
+    // 如果拖拽到同一个父节点下，只需要更新顺序
+    if (dragNode && dropNode && dragNode.pid === dropNode.pid) {
+      // 获取同级节点并更新顺序
+      await updateSameLevelOrder(dragKey, dropKey, dropPosition, dropNode.pid)
+    } else {
+      // 如果拖拽到不同的父节点下，需要更新父节点和顺序
+      // 或者当节点找不到时，仍然尝试更新顺序
+      await updateDifferentParent(dragKey, dropKey, dropPosition)
+    }
+    // 重新加载数据以更新界面
+    emit('reload-data')
+  } catch (error) {
+    console.error('拖拽更新失败:', error)
+    message.error('拖拽更新失败')
+  }
+}
+
+// 更新同级节点的顺序
+const updateSameLevelOrder = async (
+    dragKey: string,
+    dropKey: string,
+    dropPosition: number,
+    parentId: string | null
+) => {
+  try {
+    // 获取同级节点
+    let siblingNodes: IndicatorNode[] = []
+
+    if (parentId) {
+      // 如果有父节点，获取父节点的子节点
+      const parentNode = findNodeInTree(personalIndicators.value, parentId)
+      if (parentNode && parentNode.children) {
+        siblingNodes = parentNode.children
+      }
+    } else {
+      // 如果没有父节点，获取根节点
+      siblingNodes = personalIndicators.value
+    }
+
+    // 重新排序
+    const newOrder = [...siblingNodes]
+    const dragIndex = newOrder.findIndex((node) => node.key === dragKey)
+    const dropIndex = newOrder.findIndex((node) => node.key === dropKey)
+
+    // 即使找不到节点，也要继续执行更新操作，确保UI的一致性
+    // 移除拖拽节点（如果存在）
+    let draggedNode = null
+    if (dragIndex !== -1) {
+      [draggedNode] = newOrder.splice(dragIndex, 1)
+    }
+
+    // 计算插入位置
+    let insertIndex = newOrder.length // 默认插入到末尾
+
+    // 特别处理：当将节点放在第一个节点前面时
+    if (dropPosition === 0 && dropIndex === -1) {
+      // 将节点放在第一个位置前面
+      insertIndex = 0
+    } else if (dropIndex !== -1) {
+      // 计算插入位置
+      if (dropPosition === -1) {
+        // 放在目标节点前面
+        insertIndex = dropIndex
+      } else if (dropPosition === 1) {
+        // 放在目标节点后面
+        insertIndex = dropIndex + 1
+      }
+
+      // 如果拖拽节点原本在目标节点后面，移除节点后索引会前移，所以需要调整插入位置
+      if (dragIndex !== -1 && dragIndex > dropIndex) {
+        // 当拖拽节点在目标节点后面时，移除拖拽节点后，目标节点的索引会前移1位
+        // 所以插入位置需要减1
+        if (dropPosition === -1) {
+          // 放在目标节点前面，插入位置应该是目标节点的新索引
+          insertIndex = dropIndex
+        } else if (dropPosition === 1) {
+          // 放在目标节点后面，插入位置应该是目标节点的新索引+1
+          insertIndex = dropIndex + 1
+        }
+      } else if (dragIndex !== -1 && dragIndex < dropIndex) {
+        // 当拖拽节点在目标节点前面时，移除拖拽节点后，目标节点的索引会前移1位
+        // 所以插入位置需要减1
+        insertIndex--
+      }
+    } else if (dropPosition === -1) {
+      // 如果找不到目标节点，但要求放在前面，则插入到开头
+      insertIndex = 0
+    }
+
+
+    // 如果找到了拖拽节点，则插入到计算的位置
+    if (draggedNode) {
+      newOrder.splice(insertIndex, 0, draggedNode)
+    }
+
+    // 构造更新顺序的数据，从1开始计数
+    const orderData = newOrder.map((node, index) => ({
+      id: node.id,
+      showOrder: index + 1 // 从1开始计数
+    }))
+
+    // 调用API更新顺序
+    await updateStatisticOrder(orderData)
+  } catch (error) {
+    console.error('更新同级节点顺序失败:', error)
+    throw error
+  }
+}
+
+// 更新不同父节点的情况
+const updateDifferentParent = async (
+    dragKey: string,
+    dropKey: string,
+    dropPosition: number
+) => {
+  try {
+    // 获取拖拽节点和目标节点
+    const dragNode = findNodeInTree(personalIndicators.value, dragKey)
+    const dropNode = findNodeInTree(personalIndicators.value, dropKey)
+
+    // 即使找不到节点，也要继续执行更新操作，确保UI的一致性
+    let newPid: string | null = null
+
+    if (dragNode && dropNode) {
+      // 根据dropPosition确定新的父节点
+      if (dropPosition === -1) {
+        // 放在目标节点前面，父节点为目标节点的父节点
+        newPid = dropNode.pid
+      } else if (dropPosition === 1) {
+        // 放在目标节点后面，父节点为目标节点的父节点
+        newPid = dropNode.pid
+      } else {
+        // 放在目标节点内部，父节点为目标节点
+        newPid = dropNode.id
+      }
+
+      // 更新父节点
+      await updateStatisticPid({
+        id: dragNode.id,
+        pid: newPid
+      })
+    } else {
+      // 如果找不到节点，仍然尝试根据dropKey确定新的父节点
+      if (dropNode) {
+        if (dropPosition === -1 || dropPosition === 1) {
+          // 放在目标节点前面或后面，父节点为目标节点的父节点
+          newPid = dropNode.pid
+        } else {
+          // 放在目标节点内部，父节点为目标节点
+          newPid = dropNode.id
+        }
+      }
+      // 如果连dropNode都找不到，我们仍然需要更新顺序，使用null作为父节点
+    }
+
+    // 更新同级节点顺序
+    await updateSameLevelOrder(dragKey, dropKey, dropPosition, newPid)
+  } catch (error) {
+    console.error('更新不同父节点失败:', error)
+    throw error
+  }
+}
+
 // 拖拽调整宽度
 const startResize = (e: MouseEvent) => {
   isResizing.value = true
@@ -541,7 +722,6 @@ watch(
     { deep: true }
 )
 
-
 // 监听props中选中状态的变化
 watch(
     () => props.selectedCommonIndicators,
@@ -559,7 +739,10 @@ watch(
     (newVal) => {
       if (newVal) {
         selectedPersonalIndicators.value = [...newVal]
-        console.log('IndicatorTree - Updated selectedPersonalIndicators from props:', newVal)
+        console.log(
+            'IndicatorTree - Updated selectedPersonalIndicators from props:',
+            newVal
+        )
       }
     },
     { deep: true }

@@ -13,21 +13,6 @@ export interface IndicatorNode {
   items?: any[] // 添加 items 属性
 }
 
-// 图表配置类型
-export interface ChartConfig {
-  id: string
-  indicatorId: string // 关联的指标ID
-  title: string // 图表标题
-  type: string // 图表类型
-  xGrid: number // 横向格子数 (1-5)
-  yGrid: number // 纵向格子数 (1-3)
-  displayOrder: number // 显示顺序
-  show: boolean // 是否显示
-  config: any // 图表配置参数
-  url?: string // 数据源URL
-  columns?: any[] // 列配置
-}
-
 // 右侧：仪表盘展示项（从指标派生，或直接由后端 dashboard 返回）
 export interface DashboardItem {
   id: string
@@ -36,17 +21,11 @@ export interface DashboardItem {
   commonStatistic: string
   xGrid: number
   yGrid: number
+  xPosition: number
+  yPosition: number
   show: boolean
   config: any
   indicatorId?: string
-}
-
-// 仪表盘配置类型
-export interface DashboardConfig {
-  title: string // 仪表盘标题
-  tableId: string // 表ID
-  charts: ChartConfig[] // 图表配置列表
-  selectedIndicators: string[] // 选中的指标ID列表
 }
 
 // 配置模式类型

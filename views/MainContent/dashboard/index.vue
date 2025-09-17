@@ -34,6 +34,7 @@
         @delete-indicator="deleteIndicator"
         @add-dashboard="addDashboard"
         @delete-dashboard="deleteDashboard"
+        @reload-data="loadDashboardData"
       />
 
       <!-- 主体图表区域 -->
@@ -77,7 +78,6 @@ import {
   getCommonStatistic,
   getPersonalDashboard,
   getPersonalStatistic,
-  updateDashboardOrder,
   updatePersonalDashboard,
   updatePersonalStatistic
 } from './api'
@@ -133,7 +133,11 @@ const findNodeById = (nodes: IndicatorNode[], id: string): IndicatorNode | null 
 const getParentNodeKeys = (nodes: IndicatorNode[], id: string): string[] => {
   const result: string[] = []
 
-  const findParents = (nodes: IndicatorNode[], id: string, parents: string[]): boolean => {
+  const findParents = (
+      nodes: IndicatorNode[],
+      id: string,
+      parents: string[]
+  ): boolean => {
     for (const node of nodes) {
       if (node.id === id) {
         result.push(...parents)
@@ -178,6 +182,8 @@ const loadDashboardData = async () => {
             displayOrder: Number(d.order ?? 0),
             xGrid: Number(d.xGrid ?? d.xgrid ?? 1),
             yGrid: Number(d.yGrid ?? d.ygrid ?? 1),
+            xPosition: Number(d.xPosition ?? d.xposition ?? 1),
+            yPosition: Number(d.yPosition ?? d.yposition ?? 1),
             show: true, // 默认显示
             commonStatistic: d.commonStatistic,
             config:
@@ -198,7 +204,11 @@ const loadDashboardData = async () => {
               'xGrid:',
               item.xGrid,
               'yGrid:',
-              item.yGrid
+              item.yGrid,
+              'xPosition:',
+              item.xPosition,
+              'yPosition:',
+              item.yPosition
           )
           return item
         })
@@ -340,11 +350,93 @@ const deleteIndicator = async (indicatorId: string) => {
   await loadDashboardData()
 }
 
+// 计算新卡片的位置
+const calculateNewCardPosition = (
+    currentItems: DashboardItem[]
+): { xPosition: number; yPosition: number } => {
+  // 默认网格列数
+  const gridColumns = 7
+
+  // 如果没有卡片，从位置(1,1)开始
+  if (currentItems.length === 0) {
+    return { xPosition: 1, yPosition: 1 }
+  }
+
+  // 创建一个网格占用情况的映射
+  const occupiedCells = new Set<string>()
+
+  // 标记已占用的单元格
+  currentItems.forEach((item) => {
+    const xStart = item.xPosition || 1
+    const yStart = item.yPosition || 1
+    const xEnd = xStart + (item.xGrid || 1) - 1
+    const yEnd = yStart + (item.yGrid || 1) - 1
+
+    for (let x = xStart; x <= xEnd; x++) {
+      for (let y = yStart; y <= yEnd; y++) {
+        occupiedCells.add(`${ x },${ y }`)
+      }
+    }
+  })
+
+  // 从左到右，从上到下寻找第一个空位
+  let y = 1
+  while (true) {
+    for (let x = 1; x <= gridColumns; x++) {
+      // 检查位置(x, y)是否被占用
+      if (!occupiedCells.has(`${ x },${ y }`)) {
+        // 检查这个位置是否足够放置一个1x1的卡片
+        // （在这个简单实现中，我们只检查卡片的起始位置）
+        return { xPosition: x, yPosition: y }
+      }
+    }
+    y++
+
+    // 防止无限循环的安全检查
+    if (y > 1000) {
+      // 如果找不到合适的位置，放在最后一行的下一个位置
+      return { xPosition: 1, yPosition: y }
+    }
+  }
+}
+
 const addDashboard = async (indicatorIds: string[]) => {
   console.log('Adding dashboard for indicators:', indicatorIds)
   try {
+    // 获取当前已有的仪表盘项，用于计算新卡片的位置
+    const currentItems = [...dashboardItems.value]
+
+    // 为每个indicatorId创建dashboard项
+    const dashboardItemsData = indicatorIds.map((indicatorId, index) => {
+      // 计算新卡片的位置
+      const position = calculateNewCardPosition(currentItems)
+
+      // 将新添加的卡片也加入到currentItems中，确保下一个卡片不会与它重叠
+      currentItems.push(({
+        id: '',
+        title: '',
+        displayOrder: 0,
+        commonStatistic: '',
+        xGrid: 1,
+        yGrid: 1,
+        xPosition: position.xPosition,
+        yPosition: position.yPosition,
+        show: true,
+        config: {},
+        statisticId: indicatorId
+      } as unknown) as DashboardItem)
+
+      return {
+        statisticId: indicatorId,
+        xGrid: 1,
+        yGrid: 1,
+        xPosition: position.xPosition,
+        yPosition: position.yPosition
+      }
+    })
+
     // 调用API添加dashboard项
-    await addPersonalDashboard(indicatorIds)
+    await addPersonalDashboard(dashboardItemsData, tableId.value)
     // 刷新数据
     await loadDashboardData()
   } catch (error) {
@@ -379,10 +471,19 @@ const deleteDashboard = async (indicatorIds: string[]) => {
 // 保存右侧图表顺序
 const saveDashboardOrder = async (newOrder: DashboardItem[]) => {
   try {
-    const payload = newOrder.map((item, index) => ({ id: item.id, showOrder: index }))
-    await updateDashboardOrder(payload)
+    // 保存每个图表的位置信息
+    const updatePromises = newOrder.map((item) => {
+      return updatePersonalDashboard({
+        id: item.id,
+        xGrid: item.xGrid,
+        yGrid: item.yGrid,
+        xPosition: item.xPosition,
+        yPosition: item.yPosition
+      })
+    })
+    await Promise.all(updatePromises)
   } catch (error) {
-    console.error('保存图表顺序失败:', error)
+    console.error('保存图表位置失败:', error)
   }
 }
 

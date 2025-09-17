@@ -7,7 +7,7 @@
     <!-- 卡片头部 -->
     <div class="chart-card-header">
       <div class="header-title">
-        <h3>{{ indicator.title || "未命名指标" }}</h3>
+        <h3>{{ indicator.title || '未命名指标' }}</h3>
       </div>
       <div class="header-actions">
         <a-tooltip title="编辑">
@@ -79,10 +79,10 @@
 </template>
 
 <script lang="ts" setup>
-import ChartDisplayArea from "@/framework/components/common/Portal/dashboard/indicator/dashboard/ChartDisplayArea.vue"
-import type { DashboardItem } from "../types"
+import ChartDisplayArea from '@/framework/components/common/Portal/dashboard/indicator/dashboard/ChartDisplayArea.vue'
+import type { DashboardItem } from '../types'
 import { message } from 'ant-design-vue'
-import { BarChartOutlined, DeleteOutlined, EllipsisOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 
 interface Props {
   indicator: DashboardItem;
@@ -93,15 +93,15 @@ interface Props {
 }
 
 interface Emits {
-  (e: "edit"): void;
+  (e: 'edit'): void;
 
-  (e: "delete"): void;
+  (e: 'delete'): void;
 
-  (e: "resize", indicatorId: string, xGrid: number, yGrid: number): void;
+  (e: 'resize', indicatorId: string, xGrid: number, yGrid: number): void;
 
-  (e: "resize-preview", indicatorId: string, xGrid: number, yGrid: number): void;
+  (e: 'resize-preview', indicatorId: string, xGrid: number, yGrid: number): void;
 
-  (e: "card-drop", event: DragEvent): void;
+  (e: 'card-drop', event: DragEvent): void;
 
   (e: 'drag-start', event: MouseEvent, indicator: DashboardItem): void
 
@@ -128,7 +128,7 @@ const dragStartY = ref(0)
 
 // 调整大小状态
 const isResizing = ref(false)
-const resizeDirection = ref<"right" | "bottom" | "corner">("right")
+const resizeDirection = ref<'right' | 'bottom' | 'corner'>('right')
 const startX = ref(0)
 const startY = ref(0)
 const startWidth = ref(1)
@@ -141,7 +141,7 @@ const showDropZone = ref(false)
 
 // 图表配置
 const chartConfig = computed(() => ({
-  url: props.indicator.config?.url || "",
+  url: props.indicator.config?.url || '',
   columns: props.indicator.config?.columns || []
 }))
 
@@ -151,11 +151,11 @@ const hasData = computed(() => !!chartData.value && chartData.value.length > 0)
 
 // 监听配置变化
 watch(
-  () => props.indicator,
-  () => {
-    loadChartData()
-  },
-  { deep: true }
+    () => props.indicator,
+    () => {
+      loadChartData()
+    },
+    { deep: true }
 )
 
 // 加载图表数据
@@ -169,33 +169,33 @@ const loadChartData = async () => {
       // 模拟数据
     ]
   } catch (error) {
-    console.error("加载图表数据失败:", error)
-    message.error("加载图表数据失败")
+    console.error('加载图表数据失败:', error)
+    message.error('加载图表数据失败')
   }
 }
 
 // 图表生成完成事件
 const onChartGenerated = (data: any) => {
-  console.log("图表生成完成:", data)
+  console.log('图表生成完成:', data)
 }
 
 // 刷新图表
 const refreshChart = () => {
   loadChartData()
-  message.success("图表已刷新")
+  message.success('图表已刷新')
 }
 
 // 重命名图表
 const renameChart = () => {
   // 实现重命名逻辑
-  message.info("重命名功能待实现")
+  message.info('重命名功能待实现')
 }
 
 // 开始拖拽
 const startDrag = (event: MouseEvent) => {
   // 只有在点击卡片头部区域时才允许拖拽
   const target = event.target as HTMLElement
-  if (target.closest(".header-actions") || target.closest(".resize-handle")) {
+  if (target.closest('.header-actions') || target.closest('.resize-handle')) {
     return // 点击操作按钮或调整大小手柄时不触发拖拽
   }
 
@@ -203,11 +203,11 @@ const startDrag = (event: MouseEvent) => {
   dragStartX.value = event.clientX
   dragStartY.value = event.clientY
 
-  emit("drag-start", event, props.indicator)
+  emit('drag-start', event, props.indicator)
 
   // 添加全局事件监听器
-  document.addEventListener("mousemove", onDrag)
-  document.addEventListener("mouseup", stopDrag)
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
 }
 
 // 拖拽中
@@ -223,15 +223,15 @@ const onDrag = (event: MouseEvent) => {
 const stopDrag = (event: MouseEvent) => {
   isDragging.value = false
 
-  emit("drag-end", event)
+  emit('drag-end', event)
 
   // 移除全局事件监听器
-  document.removeEventListener("mousemove", onDrag)
-  document.removeEventListener("mouseup", stopDrag)
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
 }
 
 // 开始调整大小
-const startResize = (direction: "right" | "bottom" | "corner", event: MouseEvent) => {
+const startResize = (direction: 'right' | 'bottom' | 'corner', event: MouseEvent) => {
   isResizing.value = true
   resizeDirection.value = direction
   startX.value = event.clientX
@@ -245,8 +245,8 @@ const startResize = (direction: "right" | "bottom" | "corner", event: MouseEvent
   showDropZone.value = true
 
   // 添加全局事件监听器
-  document.addEventListener("mousemove", onResize)
-  document.addEventListener("mouseup", stopResize)
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
 
   event.preventDefault()
 }
@@ -264,11 +264,11 @@ const onResize = (event: MouseEvent) => {
   let newXGrid = startWidth.value
   let newYGrid = startHeight.value
 
-  if (resizeDirection.value === "right" || resizeDirection.value === "corner") {
+  if (resizeDirection.value === 'right' || resizeDirection.value === 'corner') {
     newXGrid = Math.max(1, Math.min(props.gridColumns, startWidth.value + Math.round(deltaX / unitW)))
   }
 
-  if (resizeDirection.value === "bottom" || resizeDirection.value === "corner") {
+  if (resizeDirection.value === 'bottom' || resizeDirection.value === 'corner') {
     newYGrid = Math.max(1, startHeight.value + Math.round(deltaY / unitH))
   }
 
@@ -276,7 +276,7 @@ const onResize = (event: MouseEvent) => {
   lastXGrid.value = newXGrid
   lastYGrid.value = newYGrid
   // 实时预览更新大小（不触发保存）
-  emit("resize-preview", props.indicator.id, lastXGrid.value, lastYGrid.value)
+  emit('resize-preview', props.indicator.id, lastXGrid.value, lastYGrid.value)
 
   event.preventDefault()
 }
@@ -284,17 +284,17 @@ const onResize = (event: MouseEvent) => {
 // 停止调整大小
 const stopResize = () => {
   isResizing.value = false
-  resizeDirection.value = "right"
+  resizeDirection.value = 'right'
 
   // 隐藏拖拽放置区域
   showDropZone.value = false
 
   // 移除全局事件监听器
-  document.removeEventListener("mousemove", onResize)
-  document.removeEventListener("mouseup", stopResize)
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
 
   // 在鼠标松开时一次性提交保存
-  emit("resize", props.indicator.id, lastXGrid.value, lastYGrid.value)
+  emit('resize', props.indicator.id, lastXGrid.value, lastYGrid.value)
 }
 
 // 处理拖拽悬停事件
@@ -309,7 +309,7 @@ const handleDrop = (event: DragEvent) => {
   showDropZone.value = false
 
   // 发送放置事件给父组件
-  emit("card-drop", event)
+  emit('card-drop', event)
 }
 
 // 显示拖拽放置区域的方法（可以由父组件调用）
