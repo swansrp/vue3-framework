@@ -11,7 +11,7 @@
       v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
       v-model:selected-filter-items="selectedFilterItems" :available-data-types="availableDataTypes"
       :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart"
-      @clear-chart="clearChart" />
+      @clear-chart="clearChart" @reset-config="$emit('reset-config')" />
 
     <!-- 中间展示区域 -->
     <ChartDisplayArea
@@ -21,7 +21,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, provide, ref } from 'vue'
+import { onMounted, provide, ref, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import { getIndicatorConfig } from '@/framework/apis/portal'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
@@ -134,6 +134,8 @@ const chartDisplayAreaRef = ref()
 
 // 维度指标过滤器数据
 const dimensionIndicatorsFilter = ref<DimensionIndicatorsFilter | undefined>(undefined)
+// 当 restoreConfig 在基础数据尚未加载完成时，暂存配置以便稍后渲染
+const pendingSavedConfig = ref<any | null>(null)
 
 // 事件处理
 const toggleLeftPanel = (status?: boolean) => {
@@ -464,6 +466,200 @@ onMounted(async () => {
   window.addEventListener('dragend', () => {
     dragData.value = null
   })
+
+  // 如果在加载期间已经接收到恢复配置，且此时基础配置已就绪，则生成图表
+  if (pendingSavedConfig.value && config.value?.url && indicatorTreeData.value?.length) {
+    try {
+      // 基于已加载的指标树重建筛选维度与选中项
+      tryReconstructFilterFromConditions(pendingSavedConfig.value)
+      // 同步给展示区
+      dimensionIndicatorsFilter.value = pendingSavedConfig.value
+      await nextTick()
+      if (chartDisplayAreaRef.value) {
+        await chartDisplayAreaRef.value.generateChart()
+      }
+    } catch (e) {
+      console.warn('加载完成后自动生成图表失败:', e)
+    } finally {
+      pendingSavedConfig.value = null
+    }
+  }
+})
+
+// 从指标树中查找匹配的分组
+const findGroupInTree = (key: string | number | undefined, title: string | undefined): IndicatorGroup | null => {
+  const stack: IndicatorGroup[] = [...(indicatorTreeData.value || [])]
+  while (stack.length) {
+    const node = stack.shift() as IndicatorGroup
+    if ((key !== undefined && String(node.key) === String(key)) || (title && node.title === title)) {
+      return node
+    }
+    if (node.children && node.children.length) stack.push(...node.children)
+  }
+  return null
+}
+
+// 将保存的分组还原为面板可识别结构
+const mapSavedGroupToUi = (savedGroup: any): IndicatorGroup | null => {
+  if (!savedGroup) return null
+  const matched = findGroupInTree(savedGroup.groupValue, savedGroup.groupName)
+  if (matched) {
+    // 使用树中的结构，保证 keys 等一致
+    return {
+      key: matched.key,
+      title: matched.title,
+      items: (matched.items || []).map((it: any) => ({ ...it }))
+    }
+  }
+
+  // 兜底：根据保存的数据构造
+  try {
+    return {
+      key: savedGroup.groupValue,
+      title: savedGroup.groupName,
+      items: (savedGroup.indicatorItems || []).map((it: any) => ({
+        key: it.itemValue,
+        title: it.itemName,
+        condition: JSON.stringify(it.queryConditions || { andOr: '0', conditionList: [] })
+      }))
+    }
+  } catch (e) {
+    console.warn('回显分组构造失败:', e)
+    return null
+  }
+}
+
+// 工具：判断两个对象是否深相等（简化版）
+const deepEqual = (a: any, b: any): boolean => {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b)
+  } catch {
+    return false
+  }
+}
+
+// 基于 filterConditions 在整棵指标树中推断筛选维度与选中项
+const tryReconstructFilterFromConditions = (savedConfig: any) => {
+  filterDimension.value = null
+  selectedFilterItems.value = []
+
+  const filter = savedConfig?.filterConditions
+  if (!filter || !Array.isArray(filter.conditionList) || filter.conditionList.length === 0) {
+    return
+  }
+
+  // 扫描整棵指标树，找出与任一 filter 条件匹配的分组和项
+  let bestMatchGroup: IndicatorGroup | null = null
+  let bestMatchItemKeys: string[] = []
+
+  const groupsStack: IndicatorGroup[] = [...(indicatorTreeData.value || [])]
+  while (groupsStack.length) {
+    const grp = groupsStack.shift() as IndicatorGroup
+    if (grp.children && grp.children.length) groupsStack.push(...grp.children)
+
+    const items = grp.items || []
+    if (!items.length) continue
+
+    const matchedKeys: string[] = []
+    items.forEach((it: any) => {
+      const itemCond = parseConditionGroup(it.condition)
+      if (!itemCond || !Array.isArray(itemCond.conditionList)) return
+
+      // 情况1：单条件，直接与 filter.conditionList 的某一项对比
+      if (itemCond.conditionList.length === 1) {
+        const single = itemCond.conditionList[0]
+        const has = filter.conditionList.some((fc: any) => fc && !fc.conditionList && deepEqual(fc, single))
+        if (has) matchedKeys.push(String(it.key))
+      } else {
+        // 情况2：多条件，filter 中应以子分组的形式存在
+        const groupCandidate = { conditionList: itemCond.conditionList, andOr: itemCond.andOr }
+        const hasGroup = filter.conditionList.some((fc: any) => Array.isArray(fc?.conditionList) && deepEqual({ conditionList: fc.conditionList, andOr: fc.andOr }, groupCandidate))
+        if (hasGroup) matchedKeys.push(String(it.key))
+      }
+    })
+
+    if (matchedKeys.length > bestMatchItemKeys.length) {
+      bestMatchGroup = {
+        key: grp.key,
+        title: grp.title,
+        items: (grp.items || []).map((x: any) => ({ ...x }))
+      }
+      bestMatchItemKeys = matchedKeys
+    }
+  }
+
+  if (bestMatchGroup && bestMatchItemKeys.length) {
+    filterDimension.value = bestMatchGroup
+    selectedFilterItems.value = bestMatchItemKeys
+  }
+}
+
+// 恢复配置方法（编辑时回显到配置面板）
+const restoreConfig = async (savedConfig: any) => {
+  try {
+    console.log('Dashboard开始恢复配置:', savedConfig)
+
+    if (!savedConfig || !savedConfig.firstDimension) {
+      console.warn('无效的配置数据')
+      return
+    }
+
+    // 回显维度
+    firstDimension.value = mapSavedGroupToUi(savedConfig.firstDimension)
+    secondDimension.value = mapSavedGroupToUi(savedConfig.secondDimension)
+
+    // 回显数据配置
+    if (Array.isArray(savedConfig.dataMetrics)) {
+      dataMetrics.value = savedConfig.dataMetrics.map((m: any, idx: number) => ({
+        id: `metric_${Date.now()}_${idx}`,
+        dataName: m.dataName,
+        dataField: m.dataField,
+        chartType: m.chartType || 'bar',
+        color: m.color || '#1890ff',
+        yAxisPosition: m.yAxisPosition || 'left',
+        stackGroup: m.stackGroup || 'noStack',
+        unit: m.unit || '',
+        unitConfig: m.unitConfig,
+        itemColors: m.itemColors || {}
+      }))
+    }
+
+    // 根据 filterConditions 在整棵指标树中推断筛选维度
+    tryReconstructFilterFromConditions(savedConfig)
+
+    // 同步给图表展示，并记录待生成
+    dimensionIndicatorsFilter.value = savedConfig
+    pendingSavedConfig.value = savedConfig
+
+    // 若基础配置已就绪，立即生成图表；否则等待 onMounted 末尾的自动触发
+    if (config.value?.url && indicatorTreeData.value?.length && chartDisplayAreaRef.value) {
+      await nextTick()
+      try {
+        await chartDisplayAreaRef.value.generateChart()
+        console.log('恢复配置成功，图表已生成')
+      } catch (error) {
+        console.error('生成图表失败:', error)
+      } finally {
+        pendingSavedConfig.value = null
+      }
+    }
+  } catch (error) {
+    console.error('恢复配置失败:', error)
+    throw error
+  }
+}
+
+// 暴露方法和数据给父组件
+defineExpose({
+  dimensionIndicatorsFilter,
+  firstDimension,
+  secondDimension,
+  filterDimension,
+  selectedFilterItems,
+  dataMetrics,
+  clearChart,
+  generateChart,
+  restoreConfig
 })
 </script>
 

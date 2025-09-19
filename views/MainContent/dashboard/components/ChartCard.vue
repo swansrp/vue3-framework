@@ -1,9 +1,5 @@
 <template>
-  <div
-    :class="{ 'chart-card-loading': loading, dragging: isDragging }"
-    class="chart-card"
-    @mousedown="startDrag"
-  >
+  <div :class="{ 'chart-card-loading': loading, dragging: isDragging }" class="chart-card" @mousedown="startDrag">
     <!-- 卡片头部 -->
     <div class="chart-card-header">
       <div class="header-title">
@@ -43,27 +39,23 @@
       <div v-if="loading" class="chart-loading">
         <a-spin />
       </div>
-      <div v-else-if="hasData" class="chart-container">
-        <!-- 使用现有的ChartDisplayArea组件来显示图表 -->
-        <ChartDisplayArea
-          ref="chartDisplayAreaRef"
-          :config="chartConfig"
-          :received-data="chartData"
-          @chart-generated="onChartGenerated"
-        />
+      <div v-else-if="hasValidConfig && safeChartData.length > 0" class="chart-container">
+        <!-- 直接使用 UniversalChart 组件渲染图表 -->
+        <UniversalChart
+          v-if="isInitialized && !isDestroyed" ref="chartRef" :data="safeChartData"
+          :data-metrics="indicatorConfig?.dataMetrics || []" :categories="chartCategories || []"
+          :chart-type="chartType || 'bar'" :dimension-value-map="dimensionValueMap || { first: {}, second: {} }"
+          :loading="chartLoading" :title="''" :subtitle="''" height="100%" @click="handleChartClick" />
       </div>
       <div v-else class="chart-empty">
         <BarChartOutlined class="empty-icon" />
-        <p>暂无数据</p>
+        <p>{{ hasValidConfig ? '暂无数据' : '未配置图表' }}</p>
       </div>
 
       <!-- 蓝色虚线框 - 拖拽放置区域 -->
       <div
-        :class="{ visible: showDropZone }"
-        class="drop-zone"
-        @dragover.prevent="handleDragOver"
-        @drop.prevent="handleDrop"
-      >
+        :class="{ visible: showDropZone }" class="drop-zone" @dragover.prevent="handleDragOver"
+        @drop.prevent="handleDrop">
         <div class="drop-zone-content">
           <div class="drop-zone-indicator"></div>
           <!--          <div class="drop-zone-text">拖拽到此处放置</div>-->
@@ -79,10 +71,13 @@
 </template>
 
 <script lang="ts" setup>
-import ChartDisplayArea from '@/framework/components/common/Portal/dashboard/indicator/dashboard/ChartDisplayArea.vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
 import type { DashboardItem } from '../types'
 import { message } from 'ant-design-vue'
 import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { advancedStatisticRequest } from '@/framework/apis'
+import { getPortalConfig } from '@/framework/apis/portal/config'
 
 interface Props {
   indicator: DashboardItem;
@@ -119,7 +114,10 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // 组件引用
-const chartDisplayAreaRef = ref()
+const chartRef = ref()
+
+// 组件状态管理
+const isDestroyed = ref(false)
 
 // 拖拽状态
 const isDragging = ref(false)
@@ -139,45 +137,248 @@ const lastYGrid = ref(1)
 // 拖拽放置区域状态
 const showDropZone = ref(false)
 
-// 图表配置
-const chartConfig = computed(() => ({
-  url: props.indicator.config?.url || '',
-  columns: props.indicator.config?.columns || []
-}))
+// 图表相关状态
+const chartLoading = ref(false)
+const chartData = ref<any[]>([])
+const portalConfig = ref<any>(null)
 
-// 图表数据
-const chartData = ref<any>(null)
-const hasData = computed(() => !!chartData.value && chartData.value.length > 0)
+// 避免在组件初始化时立即触发loadChartData
+let isInitialized = false
 
-// 监听配置变化
-watch(
-    () => props.indicator,
-    () => {
-      loadChartData()
-    },
-    { deep: true }
-)
-
-// 加载图表数据
-const loadChartData = async () => {
-  // 模拟加载数据
-  // 实际应用中应该调用后端API获取数据
+// 解析保存的指标配置
+const indicatorConfig = computed(() => {
   try {
-    // 这里应该根据indicator中的参数调用相应的API获取数据
-    // 暂时使用模拟数据
-    chartData.value = [
-      // 模拟数据
-    ]
+    if (!props.indicator.config || !props.indicator.config.indicator) {
+      return null
+    }
+    const configStr = props.indicator.config.indicator
+    return typeof configStr === 'string' ? JSON.parse(configStr) : configStr
   } catch (error) {
-    console.error('加载图表数据失败:', error)
-    message.error('加载图表数据失败')
+    console.error('解析指标配置失败:', error)
+    return null
+  }
+})
+
+// 判断是否有有效配置
+const hasValidConfig = computed(() => {
+  return indicatorConfig.value &&
+    indicatorConfig.value.firstDimension &&
+    indicatorConfig.value.dataMetrics &&
+    indicatorConfig.value.dataMetrics.length > 0
+})
+
+// 安全的图表数据，确保类型正确
+const safeChartData = computed(() => {
+  return Array.isArray(chartData.value) ? chartData.value : []
+})
+
+// 图表类型
+const chartType = computed(() => {
+  const firstMetric = indicatorConfig.value?.dataMetrics?.[0]
+  return firstMetric?.chartType || 'bar'
+})
+
+// 图表分类（x轴）
+const chartCategories = computed(() => {
+  if (!chartData.value.length) return []
+  // 从数据中提取第一维度值作为分类
+  const categories = [...new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
+  return categories
+})
+
+// 图表副标题
+const chartSubtitle = computed(() => {
+  const config = indicatorConfig.value
+  if (!config) return ''
+
+  const firstDim = config.firstDimension?.groupName || '第一维度'
+  const secondDim = config.secondDimension?.groupName
+
+  return secondDim
+    ? `按${firstDim}、${secondDim}和统计指标分组`
+    : `按${firstDim}和统计指标分组`
+})
+
+// 维度值映射
+const dimensionValueMap = computed(() => {
+  const config = indicatorConfig.value
+  if (!config) return { first: {}, second: {} }
+
+  const first: Record<string, string> = {}
+  const second: Record<string, string> = {}
+
+  config.firstDimension?.indicatorItems?.forEach((item: any) => {
+    first[item.itemName] = String(item.itemValue)
+  })
+
+  config.secondDimension?.indicatorItems?.forEach((item: any) => {
+    second[item.itemName] = String(item.itemValue)
+  })
+
+  return { first, second }
+})
+
+// 加载Portal配置
+const loadPortalConfig = async () => {
+  try {
+    const tableId = props.indicator.config?.tableId
+    if (!tableId) {
+      console.warn('缺少tableId，无法加载Portal配置')
+      return
+    }
+
+    const response = await getPortalConfig(tableId)
+    portalConfig.value = response.payload
+    portalConfig.value.tableId = tableId
+  } catch (error) {
+    console.error('加载Portal配置失败:', error)
   }
 }
 
-// 图表生成完成事件
-const onChartGenerated = (data: any) => {
-  console.log('图表生成完成:', data)
+// 将指标配置转换为API请求参数
+const convertToRequestParams = (config: any) => {
+  if (!config || !portalConfig.value) return null
+
+  const metricConditions: any[] = []
+
+  // 处理一级维度
+  if (config.firstDimension?.indicatorItems) {
+    if (config.secondDimension?.indicatorItems) {
+      // 有二级维度，进行交叉组合
+      config.firstDimension.indicatorItems.forEach((firstItem: any) => {
+        config.secondDimension.indicatorItems.forEach((secondItem: any) => {
+          metricConditions.push({
+            value: `${config.firstDimension.groupValue}&&${firstItem.itemValue}&&${config.secondDimension.groupValue}&&${secondItem.itemValue}`,
+            label: `${firstItem.itemName}&&${secondItem.itemName}`,
+            condition: {
+              andOr: '0',
+              conditionList: [
+                ...(firstItem.queryConditions?.conditionList || []),
+                ...(secondItem.queryConditions?.conditionList || [])
+              ]
+            }
+          })
+        })
+      })
+    } else {
+      // 只有一级维度
+      config.firstDimension.indicatorItems.forEach((item: any) => {
+        metricConditions.push({
+          value: `${config.firstDimension.groupValue}&&${item.itemValue}`,
+          label: item.itemName,
+          condition: item.queryConditions
+        })
+      })
+    }
+  }
+
+  return {
+    selectColumnCondition: {},
+    condition: {
+      conditionList: config.filterConditions?.conditionList || [],
+      andOr: config.filterConditions?.andOr || '0'
+    },
+    sort: null,
+    metricColumn: [],
+    metricCondition: metricConditions,
+    statisticColumn: config.dataMetrics?.map((metric: any) => ({
+      value: metric.dataField,
+      label: metric.dataName
+    })) || [],
+    majorCondition: ''
+  }
 }
+
+// 加载图表数据
+const loadChartData = async () => {
+  if (!hasValidConfig.value || isDestroyed.value) {
+    chartData.value = []
+    return
+  }
+
+  try {
+    chartLoading.value = true
+
+    // 确保Portal配置已加载
+    if (!portalConfig.value) {
+      await loadPortalConfig()
+    }
+
+    if (!portalConfig.value) {
+      console.warn('Portal配置未加载，跳过图表数据加载')
+      return
+    }
+
+    const requestParams = convertToRequestParams(indicatorConfig.value)
+    if (!requestParams) {
+      console.warn('无法构建请求参数')
+      return
+    }
+
+    // 调用统计API获取数据
+    const response = await advancedStatisticRequest(
+      portalConfig.value.url,
+      new Map(Object.entries(requestParams.selectColumnCondition || {})),
+      requestParams.condition,
+      requestParams.sort,
+      requestParams.metricColumn,
+      requestParams.metricCondition,
+      requestParams.statisticColumn,
+      requestParams.majorCondition
+    )
+
+    if (response && response.payload && !isDestroyed.value) {
+      chartData.value = response.payload
+    } else {
+      chartData.value = []
+    }
+  } catch (error) {
+    console.error('加载图表数据失败:', error)
+    if (!isDestroyed.value) {
+      chartData.value = []
+      message.error('加载图表数据失败')
+    }
+  } finally {
+    if (!isDestroyed.value) {
+      chartLoading.value = false
+    }
+  }
+}
+
+// 处理图表点击事件
+const handleChartClick = (params: any) => {
+  console.log('图表点击:', params)
+  // 可以在这里实现点击跳转到详情等功能
+}
+
+// 防抖函数，避免频繁请求
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout
+  const debounced = (...args: any[]) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => func.apply(null, args), delay)
+  }
+  debounced.cancel = () => {
+    clearTimeout(timeoutId)
+  }
+  return debounced
+}
+
+// 防抖后的图表数据加载函数
+const debouncedLoadChartData = debounce(() => {
+  if (!isDestroyed.value && isInitialized) {
+    loadChartData()
+  }
+}, 300) // 300ms 防抖延迟
+
+// 监听配置变化
+watch(
+  () => props.indicator,
+  () => {
+    debouncedLoadChartData()
+  },
+  { deep: true }
+)
 
 // 刷新图表
 const refreshChart = () => {
@@ -199,15 +400,39 @@ const startDrag = (event: MouseEvent) => {
     return // 点击操作按钮或调整大小手柄时不触发拖拽
   }
 
-  isDragging.value = true
+  // 记录初始位置，但不立即设置为拖拽状态
   dragStartX.value = event.clientX
   dragStartY.value = event.clientY
 
-  emit('drag-start', event, props.indicator)
+  // 添加临时监听器，等待真正的拖拽开始
+  document.addEventListener('mousemove', onDragStart)
+  document.addEventListener('mouseup', cancelDrag)
+}
 
-  // 添加全局事件监听器
-  document.addEventListener('mousemove', onDrag)
-  document.addEventListener('mouseup', stopDrag)
+// 检测是否开始真正拖拽（移动超过阈值时）
+const onDragStart = (event: MouseEvent) => {
+  const deltaX = Math.abs(event.clientX - dragStartX.value)
+  const deltaY = Math.abs(event.clientY - dragStartY.value)
+  const dragThreshold = 5 // 拖拽阈值，移动超过5px才认为是拖拽
+
+  if (deltaX > dragThreshold || deltaY > dragThreshold) {
+    // 真正开始拖拽
+    isDragging.value = true
+    emit('drag-start', event, props.indicator)
+
+    // 移除临时监听器，添加拖拽监听器
+    document.removeEventListener('mousemove', onDragStart)
+    document.removeEventListener('mouseup', cancelDrag)
+    document.addEventListener('mousemove', onDrag)
+    document.addEventListener('mouseup', stopDrag)
+  }
+}
+
+// 取消拖拽（点击但没有移动足够距离）
+const cancelDrag = () => {
+  // 清理临时监听器
+  document.removeEventListener('mousemove', onDragStart)
+  document.removeEventListener('mouseup', cancelDrag)
 }
 
 // 拖拽中
@@ -323,8 +548,23 @@ const hideDropArea = () => {
 }
 
 // 组件挂载时加载数据
-onMounted(() => {
-  loadChartData()
+onMounted(async () => {
+  try {
+    await loadPortalConfig()
+    isInitialized = true
+    await loadChartData()
+  } catch (error) {
+    console.error('ChartCard初始化失败:', error)
+  }
+})
+
+// 组件卸载前清理
+onBeforeUnmount(() => {
+  isDestroyed.value = true
+  chartData.value = []
+  portalConfig.value = null
+  // 清理防抖定时器
+  debouncedLoadChartData.cancel()
 })
 
 // 暴露方法给父组件使用
@@ -392,7 +632,7 @@ defineExpose({
   }
 
   .chart-card-content {
-    padding: 16px;
+    padding: 8px;
     height: calc(100% - 50px);
     position: relative;
 
@@ -406,6 +646,44 @@ defineExpose({
     .chart-container {
       height: 100%;
       min-height: 200px;
+      display: flex;
+      flex-direction: column;
+
+      // 为图表设置适合卡片的样式
+      :deep(.universal-chart-container) {
+        --chart-min-height: 100%;
+        --chart-min-height-sm: 100%;
+        height: 100%;
+        flex: 1;
+        min-height: 0; // 允许收缩
+        margin: 4px;
+        padding: 4px; // 增加内边距，让图表距离边框更远
+        box-shadow: none; // 移除多余阴影
+        border-radius: 0; // 卡片内部不需要圆角
+        background: transparent; // 使用卡片背景
+
+        .echarts-container {
+          height: 100% !important;
+          min-height: 100% !important;
+          flex: 1;
+        }
+
+        .ant-spin-nested-loading {
+          height: 100%;
+          min-height: 100%;
+
+          .ant-spin-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+          }
+        }
+
+        // 隐藏标题，使用卡片标题
+        .chart-title {
+          display: none;
+        }
+      }
     }
 
     .chart-empty {

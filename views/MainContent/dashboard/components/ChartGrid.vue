@@ -12,80 +12,45 @@
     </div>
 
     <div
-      v-else
-      class="chart-grid"
-      ref="gridContainerRef"
-      :style="{
+      v-else class="chart-grid" ref="gridContainerRef" :style="{
         gridAutoRows: gridUnitHeight + 'px',
         gridTemplateColumns: `repeat(${props.gridColumns}, 1fr)`,
-      }"
-    >
+      }">
       <div
-        v-for="indicator in localIndicators"
-        :key="indicator.id"
-        class="chart-item"
-        :class="{
+        v-for="indicator in localIndicators" :key="indicator.id" class="chart-item" :class="{
           'chart-item-placeholder': isDragging && draggingIndicator?.id === indicator.id,
-        }"
-        :style="{
+        }" :style="{
           gridColumn: `${indicator.xPosition} / span ${Math.min(
             indicator.xGrid || 1,
             gridColumns
           )}`,
           gridRow: `${indicator.yPosition} / span ${indicator.yGrid || 1}`,
-        }"
-        :data-xgrid="indicator.xGrid"
-        :data-ygrid="indicator.yGrid"
-        :data-xposition="indicator.xPosition"
-        :data-yposition="indicator.yPosition"
-        @mousedown="startDrag($event, indicator)"
-      >
+        }" :data-xgrid="indicator.xGrid" :data-ygrid="indicator.yGrid" :data-xposition="indicator.xPosition"
+        :data-yposition="indicator.yPosition" @mousedown="startDrag($event, indicator)">
         <ChartCard
-          :indicator="indicator"
-          :loading="loading"
-          :grid-unit-width="gridUnitWidth"
-          :grid-unit-height="gridUnitHeight"
-          :grid-columns="props.gridColumns"
+          :indicator="indicator" :loading="loading" :grid-unit-width="gridUnitWidth"
+          :grid-unit-height="gridUnitHeight" :grid-columns="props.gridColumns"
           @edit="$emit('edit-indicator', indicator)"
-          @delete="$emit('delete-indicator', [indicator.id])"
-          @resize="handleResize"
-          @resize-preview="onResizePreview"
-          @drag-start="onCardDragStart"
-          @drag-end="onCardDragEnd"
-        />
+          @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])" @resize="handleResize"
+          @resize-preview="onResizePreview" @drag-start="onCardDragStart" />
       </div>
 
       <!-- 拖拽占位符 -->
       <div
-        v-if="isDragging && dragPosition"
-        class="drag-placeholder"
-        :class="{ 'drag-placeholder-overlap': isDragOverlapping }"
-        :style="{
+        v-if="isDragging && dragPosition" class="drag-placeholder"
+        :class="{ 'drag-placeholder-overlap': isDragOverlapping }" :style="{
           gridColumn: `${dragPosition.col} / span ${Math.min(
             draggingIndicator?.xGrid || 1,
             gridColumns
           )}`,
           gridRow: `${dragPosition.row} / span ${draggingIndicator?.yGrid || 1}`,
-        }"
-      ></div>
-    </div>
-
-    <!-- 添加指标按钮 -->
-    <div class="add-indicator-button">
-      <a-button
-        type="primary"
-        size="large"
-        shape="circle"
-        @click="$emit('add-indicator', [])"
-      >
-        <PlusOutlined />
-      </a-button>
+        }"></div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { BarChartOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import ChartCard from './ChartCard.vue'
 import type { DashboardItem } from '../types'
@@ -118,11 +83,11 @@ const emit = defineEmits<Emits>()
 // 本地预览用数据
 const localIndicators = ref<DashboardItem[]>([])
 watch(
-    () => props.indicators,
-    (val) => {
-      localIndicators.value = val.map((v) => ({ ...v }))
-    },
-    { immediate: true, deep: true }
+  () => props.indicators,
+  (val) => {
+    localIndicators.value = val.map((v) => ({ ...v }))
+  },
+  { immediate: true, deep: true }
 )
 
 // 拖拽状态
@@ -135,28 +100,10 @@ const gridUnitWidth = ref(0)
 const gridUnitHeight = ref(120)
 let resizeObserver: ResizeObserver | null = null
 
-// 卡片拖拽状态
-const isCardResizing = ref(false)
-
-// 网格配置：由 props.gridColumns 控制
-
-// 计算网格行数以适应所有卡片
-const gridRows = computed(() => {
-  // 根据卡片位置和大小计算需要的行数
-  let maxRow = 1
-  props.indicators.forEach((indicator) => {
-    const endRow = (indicator.yPosition || 1) + (indicator.yGrid || 1) - 1
-    if (endRow > maxRow) {
-      maxRow = endRow
-    }
-  })
-  return Math.max(maxRow, 5) // 至少5行
-})
-
 // 检查拖拽位置是否与其他卡片重叠
 const checkDragOverlap = (
-    position: { col: number; row: number },
-    indicator: DashboardItem
+  position: { col: number; row: number },
+  indicator: DashboardItem
 ) => {
   if (!indicator.xGrid || !indicator.yGrid) return false
 
@@ -179,44 +126,16 @@ const checkDragOverlap = (
 
     // 检查是否重叠
     if (
-        dragLeft <= itemRight &&
-        dragRight >= itemLeft &&
-        dragTop <= itemBottom &&
-        dragBottom >= itemTop
+      dragLeft <= itemRight &&
+      dragRight >= itemLeft &&
+      dragTop <= itemBottom &&
+      dragBottom >= itemTop
     ) {
       return true
     }
   }
 
   return false
-}
-
-// 计算新卡片的位置
-const calculateNewCardPosition = (): { xPosition: number; yPosition: number } => {
-  // 找到当前所有卡片中右下角的位置
-  let maxX = 0
-  let maxY = 0
-
-  props.indicators.forEach((indicator) => {
-    const endX = (indicator.xPosition || 1) + (indicator.xGrid || 1) - 1
-    const endY = (indicator.yPosition || 1) + (indicator.yGrid || 1) - 1
-
-    if (endX > maxX) maxX = endX
-    if (endY > maxY) maxY = endY
-  })
-
-  // 如果没有卡片，从位置(1,1)开始
-  if (maxX === 0 && maxY === 0) {
-    return { xPosition: 1, yPosition: 1 }
-  }
-
-  // 如果 maxX 还没有超出网格列数，则在同一行添加
-  if (maxX < props.gridColumns) {
-    return { xPosition: maxX + 1, yPosition: 1 }
-  } else {
-    // 否则在下一行开始
-    return { xPosition: 1, yPosition: maxY + 1 }
-  }
 }
 
 // 开始拖拽
@@ -279,8 +198,8 @@ const startDrag = (e: MouseEvent, indicator: DashboardItem) => {
 
 // 重新排序指标
 const reorderIndicators = (
-    indicatorId: string,
-    position: { col: number; row: number }
+  indicatorId: string,
+  position: { col: number; row: number }
 ) => {
   // 创建当前指标的副本
   const newOrder = [...props.indicators]
@@ -315,12 +234,6 @@ const onCardDragStart = (event: MouseEvent, indicator: DashboardItem) => {
   console.log('卡片开始拖拽:', indicator.id)
 }
 
-// 卡片结束拖拽事件
-const onCardDragEnd = (event: MouseEvent) => {
-  // 卡片结束拖拽时的处理逻辑
-  console.log('卡片结束拖拽')
-}
-
 // 生命周期
 onMounted(() => {
   const calcUnits = () => {
@@ -341,11 +254,11 @@ onMounted(() => {
   }
   // 指标数据变化后，等待 DOM 更新再计算
   watch(
-      () => props.indicators,
-      async () => {
-        await nextTick()
-        calcUnits()
-      }
+    () => props.indicators,
+    async () => {
+      await nextTick()
+      calcUnits()
+    }
   )
 })
 
@@ -436,13 +349,6 @@ onUnmounted(() => {
         border: 2px dashed #ff4d4f;
       }
     }
-  }
-
-  .add-indicator-button {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    z-index: 10;
   }
 }
 </style>

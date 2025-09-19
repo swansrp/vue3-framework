@@ -31,10 +31,6 @@ export default defineComponent({
       type: String,
       default: '数据统计图表'
     },
-    subtitle: {
-      type: String,
-      default: ''
-    },
     height: {
       type: String,
       default: '400px'
@@ -491,7 +487,6 @@ export default defineComponent({
       return {
         title: {
           text: props.title,
-          subtext: props.subtitle,
           left: 'center',
           textStyle: {
             fontSize: 18,
@@ -877,7 +872,6 @@ export default defineComponent({
       return {
         title: {
           text: props.title,
-          subtext: props.subtitle,
           left: 'center',
           textStyle: {
             fontSize: 18,
@@ -1088,7 +1082,6 @@ export default defineComponent({
       return {
         title: {
           text: props.title,
-          subtext: props.subtitle,
           left: 'center',
           textStyle: {
             fontSize: 18,
@@ -1246,7 +1239,13 @@ export default defineComponent({
 
       // 监听窗口大小变化
       const resizeHandler = () => {
-        chartInstance?.resize()
+        if (chartInstance && chartRef.value) {
+          try {
+            chartInstance.resize()
+          } catch (error) {
+            console.warn('窗口resize时图表调整失败:', error)
+          }
+        }
       }
       window.addEventListener('resize', resizeHandler)
 
@@ -1258,34 +1257,38 @@ export default defineComponent({
 
     // 更新图表
     const updateChart = () => {
-      if (!chartInstance) return
+      if (!chartInstance || !chartRef.value) return
 
-      if (!props.data || props.data.length === 0) {
-        // 显示空数据提示
-        chartInstance.setOption({
-          title: {
-            text: props.title,
-            subtext: '暂无数据',
-            left: 'center',
-            textStyle: {
-              fontSize: 18,
-              color: '#999'
-            }
-          },
-          series: []
-        }, true)
-        return
+      try {
+        if (!props.data || props.data.length === 0) {
+          // 显示空数据提示
+          chartInstance.setOption({
+            title: {
+              text: props.title,
+              subtext: '暂无数据',
+              left: 'center',
+              textStyle: {
+                fontSize: 18,
+                color: '#999'
+              }
+            },
+            series: []
+          }, true)
+          return
+        }
+
+        const processedData = processChartData(props.data)
+        const option = generateChartOption(processedData)
+
+        chartInstance.setOption(option, true)
+      } catch (error) {
+        console.warn('更新图表失败:', error)
       }
-
-      const processedData = processChartData(props.data)
-      const option = generateChartOption(processedData)
-
-      chartInstance.setOption(option, true)
     }
 
     // 监听数据变化
     watch(
-      () => [props.data, props.dataMetrics, props.title, props.subtitle],
+      () => [props.data, props.dataMetrics, props.title],
       () => {
         if (chartInstance) {
           updateChart()
@@ -1298,9 +1301,13 @@ export default defineComponent({
     watch(
       () => [props.height, props.width],
       async () => {
-        if (chartInstance) {
-          await nextTick()
-          chartInstance.resize()
+        if (chartInstance && chartRef.value) {
+          try {
+            await nextTick()
+            chartInstance.resize()
+          } catch (error) {
+            console.warn('图表resize失败:', error)
+          }
         }
       }
     )

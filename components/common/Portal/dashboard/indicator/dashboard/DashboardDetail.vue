@@ -154,12 +154,12 @@ const condition = computed(() => {
     :deep(.root) {
       height: 100%;
       margin: 0;
-      padding: 0;
+      padding: 15px;
     }
 
     :deep(.portal-table-space) {
       margin: 0;
-      padding: 0;
+      padding: 5px;
       height: 100%;
     }
 

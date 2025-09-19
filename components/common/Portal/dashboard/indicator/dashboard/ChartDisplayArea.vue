@@ -91,7 +91,7 @@
         ref="chartRef" v-if="chartData && chartData.length > 0 && receivedData"
         :categories="chartCategories" :chartType="autoChartType" :data="filteredChartData"
         :dataMetrics="receivedData.dataMetrics || []" :dimensionValueMap="dimensionValueMap" :loading="loading"
-        :subtitle="chartSubtitle" :title="chartTitle" height="100%" @click="handleChartClick" />
+        :title="chartTitle" height="100%" @click="handleChartClick" />
 
       <!-- 当没有数据时显示占位符 -->
       <div v-else class="chart-placeholder">
@@ -165,17 +165,6 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 // 图表实例引用
 const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
 
-// 计算属性
-const chartTitle = computed(() => {
-  return '数据分布统计'
-})
-
-const chartSubtitle = computed(() => {
-  return hasSecondDimension.value
-    ? `按${firstDimensionName.value}、${secondDimensionName.value}和统计指标分组`
-    : `按${firstDimensionName.value}和统计指标分组`
-})
-
 // 获取图表分类数据（x轴）
 const chartCategories = computed(() => {
   if (!chartData.value.length) return []
@@ -234,6 +223,11 @@ const autoChartType = computed(() => {
   // 从 dataMetrics 中获取第一个配置的 chartType
   const firstMetric = receivedData.value?.dataMetrics?.[0]
   return firstMetric?.chartType || 'bar'
+})
+
+// 图表标题
+const chartTitle = computed(() => {
+  return '数据统计图表'
 })
 
 // 维度名称到编码的映射，保证颜色等与配置一致
