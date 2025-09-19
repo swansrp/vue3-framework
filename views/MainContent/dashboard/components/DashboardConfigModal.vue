@@ -1,17 +1,6 @@
 <template>
-  <a-modal
-    v-model:open="_visible"
-    :title="modalTitle"
-    :width="800"
-    @ok="handleOk"
-    @cancel="handleCancel"
-  >
-    <a-form
-      ref="formRef"
-      :model="formState"
-      :rules="formRules"
-      layout="vertical"
-    >
+  <a-modal v-model:open="_visible" :title="modalTitle" :width="800" @ok="handleOk" @cancel="handleCancel">
+    <a-form ref="formRef" :model="formState" :rules="formRules" layout="vertical">
       <!-- 指标配置 -->
       <div>
         <a-row :gutter="16">
@@ -22,11 +11,7 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="指标类型" name="type">
-              <a-select
-                v-model:value="formState.type"
-                placeholder="请选择指标类型"
-                :options="indicatorTypeOptions"
-              />
+              <a-select v-model:value="formState.type" placeholder="请选择指标类型" :options="indicatorTypeOptions" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -34,20 +19,12 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="显示顺序" name="displayOrder">
-              <a-input-number
-                v-model:value="formState.displayOrder"
-                :min="0"
-                style="width: 100%"
-              />
+              <a-input-number v-model:value="formState.displayOrder" :min="0" style="width: 100%" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="树形顺序" name="treeOrder">
-              <a-input-number
-                v-model:value="formState.treeOrder"
-                :min="0"
-                style="width: 100%"
-              />
+              <a-input-number v-model:value="formState.treeOrder" :min="0" style="width: 100%" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -56,21 +33,13 @@
           <a-col :span="12">
             <a-form-item label="横向格子数" name="xGrid">
               <a-slider
-                v-model:value="formState.xGrid"
-                :min="1"
-                :max="5"
-                :marks="{ 1: '1', 2: '2', 3: '3', 4: '4', 5: '5' }"
-              />
+                v-model:value="formState.xGrid" :min="1" :max="5"
+                :marks="{ 1: '1', 2: '2', 3: '3', 4: '4', 5: '5' }" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="纵向格子数" name="yGrid">
-              <a-slider
-                v-model:value="formState.yGrid"
-                :min="1"
-                :max="3"
-                :marks="{ 1: '1', 2: '2', 3: '3' }"
-              />
+              <a-slider v-model:value="formState.yGrid" :min="1" :max="3" :marks="{ 1: '1', 2: '2', 3: '3' }" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -82,10 +51,8 @@
         <!-- 指标配置参数 -->
         <a-form-item label="配置参数">
           <a-textarea
-            v-model:value="formState.config"
-            :auto-size="{ minRows: 4, maxRows: 8 }"
-            placeholder="请输入指标配置参数（JSON格式）"
-          />
+            v-model:value="formState.config" :auto-size="{ minRows: 4, maxRows: 8 }"
+            placeholder="请输入指标配置参数（JSON格式）" />
         </a-form-item>
       </div>
     </a-form>
@@ -116,12 +83,25 @@ const props = withDefaults(defineProps<Props>(), {
   mode: 'add',
   tableId: ''
 })
-const _visible = ref(props.visible)
-watch(
-    () => _visible.value,
-    () => emit('update:visible', _visible.value)
-)
 const emit = defineEmits<Emits>()
+
+const _visible = ref(props.visible)
+
+// 监听props.visible变化
+watch(
+  () => props.visible,
+  (newVal) => {
+    _visible.value = newVal
+  }
+)
+
+// 监听_visible变化并通知父组件
+watch(
+  () => _visible.value,
+  (newVal) => {
+    emit('update:visible', newVal)
+  }
+)
 
 // 表单引用
 const formRef = ref()

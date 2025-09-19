@@ -5,6 +5,8 @@ export interface IndicatorNode {
   id: string
   pid: string
   key: string
+  tableId: string
+  order: number
   title: string
   show: boolean
   indicator: any
@@ -24,7 +26,12 @@ export interface DashboardItem {
   xPosition: number
   yPosition: number
   show: boolean
-  config: any
+  config: {
+    tableId?: string
+    url?: string
+    columns?: any[]
+    indicator?: string | any // 保存的指标配置JSON字符串或对象
+  }
   indicatorId?: string
 }
 

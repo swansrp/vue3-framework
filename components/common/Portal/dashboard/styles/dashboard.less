@@ -1,10 +1,11 @@
 /* 人事指标仪表盘主容器样式 */
 .hr-indicator-dashboard {
   display: flex;
-  height: 100vh;
+  height: 100%; // 由外层容器控制高度（弹窗内为100%）
   background: #f5f5f5;
   user-select: none;
   /* 禁止选中文字 */
+  min-height: 0; // 允许内部flex子项在弹窗内收缩
 }
 
 /* 右侧图表展示区域占满剩余空间 */
@@ -14,6 +15,11 @@
   /* 防止内容撑开导致溢出 */
   display: flex;
   flex-direction: column;
+  min-height: 0; // 允许内部容器在小高度下正常滚动
+  overflow: auto; // 中间区域整体可滚动（含维度控制与图表）
+  // 允许通过CSS变量设置统一的图表最小高度（在弹窗内更友好）
+  // 可按需在外层覆盖，例如 .chart-config-modal { --chart-min-height: 720px; }
+  --chart-min-height: 560px;
 }
 
 /* 全局动画效果 */

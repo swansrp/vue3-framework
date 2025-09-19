@@ -13,12 +13,7 @@
     <div v-if="!collapsed" :style="{ width: panelWidth + 'px' }" class="tree-content">
       <!-- 搜索框 -->
       <div class="search-section">
-        <a-input
-          v-model:value="searchKeyword"
-          allowClear
-          placeholder="搜索指标"
-          @input="onSearch"
-        >
+        <a-input v-model:value="searchKeyword" allowClear placeholder="搜索指标" @input="onSearch">
           <template #prefix>
             <SearchOutlined />
           </template>
@@ -34,22 +29,11 @@
           </div>
           <div class="tree-wrapper">
             <a-tree
-              ref="commonTreeKey"
-              v-model:checkedKeys="selectedCommonIndicators"
-              v-model:expandedKeys="expandedCommonKeys"
-              :checkable="true"
-              :selectable="false"
-              :show-icon="true"
-              :show-line="true"
-              :tree-data="filteredCommonIndicators"
-              block-node
-              @check="onCommonIndicatorCheck"
-            >
+              ref="commonTreeKey" v-model:checkedKeys="selectedCommonIndicators"
+              v-model:expandedKeys="expandedCommonKeys" :checkable="true" :selectable="false" :show-icon="true"
+              :show-line="true" :tree-data="filteredCommonIndicators" block-node @check="onCommonIndicatorCheck">
               <template #title="{ title }">
-                <div
-                  :class="{ 'search-highlight': isHighlighted(title) }"
-                  class="tree-node-title"
-                >
+                <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
                   <span class="node-title">{{ title }}</span>
                 </div>
               </template>
@@ -68,24 +52,12 @@
           </div>
           <div class="tree-wrapper">
             <a-tree
-              ref="personalTreeKey"
-              v-model:checkedKeys="selectedPersonalIndicators"
-              v-model:expandedKeys="expandedPersonalKeys"
-              :checkable="true"
-              :selectable="false"
-              :show-icon="true"
-              :show-line="true"
-              :tree-data="filteredPersonalIndicators"
-              :draggable="true"
-              block-node
-              @check="onPersonalIndicatorCheck"
-              @drop="onPersonalTreeDrop"
-            >
+              ref="personalTreeKey" v-model:checkedKeys="selectedPersonalIndicators"
+              v-model:expandedKeys="expandedPersonalKeys" :checkable="true" :selectable="false" :show-icon="true"
+              :show-line="true" :tree-data="filteredPersonalIndicators" :draggable="true" block-node
+              @check="onPersonalIndicatorCheck" @drop="onPersonalTreeDrop">
               <template #title="{ title, isLeaf, dataRef }">
-                <div
-                  :class="{ 'search-highlight': isHighlighted(title) }"
-                  class="tree-node-title"
-                >
+                <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
                   <span class="node-title">{{ title }}</span>
                   <div v-if="isLeaf" class="node-actions">
                     <a-tooltip title="编辑">
@@ -250,7 +222,7 @@ const initializeExpandedKeys = () => {
     const allIndicators = [...props.commonIndicators, ...props.personalIndicators]
     const expandedKeys = getDefaultExpandedKeys(allIndicators)
     expandedCommonKeys.value = expandedKeys.filter((key) =>
-        findNodeInTree(props.commonIndicators, key)
+      findNodeInTree(props.commonIndicators, key)
     )
   }
 
@@ -262,23 +234,23 @@ const initializeExpandedKeys = () => {
     const allIndicators = [...props.commonIndicators, ...props.personalIndicators]
     const expandedKeys = getDefaultExpandedKeys(allIndicators)
     expandedPersonalKeys.value = expandedKeys.filter((key) =>
-        findNodeInTree(props.personalIndicators, key)
+      findNodeInTree(props.personalIndicators, key)
     )
   }
 }
 
 // 监听搜索关键词变化，更新展开状态
 watch(
-    () => searchKeyword.value,
-    (newVal) => {
-      if (!newVal.trim()) {
-        // 如果搜索关键词为空，恢复默认展开状态
-        initializeExpandedKeys()
-      } else {
-        // 如果有搜索关键词，根据过滤结果更新展开状态
-        updateExpandedKeysForSearch(newVal)
-      }
+  () => searchKeyword.value,
+  (newVal) => {
+    if (!newVal.trim()) {
+      // 如果搜索关键词为空，恢复默认展开状态
+      initializeExpandedKeys()
+    } else {
+      // 如果有搜索关键词，根据过滤结果更新展开状态
+      updateExpandedKeysForSearch(newVal)
     }
+  }
 )
 
 // 根据搜索关键词更新展开状态
@@ -293,10 +265,10 @@ const updateExpandedKeysForSearch = (keyword: string) => {
 
   // 更新展开状态
   expandedCommonKeys.value = keysToExpandCommon.filter((key) =>
-      findNodeInTree(props.commonIndicators, key)
+    findNodeInTree(props.commonIndicators, key)
   )
   expandedPersonalKeys.value = keysToExpandPersonal.filter((key) =>
-      findNodeInTree(props.personalIndicators, key)
+    findNodeInTree(props.personalIndicators, key)
   )
 }
 
@@ -322,24 +294,24 @@ const getKeysToExpandFromFilteredTree = (tree: IndicatorNode[]): string[] => {
 
 // 过滤和高亮树形数据
 const filterAndHighlightTree = (
-    tree: IndicatorNode[],
-    keyword: string
+  tree: IndicatorNode[],
+  keyword: string
 ): IndicatorNode[] => {
   if (!keyword.trim()) return tree
 
   const filterNode = (
-      node: IndicatorNode,
-      ancestors: string[] = []
+    node: IndicatorNode,
+    ancestors: string[] = []
   ): IndicatorNode | null => {
     // 检查节点标题是否匹配
     const titleMatches =
-        node.title?.toLowerCase().includes(keyword.toLowerCase()) || false
+      node.title?.toLowerCase().includes(keyword.toLowerCase()) || false
 
     // 检查节点的items是否有匹配的
     let itemsMatch = false
     if (node.items && node.items.length > 0) {
       itemsMatch = node.items.some((item: any) =>
-          item.title?.toLowerCase().includes(keyword.toLowerCase())
+        item.title?.toLowerCase().includes(keyword.toLowerCase())
       )
     }
 
@@ -388,8 +360,8 @@ const onSearch = () => {
 const onPersonalIndicatorCheck = (checkedKeys: any, e: any) => {
   // 当checkStrictly为true时，checkedKeys是对象格式{checked: [...], halfChecked: [...]}
   const keys = Array.isArray(checkedKeys)
-      ? checkedKeys
-      : checkedKeys.checked || checkedKeys
+    ? checkedKeys
+    : checkedKeys.checked || checkedKeys
 
   // 更新选中状态
   selectedPersonalIndicators.value = keys
@@ -403,8 +375,8 @@ const onPersonalIndicatorCheck = (checkedKeys: any, e: any) => {
 const onCommonIndicatorCheck = (checkedKeys: any, e: any) => {
   // 当checkStrictly为true时，checkedKeys是对象格式{checked: [...], halfChecked: [...]}
   const keys = Array.isArray(checkedKeys)
-      ? checkedKeys
-      : checkedKeys.checked || checkedKeys
+    ? checkedKeys
+    : checkedKeys.checked || checkedKeys
 
   // 更新选中状态
   selectedCommonIndicators.value = keys
@@ -426,7 +398,7 @@ const editIndicator = (indicator: IndicatorNode) => {
 const deleteIndicator = (indicator: IndicatorNode) => {
   Modal.confirm({
     title: '确认删除',
-    content: `确定要删除指标"${ indicator.title }"吗？`,
+    content: `确定要删除指标"${indicator.title}"吗？`,
     okText: '确定',
     cancelText: '取消',
     onOk() {
@@ -437,7 +409,7 @@ const deleteIndicator = (indicator: IndicatorNode) => {
 
 const viewIndicator = (indicator: IndicatorNode) => {
   // 查看指标详情
-  message.info(`查看指标：${ indicator.title }`)
+  message.info(`查看指标：${indicator.title}`)
 }
 
 // 处理个人指标树的拖拽放下事件
@@ -472,10 +444,10 @@ const onPersonalTreeDrop = async (info: any) => {
 
 // 更新同级节点的顺序
 const updateSameLevelOrder = async (
-    dragKey: string,
-    dropKey: string,
-    dropPosition: number,
-    parentId: string | null
+  dragKey: string,
+  dropKey: string,
+  dropPosition: number,
+  parentId: string | null
 ) => {
   try {
     // 获取同级节点
@@ -564,9 +536,9 @@ const updateSameLevelOrder = async (
 
 // 更新不同父节点的情况
 const updateDifferentParent = async (
-    dragKey: string,
-    dropKey: string,
-    dropPosition: number
+  dragKey: string,
+  dropKey: string,
+  dropPosition: number
 ) => {
   try {
     // 获取拖拽节点和目标节点
@@ -654,121 +626,121 @@ onUnmounted(() => {
 
 // 监听个人指标选中状态变化，触发dashboard事件
 watch(
-    () => selectedPersonalIndicators.value,
-    (newVal, oldVal) => {
-      console.log('selectedPersonalIndicators====', newVal, oldVal)
-      // 检测新增的选中项（checked）
-      const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
-      // 检测取消选中的项（unchecked）
-      const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
+  () => selectedPersonalIndicators.value,
+  (newVal, oldVal) => {
+    console.log('selectedPersonalIndicators====', newVal, oldVal)
+    // 检测新增的选中项（checked）
+    const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
+    // 检测取消选中的项（unchecked）
+    const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
 
-      // 过滤出叶子节点的变更
-      // 叶子节点判断：没有children属性或者children为空数组
-      const leafNodesChecked = newlyChecked.filter((key: string) => {
-        const node = findNodeInTree(personalIndicators.value, key)
-        return node ? !node.children || node.children.length === 0 : false
-      })
+    // 过滤出叶子节点的变更
+    // 叶子节点判断：没有children属性或者children为空数组
+    const leafNodesChecked = newlyChecked.filter((key: string) => {
+      const node = findNodeInTree(personalIndicators.value, key)
+      return node ? !node.children || node.children.length === 0 : false
+    })
 
-      const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
-        const node = findNodeInTree(personalIndicators.value, key)
-        return node ? !node.children || node.children.length === 0 : false
-      })
+    const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
+      const node = findNodeInTree(personalIndicators.value, key)
+      return node ? !node.children || node.children.length === 0 : false
+    })
 
-      // 只对叶子节点触发新增dashboard事件
-      if (leafNodesChecked.length > 0) {
-        emit('add-dashboard', leafNodesChecked)
-      }
+    // 只对叶子节点触发新增dashboard事件
+    if (leafNodesChecked.length > 0) {
+      emit('add-dashboard', leafNodesChecked)
+    }
 
-      // 只对叶子节点触发删除dashboard事件
-      if (leafNodesUnchecked.length > 0) {
-        emit('delete-dashboard', leafNodesUnchecked)
-      }
-    },
-    { deep: true }
+    // 只对叶子节点触发删除dashboard事件
+    if (leafNodesUnchecked.length > 0) {
+      emit('delete-dashboard', leafNodesUnchecked)
+    }
+  },
+  { deep: true }
 )
 
 // 监听通用指标选中状态变化，触发dashboard事件
 watch(
-    () => selectedCommonIndicators.value,
-    (newVal, oldVal) => {
-      console.log('selectedCommonIndicators====', newVal, oldVal)
-      // 检测新增的选中项（checked）
-      const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
-      // 检测取消选中的项（unchecked）
-      const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
+  () => selectedCommonIndicators.value,
+  (newVal, oldVal) => {
+    console.log('selectedCommonIndicators====', newVal, oldVal)
+    // 检测新增的选中项（checked）
+    const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
+    // 检测取消选中的项（unchecked）
+    const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
 
-      // 过滤出叶子节点的变更
-      // 叶子节点判断：没有children属性或者children为空数组
-      const leafNodesChecked = newlyChecked.filter((key: string) => {
-        const node = findNodeInTree(commonIndicators.value, key)
-        return node ? !node.children || node.children.length === 0 : false
-      })
+    // 过滤出叶子节点的变更
+    // 叶子节点判断：没有children属性或者children为空数组
+    const leafNodesChecked = newlyChecked.filter((key: string) => {
+      const node = findNodeInTree(commonIndicators.value, key)
+      return node ? !node.children || node.children.length === 0 : false
+    })
 
-      const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
-        const node = findNodeInTree(commonIndicators.value, key)
-        return node ? !node.children || node.children.length === 0 : false
-      })
+    const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
+      const node = findNodeInTree(commonIndicators.value, key)
+      return node ? !node.children || node.children.length === 0 : false
+    })
 
-      // 只对叶子节点触发新增dashboard事件
-      if (leafNodesChecked.length > 0) {
-        emit('add-dashboard', leafNodesChecked)
-      }
+    // 只对叶子节点触发新增dashboard事件
+    if (leafNodesChecked.length > 0) {
+      emit('add-dashboard', leafNodesChecked)
+    }
 
-      // 只对叶子节点触发删除dashboard事件
-      if (leafNodesUnchecked.length > 0) {
-        emit('delete-dashboard', leafNodesUnchecked)
-      }
-    },
-    { deep: true }
+    // 只对叶子节点触发删除dashboard事件
+    if (leafNodesUnchecked.length > 0) {
+      emit('delete-dashboard', leafNodesUnchecked)
+    }
+  },
+  { deep: true }
 )
 
 // 监听props中选中状态的变化
 watch(
-    () => props.selectedCommonIndicators,
-    (newVal) => {
-      if (newVal) {
-        selectedCommonIndicators.value = [...newVal]
-        console.log('IndicatorTree - Updated selectedCommonIndicators from props:', newVal)
-      }
-    },
-    { deep: true }
+  () => props.selectedCommonIndicators,
+  (newVal) => {
+    if (newVal) {
+      selectedCommonIndicators.value = [...newVal]
+      console.log('IndicatorTree - Updated selectedCommonIndicators from props:', newVal)
+    }
+  },
+  { deep: true }
 )
 
 watch(
-    () => props.selectedPersonalIndicators,
-    (newVal) => {
-      if (newVal) {
-        selectedPersonalIndicators.value = [...newVal]
-        console.log(
-            'IndicatorTree - Updated selectedPersonalIndicators from props:',
-            newVal
-        )
-      }
-    },
-    { deep: true }
+  () => props.selectedPersonalIndicators,
+  (newVal) => {
+    if (newVal) {
+      selectedPersonalIndicators.value = [...newVal]
+      console.log(
+        'IndicatorTree - Updated selectedPersonalIndicators from props:',
+        newVal
+      )
+    }
+  },
+  { deep: true }
 )
 
 // 监听props中展开状态的变化
 watch(
-    () => props.expandedCommonKeys,
-    (newVal) => {
-      if (newVal) {
-        expandedCommonKeys.value = [...newVal]
-        console.log('IndicatorTree - Updated expandedCommonKeys from props:', newVal)
-      }
-    },
-    { deep: true }
+  () => props.expandedCommonKeys,
+  (newVal) => {
+    if (newVal) {
+      expandedCommonKeys.value = [...newVal]
+      console.log('IndicatorTree - Updated expandedCommonKeys from props:', newVal)
+    }
+  },
+  { deep: true }
 )
 
 watch(
-    () => props.expandedPersonalKeys,
-    (newVal) => {
-      if (newVal) {
-        expandedPersonalKeys.value = [...newVal]
-        console.log('IndicatorTree - Updated expandedPersonalKeys from props:', newVal)
-      }
-    },
-    { deep: true }
+  () => props.expandedPersonalKeys,
+  (newVal) => {
+    if (newVal) {
+      expandedPersonalKeys.value = [...newVal]
+      console.log('IndicatorTree - Updated expandedPersonalKeys from props:', newVal)
+    }
+  },
+  { deep: true }
 )
 
 // 在树中查找节点

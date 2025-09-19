@@ -107,6 +107,7 @@ const emit = defineEmits<{
     dataMetrics: DataMetricUI[]
   } | undefined]
   'clearChart': []
+  'resetConfig': []
 }>()
 
 // 本地状态
@@ -148,6 +149,17 @@ watch(
 )
 
 // 监听props变化，同步本地状态
+// 同步数据配置（用于编辑回显时父组件更新props）
+watch(
+  () => props.dataMetrics,
+  (newValue) => {
+    // 仅在确实不同的时候更新，避免丢失本地未提交的修改
+    if (JSON.stringify(newValue) !== JSON.stringify(dataMetrics.value)) {
+      dataMetrics.value = [...newValue]
+    }
+  },
+  { deep: true, immediate: true }
+)
 watch(
   () => props.filterDimension,
   (newValue) => {
@@ -221,11 +233,11 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
     // 如果修改了图表类型为饼图，则重置坐标轴和堆叠设置
     if (field === 'chartType' && value === 'pie') {
       metric.yAxisPosition = 'left'
-      metric.stackGroup = 'stack1'
+      metric.stackGroup = 'noStack'
     }
     // 如果修改了图表类型为折线图，则重置堆叠设置
     else if (field === 'chartType' && value === 'line') {
-      metric.stackGroup = 'stack1'
+      metric.stackGroup = 'noStack'
     }
 
     emit('update:dataMetrics', dataMetrics.value)
@@ -294,7 +306,7 @@ const resetConfiguration = () => {
     chartType: 'bar',
     color: '#1890ff',
     yAxisPosition: 'left',
-    stackGroup: 'stack1',
+    stackGroup: 'noStack',
     unit: '',
     itemColors: {}
   }
@@ -311,6 +323,9 @@ const resetConfiguration = () => {
 
   // 清除右侧图表
   emit('clearChart')
+
+  // 发射重置配置事件
+  emit('resetConfig')
 }
 
 // 颜色生成函数
