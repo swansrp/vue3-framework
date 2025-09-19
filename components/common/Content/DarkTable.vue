@@ -28,7 +28,6 @@
               :table-id="tableId"
               hide-refresh
               hide-row-selection
-              text-area-in-expanded
               multi-header>
               <!-- 转发所有具名插槽 -->
               <template
