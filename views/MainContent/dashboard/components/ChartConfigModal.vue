@@ -99,7 +99,7 @@ watch(() => props.visible, async (newVal) => {
       await loadEditData()
     } else {
       // 新增模式：设置默认名称
-      indicatorName.value = '个人指标'
+      indicatorName.value = ''
     }
   }
 })
@@ -114,6 +114,7 @@ const validateIndicatorName = () => {
 
   if (!indicatorName.value || !indicatorName.value.trim()) {
     indicatorNameError.value = '指标名称不能为空'
+    message.error('指标名称不能为空')
     return false
   }
 
@@ -133,8 +134,6 @@ const validateIndicatorName = () => {
 // 加载编辑数据
 const loadEditData = async () => {
   try {
-    console.log('开始加载编辑数据，editData:', props.editData)
-
     if (!props.editData?.id) {
       message.error('无法获取指标ID')
       return
@@ -146,7 +145,6 @@ const loadEditData = async () => {
       try {
         const raw = props.editData.indicator
         savedConfig = typeof raw === 'string' ? JSON.parse(raw) : raw
-        console.log('从 editData.indicator 解析的配置数据:', savedConfig)
       } catch (e) {
         console.warn('editData.indicator 解析失败，尝试通过接口查找:', e)
       }
@@ -156,7 +154,6 @@ const loadEditData = async () => {
     if (!savedConfig) {
       const response = await getPersonalStatistic(props.tableId)
       const personalStatistics = response.payload || []
-      console.log('获取到的个人指标数据(树):', personalStatistics)
 
       const findById = (nodes: any[], id: string | number): any | null => {
         for (const n of nodes) {
@@ -173,7 +170,6 @@ const loadEditData = async () => {
         ? findById(personalStatistics, props.editData.id)
         : null
 
-      console.log('递归找到的当前指标节点:', currentNode)
       if (currentNode && currentNode.indicator) {
         try {
           savedConfig = typeof currentNode.indicator === 'string'
@@ -186,7 +182,6 @@ const loadEditData = async () => {
     }
 
     if (!savedConfig) {
-      console.log('未找到可用的配置数据，保持新增/空配置状态')
       return
     }
 
@@ -201,7 +196,6 @@ const loadEditData = async () => {
 
     // 恢复配置到dashboard组件
     if (dashboardRef.value && savedConfig) {
-      console.log('开始恢复配置到dashboard组件')
       await restoreConfigToDashboard(savedConfig)
     }
   } catch (error) {
@@ -213,17 +207,12 @@ const loadEditData = async () => {
 // 恢复配置到dashboard组件
 const restoreConfigToDashboard = async (savedConfig: any) => {
   try {
-    console.log('ChartConfigModal开始恢复配置:', savedConfig)
-
     // 这里需要根据savedConfig的格式来恢复配置
     // 如果savedConfig是dimensionIndicatorsFilter格式
     if (savedConfig.firstDimension && dashboardRef.value) {
-      console.log('调用dashboard的restoreConfig方法')
-
       // 调用dashboard组件的恢复配置方法
       if (typeof dashboardRef.value.restoreConfig === 'function') {
         await dashboardRef.value.restoreConfig(savedConfig)
-        console.log('dashboard restoreConfig调用完成')
       } else {
         console.error('dashboard组件没有restoreConfig方法')
         // 如果没有restoreConfig方法，直接设置dimensionIndicatorsFilter
@@ -286,8 +275,6 @@ const handleSaveConfig = async () => {
       indicatorData.id = props.editData.id
     }
 
-    console.log('发送给后端的数据:', indicatorData)
-
     // 根据模式调用不同的API
     if (props.isEditMode && props.editData?.id) {
       // 编辑模式：调用更新API
@@ -322,7 +309,6 @@ const handleSave = async (data: any) => {
 
 // 处理重置配置
 const handleResetConfig = () => {
-  console.log('配置面板被重置')
 
   // 清空指标名称
   indicatorName.value = ''

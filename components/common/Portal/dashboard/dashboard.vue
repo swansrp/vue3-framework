@@ -597,7 +597,6 @@ const tryReconstructFilterFromConditions = (savedConfig: any) => {
 // 恢复配置方法（编辑时回显到配置面板）
 const restoreConfig = async (savedConfig: any) => {
   try {
-    console.log('Dashboard开始恢复配置:', savedConfig)
 
     if (!savedConfig || !savedConfig.firstDimension) {
       console.warn('无效的配置数据')
@@ -636,7 +635,6 @@ const restoreConfig = async (savedConfig: any) => {
       await nextTick()
       try {
         await chartDisplayAreaRef.value.generateChart()
-        console.log('恢复配置成功，图表已生成')
       } catch (error) {
         console.error('生成图表失败:', error)
       } finally {

@@ -97,8 +97,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { message, Modal } from 'ant-design-vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {message, Modal} from 'ant-design-vue'
 import {
   BarChartOutlined,
   DeleteOutlined,
@@ -109,8 +109,8 @@ import {
   PlusOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
-import type { IndicatorNode } from '../types'
-import { updateStatisticOrder, updateStatisticPid } from '../api'
+import type {IndicatorNode} from '../types'
+import {updateStatisticOrder, updateStatisticPid} from '../api'
 
 interface Props {
   collapsed: boolean;
@@ -407,11 +407,6 @@ const deleteIndicator = (indicator: IndicatorNode) => {
   })
 }
 
-const viewIndicator = (indicator: IndicatorNode) => {
-  // 查看指标详情
-  message.info(`查看指标：${indicator.title}`)
-}
-
 // 处理个人指标树的拖拽放下事件
 const onPersonalTreeDrop = async (info: any) => {
   try {
@@ -597,8 +592,7 @@ const startResize = (e: MouseEvent) => {
   const handleMouseMove = (e: MouseEvent) => {
     if (!isResizing.value) return
     const deltaX = e.clientX - startX
-    const newWidth = Math.max(200, Math.min(600, startWidth + deltaX))
-    panelWidth.value = newWidth
+    panelWidth.value = Math.max(200, Math.min(600, startWidth + deltaX))
   }
 
   const handleMouseUp = () => {
@@ -628,7 +622,6 @@ onUnmounted(() => {
 watch(
   () => selectedPersonalIndicators.value,
   (newVal, oldVal) => {
-    console.log('selectedPersonalIndicators====', newVal, oldVal)
     // 检测新增的选中项（checked）
     const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
     // 检测取消选中的项（unchecked）
@@ -663,7 +656,6 @@ watch(
 watch(
   () => selectedCommonIndicators.value,
   (newVal, oldVal) => {
-    console.log('selectedCommonIndicators====', newVal, oldVal)
     // 检测新增的选中项（checked）
     const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
     // 检测取消选中的项（unchecked）
@@ -700,7 +692,6 @@ watch(
   (newVal) => {
     if (newVal) {
       selectedCommonIndicators.value = [...newVal]
-      console.log('IndicatorTree - Updated selectedCommonIndicators from props:', newVal)
     }
   },
   { deep: true }
@@ -711,10 +702,6 @@ watch(
   (newVal) => {
     if (newVal) {
       selectedPersonalIndicators.value = [...newVal]
-      console.log(
-        'IndicatorTree - Updated selectedPersonalIndicators from props:',
-        newVal
-      )
     }
   },
   { deep: true }
@@ -726,7 +713,6 @@ watch(
   (newVal) => {
     if (newVal) {
       expandedCommonKeys.value = [...newVal]
-      console.log('IndicatorTree - Updated expandedCommonKeys from props:', newVal)
     }
   },
   { deep: true }
@@ -737,7 +723,6 @@ watch(
   (newVal) => {
     if (newVal) {
       expandedPersonalKeys.value = [...newVal]
-      console.log('IndicatorTree - Updated expandedPersonalKeys from props:', newVal)
     }
   },
   { deep: true }
@@ -928,7 +913,7 @@ const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | nul
             }
 
             .ant-tree-checkbox {
-              margin-block-start: 0px;
+              margin-block-start: 0;
               margin-right: 8px;
             }
           }
