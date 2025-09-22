@@ -45,7 +45,7 @@
           v-if="isInitialized && !isDestroyed" ref="chartRef" :data="safeChartData"
           :data-metrics="indicatorConfig?.dataMetrics || []" :categories="chartCategories || []"
           :chart-type="chartType || 'bar'" :dimension-value-map="dimensionValueMap || { first: {}, second: {} }"
-          :loading="chartLoading" :title="''" :subtitle="''" height="100%" @click="handleChartClick" />
+          :loading="chartLoading" :title="''" :subtitle="''" height="100%" />
       </div>
       <div v-else class="chart-empty">
         <BarChartOutlined class="empty-icon" />
@@ -71,13 +71,13 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
-import type { DashboardItem } from '../types'
-import { message } from 'ant-design-vue'
-import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined } from '@ant-design/icons-vue'
-import { advancedStatisticRequest } from '@/framework/apis'
-import { getPortalConfig } from '@/framework/apis/portal/config'
+import type {DashboardItem} from '../types'
+import {message} from 'ant-design-vue'
+import {BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined} from '@ant-design/icons-vue'
+import {advancedStatisticRequest} from '@/framework/apis'
+import {getPortalConfig} from '@/framework/apis/portal/config'
 
 interface Props {
   indicator: DashboardItem;
@@ -182,12 +182,11 @@ const chartType = computed(() => {
 const chartCategories = computed(() => {
   if (!chartData.value.length) return []
   // 从数据中提取第一维度值作为分类
-  const categories = [...new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
-  return categories
+  return [...new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
 })
 
 // 图表副标题
-const chartSubtitle = computed(() => {
+computed(() => {
   const config = indicatorConfig.value
   if (!config) return ''
 
@@ -195,9 +194,9 @@ const chartSubtitle = computed(() => {
   const secondDim = config.secondDimension?.groupName
 
   return secondDim
-    ? `按${firstDim}、${secondDim}和统计指标分组`
-    : `按${firstDim}和统计指标分组`
-})
+      ? `按${firstDim}、${secondDim}和统计指标分组`
+      : `按${firstDim}和统计指标分组`
+});
 
 // 维度值映射
 const dimensionValueMap = computed(() => {
@@ -343,12 +342,6 @@ const loadChartData = async () => {
       chartLoading.value = false
     }
   }
-}
-
-// 处理图表点击事件
-const handleChartClick = (params: any) => {
-  console.log('图表点击:', params)
-  // 可以在这里实现点击跳转到详情等功能
 }
 
 // 防抖函数，避免频繁请求

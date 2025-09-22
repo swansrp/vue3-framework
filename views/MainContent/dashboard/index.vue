@@ -33,11 +33,6 @@
       </div>
     </div>
 
-    <!-- 配置弹窗 -->
-    <dashboard-config-modal
-      v-model:visible="configModalVisible" :config="currentConfig" :mode="configMode"
-      :table-id="tableId" @save="saveConfig" />
-
     <!-- 图表配置弹窗 -->
     <chart-config-modal
       v-model:visible="chartConfigModalVisible" :table-id="tableId" :edit-data="currentEditData"
@@ -46,24 +41,21 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import IndicatorTree from './components/IndicatorTree.vue'
 import ChartGrid from './components/ChartGrid.vue'
-import DashboardConfigModal from './components/DashboardConfigModal.vue'
 import ChartConfigModal from './components/ChartConfigModal.vue'
 import {
   addPersonalDashboard,
-  addPersonalStatistic,
   deletePersonalDashboard,
   deletePersonalStatistic,
   getCommonStatistic,
   getPersonalDashboard,
   getPersonalStatistic,
-  updatePersonalDashboard,
-  updatePersonalStatistic
+  updatePersonalDashboard
 } from './api'
 import type { DashboardItem, IndicatorNode } from './types'
 
@@ -71,20 +63,17 @@ import type { DashboardItem, IndicatorNode } from './types'
 const { currentRoute } = useRouter()
 const route = currentRoute.value
 const tableId = computed(
-  () =>
-    (route.query
-      ? route.query.tableId
-        ? route.query.tableId
-        : undefined
-      : undefined) as string
+    () =>
+        (route.query
+            ? route.query.tableId
+                ? route.query.tableId
+                : undefined
+            : undefined) as string
 )
 
 // 页面状态
 const loading = ref(false)
 const sidebarCollapsed = ref(false)
-const configModalVisible = ref(false)
-const currentConfig = ref<IndicatorNode | null>(null)
-const configMode = ref<any>('add')
 
 // 图表配置弹窗状态
 const chartConfigModalVisible = ref(false)
@@ -121,16 +110,14 @@ const findNodeById = (nodes: IndicatorNode[], id: string): IndicatorNode | null 
 // 工具：获取节点的所有父节点key
 const getParentNodeKeys = (nodes: IndicatorNode[], id: string): string[] => {
   const result: string[] = []
-
   const findParents = (
-    nodes: IndicatorNode[],
-    id: string,
-    parents: string[]
+      nodes: IndicatorNode[],
+      id: string,
+      parents: string[]
   ): boolean => {
     for (const node of nodes) {
       if (node.id === id) {
         result.push(...parents)
-        console.log(`Found node ${id}, parents:`, parents)
         return true
       }
       if (node.children) {
@@ -143,7 +130,6 @@ const getParentNodeKeys = (nodes: IndicatorNode[], id: string): string[] => {
   }
 
   findParents(nodes, id, [])
-  console.log(`Parent keys for node ${id}:`, result)
   return result
 }
 
@@ -164,67 +150,43 @@ const loadDashboardData = async () => {
 
     // 以 getDashboard 的顺序与大小为准，根据实际接口返回格式映射
     const dashboardItemsData = (dashboardResp.payload || [])
-      .map((d: any) => {
-        const item = {
-          id: d.id,
-          title: d.title ?? '',
-          displayOrder: Number(d.order ?? 0),
-          xGrid: Number(d.xGrid ?? d.xgrid ?? 2),
-          yGrid: Number(d.yGrid ?? d.ygrid ?? 2),
-          xPosition: Number(d.xPosition ?? d.xposition ?? 1),
-          yPosition: Number(d.yPosition ?? d.yposition ?? 1),
-          show: true, // 默认显示
-          commonStatistic: d.commonStatistic,
-          config: {
-            tableId: tableId.value,
-            indicator: d.indicator, // 保持原始格式，让ChartCard自己解析
-            url: '', // 如果需要其他配置可以在这里添加
-            columns: []
-          },
-          indicatorId: d.statisticId
-        }
-        console.log(
-          'Dashboard item:',
-          item.title,
-          'xGrid:',
-          item.xGrid,
-          'yGrid:',
-          item.yGrid,
-          'xPosition:',
-          item.xPosition,
-          'yPosition:',
-          item.yPosition
-        )
-        return item
-      })
-      .sort((a: DashboardItem, b: DashboardItem) => a.displayOrder - b.displayOrder)
+        .map((d: any) => {
+          const item = {
+            id: d.id,
+            title: d.title ?? '',
+            displayOrder: Number(d.order ?? 0),
+            xGrid: Number(d.xGrid ?? d.xgrid ?? 2),
+            yGrid: Number(d.yGrid ?? d.ygrid ?? 2),
+            xPosition: Number(d.xPosition ?? d.xposition ?? 1),
+            yPosition: Number(d.yPosition ?? d.yposition ?? 1),
+            show: true, // 默认显示
+            commonStatistic: d.commonStatistic,
+            config: {
+              tableId: tableId.value,
+              indicator: d.indicator, // 保持原始格式，让ChartCard自己解析
+              url: '', // 如果需要其他配置可以在这里添加
+              columns: []
+            },
+            indicatorId: d.statisticId
+          }
+          return item
+        })
+        .sort((a: DashboardItem, b: DashboardItem) => a.displayOrder - b.displayOrder)
 
     dashboardItems.value = dashboardItemsData
 
     // 根据 dashboard 数据中的 statisticId 选中左侧树节点
     const commonIds = dashboardItemsData
-      .filter((item: DashboardItem) => item.commonStatistic === '1')
-      .map((item: DashboardItem) => item.indicatorId)
+        .filter((item: DashboardItem) => item.commonStatistic === '1')
+        .map((item: DashboardItem) => item.indicatorId)
 
     const personalIds = dashboardItemsData
-      .filter((item: DashboardItem) => item.commonStatistic !== '1')
-      .map((item: DashboardItem) => item.indicatorId)
+        .filter((item: DashboardItem) => item.commonStatistic !== '1')
+        .map((item: DashboardItem) => item.indicatorId)
 
-    console.log('loadDashboardData - commonIds:', commonIds)
-    console.log('loadDashboardData - personalIds:', personalIds)
-    console.log('loadDashboardData - commonIndicators:', commonIndicators.value)
-    console.log('loadDashboardData - personalIndicators:', personalIndicators.value)
-
-    // 更新选中的指标，保持现有选中状态的基础上添加新的选中项
-    selectedCommonIndicators.value = [
-      ...new Set([...selectedCommonIndicators.value, ...commonIds])
-    ]
-    selectedPersonalIndicators.value = [
-      ...new Set([...selectedPersonalIndicators.value, ...personalIds])
-    ]
-
-    console.log('Updated selectedCommonIndicators:', selectedCommonIndicators.value)
-    console.log('Updated selectedPersonalIndicators:', selectedPersonalIndicators.value)
+    // 更新选中的指标，只选中实际存在于dashboard中的指标
+    selectedCommonIndicators.value = commonIds
+    selectedPersonalIndicators.value = personalIds
 
     // 获取需要展开的节点keys
     const commonExpandedKeys = new Set<string>()
@@ -245,9 +207,6 @@ const loadDashboardData = async () => {
     // 更新展开的节点keys
     expandedCommonKeys.value = Array.from(commonExpandedKeys)
     expandedPersonalKeys.value = Array.from(personalExpandedKeys)
-
-    console.log('Updated expandedCommonKeys:', expandedCommonKeys.value)
-    console.log('Updated expandedPersonalKeys:', expandedPersonalKeys.value)
   } catch (error) {
     console.error('加载仪表盘数据失败:', error)
     message.error('加载数据失败，请稍后重试')
@@ -269,23 +228,21 @@ const updateSidebarCollapsed = (collapsed: boolean) => {
 // 更新选中的通用指标
 const updateSelectedCommonIndicators = (selected: string[]) => {
   if (
-    selected.length !== selectedCommonIndicators.value.length ||
-    !selected.every((id) => selectedCommonIndicators.value.includes(id))
+      selected.length !== selectedCommonIndicators.value.length ||
+      !selected.every((id) => selectedCommonIndicators.value.includes(id))
   ) {
     selectedCommonIndicators.value = selected
   }
-  console.log('updateSelectedCommonIndicators', selectedCommonIndicators.value)
 }
 
 // 更新选中的个人指标
 const updateSelectedPersonalIndicators = (selected: string[]) => {
   if (
-    selected.length !== selectedPersonalIndicators.value.length ||
-    !selected.every((id) => selectedPersonalIndicators.value.includes(id))
+      selected.length !== selectedPersonalIndicators.value.length ||
+      !selected.every((id) => selectedPersonalIndicators.value.includes(id))
   ) {
     selectedPersonalIndicators.value = selected
   }
-  console.log('updateSelectedCommonIndicators', selectedPersonalIndicators.value)
 }
 
 // 打开指标配置（左下角按钮和编辑按钮使用）
@@ -305,8 +262,8 @@ const openIndicatorConfig = (config?: IndicatorNode) => {
     try {
       // 尝试解析indicator配置
       const parsedConfig = typeof config.indicator === 'string'
-        ? JSON.parse(config.indicator)
-        : config.indicator
+          ? JSON.parse(config.indicator)
+          : config.indicator
       hasConfig = parsedConfig && parsedConfig.firstDimension
     } catch (error) {
       console.warn('解析指标配置失败:', error)
@@ -316,15 +273,11 @@ const openIndicatorConfig = (config?: IndicatorNode) => {
 
   if (hasConfig) {
     // 有缓存配置，编辑模式
-    console.log('打开编辑模式，配置数据:', config)
-    console.log('editData ID:', config.id, '类型:', typeof config.id)
-    console.log('editData indicator:', config.indicator)
     currentEditData.value = config
     isEditMode.value = true
     chartConfigModalVisible.value = true
   } else {
     // 没有缓存配置，但有指标数据，仍然是编辑模式（只是没有图表配置）
-    console.log('打开编辑模式（无图表配置），指标数据:', config)
     currentEditData.value = config
     isEditMode.value = true
     chartConfigModalVisible.value = true
@@ -334,34 +287,10 @@ const openIndicatorConfig = (config?: IndicatorNode) => {
 // 从右侧图表编辑入口打开对应左侧指标节点
 const editIndicatorFromChart = (item: DashboardItem) => {
   const node =
-    findNodeById(commonIndicators.value, item.indicatorId || item.id) ||
-    findNodeById(personalIndicators.value, item.indicatorId || item.id)
+      findNodeById(commonIndicators.value, item.indicatorId || item.id) ||
+      findNodeById(personalIndicators.value, item.indicatorId || item.id)
   if (node) {
     openIndicatorConfig(node)
-  }
-}
-
-// 保存配置
-const saveConfig = async (config: IndicatorNode) => {
-  try {
-    loading.value = true
-
-    if (configMode.value === 'add') {
-      // 新增个人指标
-      await addPersonalStatistic(config)
-    } else {
-      // 更新个人指标
-      await updatePersonalStatistic(config)
-    }
-
-    await loadDashboardData()
-    configModalVisible.value = false
-    message.success('保存成功')
-  } catch (error) {
-    console.error('保存配置失败:', error)
-    message.error('保存失败，请稍后重试')
-  } finally {
-    loading.value = false
   }
 }
 
@@ -383,9 +312,10 @@ const deleteIndicator = async (indicatorId: string) => {
   await loadDashboardData()
 }
 
-// 计算新卡片的位置
+// 计算新卡片的位置（确保能容纳2x2大小）
 const calculateNewCardPosition = (
-  currentItems: DashboardItem[]
+    currentItems: DashboardItem[],
+    cardSize: { xGrid: number; yGrid: number } = { xGrid: 2, yGrid: 2 }
 ): { xPosition: number; yPosition: number } => {
   // 默认网格列数
   const gridColumns = 7
@@ -412,57 +342,75 @@ const calculateNewCardPosition = (
     }
   })
 
-  // 从左到右，从上到下寻找第一个空位
+  // 检查指定位置是否能放置指定大小的组件
+  const canPlaceAt = (x: number, y: number, width: number, height: number): boolean => {
+    // 检查是否超出网格边界
+    if (x + width - 1 > gridColumns || x < 1 || y < 1) {
+      return false
+    }
+
+    // 检查所需的所有单元格是否都空闲
+    for (let checkX = x; checkX < x + width; checkX++) {
+      for (let checkY = y; checkY < y + height; checkY++) {
+        if (occupiedCells.has(`${checkX},${checkY}`)) {
+          return false
+        }
+      }
+    }
+    return true
+  }
+
+  // 从左到右，从上到下寻找第一个能容纳指定大小的空位
   let y = 1
-  while (true) {
-    for (let x = 1; x <= gridColumns; x++) {
-      // 检查位置(x, y)是否被占用
-      if (!occupiedCells.has(`${x},${y}`)) {
-        // 检查这个位置是否足够放置一个1x1的卡片
-        // （在这个简单实现中，我们只检查卡片的起始位置）
+  while (y <= 100) { // 限制搜索范围防止无限循环
+    for (let x = 1; x <= gridColumns - cardSize.xGrid + 1; x++) {
+      if (canPlaceAt(x, y, cardSize.xGrid, cardSize.yGrid)) {
         return { xPosition: x, yPosition: y }
       }
     }
     y++
-
-    // 防止无限循环的安全检查
-    if (y > 1000) {
-      // 如果找不到合适的位置，放在最后一行的下一个位置
-      return { xPosition: 1, yPosition: y }
-    }
   }
+
+  // 如果找不到合适的位置，放在最底部（所有现有组件下方）
+  const maxY = Math.max(
+      ...currentItems.map(item => (item.yPosition || 1) + (item.yGrid || 1) - 1),
+      0
+  )
+  return { xPosition: 1, yPosition: maxY + 1 }
 }
 
 const addDashboard = async (indicatorIds: string[]) => {
-  console.log('Adding dashboard for indicators:', indicatorIds)
   try {
     // 获取当前已有的仪表盘项，用于计算新卡片的位置
-    const currentItems = [...dashboardItems.value]
+    let currentItems = [...dashboardItems.value]
 
     // 为每个indicatorId创建dashboard项
-    const dashboardItemsData = indicatorIds.map((indicatorId, _index) => {
-      // 计算新卡片的位置
-      const position = calculateNewCardPosition(currentItems)
+    const dashboardItemsData = indicatorIds.map((indicatorId, index) => {
+      // 计算新卡片的位置（确保2x2大小）
+      const cardSize = { xGrid: 2, yGrid: 2 }
+      const position = calculateNewCardPosition(currentItems, cardSize)
 
       // 将新添加的卡片也加入到currentItems中，确保下一个卡片不会与它重叠
-      currentItems.push(({
-        id: '',
+      const newCard: DashboardItem = {
+        id: `temp_${indicatorId}_${index}`, // 临时ID，避免重复
         title: '',
         displayOrder: 0,
         commonStatistic: '',
-        xGrid: 2,
-        yGrid: 2,
+        xGrid: cardSize.xGrid,
+        yGrid: cardSize.yGrid,
         xPosition: position.xPosition,
         yPosition: position.yPosition,
         show: true,
         config: {},
         statisticId: indicatorId
-      } as unknown) as DashboardItem)
+      } as DashboardItem
+
+      currentItems.push(newCard)
 
       return {
         statisticId: indicatorId,
-        xGrid: 2,
-        yGrid: 2,
+        xGrid: cardSize.xGrid,
+        yGrid: cardSize.yGrid,
         xPosition: position.xPosition,
         yPosition: position.yPosition
       }
@@ -470,8 +418,11 @@ const addDashboard = async (indicatorIds: string[]) => {
 
     // 调用API添加dashboard项
     await addPersonalDashboard(dashboardItemsData, tableId.value)
+
     // 刷新数据
     await loadDashboardData()
+
+    message.success(`成功添加 ${indicatorIds.length} 个组件，默认大小为 2x2`)
   } catch (error) {
     console.error('添加仪表盘项失败:', error)
     message.error('添加仪表盘项失败')
@@ -484,12 +435,8 @@ const isDeletingDashboard = ref(false)
 const deleteDashboard = async (indicatorIds: string[]) => {
   // 防止重复删除操作
   if (isDeletingDashboard.value) {
-    console.warn('删除操作正在进行中，请稍后再试')
     return
   }
-
-  console.log('Deleting dashboard for indicators:', indicatorIds)
-  console.log('Current dashboard items:', dashboardItems.value)
 
   isDeletingDashboard.value = true
 
@@ -507,16 +454,11 @@ const deleteDashboard = async (indicatorIds: string[]) => {
     // 支持两种匹配方式：按indicatorId匹配或按dashboard的id直接匹配
     const itemsToDelete = currentItems.filter((item) => {
       return (item.indicatorId && indicatorIds.includes(item.indicatorId)) ||
-        indicatorIds.includes(item.id)
+          indicatorIds.includes(item.id)
     })
-
-    console.log('Items to delete:', itemsToDelete)
 
     const dashboardIds = itemsToDelete.map((item) => item.id)
     const indicatorIdsToRemove = itemsToDelete.map((item) => item.indicatorId).filter(Boolean)
-
-    console.log('Dashboard IDs to delete:', dashboardIds)
-    console.log('Indicator IDs to remove from selection:', indicatorIdsToRemove)
 
     if (dashboardIds.length === 0) {
       console.warn('No matching dashboard items found to delete')
@@ -526,21 +468,20 @@ const deleteDashboard = async (indicatorIds: string[]) => {
 
     // 删除每个匹配的dashboard项（允许部分失败）
     const deleteResults = await Promise.allSettled(
-      dashboardIds.map(async (id) => {
-        try {
-          const result = await deletePersonalDashboard(id)
-          console.log(`删除dashboard项 ${id} 成功`)
-          return { id, success: true, result }
-        } catch (error) {
-          console.error(`删除dashboard项 ${id} 失败:`, error)
-          return { id, success: false, error }
-        }
-      })
+        dashboardIds.map(async (id) => {
+          try {
+            const result = await deletePersonalDashboard(id)
+            return { id, success: true, result }
+          } catch (error) {
+            console.error(`删除dashboard项 ${id} 失败:`, error)
+            return { id, success: false, error }
+          }
+        })
     )
 
     // 统计删除结果
     const successCount = deleteResults.filter(result =>
-      result.status === 'fulfilled' && result.value.success
+        result.status === 'fulfilled' && result.value.success
     ).length
     const failureCount = deleteResults.length - successCount
 
@@ -549,41 +490,26 @@ const deleteDashboard = async (indicatorIds: string[]) => {
     }
 
     // 同步更新左侧指标树的选中状态
-    console.log('更新前选中状态 - 通用指标:', selectedCommonIndicators.value)
-    console.log('更新前选中状态 - 个人指标:', selectedPersonalIndicators.value)
-    console.log('要移除的指标IDs:', indicatorIdsToRemove)
-
     indicatorIdsToRemove.forEach((indicatorId) => {
       if (!indicatorId) return // 过滤掉undefined值
 
       // 从通用指标选中列表中移除
       if (selectedCommonIndicators.value.includes(indicatorId)) {
         selectedCommonIndicators.value = selectedCommonIndicators.value.filter(id => id !== indicatorId)
-        console.log(`从通用指标中移除: ${indicatorId}`)
       }
       // 从个人指标选中列表中移除
       if (selectedPersonalIndicators.value.includes(indicatorId)) {
         selectedPersonalIndicators.value = selectedPersonalIndicators.value.filter(id => id !== indicatorId)
-        console.log(`从个人指标中移除: ${indicatorId}`)
       }
     })
-
-    console.log('更新后选中状态 - 通用指标:', selectedCommonIndicators.value)
-    console.log('更新后选中状态 - 个人指标:', selectedPersonalIndicators.value)
 
     // 强制触发响应式更新
     selectedCommonIndicators.value = [...selectedCommonIndicators.value]
     selectedPersonalIndicators.value = [...selectedPersonalIndicators.value]
 
-    // 刷新数据但保持选中状态
-    const currentCommonSelected = [...selectedCommonIndicators.value]
-    const currentPersonalSelected = [...selectedPersonalIndicators.value]
-
+    // 刷新数据，并保持当前更新后的选中状态
+    // 注意：不要在loadDashboardData后覆盖选中状态，让其自然更新
     await loadDashboardData()
-
-    // 恢复正确的选中状态（防止被loadDashboardData覆盖）
-    selectedCommonIndicators.value = currentCommonSelected
-    selectedPersonalIndicators.value = currentPersonalSelected
 
     // 显示删除结果消息
     if (failureCount === 0) {
@@ -601,7 +527,6 @@ const deleteDashboard = async (indicatorIds: string[]) => {
     clearTimeout(timeoutId)
     // 重置删除状态
     isDeletingDashboard.value = false
-    console.log('删除操作完成，状态已重置')
   }
 }
 
@@ -639,9 +564,9 @@ const debounce = (func: Function, delay: number) => {
 
 // 防抖后的调整大小处理函数
 const debouncedResizeHandler = debounce(async (
-  indicatorId: string,
-  xGrid: number,
-  yGrid: number
+    indicatorId: string,
+    xGrid: number,
+    yGrid: number
 ) => {
   try {
     // 保存到服务器（更新单个图表尺寸）
@@ -653,11 +578,37 @@ const debouncedResizeHandler = debounce(async (
   }
 }, 300) // 300ms 防抖延迟
 
+// 防抖后的批量布局保存处理函数
+const debouncedLayoutHandler = debounce(async (
+    newLayout: DashboardItem[]
+) => {
+  try {
+    // 批量更新所有受影响组件的位置和大小
+    const updatePromises = newLayout.map((item) => {
+      return updatePersonalDashboard({
+        id: item.id,
+        xGrid: item.xGrid,
+        yGrid: item.yGrid,
+        xPosition: item.xPosition,
+        yPosition: item.yPosition
+      })
+    })
+
+    await Promise.all(updatePromises)
+    await loadDashboardData()
+
+    message.success('布局调整完成')
+  } catch (error) {
+    console.error('保存布局失败:', error)
+    message.error('保存布局失败')
+  }
+}, 500) // 500ms 防抖延迟，因为布局操作可能更频繁
+
 // 处理图表调整大小
 const handleResizeIndicator = (
-  indicatorId: string,
-  xGrid: number,
-  yGrid: number
+    indicatorId: string,
+    xGrid: number,
+    yGrid: number
 ) => {
   // 使用防抖函数来处理调整大小，避免拖拽过程中的重复请求
   debouncedResizeHandler(indicatorId, xGrid, yGrid)
@@ -665,16 +616,38 @@ const handleResizeIndicator = (
 
 // 处理图表重新排序
 const handleReorderIndicators = async (newOrder: DashboardItem[]) => {
-  await saveDashboardOrder(newOrder)
-  await loadDashboardData()
+  // 检查是否是由调整大小触发的重新布局（包含多个组件位置变化）
+  const hasPositionChanges = newOrder.some((newItem, index) => {
+    const oldItem = dashboardItems.value[index]
+    return oldItem && (
+        oldItem.xPosition !== newItem.xPosition ||
+        oldItem.yPosition !== newItem.yPosition ||
+        oldItem.xGrid !== newItem.xGrid ||
+        oldItem.yGrid !== newItem.yGrid
+    )
+  })
+
+  if (hasPositionChanges) {
+    // 这是一个布局重新计算，使用防抖处理
+    debouncedLayoutHandler(newOrder)
+  } else {
+    // 这是一个简单的拖拽重新排序，立即保存
+    await saveDashboardOrder(newOrder)
+    await loadDashboardData()
+  }
 }
 
 // 组件挂载
 onMounted(() => {
-  console.log(tableId.value)
   if (tableId.value) {
     loadDashboardData()
   }
+})
+
+// 组件卸载前清理防抖定时器
+onUnmounted(() => {
+  debouncedResizeHandler.cancel()
+  debouncedLayoutHandler.cancel()
 })
 </script>
 

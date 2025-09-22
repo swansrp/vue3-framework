@@ -32,7 +32,7 @@
           :grid-unit-height="gridUnitHeight" :grid-columns="props.gridColumns"
           @edit="$emit('edit-indicator', indicator)"
           @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])" @resize="handleResize"
-          @resize-preview="onResizePreview" @drag-start="onCardDragStart" />
+          @resize-preview="onResizePreview" />
       </div>
 
       <!-- 拖拽占位符 -->
@@ -196,6 +196,145 @@ const startDrag = (e: MouseEvent, indicator: DashboardItem) => {
   document.addEventListener('mouseup', handleMouseUp)
 }
 
+// 检查两个组件是否重叠
+const isOverlapping = (
+  item1: { xPosition: number; yPosition: number; xGrid: number; yGrid: number },
+  item2: { xPosition: number; yPosition: number; xGrid: number; yGrid: number }
+): boolean => {
+  const left1 = item1.xPosition
+  const right1 = item1.xPosition + item1.xGrid - 1
+  const top1 = item1.yPosition
+  const bottom1 = item1.yPosition + item1.yGrid - 1
+
+  const left2 = item2.xPosition
+  const right2 = item2.xPosition + item2.xGrid - 1
+  const top2 = item2.yPosition
+  const bottom2 = item2.yPosition + item2.yGrid - 1
+
+  return !(right1 < left2 || right2 < left1 || bottom1 < top2 || bottom2 < top1)
+}
+
+// 查找下一个可用位置
+const findNextAvailablePosition = (
+  items: DashboardItem[],
+  targetItem: { xPosition: number; yPosition: number; xGrid: number; yGrid: number },
+  excludeId?: string
+): { col: number; row: number } => {
+  const gridColumns = props.gridColumns
+
+  // 从目标组件的当前位置开始向下向右搜索
+  let startRow = targetItem.yPosition
+
+  while (true) {
+    for (let row = startRow; row < startRow + 50; row++) { // 限制搜索范围防止无限循环
+      for (let col = 1; col <= gridColumns - targetItem.xGrid + 1; col++) {
+        const testPosition = {
+          xPosition: col,
+          yPosition: row,
+          xGrid: targetItem.xGrid,
+          yGrid: targetItem.yGrid
+        }
+
+        // 检查这个位置是否与任何现有组件重叠
+        let hasConflict = false
+        for (const item of items) {
+          if (excludeId && item.id === excludeId) continue
+          if (isOverlapping(testPosition, {
+            xPosition: item.xPosition || 1,
+            yPosition: item.yPosition || 1,
+            xGrid: item.xGrid || 1,
+            yGrid: item.yGrid || 1
+          })) {
+            hasConflict = true
+            break
+          }
+        }
+
+        if (!hasConflict) {
+          return { col, row }
+        }
+      }
+    }
+    startRow += 1
+    if (startRow > 100) { // 安全检查
+      break
+    }
+  }
+
+  // 如果找不到合适位置，返回一个安全的默认位置
+  return { col: 1, row: startRow }
+}
+
+// 重新计算所有组件布局，避免重叠
+const recalculateLayout = (
+  indicators: DashboardItem[],
+  changedItemId: string,
+  newSize: { xGrid: number; yGrid: number }
+): DashboardItem[] => {
+  const result = [...indicators]
+  const changedIndex = result.findIndex(item => item.id === changedItemId)
+
+  if (changedIndex === -1) return result
+
+  // 更新被修改组件的尺寸
+  result[changedIndex] = {
+    ...result[changedIndex],
+    xGrid: newSize.xGrid,
+    yGrid: newSize.yGrid
+  }
+
+  const changedItem = result[changedIndex]
+  const affectedItems: DashboardItem[] = []
+
+  // 找出所有与修改后的组件重叠的组件
+  for (let i = 0; i < result.length; i++) {
+    if (i === changedIndex) continue
+
+    const item = result[i]
+    if (isOverlapping(
+      {
+        xPosition: changedItem.xPosition || 1,
+        yPosition: changedItem.yPosition || 1,
+        xGrid: changedItem.xGrid || 1,
+        yGrid: changedItem.yGrid || 1
+      },
+      {
+        xPosition: item.xPosition || 1,
+        yPosition: item.yPosition || 1,
+        xGrid: item.xGrid || 1,
+        yGrid: item.yGrid || 1
+      }
+    )) {
+      affectedItems.push(item)
+    }
+  }
+
+  // 为受影响的组件重新分配位置
+  for (const affectedItem of affectedItems) {
+    const newPosition = findNextAvailablePosition(
+      result,
+      {
+        xPosition: affectedItem.xPosition || 1,
+        yPosition: affectedItem.yPosition || 1,
+        xGrid: affectedItem.xGrid || 1,
+        yGrid: affectedItem.yGrid || 1
+      },
+      affectedItem.id
+    )
+
+    const affectedIndex = result.findIndex(item => item.id === affectedItem.id)
+    if (affectedIndex !== -1) {
+      result[affectedIndex] = {
+        ...result[affectedIndex],
+        xPosition: newPosition.col,
+        yPosition: newPosition.row
+      }
+    }
+  }
+
+  return result
+}
+
 // 重新排序指标
 const reorderIndicators = (
   indicatorId: string,
@@ -217,6 +356,17 @@ const reorderIndicators = (
 
 // 处理调整大小
 const handleResize = (indicatorId: string, xGrid: number, yGrid: number) => {
+  // 重新计算布局，避免重叠
+  const newLayout = recalculateLayout(
+    props.indicators,
+    indicatorId,
+    { xGrid, yGrid }
+  )
+
+  // 发出重新排序事件以应用新的布局
+  emit('reorder-indicators', newLayout)
+
+  // 同时发出调整大小事件（用于保存到服务器）
   emit('resize-indicator', indicatorId, xGrid, yGrid)
 }
 
@@ -226,12 +376,6 @@ const onResizePreview = (indicatorId: string, xGrid: number, yGrid: number) => {
   if (idx !== -1) {
     localIndicators.value[idx] = { ...localIndicators.value[idx], xGrid, yGrid }
   }
-}
-
-// 卡片开始拖拽事件
-const onCardDragStart = (event: MouseEvent, indicator: DashboardItem) => {
-  // 卡片开始拖拽时的处理逻辑
-  console.log('卡片开始拖拽:', indicator.id)
 }
 
 // 生命周期
