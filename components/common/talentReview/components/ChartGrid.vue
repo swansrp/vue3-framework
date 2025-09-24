@@ -4,7 +4,7 @@
       <div class="empty-content">
         <BarChartOutlined class="empty-icon" />
         <p>暂无图表，请添加指标</p>
-        <a-button type="primary" @click="$emit('add-indicator', [])">
+        <a-button v-if="canEditPersonalIndicators" type="primary" @click="$emit('add-indicator', [])">
           <PlusOutlined />
           添加指标
         </a-button>
@@ -30,6 +30,7 @@
         <ChartCard
           :indicator="indicator" :loading="loading" :grid-unit-width="gridUnitWidth"
           :grid-unit-height="gridUnitHeight" :grid-columns="props.gridColumns"
+          :can-edit="getIndicatorEditPermission(indicator)" :can-delete="getIndicatorDeletePermission(indicator)"
           @edit="$emit('edit-indicator', indicator)"
           @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])" @resize="handleResize"
           @resize-preview="onResizePreview" />
@@ -59,6 +60,10 @@ interface Props {
   indicators: DashboardItem[];
   loading: boolean;
   gridColumns?: number;
+  canEditCommonIndicators?: boolean; // 是否可以编辑通用指标
+  canEditPersonalIndicators?: boolean; // 是否可以编辑个人指标
+  canDeleteCommonIndicators?: boolean; // 是否可以删除通用指标
+  canDeletePersonalIndicators?: boolean; // 是否可以删除个人指标
 }
 
 interface Emits {
@@ -76,10 +81,39 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   indicators: () => [],
   loading: false,
-  gridColumns: 7
+  gridColumns: 7,
+  canEditCommonIndicators: true,
+  canEditPersonalIndicators: true,
+  canDeleteCommonIndicators: true,
+  canDeletePersonalIndicators: true
 })
 
 const emit = defineEmits<Emits>()
+
+// 判断指标是否可以编辑
+const getIndicatorEditPermission = (indicator: DashboardItem): boolean => {
+  // commonStatistic 为 '1' 表示通用指标，否则为个人指标
+  const isCommonIndicator = indicator.commonStatistic === '1'
+
+  if (isCommonIndicator) {
+    return props.canEditCommonIndicators ?? true
+  } else {
+    return props.canEditPersonalIndicators ?? true
+  }
+}
+
+// 判断指标是否可以删除
+const getIndicatorDeletePermission = (indicator: DashboardItem): boolean => {
+  // commonStatistic 为 '1' 表示通用指标，否则为个人指标
+  const isCommonIndicator = indicator.commonStatistic === '1'
+
+  if (isCommonIndicator) {
+    return props.canDeleteCommonIndicators ?? true
+  } else {
+    return props.canDeletePersonalIndicators ?? true
+  }
+}
+
 // 本地预览用数据
 const localIndicators = ref<DashboardItem[]>([])
 watch(

@@ -15,7 +15,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   --chart-min-height: 560px;
 }
 /* 全局动画效果 */
