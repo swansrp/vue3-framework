@@ -36,6 +36,8 @@
           :can-edit-personal-indicators="canEditPersonalIndicators"
           :can-delete-common-indicators="commonIndicatorPermissions?.delete ?? true"
           :can-delete-personal-indicators="personalIndicatorPermissions?.delete ?? true"
+          :can-resize-common-indicators="canResizeCommonIndicators"
+          :can-resize-personal-indicators="canResizePersonalIndicators"
           @add-indicator="(ids: string[]) => addDashboard(ids, false)" @edit-indicator="editIndicatorFromChart"
           @delete-indicator="deleteDashboard" @resize-indicator="handleResizeIndicator"
           @reorder-indicators="handleReorderIndicators" />
@@ -147,6 +149,9 @@ const dashboardItems = ref<DashboardItem[]>([])
 // 向后兼容的权限计算属性（为ChartGrid等子组件提供）
 const canEditCommonIndicators = computed(() => props.commonIndicatorPermissions?.edit ?? true)
 const canEditPersonalIndicators = computed(() => props.personalIndicatorPermissions?.edit ?? true)
+// 调整大小权限：通用指标即使不可编辑也可以调整大小，个人指标需要编辑权限才能调整大小
+const canResizeCommonIndicators = computed(() => true) // 通用指标始终可以调整大小
+const canResizePersonalIndicators = computed(() => props.personalIndicatorPermissions?.edit ?? true)
 // 注意：删除权限已在IndicatorTree中直接使用新的权限对象结构
 
 // 工具：根据 id 在树中查找节点
@@ -296,20 +301,27 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
   }
 }
 
-// 随机打乱图表布局顺序
-const shuffleChartsLayout = (items: DashboardItem[]): DashboardItem[] => {
+// 按顺序重新排列图表布局
+const reorganizeChartsLayout = (items: DashboardItem[]): DashboardItem[] => {
   if (!items || items.length === 0) return items
 
   // 创建一个副本数组，避免修改原数组
-  const shuffledItems = [...items]
+  const sortedItems = [...items]
 
-  // Fisher-Yates 洗牌算法打乱顺序
-  for (let i = shuffledItems.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffledItems[i], shuffledItems[j]] = [shuffledItems[j], shuffledItems[i]]
-  }
+  // 按照 displayOrder 排序，如果没有 displayOrder 则按 id 排序
+  sortedItems.sort((a, b) => {
+    const orderA = a.displayOrder || 0
+    const orderB = b.displayOrder || 0
 
-  // 重新计算所有图表的位置，确保不重叠
+    if (orderA !== orderB) {
+      return orderA - orderB
+    }
+
+    // 如果 displayOrder 相同，按 id 排序保证一致性
+    return (a.id || '').localeCompare(b.id || '')
+  })
+
+  // 重新计算所有图表的位置，按顺序排列确保不重叠
   const gridColumns = 7
   const rearrangedItems: DashboardItem[] = []
 
@@ -317,7 +329,7 @@ const shuffleChartsLayout = (items: DashboardItem[]): DashboardItem[] => {
   let currentY = 1
   let maxYInRow = 1
 
-  for (const item of shuffledItems) {
+  for (const item of sortedItems) {
     const xGrid = item.xGrid || 2
     const yGrid = item.yGrid || 2
 
@@ -345,10 +357,10 @@ const shuffleChartsLayout = (items: DashboardItem[]): DashboardItem[] => {
 }
 
 // 保存重新排列后的图表位置
-const saveShuffledLayout = async (shuffledItems: DashboardItem[]) => {
+const saveReorganizedLayout = async (reorganizedItems: DashboardItem[]) => {
   try {
     // 批量更新所有图表的位置信息
-    const updatePromises = shuffledItems.map((item) => {
+    const updatePromises = reorganizedItems.map((item) => {
       return updatePersonalDashboard({
         id: item.id,
         xGrid: item.xGrid,
@@ -372,13 +384,13 @@ const refreshDashboard = async () => {
     // 先重新加载数据
     await loadDashboardData()
 
-    // 如果有图表数据，进行重新排列
+    // 如果有图表数据，进行按顺序重新排列
     if (dashboardItems.value && dashboardItems.value.length > 0) {
-      // 打乱图表布局
-      const shuffledItems = shuffleChartsLayout(dashboardItems.value)
+      // 按顺序重新排列图表布局
+      const reorganizedItems = reorganizeChartsLayout(dashboardItems.value)
 
       // 保存新的布局到服务器
-      await saveShuffledLayout(shuffledItems)
+      await saveReorganizedLayout(reorganizedItems)
 
       // 再次加载数据以显示新布局
       await loadDashboardData()
