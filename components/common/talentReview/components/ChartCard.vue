@@ -64,9 +64,9 @@
     </div>
 
     <!-- 调整大小的拖拽手柄 -->
-    <div v-if="canEdit" class="resize-handle right" @mousedown="startResize('right', $event)"></div>
-    <div v-if="canEdit" class="resize-handle bottom" @mousedown="startResize('bottom', $event)"></div>
-    <div v-if="canEdit" class="resize-handle corner" @mousedown="startResize('corner', $event)"></div>
+    <div v-if="canResize" class="resize-handle right" @mousedown="startResize('right', $event)"></div>
+    <div v-if="canResize" class="resize-handle bottom" @mousedown="startResize('bottom', $event)"></div>
+    <div v-if="canResize" class="resize-handle corner" @mousedown="startResize('corner', $event)"></div>
   </div>
 </template>
 
@@ -87,6 +87,7 @@ interface Props {
   gridColumns: number;
   canEdit?: boolean; // 是否可以编辑
   canDelete?: boolean; // 是否可以删除
+  canResize?: boolean; // 是否可以调整大小
 }
 
 interface Emits {
@@ -110,7 +111,8 @@ const props = withDefaults(defineProps<Props>(), {
   gridUnitHeight: 120,
   gridColumns: 5,
   canEdit: true,
-  canDelete: true
+  canDelete: true,
+  canResize: true
 })
 
 // 组件引用

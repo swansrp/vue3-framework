@@ -31,7 +31,7 @@
           :indicator="indicator" :loading="loading" :grid-unit-width="gridUnitWidth"
           :grid-unit-height="gridUnitHeight" :grid-columns="props.gridColumns"
           :can-edit="getIndicatorEditPermission(indicator)" :can-delete="getIndicatorDeletePermission(indicator)"
-          @edit="$emit('edit-indicator', indicator)"
+          :can-resize="getIndicatorResizePermission(indicator)" @edit="$emit('edit-indicator', indicator)"
           @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])" @resize="handleResize"
           @resize-preview="onResizePreview" />
       </div>
@@ -64,6 +64,8 @@ interface Props {
   canEditPersonalIndicators?: boolean; // 是否可以编辑个人指标
   canDeleteCommonIndicators?: boolean; // 是否可以删除通用指标
   canDeletePersonalIndicators?: boolean; // 是否可以删除个人指标
+  canResizeCommonIndicators?: boolean; // 是否可以调整通用指标大小
+  canResizePersonalIndicators?: boolean; // 是否可以调整个人指标大小
 }
 
 interface Emits {
@@ -85,7 +87,9 @@ const props = withDefaults(defineProps<Props>(), {
   canEditCommonIndicators: true,
   canEditPersonalIndicators: true,
   canDeleteCommonIndicators: true,
-  canDeletePersonalIndicators: true
+  canDeletePersonalIndicators: true,
+  canResizeCommonIndicators: true,
+  canResizePersonalIndicators: true
 })
 
 const emit = defineEmits<Emits>()
@@ -111,6 +115,18 @@ const getIndicatorDeletePermission = (indicator: DashboardItem): boolean => {
     return props.canDeleteCommonIndicators ?? true
   } else {
     return props.canDeletePersonalIndicators ?? true
+  }
+}
+
+// 判断指标是否可以调整大小
+const getIndicatorResizePermission = (indicator: DashboardItem): boolean => {
+  // commonStatistic 为 '1' 表示通用指标，否则为个人指标
+  const isCommonIndicator = indicator.commonStatistic === '1'
+
+  if (isCommonIndicator) {
+    return props.canResizeCommonIndicators ?? true
+  } else {
+    return props.canResizePersonalIndicators ?? true
   }
 }
 
