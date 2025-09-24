@@ -1,11 +1,11 @@
 <template>
-  <div :class="{ 'chart-card-loading': loading, dragging: isDragging }" class="chart-card" @mousedown="startDrag">
+  <div :class="{ 'chart-card-loading': loading }" class="chart-card" @mousedown="handleMouseDown">
     <!-- 卡片头部 -->
     <div class="chart-card-header">
       <div class="header-title">
         <h3>{{ indicator.title || '未命名指标' }}</h3>
       </div>
-      <div class="header-actions">
+      <div v-if="canEdit" class="header-actions">
         <a-tooltip title="编辑">
           <EditOutlined @click="$emit('edit')" />
         </a-tooltip>
@@ -19,12 +19,12 @@
                 <ReloadOutlined />
                 刷新
               </a-menu-item>
-              <a-menu-item key="rename" @click="renameChart">
+              <!-- <a-menu-item key="rename" @click="renameChart">
                 <EditOutlined />
                 重命名
-              </a-menu-item>
-              <a-menu-divider />
-              <a-menu-item key="delete" @click="$emit('delete')">
+              </a-menu-item> -->
+              <a-menu-divider v-if="canDelete" />
+              <a-menu-item v-if="canDelete" key="delete" @click="$emit('delete')">
                 <DeleteOutlined />
                 删除
               </a-menu-item>
@@ -64,20 +64,20 @@
     </div>
 
     <!-- 调整大小的拖拽手柄 -->
-    <div class="resize-handle right" @mousedown="startResize('right', $event)"></div>
-    <div class="resize-handle bottom" @mousedown="startResize('bottom', $event)"></div>
-    <div class="resize-handle corner" @mousedown="startResize('corner', $event)"></div>
+    <div v-if="canEdit" class="resize-handle right" @mousedown="startResize('right', $event)"></div>
+    <div v-if="canEdit" class="resize-handle bottom" @mousedown="startResize('bottom', $event)"></div>
+    <div v-if="canEdit" class="resize-handle corner" @mousedown="startResize('corner', $event)"></div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
-import type {DashboardItem} from '../types'
-import {message} from 'ant-design-vue'
-import {BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined} from '@ant-design/icons-vue'
-import {advancedStatisticRequest} from '@/framework/apis'
-import {getPortalConfig} from '@/framework/apis/portal/config'
+import type { DashboardItem } from '../types'
+import { message } from 'ant-design-vue'
+import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { advancedStatisticRequest } from '@/framework/apis'
+import { getPortalConfig } from '@/framework/apis/portal/config'
 
 interface Props {
   indicator: DashboardItem;
@@ -85,6 +85,8 @@ interface Props {
   gridUnitWidth: number;
   gridUnitHeight: number;
   gridColumns: number;
+  canEdit?: boolean; // 是否可以编辑
+  canDelete?: boolean; // 是否可以删除
 }
 
 interface Emits {
@@ -97,10 +99,6 @@ interface Emits {
   (e: 'resize-preview', indicatorId: string, xGrid: number, yGrid: number): void;
 
   (e: 'card-drop', event: DragEvent): void;
-
-  (e: 'drag-start', event: MouseEvent, indicator: DashboardItem): void
-
-  (e: 'drag-end', event: MouseEvent): void
 }
 
 const emit = defineEmits<Emits>()
@@ -110,7 +108,9 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
   gridUnitWidth: 0,
   gridUnitHeight: 120,
-  gridColumns: 5
+  gridColumns: 5,
+  canEdit: true,
+  canDelete: true
 })
 
 // 组件引用
@@ -119,10 +119,7 @@ const chartRef = ref()
 // 组件状态管理
 const isDestroyed = ref(false)
 
-// 拖拽状态
-const isDragging = ref(false)
-const dragStartX = ref(0)
-const dragStartY = ref(0)
+// 拖拽状态（简化版）
 
 // 调整大小状态
 const isResizing = ref(false)
@@ -194,8 +191,8 @@ computed(() => {
   const secondDim = config.secondDimension?.groupName
 
   return secondDim
-      ? `按${firstDim}、${secondDim}和统计指标分组`
-      : `按${firstDim}和统计指标分组`
+    ? `按${firstDim}、${secondDim}和统计指标分组`
+    : `按${firstDim}和统计指标分组`
 });
 
 // 维度值映射
@@ -380,72 +377,21 @@ const refreshChart = () => {
 }
 
 // 重命名图表
-const renameChart = () => {
-  // 实现重命名逻辑
-  message.info('重命名功能待实现')
-}
+// const renameChart = () => {
+//   // 实现重命名逻辑
+//   message.info('重命名功能待实现')
+// }
 
-// 开始拖拽
-const startDrag = (event: MouseEvent) => {
-  // 只有在点击卡片头部区域时才允许拖拽
+// 处理鼠标按下事件（简化版）
+const handleMouseDown = (event: MouseEvent) => {
+  // 如果点击的是操作按钮或调整大小手柄，阻止事件传播给ChartGrid
   const target = event.target as HTMLElement
   if (target.closest('.header-actions') || target.closest('.resize-handle')) {
-    return // 点击操作按钮或调整大小手柄时不触发拖拽
+    event.stopPropagation()
+    return
   }
 
-  // 记录初始位置，但不立即设置为拖拽状态
-  dragStartX.value = event.clientX
-  dragStartY.value = event.clientY
-
-  // 添加临时监听器，等待真正的拖拽开始
-  document.addEventListener('mousemove', onDragStart)
-  document.addEventListener('mouseup', cancelDrag)
-}
-
-// 检测是否开始真正拖拽（移动超过阈值时）
-const onDragStart = (event: MouseEvent) => {
-  const deltaX = Math.abs(event.clientX - dragStartX.value)
-  const deltaY = Math.abs(event.clientY - dragStartY.value)
-  const dragThreshold = 5 // 拖拽阈值，移动超过5px才认为是拖拽
-
-  if (deltaX > dragThreshold || deltaY > dragThreshold) {
-    // 真正开始拖拽
-    isDragging.value = true
-    emit('drag-start', event, props.indicator)
-
-    // 移除临时监听器，添加拖拽监听器
-    document.removeEventListener('mousemove', onDragStart)
-    document.removeEventListener('mouseup', cancelDrag)
-    document.addEventListener('mousemove', onDrag)
-    document.addEventListener('mouseup', stopDrag)
-  }
-}
-
-// 取消拖拽（点击但没有移动足够距离）
-const cancelDrag = () => {
-  // 清理临时监听器
-  document.removeEventListener('mousemove', onDragStart)
-  document.removeEventListener('mouseup', cancelDrag)
-}
-
-// 拖拽中
-const onDrag = (event: MouseEvent) => {
-  if (!isDragging.value) return
-
-  // 这里可以添加拖拽过程中的逻辑
-  // 例如更新卡片位置等
-  event.preventDefault()
-}
-
-// 停止拖拽
-const stopDrag = (event: MouseEvent) => {
-  isDragging.value = false
-
-  emit('drag-end', event)
-
-  // 移除全局事件监听器
-  document.removeEventListener('mousemove', onDrag)
-  document.removeEventListener('mouseup', stopDrag)
+  // 其他情况让事件正常传播给ChartGrid处理拖拽
 }
 
 // 开始调整大小
@@ -795,10 +741,5 @@ defineExpose({
     }
   }
 
-  // 拖拽时的样式
-  &.dragging {
-    opacity: 0.8;
-    z-index: 999;
-  }
 }
 </style>

@@ -31,10 +31,21 @@
             <a-tree
               ref="commonTreeKey" v-model:checkedKeys="selectedCommonIndicators"
               v-model:expandedKeys="expandedCommonKeys" :checkable="true" :selectable="false" :show-icon="true"
-              :show-line="true" :tree-data="filteredCommonIndicators" block-node @check="onCommonIndicatorCheck">
-              <template #title="{ title }">
+              :show-line="true" :tree-data="filteredCommonIndicators" :draggable="true" block-node
+              @check="onCommonIndicatorCheck" @drop="onCommonTreeDrop">
+              <template #title="{ title, isLeaf, dataRef }">
                 <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
                   <span class="node-title">{{ title }}</span>
+                  <div
+                    v-if="isLeaf && !dataRef.children && (commonIndicatorPermissions?.edit || commonIndicatorPermissions?.delete)"
+                    class="node-actions">
+                    <a-tooltip v-if="commonIndicatorPermissions?.edit" title="编辑">
+                      <EditOutlined @click.stop="editIndicator(dataRef)" />
+                    </a-tooltip>
+                    <a-tooltip v-if="commonIndicatorPermissions?.delete" title="删除">
+                      <DeleteOutlined @click.stop="deleteIndicator(dataRef)" />
+                    </a-tooltip>
+                  </div>
                 </div>
               </template>
               <template #icon="{ dataRef }">
@@ -46,7 +57,7 @@
         </div>
 
         <!-- 个人指标 -->
-        <div class="category-section">
+        <div v-if="showPersonalIndicators" class="category-section">
           <div class="category-header">
             <h4>个人指标</h4>
           </div>
@@ -59,11 +70,13 @@
               <template #title="{ title, isLeaf, dataRef }">
                 <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
                   <span class="node-title">{{ title }}</span>
-                  <div v-if="isLeaf" class="node-actions">
-                    <a-tooltip title="编辑">
+                  <div
+                    v-if="isLeaf && (personalIndicatorPermissions?.edit || personalIndicatorPermissions?.delete)"
+                    class="node-actions">
+                    <a-tooltip v-if="personalIndicatorPermissions?.edit" title="编辑">
                       <EditOutlined @click.stop="editIndicator(dataRef)" />
                     </a-tooltip>
-                    <a-tooltip title="删除">
+                    <a-tooltip v-if="personalIndicatorPermissions?.delete" title="删除">
                       <DeleteOutlined @click.stop="deleteIndicator(dataRef)" />
                     </a-tooltip>
                   </div>
@@ -88,7 +101,9 @@
     </div>
 
     <!-- 悬浮的新增指标按钮 -->
-    <div v-if="!collapsed" class="floating-add-button">
+    <div
+      v-if="!collapsed && shouldShowAddButton" class="floating-add-button"
+      :style="{ left: (panelWidth - 58) + 'px' }">
       <a-button shape="circle" size="large" type="primary" @click="addIndicator">
         <PlusOutlined />
       </a-button>
@@ -97,8 +112,8 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
-import {message, Modal} from 'ant-design-vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { message, Modal } from 'ant-design-vue'
 import {
   BarChartOutlined,
   DeleteOutlined,
@@ -109,8 +124,14 @@ import {
   PlusOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
-import type {IndicatorNode} from '../types'
-import {updateStatisticOrder, updateStatisticPid} from '../api'
+import type { IndicatorNode } from '../types'
+import { updateStatisticOrder, updateStatisticPid } from '../api'
+
+// 权限接口定义
+interface IndicatorPermissions {
+  edit?: boolean;
+  delete?: boolean;
+}
 
 interface Props {
   collapsed: boolean;
@@ -121,6 +142,9 @@ interface Props {
   selectedIndicators?: string[];
   expandedCommonKeys?: string[];
   expandedPersonalKeys?: string[];
+  showPersonalIndicators?: boolean; // 是否显示个人指标
+  commonIndicatorPermissions?: IndicatorPermissions; // 通用指标权限
+  personalIndicatorPermissions?: IndicatorPermissions; // 个人指标权限
 }
 
 interface Emits {
@@ -153,7 +177,9 @@ const props = withDefaults(defineProps<Props>(), {
   selectedPersonalIndicators: () => [],
   selectedIndicators: () => [],
   expandedCommonKeys: () => [],
-  expandedPersonalKeys: () => []
+  expandedPersonalKeys: () => [],
+  showPersonalIndicators: true
+  // 注意：权限配置不设置默认值，由父组件传入
 })
 
 const emit = defineEmits<Emits>()
@@ -167,6 +193,9 @@ const searchKeyword = ref('')
 const expandedCommonKeys = ref<string[]>([...(props.expandedCommonKeys || [])])
 const expandedPersonalKeys = ref<string[]>([...(props.expandedPersonalKeys || [])])
 
+// 防止循环触发的标志位
+const isUpdatingFromProps = ref(false)
+
 // 响应式数据 - 分别处理通用指标和个人指标的选中状态
 const selectedCommonIndicators = ref<string[]>([
   ...(props.selectedCommonIndicators || [])
@@ -175,9 +204,9 @@ const selectedPersonalIndicators = ref<string[]>([
   ...(props.selectedPersonalIndicators || [])
 ])
 
-// 分离通用指标和个人指标（现在直接使用props传入的数据）
-const commonIndicators = computed(() => props.commonIndicators)
-const personalIndicators = computed(() => props.personalIndicators)
+// 分离通用指标和个人指标，确保按order字段排序
+const commonIndicators = computed(() => sortNodesByOrder(props.commonIndicators || []))
+const personalIndicators = computed(() => sortNodesByOrder(props.personalIndicators || []))
 
 const commonTreeKey = ref(true)
 const personalTreeKey = ref(true)
@@ -189,6 +218,15 @@ const filteredCommonIndicators = computed(() => {
 
 const filteredPersonalIndicators = computed(() => {
   return filterAndHighlightTree(personalIndicators.value, searchKeyword.value)
+})
+
+// 决定是否显示新增按钮
+const shouldShowAddButton = computed(() => {
+  const result = props.showPersonalIndicators ?
+    props.personalIndicatorPermissions?.edit :
+    props.commonIndicatorPermissions?.edit
+
+  return result
 })
 // 获取默认应该展开的节点（有items且不为空的节点及其祖先）
 const getDefaultExpandedKeys = (tree: IndicatorNode[]): string[] => {
@@ -357,7 +395,7 @@ const onSearch = () => {
   // 搜索逻辑在computed中处理
 }
 
-const onPersonalIndicatorCheck = (checkedKeys: any, e: any) => {
+const onPersonalIndicatorCheck = (checkedKeys: any) => {
   // 当checkStrictly为true时，checkedKeys是对象格式{checked: [...], halfChecked: [...]}
   const keys = Array.isArray(checkedKeys)
     ? checkedKeys
@@ -372,7 +410,7 @@ const onPersonalIndicatorCheck = (checkedKeys: any, e: any) => {
   // dashboard事件触发已移到watch函数中
 }
 
-const onCommonIndicatorCheck = (checkedKeys: any, e: any) => {
+const onCommonIndicatorCheck = (checkedKeys: any) => {
   // 当checkStrictly为true时，checkedKeys是对象格式{checked: [...], halfChecked: [...]}
   const keys = Array.isArray(checkedKeys)
     ? checkedKeys
@@ -405,6 +443,53 @@ const deleteIndicator = (indicator: IndicatorNode) => {
       emit('delete-indicator', indicator.id)
     }
   })
+}
+
+// 处理通用指标树的拖拽放下事件
+const onCommonTreeDrop = async (info: any) => {
+  try {
+    const dropKey = info.node.key
+    const dragKey = info.dragNode.key
+    const dropPos = info.node.pos.split('-').map(Number)
+    const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1])
+    const dropToGap = info.dropToGap
+
+    // 获取拖拽节点和目标节点
+    const dragNode = findNodeInTree(commonIndicators.value, dragKey)
+    const dropNode = findNodeInTree(commonIndicators.value, dropKey)
+
+    if (!dragNode) {
+      console.error('找不到拖拽节点:', dragKey)
+      return
+    }
+
+    let newPid: string | null = null
+
+    if (!dropToGap) {
+      // 拖拽到节点内部，设置为目标节点的子节点
+      newPid = dropNode ? dropNode.id : null
+    } else {
+      // 拖拽到节点间隙，设置为目标节点的同级
+      newPid = dropNode ? dropNode.pid : null
+    }
+
+    // 只有在父节点真的改变时才更新pid
+    if (dragNode.pid !== newPid) {
+      await updateStatisticPid({
+        id: dragNode.id,
+        pid: newPid
+      })
+    }
+
+    // 更新顺序（无论是否改变了父节点都需要更新顺序）
+    await updateCommonSameLevelOrder(dragKey, dropKey, dropPosition, newPid)
+
+    // 重新加载数据以更新界面
+    emit('reload-data')
+  } catch (error) {
+    console.error('通用指标拖拽更新失败:', error)
+    message.error('通用指标拖拽更新失败')
+  }
 }
 
 // 处理个人指标树的拖拽放下事件
@@ -455,8 +540,8 @@ const updateSameLevelOrder = async (
         siblingNodes = parentNode.children
       }
     } else {
-      // 如果没有父节点，获取根节点
-      siblingNodes = personalIndicators.value
+      // 如果没有父节点，获取所有根节点（pid为null、undefined或空字符串的节点）
+      siblingNodes = personalIndicators.value.filter(node => !node.pid || node.pid === '' || node.pid === null)
     }
 
     // 重新排序
@@ -583,6 +668,70 @@ const updateDifferentParent = async (
   }
 }
 
+// 更新通用指标同级节点的顺序
+const updateCommonSameLevelOrder = async (
+  dragKey: string,
+  dropKey: string,
+  dropPosition: number,
+  parentId: string | null
+) => {
+  try {
+    // 获取新父节点下的所有子节点
+    let siblingNodes: IndicatorNode[] = []
+
+    if (parentId) {
+      // 如果有父节点，获取父节点的子节点
+      const parentNode = findNodeInTree(commonIndicators.value, parentId)
+      if (parentNode && parentNode.children) {
+        siblingNodes = [...parentNode.children]
+      }
+    } else {
+      // 如果没有父节点，获取所有根节点（pid为null、undefined或空字符串的节点）
+      siblingNodes = [...commonIndicators.value.filter(node => !node.pid || node.pid === '' || node.pid === null)]
+    }
+
+    // 找到拖拽节点并移除（如果存在）
+    const dragIndex = siblingNodes.findIndex((node) => node.key === dragKey)
+    let draggedNode = null
+    if (dragIndex !== -1) {
+      [draggedNode] = siblingNodes.splice(dragIndex, 1)
+    }
+
+    // 找到目标节点的位置
+    const dropIndex = siblingNodes.findIndex((node) => node.key === dropKey)
+
+    // 计算插入位置
+    let insertIndex = siblingNodes.length // 默认插入到末尾
+
+    if (dropIndex !== -1) {
+      if (dropPosition === -1) {
+        // 放在目标节点前面
+        insertIndex = dropIndex
+      } else if (dropPosition === 1) {
+        // 放在目标节点后面
+        insertIndex = dropIndex + 1
+      }
+    }
+
+    // 插入拖拽节点到新位置
+    if (draggedNode) {
+      siblingNodes.splice(insertIndex, 0, draggedNode)
+    }
+
+    // 构造更新顺序的数据
+    const orderData = siblingNodes.map((node, index) => ({
+      id: node.id,
+      showOrder: index + 1
+    }))
+
+    // 调用API更新顺序
+    await updateStatisticOrder(orderData)
+  } catch (error) {
+    console.error('更新通用指标同级节点顺序失败:', error)
+    throw error
+  }
+}
+
 // 拖拽调整宽度
 const startResize = (e: MouseEvent) => {
   isResizing.value = true
@@ -622,31 +771,58 @@ onUnmounted(() => {
 watch(
   () => selectedPersonalIndicators.value,
   (newVal, oldVal) => {
+    // 如果是来自props的更新，不触发事件
+    if (isUpdatingFromProps.value) {
+      return
+    }
+
     // 检测新增的选中项（checked）
     const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
     // 检测取消选中的项（unchecked）
     const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
 
+    // 如果没有变化，不触发事件
+    if (newlyChecked.length === 0 && newlyUnchecked.length === 0) {
+      return
+    }
+
     // 过滤出叶子节点的变更
     // 叶子节点判断：没有children属性或者children为空数组
     const leafNodesChecked = newlyChecked.filter((key: string) => {
       const node = findNodeInTree(personalIndicators.value, key)
-      return node ? !node.children || node.children.length === 0 : false
+      // 只有叶子节点才能添加到dashboard
+      return node ? (!node.children || node.children.length === 0) : false
     })
 
     const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
       const node = findNodeInTree(personalIndicators.value, key)
-      return node ? !node.children || node.children.length === 0 : false
+      // 只有叶子节点才能从dashboard移除
+      return node ? (!node.children || node.children.length === 0) : false
     })
 
+    // 将key转换为id用于API调用
+    const leafNodeIdsChecked = leafNodesChecked
+      .map((key: string) => {
+        const node = findNodeInTree(personalIndicators.value, key)
+        return node ? node.id : null
+      })
+      .filter(Boolean) as string[]
+
+    const leafNodeIdsUnchecked = leafNodesUnchecked
+      .map((key: string) => {
+        const node = findNodeInTree(personalIndicators.value, key)
+        return node ? node.id : null
+      })
+      .filter(Boolean) as string[]
+
     // 只对叶子节点触发新增dashboard事件
-    if (leafNodesChecked.length > 0) {
-      emit('add-dashboard', leafNodesChecked)
+    if (leafNodeIdsChecked.length > 0) {
+      emit('add-dashboard', leafNodeIdsChecked)
     }
 
     // 只对叶子节点触发删除dashboard事件
-    if (leafNodesUnchecked.length > 0) {
-      emit('delete-dashboard', leafNodesUnchecked)
+    if (leafNodeIdsUnchecked.length > 0) {
+      emit('delete-dashboard', leafNodeIdsUnchecked)
     }
   },
   { deep: true }
@@ -656,31 +832,58 @@ watch(
 watch(
   () => selectedCommonIndicators.value,
   (newVal, oldVal) => {
+    // 如果是来自props的更新，不触发事件
+    if (isUpdatingFromProps.value) {
+      return
+    }
+
     // 检测新增的选中项（checked）
     const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
     // 检测取消选中的项（unchecked）
     const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
 
+    // 如果没有变化，不触发事件
+    if (newlyChecked.length === 0 && newlyUnchecked.length === 0) {
+      return
+    }
+
     // 过滤出叶子节点的变更
     // 叶子节点判断：没有children属性或者children为空数组
     const leafNodesChecked = newlyChecked.filter((key: string) => {
       const node = findNodeInTree(commonIndicators.value, key)
-      return node ? !node.children || node.children.length === 0 : false
+      // 只有叶子节点才能添加到dashboard
+      return node ? (!node.children || node.children.length === 0) : false
     })
 
     const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
       const node = findNodeInTree(commonIndicators.value, key)
-      return node ? !node.children || node.children.length === 0 : false
+      // 只有叶子节点才能从dashboard移除
+      return node ? (!node.children || node.children.length === 0) : false
     })
 
+    // 将key转换为id用于API调用
+    const leafNodeIdsChecked = leafNodesChecked
+      .map((key: string) => {
+        const node = findNodeInTree(commonIndicators.value, key)
+        return node ? node.id : null
+      })
+      .filter(Boolean) as string[]
+
+    const leafNodeIdsUnchecked = leafNodesUnchecked
+      .map((key: string) => {
+        const node = findNodeInTree(commonIndicators.value, key)
+        return node ? node.id : null
+      })
+      .filter(Boolean) as string[]
+
     // 只对叶子节点触发新增dashboard事件
-    if (leafNodesChecked.length > 0) {
-      emit('add-dashboard', leafNodesChecked)
+    if (leafNodeIdsChecked.length > 0) {
+      emit('add-dashboard', leafNodeIdsChecked)
     }
 
     // 只对叶子节点触发删除dashboard事件
-    if (leafNodesUnchecked.length > 0) {
-      emit('delete-dashboard', leafNodesUnchecked)
+    if (leafNodeIdsUnchecked.length > 0) {
+      emit('delete-dashboard', leafNodeIdsUnchecked)
     }
   },
   { deep: true }
@@ -691,7 +894,14 @@ watch(
   () => props.selectedCommonIndicators,
   (newVal) => {
     if (newVal) {
+      // 设置标志位，表示这是来自props的更新
+      isUpdatingFromProps.value = true
       selectedCommonIndicators.value = [...newVal]
+
+      // 下一个tick后重置标志位
+      nextTick(() => {
+        isUpdatingFromProps.value = false
+      })
     }
   },
   { deep: true }
@@ -701,7 +911,14 @@ watch(
   () => props.selectedPersonalIndicators,
   (newVal) => {
     if (newVal) {
+      // 设置标志位，表示这是来自props的更新
+      isUpdatingFromProps.value = true
       selectedPersonalIndicators.value = [...newVal]
+
+      // 下一个tick后重置标志位
+      nextTick(() => {
+        isUpdatingFromProps.value = false
+      })
     }
   },
   { deep: true }
@@ -727,6 +944,24 @@ watch(
   },
   { deep: true }
 )
+
+// 按order字段排序节点数组
+// 修复排列顺序问题：确保每次刷新（手动刷新、删除、新增）都按顺序排列
+const sortNodesByOrder = (nodes: IndicatorNode[]): IndicatorNode[] => {
+  return [...nodes].sort((a, b) => {
+    // 如果有order字段，按order排序，否则按title排序作为后备方案
+    if (a.order !== undefined && b.order !== undefined) {
+      return a.order - b.order
+    }
+    if (a.order !== undefined) return -1
+    if (b.order !== undefined) return 1
+    return (a.title || '').localeCompare(b.title || '')
+  }).map(node => ({
+    ...node,
+    // 递归排序子节点
+    children: node.children ? sortNodesByOrder(node.children) : undefined
+  }))
+}
 
 // 在树中查找节点
 const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | null => {
@@ -756,6 +991,7 @@ const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | nul
       display: flex;
       flex-direction: column;
       align-items: center;
+      margin-top: 60px;
       padding: 16px 8px;
 
       .collapsed-icon {
@@ -814,10 +1050,16 @@ const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | nul
   }
 
   .floating-add-button {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
+    position: fixed;
+    bottom: 50px;
+    left: 280px;
     z-index: 102;
+    transition: left 0.3s ease;
+  }
+
+  /* 当侧边栏折叠时，隐藏添加按钮 */
+  &.collapsed .floating-add-button {
+    display: none;
   }
 
   .tree-content {

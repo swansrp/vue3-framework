@@ -2,7 +2,7 @@
 
 import { get, post } from '@/framework/network/request'
 import { apiType, baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/apis'
-import type { DashboardItem, IndicatorNode } from '@/framework/views/MainContent/dashboard/types'
+import type { DashboardItem, IndicatorNode } from './types'
 import { addEntity, deleteEntity, updateEntitySelective, updateOrder, updateTreePid } from '@/framework/apis/portal'
 import { UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 
@@ -25,7 +25,10 @@ export const updateStatisticPid = (data: UpdatePidType) => updateTreePid('portal
 export const updateStatisticOrder = (data: Array<UpdateOrderType>) => updateOrder('portal/dashboard/statistic', data)
 
 // 新增个人指标
-export const addPersonalStatistic = (data: Partial<IndicatorNode>) => addEntity('portal/dashboard/statistic', data)
+export const addPersonalStatistic = (data: Partial<IndicatorNode>) => addEntity('portal/dashboard/statistic', { ...data, customerNumber: '1' })
+
+// 新增通用指标
+export const addCommonStatistic = (data: Partial<IndicatorNode>) => addEntity('portal/dashboard/statistic', { ...data, customerNumber: '0' })
 
 // 更新个人指标
 export const updatePersonalStatistic = (data: Partial<IndicatorNode>) => updateEntitySelective('portal/dashboard/statistic', data)

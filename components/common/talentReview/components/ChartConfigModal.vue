@@ -36,7 +36,7 @@
 <script lang="ts" setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { addPersonalStatistic, updatePersonalStatistic, getPersonalStatistic } from '../api'
+import { addPersonalStatistic, updatePersonalStatistic, getPersonalStatistic, addCommonStatistic, getCommonStatistic } from '../api'
 import type { IndicatorNode } from '../types'
 import DashboardComponent from '@/framework/components/common/Portal/dashboard/dashboard.vue'
 
@@ -45,6 +45,7 @@ interface Props {
   tableId: string
   editData?: IndicatorNode | null
   isEditMode?: boolean
+  isCommonIndicator?: boolean // 是否为通用指标模式
 }
 
 interface Emits {
@@ -56,7 +57,8 @@ const props = withDefaults(defineProps<Props>(), {
   visible: false,
   tableId: '',
   editData: null,
-  isEditMode: false
+  isEditMode: false,
+  isCommonIndicator: false
 })
 
 const emit = defineEmits<Emits>()
@@ -152,7 +154,9 @@ const loadEditData = async () => {
 
     // 2) 如仍未获取到配置，则从接口返回的树形数据中递归查找对应 id
     if (!savedConfig) {
-      const response = await getPersonalStatistic(props.tableId)
+      const response = props.isCommonIndicator
+        ? await getCommonStatistic(props.tableId)
+        : await getPersonalStatistic(props.tableId)
       const personalStatistics = response.payload || []
 
       const findById = (nodes: any[], id: string | number): any | null => {
@@ -277,11 +281,15 @@ const handleSaveConfig = async () => {
 
     // 根据模式调用不同的API
     if (props.isEditMode && props.editData?.id) {
-      // 编辑模式：调用更新API
+      // 编辑模式：调用更新API（通用指标和个人指标都使用同一个更新接口）
       await updatePersonalStatistic(indicatorData)
     } else {
-      // 新增模式：调用新增API
-      await addPersonalStatistic(indicatorData)
+      // 新增模式：根据指标类型调用不同的API
+      if (props.isCommonIndicator) {
+        await addCommonStatistic(indicatorData)
+      } else {
+        await addPersonalStatistic(indicatorData)
+      }
     }
 
     message.success('保存配置成功')
@@ -345,6 +353,77 @@ const handleCancel = () => {
     flex: 1;
     // 弹窗上下文提升图表最小高度
     --chart-min-height: 560px;
+
+    // 针对弹窗环境优化图表展示区域
+    .chart-display-area {
+      .chart-panel {
+        // 在弹窗中给维度控制面板设置更严格的高度限制
+        .dimension-controls {
+          max-height: 120px !important; // 在弹窗中进一步限制维度控制面板高度
+          flex-shrink: 0 !important;
+          margin-bottom: 8px !important; // 减少底部间距，节省空间
+
+          .ant-tabs-content-holder {
+            max-height: 80px;
+            overflow-y: auto;
+          }
+
+          .tab-content {
+            padding: 8px !important; // 减少内边距
+            max-height: 60px;
+            overflow-y: auto;
+
+            .ant-checkbox-group {
+              gap: 4px 6px !important; // 减少复选框间距
+
+              .ant-checkbox-wrapper {
+                font-size: 11px !important; // 缩小字体
+                padding: 2px 6px !important; // 减少内边距
+                width: auto !important; // 自适应宽度
+                min-width: 80px !important;
+                max-width: 120px !important;
+              }
+            }
+          }
+
+          .tab-actions {
+            padding-top: 4px !important; // 减少顶部间距
+
+            .ant-btn-link {
+              font-size: 11px !important;
+              padding: 1px 6px !important;
+            }
+          }
+        }
+
+        // 确保图表容器能占满剩余空间
+        .chart-container {
+          flex: 1 !important;
+          min-height: 0 !important;
+
+          // 确保 UniversalChart 组件在弹窗中正常显示
+          :deep(.universal-chart-container) {
+            height: 100% !important;
+            min-height: 400px !important; // 设置合理的最小高度
+
+            .echarts-container {
+              height: 100% !important;
+              min-height: 400px !important;
+            }
+          }
+        }
+
+        .chart-placeholder {
+          min-height: 300px !important; // 占位符也设置合理的最小高度
+
+          .placeholder-content {
+            .placeholder-icon {
+              font-size: 36px !important; // 适当缩小图标
+            }
+          }
+        }
+      }
+    }
   }
 }
 
