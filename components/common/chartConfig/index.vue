@@ -57,9 +57,9 @@ import { computed, onMounted, onUnmounted, ref, readonly, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ReloadOutlined } from '@ant-design/icons-vue'
-import IndicatorTree from './components/IndicatorTree.vue'
-import ChartGrid from './components/ChartGrid.vue'
-import ChartConfigModal from './components/ChartConfigModal.vue'
+import IndicatorTree from '@/framework/components/common/chartConfig/IndicatorTree.vue'
+import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
+import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import {
   addPersonalDashboard,
   deletePersonalDashboard,

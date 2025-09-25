@@ -52,8 +52,8 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { InfoCircleOutlined } from '@ant-design/icons-vue'
-import { addPersonalStatistic, updatePersonalStatistic, getPersonalStatistic, addCommonStatistic, getCommonStatistic, updateCommonStatistic } from '../api'
-import type { IndicatorNode } from '../types'
+import { addPersonalStatistic, updatePersonalStatistic, getPersonalStatistic, addCommonStatistic, getCommonStatistic, updateCommonStatistic } from './api'
+import type { IndicatorNode } from './types'
 import dashboard from '@/framework/components/common/Portal/dashboard/dashboard.vue'
 
 interface Props {

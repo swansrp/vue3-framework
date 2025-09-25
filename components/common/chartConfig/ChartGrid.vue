@@ -50,7 +50,7 @@
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { BarChartOutlined } from '@ant-design/icons-vue'
 import ChartCard from './ChartCard.vue'
-import type { DashboardItem } from '../types'
+import type { DashboardItem } from './types'
 
 interface Props {
   indicators: DashboardItem[];

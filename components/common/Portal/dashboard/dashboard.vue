@@ -647,6 +647,14 @@ const restoreConfig = async (savedConfig: any) => {
   }
 }
 
+// 强制重新计算布局
+const forceRecalculateLayout = async () => {
+  await nextTick()
+  if (chartDisplayAreaRef.value && typeof chartDisplayAreaRef.value.forceRecalculateLayout === 'function') {
+    chartDisplayAreaRef.value.forceRecalculateLayout()
+  }
+}
+
 // 暴露方法和数据给父组件
 defineExpose({
   dimensionIndicatorsFilter,
@@ -657,7 +665,8 @@ defineExpose({
   dataMetrics,
   clearChart,
   generateChart,
-  restoreConfig
+  restoreConfig,
+  forceRecalculateLayout
 })
 </script>
 
