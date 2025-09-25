@@ -124,8 +124,8 @@ import {
   PlusOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
-import type { IndicatorNode } from '../types'
-import { updateStatisticOrder, updateStatisticPid } from '../api'
+import type { IndicatorNode } from './types'
+import { updateStatisticOrder, updateStatisticPid } from './api'
 
 // 权限接口定义
 interface IndicatorPermissions {

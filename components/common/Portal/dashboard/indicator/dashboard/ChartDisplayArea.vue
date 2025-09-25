@@ -714,6 +714,28 @@ const fetchTalentStatisticData = async (
   }
 }
 
+// 强制重新计算布局（主要用于弹窗初始化后的布局调整）
+const forceRecalculateLayout = async () => {
+  await nextTick()
+  if (chartRef.value && typeof chartRef.value.refresh === 'function') {
+    // 强制刷新图表
+    chartRef.value.refresh()
+  }
+  // 如果有ECharts实例，强制resize
+  if (chartRef.value && typeof chartRef.value.getInstance === 'function') {
+    const chartInstance = chartRef.value.getInstance()
+    if (chartInstance) {
+      setTimeout(() => {
+        try {
+          chartInstance.resize()
+        } catch (error) {
+          console.warn('强制resize图表失败:', error)
+        }
+      }, 50)
+    }
+  }
+}
+
 // 暴露方法供父组件调用
 defineExpose({
   generateChart: fetchChartData,
@@ -726,7 +748,8 @@ defineExpose({
     allSecondDimensions.value = []
     allStatisticTypes.value = []
     loading.value = false
-  }
+  },
+  forceRecalculateLayout
 })
 </script>
 

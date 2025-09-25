@@ -1315,6 +1315,17 @@ export default defineComponent({
     // 生命周期钩子
     onMounted(async () => {
       await initChart()
+
+      // 在弹窗环境中，需要额外的延迟来确保容器完全渲染
+      setTimeout(() => {
+        if (chartInstance && chartRef.value) {
+          try {
+            chartInstance.resize()
+          } catch (error) {
+            console.warn('延迟resize失败:', error)
+          }
+        }
+      }, 200)
     })
 
     onBeforeUnmount(() => {
