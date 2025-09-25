@@ -982,6 +982,7 @@ const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | nul
   background: white;
   border-right: 1px solid #e8e8e8;
   transition: all 0.3s ease;
+  min-height: 830px;
   z-index: 100;
 
   &.collapsed {
@@ -1051,7 +1052,7 @@ const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | nul
 
   .floating-add-button {
     position: fixed;
-    bottom: 50px;
+    bottom: 60px;
     left: 280px;
     z-index: 102;
     transition: left 0.3s ease;
