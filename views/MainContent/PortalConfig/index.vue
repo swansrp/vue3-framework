@@ -858,8 +858,8 @@
         </div>
       </template>
       <talent-review
-        ref="talentReviewRef" v-if="talentReviewModalShow" :tableId="tableConfig.name" :showHeader="false"
-        :showPersonalIndicators="false" :commonIndicatorPermissions="{ edit: true, delete: true }"
+        ref="talentReviewRef" v-if="talentReviewModalShow" :tableId="tableConfig.name"
+        :showHeader="false" :showPersonalIndicators="false" :commonIndicatorPermissions="{ edit: true, delete: true }"
         :personalIndicatorPermissions="{ edit: false, delete: false }" />
     </a-modal>
   </div>

@@ -4,10 +4,6 @@
       <div class="empty-content">
         <BarChartOutlined class="empty-icon" />
         <p>暂无图表，请添加指标</p>
-        <a-button v-if="canEditPersonalIndicators" type="primary" @click="$emit('add-indicator', [])">
-          <PlusOutlined />
-          添加指标
-        </a-button>
       </div>
     </div>
 
@@ -52,7 +48,7 @@
 
 <script lang="ts" setup>
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { BarChartOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import { BarChartOutlined } from '@ant-design/icons-vue'
 import ChartCard from './ChartCard.vue'
 import type { DashboardItem } from '../types'
 

@@ -31,10 +31,16 @@ export const addPersonalStatistic = (data: Partial<IndicatorNode>) => addEntity(
 export const addCommonStatistic = (data: Partial<IndicatorNode>) => addEntity('portal/dashboard/statistic', { ...data, customerNumber: '0' })
 
 // 更新个人指标
-export const updatePersonalStatistic = (data: Partial<IndicatorNode>) => updateEntitySelective('portal/dashboard/statistic', data)
+export const updatePersonalStatistic = (data: Partial<IndicatorNode>) => updateEntitySelective('portal/dashboard/statistic', { ...data, customerNumber: '1' })
+
+// 更新通用指标
+export const updateCommonStatistic = (data: Partial<IndicatorNode>) => updateEntitySelective('portal/dashboard/statistic', { ...data, customerNumber: '0' })
 
 // 删除个人指标
 export const deletePersonalStatistic = (id: string) => deleteEntity('portal/dashboard/statistic', id)
+
+// 删除通用指标
+export const deleteCommonStatistic = (id: string) => deleteEntity('portal/dashboard/statistic', id)
 
 // 获取图表配置
 export const getPersonalDashboard = (tableId: string) => get(buildGetApi(''), {

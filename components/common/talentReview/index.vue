@@ -31,7 +31,7 @@
       <!-- 主体图表区域 -->
       <div class="dashboard-content" :class="{ 'full-width': !showIndicatorTree }">
         <chart-grid
-          :indicators="displayedIndicators" :loading="loading"
+          :indicators="displayedIndicators" :loading="loading" :grid-columns="GRID_COLUMNS"
           :can-edit-common-indicators="canEditCommonIndicators"
           :can-edit-personal-indicators="canEditPersonalIndicators"
           :can-delete-common-indicators="commonIndicatorPermissions?.delete ?? true"
@@ -64,6 +64,7 @@ import {
   addPersonalDashboard,
   deletePersonalDashboard,
   deletePersonalStatistic,
+  deleteCommonStatistic,
   getCommonStatistic,
   getPersonalDashboard,
   getPersonalStatistic,
@@ -113,6 +114,9 @@ const route = currentRoute.value
 const computedTableId = computed(() => {
   return props.tableId || (route.query?.tableId as string)
 })
+
+// 统一的网格列数配置
+const GRID_COLUMNS = 7
 
 // 页面状态
 const loading = ref(false)
@@ -227,13 +231,34 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
     commonIndicators.value = commonResp.payload || []
     personalIndicators.value = personalResp.payload || []
 
-    // 以 getDashboard 的顺序与大小为准，根据实际接口返回格式映射
+    // 构建通用/个人指标顺序映射（来自左侧树的 order）
+    const buildOrderMap = (nodes: any[]): Record<string, number> => {
+      const map: Record<string, number> = {}
+      const walk = (arr: any[]) => {
+        if (!Array.isArray(arr)) return
+        arr.forEach((n: any) => {
+          if (n && n.id !== undefined) map[String(n.id)] = Number(n.order ?? 0)
+          if (Array.isArray(n.children) && n.children.length) walk(n.children)
+        })
+      }
+      walk(nodes || [])
+      return map
+    }
+
+    const commonOrderMap = buildOrderMap(commonIndicators.value)
+    const personalOrderMap = buildOrderMap(personalIndicators.value)
+
+    // 以指标树顺序为主，其次使用 dashboard 返回的 order，最后按 id 排序兜底
     const dashboardItemsData = (dashboardResp.payload || [])
       .map((d: any) => {
+        const isCommon = String(d.commonStatistic) === '1'
+        const orderFromTree = (isCommon ? commonOrderMap : personalOrderMap)[String(d.statisticId)]
+        const displayOrder = orderFromTree ?? Number(d.order ?? 0)
+
         const item = {
           id: d.id,
           title: d.title ?? '',
-          displayOrder: Number(d.order ?? 0),
+          displayOrder,
           xGrid: Number(d.xGrid ?? d.xgrid ?? 2),
           yGrid: Number(d.yGrid ?? d.ygrid ?? 2),
           xPosition: Number(d.xPosition ?? d.xposition ?? 1),
@@ -321,36 +346,80 @@ const reorganizeChartsLayout = (items: DashboardItem[]): DashboardItem[] => {
     return (a.id || '').localeCompare(b.id || '')
   })
 
-  // 重新计算所有图表的位置，按顺序排列确保不重叠
-  const gridColumns = 7
+  const gridColumns = GRID_COLUMNS
   const rearrangedItems: DashboardItem[] = []
 
-  let currentX = 1
-  let currentY = 1
-  let maxYInRow = 1
+  // 创建一个占用情况映射来跟踪哪些格子被占用
+  const occupiedCells = new Set<string>()
 
+  // 标记指定区域为已占用
+  const markOccupied = (x: number, y: number, width: number, height: number) => {
+    for (let i = x; i < x + width; i++) {
+      for (let j = y; j < y + height; j++) {
+        occupiedCells.add(`${i},${j}`)
+      }
+    }
+  }
+
+  // 检查指定位置是否可以放置图表
+  const canPlace = (x: number, y: number, width: number, height: number): boolean => {
+    // 检查边界
+    if (x + width - 1 > gridColumns || x < 1 || y < 1) {
+      return false
+    }
+
+    // 检查是否有冲突
+    for (let i = x; i < x + width; i++) {
+      for (let j = y; j < y + height; j++) {
+        if (occupiedCells.has(`${i},${j}`)) {
+          return false
+        }
+      }
+    }
+    return true
+  }
+
+  // 找到最佳位置：优先填充上方空缺，然后从左到右
+  const findBestPosition = (width: number, height: number): { x: number; y: number } => {
+    // 计算最大已使用的行数，限制搜索范围
+    const occupiedPositions = Array.from(occupiedCells).map(pos => parseInt(pos.split(',')[1]))
+    const maxUsedY = occupiedPositions.length > 0 ? Math.max(...occupiedPositions) : 1
+
+    // 搜索范围：从第1行开始，最多搜索到当前使用范围+2行
+    const searchMaxY = Math.min(maxUsedY + 2, 20)
+
+    for (let y = 1; y <= searchMaxY; y++) {
+      for (let x = 1; x <= gridColumns - width + 1; x++) {
+        if (canPlace(x, y, width, height)) {
+          return { x, y }
+        }
+      }
+    }
+
+    // 如果找不到位置，在底部新开一行
+    const fallbackY = Math.max(maxUsedY + 1, 1)
+    return { x: 1, y: fallbackY }
+  }
+
+  // 重新排列每个图表
   for (const item of sortedItems) {
     const xGrid = item.xGrid || 2
     const yGrid = item.yGrid || 2
 
-    // 如果当前行放不下，换到下一行
-    if (currentX + xGrid - 1 > gridColumns) {
-      currentX = 1
-      currentY = maxYInRow
-    }
+    // 找到最佳位置
+    const position = findBestPosition(xGrid, yGrid)
 
-    // 更新图表位置
+    // 创建新的图表项
     const newItem = {
       ...item,
-      xPosition: currentX,
-      yPosition: currentY
+      xPosition: position.x,
+      yPosition: position.y
     }
 
     rearrangedItems.push(newItem)
 
-    // 更新下一个位置
-    currentX += xGrid
-    maxYInRow = Math.max(maxYInRow, currentY + yGrid)
+    // 标记这个位置为已占用
+    markOccupied(position.x, position.y, xGrid, yGrid)
   }
 
   return rearrangedItems
@@ -384,12 +453,14 @@ const refreshDashboard = async () => {
     // 先重新加载数据
     await loadDashboardData()
 
-    // 如果有图表数据，进行按顺序重新排列
-    if (dashboardItems.value && dashboardItems.value.length > 0) {
-      // 按顺序重新排列图表布局
-      const reorganizedItems = reorganizeChartsLayout(dashboardItems.value)
+    // 基于当前显示范围（只通用或通用+个人）进行布局重排
+    const itemsToReorganize = displayedIndicators.value
 
-      // 保存新的布局到服务器
+    if (itemsToReorganize && itemsToReorganize.length > 0) {
+      // 按顺序重新排列图表布局（仅作用于当前显示集合）
+      const reorganizedItems = reorganizeChartsLayout(itemsToReorganize)
+
+      // 保存新的布局到服务器（仅更新当前显示集合的坐标尺寸）
       await saveReorganizedLayout(reorganizedItems)
 
       // 再次加载数据以显示新布局
@@ -480,7 +551,9 @@ const handleChartConfigSave = async (_data: any) => {
   try {
     // ChartConfigModal组件已经处理了保存逻辑和消息提示
     // 这里只需要重新加载数据以更新左侧指标树
-    await loadDashboardData()
+    // 如果是新增模式，跳过选中状态更新，保持原有选中状态
+    const skipSelection = !isEditMode.value
+    await loadDashboardData(skipSelection)
   } catch (error) {
     console.error('重新加载数据失败:', error)
     message.error('重新加载数据失败')
@@ -489,7 +562,23 @@ const handleChartConfigSave = async (_data: any) => {
 
 // 删除指标
 const deleteIndicator = async (indicatorId: string) => {
-  await deletePersonalStatistic(indicatorId)
+  // 在指标树中查找指标对象以确定类型
+  const commonNode = findNodeInIndicatorTree(commonIndicators.value, indicatorId)
+  const personalNode = findNodeInIndicatorTree(personalIndicators.value, indicatorId)
+
+  // 根据指标类型调用对应的删除API
+  if (commonNode) {
+    // 通用指标
+    await deleteCommonStatistic(indicatorId)
+  } else if (personalNode) {
+    // 个人指标
+    await deletePersonalStatistic(indicatorId)
+  } else {
+    console.error('未找到指标:', indicatorId)
+    message.error('未找到要删除的指标')
+    return
+  }
+
   await loadDashboardData()
   emit('indicator-deleted', [indicatorId])
 }
@@ -500,7 +589,7 @@ const calculateNewCardPosition = (
   cardSize: { xGrid: number; yGrid: number } = { xGrid: 2, yGrid: 2 }
 ): { xPosition: number; yPosition: number } => {
   // 默认网格列数
-  const gridColumns = 7
+  const gridColumns = GRID_COLUMNS
 
   // 如果没有卡片，从位置(1,1)开始
   if (currentItems.length === 0) {
@@ -586,12 +675,31 @@ const addDashboardFromTree = async (indicatorIds: string[]) => {
     }
   })
 
-  // 分别处理通用指标和个人指标
-  if (commonIndicatorIds.length > 0) {
-    await addDashboard(commonIndicatorIds, true) // true表示是通用指标
+  // 基于左侧树的 order 对两类指标分别排序，保证以“顺序”添加
+  const getOrderMap = (nodes: IndicatorNode[]): Record<string, number> => {
+    const map: Record<string, number> = {}
+    const walk = (arr: IndicatorNode[]) => {
+      arr?.forEach((n) => {
+        map[String(n.id)] = Number(n.order ?? 0)
+        if (n.children && n.children.length) walk(n.children)
+      })
+    }
+    walk(nodes || [])
+    return map
   }
-  if (personalIndicatorIds.length > 0) {
-    await addDashboard(personalIndicatorIds, false) // false表示是个人指标
+
+  const commonOrderMap = getOrderMap(commonIndicators.value)
+  const personalOrderMap = getOrderMap(personalIndicators.value)
+
+  const sortedCommon = [...commonIndicatorIds].sort((a, b) => (commonOrderMap[a] ?? 0) - (commonOrderMap[b] ?? 0))
+  const sortedPersonal = [...personalIndicatorIds].sort((a, b) => (personalOrderMap[a] ?? 0) - (personalOrderMap[b] ?? 0))
+
+  // 分别处理通用指标和个人指标（已按顺序）
+  if (sortedCommon.length > 0) {
+    await addDashboard(sortedCommon, true) // true表示是通用指标
+  }
+  if (sortedPersonal.length > 0) {
+    await addDashboard(sortedPersonal, false) // false表示是个人指标
   }
 }
 
@@ -643,6 +751,19 @@ const addDashboard = async (indicatorIds: string[], isCommon = false) => {
 
     // 刷新数据
     await loadDashboardData()
+
+    // 自动按顺序重新排列当前视图（仅作用于当前显示集合）
+    try {
+      const itemsToReorganize = displayedIndicators.value
+      if (itemsToReorganize && itemsToReorganize.length > 0) {
+        const reorganized = reorganizeChartsLayout(itemsToReorganize)
+        await saveReorganizedLayout(reorganized)
+        await loadDashboardData(true)
+      }
+    } catch (e) {
+      // 兜底：布局失败不影响新增成功
+      console.warn('新增后自动布局失败', e)
+    }
 
     // 只在非初始化期间显示成功提示
     if (!isInitialLoad.value) {

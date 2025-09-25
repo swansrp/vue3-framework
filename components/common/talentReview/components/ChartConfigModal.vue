@@ -36,7 +36,7 @@
 <script lang="ts" setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { addPersonalStatistic, updatePersonalStatistic, getPersonalStatistic, addCommonStatistic, getCommonStatistic } from '../api'
+import { addPersonalStatistic, updatePersonalStatistic, getPersonalStatistic, addCommonStatistic, getCommonStatistic, updateCommonStatistic } from '../api'
 import type { IndicatorNode } from '../types'
 import DashboardComponent from '@/framework/components/common/Portal/dashboard/dashboard.vue'
 
@@ -281,8 +281,12 @@ const handleSaveConfig = async () => {
 
     // 根据模式调用不同的API
     if (props.isEditMode && props.editData?.id) {
-      // 编辑模式：调用更新API（通用指标和个人指标都使用同一个更新接口）
-      await updatePersonalStatistic(indicatorData)
+      // 编辑模式：根据指标类型调用对应的更新API
+      if (props.isCommonIndicator) {
+        await updateCommonStatistic(indicatorData)
+      } else {
+        await updatePersonalStatistic(indicatorData)
+      }
     } else {
       // 新增模式：根据指标类型调用不同的API
       if (props.isCommonIndicator) {
@@ -357,6 +361,7 @@ const handleCancel = () => {
     // 针对弹窗环境优化图表展示区域
     .chart-display-area {
       .chart-panel {
+
         // 在弹窗中给维度控制面板设置更严格的高度限制
         .dimension-controls {
           max-height: 120px !important; // 在弹窗中进一步限制维度控制面板高度
