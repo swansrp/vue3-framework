@@ -266,8 +266,17 @@ export default defineComponent({
               textShadowBlur: 2
             },
             emphasis: {
-              focus: 'series'
+              focus: 'series',
+              // 扩大强调区域
+              itemStyle: {
+                borderWidth: 2,
+                borderColor: '#fff',
+                shadowBlur: 5,
+                shadowColor: 'rgba(0,0,0,0.3)'
+              }
             },
+            // 扩大触发区域
+            triggerLineEvent: true,
             animationDelay: (idx: number) => idx * 50
           })
         })
@@ -355,8 +364,17 @@ export default defineComponent({
                 textShadowBlur: 2
               },
               emphasis: {
-                focus: 'series'
+                focus: 'series',
+                // 扩大强调区域
+                itemStyle: {
+                  borderWidth: 2,
+                  borderColor: '#fff',
+                  shadowBlur: 5,
+                  shadowColor: 'rgba(0,0,0,0.3)'
+                }
               },
+              // 扩大触发区域
+              triggerLineEvent: true,
               animationDelay: (idx: number) => idx * 50
             })
           })
@@ -732,8 +750,22 @@ export default defineComponent({
               color: metric.color || `hsl(${(statIndex * 60) % 360}, 70%, 50%)`
             },
             emphasis: {
-              focus: 'series'
+              focus: 'series',
+              // 扩大强调区域
+              lineStyle: {
+                width: 4,
+                shadowBlur: 5,
+                shadowColor: 'rgba(0,0,0,0.3)'
+              },
+              itemStyle: {
+                borderWidth: 3,
+                borderColor: '#fff',
+                shadowBlur: 5,
+                shadowColor: 'rgba(0,0,0,0.3)'
+              }
             },
+            // 扩大触发区域
+            triggerLineEvent: true,
             animationDelay: (idx: number) => idx * 50
           })
         })
@@ -806,8 +838,22 @@ export default defineComponent({
                 color: itemColor
               },
               emphasis: {
-                focus: 'series'
+                focus: 'series',
+                // 扩大强调区域
+                lineStyle: {
+                  width: 4,
+                  shadowBlur: 5,
+                  shadowColor: 'rgba(0,0,0,0.3)'
+                },
+                itemStyle: {
+                  borderWidth: 3,
+                  borderColor: '#fff',
+                  shadowBlur: 5,
+                  shadowColor: 'rgba(0,0,0,0.3)'
+                }
               },
+              // 扩大触发区域
+              triggerLineEvent: true,
               animationDelay: (idx: number) => idx * 50
             })
           })
@@ -1185,8 +1231,14 @@ export default defineComponent({
                 shadowBlur: 10,
                 shadowOffsetX: 0,
                 shadowColor: 'rgba(0, 0, 0, 0.5)'
-              }
+              },
+              // 扩大强调时的缩放，使点击区域更大
+              scale: true,
+              scaleSize: 5
             },
+            // 增加选中区域，扩大点击范围
+            selectedMode: 'single',
+            selectedOffset: 5,
             label: {
               show: false,
               formatter: (params: any) => {
@@ -1236,6 +1288,94 @@ export default defineComponent({
       // 添加点击事件监听
       chartInstance.on('click', (params: any) => {
         emit('click', params)
+      })
+
+      // 添加图表区域点击事件监听（扩大点击范围）
+      chartInstance.getZr().on('click', (event: any) => {
+        // 阻止重复触发（如果已经有具体元素被点击了）
+        if (event.target && event.target.type !== 'group') {
+          return
+        }
+
+        if (!chartInstance) return
+
+        // 获取点击位置对应的数据
+        const pointInPixel = [event.offsetX, event.offsetY]
+        const option = chartInstance.getOption() as any
+
+        if (!option || !option.xAxis || !Array.isArray(option.xAxis) || !option.xAxis[0] ||
+          !option.series || !Array.isArray(option.series)) {
+          return
+        }
+
+        // 类型断言确保TypeScript类型检查
+        const xAxisConfig = option.xAxis as any[]
+        const seriesConfig = option.series as any[]
+
+        // 尝试转换为grid坐标
+        let pointInGrid = null
+        try {
+          pointInGrid = chartInstance.convertFromPixel('grid', pointInPixel)
+        } catch (e) {
+          // 转换失败，可能点击在非图表区域
+        }
+
+        let categoryName = null
+        let xAxisIndex = -1
+
+        if (pointInGrid && Array.isArray(pointInGrid) && pointInGrid[0] >= 0) {
+          // 在图表网格内的点击
+          xAxisIndex = Math.round(pointInGrid[0])
+          const xAxisData = xAxisConfig[0].data
+          if (Array.isArray(xAxisData) && xAxisIndex >= 0 && xAxisIndex < xAxisData.length) {
+            categoryName = xAxisData[xAxisIndex]
+          }
+        } else {
+          // 可能点击在x轴标签区域，尝试根据x坐标估算
+          const gridComponent = (Array.isArray(option.grid) && option.grid[0]) ? option.grid[0] : option.grid
+          const chartWidth = chartInstance!.getWidth()
+
+          // 估算网格区域
+          const gridLeft = gridComponent?.left ? (typeof gridComponent.left === 'string' ?
+            chartWidth * parseFloat(gridComponent.left) / 100 : gridComponent.left) :
+            chartWidth * 0.03
+          const gridRight = gridComponent?.right ? (typeof gridComponent.right === 'string' ?
+            chartWidth * (1 - parseFloat(gridComponent.right) / 100) : chartWidth - gridComponent.right) :
+            chartWidth * 0.97
+
+          const gridWidth = gridRight - gridLeft
+          const xAxisData = xAxisConfig[0].data
+
+          if (Array.isArray(xAxisData) && gridWidth > 0 && event.offsetX >= gridLeft && event.offsetX <= gridRight) {
+            const relativeX = event.offsetX - gridLeft
+            xAxisIndex = Math.floor((relativeX / gridWidth) * xAxisData.length)
+            if (xAxisIndex >= 0 && xAxisIndex < xAxisData.length) {
+              categoryName = xAxisData[xAxisIndex]
+            }
+          }
+        }
+
+        if (categoryName && seriesConfig.length > 0) {
+          // 构造一个模拟的点击参数，使用第一个系列的数据
+          const firstSeries = seriesConfig[0]
+          const seriesData = firstSeries.data
+
+          if (Array.isArray(seriesData) && seriesData[xAxisIndex] !== undefined) {
+            const dataValue = seriesData[xAxisIndex]
+            const mockParams = {
+              componentType: 'series',
+              seriesType: firstSeries.type,
+              seriesIndex: 0,
+              seriesName: firstSeries.name,
+              name: categoryName,
+              dataIndex: xAxisIndex,
+              data: dataValue,
+              value: dataValue?.value !== undefined ? dataValue.value : dataValue,
+              color: (dataValue?.itemStyle?.color) || firstSeries.itemStyle?.color || firstSeries.color
+            }
+            emit('click', mockParams)
+          }
+        }
       })
 
       // 监听窗口大小变化
