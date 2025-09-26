@@ -21,7 +21,7 @@
 import { computed, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ReloadOutlined } from '@ant-design/icons-vue'
-import TalentReviewDashboard from '@/framework/components/common/talentReview/index.vue'
+import TalentReviewDashboard from '@/framework/components/common/chartConfig/index.vue'
 
 // 权限配置
 const commonPermissions = reactive({ edit: false, delete: false })

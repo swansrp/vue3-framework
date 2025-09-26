@@ -917,7 +917,7 @@ import { filterOption } from '@/framework/components/common/utils'
 import SqlDraw from './sqlDraw.vue'
 import IndicatorModal from './indicatorModal.vue'
 import FolderComponent from './components/FolderComponent.vue'
-import TalentReview from '@/framework/components/common/talentReview/index.vue'
+import TalentReview from '@/framework/components/common/chartConfig/index.vue'
 
 const dict = dictStore()
 const treeDict = useTreeStore()
