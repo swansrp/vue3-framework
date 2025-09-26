@@ -185,8 +185,8 @@ const loadEditData = async () => {
     // 2) 如仍未获取到配置，则从接口返回的树形数据中递归查找对应 id
     if (!savedConfig) {
       const response = props.isCommonIndicator
-        ? await getCommonStatistic(props.tableId)
-        : await getPersonalStatistic(props.tableId)
+          ? await getCommonStatistic(props.tableId)
+          : await getPersonalStatistic(props.tableId)
       const personalStatistics = response.payload || []
 
       const findById = (nodes: any[], id: string | number): any | null => {
@@ -201,14 +201,14 @@ const loadEditData = async () => {
       }
 
       const currentNode = Array.isArray(personalStatistics)
-        ? findById(personalStatistics, props.editData.id)
-        : null
+          ? findById(personalStatistics, props.editData.id)
+          : null
 
       if (currentNode && currentNode.indicator) {
         try {
           savedConfig = typeof currentNode.indicator === 'string'
-            ? JSON.parse(currentNode.indicator)
-            : currentNode.indicator
+              ? JSON.parse(currentNode.indicator)
+              : currentNode.indicator
         } catch (e) {
           console.error('解析接口返回的 indicator 失败:', e)
         }

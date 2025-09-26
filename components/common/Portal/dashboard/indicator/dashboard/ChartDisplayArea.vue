@@ -24,7 +24,9 @@
               <a-button size="small" type="link" @click="toggleAllFirstDimensions">
                 全部选中
               </a-button>
-              <a-button size="small" type="link" @click="invertFirstDimensionsSelection">
+              <a-button
+                size="small" type="link" :disabled="isFirstDimensionInvertDisabled"
+                @click="invertFirstDimensionsSelection">
                 反选
               </a-button>
             </div>
@@ -52,7 +54,9 @@
               <a-button size="small" type="link" @click="toggleAllSecondDimensions">
                 全部选中
               </a-button>
-              <a-button size="small" type="link" @click="invertSecondDimensionsSelection">
+              <a-button
+                size="small" type="link" :disabled="isSecondDimensionInvertDisabled"
+                @click="invertSecondDimensionsSelection">
                 反选
               </a-button>
             </div>
@@ -76,7 +80,9 @@
               <a-button size="small" type="link" @click="toggleAllStatisticTypes">
                 全部选中
               </a-button>
-              <a-button size="small" type="link" @click="invertStatisticTypesSelection">
+              <a-button
+                size="small" type="link" :disabled="isStatisticTypesInvertDisabled"
+                @click="invertStatisticTypesSelection">
                 反选
               </a-button>
             </div>
@@ -241,6 +247,24 @@ const dimensionValueMap = computed(() => {
     second[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
   })
   return { first, second }
+})
+
+// 第一维度反选按钮是否应该禁用
+const isFirstDimensionInvertDisabled = computed(() => {
+  return visibleFirstDimensions.value.length === 0 ||
+    visibleFirstDimensions.value.length === allFirstDimensions.value.length
+})
+
+// 第二维度反选按钮是否应该禁用
+const isSecondDimensionInvertDisabled = computed(() => {
+  return visibleSecondDimensions.value.length === 0 ||
+    visibleSecondDimensions.value.length === allSecondDimensions.value.length
+})
+
+// 统计指标反选按钮是否应该禁用
+const isStatisticTypesInvertDisabled = computed(() => {
+  return visibleStatisticTypes.value.length === 0 ||
+    visibleStatisticTypes.value.length === allStatisticTypes.value.length
 })
 
 // 图表点击事件处理
@@ -492,10 +516,7 @@ const toggleAllFirstDimensions = () => {
 
 // 第一维度反选功能
 const invertFirstDimensionsSelection = () => {
-  // 如果当前是全选状态，则不做任何操作
-  if (visibleFirstDimensions.value.length === allFirstDimensions.value.length) {
-    return
-  }
+  // 直接进行反选操作，UI层面的禁用状态已经通过disabled属性控制
   const invertedSelection = allFirstDimensions.value.filter(
     dimension => !visibleFirstDimensions.value.includes(dimension)
   )
@@ -512,10 +533,7 @@ const toggleAllSecondDimensions = () => {
 
 // 第二维度反选功能
 const invertSecondDimensionsSelection = () => {
-  // 如果当前是全选状态，则不做任何操作
-  if (visibleSecondDimensions.value.length === allSecondDimensions.value.length) {
-    return
-  }
+  // 直接进行反选操作，UI层面的禁用状态已经通过disabled属性控制
   const invertedSelection = allSecondDimensions.value.filter(
     dimension => !visibleSecondDimensions.value.includes(dimension)
   )
