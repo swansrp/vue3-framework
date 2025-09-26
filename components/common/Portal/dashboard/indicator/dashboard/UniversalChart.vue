@@ -1147,9 +1147,10 @@ export default defineComponent({
         },
         legend: {
           type: 'scroll',
-          orient: 'vertical',
-          left: 'left',
-          top: 'middle',
+          orient: 'horizontal',
+          left: 'center',
+          top: '10%',
+          width: '80%',
           formatter: (name: string) => {
             const item = pieData.find(d => d.name === name)
             const unit = pieMetric.unit || ''
@@ -1177,7 +1178,7 @@ export default defineComponent({
             name: pieMetric.dataName,
             type: 'pie',
             radius: ['30%', '70%'],
-            center: ['60%', '50%'],
+            center: ['50%', '60%'],
             data: pieData,
             emphasis: {
               itemStyle: {
@@ -1187,14 +1188,14 @@ export default defineComponent({
               }
             },
             label: {
-              show: true,
+              show: false,
               formatter: (params: any) => {
                 return `${params.name}: ${params.percent}%`
               },
               fontSize: 12
             },
             labelLine: {
-              show: true
+              show: false
             },
             animationType: 'scale',
             animationEasing: 'elasticOut',
