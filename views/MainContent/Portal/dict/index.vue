@@ -9,6 +9,7 @@
       defaultSortColumn: [{property: 'dictName', type: 0}, {property: 'dictSort', type: 0}]
     }]"
     list-mode
+    single-select
     table-id="SysDictType" />
 </template>
 
