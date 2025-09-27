@@ -1,6 +1,6 @@
 <template>
   <div class="body">
-    <content-layout :width="width">
+    <content-layout :width="width" class="dark-content-layout">
       <template #side>
         <div class="desc-wrapper">
           <a-descriptions :column="1" class="scrollable-descriptions" layout="vertical">
@@ -53,8 +53,8 @@ import { Ref } from 'vue'
  * 左侧筛选栏只需要写 a-descriptions-item
  */
 const router = useRouter()
-const getDownloadFileName = () => {
-  return props.downloadFileName ? props.downloadFileName : router.currentRoute.value.meta.title
+const getDownloadFileName = (): string => {
+  return props.downloadFileName ? props.downloadFileName : router.currentRoute.value.meta.title as string
 }
 const props = withDefaults(
   defineProps<{
@@ -240,10 +240,21 @@ onMounted(() => {
 
   :deep(.side-wrapper) {
     background-color: transparent;
+    margin: 5px 8px !important; // 减少侧边栏边距
+    box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.3) !important; // 减淡阴影
   }
 
   :deep(.ant-layout-content) {
     background-color: transparent;
+    margin-left: 2px !important; // 大幅减少左边距
+    margin-right: 5px !important; // 减少右边距
+  }
+
+  // 新增：针对DarkTable的布局优化
+  &.dark-content-layout {
+    :deep(.resize-container) {
+      width: 4px !important; // 减少拖拽控制条宽度
+    }
   }
 
   :deep(.ant-layout-sider-children) {
@@ -267,6 +278,66 @@ onMounted(() => {
     background: url("imgs/resize-icon-right.svg") no-repeat center center;
   }
 
+  // 新增：深色主题折叠按钮样式
+  :deep(.collapse-button) {
+    background: rgba(21, 76, 121, 0.9) !important;
+    border: 1px solid rgba(0, 172, 255, 0.3) !important;
+    box-shadow: 0 0 12px rgba(0, 172, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    color: #00acff !important;
+    backdrop-filter: blur(8px);
+    
+    &:hover {
+      background: rgba(21, 76, 121, 1) !important;
+      border-color: #00acff !important;
+      box-shadow: 0 0 20px rgba(0, 172, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+      color: #ffffff !important;
+      transform: translateX(2px);
+    }
+    
+    &:active {
+      transform: translateX(1px);
+      box-shadow: 0 0 8px rgba(0, 172, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    }
+  }
+  
+  :deep(.collapse-button-expand) {
+    &:hover {
+      transform: translateX(-2px);
+    }
+    
+    &:active {
+      transform: translateX(-1px);
+    }
+  }
+  
+  // 深色主题拖拽控制条样式
+  :deep(.drag-handle) {
+    &:hover {
+      background: rgba(0, 172, 255, 0.15) !important;
+      
+      .drag-indicator {
+        opacity: 0.8;
+      }
+    }
+    
+    &.dragging {
+      background: rgba(0, 172, 255, 0.25) !important;
+      
+      .drag-indicator {
+        opacity: 1;
+      }
+    }
+  }
+  
+  :deep(.drag-dot) {
+    background: rgba(0, 172, 255, 0.6) !important;
+  }
+  
+  :deep(.drag-handle:hover .drag-dot),
+  :deep(.drag-handle.dragging .drag-dot) {
+    background: #00acff !important;
+  }
+
 }
 
 
@@ -275,6 +346,7 @@ onMounted(() => {
   width: 100%;
   height: calc(100vh - 20px);
   background-size: 100% 100%;
+  margin-left: -3px; // 向左偏移，减少间距
 
   .title {
     margin-top: 12px;
