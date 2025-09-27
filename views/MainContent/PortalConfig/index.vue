@@ -63,6 +63,8 @@
                     </a-menu>
                   </template>
                 </a-dropdown>
+                <!-- 如果没有右键菜单权限，直接显示标签 -->
+                <span v-else :title="item.label" class="item-label" v-html="highlightSearchText(item.label)"></span>
               </div>
             </div>
           </div>
@@ -75,23 +77,28 @@
             :expanded-folders="expandedFolders" :highlight-search-text="highlightSearchText"
             :get-total-item-count="getTotalItemCount" :get-sorted-folders="getSortedFolders"
             :toggle-folder="toggleFolder" :table-config="tableConfig" :table-list="tableList"
-            :get-table-config-by-name="getTableConfigByName" />
+            :get-table-config-by-name="getTableConfigByName" :selected-role="selectedRole"
+            @refresh-config="refreshConfig" @open-copy-modal="openCopyConfigModal" @delete-config="deleteConfig" />
         </div>
       </div> <!-- 结束 folder-list-content -->
 
       <!-- 底部操作按钮 -->
       <div class="folder-footer-controls">
-        <a-popconfirm title="注意清空该角色的所有配置, 该角色即将使用默认配置" @confirm="cleanPortalConfigByRole">
-          <a-button
-            v-if="selectedRole !== '0' && tableList.length !== 0" shape="round"
-            style="margin-top: 5px; width: 160px">
+        <!-- 清空配置按钮 -->
+        <a-popconfirm 
+          v-if="selectedRole !== '0' && tableList.length > 0" 
+          title="注意清空该角色的所有配置, 该角色即将使用默认配置" 
+          @confirm="cleanPortalConfigByRole">
+          <a-button shape="round" style="margin-top: 5px; width: 160px">
             清空
             <template #icon>
               <MinusCircleOutlined />
             </template>
           </a-button>
         </a-popconfirm>
-        <a-dropdown v-if="selectedRole !== '0' && tableList.length === 0">
+        
+        <!-- 初始化配置按钮 -->
+        <a-dropdown v-if="selectedRole !== '0' && tableList.length === 0 && bindRoleDictList.length > 0">
           <template #overlay>
             <a-menu @click="handleMenuClick">
               <a-menu-item v-for="role in bindRoleDictList" :key="role.value">
@@ -107,6 +114,12 @@
             </template>
           </a-button>
         </a-dropdown>
+        
+        <!-- 当没有可绑定角色时的提示 -->
+        <div v-if="selectedRole !== '0' && tableList.length === 0 && bindRoleDictList.length === 0" 
+             style="margin-top: 5px; padding: 8px 12px; font-size: 12px; color: #999; text-align: center; border: 1px dashed #d9d9d9; border-radius: 6px;">
+          暂无可用配置
+        </div>
       </div>
     </div>
     <!-- endregion -->
@@ -1661,6 +1674,13 @@ const onSqlShow = () => {
   border-top: 1px solid #f0f0f0;
   background: #fafafa;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 60px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
   /* 防止被压缩 */
 }
 
