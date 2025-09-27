@@ -1,11 +1,11 @@
 <template>
-  <div>
+  <div class="left-nav-container" :style="{width: collapsed ? '50px' : `${menuWidth}px`}">
     <a-menu
       v-if="tabStore.isNeedLeftNav"
       v-model:openKeys="keys.openKeys"
       v-model:selectedKeys="keys.selectedKeys"
       :inline-collapsed="collapsed"
-      :style="{width: collapsed ? '50px' : '250px'}"
+      :style="{width: collapsed ? '50px' : `${menuWidth}px`}"
       class="left-menu"
       mode="inline"
       theme="dark"
@@ -26,16 +26,42 @@
         </template>
       </template>
     </a-menu>
-    <a-button
-      v-if="collapsed" style="position: absolute;left: 20px; bottom: 0; z-index: 1000" type="link"
-      @click="toggleCollapsed">
-      <RightOutlined style="color: rgba(255,255,255,0.7)" />
-    </a-button>
-    <a-button
-      v-else style="position: absolute;left: 215px; bottom: 0; z-index: 1000" type="link"
-      @click="toggleCollapsed">
-      <LeftOutlined style="color: rgba(255,255,255,0.7)" />
-    </a-button>
+    
+    <!-- 拖拽调整宽度的控制条 -->
+    <div 
+      v-if="!collapsed"
+      class="resize-handle"
+      @mousedown="startResize"
+      @mouseover="handleHover"
+      @mouseleave="handleLeave"
+      :class="{hovering: isHovering}"
+    >
+      <div class="resize-indicator">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+    
+    <!-- 收起/展开按钮 -->
+    <div 
+      class="toggle-button"
+      :class="{
+        'toggle-collapsed': collapsed,
+        'toggle-expanded': !collapsed,
+        'hovering': toggleHovering
+      }"
+      :style="{
+        left: collapsed ? '25px' : `${menuWidth - 14}px`
+      }"
+      @click="toggleCollapsed"
+      @mouseenter="toggleHovering = true"
+      @mouseleave="toggleHovering = false"
+    >
+      <div class="toggle-icon">
+        <div class="arrow" :class="collapsed ? 'arrow-right' : 'arrow-left'"></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -50,7 +76,6 @@ import { genAntdMenuFirstSelectObject, getTitlePathByKey } from '@/framework/hoo
 import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
 import { getQueryObject } from '@/framework/network/utils'
 import pinia from '@/framework/store'
-import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 import { isNotEmpty } from '@/framework/utils/common'
 
 
@@ -62,6 +87,57 @@ let {topNavPath} = tabStore
 let navList = ref([] as Array<NavListType>)
 const keys = reactive({openKeys: [] as Array<string>, selectedKeys: [] as Array<string>})
 const collapsed = ref(false)
+
+// 拖拽相关状态
+const menuWidth = ref(250)
+const minWidth = 150
+const maxWidth = 800
+const isHovering = ref(false)
+const toggleHovering = ref(false)
+const isDragging = ref(false)
+
+// 拖拽功能
+const startResize = (e: MouseEvent) => {
+  if (e.button !== 0) return // 只响应左键
+  e.stopPropagation()
+  
+  isDragging.value = true
+  const startX = e.clientX
+  const startWidth = menuWidth.value
+  
+  const handleMouseMove = (moveEvent: MouseEvent) => {
+    if (!isDragging.value) return
+    
+    const deltaX = moveEvent.clientX - startX
+    const newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + deltaX))
+    
+    requestAnimationFrame(() => {
+      menuWidth.value = newWidth
+    })
+  }
+  
+  const handleMouseUp = () => {
+    isDragging.value = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    
+    // 触发resize事件通知其他组件
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 100)
+  }
+  
+  document.addEventListener('mousemove', handleMouseMove, { passive: true })
+  document.addEventListener('mouseup', handleMouseUp)
+}
+
+const handleHover = () => {
+  isHovering.value = true
+}
+
+const handleLeave = () => {
+  isHovering.value = false
+}
 const toggleCollapsed = () => {
   collapsed.value = !collapsed.value
   let resizeEvent = new Event('resize')
@@ -120,7 +196,8 @@ watch(
       // 选中左侧菜单后，增加对应的tab信息
       // const tabName = titlePath[titlePath.length - 1]
       const fullPath = `/${MAIN_CONTENT}/${value.name}`
-      tabStore.addHistoryTab(value, fullPath)
+      const tabData = { ...value, fullPath }
+      tabStore.addHistoryTab(tabData, fullPath)
     }
   },{
     immediate: true
@@ -196,6 +273,12 @@ onMounted(() => {
   user-select: none;
 }
 
+.left-nav-container {
+  position: relative;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
 :deep(.ant-menu) {
   height: 100%;
 }
@@ -204,5 +287,139 @@ onMounted(() => {
   box-shadow: 5px 0 5px 0 rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 999;
+  transition: width 0.3s ease;
+}
+
+/* 拖拽控制条样式 */
+.resize-handle {
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  width: 12px;
+  height: 100%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.resize-handle:hover,
+.resize-handle.hovering {
+  opacity: 1;
+  background: rgba(24, 144, 255, 0.2);
+  box-shadow: 0 0 16px rgba(24, 144, 255, 0.4);
+}
+
+.resize-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.resize-indicator .dot {
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.resize-handle:hover .dot,
+.resize-handle.hovering .dot {
+  background: rgba(24, 144, 255, 0.8);
+  transform: scale(1.2);
+}
+
+/* 收起/展开按钮样式 */
+.toggle-button {
+  position: absolute;
+  top: 50%;
+  width: 28px;
+  height: 60px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+/* 展开状态的按钮（在菜单右侧）*/
+.toggle-expanded {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px 0 0 6px;
+  right: 0;
+}
+
+.toggle-expanded:hover,
+.toggle-expanded.hovering {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 16px rgba(24, 144, 255, 0.4);
+}
+
+/* 收起状态的按钮（在黑色背景上）*/
+.toggle-collapsed {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0 6px 6px 0;
+  left: 0;
+}
+
+.toggle-collapsed:hover,
+.toggle-collapsed.hovering {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(24, 144, 255, 0.5);
+  box-shadow: 0 0 16px rgba(24, 144, 255, 0.3);
+}
+
+/* 箭头图标 */
+.toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.arrow {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  transition: all 0.2s ease;
+}
+
+.arrow-left {
+  border-width: 6px 8px 6px 0;
+  border-color: transparent rgba(255, 255, 255, 0.7) transparent transparent;
+}
+
+.arrow-right {
+  border-width: 6px 0 6px 8px;
+  border-color: transparent transparent transparent rgba(255, 255, 255, 0.7);
+}
+
+/* 悬停时箭头颜色加深 */
+.toggle-button:hover .arrow-left,
+.toggle-button.hovering .arrow-left {
+  border-color: transparent rgba(24, 144, 255, 0.9) transparent transparent;
+}
+
+.toggle-button:hover .arrow-right,
+.toggle-button.hovering .arrow-right {
+  border-color: transparent transparent transparent rgba(24, 144, 255, 0.9);
+}
+
+/* 点击时的缩放效果 */
+.toggle-button:active {
+  transform: translateY(-50%) scale(0.95);
 }
 </style>
