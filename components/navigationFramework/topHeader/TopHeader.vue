@@ -6,23 +6,29 @@
     </div>
     <top-nav class="top_nav" />
     <div class="top_user">
-      <a-avatar v-if="isNotEmpty(userStore.avatar)">
-        <template #icon>
-          <img :src="userStore.avatar" />
-        </template>
-      </a-avatar>
-      <a-avatar v-else>
-        <template #icon>
-          <user-outlined />
-        </template>
-      </a-avatar>
-      <div style="margin-left: 5px">
-        <marquee :content="userStore.name" :width="100" />
+      <div class="user-avatar-wrapper">
+        <a-avatar v-if="isNotEmpty(userStore.avatar)" class="user-avatar">
+          <template #icon>
+            <img :src="userStore.avatar" />
+          </template>
+        </a-avatar>
+        <a-avatar v-else class="user-avatar">
+          <template #icon>
+            <user-outlined />
+          </template>
+        </a-avatar>
+        <div class="user-status-indicator"></div>
+      </div>
+      <div class="user-info">
+        <div class="user-name">
+          <marquee :content="userStore.name" :width="100" />
+        </div>
+        <div v-if="userStore.deptName" class="user-role">{{ userStore.deptName }}</div>
       </div>
       <div class="top_user_setting">
         <a-dropdown trigger="click">
           <template #overlay>
-            <a-menu @click="handleMenuClick">
+            <a-menu @click="handleMenuClick" class="user-dropdown-menu">
               <a-menu-item key="1">
                 <RedoOutlined />
                 重新登录
@@ -43,11 +49,13 @@
               </a-menu-item>
             </a-menu>
           </template>
-          <a-button shape="circle" size="large" type="text">
-            <template #icon>
-              <SettingOutlined />
-            </template>
-          </a-button>
+          <div class="setting-button-wrapper">
+            <a-button shape="circle" size="large" type="text" class="setting-button">
+              <template #icon>
+                <SettingOutlined />
+              </template>
+            </a-button>
+          </div>
         </a-dropdown>
       </div>
     </div>
@@ -71,7 +79,7 @@
         <a-form-item
           :rules="[
             { required: true, message: '请输入密码' },
-            { message: '5位以上数字和字母', pattern: '^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{5,}$' },
+            { message: '5位以上数字和字母', pattern: /^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{5,}$/ },
             { validator: lxStr, trigger: 'change' }]"
           has-feedback
           label="输入新密码"
@@ -144,7 +152,7 @@ import { dictStore } from '@/framework/store/common'
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
-const genderOptionList = ref([])
+const genderOptionList = ref<Array<{value: string, label: string}>>([])
 const router = useRouter()
 const localLoginType = import.meta.env.VITE_ssoDomain === 'localhost'
 const modifyPasswordModal = reactive({
@@ -172,9 +180,9 @@ const lxStr = () => {
   const {password} = modifyPasswordModal
   let arr = password.split('')
   for (let i = 1; i < arr.length - 1; i++) {
-    let firstIndex = arr[i - 1].charCodeAt()
-    let secondIndex = arr[i].charCodeAt()
-    let thirdIndex = arr[i + 1].charCodeAt()
+    let firstIndex = arr[i - 1].charCodeAt(0)
+    let secondIndex = arr[i].charCodeAt(0)
+    let thirdIndex = arr[i + 1].charCodeAt(0)
     if ((thirdIndex === secondIndex) && (secondIndex === firstIndex)) {
       return Promise.reject('3位相同的字母或数字')
     }
@@ -235,7 +243,7 @@ onMounted(() => {
   font-size: 17px;
   line-height: 50px;
   padding-left: 5px;
-  padding-right: 5px;
+  padding-right: 15px;
   font-weight: bold;
   text-align: center;
   box-sizing: border-box;
@@ -247,6 +255,24 @@ onMounted(() => {
   align-items: center;
   position: relative;
   z-index: 999;
+}
+
+/* 顶部标题和菜单之间的分割线 */
+.top_title::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 30px;
+  background: linear-gradient(to bottom, 
+    transparent 0%, 
+    rgba(0, 21, 41, 0.1) 20%, 
+    rgba(0, 21, 41, 0.15) 50%, 
+    rgba(0, 21, 41, 0.1) 80%, 
+    transparent 100%);
+  opacity: 0.6;
 }
 
 .show-left-nav {
@@ -265,21 +291,167 @@ onMounted(() => {
 
 .top_nav {
   flex: 1 0 auto;
+  margin-left: 12px;
+  position: relative;
 }
 
 .top_user {
-  width: 190px;
+  width: 240px;
   height: 100%;
   position: absolute;
   right: 0;
   display: flex;
   align-items: center;
   box-sizing: border-box;
-  padding-left: 10px;
+  padding: 8px 16px 8px 12px;
   flex: 0 0 auto;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(255, 255, 255, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid rgba(0, 21, 41, 0.1);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.top_user:hover {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.98) 0%, 
+    rgba(240, 248, 255, 0.95) 100%);
+  box-shadow: inset 0 0 20px rgba(24, 144, 255, 0.1);
+}
+
+/* 用户头像区域 */
+.user-avatar-wrapper {
+  position: relative;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  border: 2px solid rgba(24, 144, 255, 0.2);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-avatar:hover {
+  border-color: rgba(24, 144, 255, 0.5);
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* 在线状态指示器 */
+.user-status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(45deg, #52c41a, #73d13d);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3), 0 0 0 0 rgba(82, 196, 26, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3), 0 0 0 6px rgba(82, 196, 26, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3), 0 0 0 0 rgba(82, 196, 26, 0);
+  }
+}
+
+/* 用户信息区域 */
+.user-info {
+  flex: 1;
+  min-width: 0;
+  margin-right: 8px;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(0, 21, 41, 0.88);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.user-role {
+  font-size: 12px;
+  color: rgba(0, 21, 41, 0.65);
+  line-height: 1;
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.1), rgba(24, 144, 255, 0.05));
+  padding: 2px 6px;
+  border-radius: 8px;
+  display: inline-block;
+  font-weight: 500;
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 设置按钮区域 */
+.setting-button-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.setting-button {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.8) 0%, 
+    rgba(248, 250, 252, 0.9) 100%) !important;
+  border: 1px solid rgba(24, 144, 255, 0.2) !important;
+  color: rgba(0, 21, 41, 0.75) !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.setting-button:hover {
+  background: linear-gradient(135deg, 
+    rgba(24, 144, 255, 0.1) 0%, 
+    rgba(24, 144, 255, 0.05) 100%) !important;
+  border-color: rgba(24, 144, 255, 0.4) !important;
+  color: rgba(24, 144, 255, 0.9) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
+}
+
+.setting-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+/* 下拉菜单美化 */
+:deep(.user-dropdown-menu) {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 21, 41, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+}
+
+:deep(.user-dropdown-menu .ant-menu-item) {
+  border-radius: 6px;
+  margin: 2px 0;
+  transition: all 0.2s ease;
+}
+
+:deep(.user-dropdown-menu .ant-menu-item:hover) {
+  background: linear-gradient(90deg, 
+    rgba(24, 144, 255, 0.08), 
+    rgba(24, 144, 255, 0.04));
+  color: rgba(24, 144, 255, 0.9);
 }
 
 :deep(.top_user_setting .ant-btn-circle) {
-  margin-right: 2px;
+  margin-right: 0;
 }
 </style>
