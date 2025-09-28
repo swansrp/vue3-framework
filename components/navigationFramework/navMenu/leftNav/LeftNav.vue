@@ -167,6 +167,19 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   const isFrame = routeStore.routePathIsFrameMap[path]
   if (isFrame && triggerIsFrame) {
     console.log('====== 外链 ============')
+  
+    // 外链菜单：在打开外链前立即设置菜单高亮状态
+    const selectedKey = obj.item.key
+    keys.selectedKeys = [selectedKey]
+    const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
+    keys.openKeys = keyPath
+    // 更新面包屑数据
+    tabStore.setTitlePath(titlePath)
+    // 更新tab信息
+    const tabData = { ...obj.item, fullPath }
+    tabStore.addHistoryTab(tabData, fullPath)
+    
+    // 打开外链
     const urlArray = fullPath.split('http')
     if(urlArray.length > 1) {
       const routeUrl = fullPath.substring(urlArray[0].length)
