@@ -36,7 +36,7 @@ const getTitlePathByKey = (tree: Array<any>, targetKey: Key) => {
 export const genAntdMenuFirstSelectObject = (node: NavListType, selectLeftNav: Function) => {
   if (!node) {
     message.error({content: () => '该路由尚未配置，请联系管理员! 3秒后将转跳到首页', style: {marginTop: '10vh'}})
-    goBackTo(`/${MAIN_CONTENT}/${HOME}`, 3500, true)
+    goBackTo(`/${HOME}`, 3500, true)
     return
   }
   let defaultNode = {}

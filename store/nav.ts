@@ -73,7 +73,7 @@ export const useTabStore = defineStore('tabStore', {
         }
       } else {
         return {
-          path: `/${MAIN_CONTENT}/${HOME}`
+          path: `/${HOME}`
         }
       }
     }

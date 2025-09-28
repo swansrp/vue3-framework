@@ -23,9 +23,8 @@ import {useRouteStore} from "@/framework/store/route"
 import {HOME, MAIN_CONTENT} from "@/framework/utils/constant"
 import pinia from "@/framework/store"
 
-// 本组件中，使用接口返回的path字段作为a-menu组件的key，而不是使用接口返回的key字段作为a-menu组件的key
+// 本组件中，使用接口返回的path字段作为a-menu组件的key
 // 因为path会被用于leftNav和HistoryTab等组件，用于当前顶部导航的判断
-// 接口返回的key，和其对应的menuId是相同的，没有实际意义
 
 const store = useTabStore(pinia)
 const routeStore = useRouteStore(pinia)
@@ -48,7 +47,7 @@ const setSelectedKey = (topNavPath: string) => {
 
 const selectTopNav = (obj: any) => {
   let path = obj.key
-  router.replace(`/${MAIN_CONTENT}/${path}`).then(() => store.setTopNavPath(path))
+  router.replace(`/${path}`).then(() => store.setTopNavPath(path))
 }
 
 watch(() => store.topNavPath, topNavPath => setSelectedKey(topNavPath), {immediate: true})

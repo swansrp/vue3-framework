@@ -159,25 +159,112 @@ const initCurrentRouteAndVar = () => {
 */
 
 const selectLeftNav = (obj: any, triggerIsFrame = true) => {
+  // 添加安全检查
+  if (!obj) {
+    console.warn('selectLeftNav: obj is undefined', obj)
+    return
+  }
+  
+  // 处理 Ant Design Menu 的 select 事件参数格式
+  let menuItemData = null
+  let selectedKey = null
+  
+  if (obj.key !== undefined) {
+    // 来自菜单点击事件，obj.key 是选中的菜单项 key
+    selectedKey = obj.key
+    
+    // 需要根据 key 从 navList 中查找对应的菜单数据
+  // 递归查找菜单项目
+  const findMenuItemByKey = (nodes: any[], targetKey: string): any => {
+    for (const node of nodes) {
+      if (node.key === targetKey || node.key == targetKey || String(node.key) === String(targetKey)) {
+        return node
+      }
+      if (node.children && node.children.length > 0) {
+        const result = findMenuItemByKey(node.children, targetKey)
+        if (result) return result
+      }
+    }
+    return null
+  }
+    
+    menuItemData = findMenuItemByKey(navList.value, selectedKey)
+    if (!menuItemData) {
+      console.warn('Cannot find menu item data for key:', selectedKey)
+      return
+    }
+  } else if (obj.item) {
+    // 来自其他调用（如初始化），obj.item 直接包含菜单数据
+    menuItemData = obj.item
+    selectedKey = obj.item.key
+  } else {
+    // 来自其他调用，obj 直接是菜单数据
+    menuItemData = obj
+    selectedKey = obj.key
+  }
+  
+  if (!menuItemData) {
+    console.warn('selectLeftNav: menuItemData is undefined')
+    return
+  }
+  
   // tab跳转过来走name 自动走path
-  let path = obj.item.name || obj.item.path
-  const fullPath = `/${MAIN_CONTENT}/${path}`
-  // console.trace('selectLeftNav', obj, navList.value, fullPath)
-  const query = (obj.item.query ? getQueryObject(obj.item.query) : {}) as LocationQueryRaw
-  const isFrame = routeStore.routePathIsFrameMap[path]
+  let path = menuItemData.name || menuItemData.path
+  
+  // 重要：对于多级菜单，需要从topNav开始，层层递归拼接所有路径上的path
+  // 获取从根节点到当前节点的完整路径
+  const getFullPath = (item: any, navList: any[]): string => {
+    // 如果 key 为 undefined，使用回退逻辑
+    if (!item.key) {
+      const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
+      return `/${topNavPath}/${path}`
+    }
+    
+    // 递归查找目标节点，在向下递归过程中累积路径
+    const findPathToItem = (nodes: any[], targetKey: string, currentPath: string[] = []): string[] | null => {
+      for (const node of nodes) {
+        // 将当前节点的path加入路径
+        const newPath = [...currentPath, node.path]
+        
+        // 如果当前节点就是目标节点，返回完整路径
+        // 处理key类型不匹配问题（数字 vs 字符串）
+        if (node.key === targetKey || node.key == targetKey || String(node.key) === String(targetKey)) {
+          return newPath
+        }
+        
+        // 如果有子节点，将当前路径传递给子节点递归查找
+        if (node.children && node.children.length > 0) {
+          const result = findPathToItem(node.children, targetKey, newPath)
+          if (result) return result
+        }
+      }
+      return null
+    }
+    
+    const pathArray = findPathToItem(navList, item.key)
+    if (pathArray) {
+      // 从topNav开始拼接完整路径
+      const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
+      return `/${topNavPath}/${pathArray.join('/')}`
+    }
+    // 如果没找到，回退到简单拼接
+    const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
+    return `/${topNavPath}/${path}`
+  }
+  
+  const fullPath = getFullPath(menuItemData, navList.value)
+  
+  const query = (menuItemData.query ? getQueryObject(menuItemData.query) : {}) as LocationQueryRaw
+  // 使用完整路径判断是否为外链
+  const fullPathForFrame = fullPath.startsWith('/') ? fullPath.substring(1) : fullPath
+  const isFrame = routeStore.routePathIsFrameMap[fullPathForFrame] || routeStore.routePathIsFrameMap[path]
   if (isFrame && triggerIsFrame) {
     console.log('====== 外链 ============')
   
     // 外链菜单：在打开外链前立即设置菜单高亮状态
-    const selectedKey = obj.item.key
     keys.selectedKeys = [selectedKey]
     const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
     keys.openKeys = keyPath
-    // 更新面包屑数据
-    tabStore.setTitlePath(titlePath)
-    // 更新tab信息
-    const tabData = { ...obj.item, fullPath }
-    tabStore.addHistoryTab(tabData, fullPath)
     
     // 打开外链
     const urlArray = fullPath.split('http')
@@ -189,6 +276,8 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
       window.open(routeUrl.href, '_blank')
     }
   } else {
+    console.log('Navigation to:', fullPath)
+    // 使用path进行导航，而不是name
     router.push({
       path: fullPath,
       query
@@ -207,8 +296,42 @@ watch(
       // 选中左侧菜单后， 为面包屑提供数据
       tabStore.setTitlePath(titlePath)
       // 选中左侧菜单后，增加对应的tab信息
-      // const tabName = titlePath[titlePath.length - 1]
-      const fullPath = `/${MAIN_CONTENT}/${value.name}`
+      // 对于多级菜单，必须使用树形结构递归查找完整路径
+      const getFullPathForWatch = (value: any): string => {
+        // 使用与selectLeftNav相同的递归查找逻辑
+        const findPathToItem = (nodes: any[], targetKey: string, currentPath: string[] = []): string[] | null => {
+          for (const node of nodes) {
+            // 将当前节点的path加入路径
+            const newPath = [...currentPath, node.path]
+            
+            // 如果当前节点就是目标节点，返回完整路径
+            // 处理key类型不匹配问题（数字 vs 字符串）
+            if (node.key === targetKey || node.key == targetKey || String(node.key) === String(targetKey)) {
+              return newPath
+            }
+            
+            // 如果有子节点，将当前路径传递给子节点递归查找
+            if (node.children && node.children.length > 0) {
+              const result = findPathToItem(node.children, targetKey, newPath)
+              if (result) return result
+            }
+          }
+          return null
+        }
+        
+        const pathArray = findPathToItem(navList.value, value.key)
+        if (pathArray) {
+          // 从topNav开始拼接完整路径
+          const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
+          return `/${topNavPath}/${pathArray.join('/')}`
+        }
+        
+        // 如果没找到，回退到简单拼接
+        const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
+        return `/${topNavPath}/${value.name}`
+      }
+      
+      const fullPath = getFullPathForWatch(value)
       const tabData = { ...value, fullPath }
       tabStore.addHistoryTab(tabData, fullPath)
     }
@@ -245,10 +368,17 @@ const initLeftNavList = () => {
           // console.log('getObjectByLeftNavPath', routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')])
           const query = router.currentRoute.value.fullPath.split('?')[1]
           const currentNode = routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')]
-          if(isNotEmpty(query)) {
-            currentNode.query = query
+          if (currentNode) {
+            if(isNotEmpty(query)) {
+              currentNode.query = query
+            }
+            getObjectByLeftNavPath(currentNode)
+          } else {
+            console.warn('currentNode not found in dynamicRouteMap for path:', [topNavPath, currentLeftNav].join('/'))
+            console.log('Available routes in dynamicRouteMap:', Object.keys(routeStore.dynamicRouteMap))
+            console.log('Falling back to first menu item')
+            genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
           }
-          getObjectByLeftNavPath(currentNode)
         }
       }
       // 否则，默认选中第一个叶子节点

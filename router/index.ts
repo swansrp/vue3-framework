@@ -27,12 +27,12 @@ const staticRoutes: Array<RouteRecordRaw> = [
     meta: { public: true }
   },
   {
-    path: I_MAIN_CONTENT,
-    name: MAIN_CONTENT,
+    path: '/',
+    name: 'Root',
     component: MainContent,
     children: [
       {
-        path: HOME,
+        path: '',
         name: HOME,
         component: Home
       }
@@ -59,13 +59,10 @@ export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
 }
 
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  console.trace('enterDynamicRoute', enableEnterFirstDynamicRoute)
-  // console.trace('enterDynamicRoute', enableEnterFirstDynamicRoute)
   // 根据是否进入Home页，判断是否需要展示左侧导航菜单
-  // 当然，这样判断是不好的，没有考虑顶部导航没有左侧导航的情况
-  tabStore.isNeedLeftNav = to.path !== `${I_MAIN_CONTENT}/${HOME}`
+  tabStore.isNeedLeftNav = to.path !== `/${HOME}` && to.path !== '/'
   const routeStore = useRouteStore(pinia)
-  const routePath = to.path.replace(I_MAIN_CONTENT + '/', '')
+  const routePath = to.path.replace('/', '')
   const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
   tabStore.isNeedNav = !currentPageIsFrame
 
@@ -76,12 +73,13 @@ export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocati
   }
   routeStore.setLastRoute(from)
   routeStore.setCurrentRoute(to)
-  // 设定MainContent组件的默认路由为第一个动态路由
-  if (enableEnterFirstDynamicRoute && (to.path === '/' || to.path === I_MAIN_CONTENT || to.path === `${I_MAIN_CONTENT}/`)) {
+  
+  // 设定首页的默认路由为第一个动态路由
+  if (enableEnterFirstDynamicRoute && to.path === '/') {
     const leftNavPath = enterFirstDynamicRoute()
     const queryStr = routeStore.dynamicRouteMap[leftNavPath] ? routeStore.dynamicRouteMap[leftNavPath].query : null
     const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
-    next({name: leftNavPath, query})
+    next({path: `/${leftNavPath}`, query})
   } else {
     next()
   }
