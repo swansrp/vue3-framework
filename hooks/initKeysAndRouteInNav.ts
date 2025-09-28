@@ -1,6 +1,6 @@
 import {message} from "ant-design-vue"
 import {goBackTo} from "@/framework/router/utils"
-import {HOME, MAIN_CONTENT} from "@/framework/utils/constant"
+import {MAIN_CONTENT} from "@/framework/utils/constant"
 import { Key } from 'ant-design-vue/es/table/interface'
 import {NavListType} from "@/framework/components/navigationFramework/navMenu/type"
 
@@ -36,7 +36,7 @@ const getTitlePathByKey = (tree: Array<any>, targetKey: Key) => {
 export const genAntdMenuFirstSelectObject = (node: NavListType, selectLeftNav: Function) => {
   if (!node) {
     message.error({content: () => '该路由尚未配置，请联系管理员! 3秒后将转跳到首页', style: {marginTop: '10vh'}})
-    goBackTo(`/${HOME}`, 3500, true)
+    goBackTo('/', 3500, true)
     return
   }
   let defaultNode = {}

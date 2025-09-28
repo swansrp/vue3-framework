@@ -20,7 +20,7 @@ import router from "@/framework/router"
 import {NavListType} from "../type"
 import {useTabStore} from "@/framework/store/nav"
 import {useRouteStore} from "@/framework/store/route"
-import {HOME, MAIN_CONTENT} from "@/framework/utils/constant"
+import {MAIN_CONTENT} from "@/framework/utils/constant"
 import pinia from "@/framework/store"
 
 // 本组件中，使用接口返回的path字段作为a-menu组件的key
@@ -37,7 +37,7 @@ let componentKey = ref('')
 const initTopNavData = () => {
   navList.value = routeStore.dynamicRoute
   const currentTopNav = routeStore.currentTopNav
-  if (currentTopNav !== HOME) keys.selectedKeys = [currentTopNav]
+  if (currentTopNav) keys.selectedKeys = [currentTopNav]
 }
 
 const setSelectedKey = (topNavPath: string) => {

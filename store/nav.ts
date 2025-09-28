@@ -1,7 +1,7 @@
 import {defineStore} from "pinia"
 import {Key} from 'ant-design-vue/lib/table/interface'
 import {TabType} from "@/framework/components/navigationFramework/historyTab/type";
-import {HOME, MAIN_CONTENT} from "@/framework/utils/constant";
+import {MAIN_CONTENT} from "@/framework/utils/constant";
 import {getQueryObject} from "@/framework/network/utils";
 import {LocationQueryRaw} from "vue-router";
 
@@ -72,8 +72,9 @@ export const useTabStore = defineStore('tabStore', {
           query
         }
       } else {
+        // 当没有找到目标路由时，跳转到默认的第一个动态路由
         return {
-          path: `/${HOME}`
+          path: '/'
         }
       }
     }

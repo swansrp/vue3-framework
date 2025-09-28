@@ -71,7 +71,7 @@ import { LocationQueryRaw, useRouter } from 'vue-router'
 import { NavListType } from '../type'
 import { useTabStore } from '@/framework/store/nav'
 import { useRouteStore } from '@/framework/store/route'
-import { CHANGE_TAB, HOME, MAIN_CONTENT } from '@/framework/utils/constant'
+import { CHANGE_TAB, MAIN_CONTENT } from '@/framework/utils/constant'
 import { genAntdMenuFirstSelectObject, getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
 import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
 import { getQueryObject } from '@/framework/network/utils'
@@ -349,7 +349,8 @@ const initLeftNavList = () => {
   topNavPath = topNavPath || routeStore.currentTopNav
   const currentLeftNav = (tabStore.updateLeftNav && tabStore.tabActivateKey) ? tabStore.tabActivateKey : routeStore.currentLeftNav
   topNavPath = (tabStore.updateLeftNav && tabStore.topNavPath) ? tabStore.topNavPath : routeStore.currentTopNav
-  if (topNavPath === HOME) return
+  // 如果没有topNavPath，说明当前在根路径，不需要展示左侧菜单
+  if (!topNavPath) return
   for (const node of routeStore.dynamicRoute) {
     if (node.path === topNavPath) {
       navList.value = node.children

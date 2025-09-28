@@ -3,7 +3,7 @@ import { useTabStore } from '@/framework/store/nav'
 import { getComponent, useRouteStore } from '@/framework/store/route'
 import { getQueryObject } from '@/framework/network/utils'
 import { enterFirstDynamicRoute } from '@/framework/router/utils'
-import { HOME, I_MAIN_CONTENT, MAIN_CONTENT } from '@/framework/utils/constant'
+import { I_MAIN_CONTENT, MAIN_CONTENT } from '@/framework/utils/constant'
 import {
   createRouter,
   createWebHashHistory,
@@ -16,7 +16,6 @@ import {
 const tabStore = useTabStore(pinia)
 const NotFound = () => import('@/framework/views/NotFound/index.vue')
 const MainContent = () => import('@/framework/views/MainContent/index.vue')
-const Home = () => import('@/framework/views/MainContent/WelcomeHome/index.vue')
 let enableEnterFirstDynamicRoute = true
 
 const staticRoutes: Array<RouteRecordRaw> = [
@@ -29,14 +28,7 @@ const staticRoutes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'Root',
-    component: MainContent,
-    children: [
-      {
-        path: '',
-        name: HOME,
-        component: Home
-      }
-    ]
+    component: MainContent
   },
   {
     path: '/:catchAll(.*)',
@@ -59,8 +51,8 @@ export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
 }
 
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  // 根据是否进入Home页，判断是否需要展示左侧导航菜单
-  tabStore.isNeedLeftNav = to.path !== `/${HOME}` && to.path !== '/'
+  // 根据是否进入动态路由，判断是否需要展示左侧导航菜单
+  tabStore.isNeedLeftNav = to.path !== '/'
   const routeStore = useRouteStore(pinia)
   const routePath = to.path.replace('/', '')
   const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
@@ -74,7 +66,7 @@ export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocati
   routeStore.setLastRoute(from)
   routeStore.setCurrentRoute(to)
   
-  // 设定首页的默认路由为第一个动态路由
+  // 设定默认路由为第一个动态路由
   if (enableEnterFirstDynamicRoute && to.path === '/') {
     const leftNavPath = enterFirstDynamicRoute()
     const queryStr = routeStore.dynamicRouteMap[leftNavPath] ? routeStore.dynamicRouteMap[leftNavPath].query : null

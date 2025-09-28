@@ -1,7 +1,7 @@
 import router from '@/framework/router'
 import { defineStore } from 'pinia'
 import { getRouteTree } from '@/framework/apis/nav/route'
-import { MAIN_CONTENT, HOME } from '@/framework/utils/constant'
+import { MAIN_CONTENT } from '@/framework/utils/constant'
 import { NavListType } from '@/framework/components/navigationFramework/navMenu/type'
 import pinia from '@/framework/store/index'
 import { setField } from '@/framework/utils/common'
@@ -118,8 +118,6 @@ export const useRouteStore = defineStore('routeStore', {
       
       routeStore.routePath2RouteTitlePathMap = routePath2RouteTitlePathMap
       routeStore.routePathIsFrameMap = routePathIsFrameMap
-      routeStore.routePath2RouteTitlePathMap['Home'] = '首页'
-      routeStore.routePathIsFrameMap['Home'] = false
       routeStore.buttonMap = buttonMap
 
       // console.log(routeStore.dynamicRouteMap)

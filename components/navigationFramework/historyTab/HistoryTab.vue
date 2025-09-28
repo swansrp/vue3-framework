@@ -7,7 +7,6 @@
       type="editable-card"
       @change="changeActivateKey"
       @edit="removeTab">
-      <a-tab-pane :key="homePageKey" :closable="false" :disabled="true" tab="首页" />
       <a-tab-pane v-for="item in tabs" :key="String(item.key || item.id)" :tab="item.title" />
     </a-tabs>
   </div>
@@ -17,19 +16,16 @@
 import router from "@/framework/router"
 import mitt from '@/framework/utils/mitt'
 import {useTabStore} from '@/framework/store/nav'
-import {CHANGE_TAB, HOME} from '@/framework/utils/constant'
+import {CHANGE_TAB} from '@/framework/utils/constant'
 import {Key} from 'ant-design-vue/es/table/interface'
 import {TabType} from "@/framework/components/navigationFramework/historyTab/type";
 import pinia from "@/framework/store";
 
 const store = useTabStore(pinia)
-// 这个key要和路由中的path一致
-const homePageKey = HOME
 // 初始的tabs为空，leftNav组件会根据路由，通过修改store.tabActivateKey，更新tabs
 let tabs = ref<TabType[]>([])
-// 默认显示首页，这里的赋值其实不会生效，因为store.tabActivateKey会再次修改activeKey的值
 // 初始化当前要激活的tab
-const activeKey = ref<Key>(homePageKey)
+const activeKey = ref<Key>('')
 
 const historyPath: Array<Key> = []
 //保留历史页面（路由）对应的key，方便点击浏览器的“返回”按钮，返回到上一个页面使用
@@ -63,8 +59,9 @@ const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
   }
   // 向pinia 中写入当前激活tab的key
   if (tabs.value.length === 0) {
-    // 当所有tab都被关闭时，显示首页
-    store.tabActivateKey = homePageKey
+    // 当所有tab都被关闭时，自动切换到第一个可用的动态路由
+    // 这里不再设置为首页，而是让系统自动处理
+    // store.tabActivateKey = ''
   } else {
     changeActivateKey(activeKey.value)
   }
@@ -83,17 +80,19 @@ const changeActivateKey = (key: Key) => {
     // 通知左侧导航的更新，左侧导航会通知顶部导航的更新
     mitt.emit(CHANGE_TAB)
   })
-  store.isNeedLeftNav = key !== HOME;
+  // 所有菜单都需要展示左侧导航
+  store.isNeedLeftNav = true
 }
 
 // 用于监听左侧导航栏中的选项选中情况，以及时更新tab
 watch(() => store.tabActivateKey,
     key => {
-      // 如果key为空，则显示首页，immediate可能会使key为''，所以需要判断一下
-      if (key) activeKey.value = key
-      else activeKey.value = homePageKey
-      tabs.value = store._historyTabArray
-      saveHistoryRoute(activeKey.value)
+      // 如果key不为空，则设置为当前key
+      if (key) {
+        activeKey.value = key
+        tabs.value = store._historyTabArray
+        saveHistoryRoute(activeKey.value)
+      }
     },
     { immediate: true }
 )
