@@ -434,13 +434,16 @@ onMounted(() => {
   transition: width 0.3s ease;
 }
 
-/* 左侧菜单项基础样式优化 */
+/* 左侧菜单项基础样式优化 - 统一缩小边框间距 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
   margin: 2px 6px;
   border-radius: 6px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  padding: 0 16px;
+  height: 36px;
+  line-height: 34px;
   /* 未选中时的微妙阴影 */
   box-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.12),
@@ -519,11 +522,14 @@ onMounted(() => {
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
 }
 
-/* 子菜单样式优化 */
+/* 子菜单样式优化 - 统一缩小边框间距 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title) {
   margin: 2px 6px;
   border-radius: 6px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0 16px;
+  height: 36px;
+  line-height: 34px;
   /* 未选中时的微妙阴影 */
   box-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.12),
@@ -580,11 +586,67 @@ onMounted(() => {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 收起状态下的菜单项样式 */
+/* 收起状态下的菜单项样式 - 统一缩小边框间距 */
 :deep(.ant-menu-dark.ant-menu-inline-collapsed .ant-menu-item) {
-  margin: 2px 4px;
+  margin: 2px 6px;
   text-align: center;
+  padding: 0 12px;
+  height: 36px;
+  line-height: 34px;
+}
+
+/* 额外的子菜单间距优化 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu) {
+  margin: 2px 0;
+}
+
+/* 子菜单内容的间距优化 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-sub) {
+  background: transparent;
+  padding: 0;
+}
+
+/* 子菜单项目的样式优化 - 修复出格问题 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item) {
+  height: 36px;
+  line-height: 34px;
+  font-size: 14px;
+  border-radius: 6px;
   padding: 0 16px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.02) 0%, 
+    rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* 子菜单项目悬停效果 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item:not(.ant-menu-item-selected):hover) {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.06) 0%, 
+    rgba(255, 255, 255, 0.03) 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(24, 144, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* 子菜单选中项样式 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item-selected) {
+  background: linear-gradient(135deg, 
+    rgba(24, 144, 255, 0.15) 0%, 
+    rgba(24, 144, 255, 0.08) 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(24, 144, 255, 0.3) !important;
+  box-shadow: 
+    0 0 16px rgba(24, 144, 255, 0.25),
+    0 2px 12px rgba(24, 144, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
 }
 
 /* 收起状态下选中项的发光效果 */
