@@ -309,7 +309,7 @@ onMounted(() => {
     rgba(255, 255, 255, 0.95) 0%, 
     rgba(255, 255, 255, 0.9) 100%);
   backdrop-filter: blur(10px);
-  border-left: 1px solid rgba(0, 21, 41, 0.1);
+  border-bottom: 1px solid #e8eaed !important;
   position: relative;
   transition: all 0.3s ease;
 }
