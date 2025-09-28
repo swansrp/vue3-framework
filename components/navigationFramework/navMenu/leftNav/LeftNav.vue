@@ -434,6 +434,167 @@ onMounted(() => {
   transition: width 0.3s ease;
 }
 
+/* 左侧菜单项基础样式优化 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
+  margin: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  /* 未选中时的微妙阴影 */
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.03) 0%, 
+    rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 未选中菜单项悬停效果 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item:not(.ant-menu-item-selected):hover) {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.04) 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 20px rgba(24, 144, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 选中菜单项样式 - 发光效果 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected) {
+  background: linear-gradient(135deg, 
+    rgba(24, 144, 255, 0.2) 0%, 
+    rgba(24, 144, 255, 0.1) 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(24, 144, 255, 0.4) !important;
+  /* 选中时的发光效果 */
+  box-shadow: 
+    0 0 20px rgba(24, 144, 255, 0.3),
+    0 4px 16px rgba(24, 144, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(24, 144, 255, 0.2);
+  transform: translateY(-1px);
+  position: relative;
+}
+
+/* 选中菜单项的内部光晕 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.1) 0%, 
+    transparent 50%, 
+    rgba(24, 144, 255, 0.1) 100%);
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+/* 选中菜单项图标样式 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected .anticon) {
+  color: #ffffff !important;
+  filter: drop-shadow(0 0 6px rgba(24, 144, 255, 0.6));
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+/* 普通菜单项图标样式 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item .anticon) {
+  color: rgba(255, 255, 255, 0.75);
+  transition: all 0.3s ease;
+  margin-right: 12px;
+}
+
+/* 悬停时图标样式 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item:not(.ant-menu-item-selected):hover .anticon) {
+  color: rgba(255, 255, 255, 0.9);
+  transform: scale(1.02);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+}
+
+/* 子菜单样式优化 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title) {
+  margin: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 未选中时的微妙阴影 */
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.03) 0%, 
+    rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 子菜单悬停效果 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title:hover) {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.04) 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 20px rgba(24, 144, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 展开的子菜单标题样式 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-open > .ant-menu-submenu-title) {
+  background: linear-gradient(135deg, 
+    rgba(24, 144, 255, 0.15) 0%, 
+    rgba(24, 144, 255, 0.08) 100%) !important;
+  border-color: rgba(24, 144, 255, 0.3);
+  box-shadow: 
+    0 0 16px rgba(24, 144, 255, 0.2),
+    0 2px 8px rgba(24, 144, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 子菜单箭头图标 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title .ant-menu-submenu-arrow) {
+  color: rgba(255, 255, 255, 0.75);
+  transition: all 0.3s ease;
+}
+
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title:hover .ant-menu-submenu-arrow) {
+  color: rgba(255, 255, 255, 0.9);
+  transform: scale(1.1);
+}
+
+/* 菜单文字样式 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item),
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title) {
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 收起状态下的菜单项样式 */
+:deep(.ant-menu-dark.ant-menu-inline-collapsed .ant-menu-item) {
+  margin: 2px 4px;
+  text-align: center;
+  padding: 0 16px;
+}
+
+/* 收起状态下选中项的发光效果 */
+:deep(.ant-menu-dark.ant-menu-inline-collapsed .ant-menu-item-selected) {
+  box-shadow: 
+    0 0 20px rgba(24, 144, 255, 0.4),
+    0 4px 16px rgba(24, 144, 255, 0.3),
+    inset 0 0 10px rgba(24, 144, 255, 0.2);
+}
+
 /* 拖拽控制条样式 */
 .resize-handle {
   position: absolute;
