@@ -2055,121 +2055,331 @@ onUnmounted(() => {
 defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig, getData })
 </script>
 <style lang="less" scoped>
+// 主要容器样式
 .portal-tree-wrapper {
-  background-color: white;
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border: 1px solid #e6e8eb;
+  border-radius: 8px;
   box-sizing: border-box;
   overflow: auto;
   height: calc(100vh - 200px);
-  // box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .portal-tree-bind-wrapper {
-  background-color: white;
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border: 1px solid #e6e8eb;
+  border-radius: 12px;
   box-sizing: border-box;
   overflow: auto;
   height: calc(100vh - 150px);
-  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.12);
   margin: 10px 15px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), 0 3px 10px rgba(0, 0, 0, 0.15);
+  }
 }
 
 .root {
   height: calc(100% - 70px);
   display: flex;
-
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  
   .menu-tree {
     width: 280px;
-    box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+    background: linear-gradient(145deg, #ffffff, #f8f9fa);
+    border: 1px solid #e6e8eb;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08), 0 1px 6px rgba(0, 0, 0, 0.1);
     margin: 5px 0 5px 15px;
     position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 16px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
 
     .no-data {
       width: 100%;
-      font-size: 17px;
-      font-weight: bold;
+      font-size: 16px;
+      font-weight: 500;
       text-align: center;
-      color: #8e8e8e;
-      padding-top: 20px;
+      color: #64748b;
+      padding: 40px 20px;
+      letter-spacing: 0.5px;
     }
 
     .menu-category {
-      font-size: 23px;
-      font-weight: bold;
+      font-size: 20px;
+      font-weight: 600;
       text-align: center;
-      padding: 10px 0;
+      padding: 16px 0;
+      color: #1e293b;
+      background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
+      border-bottom: 2px solid #e2e8f0;
+      letter-spacing: 0.5px;
     }
   }
 
   .portal-button-space {
     display: flex;
     justify-content: space-between;
-    margin: 3px 20px 3px 15px;
+    align-items: center;
+    margin: 8px 20px 8px 15px;
+    padding: 12px 16px;
+    background: linear-gradient(145deg, #ffffff, #f8f9fa);
+    border: 1px solid #e6e8eb;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   }
 
   .portal-table-space {
     position: relative;
     height: calc(100% - 70px);
     width: 100%;
+    padding: 0 15px;
 
     .portal-table {
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
+      width: 100%;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e6e8eb;
     }
   }
 }
 
+// 分页样式优化
 .pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 16px 24px;
+  background: linear-gradient(145deg, #f8f9fa, #ffffff);
+  border-top: 1px solid #e6e8eb;
+  border-radius: 0 0 12px 12px;
 }
 
-/**
- 保证数据少时右键菜单显示完整
- */
+// 表格主体样式
 :deep(.surely-table-body-viewport-container) {
   min-height: 350px !important;
+  background: #ffffff;
 }
 
 :deep(.surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner) {
   padding: 0 !important;
 }
 
+// 表头样式优化
 .table-title-cell {
   display: flex;
-  font-weight: bold;
+  font-weight: 600;
   flex-direction: column;
   justify-content: center;
+  color: #374151;
+  font-size: 14px;
+  letter-spacing: 0.3px;
 }
 
 :deep(.surely-table-header-cell) {
-  font-weight: bold;
+  font-weight: 600;
+  background: #f8fafc !important;
+  color: #374151 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  
+  // 移除动画效果，保持静态样式
+  &:hover {
+    background: #f8fafc !important;
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
 }
 
-:deep(.surely-table-body .surely-table-row-odd:not(.surely-table-row-selected):hover) {
-  background-color: #f5f7fa;
+// 表格行样式优化 - 强制斑马纹设计
+:deep(.surely-table-body .surely-table-row) {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid #f1f5f9;
 }
 
-:deep(.surely-table-body .surely-table-row-even:not(.surely-table-row-selected):hover) {
-  background-color: #f5f7fa;
+// 奇数行 - 白色背景
+:deep(.surely-table-body .surely-table-row-odd:not(.surely-table-row-selected)) {
+  background-color: #ffffff !important;
+  
+  &:hover {
+    background-color: #f8fafc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
 }
 
+// 偶数行 - 浅灰背景形成斑马纹
+:deep(.surely-table-body .surely-table-row-even:not(.surely-table-row-selected)) {
+  background-color: #f9fafb !important;
+  
+  &:hover {
+    background-color: #f3f4f6 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
+
+// 通用斑马纹效果 - 多种选择器强制生效
+:deep(.surely-table),
+:deep(.surely-table-wrapper) {
+  
+  tbody tr:nth-child(even),
+  .surely-table-tbody .surely-table-row:nth-child(even),
+  .surely-table-body tr:nth-child(even),
+  .surely-table-body .surely-table-row:nth-child(even) {
+    background-color: #f9fafb !important;
+  }
+  
+  tbody tr:nth-child(odd),
+  .surely-table-tbody .surely-table-row:nth-child(odd),
+  .surely-table-body tr:nth-child(odd),
+  .surely-table-body .surely-table-row:nth-child(odd) {
+    background-color: #ffffff !important;
+  }
+  
+  // hover 效果覆盖
+  tbody tr:nth-child(even):hover,
+  .surely-table-body tr:nth-child(even):hover,
+  .surely-table-body .surely-table-row:nth-child(even):hover {
+    background-color: #f3f4f6 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  
+  tbody tr:nth-child(odd):hover,
+  .surely-table-body tr:nth-child(odd):hover,
+  .surely-table-body .surely-table-row:nth-child(odd):hover {
+    background-color: #f8fafc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
+
+// 最高优先级的斑马纹设计
+:deep(.portal-table) {
+  tr:nth-of-type(even) {
+    background-color: #f9fafb !important;
+  }
+  
+  tr:nth-of-type(odd) {
+    background-color: #ffffff !important;
+  }
+  
+  tr:nth-of-type(even):hover {
+    background-color: #f3f4f6 !important;
+  }
+  
+  tr:nth-of-type(odd):hover {
+    background-color: #f8fafc !important;
+  }
+}
+
+:deep(.surely-table-body .surely-table-row-selected) {
+  background: #eff6ff !important;
+  border-left: 3px solid #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #3b82f6;
+    opacity: 0.3;
+  }
+}
+
+// 单元格样式
+:deep(.surely-table-cell) {
+  padding: 12px 16px !important;
+  font-size: 14px;
+  color: #374151;
+  border-right: 1px solid #f3f4f6;
+  transition: all 0.2s ease;
+}
+
+// 过滤器样式
 .filter-active {
-  color: var(--surely-table-primary-color) !important;
+  color: #3b82f6 !important;
   opacity: 1 !important;
+  font-weight: 600;
 }
 
+// 弹出菜单样式优化
 .menu-popup-container {
-  background-color: white;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
   width: fit-content !important;
-  max-height: 250px;
+  min-width: 200px;
+  max-height: 320px;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: 6px 0;
+  backdrop-filter: blur(8px);
+  
+  // 微妙的立体感
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #f1f5f9, transparent);
+    opacity: 0.6;
+  }
+  
+  // 滚动条优化
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #94a3b8;
+    }
+  }
 }
 
 :deep(.surely-table-popup-container-inner) {
-  width: 580px;
-  height: 400px;
+  width: 600px;
+  height: 420px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 :deep(.surely-table-popup-container) {
@@ -2180,32 +2390,216 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
 
 .menu-popup {
   width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 
   .menu-popup-item {
     width: 100%;
-    padding: 4px 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #374151;
+    font-weight: 500;
+    line-height: 1.4;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0;
+    margin: 0;
+    border-bottom: 1px solid #f1f5f9;
+    position: relative;
+    
+    // 首个项目的特殊样式
+    &:first-child {
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+    }
+    
+    // 最后一个项目的特殊样式
+    &:last-child {
+      border-bottom: none;
+      border-bottom-left-radius: 5px;
+      border-bottom-right-radius: 5px;
+    }
 
     &:hover {
-      background-color: var(--surely-table-row-hover-bg);
+      background: #f8fafc;
+      color: #1e40af;
+      transform: none;
+      
+      // 微妙的左侧标识
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: #3b82f6;
+        opacity: 0.6;
+        transition: all 0.2s ease;
+      }
     }
 
     &.disabled {
-      color: var(--surely-table-disabled-color);
+      color: #9ca3af;
       cursor: not-allowed;
+      opacity: 0.5;
+      
+      &:hover {
+        background: transparent;
+        color: #9ca3af;
+        
+        &::before {
+          display: none;
+        }
+      }
+    }
+    
+    // 复选框和按钮的对齐优化
+    .ant-checkbox {
+      margin-right: 8px;
+      
+      .ant-checkbox-inner {
+        border-color: #d1d5db;
+        
+        &:hover {
+          border-color: #3b82f6;
+        }
+      }
+    }
+    
+    .ant-btn {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      border-color: #d1d5db;
+      
+      &:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+      }
     }
   }
 }
 
 .surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner {
-  padding: 1px !important;
+  padding: 4px !important;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  
+  &:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
 }
 
-/**
-list模式样式
- */
+// 列表模式激活样式
 .activate-item {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+  border-right: 4px solid #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+// 滚动条美化
+:deep(::-webkit-scrollbar) {
+  width: 8px;
+  height: 8px;
+}
+
+:deep(::-webkit-scrollbar-track) {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+:deep(::-webkit-scrollbar-thumb) {
+  background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: linear-gradient(135deg, #94a3b8, #64748b);
+  }
+}
+
+// 加载状态美化
+:deep(.ant-spin-container) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.ant-spin) {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-radius: 12px;
+}
+
+// 空状态样式
+:deep(.ant-empty) {
+  padding: 40px 20px;
+  
+  .ant-empty-description {
+    color: #64748b;
+    font-size: 14px;
+  }
+}
+
+// 全局斑马纹强制样式
+</style>
+
+<style lang="less">
+// 全局样式，强制斑马纹效果
+.surely-table {
+  tbody tr:nth-child(even),
+  .surely-table-tbody .surely-table-row:nth-child(even),
+  .surely-table-body tr:nth-child(even),
+  .surely-table-body .surely-table-row:nth-child(even) {
+    background-color: #f9fafb !important;
+  }
+  
+  tbody tr:nth-child(odd),
+  .surely-table-tbody .surely-table-row:nth-child(odd),
+  .surely-table-body tr:nth-child(odd),
+  .surely-table-body .surely-table-row:nth-child(odd) {
+    background-color: #ffffff !important;
+  }
+  
+  tbody tr:nth-child(even):hover,
+  .surely-table-body tr:nth-child(even):hover,
+  .surely-table-body .surely-table-row:nth-child(even):hover {
+    background-color: #f3f4f6 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  tbody tr:nth-child(odd):hover,
+  .surely-table-body tr:nth-child(odd):hover,
+  .surely-table-body .surely-table-row:nth-child(odd):hover {
+    background-color: #f8fafc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+// 直接针对表格容器
+.portal-table {
+  tr:nth-of-type(even) {
+    background-color: #f9fafb !important;
+  }
+  
+  tr:nth-of-type(odd) {
+    background-color: #ffffff !important;
+  }
+  
+  tr:nth-of-type(even):hover {
+    background-color: #f3f4f6 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  
+  tr:nth-of-type(odd):hover {
+    background-color: #f8fafc !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
 </style>
