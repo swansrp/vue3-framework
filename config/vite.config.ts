@@ -10,6 +10,7 @@ import vueJsx from "@vitejs/plugin-vue-jsx"
 import legacyPlugin from '@vitejs/plugin-legacy'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import VueSetupExtend from 'vite-plugin-vue-setup-extend'
+import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,6 +27,7 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    vueDevTools(),
     vueJsx(),
     VueSetupExtend(),
     eslintPlugin({
