@@ -116,8 +116,9 @@
         </a-dropdown>
         
         <!-- 当没有可绑定角色时的提示 -->
-        <div v-if="selectedRole !== '0' && tableList.length === 0 && bindRoleDictList.length === 0" 
-             style="margin-top: 5px; padding: 8px 12px; font-size: 12px; color: #999; text-align: center; border: 1px dashed #d9d9d9; border-radius: 6px;">
+        <div
+          v-if="selectedRole !== '0' && tableList.length === 0 && bindRoleDictList.length === 0" 
+          style="margin-top: 5px; padding: 8px 12px; font-size: 12px; color: #999; text-align: center; border: 1px dashed #d9d9d9; border-radius: 6px;">
           暂无可用配置
         </div>
       </div>

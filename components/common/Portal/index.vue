@@ -2317,7 +2317,6 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
 
 // 单元格样式
 :deep(.surely-table-cell) {
-  padding: 12px 16px !important;
   font-size: 14px;
   color: #374151;
   border-right: 1px solid #f3f4f6;

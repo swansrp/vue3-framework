@@ -71,7 +71,7 @@ import { LocationQueryRaw, useRouter } from 'vue-router'
 import { NavListType } from '../type'
 import { useTabStore } from '@/framework/store/nav'
 import { useRouteStore } from '@/framework/store/route'
-import { CHANGE_TAB, MAIN_CONTENT } from '@/framework/utils/constant'
+import { CHANGE_TAB } from '@/framework/utils/constant'
 import { genAntdMenuFirstSelectObject, getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
 import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
 import { getQueryObject } from '@/framework/network/utils'
@@ -263,7 +263,7 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   
     // 外链菜单：在打开外链前立即设置菜单高亮状态
     keys.selectedKeys = [selectedKey]
-    const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
+    const {keyPath} = getTitlePathByKey(navList.value, selectedKey)
     keys.openKeys = keyPath
     
     // 打开外链
