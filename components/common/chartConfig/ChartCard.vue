@@ -827,7 +827,7 @@ defineExpose({
   }
 
   .chart-card-content {
-    padding: 8px;
+    padding: 0;
     height: calc(100% - 50px);
     position: relative;
 
@@ -840,7 +840,7 @@ defineExpose({
 
     .chart-container {
       height: 100%;
-      min-height: 200px;
+      min-height: 0;
       display: flex;
       flex-direction: column;
 
@@ -851,8 +851,8 @@ defineExpose({
         height: 100%;
         flex: 1;
         min-height: 0; // 允许收缩
-        margin: 4px;
-        padding: 4px; // 增加内边距，让图表距离边框更远
+        margin: 0;
+        padding: 0; // 移除所有内边距，让图表占满整个可用空间
         box-shadow: none; // 移除多余阴影
         border-radius: 0; // 卡片内部不需要圆角
         background: transparent; // 使用卡片背景
