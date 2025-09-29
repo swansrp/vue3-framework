@@ -86,14 +86,15 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '../../../src')
+      '@': path.resolve(__dirname, '../../../src'),
+      "grid-layout-plus/src/helpers/types": "grid-layout-plus/dist/helpers/types.js"
     }
   },
   optimizeDeps: {
     include: [
       'brace',
     ],
-    exclude: [],
+    exclude: ['grid-layout-plus']
   },
   // 不加入这部分代码，surely table会报错
   css: {
