@@ -506,6 +506,7 @@ export default defineComponent({
         title: {
           text: props.title,
           left: 'center',
+          top: '0%',
           textStyle: {
             fontSize: 18,
             fontWeight: 'bold'
@@ -514,9 +515,11 @@ export default defineComponent({
         legend: {
           type: 'scroll',
           orient: 'horizontal',
-          top: '10%',
+          top: '5%',
           left: 'center',
           width: '80%',
+          itemGap: 15,
+          itemHeight: 14,
           // 当没有第二维度时，不显示色块
           itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {}
         },
@@ -648,10 +651,10 @@ export default defineComponent({
           }
         },
         grid: {
-          left: '3%',
-          right: '3%',
-          bottom: '3%',
-          top: '120px',
+          left: '5%',
+          right: '5%',
+          bottom: '5%',
+          top: '15%',
           containLabel: true
         },
         xAxis: {
@@ -919,6 +922,7 @@ export default defineComponent({
         title: {
           text: props.title,
           left: 'center',
+          top: '0%',
           textStyle: {
             fontSize: 18,
             fontWeight: 'bold'
@@ -927,9 +931,11 @@ export default defineComponent({
         legend: {
           type: 'scroll',
           orient: 'horizontal',
-          top: '10%',
+          top: '5%',
           left: 'center',
           width: '80%',
+          itemGap: 15,
+          itemHeight: 14,
           // 当没有第二维度时，不显示色块
           itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {}
         },
@@ -1058,10 +1064,10 @@ export default defineComponent({
           }
         },
         grid: {
-          left: '3%',
-          right: '3%',
-          bottom: '3%',
-          top: '120px',
+          left: '5%',
+          right: '5%',
+          bottom: '5%',
+          top: '15%',
           containLabel: true
         },
         xAxis: {
@@ -1129,6 +1135,7 @@ export default defineComponent({
         title: {
           text: props.title,
           left: 'center',
+          top: '0%',
           textStyle: {
             fontSize: 18,
             fontWeight: 'bold'
@@ -1195,8 +1202,10 @@ export default defineComponent({
           type: 'scroll',
           orient: 'horizontal',
           left: 'center',
-          top: '10%',
+          top: '5%',
           width: '80%',
+          itemGap: 15,
+          itemHeight: 14,
           formatter: (name: string) => {
             const item = pieData.find(d => d.name === name)
             const unit = pieMetric.unit || ''
@@ -1224,7 +1233,7 @@ export default defineComponent({
             name: pieMetric.dataName,
             type: 'pie',
             radius: ['30%', '70%'],
-            center: ['50%', '60%'],
+            center: ['50%', '55%'],
             data: pieData,
             emphasis: {
               itemStyle: {
