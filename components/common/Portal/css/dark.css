@@ -1,5 +1,33 @@
 /* 使用CSS变量语法覆盖默认变量 */
 
+/* =========================== */
+/* 最高优先级的全局深色主题覆盖 */
+/* =========================== */
+
+/* 强制覆盖所有表格背景 */
+html body .dark-content-layout .surely-table,
+html body .dark-content-layout .portal-table .surely-table,
+html body .dark-content-layout .portal-table {
+    background-color: rgb(2, 57, 85) !important;
+    background: rgb(2, 57, 85) !important;
+}
+
+/* 强制覆盖表格主体背景 */
+html body .dark-content-layout .surely-table-body,
+html body .dark-content-layout .portal-table .surely-table-body {
+    background-color: rgb(2, 57, 85) !important;
+    background: rgb(2, 57, 85) !important;
+}
+
+/* 强制覆盖所有表格行的默认背景 */
+html body .dark-content-layout .surely-table tr,
+html body .dark-content-layout .portal-table tr,
+html body .dark-content-layout .surely-table .surely-table-row,
+html body .dark-content-layout .portal-table .surely-table-row {
+    background-color: #0E3D55 !important;
+    background: #0E3D55 !important;
+    color: #ffffff !important;
+}
 
 :deep(.surely-table), :deep(.surely-table-header), :deep(.surely-table-header-cell) {
     background-color: rgb(2, 57, 85) !important;
@@ -7,18 +35,74 @@
 }
 
 :deep(.surely-table-header-cell) {
-    color: #fff;
+    color: #ffffff !important;
     font-family: 'Noto Sans SC', serif;
     font-size: 16px;
+    font-weight: 600;
     background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0));
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* 禁用表头的所有动画效果，保持静态稳定 */
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+}
+
+/* 表头内容文字样式强化 */
+:deep(.surely-table-header-cell .surely-table-cell-content) {
+    color: #ffffff !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 表头内部所有文本元素 */
+:deep(.surely-table-header-cell span),
+:deep(.surely-table-header-cell div),
+:deep(.surely-table-header-cell .table-title-cell) {
+    color: #ffffff !important;
 }
 
 :deep(.surely-table-thead) {
     height: 70px;
+    background-color: rgb(2, 57, 85) !important;
+}
+
+/* 表头的悬停效果禁用 */
+:deep(.surely-table-header-cell:hover) {
+    background-color: rgb(2, 57, 85) !important;
+    background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0)) !important;
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+}
+
+/* 表头文字颜色的最高优先级覆盖 */
+:deep(.surely-table-header-cell *) {
+    color: #ffffff !important;
+}
+
+:deep(.surely-table-header-cell:hover *) {
+    color: #ffffff !important;
 }
 
 :deep(.surely-table-filter-trigger, .ant-dropdown-trigger, .surely-table-menu-popup-trigger) {
-    color: #fff;
+    color: #fff !important;
+    background-color: transparent !important;
+    border: none !important;
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+}
+
+:deep(.surely-table-filter-trigger:hover, .ant-dropdown-trigger:hover, .surely-table-menu-popup-trigger:hover) {
+    color: #1FC6FF !important;
+    background-color: transparent !important;
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
 }
 
 :deep(.surely-table.surely-table-stripe .surely-table-body .surely-table-row-odd) {
@@ -33,11 +117,24 @@
 }
 
 :deep(.surely-table-bordered .surely-table-cell:not(.surely-table-body-cell-range-single-cell):not( .surely-table-body-cell-range-selected)) {
-    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: none !important;
+    border-left: none !important;
+}
+
+/* 表格主边框样式 */
+:deep(.surely-table-bordered) {
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 8px !important;
+    overflow: hidden;
 }
 
 :deep(.surely-table-thead .surely-table-cell) {
-    border-right: 1px solid var(--surely-table-border-color) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+    border-top: none !important;
+    border-left: none !important;
 }
 
 :deep(.surely-table-row) {
@@ -63,14 +160,17 @@
 }
 
 :deep(.surely-table-header) {
-    border-width: 1px;
-    border-style: solid;
-    border-image-source: linear-gradient(to top, rgba(90, 211, 251, 1), rgba(90, 211, 251, 0));
-    border-image-slice: 1;
+    border: 2px solid rgba(31, 198, 255, 0.6) !important;
+    border-bottom: 2px solid rgba(31, 198, 255, 0.8) !important;
+    border-radius: 8px 8px 0 0 !important;
+    background: linear-gradient(135deg, rgb(2, 57, 85), rgb(3, 69, 102)) !important;
 }
 
 :deep(.surely-table-cell) {
-    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: none !important;
+    border-left: none !important;
 }
 
 .ellipsis {
@@ -94,68 +194,143 @@
     min-width: 0 !important;
 }
 
-/*表格滚动条样式*/
+/*深色主题滚动条样式优化*/
 :deep(*::-webkit-scrollbar) {
     width: 12px;
     height: 12px;
-    border-radius: 5px;
-    background-color: #181c32;
+    border-radius: 6px;
+    background-color: #0A1F2E !important;
 }
 
 :deep(*::-webkit-scrollbar-thumb) {
     width: 12px;
-    border-radius: 5px;
-    background-color: #22536D;
-    border-top: 1px solid #2485A6;
-    border-bottom: 1px solid #2485A6;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #1B475D, #22536D) !important;
+    border: 1px solid #2485A6 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+:deep(*::-webkit-scrollbar-thumb:hover) {
+    background: linear-gradient(135deg, #22536D, #2A5F7A) !important;
+    border-color: #1FC6FF !important;
 }
 
 :deep(*::-webkit-scrollbar-track) {
     width: 12px;
-    border-radius: 5px;
-    background-color: #0E2D3C;
-    border: 1px solid #2485A6;
+    border-radius: 6px;
+    background-color: #0E2D3C !important;
+    border: 1px solid #154A66 !important;
     box-sizing: border-box;
 }
 
-/* 底部分页器的样式 */
+:deep(*::-webkit-scrollbar-corner) {
+    background-color: #0A1F2E !important;
+}
+
+/* 深色主题分页器样式优化 */
 :deep(.ant-pagination-prev), :deep(.ant-pagination-next) {
     margin-right: 5px !important;
-    border-radius: 0;
-    border: 1px solid #1FC6FF;
+    border-radius: 4px !important;
+    border: 1px solid #1FC6FF !important;
+    background-color: rgba(21, 76, 121, 0.3) !important;
+    color: #fff !important;
+    font-family: 'Noto Sans SC', serif;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:deep(.ant-pagination-prev:hover), :deep(.ant-pagination-next:hover) {
+    background-color: rgba(31, 198, 255, 0.15) !important;
+    border-color: #1FC6FF !important;
+    color: #1FC6FF !important;
+    box-shadow: 0 0 12px rgba(31, 198, 255, 0.3) !important;
+}
+
+:deep(.ant-pagination-prev:disabled), :deep(.ant-pagination-next:disabled) {
+    background-color: rgba(21, 76, 121, 0.1) !important;
+    border-color: rgba(31, 198, 255, 0.3) !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    cursor: not-allowed;
 }
 
 :deep(.ant-pagination-item-link) {
-    color: #fff;
+    color: #fff !important;
     font-family: 'Noto Sans SC', serif;
+    font-weight: 500;
+    background-color: transparent !important;
 }
 
 :deep(.ant-pagination-item) {
     margin-right: 5px !important;
     border: 1px solid #1FC6FF !important;
+    border-radius: 4px !important;
+    background-color: rgba(21, 76, 121, 0.3) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:deep(.ant-pagination-item:hover) {
+    background-color: rgba(31, 198, 255, 0.15) !important;
+    border-color: #1FC6FF !important;
+    box-shadow: 0 0 8px rgba(31, 198, 255, 0.2) !important;
 }
 
 :deep(.ant-pagination-item a) {
-    color: #fff;
+    color: #fff !important;
+    font-family: 'Noto Sans SC', serif;
+    font-weight: 500;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+:deep(.ant-pagination-item:hover a) {
+    color: #1FC6FF !important;
 }
 
 :deep(.ant-pagination-item-active) {
-    border: 1px solid #1FC6FF;
-    border-radius: 0;
-    background-color: #1FC6FF !important;
+    border: 1px solid #1FC6FF !important;
+    border-radius: 4px !important;
+    background: linear-gradient(135deg, #1FC6FF, #00A8E6) !important;
+    box-shadow: 0 0 16px rgba(31, 198, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+:deep(.ant-pagination-item-active a) {
+    color: #fff !important;
+    font-weight: 600;
 }
 
 :deep(.ant-pagination-options-quick-jumper) {
-    color: #fff;
-}
-
-:deep(.ant-pagination-options .ant-select-selector) {
-    display: none;
+    color: #fff !important;
+    font-family: 'Noto Sans SC', serif;
 }
 
 :deep(.ant-pagination-options-quick-jumper input) {
-    color: #1FC6FF;
-    background-color: #091F33;
+    color: #1FC6FF !important;
+    background-color: rgba(9, 31, 51, 0.8) !important;
+    border: 1px solid #1FC6FF !important;
+    border-radius: 4px !important;
+    padding: 4px 8px;
+    font-family: 'Noto Sans SC', serif;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:deep(.ant-pagination-options-quick-jumper input:focus) {
+    background-color: rgba(9, 31, 51, 1) !important;
+    border-color: #1FC6FF !important;
+    box-shadow: 0 0 8px rgba(31, 198, 255, 0.3) !important;
+    outline: none;
+}
+
+:deep(.ant-pagination-options .ant-select-selector) {
+    background-color: rgba(21, 76, 121, 0.3) !important;
+    border: 1px solid #1FC6FF !important;
+    border-radius: 4px !important;
+    color: #fff !important;
+    display: block !important;
+}
+
+:deep(.ant-pagination-options .ant-select-arrow) {
+    color: #1FC6FF !important;
 }
 
 :deep(.ant-pagination-item-ellipsis) {
@@ -204,4 +379,783 @@
 
 :deep(.surely-table-summary-scrollbar) {
     border: none;
+}
+
+/* 新增：强化表格主体区域的深色主题 */
+:deep(.surely-table-body-viewport-container) {
+    background-color: #0E3D55 !important;
+}
+
+:deep(.surely-table-body) {
+    background-color: #0E3D55 !important;
+}
+
+:deep(.surely-table-tbody) {
+    background-color: #0E3D55 !important;
+}
+
+:deep(.surely-table-cell) {
+    color: #fff !important;
+}
+
+/* 强化深色主题的表格背景 */
+:deep(.portal-table) {
+    background-color: #0E3D55 !important;
+}
+
+/* =========================== */
+/* DarkTable 组件专用样式 */
+/* =========================== */
+
+/* Ant Design 组件深色主题适配 */
+:deep(.ant-select-clear) {
+    background-color: rgb(21, 76, 121) !important;
+    color: white !important;
+}
+
+:deep(.ant-select-selector) {
+    background-color: rgb(21, 76, 121) !important;
+
+    .ant-select-selection-placeholder {
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .ant-select-selection-item {
+        color: white;
+
+        svg {
+            color: white;
+        }
+    }
+}
+
+:deep(.ant-picker) {
+    background-color: rgb(21, 76, 121) !important;
+    .ant-picker-input {
+        background-color: rgb(21, 76, 121) !important;
+
+        input {
+            color: white !important;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .ant-picker-suffix {
+            color: white !important;
+        }
+    }
+}
+
+/* 描述列表样式 */
+:deep(.ant-descriptions .ant-descriptions-row > th) {
+    padding-bottom: 12px;
+}
+
+:deep(.ant-descriptions-item-label) {
+    color: white;
+}
+
+:deep(.ant-descriptions-item-content) {
+    input {
+        color: white !important;
+    }
+
+    input::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+    }
+}
+
+/* 表格单元格内容样式 */
+:deep(.surely-table-cell-content) {
+    padding: 4px 4px !important;
+    font-size: 14px;
+}
+
+/* 表头单元格样式增强 */
+:deep(.surely-table-header-cell) {
+    padding: 2px 0 !important;
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+    font-weight: 600 !important;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+:deep(.surely-table.surely-table-small .surely-table-auto-header-height .surely-table-header-cell) {
+    padding: 2px 0 !important;
+}
+
+/* 表头内容区域文字颜色强制设定 */
+:deep(.surely-table-header-cell .surely-table-cell-content),
+:deep(.surely-table-header-cell span),
+:deep(.surely-table-header-cell div),
+:deep(.surely-table-header-cell .table-title-cell) {
+    color: #ffffff !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 表头排序和筛选图标颜色 */
+:deep(.surely-table-header-cell .surely-table-column-sorter),
+:deep(.surely-table-header-cell .surely-table-filter-trigger),
+:deep(.surely-table-header-cell .ant-dropdown-trigger) {
+    color: #ffffff !important;
+}
+
+:deep(.surely-table-header-cell .surely-table-column-sorter:hover),
+:deep(.surely-table-header-cell .surely-table-filter-trigger:hover),
+:deep(.surely-table-header-cell .ant-dropdown-trigger:hover) {
+    color: #1FC6FF !important;
+}
+
+/* 展开图标样式 */
+:deep(.surely-table-row-expand-icon-cell) {
+    color: white;
+}
+
+:deep(.surely-table-row-expand-icon.surely-table-row-expand-icon-collapsed) {
+    color: rgba(21, 76, 121);
+}
+
+:deep(.surely-table-row-expand-icon.surely-table-row-expand-icon-collapsed.surely-table-row-expand-icon-disabled) {
+    color: rgba(21, 76, 121, 0.4);
+}
+
+:deep(.surely-table-row-expand-icon.surely-table-row-expand-icon-expanded) {
+    color: rgba(21, 76, 121);
+}
+
+/* 分页器容器样式 */
+:deep(.pagination) {
+    background: linear-gradient(145deg, rgba(14, 61, 85, 0.8), rgba(27, 71, 93, 0.8)) !important;
+    border-top: 1px solid rgba(31, 198, 255, 0.3) !important;
+    backdrop-filter: blur(8px);
+}
+
+/* 表格底部分页区域 */
+:deep(.surely-table-footer) {
+    background: linear-gradient(145deg, rgba(14, 61, 85, 0.8), rgba(27, 71, 93, 0.8)) !important;
+    border-top: 1px solid rgba(31, 198, 255, 0.3) !important;
+}
+
+/* =========================== */
+/* DarkTable 布局组件样式 */
+/* =========================== */
+
+/* 布局相关样式 */
+:deep(.ant-layout), :deep(.ant-layout-has-sider) {
+    height: 100vh !important;
+    background: transparent;
+}
+
+:deep(.side-wrapper) {
+    background-color: transparent !important;
+    margin: 5px 8px !important;
+    box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.3) !important;
+}
+
+/* DarkTable 侧边栏深色主题样式 */
+:deep(.dark-content-layout .side-wrapper) {
+    background: url("imgs/side-bg.png") no-repeat center center !important;
+    background-size: 100% 100% !important;
+    background-color: rgba(14, 61, 85, 0.95) !important;
+    border: 1px solid rgba(31, 198, 255, 0.3) !important;
+    border-radius: 8px !important;
+    box-shadow: 
+        0 6px 20px rgba(31, 198, 255, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 描述列表在深色主题下的样式 */
+:deep(.dark-content-layout .desc-wrapper) {
+    background: transparent;
+    color: white;
+}
+
+:deep(.dark-content-layout .scrollable-descriptions) {
+    background: transparent;
+}
+
+:deep(.dark-content-layout .ant-descriptions) {
+    background: transparent !important;
+    color: white !important;
+}
+
+:deep(.dark-content-layout .ant-descriptions-item-label) {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+:deep(.dark-content-layout .ant-descriptions-item-content) {
+    color: white !important;
+}
+
+/* 侧边栏内的表单元素深色主题 */
+:deep(.dark-content-layout .ant-input) {
+    background-color: rgba(21, 76, 121, 0.6) !important;
+    border: 1px solid rgba(31, 198, 255, 0.4) !important;
+    color: white !important;
+}
+
+:deep(.dark-content-layout .ant-input:focus),
+:deep(.dark-content-layout .ant-input:hover) {
+    background-color: rgba(21, 76, 121, 0.8) !important;
+    border-color: #1FC6FF !important;
+    box-shadow: 0 0 8px rgba(31, 198, 255, 0.3) !important;
+}
+
+:deep(.ant-layout-content) {
+    background-color: transparent;
+    margin-left: 2px !important;
+    margin-right: 5px !important;
+}
+
+/* 拖拽控制相关样式 */
+:deep(.dark-content-layout .resize-container) {
+    width: 4px !important;
+}
+
+:deep(.ant-layout-sider-children) {
+    background: url("imgs/side-bg.png") no-repeat center center;
+    height: 100%;
+    background-size: 100% 100%;
+}
+
+:deep(.resize-button-left), :deep(.resize-button-right) {
+    width: 30px !important;
+    height: 40px;
+    background-size: 100% 100% !important;
+    color: transparent !important;
+}
+
+:deep(.resize-button-left) {
+    background: url("imgs/resize-icon-left.svg") no-repeat center center;
+}
+
+:deep(.resize-button-right) {
+    background: url("imgs/resize-icon-right.svg") no-repeat center center;
+}
+
+/* 深色主题折叠按钮样式 */
+:deep(.collapse-button) {
+    background: rgba(21, 76, 121, 0.9) !important;
+    border: 1px solid rgba(0, 172, 255, 0.3) !important;
+    box-shadow: 0 0 12px rgba(0, 172, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    color: #00acff !important;
+    backdrop-filter: blur(8px);
+}
+
+:deep(.collapse-button:hover) {
+    background: rgba(21, 76, 121, 1) !important;
+    border-color: #00acff !important;
+    box-shadow: 0 0 20px rgba(0, 172, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    transform: translateX(2px);
+}
+
+:deep(.collapse-button:active) {
+    transform: translateX(1px);
+    box-shadow: 0 0 8px rgba(0, 172, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+:deep(.collapse-button-expand:hover) {
+    transform: translateX(-2px);
+}
+
+:deep(.collapse-button-expand:active) {
+    transform: translateX(-1px);
+}
+
+/* 深色主题拖拽控制条样式 */
+:deep(.drag-handle:hover) {
+    background: rgba(0, 172, 255, 0.15) !important;
+}
+
+:deep(.drag-handle:hover .drag-indicator) {
+    opacity: 0.8;
+}
+
+:deep(.drag-handle.dragging) {
+    background: rgba(0, 172, 255, 0.25) !important;
+}
+
+:deep(.drag-handle.dragging .drag-indicator) {
+    opacity: 1;
+}
+
+:deep(.drag-dot) {
+    background: rgba(0, 172, 255, 0.6) !important;
+}
+
+:deep(.drag-handle:hover .drag-dot),
+:deep(.drag-handle.dragging .drag-dot) {
+    background: #00acff !important;
+}
+
+/* =========================== */
+/* DarkTable 最高优先级样式覆盖 */
+/* =========================== */
+
+/* 强制覆盖Portal组件的全局斑马纹样式 */
+.dark-content-layout .surely-table tbody tr:nth-child(even),
+.dark-content-layout .surely-table .surely-table-tbody .surely-table-row:nth-child(even),
+.dark-content-layout .surely-table .surely-table-body tr:nth-child(even),
+.dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(even),
+.dark-content-layout .portal-table tbody tr:nth-child(even),
+.dark-content-layout .portal-table .surely-table-tbody .surely-table-row:nth-child(even),
+.dark-content-layout .portal-table .surely-table-body tr:nth-child(even),
+.dark-content-layout .portal-table .surely-table-body .surely-table-row:nth-child(even) {
+    background-color: #1B475D !important;
+    color: #fff !important;
+}
+
+.dark-content-layout .surely-table tbody tr:nth-child(odd),
+.dark-content-layout .surely-table .surely-table-tbody .surely-table-row:nth-child(odd),
+.dark-content-layout .surely-table .surely-table-body tr:nth-child(odd),
+.dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(odd),
+.dark-content-layout .portal-table tbody tr:nth-child(odd),
+.dark-content-layout .portal-table .surely-table-tbody .surely-table-row:nth-child(odd),
+.dark-content-layout .portal-table .surely-table-body tr:nth-child(odd),
+.dark-content-layout .portal-table .surely-table-body .surely-table-row:nth-child(odd) {
+    background-color: #0E3D55 !important;
+    color: #fff !important;
+}
+
+.dark-content-layout .surely-table tbody tr:nth-child(even):hover,
+.dark-content-layout .surely-table .surely-table-body tr:nth-child(even):hover,
+.dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(even):hover,
+.dark-content-layout .portal-table tbody tr:nth-child(even):hover,
+.dark-content-layout .portal-table .surely-table-body tr:nth-child(even):hover,
+.dark-content-layout .portal-table .surely-table-body .surely-table-row:nth-child(even):hover {
+    background-color: #1F5570 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark-content-layout .surely-table tbody tr:nth-child(odd):hover,
+.dark-content-layout .surely-table .surely-table-body tr:nth-child(odd):hover,
+.dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(odd):hover,
+.dark-content-layout .portal-table tbody tr:nth-child(odd):hover,
+.dark-content-layout .portal-table .surely-table-body tr:nth-child(odd):hover,
+.dark-content-layout .portal-table .surely-table-body .surely-table-row:nth-child(odd):hover {
+    background-color: #154A66 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 直接针对表格容器的样式覆盖 */
+.dark-content-layout .portal-table tr:nth-of-type(even),
+.dark-content-layout .surely-table tr:nth-of-type(even) {
+    background-color: #1B475D !important;
+    color: #fff !important;
+}
+
+.dark-content-layout .portal-table tr:nth-of-type(odd),
+.dark-content-layout .surely-table tr:nth-of-type(odd) {
+    background-color: #0E3D55 !important;
+    color: #fff !important;
+}
+
+.dark-content-layout .portal-table tr:nth-of-type(even):hover,
+.dark-content-layout .surely-table tr:nth-of-type(even):hover {
+    background-color: #1F5570 !important;
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+}
+
+.dark-content-layout .portal-table tr:nth-of-type(odd):hover,
+.dark-content-layout .surely-table tr:nth-of-type(odd):hover {
+    background-color: #154A66 !important;
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+}
+
+/* 表头样式强化 - 禁用所有动画效果 */
+.dark-content-layout .surely-table-header-cell {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+}
+
+.dark-content-layout .surely-table-header-cell:hover {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+}
+
+/* 表头内部所有文本元素颜色强制设定 */
+.dark-content-layout .surely-table-header-cell .surely-table-cell-content,
+.dark-content-layout .surely-table-header-cell span,
+.dark-content-layout .surely-table-header-cell div,
+.dark-content-layout .surely-table-header-cell .table-title-cell {
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+/* 排序和筛选图标 */
+.dark-content-layout .surely-table-header-cell .surely-table-column-sorter,
+.dark-content-layout .surely-table-header-cell .surely-table-filter-trigger,
+.dark-content-layout .surely-table-header-cell .ant-dropdown-trigger {
+    color: #ffffff !important;
+}
+
+.dark-content-layout .surely-table-header-cell .surely-table-column-sorter:hover,
+.dark-content-layout .surely-table-header-cell .surely-table-filter-trigger:hover,
+.dark-content-layout .surely-table-header-cell .ant-dropdown-trigger:hover {
+    color: #1FC6FF !important;
+}
+
+/* 滚动条区域优化 */
+.dark-content-layout .surely-table-body::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.dark-content-layout .surely-table-body::-webkit-scrollbar-track {
+    background: rgba(14, 45, 60, 0.8) !important;
+    border-radius: 6px;
+}
+
+.dark-content-layout .surely-table-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #1B475D, #22536D) !important;
+    border-radius: 6px;
+    border: 1px solid #2485A6;
+}
+
+.dark-content-layout .surely-table-body::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #22536D, #2A5F7A) !important;
+}
+
+/* 分页器组件的深色主题优化 */
+.dark-content-layout .ant-pagination .ant-pagination-total-text {
+    color: #1FC6FF !important;
+    font-weight: 500;
+}
+
+.dark-content-layout .ant-pagination .ant-pagination-item-ellipsis {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* 表格边框优化 - 精细化控制 */
+.dark-content-layout .portal-table {
+    border: 2px solid rgba(31, 198, 255, 0.45) !important;
+    border-radius: 12px !important;
+    box-shadow: 
+        0 8px 32px rgba(31, 198, 255, 0.15),
+        0 4px 16px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(31, 198, 255, 0.2) !important;
+    background: linear-gradient(135deg, 
+        rgba(14, 61, 85, 0.98), 
+        rgba(27, 71, 93, 0.98)) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.dark-content-layout .portal-table::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        rgba(31, 198, 255, 0.05) 0%, 
+        transparent 50%, 
+        rgba(31, 198, 255, 0.02) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 表格包装器边框 */
+.dark-content-layout .surely-table-wrapper {
+    border: 2px solid rgba(31, 198, 255, 0.4) !important;
+    border-radius: 12px !important;
+    box-shadow: 
+        0 6px 20px rgba(31, 198, 255, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 表头边框加强 */
+.dark-content-layout .surely-table-header {
+    border-bottom: 3px solid rgba(31, 198, 255, 0.7) !important;
+    background: linear-gradient(135deg, 
+        rgb(2, 57, 85) 0%, 
+        rgb(3, 69, 102) 50%, 
+        rgb(2, 57, 85) 100%) !important;
+}
+
+/* 单元格边框细化 */
+.dark-content-layout .surely-table-cell {
+    border-right: 1px solid rgba(31, 198, 255, 0.25) !important;
+    border-bottom: 1px solid rgba(31, 198, 255, 0.18) !important;
+}
+
+/* 表格行边框覆盖 - 修复下沿颜色 */
+html body .dark-content-layout .surely-table tr,
+html body .dark-content-layout .portal-table tr,
+html body .dark-content-layout .surely-table .surely-table-row,
+html body .dark-content-layout .portal-table .surely-table-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+}
+
+/* 表格单元格边框统一 */
+html body .dark-content-layout .surely-table td,
+html body .dark-content-layout .portal-table td,
+html body .dark-content-layout .surely-table .surely-table-cell,
+html body .dark-content-layout .portal-table .surely-table-cell {
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: none !important;
+    border-left: none !important;
+}
+
+/* 最后一行不显示下边框 */
+html body .dark-content-layout .surely-table tr:last-child,
+html body .dark-content-layout .portal-table tr:last-child,
+html body .dark-content-layout .surely-table .surely-table-row:last-child,
+html body .dark-content-layout .portal-table .surely-table-row:last-child {
+    border-bottom: none !important;
+}
+
+/* 最后一列不显示右边框 */
+html body .dark-content-layout .surely-table td:last-child,
+html body .dark-content-layout .portal-table td:last-child,
+html body .dark-content-layout .surely-table .surely-table-cell:last-child,
+html body .dark-content-layout .portal-table .surely-table-cell:last-child {
+    border-right: none !important;
+}
+
+/* 表头单元格边框 */
+.dark-content-layout .surely-table-thead .surely-table-cell {
+    border-right: 1px solid rgba(31, 198, 255, 0.4) !important;
+    border-bottom: 2px solid rgba(31, 198, 255, 0.6) !important;
+}
+
+/* =========================== */
+/* 最强度表格行背景覆盖 */
+/* =========================== */
+
+/* 使用最高优先级的选择器强制覆盖 */
+html body .dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(even),
+html body .dark-content-layout .portal-table .surely-table .surely-table-body .surely-table-row:nth-child(even),
+html body .dark-content-layout .portal-table .surely-table-body .surely-table-row:nth-child(even),
+html body .dark-content-layout .portal-table tr:nth-child(even),
+html body .dark-content-layout .surely-table tr:nth-child(even),
+html body .dark-content-layout .portal-table tbody tr:nth-child(even),
+html body .dark-content-layout .surely-table tbody tr:nth-child(even) {
+    background-color: #1B475D !important;
+    background: #1B475D !important;
+    color: #ffffff !important;
+}
+
+html body .dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(odd),
+html body .dark-content-layout .portal-table .surely-table .surely-table-body .surely-table-row:nth-child(odd),
+html body .dark-content-layout .portal-table .surely-table-body .surely-table-row:nth-child(odd),
+html body .dark-content-layout .portal-table tr:nth-child(odd),
+html body .dark-content-layout .surely-table tr:nth-child(odd),
+html body .dark-content-layout .portal-table tbody tr:nth-child(odd),
+html body .dark-content-layout .surely-table tbody tr:nth-child(odd) {
+    background-color: #0E3D55 !important;
+    background: #0E3D55 !important;
+    color: #ffffff !important;
+}
+
+/* 悬停效果的最高优先级覆盖 */
+html body .dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(even):hover,
+html body .dark-content-layout .portal-table .surely-table .surely-table-body .surely-table-row:nth-child(even):hover,
+html body .dark-content-layout .portal-table tr:nth-child(even):hover,
+html body .dark-content-layout .surely-table tr:nth-child(even):hover {
+    background-color: #1F5570 !important;
+    background: #1F5570 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html body .dark-content-layout .surely-table .surely-table-body .surely-table-row:nth-child(odd):hover,
+html body .dark-content-layout .portal-table .surely-table .surely-table-body .surely-table-row:nth-child(odd):hover,
+html body .dark-content-layout .portal-table tr:nth-child(odd):hover,
+html body .dark-content-layout .surely-table tr:nth-child(odd):hover {
+    background-color: #154A66 !important;
+    background: #154A66 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 通用行覆盖 - 使用nth-of-type */
+html body .dark-content-layout .portal-table tr:nth-of-type(even),
+html body .dark-content-layout .surely-table tr:nth-of-type(even) {
+    background-color: #1B475D !important;
+    background: #1B475D !important;
+    color: #ffffff !important;
+}
+
+html body .dark-content-layout .portal-table tr:nth-of-type(odd),
+html body .dark-content-layout .surely-table tr:nth-of-type(odd) {
+    background-color: #0E3D55 !important;
+    background: #0E3D55 !important;
+    color: #ffffff !important;
+}
+
+html body .dark-content-layout .portal-table tr:nth-of-type(even):hover,
+html body .dark-content-layout .surely-table tr:nth-of-type(even):hover {
+    background-color: #1F5570 !important;
+    background: #1F5570 !important;
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+}
+
+html body .dark-content-layout .portal-table tr:nth-of-type(odd):hover,
+html body .dark-content-layout .surely-table tr:nth-of-type(odd):hover {
+    background-color: #154A66 !important;
+    background: #154A66 !important;
+    box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
+}
+
+/* =========================== */
+/* 终极覆盖方案 - 通配符选择器 */
+/* =========================== */
+
+/* 使用通配符强制覆盖所有可能的表格行 */
+.dark-content-layout * .surely-table * tr:nth-child(even),
+.dark-content-layout * .portal-table * tr:nth-child(even),
+.dark-content-layout * tr:nth-child(even) {
+    background-color: #1B475D !important;
+    background: #1B475D !important;
+    color: #ffffff !important;
+}
+
+.dark-content-layout * .surely-table * tr:nth-child(odd),
+.dark-content-layout * .portal-table * tr:nth-child(odd),
+.dark-content-layout * tr:nth-child(odd) {
+    background-color: #0E3D55 !important;
+    background: #0E3D55 !important;
+    color: #ffffff !important;
+}
+
+/* 通配符悬停效果 */
+.dark-content-layout * .surely-table * tr:nth-child(even):hover,
+.dark-content-layout * .portal-table * tr:nth-child(even):hover,
+.dark-content-layout * tr:nth-child(even):hover {
+    background-color: #1F5570 !important;
+    background: #1F5570 !important;
+}
+
+.dark-content-layout * .surely-table * tr:nth-child(odd):hover,
+.dark-content-layout * .portal-table * tr:nth-child(odd):hover,
+.dark-content-layout * tr:nth-child(odd):hover {
+    background-color: #154A66 !important;
+    background: #154A66 !important;
+}
+
+/* 使用CSS变量强制覆盖 */
+.dark-content-layout {
+    --surely-table-row-even-bg: #1B475D !important;
+    --surely-table-row-odd-bg: #0E3D55 !important;
+    --surely-table-row-even-hover-bg: #1F5570 !important;
+    --surely-table-row-odd-hover-bg: #154A66 !important;
+    --surely-table-border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* =========================== */
+/* 最终边框颜色覆盖 */
+/* =========================== */
+
+/* 通配符边框覆盖 */
+.dark-content-layout * .surely-table * tr,
+.dark-content-layout * .portal-table * tr,
+.dark-content-layout * tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+}
+
+.dark-content-layout * .surely-table * td,
+.dark-content-layout * .portal-table * td,
+.dark-content-layout * .surely-table * .surely-table-cell,
+.dark-content-layout * .portal-table * .surely-table-cell,
+.dark-content-layout * td,
+.dark-content-layout * .surely-table-cell {
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: none !important;
+    border-left: none !important;
+}
+
+/* 最后一行和最后一列边框去除 */
+.dark-content-layout * tr:last-child,
+.dark-content-layout * .surely-table-row:last-child {
+    border-bottom: none !important;
+}
+
+.dark-content-layout * td:last-child,
+.dark-content-layout * .surely-table-cell:last-child {
+    border-right: none !important;
+}
+
+/* 表格列排序图标样式 */
+:deep(.surely-table-column-sorter) {
+    color: #fff !important;
+    transition: none !important;
+}
+
+:deep(.surely-table-column-sorter:hover) {
+    color: #1FC6FF !important;
+}
+
+/* 表格选择列样式 */
+:deep(.surely-table-selection-extra-dropdown-icon) {
+    color: #fff !important;
+}
+
+/* 空数据状态样式 */
+:deep(.ant-empty-description) {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-family: 'Noto Sans SC', serif;
+}
+
+/* 表格边框优化 */
+:deep(.surely-table-wrapper) {
+    border: 2px solid rgba(31, 198, 255, 0.4) !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(31, 198, 255, 0.15), 
+                0 0 0 1px rgba(31, 198, 255, 0.1) inset !important;
+    background: linear-gradient(135deg, rgba(14, 61, 85, 0.95), rgba(27, 71, 93, 0.95));
+}
+
+/* 表格容器背景 */
+:deep(.portal-table-space) {
+    background: transparent;
+    border-radius: 10px;
+    padding: 0;
+    margin: 8px;
+}
+
+/* 表格主体边框精细化 */
+:deep(.portal-table) {
+    background: linear-gradient(135deg, rgba(14, 61, 85, 0.98), rgba(27, 71, 93, 0.98)) !important;
+    border: 2px solid rgba(31, 198, 255, 0.4) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 6px 24px rgba(31, 198, 255, 0.12),
+                0 2px 8px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    overflow: hidden;
 }

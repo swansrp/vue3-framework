@@ -753,7 +753,7 @@ const getTableHeight = () => {
 }
 const updateTableWidthAndHeight = () => {
   console.debug('updateTableWidthAndHeight')
-  updateTableSize(root, tableWidth, 40 + (config.treeMenuShow ? 230 : 0), tableHeight, 225)
+  updateTableSize(root, tableWidth, 10 + (config.treeMenuShow ? 230 : 0), tableHeight, 225)
 }
 const _updateTableSize = _.debounce(updateTableWidthAndHeight, 200)
 const _statisticButton = ref(false)
@@ -2153,7 +2153,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      width: 100%;
+      width: 99%;
       background: #ffffff;
       border-radius: 12px;
       overflow: hidden;
