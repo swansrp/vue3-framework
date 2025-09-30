@@ -13,7 +13,6 @@ export const getComponent = (component: string) => {
   } else {
     return modules[`/src${component}/index.vue`]
   }
-
 }
 export const useRouteStore = defineStore('routeStore', {
   state: () => {
@@ -38,28 +37,29 @@ export const useRouteStore = defineStore('routeStore', {
         this.travelRouteTree(routeTree)
         this.clearButtonNode(routeTree)
         
-        // 扁平化注册所有路由，保持完整路径结构
+        // 扁平化注册所有路由，确保路径唯一性
         const registerRoutesFlat = (routes: any[], pathPrefix = '') => {
           for (let i = 0; i < routes.length; ++i) {
             const route = routes[i]
             const fullPath = pathPrefix ? `${pathPrefix}/${route.path}` : route.path
             
-            // 创建新的路由对象，使用完整路径
+            // 创建路由对象，使用完整路径确保唯一性
             const flatRoute = {
               ...route,
               path: fullPath,
-              children: undefined // 移除children，因为我们要扁平化
+              name: fullPath.replace(/\//g, '-'), // 使用完整路径作为name，避免冲突
+              meta: { title: route.title }, // 确保正确设置meta.title
+              children: undefined // 移除children，扁平化处理
             }
-            
+
             router.addRoute('Root', flatRoute)
             
-            // 如果有子路由，递归处理但不嵌套
+            // 递归处理子路由
             if (route.children && route.children.length > 0) {
               registerRoutesFlat(route.children, fullPath)
             }
           }
         }
-        
         registerRoutesFlat(routeTree)
       })
     },
