@@ -15,7 +15,7 @@
     :single-select="!multi"
     :row-select-props="rowSelectProps"
     :table-id="tableId"
-    check-strictly="check-strictly"
+    :check-strictly="checkStrictly"
     hide-association
     list-mode
     mode-lock
@@ -39,7 +39,7 @@ const props = withDefaults(
     labelField?: string
     disable?: boolean
     searchAble?: boolean
-    rowSelectProps?: Function
+    rowSelectProps?: (record: any) => any
     labelInValue?: boolean
   }>(),
   {
@@ -119,5 +119,74 @@ onMounted(() => {
 .activate-item {
   background-color: #e6f7ff;
   border-right: 3px solid #1890ff;
+}
+
+// 针对list模式优化样式层叠问题
+:deep(.portal-tree-wrapper),
+:deep(.portal-tree-bind-wrapper) {
+  // 移除多余的白色背景和边框，使用透明背景
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  
+  // 移除hover效果的额外样式
+  &:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// 移除ContentLayout中side插槽的margin
+:deep(.ant-layout-sider-children) {
+  > div {
+    margin: 0 !important;
+  }
+}
+
+// 针对内部portal组件的进一步优化
+:deep(.root) {
+  // 移除额外的高度计算和边距
+  height: 100% !important;
+  
+  .portal-button-space {
+    // 简化按钮区域样式
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 8px 0 !important;
+    padding: 8px 0 !important;
+  }
+  
+  .portal-table-space {
+    // 移除表格容器的额外padding
+    padding: 0 !important;
+    
+    .portal-table {
+      // 移除table容器的定位和变换，减少一层白色背景
+      position: static !important;
+      left: auto !important;
+      transform: none !important;
+      width: 100% !important;
+      margin: 0 !important;
+      // 保留一定的圆角和阴影，但减弱效果
+      border-radius: 8px !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+      border: 1px solid #f0f0f0 !important;
+    }
+  }
+}
+
+// 列表模式特殊处理
+:deep(.list-mode-table) {
+  // 移除列表模式下的额外背景
+  background: transparent !important;
+  
+  // 确保列表项的样式清爽
+  .s-table {
+    background: transparent !important;
+  }
 }
 </style>

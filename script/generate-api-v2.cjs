@@ -168,105 +168,7 @@ function getControllerNameFromTags(swaggerTags, operationTags) {
         .join('');
     }
     
-    // 增强的中文到英文映射
-    const chineseToEnglish = {
-      // 基础词汇
-      '试卷': 'exam',
-      '管理': 'management',
-      '登录': 'login', 
-      '操作': 'operation',
-      '外部': 'external',
-      '对接': 'integration',
-      '系统': 'system',
-      '获取': 'get',
-      '测试': 'test',
-      '签名': 'signature',
-      '生成': 'generate',
-      '内容': 'content',
-      '令牌': 'token',
-      '用户': 'user',
-      '认证': 'auth',
-      '验证': 'validate',
-      '查询': 'query',
-      '查找': 'search',
-      '更新': 'update',
-      '删除': 'delete',
-      '新增': 'add',
-      '创建': 'create',
-      '修改': 'modify',
-      '保存': 'save',
-      '导出': 'export',
-      '导入': 'import',
-      '上传': 'upload',
-      '下载': 'download',
-      '配置': 'config',
-      '设置': 'setting',
-      '列表': 'list',
-      '详情': 'detail',
-      '信息': 'info',
-      '数据': 'data',
-      '状态': 'status',
-      '权限': 'permission',
-      '角色': 'role',
-      '菜单': 'menu',
-      '字典': 'dict',
-      '日志': 'log',
-      '文件': 'file',
-      '图片': 'image',
-      '视频': 'video',
-      '音频': 'audio',
-      '文档': 'document',
-      '报告': 'report',
-      '统计': 'statistics',
-      '分析': 'analysis',
-      '监控': 'monitor',
-      '通知': 'notification',
-      '消息': 'message',
-      '邮件': 'email',
-      '短信': 'sms',
-      // 常见组合词汇
-      '试卷内容': 'examContent',
-      '试卷管理': 'examManagement',
-      '登录操作': 'loginOperation',
-      '外部对接': 'externalIntegration',
-      '获取令牌': 'getToken',
-      '获取token': 'getToken',
-      '测试签名': 'testSignature',
-      '测试获取生成签名': 'testSignature',
-      '用户管理': 'userManagement',
-      '用户认证': 'userAuth',
-      '权限管理': 'permissionManagement',
-      '角色管理': 'roleManagement',
-      '菜单管理': 'menuManagement',
-      '数据查询': 'dataQuery',
-      '文件上传': 'fileUpload',
-      '文件下载': 'fileDownload',
-      // DAS 相关词汇
-      'DAS': 'das',
-      'DAS - 试卷管理 - 试卷': 'examManagement'
-    };
-    
-    // 尝试直接匹配整个词组
-    let englishName = chineseToEnglish[name];
-    
-    if (!englishName) {
-      // 尝试分词匹配常见组合
-      for (const [chinese, english] of Object.entries(chineseToEnglish)) {
-        if (name.includes(chinese) && chinese.length > 1) {
-          englishName = name.replace(chinese, english);
-          break;
-        }
-      }
-    }
-    
-    if (!englishName) {
-      // 逐字符转换
-      englishName = name.split('').map(char => {
-        return chineseToEnglish[char] || char;
-      }).join('');
-    }
-    
-    return englishName;
+    return name
   }
   
   let result = processFileName(tagDescription);
@@ -285,25 +187,6 @@ function getControllerNameFromTags(swaggerTags, operationTags) {
     || 'common';
 }
 
-// 获取API类型
-function getApiType(tags) {
-  const apiTypeMapping = {
-    'admin': 'navEdit',
-    'user': 'account',
-    'auth': 'auth',
-    'menu': 'menu',
-    'nav': 'nav',
-    'dict': 'dict',
-    'config': 'config',
-    'common': 'common'
-  };
-  
-  if (!tags || tags.length === 0) return 'common';
-  
-  const tag = tags[0].toLowerCase();
-  return apiTypeMapping[tag] || 'common';
-}
-
 // 生成API函数
 function generateApiFunction(path, method, operation, envConfig, usedNames) {
   // 生成函数名（去除Using后缀）
@@ -311,7 +194,6 @@ function generateApiFunction(path, method, operation, envConfig, usedNames) {
   
   const httpMethod = method.toUpperCase();
   const summary = operation.summary || '';
-  const apiType = getApiType(operation.tags);
   
   // 清理API路径（移除项目前缀）
   const cleanPath = cleanApiPath(path, envConfig.projectName);
@@ -353,7 +235,7 @@ function generateApiFunction(path, method, operation, envConfig, usedNames) {
   code += `export const ${functionName} = (${params.join(', ')}) => {\n`;
   
   const builderFunc = httpMethod === 'GET' ? 'buildGetApiByType' : 'buildPostApiByType';
-  code += `  const api = ${builderFunc}('${apiPath}', apiType.${apiType});\n`;
+  code += `  const api = ${builderFunc}('${apiPath}', '');\n`;
   
   if (queryParams.length > 0 && hasRequestBody) {
     code += `  return request(api, params || {}, data || {}, showSuccess, showLoading);\n`;
@@ -490,7 +372,7 @@ async function main() {
     
     const swaggerJsonUrl = `${envConfig.baseURL}/${envConfig.projectName}/v3/api-docs`;
     console.log(`📡 获取Swagger JSON: ${swaggerJsonUrl}`);
-    
+
     // 获取Swagger数据
     const swaggerData = await fetchSwaggerJson(swaggerJsonUrl);
     console.log('✓ 成功获取Swagger JSON');
