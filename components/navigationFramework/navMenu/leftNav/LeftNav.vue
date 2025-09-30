@@ -143,20 +143,6 @@ const toggleCollapsed = () => {
   let resizeEvent = new Event('resize')
   window.dispatchEvent(resizeEvent)
 }
-/*
-const initCurrentRouteAndVar = () => {
-  // console.log('initCurrentRouteAndVar')
-  let defaultLeftNavPath = ''
-  let defaultTopNavPath = ''
-  // allPathArray的第一部分是 MainContent， 第二部分是 TopNavPath，第三部分及其以后才是左侧菜单导航路径
-  const allPathArray = router.currentRoute.value.fullPath.split('/').filter(path => path)
-  if (allPathArray.length >= 3) {
-    defaultTopNavPath = allPathArray[1]
-    defaultLeftNavPath = allPathArray.slice(2).join('/')
-    router.push(`/${MAIN_CONTENT}/${defaultTopNavPath}/${defaultLeftNavPath}`)
-  }
-}
-*/
 
 const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   // 添加安全检查
@@ -260,7 +246,6 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   const isFrame = routeStore.routePathIsFrameMap[fullPathForFrame] || routeStore.routePathIsFrameMap[path]
   if (isFrame && triggerIsFrame) {
     console.log('====== 外链 ============')
-  
     // 外链菜单：在打开外链前立即设置菜单高亮状态
     keys.selectedKeys = [selectedKey]
     const {keyPath} = getTitlePathByKey(navList.value, selectedKey)
@@ -291,44 +276,70 @@ watch(
     if(value && isNotEmpty(value.component)) {
       const selectedKey = value.key
       keys.selectedKeys = [selectedKey]
-      const {titlePath, keyPath} = getTitlePathByKey(navList.value, selectedKey)
-      keys.openKeys = keyPath
-      // 选中左侧菜单后， 为面包屑提供数据
-      tabStore.setTitlePath(titlePath)
-      // 选中左侧菜单后，增加对应的tab信息
-      // 对于多级菜单，必须使用树形结构递归查找完整路径
-      const getFullPathForWatch = (value: any): string => {
-        // 使用与selectLeftNav相同的递归查找逻辑
-        const findPathToItem = (nodes: any[], targetKey: string, currentPath: string[] = []): string[] | null => {
-          for (const node of nodes) {
-            // 将当前节点的path加入路径
-            const newPath = [...currentPath, node.path]
-            
-            // 如果当前节点就是目标节点，返回完整路径
-            // 处理key类型不匹配问题（数字 vs 字符串）
-            if (node.key === targetKey || node.key == targetKey || String(node.key) === String(targetKey)) {
-              return newPath
-            }
-            
-            // 如果有子节点，将当前路径传递给子节点递归查找
-            if (node.children && node.children.length > 0) {
-              const result = findPathToItem(node.children, targetKey, newPath)
-              if (result) return result
+      
+      // 优化：使用全局路由映射来计算菜单展开状态，避免依赖navList.value
+      const getMenuKeysFromGlobalRoute = (targetKey: string) => {
+        const currentRoutePath = router.currentRoute.value.fullPath.slice(1).split('?')[0]
+        const pathSegments = currentRoutePath.split('/')
+        
+        // 如果有多级路径，需要找到所有父级菜单的key来展开
+        const openKeys: string[] = []
+        const titlePath: string[] = []
+        
+        // 从全局路由中寻找当前路径对应的完整层级
+        if (pathSegments.length > 1) {
+          // 构建逐级递增的路径来查找父级菜单
+          for (let i = 1; i < pathSegments.length; i++) {
+            const partialPath = pathSegments.slice(0, i + 1).join('/')
+            const routeNode = routeStore.dynamicRouteMap[partialPath]
+            if (routeNode) {
+              openKeys.push(routeNode.key)
+              titlePath.push(routeNode.title)
             }
           }
-          return null
         }
         
-        const pathArray = findPathToItem(navList.value, value.key)
-        if (pathArray) {
-          // 从topNav开始拼接完整路径
+        // 如果通过全局路由没找到合适的openKeys，回退到navList查找
+        if (openKeys.length === 0 && navList.value.length > 0) {
+          const {titlePath: fallbackTitlePath, keyPath: fallbackKeyPath} = getTitlePathByKey(navList.value, selectedKey)
+          return {
+            openKeys: fallbackKeyPath,
+            titlePath: fallbackTitlePath
+          }
+        }
+        
+        return {
+          openKeys,
+          titlePath
+        }
+      }
+      
+      const {openKeys, titlePath} = getMenuKeysFromGlobalRoute(selectedKey)
+      keys.openKeys = openKeys
+      
+      // 选中左侧菜单后， 为面包屑提供数据
+      tabStore.setTitlePath(titlePath)
+      
+      // 选中左侧菜单后，增加对应的tab信息
+      // 对于多级菜单，必须从全局路由映射中查找完整路径
+      const getFullPathForWatch = (value: any): string => {
+        // 使用全局的路由映射查找完整路径，避免依赖当前navList状态
+        const currentRoutePath = router.currentRoute.value.fullPath.slice(1).split('?')[0]
+        
+        // 如果在全局路由映射中找到了对应的节点，直接使用当前路径
+        if (routeStore.dynamicRouteMap[currentRoutePath]) {
+          return `/${currentRoutePath}`
+        }
+        
+        // 如果没找到，尝试从value构建路径
+        if (value.name) {
           const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
-          return `/${topNavPath}/${pathArray.join('/')}`
+          return `/${topNavPath}/${value.name}`
         }
         
-        // 如果没找到，回退到简单拼接
+        // 最后的回退方案
         const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
-        return `/${topNavPath}/${value.name}`
+        return `/${topNavPath}/${value.path || ''}`
       }
       
       const fullPath = getFullPathForWatch(value)
@@ -343,7 +354,6 @@ watch(
 const getObjectByLeftNavPath = (currentNode: NavListType) => {
   selectLeftNav({item: currentNode}, false)
 }
-
 
 const initLeftNavList = () => {
   topNavPath = topNavPath || routeStore.currentTopNav
@@ -366,7 +376,6 @@ const initLeftNavList = () => {
           // const targetPath = `/${MAIN_CONTENT}/${tabStore.topNavPath}/${tabStore.tabActivateKey}`
           genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
         } else {
-          // console.log('getObjectByLeftNavPath', routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')])
           const query = router.currentRoute.value.fullPath.split('?')[1]
           const currentNode = routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')]
           if (currentNode) {
@@ -376,8 +385,6 @@ const initLeftNavList = () => {
             getObjectByLeftNavPath(currentNode)
           } else {
             console.warn('currentNode not found in dynamicRouteMap for path:', [topNavPath, currentLeftNav].join('/'))
-            console.log('Available routes in dynamicRouteMap:', Object.keys(routeStore.dynamicRouteMap))
-            console.log('Falling back to first menu item')
             genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
           }
         }
@@ -405,7 +412,6 @@ mitt.on(CHANGE_TAB, () => {
 })
 
 onMounted(() => {
-  // initCurrentRouteAndVar()
   initLeftNavList()
 })
 
@@ -467,24 +473,27 @@ onMounted(() => {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* 选中菜单项样式 - 发光效果 */
+/* 选中菜单项样式 - 强化发光效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected) {
   background: linear-gradient(135deg, 
-    rgba(24, 144, 255, 0.2) 0%, 
-    rgba(24, 144, 255, 0.1) 100%) !important;
+    rgba(24, 144, 255, 0.35) 0%, 
+    rgba(24, 144, 255, 0.25) 50%,
+    rgba(24, 144, 255, 0.15) 100%) !important;
   color: #ffffff !important;
-  border: 1px solid rgba(24, 144, 255, 0.4) !important;
-  /* 选中时的发光效果 */
+  border: 1px solid rgba(24, 144, 255, 0.6) !important;
+  /* 增强的发光效果 */
   box-shadow: 
-    0 0 20px rgba(24, 144, 255, 0.3),
-    0 4px 16px rgba(24, 144, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(24, 144, 255, 0.2);
-  transform: translateY(-1px);
+    0 0 25px rgba(24, 144, 255, 0.5),
+    0 0 12px rgba(24, 144, 255, 0.4),
+    0 6px 20px rgba(24, 144, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(24, 144, 255, 0.3);
+  transform: translateY(-2px);
   position: relative;
+  font-weight: 600;
 }
 
-/* 选中菜单项的内部光晕 */
+/* 选中菜单项的内部光晕 - 增强效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected::before) {
   content: '';
   position: absolute;
@@ -493,19 +502,38 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.1) 0%, 
-    transparent 50%, 
-    rgba(24, 144, 255, 0.1) 100%);
+    rgba(255, 255, 255, 0.2) 0%, 
+    rgba(24, 144, 255, 0.1) 30%,
+    transparent 70%, 
+    rgba(24, 144, 255, 0.15) 100%);
   border-radius: 5px;
   pointer-events: none;
 }
 
-/* 选中菜单项图标样式 */
+/* 添加左侧高亮边框 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected::after) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    rgba(24, 144, 255, 1) 0%, 
+    rgba(24, 144, 255, 0.8) 50%,
+    rgba(24, 144, 255, 1) 100%);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.6);
+  pointer-events: none;
+}
+
+/* 选中菜单项图标样式 - 增强效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected .anticon) {
   color: #ffffff !important;
-  filter: drop-shadow(0 0 6px rgba(24, 144, 255, 0.6));
-  transform: scale(1.05);
+  filter: drop-shadow(0 0 8px rgba(24, 144, 255, 0.8)) drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
+  transform: scale(1.1);
   transition: all 0.3s ease;
+  text-shadow: 0 0 8px rgba(24, 144, 255, 0.6);
 }
 
 /* 普通菜单项图标样式 */
@@ -635,26 +663,53 @@ onMounted(() => {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* 子菜单选中项样式 */
+/* 子菜单选中项样式 - 增强效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item-selected) {
   background: linear-gradient(135deg, 
-    rgba(24, 144, 255, 0.15) 0%, 
-    rgba(24, 144, 255, 0.08) 100%) !important;
+    rgba(24, 144, 255, 0.3) 0%, 
+    rgba(24, 144, 255, 0.2) 50%,
+    rgba(24, 144, 255, 0.12) 100%) !important;
   color: #ffffff !important;
-  border: 1px solid rgba(24, 144, 255, 0.3) !important;
-  box-shadow: 
-    0 0 16px rgba(24, 144, 255, 0.25),
-    0 2px 12px rgba(24, 144, 255, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  transform: translateY(-1px);
-}
-
-/* 收起状态下选中项的发光效果 */
-:deep(.ant-menu-dark.ant-menu-inline-collapsed .ant-menu-item-selected) {
+  border: 1px solid rgba(24, 144, 255, 0.5) !important;
   box-shadow: 
     0 0 20px rgba(24, 144, 255, 0.4),
-    0 4px 16px rgba(24, 144, 255, 0.3),
-    inset 0 0 10px rgba(24, 144, 255, 0.2);
+    0 0 10px rgba(24, 144, 255, 0.3),
+    0 4px 16px rgba(24, 144, 255, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  font-weight: 600;
+  position: relative;
+}
+
+/* 子菜单选中项的左侧高亮边框 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item-selected::after) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    rgba(24, 144, 255, 1) 0%, 
+    rgba(24, 144, 255, 0.8) 50%,
+    rgba(24, 144, 255, 1) 100%);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 6px rgba(24, 144, 255, 0.6);
+  pointer-events: none;
+}
+
+/* 收起状态下选中项的强化发光效果 */
+:deep(.ant-menu-dark.ant-menu-inline-collapsed .ant-menu-item-selected) {
+  box-shadow: 
+    0 0 30px rgba(24, 144, 255, 0.6),
+    0 0 15px rgba(24, 144, 255, 0.5),
+    0 6px 20px rgba(24, 144, 255, 0.4),
+    inset 0 0 15px rgba(24, 144, 255, 0.3);
+  background: linear-gradient(135deg, 
+    rgba(24, 144, 255, 0.4) 0%, 
+    rgba(24, 144, 255, 0.25) 100%) !important;
+  border: 2px solid rgba(24, 144, 255, 0.7) !important;
+  transform: translateY(-2px) scale(1.02);
 }
 
 /* 拖拽控制条样式 */

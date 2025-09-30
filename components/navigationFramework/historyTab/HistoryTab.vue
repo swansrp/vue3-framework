@@ -71,6 +71,7 @@ const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
 
 // tab切换后的回调函数
 const changeActivateKey = (key: Key) => {
+  console.log('changeActivateKey===', key, store.getRouterTarget(key));
   // 不要更换这两句话的顺序，否则会产生bug
   // 保存用户最后选择的openKeys和tab
   router.push(store.getRouterTarget(key)).then(() => {

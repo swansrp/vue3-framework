@@ -34,9 +34,11 @@ export const useTabStore = defineStore('tabStore', {
       // console.log('addHistoryTab', tab, hrefFullPath)
       const key = String(tab.id || tab.key)
       tab.key = key
+
       if (!this._historyTabSet.has(key)) {
         this._historyTabSet.add(key)
         this._historyTabArray.push(tab)
+        console.log('addHistoryTab', key, tab, hrefFullPath);
       }
       this._key2HistoryTabMap[key] = tab
       this._key2HistoryTabMap[key].fullPath = hrefFullPath
@@ -49,8 +51,9 @@ export const useTabStore = defineStore('tabStore', {
     },
     // 保存用户最后选择的openKeys和tab
     changeTab(key: Key) {
+      console.log('changeTab', key);
       const fullPath = this._key2HistoryTabMap[key].fullPath
-      const fullPathArray = fullPath.split('/').filter(item => item).slice(1)
+      const fullPathArray = fullPath.split('/')
       // 通知topNav选中对应的菜单项
       this.topNavPath = fullPathArray[0]
     },
