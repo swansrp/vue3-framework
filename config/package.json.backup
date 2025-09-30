@@ -5,10 +5,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run bidr && vite --config ./src/framework/config/vite.config.ts",
+    "dev": "npm run bidr && npm run generate-api && vite --config ./src/framework/config/vite.config.ts",
     "build:prod": "npm run bidr && vite build --mode production",
     "bidr": "node src/framework/script/change-node-modules.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-api": "node src/framework/script/generate-api-v2.cjs"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^6.1.0",
