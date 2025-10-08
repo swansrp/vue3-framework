@@ -41,12 +41,23 @@ function fetchSwaggerJson(url) {
         reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
         return;
       }
-      
-      let data = '';
-      res.on('data', (chunk) => data += chunk);
+
+      let chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
       res.on('end', () => {
         try {
-          resolve(JSON.parse(data));
+          // 拼成完整 Buffer
+          const buffer = Buffer.concat(chunks);
+
+          // 转字符串（UTF-8）
+          let text = buffer.toString('utf-8');
+
+          // 去掉 BOM 头（如果有）
+          if (text.charCodeAt(0) === 0xFEFF) {
+            text = text.slice(1);
+          }
+
+          resolve(JSON.parse(text));
         } catch (err) {
           reject(new Error(`解析JSON失败: ${err.message}`));
         }
@@ -333,7 +344,7 @@ function generateControllerFile(controllerName, controllerData, envConfig) {
   
   // 导入语句
   content += `import { request } from '@/framework/network/request';\n`;
-  content += `import { apiType, buildGetApiByType, buildPostApiByType } from '@/framework/apis';\n\n`;
+  content += `import { buildGetApiByType, buildPostApiByType } from '@/framework/apis';\n\n`;
   
   // API函数
   content += controllerData.functions.join('');
