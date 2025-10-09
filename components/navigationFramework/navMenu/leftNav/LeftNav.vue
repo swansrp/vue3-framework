@@ -278,7 +278,7 @@ watch(
       keys.selectedKeys = [selectedKey]
       
       // 优化：使用全局路由映射来计算菜单展开状态，避免依赖navList.value
-      const getMenuKeysFromGlobalRoute = (targetKey: string) => {
+      const getMenuKeysFromGlobalRoute = () => {
         const currentRoutePath = router.currentRoute.value.fullPath.slice(1).split('?')[0]
         const pathSegments = currentRoutePath.split('/')
         

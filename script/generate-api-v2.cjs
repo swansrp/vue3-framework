@@ -88,30 +88,69 @@ function sanitizeFunctionName(name) {
   return toCamelCase(functionName);
 }
 
+// 专门处理基于路径生成的函数名
+function generatePathBasedFunctionName(method, path) {
+  const pathParts = path.split('/').filter(part => part && !part.startsWith('{')).slice(-2);
+  const baseName = method + '_' + pathParts.join('_');
+  return sanitizeFunctionName(baseName);
+}
+
 // 去除函数名中的Using前缀和方法后缀，并处理重复函数名
 function cleanFunctionName(operationId, method, path, usedNames = new Set()) {
   let functionName;
   
   if (operationId) {
-    // 移除 UsingGET, UsingPOST 等后缀
-    functionName = operationId.replace(/Using(GET|POST|PUT|DELETE|PATCH)$/i, '');
-    // 移除数字后缀 (如 UsingPOST1, UsingPOST2, loginUsingPOST1 等)
-    functionName = functionName.replace(/Using(GET|POST|PUT|DELETE|PATCH)\d+$/i, '');
-    // 移除只有数字的后缀 (如 login1, refresh2 等)
-    functionName = functionName.replace(/\d+$/, '');
+    functionName = operationId;
+    
+    // 移除所有 Using 相关的后缀（包括数字后缀）
+    // 匹配模式：UsingPOST_10, UsingPOST1, UsingPOST 等
+    functionName = functionName.replace(/Using(GET|POST|PUT|DELETE|PATCH)[_\d]*$/i, '');
+    
+    // 移除末尾的下划线和数字 (如 replace_, replace_10 等)
+    functionName = functionName.replace(/[_\d]+$/, '');
+    
+    // 添加调试信息（开发阶段可以启用）
+    // if (operationId !== functionName) {
+    //   console.log(`  清理函数名: ${operationId} -> ${functionName}`);
+    // }
   } else {
     // 从路径生成函数名
     const pathParts = path.split('/').filter(part => part && !part.startsWith('{'));
     functionName = pathParts.join('_');
   }
   
-  // 基础清理
-  let cleanName = sanitizeFunctionName(functionName);
+  // 基础清理 - 保持驼峰命名
+  let cleanName = functionName;
+  
+  // 只处理特殊字符，保持已有的驼峰命名
+  cleanName = cleanName.replace(/[^a-zA-Z0-9]/g, '');
+  
+  // 确保首字母小写
+  if (cleanName && cleanName.length > 0) {
+    cleanName = cleanName.charAt(0).toLowerCase() + cleanName.slice(1);
+  }
+  
+  // 处理 JavaScript 保留关键字
+  const reservedKeywords = [
+    'delete', 'export', 'import', 'return', 'function', 'var', 'let', 'const',
+    'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue',
+    'try', 'catch', 'finally', 'throw', 'new', 'this', 'super', 'class',
+    'extends', 'static', 'async', 'await', 'yield', 'default', 'null',
+    'undefined', 'true', 'false', 'typeof', 'instanceof', 'in', 'of'
+  ];
+  
+  if (reservedKeywords.includes(cleanName.toLowerCase())) {
+    cleanName = cleanName + 'Item'; // 添加 Item 后缀避免关键字冲突
+  }
+  
+  // 如果数字开头，添加前缀
+  if (cleanName && cleanName.match(/^[0-9]/)) {
+    cleanName = 'api' + cleanName;
+  }
   
   // 如果清理后的名称为空或太短，使用路径生成
   if (!cleanName || cleanName.length < 2) {
-    const pathParts = path.split('/').filter(part => part && !part.startsWith('{')).slice(-2); // 取后两段
-    cleanName = sanitizeFunctionName(method + '_' + pathParts.join('_'));
+    cleanName = generatePathBasedFunctionName(method, path);
   }
   
   // 处理重复函数名
@@ -198,10 +237,157 @@ function getControllerNameFromTags(swaggerTags, operationTags) {
     || 'common';
 }
 
+// 根据控制器名称生成业务前缀
+function getControllerPrefix(controllerName, tagDescription) {
+  // 定义业务前缀映射
+  const prefixMap = {
+    'evaluationPortalController': 'evaluation',
+    'examPortalController': 'exam', 
+    'examRefereePortalController': 'examReferee',
+    'examRoomPortalController': 'examRoom',
+    'examTesterPortalController': 'examTester',
+    'examEvaluationBindController': 'examEvaluation',
+    'examRoomRefereeBindController': 'roomReferee',
+    'examRoomTesterBindController': 'roomTester'
+  };
+  
+  // 如果有预定义的前缀，使用预定义的
+  if (prefixMap[controllerName]) {
+    return prefixMap[controllerName];
+  }
+  
+  // 否则基于控制器名称生成前缀
+  return controllerName
+    .replace(/PortalController|BindController|Controller$/i, '')
+    .replace(/([A-Z])/g, (match, p1, offset) => offset > 0 ? p1 : p1.toLowerCase())
+    .replace(/^./, str => str.toLowerCase());
+}
+
+// 根据API路径生成有意义的后缀
+function generatePathSuffix(path, summary) {
+  // 清理路径，提取关键信息
+  const cleanPath = path.replace(/^.*?\//, ''); // 移除前缀
+  
+  // 定义路径模式到后缀的映射
+  const pathSuffixMap = {
+    // 绑定相关
+    '/bind/advanced/query': 'Advanced',
+    '/bind/attach/query': 'Attach', 
+    '/bind/query': 'Query',
+    '/bind/list': 'List',
+    '/bind/batch': 'Batch',
+    '/bind/all': 'All',
+    '/bind/info': 'Info',
+    '/bind/info/list': 'InfoList',
+    '/advanced/replace': 'Advanced',
+    '/attach/advanced/query': 'AttachAdvanced',
+    
+    // 解绑相关
+    '/unbind/advanced/query': 'Advanced',
+    '/unbind/query': 'Query', 
+    '/unbind/batch': 'Batch',
+    '/unbind/all': 'All',
+    
+    // 通用查询相关
+    '/advanced/count': 'Advanced',
+    '/advanced/query': 'Advanced',
+    '/advanced/select': 'Advanced', 
+    '/advanced/statistic': 'Advanced',
+    '/advanced/summary': 'Advanced',
+    '/advanced/query/export': 'AdvancedExport',
+    '/general/count': 'General',
+    '/general/query': 'General',
+    '/general/select': 'General',
+    '/general/statistic': 'General', 
+    '/general/summary': 'General',
+    
+    // 导入相关
+    '/import/add': 'Import',
+    '/import/add/progress': 'ImportProgress',
+    '/import/update': 'ImportUpdate',
+    '/import/update/progress': 'ImportUpdateProgress',
+    
+    // 其他
+    '/delete/list': 'List',
+    '/template/export': 'Template',
+    '/update/list': 'List'
+  };
+  
+  // 尝试匹配路径后缀
+  for (const [pathPattern, suffix] of Object.entries(pathSuffixMap)) {
+    if (cleanPath.endsWith(pathPattern)) {
+      return suffix;
+    }
+  }
+  
+  // 如果没有匹配到，尝试从摘要中提取关键词
+  if (summary) {
+    if (summary.includes('列表') || summary.includes('list')) return 'List';
+    if (summary.includes('批量') || summary.includes('batch')) return 'Batch';
+    if (summary.includes('高级') || summary.includes('advanced')) return 'Advanced';
+    if (summary.includes('通用') || summary.includes('general')) return 'General';
+    if (summary.includes('导入') || summary.includes('import')) return 'Import';
+    if (summary.includes('模版') || summary.includes('template')) return 'Template';
+    if (summary.includes('进度') || summary.includes('progress')) return 'Progress';
+    if (summary.includes('信息') || summary.includes('info')) return 'Info';
+  }
+  
+  // 最后尝试从路径末尾提取关键词
+  const pathParts = cleanPath.split('/').filter(part => part && !part.match(/^{.*}$/));
+  if (pathParts.length > 0) {
+    const lastPart = pathParts[pathParts.length - 1];
+    if (lastPart && lastPart !== 'query' && lastPart !== 'delete' && lastPart !== 'update') {
+      return lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
+    }
+  }
+  
+  return ''; // 如果都没有匹配到，返回空字符串
+}
+
 // 生成API函数
-function generateApiFunction(path, method, operation, envConfig, usedNames) {
+function generateApiFunction(path, method, operation, envConfig, usedNames, controllerPrefix = '') {
   // 生成函数名（去除Using后缀）
-  const functionName = cleanFunctionName(operation.operationId, method, path, usedNames);
+  let baseFunctionName = cleanFunctionName(operation.operationId, method, path, new Set()); // 先生成基础函数名
+  
+  // 为通用接口添加控制器前缀，避免命名冲突
+  const commonApiPatterns = [
+    'advancedCount', 'advancedQuery', 'advancedQueryExport', 'advancedSelect', 
+    'advancedStatistic', 'advancedSummary', 'deleteItem', 'deleteList',
+    'generalCount', 'generalQuery', 'generalSelect', 'generalStatistic', 
+    'generalSummary', 'queryById', 'importAdd', 'importAddProgress',
+    'importUpdate', 'importUpdateProgress', 'add', 'templateExport', 
+    'update', 'bind', 'unbind', 'replace', 'getAttach', 'getBind', 
+    'getUnBind', 'bindAll', 'unbindAll', 'bindInfo', 'bindInfoList', 'getBindList'
+  ];
+  
+  // 检查是否为通用接口，如果是则添加前缀
+  let functionName = baseFunctionName;
+  if (commonApiPatterns.some(pattern => baseFunctionName.toLowerCase().startsWith(pattern.toLowerCase()) || baseFunctionName === pattern)) {
+    functionName = controllerPrefix + baseFunctionName.charAt(0).toUpperCase() + baseFunctionName.slice(1);
+  }
+  
+  // 改进的重复函数名处理 - 基于API路径生成更有意义的后缀
+  let finalName = functionName;
+  if (usedNames.has(finalName)) {
+    // 根据API路径生成有意义的后缀
+    const pathSuffix = generatePathSuffix(path, operation.summary || '');
+    if (pathSuffix) {
+      finalName = functionName + pathSuffix;
+    }
+    
+    // 如果还是重复，则使用数字后缀
+    let counter = 1;
+    while (usedNames.has(finalName)) {
+      if (pathSuffix) {
+        finalName = `${functionName}${pathSuffix}${counter}`;
+      } else {
+        finalName = `${functionName}${counter}`;
+      }
+      counter++;
+    }
+  }
+  
+  usedNames.add(finalName);
   
   const httpMethod = method.toUpperCase();
   const summary = operation.summary || '';
@@ -233,7 +419,7 @@ function generateApiFunction(path, method, operation, envConfig, usedNames) {
   }
   
   // 默认参数
-  params.push('showSuccess = false', 'showLoading = true');
+  params.push('showSuccess = true', 'showLoading = false');
   
   // 构建路径
   let apiPath = cleanPath;
@@ -243,7 +429,7 @@ function generateApiFunction(path, method, operation, envConfig, usedNames) {
   
   // 生成函数代码
   let code = `/**\n * ${summary}\n */\n`;
-  code += `export const ${functionName} = (${params.join(', ')}) => {\n`;
+  code += `export const ${finalName} = (${params.join(', ')}) => {\n`;
   
   const builderFunc = httpMethod === 'GET' ? 'buildGetApiByType' : 'buildPostApiByType';
   code += `  const api = ${builderFunc}('${apiPath}', '');\n`;
@@ -318,11 +504,12 @@ function generateApiByController(swaggerData, envConfig) {
           summary: operation.summary || '',
           description: operation.description || '',
           functions: [],
-          usedNames: new Set() // 用于跟踪已使用的函数名
+          usedNames: new Set(), // 用于跟踪已使用的函数名
+          controllerPrefix: getControllerPrefix(controllerName, tagDescription) // 添加控制器前缀
         };
       }
       
-      const apiFunction = generateApiFunction(pathKey, method, operation, envConfig, controllerGroups[controllerName].usedNames);
+      const apiFunction = generateApiFunction(pathKey, method, operation, envConfig, controllerGroups[controllerName].usedNames, controllerGroups[controllerName].controllerPrefix);
       controllerGroups[controllerName].functions.push(apiFunction);
     });
   });
