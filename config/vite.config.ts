@@ -10,6 +10,7 @@ import vueJsx from "@vitejs/plugin-vue-jsx"
 import legacyPlugin from '@vitejs/plugin-legacy'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import VueSetupExtend from 'vite-plugin-vue-setup-extend'
+import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,6 +27,7 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    vueDevTools(),
     vueJsx(),
     VueSetupExtend(),
     eslintPlugin({
@@ -84,14 +86,20 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '../../../src')
+      '@': path.resolve(__dirname, '../../../src'),
+      "grid-layout-plus/src/helpers/types": "grid-layout-plus/dist/helpers/types.js"
     }
+  },
+  define: {
+    // 解决 interactjs 模块导入问题
+    global: 'globalThis'
   },
   optimizeDeps: {
     include: [
       'brace',
+      'interactjs'
     ],
-    exclude: [],
+    exclude: ['grid-layout-plus']
   },
   // 不加入这部分代码，surely table会报错
   css: {
