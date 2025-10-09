@@ -721,7 +721,7 @@ onMounted(() => {
   height: 100%;
   transform: translateY(-50%);
   cursor: ew-resize;
-  z-index: 1001;
+  z-index: 900;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -763,11 +763,11 @@ onMounted(() => {
 .toggle-button {
   position: absolute;
   top: 50%;
-  width: 28px;
+  width: 15px;
   height: 60px;
   transform: translateY(-50%);
   cursor: pointer;
-  z-index: 1002;
+  z-index: 999;
   display: flex;
   align-items: center;
   justify-content: center;
