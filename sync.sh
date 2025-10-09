@@ -15,7 +15,7 @@ set -o pipefail
 # === 配置 ===
 ORIGIN_REMOTE="origin"
 GITEE_REMOTE="gitee"
-BRANCH="main"  # 如果你的主分支是 master，请改成 master
+BRANCH="master"  # 如果你的主分支是 master，请改成 master
 
 # === 函数 ===
 log() {
