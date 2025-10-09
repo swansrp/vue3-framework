@@ -90,9 +90,14 @@ export default defineConfig({
       "grid-layout-plus/src/helpers/types": "grid-layout-plus/dist/helpers/types.js"
     }
   },
+  define: {
+    // 解决 interactjs 模块导入问题
+    global: 'globalThis'
+  },
   optimizeDeps: {
     include: [
       'brace',
+      'interactjs'
     ],
     exclude: ['grid-layout-plus']
   },
