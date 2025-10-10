@@ -455,16 +455,6 @@ function generateApiByController(swaggerData, envConfig) {
   const controllerGroups = {};
   let ignoredCount = 0;
   
-  console.log('\n📝 Swagger Tags 定义:');
-  if (swaggerTags && Array.isArray(swaggerTags)) {
-    swaggerTags.forEach(tag => {
-      console.log(`  - ${tag.name}: ${tag.description || '无描述'}`);
-    });
-  } else {
-    console.log('  - 未找到 tags 定义');
-  }
-  console.log('');
-  
   // 按每个operation的tag description分组，每个operation一个文件
   Object.keys(paths).forEach(pathKey => {
     const pathObj = paths[pathKey];
@@ -627,14 +617,6 @@ async function main() {
     console.log('\n🎉 API生成完成！');
     console.log('\n📖 使用方式:');
     console.log('  import { functionName } from "@/apis";');
-    console.log('\n💡 改进内容:');
-    console.log('  1. ✅ 移除了函数名中的UsingGET/UsingPOST后缀');
-    console.log('  2. ✅ 清理了API路径，移除了项目前缀');
-    console.log('  3. ✅ 按每个API的Tag Description分别生成文件');
-    console.log('  4. ✅ 忽略了以\'系统\'开头的API');
-    console.log('  5. ✅ 文件生成在src/apis/目录下');
-    console.log('  6. ✅ 使用英文驼峰命名，避免中文文件名问题');
-    console.log('  7. ✅ 从 Swagger JSON 的 tags 定义中获取 description 生成文件名');
     
   } catch (error) {
     console.error('\n❌ 生成失败:', error.message);
