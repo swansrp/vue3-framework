@@ -542,7 +542,6 @@ function generateControllerFile(controllerName, controllerData, envConfig) {
 // 生成索引文件
 function generateIndexFile(controllerGroups) {
   let content = `// ==================== 自动生成的API导出 ====================\n`;
-  content += `// 生成时间: ${new Date().toLocaleString()}\n`;
   content += `// 位置: src/apis/\n`;
   content += `// 说明: 每个API操作按其tag description单独生成文件\n`;
   content += `// ============================================================\n\n`;
