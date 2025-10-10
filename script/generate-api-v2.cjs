@@ -520,7 +520,6 @@ function generateApiByController(swaggerData, envConfig) {
 // 生成单个文件内容（按tag description分组）
 function generateControllerFile(controllerName, controllerData, envConfig) {
   let content = `// ==================== ${controllerData.tagDescription || controllerData.tag} API ====================\n`;
-  content += `// 生成时间: ${new Date().toLocaleString()}\n`;
   content += `// 项目: ${envConfig.projectName}\n`;
   content += `// 文件: ${controllerName}.ts\n`;
   content += `// Tag: ${controllerData.tag}\n`;
