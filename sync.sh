@@ -1,68 +1,82 @@
 #!/bin/bash
-# ==========================================
-# Git 双向同步脚本
-# 功能：
-#   1. 从 origin 拉取并推送到 gitee
-#   2. 从 gitee 拉取并推送到 origin
-# 使用方式：
-#   chmod +x git-sync.sh
-#   ./git-sync.sh
-# ==========================================
+set -e
 
-set -e  # 出错即退出
-set -o pipefail
+# 定义远程仓库
+REMOTE_ORIGIN="origin"
+REMOTE_GITEE="gitee"
 
-# === 配置 ===
-ORIGIN_REMOTE="origin"
-GITEE_REMOTE="gitee"
-BRANCH="master"  # 如果你的主分支是 master，请改成 master
-
-# === 函数 ===
-log() {
-  echo -e "\033[1;32m[INFO]\033[0m $1"
-}
-
-error() {
-  echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
-  exit 1
-}
-
-# 检查是否是 git 仓库
-if [ ! -d .git ]; then
-  error "当前目录不是一个 Git 仓库，请先进入仓库根目录。"
+# 获取要同步的分支
+if [ $# -eq 0 ]; then
+  BRANCHES=("master")
+else
+  BRANCHES=("$@")
 fi
 
-# 检查远程仓库是否存在
-if ! git remote get-url "$ORIGIN_REMOTE" >/dev/null 2>&1; then
-  error "未找到远程：$ORIGIN_REMOTE"
-fi
-if ! git remote get-url "$GITEE_REMOTE" >/dev/null 2>&1; then
-  error "未找到远程：$GITEE_REMOTE"
-fi
+echo "开始同步分支: ${BRANCHES[*]}"
+echo "============================="
 
-log "当前远程："
-git remote -v
+# 记录是否有 stash
+STASHED=false
 
-# 确保工作区干净
-if [ -n "$(git status --porcelain)" ]; then
-  error "工作区或暂存区存在未提交更改，请先提交或清理。"
+# 如果有本地改动，先 stash
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "检测到本地未提交更改，执行 git stash..."
+  git stash push -m "auto-stash-before-sync"
+  STASHED=true
 fi
 
-# === Step 1: 从 origin 拉取并推送到 gitee ===
-log "从 $ORIGIN_REMOTE 拉取最新分支 $BRANCH..."
-git fetch "$ORIGIN_REMOTE" "$BRANCH"
-git checkout "$BRANCH"
-git merge "$ORIGIN_REMOTE/$BRANCH" --no-edit || true
+# 循环同步每个分支
+for BRANCH in "${BRANCHES[@]}"; do
+  echo ""
+  echo "🔁 同步分支: $BRANCH"
+  echo "-----------------------------"
 
-log "推送最新代码到 $GITEE_REMOTE/$BRANCH..."
-git push "$GITEE_REMOTE" "$BRANCH"
+  # 确保本地有该分支
+  if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+    git checkout "$BRANCH"
+  else
+    echo "本地无 $BRANCH 分支，尝试从 $REMOTE_ORIGIN 拉取..."
+    git fetch "$REMOTE_ORIGIN" "$BRANCH":"$BRANCH" || {
+      echo "❌ 从 $REMOTE_ORIGIN 拉取 $BRANCH 失败，跳过..."
+      continue
+    }
+    git checkout "$BRANCH"
+  fi
 
-# === Step 2: 从 gitee 拉取并推送回 origin ===
-log "从 $GITEE_REMOTE 拉取最新分支 $BRANCH..."
-git fetch "$GITEE_REMOTE" "$BRANCH"
-git merge "$GITEE_REMOTE/$BRANCH" --no-edit || true
+  # 更新 origin -> 本地
+  echo "⬇️ 从 $REMOTE_ORIGIN 拉取最新代码..."
+  git fetch "$REMOTE_ORIGIN" "$BRANCH"
+  git rebase "$REMOTE_ORIGIN/$BRANCH" || git rebase --abort
 
-log "推送合并后的代码回 $ORIGIN_REMOTE/$BRANCH..."
-git push "$ORIGIN_REMOTE" "$BRANCH"
+  # 推送到 gitee
+  echo "⬆️ 推送到 $REMOTE_GITEE..."
+  if ! git push "$REMOTE_GITEE" "$BRANCH"; then
+    echo "⚠️ 推送被拒绝，尝试拉取后重推..."
+    git pull "$REMOTE_GITEE" "$BRANCH" --rebase || true
+    git push "$REMOTE_GITEE" "$BRANCH" || echo "⚠️ Gitee 推送失败（可能分支冲突）"
+  fi
 
-log "✅ 同步完成：origin ↔ gitee"
+  # 再同步 Gitee -> Origin
+  echo "⬇️ 从 $REMOTE_GITEE 拉取最新代码..."
+  git fetch "$REMOTE_GITEE" "$BRANCH"
+  git rebase "$REMOTE_GITEE/$BRANCH" || git rebase --abort
+
+  echo "⬆️ 推送到 $REMOTE_ORIGIN..."
+  if ! git push "$REMOTE_ORIGIN" "$BRANCH"; then
+    echo "⚠️ 推送被拒绝，尝试拉取后重推..."
+    git pull "$REMOTE_ORIGIN" "$BRANCH" --rebase || true
+    git push "$REMOTE_ORIGIN" "$BRANCH" || echo "⚠️ Origin 推送失败（可能分支冲突）"
+  fi
+
+  echo "✅ 分支 $BRANCH 同步完成"
+done
+
+# 恢复 stash
+if [ "$STASHED" = true ]; then
+  echo ""
+  echo "恢复本地改动..."
+  git stash pop || echo "⚠️ 恢复 stash 可能有冲突，请手动处理"
+fi
+
+echo ""
+echo "🎉 所有分支同步完成！"
