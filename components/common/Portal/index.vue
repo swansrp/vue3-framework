@@ -2440,63 +2440,36 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   }
 }
 
-// 全局斑马纹强制样式
-</style>
-
-<style lang="less">
-// 全局样式，强制斑马纹效果
 .surely-table {
-  tbody tr:nth-child(even),
-  .surely-table-tbody .surely-table-row:nth-child(even),
-  .surely-table-body tr:nth-child(even),
-  .surely-table-body .surely-table-row:nth-child(even) {
+  // 使用组件自带的奇偶类名，更稳定可靠
+  .surely-table-row-even,
+  tbody tr.surely-table-row-even,
+  .surely-table-body .surely-table-row-even {
     background-color: #f9fafb !important;
   }
-  
-  tbody tr:nth-child(odd),
-  .surely-table-tbody .surely-table-row:nth-child(odd),
-  .surely-table-body tr:nth-child(odd),
-  .surely-table-body .surely-table-row:nth-child(odd) {
-    background-color: #ffffff !important;
-  }
-  
-  tbody tr:nth-child(even):hover,
-  .surely-table-body tr:nth-child(even):hover,
-  .surely-table-body .surely-table-row:nth-child(even):hover {
-    background-color: #f3f4f6 !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  tbody tr:nth-child(odd):hover,
-  .surely-table-body tr:nth-child(odd):hover,
-  .surely-table-body .surely-table-row:nth-child(odd):hover {
-    background-color: #f8fafc !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-}
 
-// 直接针对表格容器
-.portal-table {
-  tr:nth-of-type(even) {
-    background-color: #f9fafb !important;
-  }
-  
-  tr:nth-of-type(odd) {
+  .surely-table-row-odd,
+  tbody tr.surely-table-row-odd,
+  .surely-table-body .surely-table-row-odd {
     background-color: #ffffff !important;
   }
-  
-  tr:nth-of-type(even):hover {
+
+  .surely-table-row-even:hover,
+  tbody tr.surely-table-row-even:hover,
+  .surely-table-body .surely-table-row-even:hover {
     background-color: #f3f4f6 !important;
+    transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
-  tr:nth-of-type(odd):hover {
+
+  .surely-table-row-odd:hover,
+  tbody tr.surely-table-row-odd:hover,
+  .surely-table-body .surely-table-row-odd:hover {
     background-color: #f8fafc !important;
+    transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 </style>
