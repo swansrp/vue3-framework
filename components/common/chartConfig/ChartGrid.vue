@@ -1,6 +1,9 @@
 <template>
   <div class="chart-grid-container">
-    <div v-if="indicators.length === 0" class="empty-state">
+    <div
+      v-if="indicators.length === 0"
+      class="empty-state"
+    >
       <div class="empty-content">
         <BarChartOutlined class="empty-icon" />
         <p>暂无图表，请添加指标</p>
@@ -8,47 +11,71 @@
     </div>
 
     <div
-      v-else class="chart-grid" ref="gridContainerRef" :style="{
+      v-else
+      ref="gridContainerRef"
+      class="chart-grid"
+      :style="{
         gridAutoRows: gridUnitHeight + 'px',
         gridTemplateColumns: `repeat(${props.gridColumns}, 1fr)`,
-      }">
+      }"
+    >
       <div
-        v-for="indicator in localIndicators" :key="indicator.id" class="chart-item" :class="{
+        v-for="indicator in localIndicators"
+        :key="indicator.id"
+        class="chart-item"
+        :class="{
           'chart-item-placeholder': isDragging && draggingIndicator?.id === indicator.id,
-        }" :style="{
+        }"
+        :style="{
           gridColumn: `${indicator.xPosition} / span ${Math.min(
             indicator.xGrid || 1,
             gridColumns
           )}`,
           gridRow: `${indicator.yPosition} / span ${indicator.yGrid || 1}`,
-        }" :data-xgrid="indicator.xGrid" :data-ygrid="indicator.yGrid" :data-xposition="indicator.xPosition"
-        :data-yposition="indicator.yPosition" @mousedown="startDrag($event, indicator)">
+        }"
+        :data-xgrid="indicator.xGrid"
+        :data-ygrid="indicator.yGrid"
+        :data-xposition="indicator.xPosition"
+        :data-yposition="indicator.yPosition"
+        @mousedown="startDrag($event, indicator)"
+      >
         <ChartCard
-          :indicator="indicator" :loading="loading" :grid-unit-width="gridUnitWidth"
-          :grid-unit-height="gridUnitHeight" :grid-columns="props.gridColumns"
-          :can-edit="getIndicatorEditPermission(indicator)" :can-delete="getIndicatorDeletePermission(indicator)"
-          :can-resize="getIndicatorResizePermission(indicator)" @edit="$emit('edit-indicator', indicator)"
-          @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])" @resize="handleResize"
-          @resize-preview="onResizePreview" />
+          :indicator="indicator"
+          :loading="loading"
+          :grid-unit-width="gridUnitWidth"
+          :grid-unit-height="gridUnitHeight"
+          :grid-columns="props.gridColumns"
+          :can-edit="getIndicatorEditPermission(indicator)"
+          :can-delete="getIndicatorDeletePermission(indicator)"
+          :can-resize="getIndicatorResizePermission(indicator)"
+          @edit="$emit('edit-indicator', indicator)"
+          @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])"
+          @resize="handleResize"
+          @resize-preview="onResizePreview"
+        />
       </div>
 
       <!-- 拖拽占位符 -->
       <div
-        v-if="isDragging && dragPosition" class="drag-placeholder"
-        :class="{ 'drag-placeholder-overlap': isDragOverlapping }" :style="{
+        v-if="isDragging && dragPosition"
+        class="drag-placeholder"
+        :class="{ 'drag-placeholder-overlap': isDragOverlapping }"
+        :style="{
           gridColumn: `${dragPosition.col} / span ${Math.min(
             draggingIndicator?.xGrid || 1,
             gridColumns
           )}`,
           gridRow: `${dragPosition.row} / span ${draggingIndicator?.yGrid || 1}`,
-        }"></div>
+        }"
+      />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { BarChartOutlined } from '@ant-design/icons-vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
 import ChartCard from './ChartCard.vue'
 import type { DashboardItem } from './types'
 

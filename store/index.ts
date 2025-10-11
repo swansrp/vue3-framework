@@ -3,5 +3,5 @@
 // 解决方案是先创建一个全局的pinia对象，然后共同引入，就解决了这个问题
 
 import { createPinia } from 'pinia'
-const pinia = createPinia();
+const pinia = createPinia()
 export default pinia

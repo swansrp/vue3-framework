@@ -2,15 +2,28 @@
   <div class="menu-config">
     <!--展示树状结构的样式-->
     <div class="menu-tree">
-      <div class="menu-category">{{ menuName }}</div>
+      <div class="menu-category">
+        {{ menuName }}
+      </div>
       <!--如果treeData的length为0，说明没有数据，展示提示信息-->
-      <div v-if="!treeData || !treeData.length" class="no-data">暂无数据</div>
+      <div
+        v-if="!treeData || !treeData.length"
+        class="no-data"
+      >
+        暂无数据
+      </div>
       <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
       <a-tree
-        :key="treeData" v-model:selectedKeys="treeSelectKey" :defaultExpandAll="true" :show-line="true"
+        :key="treeData"
+        v-model:selected-keys="treeSelectKey"
+        :default-expand-all="true"
+        :show-line="true"
         :tree-data="treeData"
         style="overflow: auto; max-height: 550px"
-        draggable @drop="onDrop" @select="selectTreeNode">
+        draggable
+        @drop="onDrop"
+        @select="selectTreeNode"
+      >
         <!--使用title插槽自定义a-tree的图标-->
         <template #title="{ dataRef }">
           <Icon :icon="dataRef.icon" />
@@ -19,21 +32,31 @@
       </a-tree>
       <!--底部按钮列表-->
       <div class="nav-switch-btn-list">
-        <a-button type="primary" @click="addRootMenu">
+        <a-button
+          type="primary"
+          @click="addRootMenu"
+        >
           <template #icon>
             <file-add-filled />
           </template>
           新增节点
         </a-button>
-        <a-button v-show="menuNameListIndex === 1" type="primary" @click="backToMainMenu">
+        <a-button
+          v-show="menuNameListIndex === 1"
+          type="primary"
+          @click="backToMainMenu"
+        >
           <template #icon>
             <left-outlined />
           </template>
           返回主菜单
         </a-button>
         <a-button
-          v-show="menuNameListIndex === 0" :disabled="!canEnterSubMenuFlag" type="primary"
-          @click="enterSubMenu">
+          v-show="menuNameListIndex === 0"
+          :disabled="!canEnterSubMenuFlag"
+          type="primary"
+          @click="enterSubMenu"
+        >
           <template #icon>
             <right-outlined />
           </template>
@@ -44,56 +67,118 @@
     <!--节点信息配置区域-->
     <div class="menu-config-space">
       <!--为左侧导航的编辑提供一个标题，以展示该左侧导航菜单属于哪一个横向导航菜单-->
-      <div v-show="menuTitle" class="sub-menu-title">
+      <div
+        v-show="menuTitle"
+        class="sub-menu-title"
+      >
         {{ menuTitle }}
-        <span v-if="menuNameListIndex">{{ subMenuCurrentPath }}</span></div>
+        <span v-if="menuNameListIndex">{{ subMenuCurrentPath }}</span>
+      </div>
       <a-tabs
-        v-if="menuConfigItem === 'currentConfig'" v-model:activeKey="tabActiveKey" type="card"
-        @change="tabsChange">
-        <a-tab-pane key="editNode" :tab="isButton()?'编辑按钮':'编辑节点'">
-          <tree-edit-form :formState="editMenuFormState" :grandId="grandId" :menuId="menuId" :type="EDIT" />
+        v-if="menuConfigItem === 'currentConfig'"
+        v-model:active-key="tabActiveKey"
+        type="card"
+        @change="tabsChange"
+      >
+        <a-tab-pane
+          key="editNode"
+          :tab="isButton()?'编辑按钮':'编辑节点'"
+        >
+          <tree-edit-form
+            :form-state="editMenuFormState"
+            :grand-id="grandId"
+            :menu-id="menuId"
+            :type="EDIT"
+          />
         </a-tab-pane>
-        <a-tab-pane v-if="menuNameListIndex === 1 && !isButton()" key="addSubMenu" tab="增加子菜单">
-          <tree-edit-form :formState="addSubMenuFormState" :grandId="grandId" :menuId="menuId" type="add_menu" />
+        <a-tab-pane
+          v-if="menuNameListIndex === 1 && !isButton()"
+          key="addSubMenu"
+          tab="增加子菜单"
+        >
+          <tree-edit-form
+            :form-state="addSubMenuFormState"
+            :grand-id="grandId"
+            :menu-id="menuId"
+            type="add_menu"
+          />
         </a-tab-pane>
-        <a-tab-pane v-if="menuNameListIndex === 1 && !isButton()" key="addMenuButton" tab="增加按钮">
-          <tree-edit-form :formState="addSubMenuFormState" :grandId="grandId" :menuId="menuId" type="add_button" />
+        <a-tab-pane
+          v-if="menuNameListIndex === 1 && !isButton()"
+          key="addMenuButton"
+          tab="增加按钮"
+        >
+          <tree-edit-form
+            :form-state="addSubMenuFormState"
+            :grand-id="grandId"
+            :menu-id="menuId"
+            type="add_button"
+          />
         </a-tab-pane>
-        <a-tab-pane key="deleteNode" :tab="isButton()?'删除按钮':'删除节点'">
-          <a-alert message="警告" show-icon type="error">
+        <a-tab-pane
+          key="deleteNode"
+          :tab="isButton()?'删除按钮':'删除节点'"
+        >
+          <a-alert
+            message="警告"
+            show-icon
+            type="error"
+          >
             <template #icon>
               <Icon icon="WarningFilled" />
             </template>
-            <template #description>确认删除当前节点？<br /><b>说明：只有当前接节点不含有子节点时才允许删除该节点</b>
+            <template #description>
+              确认删除当前节点？<br><b>说明：只有当前接节点不含有子节点时才允许删除该节点</b>
             </template>
           </a-alert>
-          <a-button :disabled="disableDeleteBtn" class="delete-btn" danger type="primary" @click="deleteNode">确认删除
+          <a-button
+            :disabled="disableDeleteBtn"
+            class="delete-btn"
+            danger
+            type="primary"
+            @click="deleteNode"
+          >
+            确认删除
           </a-button>
         </a-tab-pane>
       </a-tabs>
-      <div v-if="menuConfigItem === 'addRootMenu'" class="add-root-menu">
-        <div class="add-root-menu-title">新增根节点</div>
-        <tree-edit-form :formState="addRootMenuFormState" :grandId="grandId" type="add_menu" />
+      <div
+        v-if="menuConfigItem === 'addRootMenu'"
+        class="add-root-menu"
+      >
+        <div class="add-root-menu-title">
+          新增根节点
+        </div>
+        <tree-edit-form
+          :form-state="addRootMenuFormState"
+          :grand-id="grandId"
+          type="add_menu"
+        />
       </div>
-      <div v-if="!menuConfigItem" class="config-warning">顶部导航和左侧导航的叶子节点必须要配置“路由路径”和“组件地址”
+      <div
+        v-if="!menuConfigItem"
+        class="config-warning"
+      >
+        顶部导航和左侧导航的叶子节点必须要配置“路由路径”和“组件地址”
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { Ref } from "vue"
-import { message } from "ant-design-vue"
-import { Key } from "ant-design-vue/es/_util/type"
-import { EDIT } from "@/framework/utils/constant"
-import { AntTreeNodeDropEvent } from "ant-design-vue/es/tree"
-import { DataNode } from "ant-design-vue/es/vc-tree/interface"
-import { getDroppedData } from "@/framework/hooks/antTreeDropSort"
-import { FormState } from "@/framework/components/common/treeEditForm/type"
-import { FileAddFilled, LeftOutlined, RightOutlined } from "@ant-design/icons-vue"
-import { getAllParentNodes, getBrotherNodes, setField } from "@/framework/utils/common"
-import TreeEditForm from "@/framework/components/common/treeEditForm/TreeEditForm.vue"
-import { changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder } from "@/framework/apis/admin/navEdit"
+import { FileAddFilled, LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { Key } from 'ant-design-vue/es/_util/type'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { Ref } from 'vue'
+
+import { changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder } from '@/framework/apis/admin/navEdit'
+import TreeEditForm from '@/framework/components/common/treeEditForm/TreeEditForm.vue'
+import { FormState } from '@/framework/components/common/treeEditForm/type'
+import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
+import { getAllParentNodes, getBrotherNodes, setField } from '@/framework/utils/common'
+import { EDIT } from '@/framework/utils/constant'
 
 const _initFormState: FormState = {
   title: '',
@@ -117,9 +202,9 @@ let tabActiveKey = ref('editNode')
 let treeSelectKey: Ref<TreeKeyType> = ref<TreeKeyType>([])
 let treeData: Ref<Array<DataNode>> = ref([])
 let menuConfigItem = ref<MenuConfigItem>('')
-let editMenuFormState: FormState = reactive<FormState>({..._initFormState})
-let addSubMenuFormState: FormState = reactive<FormState>({..._initFormState})
-let addRootMenuFormState: FormState = reactive<FormState>({..._initFormState})
+let editMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
+let addSubMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
+let addRootMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
 let canEnterSubMenuFlag: Ref<boolean> = ref(false)
 
 type TreeKeyType = string[] | number[]
@@ -145,7 +230,7 @@ const updateMainTree = (needSelectKey = true) => {
   })
 }
 const updateSubTree = () => {
-  const data = {menuId: grandId.value}
+  const data = { menuId: grandId.value }
   getSubMenu(data).then(res => {
     treeData.value = res.payload
     selectTreeKey()
@@ -168,7 +253,7 @@ let disableDeleteBtn = ref(false)
 
 const selectTreeNode = (_: string, info: any) => {
   canEnterSubMenuFlag.value = true
-  const {node} = info // 获取当前的节点信息
+  const { node } = info // 获取当前的节点信息
   menuId.value = node.menuId
   if (menuNameListIndex.value === 0) menuTitle.value = node.title
   else if (menuNameListIndex.value === 1) {
@@ -232,7 +317,7 @@ const tabsChange = (activeKey: Key) => {
 // 删除菜单节点的方法
 const deleteNode = () => {
   // 删除Main Menu 和Sub Menu的方法都是一样的，所以只是根据menuNameListIndex的选择情况判断需要使用哪个方法更新a-tree
-  deleteMainMenu({id: menuId.value}).then(() => {
+  deleteMainMenu({ id: menuId.value }).then(() => {
     if (menuNameListIndex.value === 0) updateMainTree()
     else if (menuNameListIndex.value === 1) updateSubTree()
     // 删除节点后,不显示menu-config-space的配置面板
@@ -251,13 +336,13 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
     id: dragKey
   }
   if (menuNameListIndex.value === 0 && info.dragNode.pid !== updatePIdData.pid) {
-    message.error({content: () => '顶部导航不能存在子节点！'})
+    message.error({ content: () => '顶部导航不能存在子节点！' })
     updateMainTree()
     return
   }
   let updateOrderData: any = []
   brotherNodes.forEach((node: FormState, index: number) => {
-    updateOrderData.push({id: node.menuId, showOrder: index})
+    updateOrderData.push({ id: node.menuId, showOrder: index })
   })
 
   let changeOrderPromise = updateMenuOrder(updateOrderData)

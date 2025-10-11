@@ -1,16 +1,17 @@
-import path from "path"
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { viteMockServe } from "vite-plugin-mock"
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
-import eslintPlugin from "vite-plugin-eslint"
-import vueJsx from "@vitejs/plugin-vue-jsx"
+import path from 'path'
+
 import legacyPlugin from '@vitejs/plugin-legacy'
+import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
+import AutoImport from 'unplugin-auto-import/vite'
+import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
+import Components from 'unplugin-vue-components/vite'
+import { defineConfig } from 'vite'
+import eslintPlugin from 'vite-plugin-eslint'
+import { viteMockServe } from 'vite-plugin-mock'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
-import VueSetupExtend from 'vite-plugin-vue-setup-extend'
 import vueDevTools from 'vite-plugin-vue-devtools'
+import VueSetupExtend from 'vite-plugin-vue-setup-extend'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -19,7 +20,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            return id.toString().split('node_modules/')[1].split('/')[0].toString();
+            return id.toString().split('node_modules/')[1].split('/')[0].toString()
           }
         }
       }
@@ -87,7 +88,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '../../../src'),
-      "grid-layout-plus/src/helpers/types": "grid-layout-plus/dist/helpers/types.js"
+      'grid-layout-plus/src/helpers/types': 'grid-layout-plus/dist/helpers/types.js'
     }
   },
   define: {

@@ -1,5 +1,8 @@
 <template>
-  <portal table-id="AcPartnerHistory" read-only />
+  <portal
+    table-id="AcPartnerHistory"
+    read-only
+  />
 </template>
 
 <script lang="ts" setup>

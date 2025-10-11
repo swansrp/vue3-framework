@@ -2,14 +2,18 @@
   <tree-content
     v-if="treeMode"
     v-model="selectedData"
-    :checkStrictly="props.checkStrictly"
+    :check-strictly="props.checkStrictly"
     :disable="props.disabled"
-    :labelField="props.labelField"
+    :label-field="props.labelField"
     :multi="props.multi"
-    :treeData="treeData"
+    :tree-data="treeData"
   >
     <template #title="{ item }">
-      <slot v-if="$slots.title" :item="item" name="title"></slot>
+      <slot
+        v-if="$slots.title"
+        :item="item"
+        name="title"
+      />
       <span v-else>{{ item && item[props.labelField] }}</span>
     </template>
   </tree-content>
@@ -17,21 +21,26 @@
     v-else
     v-model="selectedData"
     :disable="props.disabled"
-    :labelField="props.labelField"
-    :listData="dictData"
+    :label-field="props.labelField"
+    :list-data="dictData"
     :multi="props.multi"
     :search-able="searchAble"
   >
     <template #title="{ item }">
-      <slot v-if="$slots.title" :item="item" name="title"></slot>
+      <slot
+        v-if="$slots.title"
+        :item="item"
+        name="title"
+      />
       <span v-else>{{ item && item[props.labelField] }}</span>
     </template>
   </list-content>
 </template>
 
 <script lang="ts" setup>
-import { dictStore, useTreeStore } from '@/framework/store/common'
 import { Ref } from 'vue'
+
+import { dictStore, useTreeStore } from '@/framework/store/common'
 
 const props = withDefaults(
   defineProps<{
@@ -54,7 +63,7 @@ const props = withDefaults(
     searchAble: false
   }
 )
-const {dict, treeMode, modelValue} = toRefs(props)
+const { dict, treeMode, modelValue } = toRefs(props)
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any, label: any): void

@@ -1,52 +1,95 @@
 <template>
-  <div :style="{flexDirection, height: wrapperHeight, marginBottom}" class="department-staff-form-wrapper">
+  <div
+    :style="{flexDirection, height: wrapperHeight, marginBottom}"
+    class="department-staff-form-wrapper"
+  >
     <div v-if="showDept">
       <a-form-item :label="departmentInputLabel">
         <a-cascader
-          :style="{width: inputWidth}"
           v-model:value="localDepartmentListValue"
+          :style="{width: inputWidth}"
           :options="departmentListOption"
           :show-search="{ cascaderFilter }"
-          :showSearch="true"
+          :show-search="true"
           max-tag-count="responsive"
           multiple
           placeholder="请选择公司部门"
-          @change="selectDepartment">
+          @change="selectDepartment"
+        >
           <template #tagRender="data">
-            <a-tag :key="data.value" color="blue">{{ data.label }}</a-tag>
+            <a-tag
+              :key="data.value"
+              color="blue"
+            >
+              {{ data.label }}
+            </a-tag>
           </template>
         </a-cascader>
       </a-form-item>
     </div>
     <a-form-item :label="staffInputLabel">
       <a-select
-        :style="{width: inputWidth}"
         ref="selectUserRef"
         v-model:value="localStaffListValue"
+        :style="{width: inputWidth}"
         :max-tag-count="staffMaxTagCount"
         :options="staffListOption"
-        :maxTagTextLength="10"
+        :max-tag-text-length="10"
         :virtual="false"
-        allowClear
-        labelInValue
+        allow-clear
+        label-in-value
         mode="multiple"
-        optionFilterProp="label"
+        option-filter-prop="label"
         placeholder="请选择职工"
         @blur="handleBlur"
         @change="handleStaffChange"
-        @search="handleInputChange">
+        @search="handleInputChange"
+      >
         <template #option="{label, value}">
-          <img v-lazy="staffAvatar(staffId2AvatarMap[value])" alt="头像" class="avatar" />
+          <img
+            v-lazy="staffAvatar(staffId2AvatarMap[value])"
+            alt="头像"
+            class="avatar"
+          >
           {{ label }}
         </template>
-        <template v-if="isMultiple" #dropdownRender="{ menuNode: menu }">
+        <template
+          v-if="isMultiple"
+          #dropdownRender="{ menuNode: menu }"
+        >
           <VNodes :vnodes="menu" />
           <a-divider style="margin: 4px 0" />
-          <div class="staff-select-operation-btn-list" @mousedown="e => e.preventDefault()">
-            <a-button class="confirm-btn" size="small" @click="closeSelectBox">确定</a-button>
-            <a-button size="small" type="primary" @click="selectAllStaff">全选</a-button>
-            <a-button size="small" @click="invertCurrentStaff">反选</a-button>
-            <a-button danger size="small" @click="clearAllSelectStaff">清空</a-button>
+          <div
+            class="staff-select-operation-btn-list"
+            @mousedown="e => e.preventDefault()"
+          >
+            <a-button
+              class="confirm-btn"
+              size="small"
+              @click="closeSelectBox"
+            >
+              确定
+            </a-button>
+            <a-button
+              size="small"
+              type="primary"
+              @click="selectAllStaff"
+            >
+              全选
+            </a-button>
+            <a-button
+              size="small"
+              @click="invertCurrentStaff"
+            >
+              反选
+            </a-button>
+            <a-button
+              danger
+              size="small"
+              @click="clearAllSelectStaff"
+            >
+              清空
+            </a-button>
           </div>
         </template>
       </a-select>
@@ -57,19 +100,21 @@
 <script lang="ts">
 export default defineComponent({
   components: {
-    VNodes: (_, {attrs}) => attrs.vnodes
+    VNodes: (_, { attrs }) => attrs.vnodes
   }
 })
 </script>
 
 <script lang="ts" setup>
-import _ from "lodash"
-import {getCascaderList} from "../utils"
-import {getDepartmentTree, getStaffList} from "./api"
-import {QUERY_INTERVAL} from "@/framework/utils/constant"
-import getImgUrl from "@/framework/assets/imgs/getImgUrl"
-import {ShowSearchType} from "ant-design-vue/es/vc-cascader"
-import {StaffBaseSelectArrayType, ValueLabelArray} from "@/framework/utils/type"
+import { ShowSearchType } from 'ant-design-vue/es/vc-cascader'
+import _ from 'lodash'
+
+import { getCascaderList } from '../utils'
+import { getDepartmentTree, getStaffList } from './api'
+
+import getImgUrl from '@/framework/assets/imgs/getImgUrl'
+import { QUERY_INTERVAL } from '@/framework/utils/constant'
+import { StaffBaseSelectArrayType, ValueLabelArray } from '@/framework/utils/type'
 
 
 const defaultAvatar = getImgUrl('defaultAvatar.png')
@@ -95,7 +140,7 @@ const props = withDefaults(defineProps<{
   staffMaxTagCount: 3
 })
 
-const {layoutMode, width, isMultiple, showDept, staffMaxTagCount} = toRefs(props)
+const { layoutMode, width, isMultiple, showDept, staffMaxTagCount } = toRefs(props)
 const emit = defineEmits(['update:staffListValue', 'update:departmentListValue', 'onChange'])
 
 // 组件的样式配置
@@ -185,7 +230,7 @@ const handleStaffChange = (option?: any[]) => {
   }
   else if (option && Array.isArray(option)) {
     if (option.length === 0) localStaffListValue.value = []
-    else localStaffListValue.value = [{...option[option.length - 1]}]
+    else localStaffListValue.value = [{ ...option[option.length - 1] }]
     emit('update:staffListValue', localStaffListValue.value)
   }
   emit('onChange', {
@@ -196,7 +241,7 @@ const handleStaffChange = (option?: any[]) => {
 const handleBlur = () => queryStaffList(departmentList, '').then(closeSelectBox)
 const closeSelectBox = () => selectUserRef.value.blur()
 
-document.addEventListener("error", function (e: any) {
+document.addEventListener('error', function (e: any) {
   const elem = e.target
   if (elem.tagName.toLowerCase() === 'img') elem.src = defaultAvatar
 }, true /*指定事件处理函数在捕获阶段执行*/)
@@ -204,8 +249,8 @@ document.addEventListener("error", function (e: any) {
 watch(() => props.staffListValue, value => {
   localStaffListValue.value = value
   localStaffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
-}, {immediate: true})
-watch(() => props.departmentListValue, value => localDepartmentListValue && value && (localDepartmentListValue.value = value), {immediate: true})
+}, { immediate: true })
+watch(() => props.departmentListValue, value => localDepartmentListValue && value && (localDepartmentListValue.value = value), { immediate: true })
 
 </script>
 

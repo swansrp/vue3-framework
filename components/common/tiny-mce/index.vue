@@ -1,5 +1,10 @@
 <template>
-  <editor v-model="myValue" :init="init" :disabled="disabled" :id="tinymceId" />
+  <editor
+    :id="tinymceId"
+    v-model="myValue"
+    :init="init"
+    :disabled="disabled"
+  />
 </template>
 
 
@@ -11,34 +16,34 @@ import 'tinymce/skins/content/default/content.css'
 import Editor from '@tinymce/tinymce-vue'
 import 'tinymce/themes/silver'
 import 'tinymce/themes/silver/theme'
-import 'tinymce/icons/default'; //引入编辑器图标icon，不引入则不显示对应图标
+import 'tinymce/icons/default' //引入编辑器图标icon，不引入则不显示对应图标
 import 'tinymce/models/dom' // 这里是个坑 一定要引入
 
 //在TinyMce.vue中接着引入相关插件
-import "tinymce/icons/default/icons"
-import "tinymce/plugins/image" // 插入上传图片插件
-import "tinymce/plugins/media" // 插入视频插件
-import "tinymce/plugins/table" // 插入表格插件
-import "tinymce/plugins/lists" // 列表插件
-import "tinymce/plugins/wordcount" // 字数统计插件
-import "tinymce/plugins/code" // 源码
-import "tinymce/plugins/fullscreen" //全屏
+import 'tinymce/icons/default/icons'
+import 'tinymce/plugins/image' // 插入上传图片插件
+import 'tinymce/plugins/media' // 插入视频插件
+import 'tinymce/plugins/table' // 插入表格插件
+import 'tinymce/plugins/lists' // 列表插件
+import 'tinymce/plugins/wordcount' // 字数统计插件
+import 'tinymce/plugins/code' // 源码
+import 'tinymce/plugins/fullscreen' //全屏
 
 //接下来定义编辑器所需要的插件数据
-import { reactive, ref } from "vue"
+import { reactive, ref } from 'vue'
 import axios from 'axios'
-const emits = defineEmits(["getContent"])
+const emits = defineEmits(['getContent'])
 //这里我选择将数据定义在props里面，方便在不同的页面也可以配置出不同的编辑器，当然也可以直接在组件中直接定义
 const props = defineProps({
   value: {
     type: String,
     default: () => {
-      return ""
+      return ''
     },
   },
   baseUrl: {
     type: String,
-    default: "",
+    default: '',
   },
   disabled: {
     type: Boolean,
@@ -46,17 +51,17 @@ const props = defineProps({
   },
   plugins: {
     type: [String, Array],
-    default: "lists  table",
+    default: 'lists  table',
   },//必填
   toolbar: {
     type: [String, Array],
     default:
-      "codesample bold italic underline alignleft aligncenter alignright alignjustify | undo redo | formatselect | fontselect | fontsizeselect | forecolor backcolor | bullist numlist outdent indent | lists link table code | removeformat ",
+      'codesample bold italic underline alignleft aligncenter alignright alignjustify | undo redo | formatselect | fontselect | fontsizeselect | forecolor backcolor | bullist numlist outdent indent | lists link table code | removeformat ',
   },
 })
 //用于接收外部传递进来的富文本
 const myValue = ref(props.value)
-const tinymceId = ref("vue-tinymce-" + +new Date() + ((Math.random() * 1000).toFixed(0) + ""))
+const tinymceId = ref('vue-tinymce-' + +new Date() + ((Math.random() * 1000).toFixed(0) + ''))
 // 这个函数必须在这里定义，因为import.meta.url指向当前文件所在的路径
 const getAssetsFile = (url: string) => new URL(`./${url}`, import.meta.url).href
 //定义一个对象 init初始化
@@ -64,7 +69,7 @@ const init = reactive({
   selector: '#' + tinymceId.value, //富文本编辑器的id,
   relative_urls : true,
   language_url: getAssetsFile('langs/zh_CN.js'), // 语言包的路径，具体路径看自己的项目，文档后面附上中文js文件
-  language: "zh_CN", //语言
+  language: 'zh_CN', //语言
   skin_url: new URL(`./skins/ui/oxide`, import.meta.url).href,
   height: 400, //编辑器高度
   branding: false, //是否禁用“Powered by TinyMCE”
@@ -75,7 +80,7 @@ const init = reactive({
   font_formats: 'Arial=arial,helvetica,sans-serif; 宋体=SimSun; 微软雅黑=Microsoft Yahei; Impact=impact,chicago;', //字体
   fontsize_formats: '11px 12px 14px 16px 18px 24px 36px 48px 64px 72px', //文字大小
   // paste_convert_word_fake_lists: false, // 插入word文档需要该属性
-  paste_webkit_styles: "all",
+  paste_webkit_styles: 'all',
   paste_merge_formats: true,
   nonbreaking_force_tab: false,
   paste_auto_cleanup_on_paste: false,
@@ -88,13 +93,13 @@ const init = reactive({
       reject({ message: '上传失败，图片大小请控制在 2M 以内', remove: true })
       return
     } else {
-      const ph = import.meta.env.VITE_BASE_PATH + ":" + import.meta.env.VITE_SERVER_PORT + "/"
+      const ph = import.meta.env.VITE_BASE_PATH + ':' + import.meta.env.VITE_SERVER_PORT + '/'
       let params = new FormData()
       params.append('file', blobInfo.blob())
 
       let config = {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
 
         }
       }
@@ -103,7 +108,7 @@ const init = reactive({
         if (res.data.code == 200) {
           resolve(ph + res.data.msg)  //上传成功，在成功函数里填入图片路径
         } else {
-          reject('HTTP Error: 上传失败' + res.data.code);
+          reject('HTTP Error: 上传失败' + res.data.code)
           return
         }
       }).catch(() => {
@@ -117,17 +122,17 @@ const init = reactive({
   file_picker_callback: (callback: Function, value: any, meta: any) => {
     // Provide file and text for the link dialog
     if (meta.filetype == 'file') {
-      callback('mypage.html', { text: 'My text' });
+      callback('mypage.html', { text: 'My text' })
     }
 
     // Provide image and alt text for the image dialog
     if (meta.filetype == 'image') {
-      callback('myimage.jpg', { alt: 'My alt text' });
+      callback('myimage.jpg', { alt: 'My alt text' })
     }
 
     // Provide alternative source and posted for the media dialog
     if (meta.filetype == 'media') {
-      callback('movie.mp4', { source2: 'alt.ogg', poster: 'image.jpg' });
+      callback('movie.mp4', { source2: 'alt.ogg', poster: 'image.jpg' })
     }
   }
 })
@@ -137,11 +142,11 @@ watch(
   () => props.value,
   () => {
     myValue.value = props.value
-    emits("getContent", myValue.value)
+    emits('getContent', myValue.value)
   }
 )
 //监听富文本中的数据变化
-watch(() => myValue.value, () => emits("getContent", myValue.value))
+watch(() => myValue.value, () => emits('getContent', myValue.value))
 //在onMounted中初始化编辑器
 onMounted(() => tinymce.init({}))
 </script>

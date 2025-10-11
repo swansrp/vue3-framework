@@ -2,17 +2,32 @@
   <div class="right-panel">
     <div class="config-header">
       <div class="config-header-content">
-        <a-button class="collapse-btn" size="small" type="text" @click="toggleLeftPanel">
+        <a-button
+          class="collapse-btn"
+          size="small"
+          type="text"
+          @click="toggleLeftPanel"
+        >
           <MenuFoldOutlined v-if="!leftPanelCollapsed" />
           <MenuUnfoldOutlined v-else />
         </a-button>
         <h3>配置面板</h3>
       </div>
       <div class="action-buttons">
-        <a-button class="reset-btn" size="small" title="重置配置" type="text" @click="resetConfiguration">
+        <a-button
+          class="reset-btn"
+          size="small"
+          title="重置配置"
+          type="text"
+          @click="resetConfiguration"
+        >
           <ReloadOutlined />
         </a-button>
-        <a-button :disabled="!firstDimension" type="primary" @click="generateChart">
+        <a-button
+          :disabled="!firstDimension"
+          type="primary"
+          @click="generateChart"
+        >
           生成图表
         </a-button>
       </div>
@@ -21,28 +36,38 @@
     <div class="config-content">
       <!-- 维度选择 -->
       <DimensionSelector
-        v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
-        :filter-dimension="filterDimension" @dimension-changed="onDimensionChanged" />
+        v-model:first-dimension="firstDimension"
+        v-model:second-dimension="secondDimension"
+        :filter-dimension="filterDimension"
+        @dimension-changed="onDimensionChanged"
+      />
 
       <!-- 全局筛选条件 -->
-      <FilterCondition v-model:filter-dimension="filterDimension" v-model:selected-filter-items="selectedFilterItems" />
+      <FilterCondition
+        v-model:filter-dimension="filterDimension"
+        v-model:selected-filter-items="selectedFilterItems"
+      />
 
       <!-- 数据配置 -->
       <DataConfiguration
-        v-model:data-metrics="dataMetrics" :available-data-types="availableDataTypes"
-        :first-dimension="firstDimension" :second-dimension="secondDimension"
-        @update-metric-field="updateMetricField" />
+        v-model:data-metrics="dataMetrics"
+        :available-data-types="availableDataTypes"
+        :first-dimension="firstDimension"
+        :second-dimension="secondDimension"
+        @update-metric-field="updateMetricField"
+      />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
 import { MenuFoldOutlined, MenuUnfoldOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { ref } from 'vue'
+
+import DataConfiguration from './DataConfiguration.vue'
 import DimensionSelector from './DimensionSelector.vue'
 import FilterCondition from './FilterCondition.vue'
-import DataConfiguration from './DataConfiguration.vue'
 
 // 接口定义
 interface IndicatorItem {

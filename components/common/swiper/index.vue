@@ -1,23 +1,36 @@
 <template>
   <div style="width: 100%;height: 50px;background-color: rgba(31, 180, 255, 0.12);position: relative">
-    <div class="top-line"></div>
-    <swiper class="swiper" loop :modules="[Autoplay]" :autoplay="{delay: 4000, disableOnInteraction: false}" :speed="3500">
-      <swiper-slide v-for="(newsList, index) in swiperData" :key="index">
+    <div class="top-line" />
+    <swiper
+      class="swiper"
+      loop
+      :modules="[Autoplay]"
+      :autoplay="{delay: 4000, disableOnInteraction: false}"
+      :speed="3500"
+    >
+      <swiper-slide
+        v-for="(newsList, index) in swiperData"
+        :key="index"
+      >
         <div class="slide-item">
-          <div v-for="(news, i) in newsList" :key="i" class="slide-sub-item">
+          <div
+            v-for="(news, i) in newsList"
+            :key="i"
+            class="slide-sub-item"
+          >
             <span>{{ news }}</span>
           </div>
         </div>
       </swiper-slide>
     </swiper>
-    <div class="bottom-line"></div>
+    <div class="bottom-line" />
   </div>
 </template>
 
 <script setup lang="ts">
 import 'swiper/css'
+import { Autoplay } from 'swiper'
 import { Swiper, SwiperSlide } from 'swiper/vue'
-import {Autoplay} from "swiper"
 
 const splitLength = 1
 const swiperData: Array<string>[] = []

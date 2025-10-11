@@ -1,8 +1,13 @@
 <template>
   <a-modal
-    v-model:open="visible" :width="'95vw'" :style="{ top: '20px', paddingBottom: 0 }"
-    :bodyStyle="{ height: 'calc(100vh - 120px)', padding: 0, display: 'flex', flexDirection: 'column' }" :footer="null"
-    :destroyOnClose="true" @cancel="handleCancel">
+    v-model:open="visible"
+    :width="'95vw'"
+    :style="{ top: '20px', paddingBottom: 0 }"
+    :body-style="{ height: 'calc(100vh - 120px)', padding: 0, display: 'flex', flexDirection: 'column' }"
+    :footer="null"
+    :destroy-on-close="true"
+    @cancel="handleCancel"
+  >
     <!-- 自定义表头区域 -->
     <template #title>
       <div class="modal-header">
@@ -10,12 +15,23 @@
         <div class="indicator-name-input">
           <span class="input-label">指标名称：<span class="required-star">*</span></span>
           <a-input
-            v-model:value="indicatorName" placeholder="请输入指标名称（必填）" :maxlength="50"
-            :status="indicatorNameError ? 'error' : ''" style="width: 200px;" @blur="validateIndicatorName" />
-          <span v-if="indicatorNameError" class="error-message">{{ indicatorNameError }}</span>
+            v-model:value="indicatorName"
+            placeholder="请输入指标名称（必填）"
+            :maxlength="50"
+            :status="indicatorNameError ? 'error' : ''"
+            style="width: 200px;"
+            @blur="validateIndicatorName"
+          />
+          <span
+            v-if="indicatorNameError"
+            class="error-message"
+          >{{ indicatorNameError }}</span>
         </div>
         <div class="skip-chart-option">
-          <a-checkbox v-model:checked="skipChartGeneration" :disabled="isEditMode">
+          <a-checkbox
+            v-model:checked="skipChartGeneration"
+            :disabled="isEditMode"
+          >
             跳过图表配置（仅保存指标名称）
           </a-checkbox>
         </div>
@@ -23,7 +39,10 @@
     </template>
     <div class="chart-config-modal">
       <!-- 当跳过图表配置时显示提示信息 -->
-      <div v-if="skipChartGeneration" class="skip-chart-message">
+      <div
+        v-if="skipChartGeneration"
+        class="skip-chart-message"
+      >
         <div class="skip-message-content">
           <InfoCircleOutlined class="info-icon" />
           <p>您选择了跳过图表配置，将只保存指标名称作为根目录。</p>
@@ -34,14 +53,26 @@
       <!-- 直接使用dashboard组件 -->
       <dashboard
         v-if="!skipChartGeneration"
-        ref="dashboardRef" :table-id="tableId" :edit-data="editData" :is-edit-mode="isEditMode"
-        @save="handleSave" @reset-config="handleResetConfig" />
+        ref="dashboardRef"
+        :table-id="tableId"
+        :edit-data="editData"
+        :is-edit-mode="isEditMode"
+        @save="handleSave"
+        @reset-config="handleResetConfig"
+      />
     </div>
 
     <!-- 自定义底部按钮区域 -->
     <div class="modal-footer">
-      <a-button @click="handleCancel">取消</a-button>
-      <a-button type="primary" :loading="saving" :disabled="isSaveDisabled" @click="handleSaveConfig">
+      <a-button @click="handleCancel">
+        取消
+      </a-button>
+      <a-button
+        type="primary"
+        :loading="saving"
+        :disabled="isSaveDisabled"
+        @click="handleSaveConfig"
+      >
         保存配置
       </a-button>
     </div>
@@ -49,11 +80,13 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from 'vue'
-import { message } from 'ant-design-vue'
 import { InfoCircleOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { computed, nextTick, ref, watch } from 'vue'
+
 import { addPersonalStatistic, updatePersonalStatistic, getPersonalStatistic, addCommonStatistic, getCommonStatistic, updateCommonStatistic } from './api'
 import type { IndicatorNode } from './types'
+
 import dashboard from '@/framework/components/common/Portal/dashboard/dashboard.vue'
 
 interface Props {

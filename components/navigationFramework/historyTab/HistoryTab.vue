@@ -1,25 +1,31 @@
 <template>
   <div class="history-tags">
     <a-tabs
-      v-model:activeKey="activeKey"
+      v-model:active-key="activeKey"
       hide-add
       size="small"
       type="editable-card"
       @change="changeActivateKey"
-      @edit="removeTab">
-      <a-tab-pane v-for="item in tabs" :key="String(item.key || item.id)" :tab="item.title" />
+      @edit="removeTab"
+    >
+      <a-tab-pane
+        v-for="item in tabs"
+        :key="String(item.key || item.id)"
+        :tab="item.title"
+      />
     </a-tabs>
   </div>
 </template>
 
 <script lang="ts" setup>
-import router from "@/framework/router"
+import { Key } from 'ant-design-vue/es/table/interface'
+
+import { TabType } from '@/framework/components/navigationFramework/historyTab/type'
+import router from '@/framework/router'
+import pinia from '@/framework/store'
+import { useTabStore } from '@/framework/store/nav'
+import { CHANGE_TAB } from '@/framework/utils/constant'
 import mitt from '@/framework/utils/mitt'
-import {useTabStore} from '@/framework/store/nav'
-import {CHANGE_TAB} from '@/framework/utils/constant'
-import {Key} from 'ant-design-vue/es/table/interface'
-import {TabType} from "@/framework/components/navigationFramework/historyTab/type";
-import pinia from "@/framework/store";
 
 const store = useTabStore(pinia)
 // 初始的tabs为空，leftNav组件会根据路由，通过修改store.tabActivateKey，更新tabs
@@ -71,7 +77,7 @@ const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
 
 // tab切换后的回调函数
 const changeActivateKey = (key: Key) => {
-  console.log('changeActivateKey===', key, store.getRouterTarget(key));
+  console.log('changeActivateKey===', key, store.getRouterTarget(key))
   // 不要更换这两句话的顺序，否则会产生bug
   // 保存用户最后选择的openKeys和tab
   router.push(store.getRouterTarget(key)).then(() => {

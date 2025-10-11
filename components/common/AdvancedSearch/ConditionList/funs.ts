@@ -1,4 +1,4 @@
-import {ConditionListType} from './type'
+import { ConditionListType } from './type'
 
 let currentConditionArrayIndex = 0
 export const genEmptyCondition = (): ConditionListType => ({

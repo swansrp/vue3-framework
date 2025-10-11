@@ -9,17 +9,24 @@
       <!-- Header -->
       <div class="drawer-header">
         <span class="drawer-title">{{ title }}</span>
-        <span v-if="closable" class="drawer-close" @click="emitClose">✖</span>
+        <span
+          v-if="closable"
+          class="drawer-close"
+          @click="emitClose"
+        >✖</span>
       </div>
 
       <!-- Body -->
       <div class="drawer-body">
-        <slot name="drawerBody"></slot>
+        <slot name="drawerBody" />
       </div>
 
       <!-- Footer -->
-      <div v-if="$slots.footer" class="drawer-footer">
-        <slot name="footer"></slot>
+      <div
+        v-if="$slots.footer"
+        class="drawer-footer"
+      >
+        <slot name="footer" />
       </div>
 
       <!-- 拖动宽度控制条 -->
@@ -27,7 +34,7 @@
         :class="placement"
         class="resizer"
         @mousedown="startResize"
-      ></div>
+      />
     </div>
 
     <!-- 主体内容 -->
@@ -36,24 +43,25 @@
       :style="shiftStyle"
       class="drawer-main"
     >
-      <slot></slot>
+      <slot />
     </div>
   </div>
 </template>
 
 <script setup>
-import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
-import bus, {PORTAL_RESIZE} from '@/framework/mitt'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+
+import bus, { PORTAL_RESIZE } from '@/framework/mitt'
 
 const props = defineProps({
   visible: Boolean,
   title: String,
-  closable: {type: Boolean, default: true},
-  width: {type: String, default: '300'}, // 单位 px
-  placement: {type: String, default: 'left'}, // 'left' or 'right'
-  escToClose: {type: Boolean, default: true}
+  closable: { type: Boolean, default: true },
+  width: { type: String, default: '300' }, // 单位 px
+  placement: { type: String, default: 'left' }, // 'left' or 'right'
+  escToClose: { type: Boolean, default: true }
 })
-const {visible, placement} = toRefs(props)
+const { visible, placement } = toRefs(props)
 const emit = defineEmits(['update:visible'])
 
 const defaultWidth = parseInt(props.width || '300')

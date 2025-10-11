@@ -5,30 +5,36 @@
       :options="propertySelectOptions"
       placeholder="选择属性字段"
       style="width: 200px;"
-      @change="onPropertyChange" />
+      @change="onPropertyChange"
+    />
     <a-select
       v-model:value="relationValue"
       :options="conditionSelectOptions"
       placeholder="选择比较关系"
       style="width: 130px;"
-      @change="onConditionChange" />
+      @change="onConditionChange"
+    />
     <ConditionValueComponent
       v-model:condition-content-value="conditionContentValue"
       :reference="conditionReference"
       :type="conditionType"
       :relation="relationValue"
-      :width="350" />
+      :width="350"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { Ref } from 'vue'
-import { ValueLabel } from '@/framework/utils/type'
 import { SelectValue } from 'ant-design-vue/es/select'
-import { useAdvancedSearch } from '@/framework/store/AdvancedSearch'
+import { Ref } from 'vue'
+
+
 import ConditionValueComponent from '../ConditionValueComponent/index.vue'
+
 import { getRelation } from '@/framework/components/common/AdvancedSearch/funs'
+import { useAdvancedSearch } from '@/framework/store/AdvancedSearch'
 import { isNotEmpty } from '@/framework/utils/common'
+import { ValueLabel } from '@/framework/utils/type'
 
 
 const useAdvancedSearchStore = useAdvancedSearch()

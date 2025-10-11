@@ -1,61 +1,109 @@
 <template>
   <div class="wrapper">
     <a-layout style="height: 100%;background-color: #fff">
-      <a-layout-sider class="user-group-category-list-wrapper" theme="light" width="280">
-        <a-list :data-source="userGroupCategory" bordered class="user-group-category-list" size="small">
+      <a-layout-sider
+        class="user-group-category-list-wrapper"
+        theme="light"
+        width="280"
+      >
+        <a-list
+          :data-source="userGroupCategory"
+          bordered
+          class="user-group-category-list"
+          size="small"
+        >
           <template #renderItem="{ item, index }">
             <a-list-item
               :class="{'activate-item': activateDictItem === index}"
-              @click="getCurrentUserGroupCategory(item.id, index)">{{ item.name }}
+              @click="getCurrentUserGroupCategory(item.id, index)"
+            >
+              {{ item.name }}
             </a-list-item>
           </template>
           <template #header>
             <a-input-search
-              v-model:value="inputUserGroupCategoryName" enter-button
-              placeholder="请输入用户组类别名称" @search="onSearchUserGroupCategory" />
+              v-model:value="inputUserGroupCategoryName"
+              enter-button
+              placeholder="请输入用户组类别名称"
+              @search="onSearchUserGroupCategory"
+            />
           </template>
         </a-list>
       </a-layout-sider>
-      <a-layout-sider v-if="hasSelectUserGroupCategory" class="user-group-list-wrapper" theme="light" width="300">
+      <a-layout-sider
+        v-if="hasSelectUserGroupCategory"
+        class="user-group-list-wrapper"
+        theme="light"
+        width="300"
+      >
         <div>
           <a-tree
             v-if="userGroupTreeData.length"
-            :defaultExpandAll="true"
+            :default-expand-all="true"
             :show-line="true"
             :tree-data="userGroupTreeData"
-            @select="selectUserGroup">
-            <template #title="{ dataRef }">{{ dataRef.name }}</template>
+            @select="selectUserGroup"
+          >
+            <template #title="{ dataRef }">
+              {{ dataRef.name }}
+            </template>
           </a-tree>
           <a-empty v-else />
         </div>
       </a-layout-sider>
-      <a-layout-content v-if="hasSelectUserGroup" class="user-name-wrapper">
-        <a-tabs v-model:activeKey="activeTabKey" style="margin-left: 10px" @change="changeTab">
-          <a-tab-pane :key="USER" tab="用户组管理">
+      <a-layout-content
+        v-if="hasSelectUserGroup"
+        class="user-name-wrapper"
+      >
+        <a-tabs
+          v-model:active-key="activeTabKey"
+          style="margin-left: 10px"
+          @change="changeTab"
+        >
+          <a-tab-pane
+            :key="USER"
+            tab="用户组管理"
+          >
             <div class="tab-pane-content">
-              <UserPermission :currentUserGroupInfo="currentUserGroupInfo" :render-bind-user-flag="renderBindUserFlag" />
+              <UserPermission
+                :current-user-group-info="currentUserGroupInfo"
+                :render-bind-user-flag="renderBindUserFlag"
+              />
             </div>
           </a-tab-pane>
-          <template v-for="bindTab in bindTabs" :key="bindTab.tabKey">
+          <template
+            v-for="bindTab in bindTabs"
+            :key="bindTab.tabKey"
+          >
             <template v-if="bindTab.readOnly">
-              <a-tab-pane :key="bindTab.tabKey" :tab="bindTab.title">
+              <a-tab-pane
+                :key="bindTab.tabKey"
+                :tab="bindTab.title"
+              >
                 <template v-if="bindTab.treeMode">
                   <div class="tab-pane-content">
                     <a-tree
                       v-if="isNotEmpty(bindTab.data)"
                       :key="bindTab.key"
-                      :defaultExpandAll="true"
+                      :default-expand-all="true"
                       :show-line="true"
-                      :tree-data="bindTab.data">
-                      <template #title="{ dataRef }">{{ dataRef.label }}</template>
+                      :tree-data="bindTab.data"
+                    >
+                      <template #title="{ dataRef }">
+                        {{ dataRef.label }}
+                      </template>
                     </a-tree>
                     <a-empty v-else />
                   </div>
                 </template>
                 <template v-else>
                   <a-list
-                    v-if="isNotEmpty(bindTab.data)" :key="bindTab.key" :data-source="bindTab.data" bordered
-                    size="small">
+                    v-if="isNotEmpty(bindTab.data)"
+                    :key="bindTab.key"
+                    :data-source="bindTab.data"
+                    bordered
+                    size="small"
+                  >
                     <template #renderItem="{ item }">
                       <a-list-item>{{ item[bindTab.bindDataDisplayField] }}</a-list-item>
                     </template>
@@ -65,11 +113,18 @@
               </a-tab-pane>
             </template>
             <template v-else>
-              <a-tab-pane :key="bindTab.tabKey + '_view'" :tab="'查看' + bindTab.title">
+              <a-tab-pane
+                :key="bindTab.tabKey + '_view'"
+                :tab="'查看' + bindTab.title"
+              >
                 <div class="tab-pane-content">
                   <a-list
-                    v-if="isNotEmpty(bindTab.bindData)" :key="bindTab.key" :data-source="bindTab.bindData"
-                    bordered size="small">
+                    v-if="isNotEmpty(bindTab.bindData)"
+                    :key="bindTab.key"
+                    :data-source="bindTab.bindData"
+                    bordered
+                    size="small"
+                  >
                     <template #renderItem="{ item }">
                       <a-list-item>{{ item[bindTab.bindDataDisplayField] }}</a-list-item>
                     </template>
@@ -77,19 +132,25 @@
                   <a-empty v-else />
                 </div>
               </a-tab-pane>
-              <a-tab-pane :key="bindTab.tabKey + '_bind'" :tab="'绑定'+ bindTab.title">
+              <a-tab-pane
+                :key="bindTab.tabKey + '_bind'"
+                :tab="'绑定'+ bindTab.title"
+              >
                 <template v-if="bindTab.treeMode">
                   <div class="tab-pane-content">
                     <a-tree
                       v-if="isNotEmpty(bindTab.data)"
                       :key="bindTab.key"
-                      v-model:checkedKeys="bindTab.checked"
-                      :defaultExpandAll="true"
+                      v-model:checked-keys="bindTab.checked"
+                      :default-expand-all="true"
                       :show-line="true"
                       :tree-data="bindTab.data"
                       checkable
-                      @check="handleChecked($event, bindTab)">
-                      <template #title="{ dataRef }">{{ dataRef.label }}</template>
+                      @check="handleChecked($event, bindTab)"
+                    >
+                      <template #title="{ dataRef }">
+                        {{ dataRef.label }}
+                      </template>
                     </a-tree>
                     <a-empty v-else />
                   </div>
@@ -99,11 +160,14 @@
                     v-if="isNotEmpty(bindTab.data)"
                     v-model:value="bindTab.checked"
                     style="display: grid;"
-                    @change="handleChecked($event, bindTab)">
+                    @change="handleChecked($event, bindTab)"
+                  >
                     <a-checkbox
-                      v-for="(item, index) in bindTab.data" :key="index"
+                      v-for="(item, index) in bindTab.data"
+                      :key="index"
                       :value="item.value"
-                      style="margin: 5px 0">
+                      style="margin: 5px 0"
+                    >
                       <span class="normal">{{ item.label }}</span>
                     </a-checkbox>
                   </a-checkbox-group>
@@ -120,17 +184,18 @@
 
 <script lang="ts" setup>
 import '@/framework/assets/css/userGroup.css'
-import { IdName, IdNameArray } from '@/framework/utils/type'
-import { getUserGroupTree, getUserGroupType } from '@/framework/apis/admin/userGroup'
-import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { Key } from 'ant-design-vue/es/table/interface'
-import { QUERY_INTERVAL, USER } from '@/framework/utils/constant'
-import { GroupBindProperty } from '@/framework/components/common/GroupManage/types'
-import { isEmpty, isNotEmpty } from '@/framework/utils/common'
-import { dictStore, useTreeStore } from '@/framework/store/common'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
+import { Ref } from 'vue'
+
+import { getUserGroupTree, getUserGroupType } from '@/framework/apis/admin/userGroup'
 import { bindReplaceBatchAttachByUrl, getAllBindListByUrl } from '@/framework/apis/portal'
-import { Ref } from "vue";
+import { GroupBindProperty } from '@/framework/components/common/GroupManage/types'
+import { dictStore, useTreeStore } from '@/framework/store/common'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { QUERY_INTERVAL, USER } from '@/framework/utils/constant'
+import { IdName, IdNameArray } from '@/framework/utils/type'
 
 let userGroupCategory: Ref<IdNameArray> = ref([])
 let activateDictItem: Ref<number> = ref(-1)
@@ -139,7 +204,7 @@ let currentUserGroupCategoryId: Ref<string> = ref('')
 let userGroupTreeData: Ref<Array<DataNode>> = ref([])
 let hasSelectUserGroupCategory: Ref<boolean> = ref(false)
 let hasSelectUserGroup: Ref<boolean> = ref(false)
-let currentUserGroupInfo: Ref<IdName> = ref({name: '', id: ''})
+let currentUserGroupInfo: Ref<IdName> = ref({ name: '', id: '' })
 let renderBindUserFlag: Ref<number> = ref(0)
 const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
 const renderUserGroupTree = () => getUserGroupTree(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
@@ -153,7 +218,7 @@ const getCurrentUserGroupCategory = (id: string, index: number) => {
 }
 const onSearchUserGroupCategory = renderUserGroupType
 const selectUserGroup = (_: Key[], info: any) => {
-  const {id, name} = info.node
+  const { id, name } = info.node
   currentUserGroupInfo.value.name = name
   currentUserGroupInfo.value.id = id
   hasSelectUserGroup.value = true

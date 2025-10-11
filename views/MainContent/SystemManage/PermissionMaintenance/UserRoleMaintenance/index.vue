@@ -1,32 +1,60 @@
 <template>
   <div class="content-wrap">
-    <a-row type="flex" class="content-wrap-row">
+    <a-row
+      type="flex"
+      class="content-wrap-row"
+    >
       <a-col :span="8">
         <a-card title="人员选择">
-          <department-and-staff-select layout-mode="vertical" v-model:staffListValue="staffListValue" :is-multiple="false" />
+          <department-and-staff-select
+            v-model:staff-list-value="staffListValue"
+            layout-mode="vertical"
+            :is-multiple="false"
+          />
         </a-card>
         <a-card :title="staffListTitle">
           <a-list
-            size="small" bordered :data-source="staffRoleList"
-            :locale="{emptyText: hasSelectUser ? '请选择用户后再查看其所拥有的角色' :'暂无角色'}">
+            size="small"
+            bordered
+            :data-source="staffRoleList"
+            :locale="{emptyText: hasSelectUser ? '请选择用户后再查看其所拥有的角色' :'暂无角色'}"
+          >
             <template #renderItem="{ item, index }">
               <a-list-item>{{ index+1 }}.{{ item }}</a-list-item>
             </template>
           </a-list>
         </a-card>
       </a-col>
-      <a-col :span="16" class="content-wrap-col">
-        <div ref="permissionTreeWrapperRef" class="content-wrap-card-wrap">
-          <a-card title="用户权限" class="content-wrap-card">
-            <div ref="permissionTreeRef" class="content-wrap-tree">
+      <a-col
+        :span="16"
+        class="content-wrap-col"
+      >
+        <div
+          ref="permissionTreeWrapperRef"
+          class="content-wrap-card-wrap"
+        >
+          <a-card
+            title="用户权限"
+            class="content-wrap-card"
+          >
+            <div
+              ref="permissionTreeRef"
+              class="content-wrap-tree"
+            >
               <a-tree
-                :defaultExpandAll="true"
+                v-if="userPermissionTreeData.length"
+                :default-expand-all="true"
                 :show-line="true"
                 :tree-data="userPermissionTreeData"
-                v-if="userPermissionTreeData.length">
-                <template #title="{ dataRef }"><Icon :icon="dataRef.icon" />{{ dataRef.title }}</template>
+              >
+                <template #title="{ dataRef }">
+                  <Icon :icon="dataRef.icon" />{{ dataRef.title }}
+                </template>
               </a-tree>
-              <a-empty :description="hasSelectUser ? '请选择用户后再查看其所拥有的权限' : '暂无权限'" v-else />
+              <a-empty
+                v-else
+                :description="hasSelectUser ? '请选择用户后再查看其所拥有的权限' : '暂无权限'"
+              />
             </div>
           </a-card>
         </div>
@@ -35,13 +63,15 @@
   </div>
 </template>
 <script setup lang="ts">
-import {Ref} from "vue"
-import {ValueLabelArray} from "@/framework/utils/type";
-import {getRoleList} from "@/framework/apis/admin/rolePermission";
-import {RoleDataType} from "../type"
-import {getUserPermissionTree, getUserRoleList} from "@/framework/apis/admin/userRole";
-import {DataNode} from "ant-design-vue/es/vc-tree/interface";
-import * as _ from "lodash";
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import * as _ from 'lodash'
+import { Ref } from 'vue'
+
+import { RoleDataType } from '../type'
+
+import { getRoleList } from '@/framework/apis/admin/rolePermission'
+import { getUserPermissionTree, getUserRoleList } from '@/framework/apis/admin/userRole'
+import { ValueLabelArray } from '@/framework/utils/type'
 
 let roleData: Ref<Array<RoleDataType>> = ref([])
 const staffListValue: Ref<ValueLabelArray> = ref([])

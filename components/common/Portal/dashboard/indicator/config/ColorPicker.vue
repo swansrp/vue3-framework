@@ -2,9 +2,9 @@
   <a-modal
     :open="visible"
     :title="title"
+    width="500px"
     @ok="confirmColorChange"
     @cancel="handleCancel"
-    width="500px"
   >
     <div class="color-picker-modal">
       <!-- HSV 颜色圆盘 -->
@@ -25,7 +25,7 @@
               <div 
                 class="hue-pointer" 
                 :style="huePointerStyle"
-              ></div>
+              />
             </div>
             
             <!-- 饱和度-明度方形区域 -->
@@ -37,12 +37,12 @@
               @mousemove="onSVMove"
               @mouseup="stopSVDrag"
             >
-              <div class="sv-overlay-white"></div>
-              <div class="sv-overlay-black"></div>
+              <div class="sv-overlay-white" />
+              <div class="sv-overlay-black" />
               <div 
                 class="sv-pointer" 
                 :style="svPointerStyle"
-              ></div>
+              />
             </div>
           </div>
           
@@ -60,7 +60,7 @@
               <div 
                 class="alpha-pointer" 
                 :style="alphaPointerStyle"
-              ></div>
+              />
             </div>
             <span class="alpha-value">{{ Math.round(alpha * 100) }}%</span>
           </div>
@@ -68,11 +68,11 @@
           <!-- 颜色预览 -->
           <div class="color-preview-section">
             <div class="color-preview-container">
-              <div class="color-preview-bg"></div>
+              <div class="color-preview-bg" />
               <div 
                 class="color-preview"
                 :style="{ backgroundColor: selectedColor }"
-              ></div>
+              />
             </div>
             <a-input 
               v-model:value="selectedColor"
@@ -253,7 +253,7 @@ const isValidColor = (color: string): boolean => {
   // 检查是否为RGB或RGBA值
   const rgbColorRegex = /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/
   const rgbaColorRegex = /^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[01]?(\.\d+)?\s*\)$/
-  return rgbColorRegex.test(color) || rgbaColorRegex.test(color);
+  return rgbColorRegex.test(color) || rgbaColorRegex.test(color)
 }
 
 // 更新选中的颜色

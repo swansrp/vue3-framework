@@ -1,28 +1,56 @@
 <template>
   <div class="data-section">
-    <div class="section-header" @click="toggleCollapse">
+    <div
+      class="section-header"
+      @click="toggleCollapse"
+    >
       <div class="data-header">
         <h4>数据配置</h4>
-        <a-button type="primary" size="small" :disabled="!canAddDataMetric" @click.stop="openDataConfig('add')">
+        <a-button
+          type="primary"
+          size="small"
+          :disabled="!canAddDataMetric"
+          @click.stop="openDataConfig('add')"
+        >
           添加数据
         </a-button>
       </div>
-      <a-button type="text" size="small" class="collapse-btn">
+      <a-button
+        type="text"
+        size="small"
+        class="collapse-btn"
+      >
         <DownOutlined v-if="!collapsed" />
         <RightOutlined v-else />
       </a-button>
     </div>
 
-    <div v-show="!collapsed" class="section-content">
+    <div
+      v-show="!collapsed"
+      class="section-content"
+    >
       <div class="data-list">
-        <div v-for="metric in dataMetrics" :key="metric.id" class="data-item">
+        <div
+          v-for="metric in dataMetrics"
+          :key="metric.id"
+          class="data-item"
+        >
           <div class="data-item-header">
             <span class="data-name">{{ metric.dataName }}</span>
             <div class="data-actions">
-              <a-button type="text" size="small" @click="openDataConfig('edit', metric)">
+              <a-button
+                type="text"
+                size="small"
+                @click="openDataConfig('edit', metric)"
+              >
                 编辑
               </a-button>
-              <a-button type="text" size="small" danger @click="removeDataMetric(metric.id)">
+              <a-button
+                type="text"
+                size="small"
+                danger
+                @click="removeDataMetric(metric.id)"
+              >
                 删除
               </a-button>
             </div>
@@ -33,36 +61,61 @@
               <span class="data-label">图表类型：</span>
               <span class="data-value">
                 <a-select
-                  :value="metric.chartType" size="small" style="width: 120px"
+                  :value="metric.chartType"
+                  size="small"
+                  style="width: 120px"
                   :disabled="!canChangeChartType(metric)"
-                  @change="(value) => updateMetricField(metric.id, 'chartType', value)">
+                  @change="(value) => updateMetricField(metric.id, 'chartType', value)"
+                >
                   <a-select-option
-                    v-for="option in getAvailableChartTypesForMetric(metric)" :key="option.value"
-                    :value="option.value">
+                    v-for="option in getAvailableChartTypesForMetric(metric)"
+                    :key="option.value"
+                    :value="option.value"
+                  >
                     {{ option.label }}
                   </a-select-option>
                 </a-select>
               </span>
             </div>
-            <div class="data-row" v-if="metric.chartType !== 'pie'">
+            <div
+              v-if="metric.chartType !== 'pie'"
+              class="data-row"
+            >
               <span class="data-label">坐标轴：</span>
               <span class="data-value">
                 <a-select
-                  :value="metric.yAxisPosition" size="small" style="width: 120px"
-                  @change="(value) => updateMetricField(metric.id, 'yAxisPosition', value)">
-                  <a-select-option v-for="option in axisPositionOptions" :key="option.value" :value="option.value">
+                  :value="metric.yAxisPosition"
+                  size="small"
+                  style="width: 120px"
+                  @change="(value) => updateMetricField(metric.id, 'yAxisPosition', value)"
+                >
+                  <a-select-option
+                    v-for="option in axisPositionOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
                     {{ option.label }}
                   </a-select-option>
                 </a-select>
               </span>
             </div>
-            <div class="data-row" v-if="metric.chartType === 'bar'">
+            <div
+              v-if="metric.chartType === 'bar'"
+              class="data-row"
+            >
               <span class="data-label">堆叠：</span>
               <span class="data-value">
                 <a-select
-                  :value="metric.stackGroup" size="small" style="width: 120px"
-                  @change="(value) => updateMetricField(metric.id, 'stackGroup', value)">
-                  <a-select-option v-for="option in stackOptions" :key="option.value" :value="option.value">
+                  :value="metric.stackGroup"
+                  size="small"
+                  style="width: 120px"
+                  @change="(value) => updateMetricField(metric.id, 'stackGroup', value)"
+                >
+                  <a-select-option
+                    v-for="option in stackOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
                     {{ option.label }}
                   </a-select-option>
                 </a-select>
@@ -72,32 +125,52 @@
             <!-- 二级维度值的颜色设置 -->
             <div
               v-if="(secondDimension && secondDimension.items && secondDimension.items.length > 0) || (firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension)"
-              class="data-color-config">
-              <div class="color-label">颜色配置：</div>
+              class="data-color-config"
+            >
+              <div class="color-label">
+                颜色配置：
+              </div>
               <div class="color-items">
                 <!-- 如果有二级维度，显示二级维度的项 -->
                 <template v-if="secondDimension && secondDimension.items && secondDimension.items.length > 0">
-                  <div v-for="item in secondDimension.items" :key="item.key" class="color-item">
-                    <a-tooltip :title="item.title" placement="top">
+                  <div
+                    v-for="item in secondDimension.items"
+                    :key="item.key"
+                    class="color-item"
+                  >
+                    <a-tooltip
+                      :title="item.title"
+                      placement="top"
+                    >
                       <span class="item-name">{{ item.title }}</span>
                     </a-tooltip>
                     <a-button
                       class="color-picker-btn"
                       :style="{ backgroundColor: getDataItemColor(metric.id, item.key) }"
-                      @click="openDataItemColorPicker(metric.id, item.key)" />
+                      @click="openDataItemColorPicker(metric.id, item.key)"
+                    />
                   </div>
                 </template>
                 <!-- 如果只有一级维度，显示一级维度的项 -->
                 <template
-                  v-else-if="firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension">
-                  <div v-for="item in firstDimension.items" :key="item.key" class="color-item">
-                    <a-tooltip :title="item.title" placement="top">
+                  v-else-if="firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension"
+                >
+                  <div
+                    v-for="item in firstDimension.items"
+                    :key="item.key"
+                    class="color-item"
+                  >
+                    <a-tooltip
+                      :title="item.title"
+                      placement="top"
+                    >
                       <span class="item-name">{{ item.title }}</span>
                     </a-tooltip>
                     <a-button
                       class="color-picker-btn"
                       :style="{ backgroundColor: getDataItemColor(metric.id, item.key) }"
-                      @click="openDataItemColorPicker(metric.id, item.key)" />
+                      @click="openDataItemColorPicker(metric.id, item.key)"
+                    />
                   </div>
                 </template>
               </div>
@@ -108,50 +181,101 @@
 
       <!-- 数据配置模态框 -->
       <a-modal
-        v-model:open="dataConfigVisible" :title="dataFormMode === 'add' ? '添加数据' : '编辑数据'"
-        @ok="confirmDataConfig" @cancel="dataConfigVisible = false" width="600px">
+        v-model:open="dataConfigVisible"
+        :title="dataFormMode === 'add' ? '添加数据' : '编辑数据'"
+        width="600px"
+        @ok="confirmDataConfig"
+        @cancel="dataConfigVisible = false"
+      >
         <a-form
-          :model="editingDataMetric" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }"
-          v-if="editingDataMetric">
-          <a-form-item label="数据类型" required>
-            <a-select v-model:value="editingDataMetric.dataField" placeholder="请选择数据类型" @change="onDataTypeChange">
+          v-if="editingDataMetric"
+          :model="editingDataMetric"
+          :label-col="{ span: 6 }"
+          :wrapper-col="{ span: 18 }"
+        >
+          <a-form-item
+            label="数据类型"
+            required
+          >
+            <a-select
+              v-model:value="editingDataMetric.dataField"
+              placeholder="请选择数据类型"
+              @change="onDataTypeChange"
+            >
               <a-select-option
-                v-for="dataType in availableDataTypes" :key="dataType.dataField"
-                :value="dataType.dataField" :disabled="isDataTypeUsed(dataType.dataField)">
+                v-for="dataType in availableDataTypes"
+                :key="dataType.dataField"
+                :value="dataType.dataField"
+                :disabled="isDataTypeUsed(dataType.dataField)"
+              >
                 {{ dataType.dataName }}
-                <span v-if="isDataTypeUsed(dataType.dataField)" class="used-tag">(已使用)</span>
+                <span
+                  v-if="isDataTypeUsed(dataType.dataField)"
+                  class="used-tag"
+                >(已使用)</span>
               </a-select-option>
             </a-select>
           </a-form-item>
 
-          <a-form-item label="图表类型" required>
-            <a-select v-model:value="editingDataMetric.chartType" placeholder="请选择图表类型" @change="onChartTypeChange">
+          <a-form-item
+            label="图表类型"
+            required
+          >
+            <a-select
+              v-model:value="editingDataMetric.chartType"
+              placeholder="请选择图表类型"
+              @change="onChartTypeChange"
+            >
               <a-select-option
-                v-for="option in availableChartTypeOptions" :key="option.value" :value="option.value"
-                :disabled="option.disabled">
+                v-for="option in availableChartTypeOptions"
+                :key="option.value"
+                :value="option.value"
+                :disabled="option.disabled"
+              >
                 {{ option.label }}
-                <span v-if="option.disabled" class="disabled-tip">({{ option.disabledReason }})</span>
+                <span
+                  v-if="option.disabled"
+                  class="disabled-tip"
+                >({{ option.disabledReason }})</span>
               </a-select-option>
             </a-select>
           </a-form-item>
 
-          <a-form-item label="坐标轴位置" v-if="editingDataMetric.chartType !== 'pie'">
+          <a-form-item
+            v-if="editingDataMetric.chartType !== 'pie'"
+            label="坐标轴位置"
+          >
             <a-radio-group v-model:value="editingDataMetric.yAxisPosition">
-              <a-radio value="left">左侧</a-radio>
-              <a-radio value="right">右侧</a-radio>
+              <a-radio value="left">
+                左侧
+              </a-radio>
+              <a-radio value="right">
+                右侧
+              </a-radio>
             </a-radio-group>
           </a-form-item>
 
-          <a-form-item label="堆叠位置" v-if="editingDataMetric.chartType === 'bar'">
-            <a-select v-model:value="editingDataMetric.stackGroup" placeholder="请选择堆叠位置" allow-clear>
-              <a-select-option v-for="option in stackOptions" :key="option.value" :value="option.value">
+          <a-form-item
+            v-if="editingDataMetric.chartType === 'bar'"
+            label="堆叠位置"
+          >
+            <a-select
+              v-model:value="editingDataMetric.stackGroup"
+              placeholder="请选择堆叠位置"
+              allow-clear
+            >
+              <a-select-option
+                v-for="option in stackOptions"
+                :key="option.value"
+                :value="option.value"
+              >
                 {{ option.label }}
               </a-select-option>
             </a-select>
             <div class="stack-tip">
-              <small>提示：</small><br />
-              <small>• 不堆叠：第二维度并排显示</small><br />
-              <small>• 自堆叠：该指标的第二维度堆叠显示</small><br />
+              <small>提示：</small><br>
+              <small>• 不堆叠：第二维度并排显示</small><br>
+              <small>• 自堆叠：该指标的第二维度堆叠显示</small><br>
               <small>• 堆叠组：相同组且相同第二维度的指标堆叠，不同第二维度并排</small>
             </div>
           </a-form-item>
@@ -160,16 +284,20 @@
 
       <!-- 数据项颜色选择器 -->
       <ColorPicker
-        v-model:visible="dataItemColorPickerVisible" title="选择数据项颜色" :initial-color="currentDataItemColor"
-        @confirm="confirmDataItemColorChange" />
+        v-model:visible="dataItemColorPickerVisible"
+        title="选择数据项颜色"
+        :initial-color="currentDataItemColor"
+        @confirm="confirmDataItemColorChange"
+      />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
-import { message } from 'ant-design-vue'
 import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { ref, computed } from 'vue'
+
 import ColorPicker from './ColorPicker.vue'
 
 // 接口定义

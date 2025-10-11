@@ -14,4 +14,4 @@ interface DataItem {
     isDefault: string
 }
 
-export type {DictDateType, DictConfigItemType, DataItem}
+export type { DictDateType, DictConfigItemType, DataItem }

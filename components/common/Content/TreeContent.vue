@@ -1,24 +1,29 @@
 <template>
   <a-tree
     :key="treeData"
-    v-model:checkedKeys="selectedData"
-    :checkStrictly="props.checkStrictly"
+    v-model:checked-keys="selectedData"
+    :check-strictly="props.checkStrictly"
     :disabled="disable"
     :tree-data="treeData"
     checkable
-    defaultExpandAll
+    default-expand-all
     show-line
-    @check="checkTreeNode">
+    @check="checkTreeNode"
+  >
     <template #title="{ dataRef }">
-      <slot v-if="$slots.title" :item="dataRef" name="title"></slot>
+      <slot
+        v-if="$slots.title"
+        :item="dataRef"
+        name="title"
+      />
       <span v-else>{{ dataRef[props.labelField] }}</span>
     </template>
   </a-tree>
 </template>
 
 <script lang="ts" setup>
-import { Ref } from 'vue'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { Ref } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -37,8 +42,8 @@ const props = withDefaults(
     disable: false
   }
 )
-const {modelValue, multi, treeData} = toRefs(props)
-const selectedData: Ref<any> = ref(modelValue.value || {checked: []})
+const { modelValue, multi, treeData } = toRefs(props)
+const selectedData: Ref<any> = ref(modelValue.value || { checked: [] })
 const selectedLabel = [] as Array<any>
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void

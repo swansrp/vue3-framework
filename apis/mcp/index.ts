@@ -1,5 +1,5 @@
-import { get, post } from '@/framework/network/request'
 import { baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/apis'
+import { get, post } from '@/framework/network/request'
 
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, '/sys/mcp/config', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, '/sys/mcp/config', domain)

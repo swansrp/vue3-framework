@@ -1,6 +1,6 @@
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
-export const AUTO_UUID_ROW_KEY = "auto_uuid_row_key"
+export const AUTO_UUID_ROW_KEY = 'auto_uuid_row_key'
 export const indexColumn = {
   title: '序号',
   dataIndex: 'index',
@@ -53,7 +53,7 @@ export const defaultColumn = {
   rowDrag: false,
   editable: 'cellEditorSlot',
   referenceDictOption: [] as Array<any>,
-  tooltip: {placement: 'rightBottom', mouseEnterDelay: 1, overlayStyle: {}, popupStyle: {}},
+  tooltip: { placement: 'rightBottom', mouseEnterDelay: 1, overlayStyle: {}, popupStyle: {} },
   filterAble: false,
   filterStrict: false,
   sorter: false,

@@ -1,15 +1,17 @@
 <template>
   <a-tabs
     v-model:active-key="activeKey"
-    @change="handleTabChanged">
+    @change="handleTabChanged"
+  >
     <a-tab-pane
       v-for="(item, key) in bindTabs"
       :key="key"
-      :tab="item.title">
+      :tab="item.title"
+    >
       <div style="height: calc(100vh - 200px);">
         <portal
           :ref="(arg) => bindPortalRefMap.set(key, arg)"
-          v-model:selectedTreeData="checkedKeys"
+          v-model:selected-tree-data="checkedKeys"
           :action-width="0"
           :advance-condition="bindConditionMap.get(key)"
           :bind-default-value="bindDefaultValue"
@@ -18,26 +20,42 @@
           :read-only="isReadOnly(item)"
           :table-id="item.tableId"
           :tree-check-able="isNotEmpty(record) && item.bindType === '2'"
-          :tree-mode="item.treeMode" />
+          :tree-mode="item.treeMode"
+        />
       </div>
     </a-tab-pane>
-    <template v-if="bindTabs[activeKey]?.bindType === '2'" #rightExtra>
-      <a-button style="margin-right: 5px;" type="primary" @click="bindAll">绑定全部</a-button>
-      <a-button type="primary" @click="unbindAll">清除全部</a-button>
+    <template
+      v-if="bindTabs[activeKey]?.bindType === '2'"
+      #rightExtra
+    >
+      <a-button
+        style="margin-right: 5px;"
+        type="primary"
+        @click="bindAll"
+      >
+        绑定全部
+      </a-button>
+      <a-button
+        type="primary"
+        @click="unbindAll"
+      >
+        清除全部
+      </a-button>
     </template>
   </a-tabs>
 </template>
 
 <script lang="ts" setup>
-import { createVNode, Ref } from 'vue'
-import { Modal } from 'ant-design-vue'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
-import { bindAllAttach, bindReplaceBatchAttach, getAllBindList, unbindAllAttach } from '@/framework/apis/portal'
-import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
-import { isNotEmpty } from '@/framework/utils/common'
+import { Modal } from 'ant-design-vue'
 import * as _ from 'lodash'
+import { createVNode, Ref } from 'vue'
+
+import { bindAllAttach, bindReplaceBatchAttach, getAllBindList, unbindAllAttach } from '@/framework/apis/portal'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { isNotEmpty } from '@/framework/utils/common'
 
 const bindPortalRefMap = new Map<number, any>()
 const prop = defineProps<{
@@ -47,7 +65,7 @@ const prop = defineProps<{
   rowKey: string,
   bindTabs: Array<PortalBindType>
 }>()
-const {record, rowKey, bindTabs} = toRefs(prop)
+const { record, rowKey, bindTabs } = toRefs(prop)
 const isSelectedEntity = computed(() => {
   return isNotEmpty(record.value)
 })
@@ -68,11 +86,11 @@ watch(checkedKeys, (newValue: Array<any>) => {
   }
 })
 const activeKey = ref(0)
-const baseBindCondition:Ref<ConditionListType> = ref({} as ConditionListType);
+const baseBindCondition:Ref<ConditionListType> = ref({} as ConditionListType)
 const bindConditionMap: Ref = ref(new Map())
 const bindDefaultValue = computed(() => {
   if (baseBindCondition.value && baseBindCondition.value.value) {
-    return {[`${baseBindCondition.value.property}`]: baseBindCondition.value.value[0]}
+    return { [`${baseBindCondition.value.property}`]: baseBindCondition.value.value[0] }
   } else {
     return {}
   }
@@ -144,7 +162,7 @@ const unbindAll = () => {
   Modal.confirm({
     title: '将所有' + bindTabs.value[activeKey.value].title + '绑定清除',
     icon: createVNode(ExclamationCircleOutlined),
-    content: createVNode('div', {style: 'color:red;'}, '注意: 所有授权信息将被清除'),
+    content: createVNode('div', { style: 'color:red;' }, '注意: 所有授权信息将被清除'),
     onOk() {
       unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], prop.baseDomain)
         .then(getBindList)

@@ -1,11 +1,18 @@
 <template>
-  <div :class="{ 'chart-card-loading': loading }" class="chart-card" @mousedown="handleMouseDown">
+  <div
+    :class="{ 'chart-card-loading': loading }"
+    class="chart-card"
+    @mousedown="handleMouseDown"
+  >
     <!-- 卡片头部 -->
     <div class="chart-card-header">
       <div class="header-title">
         <h3>{{ indicator.title || '未命名指标' }}</h3>
       </div>
-      <div v-if="canEdit" class="header-actions">
+      <div
+        v-if="canEdit"
+        class="header-actions"
+      >
         <a-tooltip title="编辑">
           <EditOutlined @click="$emit('edit')" />
         </a-tooltip>
@@ -15,7 +22,10 @@
           </a-tooltip>
           <template #overlay>
             <a-menu>
-              <a-menu-item key="refresh" @click="refreshChart">
+              <a-menu-item
+                key="refresh"
+                @click="refreshChart"
+              >
                 <ReloadOutlined />
                 刷新
               </a-menu-item>
@@ -24,7 +34,11 @@
                 重命名
               </a-menu-item> -->
               <a-menu-divider v-if="canDelete" />
-              <a-menu-item v-if="canDelete" key="delete" @click="$emit('delete')">
+              <a-menu-item
+                v-if="canDelete"
+                key="delete"
+                @click="$emit('delete')"
+              >
                 <DeleteOutlined />
                 删除
               </a-menu-item>
@@ -36,49 +50,87 @@
 
     <!-- 卡片内容 -->
     <div class="chart-card-content">
-      <div v-if="loading" class="chart-loading">
+      <div
+        v-if="loading"
+        class="chart-loading"
+      >
         <a-spin />
       </div>
-      <div v-else-if="hasValidConfig && safeChartData.length > 0" class="chart-container">
+      <div
+        v-else-if="hasValidConfig && safeChartData.length > 0"
+        class="chart-container"
+      >
         <!-- 直接使用 UniversalChart 组件渲染图表 -->
         <UniversalChart
-          v-if="isInitialized && !isDestroyed" ref="chartRef" :data="safeChartData"
-          :data-metrics="indicatorConfig?.dataMetrics || []" :categories="chartCategories || []"
-          :chart-type="chartType || 'bar'" :dimension-value-map="dimensionValueMap || { first: {}, second: {} }"
-          :loading="chartLoading" :title="''" :subtitle="''" height="100%" @click="handleChartClick" />
+          v-if="isInitialized && !isDestroyed"
+          ref="chartRef"
+          :data="safeChartData"
+          :data-metrics="indicatorConfig?.dataMetrics || []"
+          :categories="chartCategories || []"
+          :chart-type="chartType || 'bar'"
+          :dimension-value-map="dimensionValueMap || { first: {}, second: {} }"
+          :loading="chartLoading"
+          :title="''"
+          :subtitle="''"
+          height="100%"
+          @click="handleChartClick"
+        />
       </div>
-      <div v-else class="chart-empty">
+      <div
+        v-else
+        class="chart-empty"
+      >
         <BarChartOutlined class="empty-icon" />
         <p>{{ hasValidConfig ? '暂无数据' : '未配置图表' }}</p>
       </div>
 
       <!-- 蓝色虚线框 - 拖拽放置区域 -->
       <div
-        :class="{ visible: showDropZone }" class="drop-zone" @dragover.prevent="handleDragOver"
-        @drop.prevent="handleDrop">
+        :class="{ visible: showDropZone }"
+        class="drop-zone"
+        @dragover.prevent="handleDragOver"
+        @drop.prevent="handleDrop"
+      >
         <div class="drop-zone-content">
-          <div class="drop-zone-indicator"></div>
+          <div class="drop-zone-indicator" />
           <!--          <div class="drop-zone-text">拖拽到此处放置</div>-->
         </div>
       </div>
     </div>
 
     <!-- 调整大小的拖拽手柄 -->
-    <div v-if="canResize" class="resize-handle right" @mousedown="startResize('right', $event)"></div>
-    <div v-if="canResize" class="resize-handle bottom" @mousedown="startResize('bottom', $event)"></div>
-    <div v-if="canResize" class="resize-handle corner" @mousedown="startResize('corner', $event)"></div>
+    <div
+      v-if="canResize"
+      class="resize-handle right"
+      @mousedown="startResize('right', $event)"
+    />
+    <div
+      v-if="canResize"
+      class="resize-handle bottom"
+      @mousedown="startResize('bottom', $event)"
+    />
+    <div
+      v-if="canResize"
+      class="resize-handle corner"
+      @mousedown="startResize('corner', $event)"
+    />
 
     <!-- 图表详情弹窗 -->
     <DashboardDetail
-      v-model:open="detailModalVisible" :selected-bar-info="selectedBarInfo" :table-id="tableId"
-      @close="closeDetailModal" />
+      v-model:open="detailModalVisible"
+      :selected-bar-info="selectedBarInfo"
+      :table-id="tableId"
+      @close="closeDetailModal"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch, defineAsyncComponent } from 'vue'
-import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
+
 import type { DashboardItem } from './types'
+
+import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
 // 异步导入DashboardDetail组件
@@ -87,6 +139,7 @@ const DashboardDetail = defineAsyncComponent(() =>
 )
 import { message } from 'ant-design-vue'
 import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+
 import { advancedStatisticRequest } from '@/framework/apis'
 import { getPortalConfig } from '@/framework/apis/portal/config'
 
@@ -215,7 +268,7 @@ computed(() => {
   return secondDim
     ? `按${firstDim}、${secondDim}和统计指标分组`
     : `按${firstDim}和统计指标分组`
-});
+})
 
 // 维度值映射
 const dimensionValueMap = computed(() => {
@@ -573,7 +626,7 @@ const buildFirstDimensionConditions = (firstDim: string) => {
   }
 
   return {
-    andOr: firstDimItem.queryConditions.andOr || "0",
+    andOr: firstDimItem.queryConditions.andOr || '0',
     conditionList: [...firstDimItem.queryConditions.conditionList],
     // 附加信息：原始条件
     firstDimensionCondition: firstDimItem.queryConditions,
@@ -621,7 +674,7 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
     : [...firstDimItem.queryConditions.conditionList]
 
   return {
-    andOr: "0", // 使用 AND 连接
+    andOr: '0', // 使用 AND 连接
     conditionList: combinedConditionList,
     // 附加信息：原始条件
     firstDimensionCondition: firstDimItem.queryConditions,

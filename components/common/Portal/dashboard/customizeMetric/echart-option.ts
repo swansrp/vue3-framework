@@ -1,6 +1,8 @@
 import * as echarts from 'echarts'
-import { calcArrayMaxValue, colorList, getEchartsLinearGradient } from "../utils"
-import { MetricStatisticType } from "../type"
+
+import { MetricStatisticType } from '../type'
+import { calcArrayMaxValue, colorList, getEchartsLinearGradient } from '../utils'
+
 import { formatPercent } from '@/framework/utils/formatter'
 
 
@@ -197,7 +199,7 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
     },
     yAxis: [
       {
-        type: "value",
+        type: 'value',
         min: 0,
         max: dataMax,
         interval: dataMax / yAxisSplitNumber,
@@ -208,7 +210,7 @@ export const getEchartsBar3dOption = (data: Array<MetricStatisticType>, isPercen
           fontWeight: 'bold',
           fontFamily: 'Noto Sans SC'
         },
-        position: "left",
+        position: 'left',
         splitLine: { show: true },
         axisTick: { show: true },
         axisLine: { show: true },

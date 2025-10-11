@@ -1,44 +1,91 @@
 <template>
   <div class="filter-section">
-    <div class="section-header" @click="toggleCollapse">
+    <div
+      class="section-header"
+      @click="toggleCollapse"
+    >
       <h4>全局筛选条件</h4>
-      <a-button type="text" size="small" class="collapse-btn">
+      <a-button
+        type="text"
+        size="small"
+        class="collapse-btn"
+      >
         <DownOutlined v-if="!collapsed" />
         <RightOutlined v-else />
       </a-button>
     </div>
 
-    <div v-show="!collapsed" class="section-content">
+    <div
+      v-show="!collapsed"
+      class="section-content"
+    >
       <div
-        class="drop-zone filter-drop" :class="{
+        class="drop-zone filter-drop"
+        :class="{
           'has-content': filterDimension,
           'drag-over': dragOverFilter
-        }" @dragover.prevent="onDragOverFilter" @dragleave="onDragLeaveFilter" @drop="onDropFilterDimension">
-        <div v-if="!filterDimension" class="drop-placeholder">
+        }"
+        @dragover.prevent="onDragOverFilter"
+        @dragleave="onDragLeaveFilter"
+        @drop="onDropFilterDimension"
+      >
+        <div
+          v-if="!filterDimension"
+          class="drop-placeholder"
+        >
           拖拽指标到此处设置筛选条件
         </div>
-        <div v-else class="filter-content">
+        <div
+          v-else
+          class="filter-content"
+        >
           <div class="filter-header">
             <span>{{ filterDimension?.title }}</span>
             <div class="filter-actions">
-              <a-button type="text" size="small" @click="selectAllFilterItems" class="action-btn">
+              <a-button
+                type="text"
+                size="small"
+                class="action-btn"
+                @click="selectAllFilterItems"
+              >
                 全选
               </a-button>
-              <a-button type="text" size="small" @click="reverseFilterItems" class="action-btn">
+              <a-button
+                type="text"
+                size="small"
+                class="action-btn"
+                @click="reverseFilterItems"
+              >
                 反选
               </a-button>
-              <a-button type="text" size="small" @click="clearAllFilterItems" class="action-btn">
+              <a-button
+                type="text"
+                size="small"
+                class="action-btn"
+                @click="clearAllFilterItems"
+              >
                 全部取消
               </a-button>
-              <a-button type="text" size="small" @click="clearFilterDimension" class="clear-btn">
+              <a-button
+                type="text"
+                size="small"
+                class="clear-btn"
+                @click="clearFilterDimension"
+              >
                 清空
               </a-button>
             </div>
           </div>
-          <a-checkbox-group v-model:value="localSelectedFilterItems" class="filter-items">
+          <a-checkbox-group
+            v-model:value="localSelectedFilterItems"
+            class="filter-items"
+          >
             <a-checkbox
-              v-for="item in filterDimension?.items" :key="item.key" :value="item.key"
-              class="filter-checkbox">
+              v-for="item in filterDimension?.items"
+              :key="item.key"
+              :value="item.key"
+              class="filter-checkbox"
+            >
               {{ item.title }}
             </a-checkbox>
           </a-checkbox-group>
@@ -49,8 +96,8 @@
 </template>
 
 <script lang="ts" setup>
-import { inject, ref, watch } from 'vue'
 import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { inject, ref, watch } from 'vue'
 
 // 接口定义
 interface IndicatorItem {

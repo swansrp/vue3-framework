@@ -2,41 +2,69 @@
   <dialog-box
     v-model:visible="_show"
     :title="config.title"
-    is-full>
-    <content-layout :width="300" style="margin-top: 10px">
+    is-full
+  >
+    <content-layout
+      :width="300"
+      style="margin-top: 10px"
+    >
       <template #side>
         <a-tabs
-          v-model:activeKey="metricActiveKey"
+          v-model:active-key="metricActiveKey"
           destroy-inactive-tab-pane
           type="card"
-          @change="onMetricTabChange">
-          <a-tab-pane key="1" tab="指标">
+          @change="onMetricTabChange"
+        >
+          <a-tab-pane
+            key="1"
+            tab="指标"
+          >
             <list-content
               ref="leftRef"
               v-model="selectedDict"
               :list-data="dictFields"
               label-in-value
-              @change="onDictFieldChange" />
+              @change="onDictFieldChange"
+            />
           </a-tab-pane>
-          <a-tab-pane key="2" tab="自定义">
+          <a-tab-pane
+            key="2"
+            tab="自定义"
+          >
             <div style="height: 100%">
               <div style="display: flex;justify-content: end">
                 <a-switch
-                  v-model:checked="majorCondition" checked-children="主" checked-value="0"
-                  style="margin-top: 5px; margin-right: 3px;" un-checked-children="次" un-checked-value="1" />
+                  v-model:checked="majorCondition"
+                  checked-children="主"
+                  checked-value="0"
+                  style="margin-top: 5px; margin-right: 3px;"
+                  un-checked-children="次"
+                  un-checked-value="1"
+                />
                 <a-select
-                  v-model:value="customMetric" allow-clear
-                  placeholder="请选择分类指标" style="width: 200px; margin-right: 10px">
-                  <a-select-option v-for="item in dictFields" :key="item.value" :value="item.value">{{
-                    item.label
-                  }}
+                  v-model:value="customMetric"
+                  allow-clear
+                  placeholder="请选择分类指标"
+                  style="width: 200px; margin-right: 10px"
+                >
+                  <a-select-option
+                    v-for="item in dictFields"
+                    :key="item.value"
+                    :value="item.value"
+                  >
+                    {{
+                      item.label
+                    }}
                   </a-select-option>
                 </a-select>
                 <a-tooltip placement="top">
                   <template #title>
                     <span>添加数据条目</span>
                   </template>
-                  <a-button style="margin-right: 2px" @click="addCustomMetric">
+                  <a-button
+                    style="margin-right: 2px"
+                    @click="addCustomMetric"
+                  >
                     <template #icon>
                       <PlusOutlined />
                     </template>
@@ -60,21 +88,27 @@
                 :field-names="{value: 'value', label: 'label'}"
                 :height="4"
                 :max-col="1"
-                :rowHeight="4"
-                :width="1">
+                :row-height="4"
+                :width="1"
+              >
                 <template #render="{ item }">
                   <a-card
                     :body-style="{padding: 0, height: '100%'}"
                     :head-style="{backgroundColor: '#fff'}"
                     :title="item.data.label"
                     size="small"
-                    style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
+                    style="height: 100%; border-radius: 0; background-color: transparent; border: none;"
+                  >
                     <template #extra>
                       <a-tooltip placement="top">
                         <template #title>
                           <span>编辑</span>
                         </template>
-                        <a-button size="small" type="text" @click="editCustomMetric(item.data)">
+                        <a-button
+                          size="small"
+                          type="text"
+                          @click="editCustomMetric(item.data)"
+                        >
                           <template #icon>
                             <EditOutlined />
                           </template>
@@ -84,7 +118,11 @@
                         <template #title>
                           <span>复制</span>
                         </template>
-                        <a-button size="small" type="text" @click="copyCustomMetric(item.data)">
+                        <a-button
+                          size="small"
+                          type="text"
+                          @click="copyCustomMetric(item.data)"
+                        >
                           <template #icon>
                             <CopyOutlined />
                           </template>
@@ -94,7 +132,11 @@
                         <template #title>
                           <span>删除</span>
                         </template>
-                        <a-button size="small" type="text" @click="deleteCustomMetric(item.data)">
+                        <a-button
+                          size="small"
+                          type="text"
+                          @click="deleteCustomMetric(item.data)"
+                        >
                           <template #icon>
                             <DeleteOutlined />
                           </template>
@@ -107,8 +149,12 @@
             </div>
             <div class="center">
               <a-button
-                :disabled="customMetricCondition.length === 0" style="margin: 10px" type="primary"
-                @click="confirmMetricCondition">生成指标图
+                :disabled="customMetricCondition.length === 0"
+                style="margin: 10px"
+                type="primary"
+                @click="confirmMetricCondition"
+              >
+                生成指标图
               </a-button>
             </div>
           </a-tab-pane>
@@ -116,15 +162,28 @@
       </template>
       <template #content>
         <a-tabs
-          v-model:activeKey="activeKey"
+          v-model:active-key="activeKey"
           destroy-inactive-tab-pane
-          @change="onTabChange">
-          <a-tab-pane v-for="statisticTab in statisticTabs" :key="statisticTab.value" :tab="statisticTab.label">
+          @change="onTabChange"
+        >
+          <a-tab-pane
+            v-for="statisticTab in statisticTabs"
+            :key="statisticTab.value"
+            :tab="statisticTab.label"
+          >
             <a-row
-              v-if="secondDictExpand && statisticTab.value === PERCENTAGE_TAB_KEY && selectedDict.length === 1">
-              <a-col v-for="item in secondDictMap.get(selectedDict[0].value)" :key="item.value" :span="4">
+              v-if="secondDictExpand && statisticTab.value === PERCENTAGE_TAB_KEY && selectedDict.length === 1"
+            >
+              <a-col
+                v-for="item in secondDictMap.get(selectedDict[0].value)"
+                :key="item.value"
+                :span="4"
+              >
                 <a-checkbox
-                  :key="item.value" v-model:checked="item.checked" @change="onSecondDictFieldChange(item)">
+                  :key="item.value"
+                  v-model:checked="item.checked"
+                  @change="onSecondDictFieldChange(item)"
+                >
                   {{ item.label }}
                 </a-checkbox>
               </a-col>
@@ -136,8 +195,9 @@
               :field-names="{value: 'value', label: 'label'}"
               :height="computedGrid.height"
               :max-col="computedGrid.maxCol"
-              :rowHeight="computedGrid.rowHeight"
-              :width="computedGrid.width">
+              :row-height="computedGrid.rowHeight"
+              :width="computedGrid.width"
+            >
               <template #render="{ item }">
                 <a-card
                   :key="item.key"
@@ -145,48 +205,73 @@
                   :head-style="{backgroundColor: '#fff'}"
                   :title="item.data.label"
                   size="small"
-                  style="height: 100%; border-radius: 0; background-color: transparent; border: none;">
+                  style="height: 100%; border-radius: 0; background-color: transparent; border: none;"
+                >
                   <template v-if="isEmpty(item.data.metricCondition)">
                     <single-metric
                       v-if="isEmpty(dictMap.get(item.data.value.split('-')[0].split(',')[1]))"
                       :data="item.data.echatOption"
-                      :index="item.i" />
+                      :index="item.i"
+                    />
                     <double-metric
                       v-else
                       :data="item.data.echatOption"
-                      :index="item.i" />
+                      :index="item.i"
+                    />
                   </template>
                   <template v-else>
                     <customize-metric
                       :data="item.data.echatOption"
-                      :index="item.i" />
+                      :index="item.i"
+                    />
                   </template>
                   <template #extra>
-                    <a-tooltip v-if="item.data.sort === 0" placement="top">
+                    <a-tooltip
+                      v-if="item.data.sort === 0"
+                      placement="top"
+                    >
                       <template #title>
                         <span>正序</span>
                       </template>
-                      <a-button size="small" type="text" @click="reloadCard(item.data, 1)">
+                      <a-button
+                        size="small"
+                        type="text"
+                        @click="reloadCard(item.data, 1)"
+                      >
                         <template #icon>
                           <SortAscendingOutlined />
                         </template>
                       </a-button>
                     </a-tooltip>
-                    <a-tooltip v-else-if="item.data.sort === 1" placement="top">
+                    <a-tooltip
+                      v-else-if="item.data.sort === 1"
+                      placement="top"
+                    >
                       <template #title>
                         <span>倒序</span>
                       </template>
-                      <a-button size="small" type="text" @click="reloadCard(item.data, null)">
+                      <a-button
+                        size="small"
+                        type="text"
+                        @click="reloadCard(item.data, null)"
+                      >
                         <template #icon>
                           <SortDescendingOutlined />
                         </template>
                       </a-button>
                     </a-tooltip>
-                    <a-tooltip v-else placement="top">
+                    <a-tooltip
+                      v-else
+                      placement="top"
+                    >
                       <template #title>
                         <span>默认顺序</span>
                       </template>
-                      <a-button size="small" type="text" @click="reloadCard(item.data, 0)">
+                      <a-button
+                        size="small"
+                        type="text"
+                        @click="reloadCard(item.data, 0)"
+                      >
                         <template #icon>
                           <SwapOutlined :rotate="90" />
                         </template>
@@ -196,7 +281,11 @@
                       <template #title>
                         <span>刷新</span>
                       </template>
-                      <a-button size="small" type="text" @click="reloadCard(item.data)">
+                      <a-button
+                        size="small"
+                        type="text"
+                        @click="reloadCard(item.data)"
+                      >
                         <template #icon>
                           <RedoOutlined />
                         </template>
@@ -206,7 +295,11 @@
                       <template #title>
                         <span>关闭</span>
                       </template>
-                      <a-button size="small" type="text" @click="closeCard(item.data)">
+                      <a-button
+                        size="small"
+                        type="text"
+                        @click="closeCard(item.data)"
+                      >
                         <template #icon>
                           <CloseCircleOutlined />
                         </template>
@@ -222,7 +315,8 @@
               :disabled="activeKey !== PERCENTAGE_TAB_KEY || selectedDict.length !== 1"
               style="margin-bottom: -10px"
               type="link"
-              @click="secondDictExpand = !secondDictExpand">
+              @click="secondDictExpand = !secondDictExpand"
+            >
               <template #icon>
                 <MoreOutlined />
               </template>
@@ -234,9 +328,12 @@
                 <span>关闭所有</span>
               </template>
               <a-button
-                :disabled="statistic.length === 0" shape="circle" size="middle"
+                :disabled="statistic.length === 0"
+                shape="circle"
+                size="middle"
                 type="text"
-                @click="closeAll">
+                @click="closeAll"
+              >
                 <template #icon>
                   <ClearOutlined />
                 </template>
@@ -247,8 +344,12 @@
                 <span>高级查询</span>
               </template>
               <a-button
-                shape="circle" size="middle" style="margin-right: 15px;" type="text"
-                @click="advancedCondition.show = true">
+                shape="circle"
+                size="middle"
+                style="margin-right: 15px;"
+                type="text"
+                @click="advancedCondition.show = true"
+              >
                 <template #icon>
                   <funnel-plot-outlined />
                 </template>
@@ -262,14 +363,15 @@
   <portal-advanced-search-modal
     :advanced="false"
     :advanced-condition="advancedCondition"
-    @confirm="onAdvancedConditionConfirm" />
+    @confirm="onAdvancedConditionConfirm"
+  />
   <portal-statistic-custom-metric
     :advanced-condition="metricAdvancedCondition"
-    @confirm="onMetricConditionConfirm" />
+    @confirm="onMetricConditionConfirm"
+  />
 </template>
 
 <script lang="ts" setup>
-import { ColumnType, FIELD_TYPE, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
 import {
   ClearOutlined,
   CloseCircleOutlined,
@@ -284,14 +386,18 @@ import {
   PlusOutlined,
   RedoOutlined
 } from '@ant-design/icons-vue'
-import { advancedStatistic, generalStatistic } from '@/framework/apis/portal'
-import SingleMetric from '../dashboard/singleMetric/index.vue'
-import DoubleMetric from '../dashboard/doubleMetric/index.vue'
+import _ from 'lodash'
+
 import CustomizeMetric from '../dashboard/customizeMetric/index.vue'
+import DoubleMetric from '../dashboard/doubleMetric/index.vue'
+import SingleMetric from '../dashboard/singleMetric/index.vue'
+
+import { advancedStatistic, generalStatistic } from '@/framework/apis/portal'
+import PortalStatisticCustomMetric from '@/framework/components/common/Portal/modal/PortalStatisticCustomMetric.vue'
+import { ColumnType, FIELD_TYPE, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, uuid } from '@/framework/utils/common'
-import PortalStatisticCustomMetric from '@/framework/components/common/Portal/modal/PortalStatisticCustomMetric.vue'
-import _ from "lodash"
+
 
 const dragGridRef = ref()
 const customMetricDragGridRef = ref()

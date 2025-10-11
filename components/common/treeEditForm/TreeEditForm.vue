@@ -1,37 +1,86 @@
 <template>
-  <a-form :label-col="{ span: 6 }" :model="formState" :wrapper-col="{ span: 14 }" @finish="onFinish">
+  <a-form
+    :label-col="{ span: 6 }"
+    :model="formState"
+    :wrapper-col="{ span: 14 }"
+    @finish="onFinish"
+  >
     <template v-if="isButton()">
-      <a-form-item :rules="[{ required: true, message: '请输入按钮名称!' }]" label="按钮名称" name="title">
+      <a-form-item
+        :rules="[{ required: true, message: '请输入按钮名称!' }]"
+        label="按钮名称"
+        name="title"
+      >
         <a-input v-model:value="formState['title']" />
       </a-form-item>
-      <a-form-item label="代码标识" name="path" required>
+      <a-form-item
+        label="代码标识"
+        name="path"
+        required
+      >
         <a-input v-model:value="formState['path']" />
       </a-form-item>
     </template>
     <template v-else>
-      <a-form-item :rules="[{ required: true, message: '请输入菜单名称!' }]" label="菜单名称" name="title">
+      <a-form-item
+        :rules="[{ required: true, message: '请输入菜单名称!' }]"
+        label="菜单名称"
+        name="title"
+      >
         <a-input v-model:value="formState['title']" />
       </a-form-item>
-      <a-form-item :rules="[{ required: true, message: '请选择一个菜单图标!' }]" label="菜单图标" name="icon">
-        <a-input id="iconInput" v-model:value="formState['icon']" class="icon-input" readOnly @click="selectMenuIcon">
-          <template v-if="formState['icon'].length" #prefix>
+      <a-form-item
+        :rules="[{ required: true, message: '请选择一个菜单图标!' }]"
+        label="菜单图标"
+        name="icon"
+      >
+        <a-input
+          id="iconInput"
+          v-model:value="formState['icon']"
+          class="icon-input"
+          read-only
+          @click="selectMenuIcon"
+        >
+          <template
+            v-if="formState['icon'].length"
+            #prefix
+          >
             <Icon :icon="formState['icon']" />
           </template>
           <template #suffix>
-            <a-button size="small" type="primary" @click="onSearch">手动输入</a-button>
+            <a-button
+              size="small"
+              type="primary"
+              @click="onSearch"
+            >
+              手动输入
+            </a-button>
           </template>
         </a-input>
       </a-form-item>
-      <a-form-item label="是否缓存" required>
+      <a-form-item
+        label="是否缓存"
+        required
+      >
         <a-switch v-model:checked="formState['isCache']" />
       </a-form-item>
-      <a-form-item label="是否为外链" required>
+      <a-form-item
+        label="是否为外链"
+        required
+      >
         <a-switch v-model:checked="formState['isFrame']" />
       </a-form-item>
-      <a-form-item label="路由路径" name="path" required>
+      <a-form-item
+        label="路由路径"
+        name="path"
+        required
+      >
         <a-input v-model:value="formState['path']" />
       </a-form-item>
-      <a-form-item label="组件地址" name="component">
+      <a-form-item
+        label="组件地址"
+        name="component"
+      >
         <a-input v-model:value="formState['component']" />
       </a-form-item>
       <a-form-item label="路由参数">
@@ -40,41 +89,72 @@
     </template>
     <a-form-item :wrapper-col="{ span: 14, offset: 6 }">
       <div class="form-button-list">
-        <a-button @click="resetForm">清空</a-button>
-        <a-button html-type="submit" type="primary">提交</a-button>
+        <a-button @click="resetForm">
+          清空
+        </a-button>
+        <a-button
+          html-type="submit"
+          type="primary"
+        >
+          提交
+        </a-button>
       </div>
     </a-form-item>
   </a-form>
-  <icon-modal v-model:icon="formState['icon']" v-model:visible="visible" />
-  <dialog-box v-model:visible="inputIconBoxVisible" :width="500" title="参数修改">
-    <a-form :model="iconForm" labelAlign="right" @finish="inputIconForm">
+  <icon-modal
+    v-model:icon="formState['icon']"
+    v-model:visible="visible"
+  />
+  <dialog-box
+    v-model:visible="inputIconBoxVisible"
+    :width="500"
+    title="参数修改"
+  >
+    <a-form
+      :model="iconForm"
+      label-align="right"
+      @finish="inputIconForm"
+    >
       <a-form-item
-        :rules="[{required: true, message: '请输入图标字符串!'}]" label="图标" name="icon"
-        required>
-        <a-input v-model:value="iconForm['icon']" placeholder="请输入图标对应的字符串" />
+        :rules="[{required: true, message: '请输入图标字符串!'}]"
+        label="图标"
+        name="icon"
+        required
+      >
+        <a-input
+          v-model:value="iconForm['icon']"
+          placeholder="请输入图标对应的字符串"
+        />
       </a-form-item>
       <a-form-item>
-        <a-button block html-type="submit" type="primary">确定</a-button>
+        <a-button
+          block
+          html-type="submit"
+          type="primary"
+        >
+          确定
+        </a-button>
       </a-form-item>
     </a-form>
   </dialog-box>
 </template>
 
 <script lang="ts" setup>
-import { Ref } from "vue"
-import { EDIT } from "@/framework/utils/constant"
-import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue"
-import { FormState, FormType } from "@/framework/components/common/treeEditForm/type"
-import { addMainMenu, addMenuButton, addSubMenu, updateMainMenu, updateSubMenu } from "@/framework/apis/admin/navEdit"
+import { Ref } from 'vue'
+
+import { addMainMenu, addMenuButton, addSubMenu, updateMainMenu, updateSubMenu } from '@/framework/apis/admin/navEdit'
+import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
+import { FormState, FormType } from '@/framework/components/common/treeEditForm/type'
+import { EDIT } from '@/framework/utils/constant'
 
 let visible: Ref<boolean> = ref(false) //控制图标选择对话框的弹出
 let inputIconBoxVisible: Ref<boolean> = ref(false)
-let iconForm: Ref<{ icon: string }> = ref({icon: ''})
+let iconForm: Ref<{ icon: string }> = ref({ icon: '' })
 
 // formState：默认表单数据，因为编辑的时候需要展示已有信息， type：用于区别是目前表单应为编辑表单还是新增表单
 // menuId: 菜单项Id，用于编辑Sub Menu和Main Menu菜单项和新增Sub Menu菜单项
 const props = defineProps<{ formState: FormState, type: FormType, menuId?: number | undefined, grandId?: number | null }>()
-let {formState, menuId, type, grandId} = toRefs(props)
+let { formState, menuId, type, grandId } = toRefs(props)
 
 // 从父组件中接收两个函数，以更新父组件中相关组件的更新
 const updateMainTree = inject('updateMainTree') as () => void
@@ -86,7 +166,7 @@ const selectMenuIcon = () => visible.value = true
 // 表单验证成功后的回调函数，整理数据后发送网络请求，并更新父组件中的某些组件
 const onFinish = () => {
   if (type.value === EDIT && menuId && typeof menuId.value === 'number') {
-    const data = {...formState.value, menuId: menuId.value}
+    const data = { ...formState.value, menuId: menuId.value }
     data['isCache'] = +data['isCache']
     data['isFrame'] = +data['isFrame']
     // grandId 有值，说明操作的是SubMenu，则需要更新updateSubTree；否则，需要更新updateMainTree

@@ -1,10 +1,11 @@
-import { Ref } from 'vue'
 import dayjs from 'dayjs'
-import weekOfYear from 'dayjs/plugin/weekOfYear'
-import isoWeeksInYear from 'dayjs/plugin/isoWeeksInYear'
 import isLeapYear from 'dayjs/plugin/isLeapYear'
+import isoWeeksInYear from 'dayjs/plugin/isoWeeksInYear'
+import weekOfYear from 'dayjs/plugin/weekOfYear'
+import { Ref } from 'vue'
 
 import { name } from '../../../package.json'
+
 import { TimerType } from '@/framework/utils/type'
 
 const localStoragePrefix = name + '-'
@@ -41,7 +42,7 @@ function isEmpty(data: any) {
   } else if (typeof data === 'string') {
     return data.length === 0 || data === ''
   } else if (typeof data === 'object') {
-    return Object.keys(data).length === 0;
+    return Object.keys(data).length === 0
   } else {
     return false
   }
@@ -141,7 +142,7 @@ const updateTableSize = (tableWrapper: Ref, tableWidth?: Ref, w_bias?: number, t
 const _getWeekStartEndDay = (day: string) => {
   const start = dayjs(day).subtract(dayjs(day).day() ? dayjs(day).day() - 1 : 6, 'day').format('YYYY-MM-DD')
   const end = dayjs(start).add(6, 'day').format('YYYY-MM-DD')
-  return {start, end}
+  return { start, end }
 }
 
 const clearFromField = (form: any, formRef: Ref) => {
@@ -153,7 +154,7 @@ const clearFromField = (form: any, formRef: Ref) => {
     } else if (key === 'partnerList' || key === 'competitorList' || key === 'financingMode') {
       form[key] = []
     } else if (key === 'customer') {
-      form[key] = {value: ''}
+      form[key] = { value: '' }
     } else if (key === 'visitAt' || key === 'planAt') {
       form[key] = null
     } else {
@@ -248,9 +249,9 @@ const startTimer = (data: TimerType, render: Function, immediate = true, replace
 const uuid = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = Math.random() * 16 | 0,
-      v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+      v = c == 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
 }
 
 const parseCssValue = (value: string | number = 'auto', unit = 'px') => {

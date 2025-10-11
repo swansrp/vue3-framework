@@ -1,10 +1,14 @@
 <template>
   <context-holder />
-  <content-layout :width="250" height="100vh">
+  <content-layout
+    :width="250"
+    height="100vh"
+  >
     <template #side>
       <a-form
         :label-col="labelCol"
-        :wrapper-col="wrapperCol" layout="vertical"
+        :wrapper-col="wrapperCol"
+        layout="vertical"
       >
         <a-form-item label="平台">
           <a-tree-select
@@ -23,7 +27,11 @@
             v-model:value="logStore.envType"
             @change="onChangeEnvType"
           >
-            <a-radio-button v-for="option in environmentOptions" :key="option.value" :value="option.value">
+            <a-radio-button
+              v-for="option in environmentOptions"
+              :key="option.value"
+              :value="option.value"
+            >
               {{ option.label }}
             </a-radio-button>
           </a-radio-group>
@@ -41,13 +49,19 @@
         </a-form-item>
         <a-form-item label="除外词条">
           <log-filter
-            :local-storage-key="BLOCK_LOG" title="除外词条" width="180"
-            @change="getLog().then(() => scrollToBottom(logContainer, true))" />
+            :local-storage-key="BLOCK_LOG"
+            title="除外词条"
+            width="180"
+            @change="getLog().then(() => scrollToBottom(logContainer, true))"
+          />
         </a-form-item>
         <a-form-item label="过滤词条">
           <log-filter
-            :local-storage-key="FILTER_LOG" title="过滤词条" width="180"
-            @change="getLog().then(() => scrollToBottom(logContainer, true))" />
+            :local-storage-key="FILTER_LOG"
+            title="过滤词条"
+            width="180"
+            @change="getLog().then(() => scrollToBottom(logContainer, true))"
+          />
         </a-form-item>
       </a-form>
     </template>
@@ -57,8 +71,8 @@
         <a-input
           v-model:value="searchText"
           placeholder="输入关键字进行搜索"
-          @press-enter="getLog"
           style="width: 1500px;"
+          @press-enter="getLog"
         />
         <!-- 第二行：时间查询和查询按钮 -->
         <div class="time-query-row">
@@ -109,53 +123,104 @@
           <a-dropdown>
             <template #overlay>
               <a-menu @click="handleMenuClick">
-                <a-menu-item v-for="(item, index) in intervalTimeLabel" :key="index">
+                <a-menu-item
+                  v-for="(item, index) in intervalTimeLabel"
+                  :key="index"
+                >
                   {{ item }}
                 </a-menu-item>
               </a-menu>
             </template>
-            <a-button style="margin-left: 10px;" type="primary">
+            <a-button
+              style="margin-left: 10px;"
+              type="primary"
+            >
               {{ intervalTimeLabel[intervalSelected] }}
               <DownOutlined />
             </a-button>
           </a-dropdown>
         </div>
       </div>
-      <div ref="logContainer" class="log-container">
-        <a-spin :indicator="indicator" :spinning="loading" size="large" tip="加载中..." wrapperClassName="spinClass">
+      <div
+        ref="logContainer"
+        class="log-container"
+      >
+        <a-spin
+          :indicator="indicator"
+          :spinning="loading"
+          size="large"
+          tip="加载中..."
+          wrapper-class-name="spinClass"
+        >
           <a-empty v-if="!loading && data.size === 0" />
-          <div v-else class="log-list">
+          <div
+            v-else
+            class="log-list"
+          >
             <div
-              v-for="({expand, log}, index) in data.values()" :key="index"
+              v-for="({expand, log}, index) in data.values()"
+              :key="index"
               :style="{height: expand === false ? 'auto' : '30px'}"
-              class="log-item tip">
+              class="log-item tip"
+            >
               <a-dropdown :trigger="['contextmenu']">
                 <template #overlay>
                   <a-menu @click="handleContextMenuClick($event, log)">
-                    <a-menu-item key="json">JSON格式化</a-menu-item>
-                    <a-menu-item v-if="isSQL(log.content)" key="sql">SQL格式化</a-menu-item>
-                    <a-menu-item v-if="isNotEmpty(data)" key="clear">清空</a-menu-item>
+                    <a-menu-item key="json">
+                      JSON格式化
+                    </a-menu-item>
+                    <a-menu-item
+                      v-if="isSQL(log.content)"
+                      key="sql"
+                    >
+                      SQL格式化
+                    </a-menu-item>
+                    <a-menu-item
+                      v-if="isNotEmpty(data)"
+                      key="clear"
+                    >
+                      清空
+                    </a-menu-item>
                   </a-menu>
                 </template>
                 <div>
                   <a-tooltip
-                    :overlayStyle="{ maxWidth: '500px'}" :title="`${log.className}-${log.methodName}`" color="#777"
-                    placement="topLeft">
+                    :overlay-style="{ maxWidth: '500px'}"
+                    :title="`${log.className}-${log.methodName}`"
+                    color="#777"
+                    placement="topLeft"
+                  >
                     <span
                       :class="[isNotEmpty(log.requestId) ? 'createTimeCss' : '', getLogLevelClass(log.logLevel)]"
-                      @click="queryByRequestId(log)">{{ formatDate(log.createTime) }}</span>
+                      @click="queryByRequestId(log)"
+                    >{{ formatDate(log.createTime) }}</span>
                   </a-tooltip>
-                  <a-button size="small" type="text" @click="expandLog(data.get(log.logId))">
+                  <a-button
+                    size="small"
+                    type="text"
+                    @click="expandLog(data.get(log.logId))"
+                  >
                     <template #icon>
-                      <PlusOutlined v-if="expand" style="color: blue" />
+                      <PlusOutlined
+                        v-if="expand"
+                        style="color: blue"
+                      />
                       <MinusOutlined
-                        v-else :style="{color: expand === null ? 'grey' : 'blue'}" />
+                        v-else
+                        :style="{color: expand === null ? 'grey' : 'blue'}"
+                      />
                     </template>
                   </a-button>
                   <span
-                    v-if="expand" :class="['contentCss', getLogLevelClass(log.logLevel)]"
-                    v-html="log.content.substring(0, EXPAND_WIDTH)"></span>
-                  <span v-else :class="['contentCss', getLogLevelClass(log.logLevel)]" v-html="log.content"></span>
+                    v-if="expand"
+                    :class="['contentCss', getLogLevelClass(log.logLevel)]"
+                    v-html="log.content.substring(0, EXPAND_WIDTH)"
+                  />
+                  <span
+                    v-else
+                    :class="['contentCss', getLogLevelClass(log.logLevel)]"
+                    v-html="log.content"
+                  />
                 </div>
               </a-dropdown>
             </div>
@@ -164,9 +229,20 @@
       </div>
     </template>
   </content-layout>
-  <log-context-draw v-model:show="showContextLog" :data="contextData" :expand-width="EXPAND_WIDTH" />
-  <log-json-draw v-if="isNotEmpty(jsonData)" v-model:show="showJson" :data="jsonData" />
-  <log-sql-draw v-model:show="showSql" :sql="sqlData" />
+  <log-context-draw
+    v-model:show="showContextLog"
+    :data="contextData"
+    :expand-width="EXPAND_WIDTH"
+  />
+  <log-json-draw
+    v-if="isNotEmpty(jsonData)"
+    v-model:show="showJson"
+    :data="jsonData"
+  />
+  <log-sql-draw
+    v-model:show="showSql"
+    :sql="sqlData"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -179,22 +255,25 @@ import {
   SearchOutlined,
   VerticalAlignMiddleOutlined
 } from '@ant-design/icons-vue'
-import { ref } from "vue"
-import locale from "ant-design-vue/es/date-picker/locale/zh_CN"
-import { LogInfo } from "./logInfo"
-import dayjs from "dayjs"
-import { LogBoardReq } from "@/framework/apis/log/logBoardReq"
-import { queryLog } from "@/framework/apis/log/log"
-import { dictStore, useTreeStore } from "@/framework/store/common"
-import { isNotEmpty, localStorageMethods, scrollToBottom, strLF2HtmlLF } from '@/framework/utils/common'
-import { useLogStore } from '../../../store/log'
 import { message } from 'ant-design-vue'
+import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
+import dayjs from 'dayjs'
+import { ref } from 'vue'
+
 import LogContextDraw from './logContext.vue'
+import LogFilter from './logFilter.vue'
+import { LogInfo } from './logInfo'
 import LogJsonDraw from './logJson.vue'
 import LogSqlDraw from './logSql.vue'
-import LogFilter from './logFilter.vue'
 import { expandLog, formatDate, getLogLevelClass, isJson, isSQL } from './logUtil'
+import { useLogStore } from '../../../store/log'
+
+import { queryLog } from '@/framework/apis/log/log'
+import { LogBoardReq } from '@/framework/apis/log/logBoardReq'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import { BLOCK_LOG, FILTER_LOG } from '@/framework/store/log/constant'
+import { isNotEmpty, localStorageMethods, scrollToBottom, strLF2HtmlLF } from '@/framework/utils/common'
+
 
 const props = withDefaults(
   defineProps<{
@@ -222,13 +301,13 @@ const indicator = h(LoadingOutlined, {
 const labelCol = { style: { width: '150px' } }
 const wrapperCol = { span: 14 }
 const environmentOptions = ref([
-  { label: "预生产", value: "pre" },
-  { label: "生产", value: "prod" }
+  { label: '预生产', value: 'pre' },
+  { label: '生产', value: 'prod' }
 ])
 const levelOptions = ref([])
 const platformOptions = ref([])
 
-const searchText = ref("")
+const searchText = ref('')
 const loading = ref(false)
 const data = ref<Map<number, { expand: boolean | null, log: LogInfo }>>(new Map())
 const EXPAND_WIDTH = 200
@@ -269,7 +348,7 @@ const queryByRequestId = (log: any) => {
       for (let index = resp.payload.length - 1; index >= 0; index--) {
         const log = resp.payload[index]
         log.content = strLF2HtmlLF(log.content)
-        contextData.value.set(log.logId, {expand: log.content.length > EXPAND_WIDTH ? true : null, log})
+        contextData.value.set(log.logId, { expand: log.content.length > EXPAND_WIDTH ? true : null, log })
       }
       showContextLog.value = true
     })
@@ -280,7 +359,7 @@ const handleLogData = (resp: any, refresh = false) => {
     data.value.clear()
   }
   if(resp.payload?.length > 5000) {
-    messageApi.error({content: () => '日志过多,无法解析'})
+    messageApi.error({ content: () => '日志过多,无法解析' })
     return
   }
   const blockLog = JSON.parse(localStorageMethods.getLocalStorage(BLOCK_LOG, JSON.stringify([])))

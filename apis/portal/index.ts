@@ -4,7 +4,7 @@ import {
   advancedQueryRequest,
   advancedSelectRequest,
   advancedStatisticRequest,
-  advancedSummaryRequest, apiType,
+  advancedSummaryRequest,
   bindAllRequest,
   bindBatchRequest,
   bindInfoListRequest,
@@ -205,4 +205,4 @@ export const bindAllAttachByUrl = (url: string, entityId: any, attachQuery = {} 
 export const unbindAllAttachByUrl = (url: string, entityId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
   unbindAllRequest(url, entityId, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const getIndicatorConfig = (name: string) => get(buildGetApiByType('portal/indicator/group/indicator/tree'), {tableId: name}) as Promise<any>
+export const getIndicatorConfig = (name: string) => get(buildGetApiByType('portal/indicator/group/indicator/tree'), { tableId: name }) as Promise<any>

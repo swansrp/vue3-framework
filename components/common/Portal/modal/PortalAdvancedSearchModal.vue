@@ -8,8 +8,7 @@
     @close="advancedConditionDrawClose"
   >
     <template #extra>
-      <slot name="extra">
-      </slot>
+      <slot name="extra" />
     </template>
     <advanced-search
       :key="key"
@@ -17,7 +16,8 @@
       :columns="advancedCondition.columnArray"
       :condition="advancedCondition.condition"
       :ok-text="advancedCondition.okText"
-      @get-condition="handleAdvancedConditionConfirm" />
+      @get-condition="handleAdvancedConditionConfirm"
+    />
   </a-drawer>
 
   <!-- endregion -->

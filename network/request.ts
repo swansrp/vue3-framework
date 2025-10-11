@@ -1,15 +1,16 @@
-import qs from 'qs'
+import { message } from 'ant-design-vue'
 import axios, { AxiosProgressEvent, AxiosResponse } from 'axios'
+import qs from 'qs'
+
+import { baseDomain } from '@/framework/apis'
+import { load } from '@/framework/components/common/Loading'
+import { navigation2Login } from '@/framework/network/login'
+import pinia from '@/framework/store'
+import { useCommonStore } from '@/framework/store/common'
 import { isEmpty, localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
-import { useCommonStore } from '@/framework/store/common'
-import pinia from '@/framework/store'
-import { baseDomain } from '@/framework/apis'
-import { navigation2Login } from '@/framework/network/login'
-import { message } from "ant-design-vue";
-import { load } from '@/framework/components/common/Loading'
 
-message.config({maxCount: 1})
+message.config({ maxCount: 1 })
 const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
 const commonStore = useCommonStore(pinia)
 const web = '/web'
@@ -22,7 +23,7 @@ const errCode = {
 const axiosInstance = axios.create({})
 axiosInstance.interceptors.request.use(
   (config) => {
-    const {data, showLoading} = config.data as configDataType
+    const { data, showLoading } = config.data as configDataType
     if (showLoading) load.show()
     config.data = data
     const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
@@ -100,7 +101,7 @@ function request(apiType: ApiType,
   return axiosInstance({
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,
-    url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
+    url: apiType.url + '?' + qs.stringify(params, { arrayFormat: 'repeat' }),
     data: {
       data: body,
       showLoading
@@ -164,8 +165,8 @@ function download(
   return axiosInstance({
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,
-    url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
-    data: {data: body},
+    url: apiType.url + '?' + qs.stringify(params, { arrayFormat: 'repeat' }),
+    data: { data: body },
     params: null,
     headers: {
       'Content-Type': 'application/json',
@@ -195,10 +196,10 @@ function upload(
   return axiosInstance({
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,
-    url: apiType.url + '?' + qs.stringify(params, {arrayFormat: 'repeat'}),
-    data: {data: body},
+    url: apiType.url + '?' + qs.stringify(params, { arrayFormat: 'repeat' }),
+    data: { data: body },
     params: null,
-    headers: {'Content-Type': 'multipart/form-data'},
+    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (progressEvent: AxiosProgressEvent) => {
       onUploadProgress(progressEvent)
     }

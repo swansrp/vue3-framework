@@ -8,7 +8,8 @@
     mode-lock
     read-only
     tree-mode
-    @selected-data="onSelectedData" />
+    @selected-data="onSelectedData"
+  />
   <portal
     v-else
     ref="portalRef"
@@ -20,11 +21,13 @@
     list-mode
     mode-lock
     read-only
-    @selected-data="onSelectedData" />
+    @selected-data="onSelectedData"
+  />
 </template>
 
 <script lang="ts" setup>
 import { Ref } from 'vue'
+
 import { isNotEmpty } from '@/framework/utils/common'
 
 const portalRef = ref()

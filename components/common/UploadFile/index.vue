@@ -1,45 +1,57 @@
 <template>
   <a-modal
     :keyboard="false"
-    :maskClosable="false"
+    :mask-closable="false"
     :open="uploadDialogBox.show"
     :width="800"
     centered
     @cancel="closeUploadModal"
-    @ok="confirmUploadModal">
-    <a-button v-if="isNotEmpty(_template) && isNotEmpty(templateName)" ghost @click="_template(templateName)">下载模版
+    @ok="confirmUploadModal"
+  >
+    <a-button
+      v-if="isNotEmpty(_template) && isNotEmpty(templateName)"
+      ghost
+      @click="_template(templateName)"
+    >
+      下载模版
     </a-button>
     <a-upload-dragger
       v-if="config.type === 'INIT'"
-      v-model:fileList="uploadDialogBox.file"
+      v-model:file-list="uploadDialogBox.file"
       :accept="accept"
       :before-upload="beforeUpload"
-      :customRequest="handleFileUpload"
+      :custom-request="handleFileUpload"
       :directory="directory"
       :max-count="multiple ? undefined : 1"
       :multiple="multiple"
       :name="multiple ? 'files' : 'file'"
       :style="{marginTop: (isNotEmpty(template) && isNotEmpty(templateName)) ? '5px' : '30px'}"
-      listType="text"
+      list-type="text"
       @change="handleUploadChange"
-      @reject="reject">
+      @reject="reject"
+    >
       <p class="ant-upload-drag-icon">
         <inbox-outlined />
       </p>
-      <p class="ant-upload-text">点击或者拖拽文件至此上传</p>
+      <p class="ant-upload-text">
+        点击或者拖拽文件至此上传
+      </p>
     </a-upload-dragger>
     <a-result
       v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) !== -1"
-      :title="'正在' + stepTitle[config.step] + '数据...'">
+      :title="'正在' + stepTitle[config.step] + '数据...'"
+    >
       <template #icon>
         <a-steps
           :current="config.step"
-          :percent="config.percent">
+          :percent="config.percent"
+        >
           <a-step
             v-for="title in stepTitle"
             :key="title"
             :title="title + '数据'"
-            description="" />
+            description=""
+          />
         </a-steps>
       </template>
     </a-result>
@@ -49,9 +61,7 @@
       status="success"
       title="上传数据成功"
     >
-      <template #extra>
-
-      </template>
+      <template #extra />
     </a-result>
     <a-result
       v-if="config.type === 'FAILED'"
@@ -59,14 +69,26 @@
       title="上传数据失败"
     >
       <template #extra>
-        <a-button key="console" type="primary" @click="resetUploadProgress()">重新上传</a-button>
+        <a-button
+          key="console"
+          type="primary"
+          @click="resetUploadProgress()"
+        >
+          重新上传
+        </a-button>
       </template>
 
-      <div v-if="config.failedReason.length !== 0" class="desc">
+      <div
+        v-if="config.failedReason.length !== 0"
+        class="desc"
+      >
         <p style="font-size: 16px">
           <strong>上传过程发生了下列错误:</strong>
         </p>
-        <p v-for="reason in config.failedReason" :key="reason">
+        <p
+          v-for="reason in config.failedReason"
+          :key="reason"
+        >
           <close-circle-outlined :style="{ color: 'red' }" />
           {{ reason }}
         </p>
@@ -75,11 +97,19 @@
     <a-progress
       v-if="!multiple && _handleProgress"
       :percent="_handleProgress"
-      :status="_handleProgress < 0 ? 'exception' : undefined" />
+      :status="_handleProgress < 0 ? 'exception' : undefined"
+    />
     <template #footer>
       <div v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) === -1">
-        <a-button @click="closeUploadModal">取消</a-button>
-        <a-button type="primary" @click="confirmUploadModal">确定</a-button>
+        <a-button @click="closeUploadModal">
+          取消
+        </a-button>
+        <a-button
+          type="primary"
+          @click="confirmUploadModal"
+        >
+          确定
+        </a-button>
       </div>
     </template>
   </a-modal>
@@ -87,17 +117,20 @@
 
 <script lang="ts" setup>
 
+import { CloseCircleOutlined, InboxOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { uploadFile } from '@/framework/apis/common/common'
 import { AxiosProgressEvent } from 'axios'
 import { isNumber } from 'lodash'
-import { getUploadAccepts, getUploadFileType } from '@/framework/components/common/UploadFile/utils'
-import { CloseCircleOutlined, InboxOutlined } from '@ant-design/icons-vue'
-import { isNotEmpty, startTimer, stopTimer } from '@/framework/utils/common'
-import { UploadModalType } from '@/framework/components/common/Portal/type'
-import { TimerType } from '@/framework/utils/type'
 import { Ref } from 'vue'
+
+import { uploadFile } from '@/framework/apis/common/common'
 import { downloadTemplate, getUploadParseProgress, uploadParse } from '@/framework/apis/upload'
+import { UploadModalType } from '@/framework/components/common/Portal/type'
+import { getUploadAccepts, getUploadFileType } from '@/framework/components/common/UploadFile/utils'
+import { isNotEmpty, startTimer, stopTimer } from '@/framework/utils/common'
+import { TimerType } from '@/framework/utils/type'
+
+
 
 const stepTitle = ['上传', '校验', '保存']
 const prop = withDefaults(defineProps<{
@@ -139,7 +172,7 @@ const emit = defineEmits<{
   (e: 'uploadComplete'): void
   (e: 'afterConfirm'): void
 }>()
-const {handleProgress, uploadParam, useOriginalFileName, excelParseUrl} = toRefs(prop)
+const { handleProgress, uploadParam, useOriginalFileName, excelParseUrl } = toRefs(prop)
 const _handleProgress: Ref<number | undefined> = ref(undefined)
 const _progress = ref(prop.progress)
 const _upload = ref(prop.upload)
@@ -201,7 +234,7 @@ const setFailedProgress = () => {
   config.percent = 0
 }
 const updateProgress = (resp: any) => {
-  const {step, loaded, comments, total} = resp
+  const { step, loaded, comments, total } = resp
   console.debug('updateProgress', step, loaded, comments, total)
   config.type = step
   config.loaded = loaded
@@ -255,7 +288,7 @@ const beforeUpload = (file: any, fileList: any) => {
   return isLt20M
 }
 const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?: any; onError?: any }) => {
-  const {file, onProgress, onSuccess, onError} = data
+  const { file, onProgress, onSuccess, onError } = data
   let formData = new FormData()
   formData.append('file', file)
   if (_upload.value) {
@@ -264,7 +297,7 @@ const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?:
       if (isNumber(progressEvent.total)) {
         percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
       }
-      onProgress({percent: percent}, file)
+      onProgress({ percent: percent }, file)
       if (isNotEmpty(_progress.value))  {
         setUploadProgress(percent)
       }
@@ -280,7 +313,7 @@ const handleFileUpload = async (data: { file: any; onProgress?: any; onSuccess?:
       if (isNumber(progressEvent.total)) {
         percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
       }
-      onProgress({percent: percent}, file)
+      onProgress({ percent: percent }, file)
     }, getUploadFileType(file), prop.folder, useOriginalFileName.value ? file.name : prop.fileName).then((resp: any) => {
       onSuccess(resp, file)
       uploadDialogBox.url = resp.payload.url
@@ -308,7 +341,7 @@ const reject = () => {
   message.error('不支持该文件格式')
 }
 
-defineExpose({showUploadDialogBox, updateProgress})
+defineExpose({ showUploadDialogBox, updateProgress })
 </script>
 
 <style scoped>

@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
+
+import { baseDomain } from '@/framework/apis'
 import { getDictList, getTreeList } from '@/framework/apis/common/common'
+import { getAllTreeDict, getDictNameList } from '@/framework/apis/dict/dict'
+import { getConfig } from '@/framework/apis/params'
 import { getAllNodes, isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { ValueLabel } from '@/framework/utils/type'
-import { getConfig } from '@/framework/apis/params'
-import { getAllTreeDict, getDictNameList } from '@/framework/apis/dict/dict'
-import { baseDomain } from '@/framework/apis'
 
 export const useCommonStore = defineStore('commonStore', {
   state: () => {
@@ -58,7 +59,7 @@ export const dictStore = defineStore('dictStore', {
           // }
           labelMap.set(data.label, data.value)
         })
-        this.map.set(dictName, {data: res.payload, valueMap, labelMap})
+        this.map.set(dictName, { data: res.payload, valueMap, labelMap })
         return res.payload.filter((dict:any) => dict.show !== '0')
       })
     }, async getLabelAsync(dictName: string, value: number | string) {
@@ -94,7 +95,7 @@ export const dictStore = defineStore('dictStore', {
       return this.map.get(dictName).labelMap.get(label)
     }, async getAllDict(dictName: string) {
       if (isEmpty(this.allDict)) {
-        return await getDictNameList({name: dictName}).then((res) => {
+        return await getDictNameList({ name: dictName }).then((res) => {
           this.allDict = res.payload || []
           return this.allDict
         })
@@ -128,7 +129,7 @@ export const useTreeStore = defineStore('treeStore', {
           valueMap.set(item.value.toString(), item.label)
           labelMap.set(item.label, item.value)
         })
-        this.map.set(dictName, {data: res.payload, valueMap, labelMap})
+        this.map.set(dictName, { data: res.payload, valueMap, labelMap })
         return res.payload
       })
     }, getLabel(dictName: string, value: number | string) {

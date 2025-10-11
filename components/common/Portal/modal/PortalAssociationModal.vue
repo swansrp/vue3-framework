@@ -6,19 +6,21 @@
     wrap-class-name="full-modal"
     @cancel="() => emit('cancel')"
     @close="() => emit('close')"
-    @ok="() => emit('confirm')">
+    @ok="() => emit('confirm')"
+  >
     <portal-bind-tab
       :base-domain="config.baseDomain"
       :bind-tabs="bindTabs"
       :entity-name="config.tableId"
       :record="config.modal.data"
-      :row-key="config.rowKey" />
+      :row-key="config.rowKey"
+    />
   </a-modal>
 </template>
 
 <script lang="ts" setup>
-import { TableConfigType } from '@/framework/components/common/Portal/type'
 import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
+import { TableConfigType } from '@/framework/components/common/Portal/type'
 
 const props = withDefaults(
   defineProps<{
@@ -27,7 +29,7 @@ const props = withDefaults(
   }>(),
   {}
 )
-const {config, bindTabs} = toRefs(props)
+const { config, bindTabs } = toRefs(props)
 
 const emit = defineEmits<{
   /**

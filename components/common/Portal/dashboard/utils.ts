@@ -1,6 +1,7 @@
 import * as echarts from 'echarts'
-import bus, { DRAG_GRID_RESIZE } from '@/framework/mitt'
 import _ from 'lodash'
+
+import bus, { DRAG_GRID_RESIZE } from '@/framework/mitt'
 
 export const colorList = ['rgba(55,117,246,100)', 'rgba(255,195,113,100)', 'rgba(255,124,17,100)', 'rgba(112,49,222,100)', 'rgba(72,95,155,100)', 'rgba(72,95,155,100)', 'rgba(51,191,207,100)', 'rgba(253,113,109,100)', 'rgba(184,118,75,100)', 'rgba(148,141,224,100)']
 export const setEchartsOptionsAndResize = (chart: echarts.ECharts, option: echarts.EChartsOption, notMerge = false) => {

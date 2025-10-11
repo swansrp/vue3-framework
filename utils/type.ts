@@ -1,4 +1,4 @@
-import {Method} from 'axios'
+import { Method } from 'axios'
 
 declare global {
     // 因为不能保证所有的浏览器都可以使用msSaveBlob，所以需要定义Navigator的类型

@@ -78,7 +78,10 @@
           :key="index"
           class="dynamic-field-item"
         >
-          <a-row :gutter="8" align="middle">
+          <a-row
+            :gutter="8"
+            align="middle"
+          >
             <a-col :span="10">
               <a-form-item-rest>
                 <a-input
@@ -147,14 +150,15 @@
 </template>
 
 <script lang="ts" setup>
+import { DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { FormInstance } from 'ant-design-vue'
 import type { Rule } from 'ant-design-vue/es/form'
-import { DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import { isNotEmpty } from '@/framework/utils/common'
-import { dictStore } from '@/framework/store/common'
-import { ColumnType, FIELD_TYPE } from '@/framework/components/common/Portal/type'
+
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
+import { ColumnType, FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import { dictStore } from '@/framework/store/common'
+import { isNotEmpty } from '@/framework/utils/common'
 
 // 动态字段类型定义
 interface DynamicField {
@@ -224,10 +228,10 @@ const formRules: Record<string, Rule[]> = {
 const entityCondition = reactive({
   show: false,
   columnArray: [] as Array<ColumnType>,
-  title: "",
+  title: '',
   condition: {} as ConditionType | undefined,
   key: 0,
-  okText: "保存"
+  okText: '保存'
 })
 
 // 条件文本显示
@@ -283,33 +287,33 @@ const openConditionDraw = async () => {
   entityCondition.columnArray = props.config.columns
     .filter(
       (item: { filterAble: string; show: string }) =>
-        item.filterAble === "1" && item.show === "1"
+        item.filterAble === '1' && item.show === '1'
     )
     .map((item: any) => ({
       title: item.displayName,
       key: item.property,
       referenceDict: item.reference,
       fieldType: item.fieldType,
-    }));
+    }))
   
   for (let item of entityCondition.columnArray) {
     if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.referenceDict)) {
-      item.referenceDictOption = (await dict.getDict(item.referenceDict)) || [];
+      item.referenceDictOption = (await dict.getDict(item.referenceDict)) || []
     }
   }
   
   if (isNotEmpty(formData.value.condition)) {
     try {
-      entityCondition.condition = JSON.parse(formData.value.condition);
+      entityCondition.condition = JSON.parse(formData.value.condition)
     } catch (e) {
-      entityCondition.condition = {} as ConditionType;
+      entityCondition.condition = {} as ConditionType
     }
   } else {
-    entityCondition.condition = {} as ConditionType;
+    entityCondition.condition = {} as ConditionType
   }
   
-  entityCondition.show = true;
-  entityCondition.key++;
+  entityCondition.show = true
+  entityCondition.key++
 }
 
 // 保存条件

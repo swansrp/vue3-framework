@@ -1,4 +1,5 @@
 import Dexie, { Table } from 'dexie'
+
 import { name } from '@/../package.json'
 
 class Database extends Dexie {

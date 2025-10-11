@@ -1,24 +1,28 @@
 <template>
   <a-modal
     :keyboard="false"
-    :maskClosable="false"
+    :mask-closable="false"
     :open="uploadDialogBox.show"
     :width="800"
     centered
     @cancel="closeUploadModal"
-    @ok="confirmUploadModal">
+    @ok="confirmUploadModal"
+  >
     <a-result
       v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) !== -1"
-      :title="'正在' + stepTitle[config.step] + '数据...'">
+      :title="'正在' + stepTitle[config.step] + '数据...'"
+    >
       <template #icon>
         <a-steps
           :current="config.step"
-          :percent="config.percent">
+          :percent="config.percent"
+        >
           <a-step
             v-for="title in stepTitle"
             :key="title"
             :title="title"
-            description="" />
+            description=""
+          />
         </a-steps>
       </template>
     </a-result>
@@ -26,20 +30,26 @@
       v-if="config.type === 'SUCCESS'"
       :sub-title="'已成功处理数据' + config.loaded + '条'"
       status="success"
-      title="完成">
-      <template #extra>
-      </template>
+      title="完成"
+    >
+      <template #extra />
     </a-result>
     <a-result
       v-if="config.type === 'FAILED'"
       status="error"
       title="失败"
     >
-      <div v-if="config.failedReason.length !== 0" class="desc">
+      <div
+        v-if="config.failedReason.length !== 0"
+        class="desc"
+      >
         <p style="font-size: 16px">
           <strong>处理过程发生了下列错误:</strong>
         </p>
-        <p v-for="reason in config.failedReason" :key="reason">
+        <p
+          v-for="reason in config.failedReason"
+          :key="reason"
+        >
           <close-circle-outlined :style="{ color: 'red' }" />
           {{ reason }}
         </p>
@@ -47,8 +57,15 @@
     </a-result>
     <template #footer>
       <div v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) === -1">
-        <a-button @click="closeUploadModal">取消</a-button>
-        <a-button type="primary" @click="confirmUploadModal">确定</a-button>
+        <a-button @click="closeUploadModal">
+          取消
+        </a-button>
+        <a-button
+          type="primary"
+          @click="confirmUploadModal"
+        >
+          确定
+        </a-button>
       </div>
     </template>
   </a-modal>
@@ -57,8 +74,9 @@
 <script lang="ts" setup>
 
 import { CloseCircleOutlined } from '@ant-design/icons-vue'
-import { startTimer, stopTimer } from '@/framework/utils/common'
+
 import { UploadModalType } from '@/framework/components/common/Portal/type'
+import { startTimer, stopTimer } from '@/framework/utils/common'
 import { TimerType } from '@/framework/utils/type'
 
 const stepTitle = ['请求', '校验', '处理']

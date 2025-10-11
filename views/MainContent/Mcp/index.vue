@@ -1,11 +1,17 @@
 <template>
-  <a-tabs :active-key="endpoint" style="margin-left: 20px">
+  <a-tabs
+    :active-key="endpoint"
+    style="margin-left: 20px"
+  >
     <a-tab-pane
       v-for="category in mcpEndpoint"
       :key="category.value"
       :tab="category.label"
     >
-      <a-radio-group v-model:value="type" button-style="solid">
+      <a-radio-group
+        v-model:value="type"
+        button-style="solid"
+      >
         <a-radio-button
           v-for="item in mcpType"
           :key="item.value"
@@ -22,7 +28,10 @@
           class="card-item"
         >
           <template #extra>
-            <a-button type="link" @click="toggleEdit(item)">
+            <a-button
+              type="link"
+              @click="toggleEdit(item)"
+            >
               {{ item.editing ? '保存' : '编辑' }}
             </a-button>
           </template>
@@ -42,9 +51,10 @@
 </template>
 
 <script lang="ts" setup>
-import { dictStore } from '@/framework/store/common'
 import { Ref } from 'vue'
+
 import { getMcpEndpoint, getMcpList, updateMcpDescription } from '@/framework/apis/mcp'
+import { dictStore } from '@/framework/store/common'
 
 const dict = dictStore()
 const endpoint = ref()

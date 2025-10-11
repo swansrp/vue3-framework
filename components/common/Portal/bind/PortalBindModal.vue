@@ -2,47 +2,75 @@
   <dialog-box
     v-model:visible="bindDialogBox.show"
     :title="title + actionText"
-    is-full>
+    is-full
+  >
     <a-tabs
-      v-model:activeKey="bindDialogBox.tab"
+      v-model:active-key="bindDialogBox.tab"
       destroy-inactive-tab-pane
       type="card"
-      @change="handleTabChanged">
-      <a-tab-pane key="0" :tab="'已' + actionText + title">
+      @change="handleTabChanged"
+    >
+      <a-tab-pane
+        key="0"
+        :tab="'已' + actionText + title"
+      >
         <div style="height: calc(100vh - 200px);">
           <Portal
             ref="bindPortal"
             :query="queryBindListFunc"
             :row-drag-end="handleRowDragEnd"
             :table-id="attachEntity"
-            read-only>
+            read-only
+          >
             <!-- :advance-condition="entityDialogBox.column.entityCondition"-->
             <template #action="{ portalConfig, column, record }">
-              <a-button type="text" @click="unbind(portalConfig, column, record)">取消</a-button>
-              <slot :column="column" :portalConfig="portalConfig" :record="record" name="action"></slot>
+              <a-button
+                type="text"
+                @click="unbind(portalConfig, column, record)"
+              >
+                取消
+              </a-button>
+              <slot
+                :column="column"
+                :portal-config="portalConfig"
+                :record="record"
+                name="action"
+              />
             </template>
             <template #right-btns>
-              <slot name="bind-right-btns"></slot>
+              <slot name="bind-right-btns" />
             </template>
           </Portal>
         </div>
       </a-tab-pane>
-      <a-tab-pane key="1" :tab="'未' + actionText + title">
+      <a-tab-pane
+        key="1"
+        :tab="'未' + actionText + title"
+      >
         <div style="height: calc(100vh - 200px);">
           <Portal
             ref="unbindPortal"
             :advance-condition="attachCondition"
             :query="queryUnbindListFunc"
             :table-id="attachEntity"
-            read-only>
+            read-only
+          >
             <!-- :advance-condition="entityDialogBox.column.entityCondition"-->
             <template #action="{ portalConfig, column, record }">
-              <a-button type="text" @click="bind(portalConfig, column, record)">{{ actionText }}</a-button>
+              <a-button
+                type="text"
+                @click="bind(portalConfig, column, record)"
+              >
+                {{ actionText }}
+              </a-button>
             </template>
           </Portal>
         </div>
       </a-tab-pane>
-      <a-tab-pane key="2" :tab="'全部' + title">
+      <a-tab-pane
+        key="2"
+        :tab="'全部' + title"
+      >
         <div style="height: calc(100vh - 200px);">
           <Portal
             ref="allPortal"
@@ -50,26 +78,50 @@
             :advance-condition="attachCondition"
             :query="queryAttachListFunc"
             :table-id="attachEntity"
-            read-only />
+            read-only
+          />
         </div>
       </a-tab-pane>
       <template #rightExtra>
         <template v-if="bindDialogBox.tab === '0'">
           <a-button
-            :disabled="isEmpty(bindPortal?.getRowSelection())" style="margin-right: 5px;" type="primary"
-            @click="unbindSelected">清除选中
+            :disabled="isEmpty(bindPortal?.getRowSelection())"
+            style="margin-right: 5px;"
+            type="primary"
+            @click="unbindSelected"
+          >
+            清除选中
           </a-button>
-          <a-button type="primary" @click="unbindAll">清除全部</a-button>
+          <a-button
+            type="primary"
+            @click="unbindAll"
+          >
+            清除全部
+          </a-button>
         </template>
         <template v-if="bindDialogBox.tab === '1'">
           <a-button
-            :disabled="isEmpty(unbindPortal?.getRowSelection())" style="margin-right: 5px;" type="primary"
-            @click="bindSelected">{{ actionText + '选中' }}
+            :disabled="isEmpty(unbindPortal?.getRowSelection())"
+            style="margin-right: 5px;"
+            type="primary"
+            @click="bindSelected"
+          >
+            {{ actionText + '选中' }}
           </a-button>
-          <a-button type="primary" @click="bindAll">{{ actionText + '全部' }}</a-button>
+          <a-button
+            type="primary"
+            @click="bindAll"
+          >
+            {{ actionText + '全部' }}
+          </a-button>
         </template>
         <template v-if="bindDialogBox.tab === '2'">
-          <a-button type="primary" @click="bindReplace">{{ '选中替换' + actionText }}</a-button>
+          <a-button
+            type="primary"
+            @click="bindReplace"
+          >
+            {{ '选中替换' + actionText }}
+          </a-button>
         </template>
       </template>
     </a-tabs>
@@ -77,7 +129,10 @@
 </template>
 
 <script lang="ts" setup>
-import { ColumnType, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
+import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
+import { Modal } from 'ant-design-vue'
+import { createVNode } from 'vue'
+
 import {
   bindAllAttach,
   bindAttach,
@@ -91,11 +146,11 @@ import {
   unbindAttach,
   unbindBatchAttach
 } from '@/framework/apis/portal'
-import { isEmpty, isNotEmpty } from '@/framework/utils/common'
-import { Modal } from 'ant-design-vue'
-import { createVNode } from 'vue'
-import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { ColumnType, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+
+
 
 const prop = withDefaults(defineProps<{
   baseDomain?: string

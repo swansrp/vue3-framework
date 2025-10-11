@@ -1,19 +1,38 @@
 <template>
-  <div :class="{ collapsed: collapsed }" class="indicator-tree-panel">
+  <div
+    :class="{ collapsed: collapsed }"
+    class="indicator-tree-panel"
+  >
     <!-- 折叠控制按钮 -->
-    <div class="collapse-trigger" @click="toggleCollapse">
+    <div
+      class="collapse-trigger"
+      @click="toggleCollapse"
+    >
       <MenuFoldOutlined v-if="!collapsed" />
       <MenuUnfoldOutlined v-else />
     </div>
 
     <!-- 可调整宽度的分隔条 -->
-    <div v-if="!collapsed" class="resize-handle" @mousedown="startResize"></div>
+    <div
+      v-if="!collapsed"
+      class="resize-handle"
+      @mousedown="startResize"
+    />
 
     <!-- 树形面板内容 -->
-    <div v-if="!collapsed" :style="{ width: panelWidth + 'px' }" class="tree-content">
+    <div
+      v-if="!collapsed"
+      :style="{ width: panelWidth + 'px' }"
+      class="tree-content"
+    >
       <!-- 搜索框 -->
       <div class="search-section">
-        <a-input v-model:value="searchKeyword" allowClear placeholder="搜索指标" @input="onSearch">
+        <a-input
+          v-model:value="searchKeyword"
+          allow-clear
+          placeholder="搜索指标"
+          @input="onSearch"
+        >
           <template #prefix>
             <SearchOutlined />
           </template>
@@ -29,20 +48,39 @@
           </div>
           <div class="tree-wrapper">
             <a-tree
-              ref="commonTreeKey" v-model:checkedKeys="selectedCommonIndicators"
-              v-model:expandedKeys="expandedCommonKeys" :checkable="true" :draggable="true" :selectable="false"
-              :show-icon="true" :show-line="true" :tree-data="filteredCommonIndicators" block-node
-              @check="onCommonIndicatorCheck" @drop="onCommonTreeDrop">
+              ref="commonTreeKey"
+              v-model:checked-keys="selectedCommonIndicators"
+              v-model:expanded-keys="expandedCommonKeys"
+              :checkable="true"
+              :draggable="true"
+              :selectable="false"
+              :show-icon="true"
+              :show-line="true"
+              :tree-data="filteredCommonIndicators"
+              block-node
+              @check="onCommonIndicatorCheck"
+              @drop="onCommonTreeDrop"
+            >
               <template #title="{ title, isLeaf, dataRef }">
-                <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
+                <div
+                  :class="{ 'search-highlight': isHighlighted(title) }"
+                  class="tree-node-title"
+                >
                   <span class="node-title">{{ title }}</span>
                   <div
                     v-if="isLeaf && !dataRef.children && (commonIndicatorPermissions?.edit || commonIndicatorPermissions?.delete)"
-                    class="node-actions">
-                    <a-tooltip v-if="commonIndicatorPermissions?.edit" title="编辑">
+                    class="node-actions"
+                  >
+                    <a-tooltip
+                      v-if="commonIndicatorPermissions?.edit"
+                      title="编辑"
+                    >
                       <EditOutlined @click.stop="editIndicator(dataRef)" />
                     </a-tooltip>
-                    <a-tooltip v-if="commonIndicatorPermissions?.delete" title="删除">
+                    <a-tooltip
+                      v-if="commonIndicatorPermissions?.delete"
+                      title="删除"
+                    >
                       <DeleteOutlined @click.stop="deleteIndicator(dataRef)" />
                     </a-tooltip>
                   </div>
@@ -57,26 +95,48 @@
         </div>
 
         <!-- 个人指标 -->
-        <div v-if="showPersonalIndicators" class="category-section">
+        <div
+          v-if="showPersonalIndicators"
+          class="category-section"
+        >
           <div class="category-header">
             <h4>个人指标</h4>
           </div>
           <div class="tree-wrapper">
             <a-tree
-              ref="personalTreeKey" v-model:checkedKeys="selectedPersonalIndicators"
-              v-model:expandedKeys="expandedPersonalKeys" :checkable="true" :draggable="true" :selectable="false"
-              :show-icon="true" :show-line="true" :tree-data="filteredPersonalIndicators" block-node
-              @check="onPersonalIndicatorCheck" @drop="onPersonalTreeDrop">
+              ref="personalTreeKey"
+              v-model:checked-keys="selectedPersonalIndicators"
+              v-model:expanded-keys="expandedPersonalKeys"
+              :checkable="true"
+              :draggable="true"
+              :selectable="false"
+              :show-icon="true"
+              :show-line="true"
+              :tree-data="filteredPersonalIndicators"
+              block-node
+              @check="onPersonalIndicatorCheck"
+              @drop="onPersonalTreeDrop"
+            >
               <template #title="{ title, isLeaf, dataRef }">
-                <div :class="{ 'search-highlight': isHighlighted(title) }" class="tree-node-title">
+                <div
+                  :class="{ 'search-highlight': isHighlighted(title) }"
+                  class="tree-node-title"
+                >
                   <span class="node-title">{{ title }}</span>
                   <div
                     v-if="isLeaf && (personalIndicatorPermissions?.edit || personalIndicatorPermissions?.delete)"
-                    class="node-actions">
-                    <a-tooltip v-if="personalIndicatorPermissions?.edit" title="编辑">
+                    class="node-actions"
+                  >
+                    <a-tooltip
+                      v-if="personalIndicatorPermissions?.edit"
+                      title="编辑"
+                    >
                       <EditOutlined @click.stop="editIndicator(dataRef)" />
                     </a-tooltip>
-                    <a-tooltip v-if="personalIndicatorPermissions?.delete" title="删除">
+                    <a-tooltip
+                      v-if="personalIndicatorPermissions?.delete"
+                      title="删除"
+                    >
                       <DeleteOutlined @click.stop="deleteIndicator(dataRef)" />
                     </a-tooltip>
                   </div>
@@ -93,18 +153,30 @@
     </div>
 
     <!-- 折叠状态的缩略显示 -->
-    <div v-else class="collapsed-content">
+    <div
+      v-else
+      class="collapsed-content"
+    >
       <div class="collapsed-icon">
         <BarChartOutlined />
       </div>
-      <div class="collapsed-text">指标</div>
+      <div class="collapsed-text">
+        指标
+      </div>
     </div>
 
     <!-- 悬浮的新增指标按钮 -->
     <div
-      v-if="!collapsed && shouldShowAddButton" :style="{ left: (panelWidth - 58) + 'px' }"
-      class="floating-add-button">
-      <a-button shape="circle" size="large" type="primary" @click="addIndicator">
+      v-if="!collapsed && shouldShowAddButton"
+      :style="{ left: (panelWidth - 58) + 'px' }"
+      class="floating-add-button"
+    >
+      <a-button
+        shape="circle"
+        size="large"
+        type="primary"
+        @click="addIndicator"
+      >
         <PlusOutlined />
       </a-button>
     </div>
@@ -112,8 +184,6 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
-import {message, Modal} from 'ant-design-vue'
 import {
   BarChartOutlined,
   DeleteOutlined,
@@ -124,8 +194,11 @@ import {
   PlusOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
-import type {IndicatorNode} from './types'
-import {updateStatisticOrder, updateStatisticPid} from './api'
+import { message, Modal } from 'ant-design-vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
+import { updateStatisticOrder, updateStatisticPid } from './api'
+import type { IndicatorNode } from './types'
 
 // 权限接口定义
 interface IndicatorPermissions {
@@ -850,7 +923,7 @@ watch(
         emit('delete-dashboard', leafNodeIdsUnchecked)
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
 // 监听通用指标选中状态变化，触发dashboard事件
@@ -945,7 +1018,7 @@ watch(
         emit('delete-dashboard', leafNodeIdsUnchecked)
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
 // 监听props中选中状态的变化
@@ -963,7 +1036,7 @@ watch(
         })
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
 watch(
@@ -980,7 +1053,7 @@ watch(
         })
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
 // 监听props中展开状态的变化
@@ -991,7 +1064,7 @@ watch(
         expandedCommonKeys.value = [...newVal]
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
 watch(
@@ -1001,7 +1074,7 @@ watch(
         expandedPersonalKeys.value = [...newVal]
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
 // 按order字段排序节点数组

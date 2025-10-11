@@ -13,13 +13,19 @@
         :style="iconStyle"
         class="folder-icon"
       />
-      <FolderOutlined :style="iconStyle" class="folder-icon" />
+      <FolderOutlined
+        :style="iconStyle"
+        class="folder-icon"
+      />
       <span
         :style="titleStyle"
         class="folder-title"
         v-html="highlightSearchText(folderKey || '')"
-      ></span>
-      <span :style="countStyle" class="folder-count">
+      />
+      <span
+        :style="countStyle"
+        class="folder-count"
+      >
         ({{ getTotalItemCount(folderData) }})
       </span>
     </div>
@@ -42,14 +48,14 @@
         :get-sorted-folders="getSortedFolders"
         :get-table-config-by-name="getTableConfigByName"
         :selected-role="selectedRole"
-        @refresh-config="$emit('refresh-config', $event)"
-        @open-copy-modal="$emit('open-copy-modal', $event)"
-        @delete-config="$emit('delete-config', $event)"
         :get-total-item-count="getTotalItemCount"
         :highlight-search-text="highlightSearchText"
         :table-config="tableConfig"
         :table-list="tableList"
         :toggle-folder="toggleFolder"
+        @refresh-config="$emit('refresh-config', $event)"
+        @open-copy-modal="$emit('open-copy-modal', $event)"
+        @delete-config="$emit('delete-config', $event)"
       />
 
       <!-- 渲染项目 -->
@@ -62,20 +68,38 @@
         @mouseenter="onItemMouseEnter"
         @mouseleave="onItemMouseLeave"
       >
-        <div :style="getItemContentStyle()" class="item-content">
-          <FileTextOutlined :style="fileIconStyle" class="file-icon" />
-          <a-dropdown v-if="tableList.length !== 0" :trigger="['contextmenu']">
+        <div
+          :style="getItemContentStyle()"
+          class="item-content"
+        >
+          <FileTextOutlined
+            :style="fileIconStyle"
+            class="file-icon"
+          />
+          <a-dropdown
+            v-if="tableList.length !== 0"
+            :trigger="['contextmenu']"
+          >
             <span
               :style="itemLabelStyle"
               :title="item.shortLabel || item.label"
               class="item-label"
               v-html="highlightSearchText(item.shortLabel || item.label)"
-            ></span>
-            <template v-if="selectedRole === '0'" #overlay>
+            />
+            <template
+              v-if="selectedRole === '0'"
+              #overlay
+            >
               <a-menu>
                 <a-menu-item key="0">
-                  <a-popconfirm title="注意 即将恢复该配置到默认状态" @confirm="$emit('refresh-config', item.value)">
-                    <a-button type="text" size="small">
+                  <a-popconfirm
+                    title="注意 即将恢复该配置到默认状态"
+                    @confirm="$emit('refresh-config', item.value)"
+                  >
+                    <a-button
+                      type="text"
+                      size="small"
+                    >
                       恢复
                       <template #icon>
                         <UndoOutlined />
@@ -84,7 +108,11 @@
                   </a-popconfirm>
                 </a-menu-item>
                 <a-menu-item key="1">
-                  <a-button type="text" size="small" @click="$emit('open-copy-modal', item)">
+                  <a-button
+                    type="text"
+                    size="small"
+                    @click="$emit('open-copy-modal', item)"
+                  >
                     复制
                     <template #icon>
                       <CopyOutlined />
@@ -92,8 +120,14 @@
                   </a-button>
                 </a-menu-item>
                 <a-menu-item key="2">
-                  <a-popconfirm title="注意 即将删除该配置" @confirm="$emit('delete-config', item.value)">
-                    <a-button type="text" size="small">
+                  <a-popconfirm
+                    title="注意 即将删除该配置"
+                    @confirm="$emit('delete-config', item.value)"
+                  >
+                    <a-button
+                      type="text"
+                      size="small"
+                    >
                       删除
                       <template #icon>
                         <DeleteOutlined />
@@ -111,7 +145,7 @@
             :title="item.shortLabel || item.label"
             class="item-label"
             v-html="highlightSearchText(item.shortLabel || item.label)"
-          ></span>
+          />
         </div>
       </div>
     </div>
@@ -119,8 +153,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
 import { CaretDownOutlined, CaretRightOutlined, FileTextOutlined, FolderOutlined, UndoOutlined, CopyOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { computed } from 'vue'
 
 // 定义Props接口
 interface FolderComponentProps {

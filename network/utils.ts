@@ -1,4 +1,4 @@
-import {EmptyObjectType} from "@/framework/utils/type"
+import { EmptyObjectType } from '@/framework/utils/type'
 
 export const getQueryObject = function (url: string) {
   url = url || window.location.href

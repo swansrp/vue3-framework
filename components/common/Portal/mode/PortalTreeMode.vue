@@ -1,26 +1,37 @@
 <template>
   <a-tree
     :key="treeData"
-    v-model:checkedKeys="selectedTreeData"
-    :checkStrictly="props.checkStrictly"
+    v-model:checked-keys="selectedTreeData"
+    :check-strictly="props.checkStrictly"
     :checkable="props.treeCheckAble"
-    :defaultExpandAll="true"
+    :default-expand-all="true"
     :draggable="!config.readOnly && config.treeDragAble"
     :show-line="true"
     :tree-data="treeData"
     @drop="(info: AntTreeNodeDropEvent) => emit('updateTree', info)"
-    @select="(selectedKeys: any, event: { selected: boolean, selectedNodes: any, node: any, event: any }) => emit('handleTreeSelected', selectedKeys, event)">
+    @select="(selectedKeys: any, event: { selected: boolean, selectedNodes: any, node: any, event: any }) => emit('handleTreeSelected', selectedKeys, event)"
+  >
     <template #title="{ dataRef }">
       <a-dropdown :trigger="['contextmenu']">
         <span>{{ dataRef.title }}</span>
         <template #overlay>
           <a-menu @click="({ key: menuKey }) => handleMenuContext(dataRef.key, menuKey)">
-            <a-menu-item key="1">查看详情</a-menu-item>
+            <a-menu-item key="1">
+              查看详情
+            </a-menu-item>
             <template v-if="!config.readOnly">
-              <a-menu-item key="2">新增记录</a-menu-item>
-              <a-menu-item key="3">编辑记录</a-menu-item>
-              <a-menu-item key="4">复制记录</a-menu-item>
-              <a-menu-item key="5">删除记录</a-menu-item>
+              <a-menu-item key="2">
+                新增记录
+              </a-menu-item>
+              <a-menu-item key="3">
+                编辑记录
+              </a-menu-item>
+              <a-menu-item key="4">
+                复制记录
+              </a-menu-item>
+              <a-menu-item key="5">
+                删除记录
+              </a-menu-item>
             </template>
           </a-menu>
         </template>
@@ -28,14 +39,15 @@
     </template>
   </a-tree>
   <div style="margin-top: 20px">
-    <slot name="end-action"></slot>
+    <slot name="end-action" />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { TableConfigType } from '@/framework/components/common/Portal/type'
-import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+
+import { TableConfigType } from '@/framework/components/common/Portal/type'
 
 const props = withDefaults(defineProps<{
   treeCheckAble?: boolean
@@ -63,7 +75,7 @@ watch(() => props.selectedTreeData, (data: Array<any> | undefined) => {
   if (data !== undefined) {
     selectedTreeData.value = data
   }
-}, {immediate: true})
+}, { immediate: true })
 watch(
   () => selectedTreeData.value,
   (data: Array<any>) => {

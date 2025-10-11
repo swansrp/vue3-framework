@@ -1,19 +1,49 @@
 <template>
   <div style="height: calc(100% - 66px);">
     <a-layout class="role-permission-user-maintenance">
-      <a-layout-sider class="role-list-wrap" width="400">
-        <a-list :data-source="roleData" bordered class="role-list" style="height: 100%;">
+      <a-layout-sider
+        class="role-list-wrap"
+        width="400"
+      >
+        <a-list
+          :data-source="roleData"
+          bordered
+          class="role-list"
+          style="height: 100%;"
+        >
           <template #header>
-            <a-input v-model:value="inputRoleName" placeholder="请输入角色名称" @search="initAndUpdateRoleList" style="width: 276px; margin-right: 10px;" />
-            <a-button type="primary" @click="addRoleBoxVisible=true">添加</a-button>
+            <a-input
+              v-model:value="inputRoleName"
+              placeholder="请输入角色名称"
+              style="width: 276px; margin-right: 10px;"
+              @search="initAndUpdateRoleList"
+            />
+            <a-button
+              type="primary"
+              @click="addRoleBoxVisible=true"
+            >
+              添加
+            </a-button>
           </template>
           <template #renderItem="{ item, index }">
-            <a-list-item @click="queryRoleDetail(item, index)" :class="{'activate-item': activateItemIndex === index}">
+            <a-list-item
+              :class="{'activate-item': activateItemIndex === index}"
+              @click="queryRoleDetail(item, index)"
+            >
               <div class="a-list-item-content">
                 {{ item.roleName }}
                 <div>
-                  <a-button size="small" type="primary" @click="onEditRole(item)">编辑</a-button>
-                  <delete-pop-confirm @delete-event="handleDeleteRole(item.roleId)" v-if="item.status !== -1" />
+                  <a-button
+                    size="small"
+                    type="primary"
+                    @click="onEditRole(item)"
+                  >
+                    编辑
+                  </a-button>
+                  <delete-pop-confirm
+                    v-if="item.status !== -1"
+                    @delete-event="handleDeleteRole(item.roleId)"
+                  />
                 </div>
               </div>
             </a-list-item>
@@ -21,44 +51,113 @@
         </a-list>
       </a-layout-sider>
       <a-layout-content style="min-width: 710px">
-        <a-tabs v-if="showPermissionTreeTab" type="editable-card" hideAdd @change="tabChange" style="height: 100%;">
-          <a-tab-pane :key="VIEW" tab="查看权限树" :closable="false">
+        <a-tabs
+          v-if="showPermissionTreeTab"
+          type="editable-card"
+          hide-add
+          style="height: 100%;"
+          @change="tabChange"
+        >
+          <a-tab-pane
+            :key="VIEW"
+            tab="查看权限树"
+            :closable="false"
+          >
             <a-tree
-              :defaultExpandAll="true"
+              v-if="rolePermissionTreeData.length"
+              :default-expand-all="true"
               :show-line="true"
               :tree-data="rolePermissionTreeData"
-              v-if="rolePermissionTreeData.length">
-              <template #title="{ dataRef }"><Icon :icon="dataRef.icon" />{{ dataRef.title }}</template>
+            >
+              <template #title="{ dataRef }">
+                <Icon :icon="dataRef.icon" />{{ dataRef.title }}
+              </template>
             </a-tree>
             <a-empty v-else />
           </a-tab-pane>
-          <a-tab-pane :key="EDIT" tab="编辑权限树" :closable="false">
+          <a-tab-pane
+            :key="EDIT"
+            tab="编辑权限树"
+            :closable="false"
+          >
             <a-tree
-              :defaultExpandAll="true"
+              v-if="completeRoleTreeData.length"
+              v-model:checked-keys="roleTreeCheckedKeys"
+              :default-expand-all="true"
               :show-line="true"
               checkable
               check-strictly
               :tree-data="completeRoleTreeData"
               @check="checkRoleTreeNode"
-              v-if="completeRoleTreeData.length"
-              v-model:checkedKeys="roleTreeCheckedKeys">
-              <template #title="{ dataRef }"><Icon :icon="dataRef.icon" />{{ dataRef.title }}</template>
+            >
+              <template #title="{ dataRef }">
+                <Icon :icon="dataRef.icon" />{{ dataRef.title }}
+              </template>
             </a-tree>
           </a-tab-pane>
-          <a-tab-pane :key="LINK" tab="关联用户" :closable="false">
-            <department-and-staff-select layout-mode="vertical" :width="610" v-model:staffListValue="staffListValue" :is-multiple="true" />
+          <a-tab-pane
+            :key="LINK"
+            tab="关联用户"
+            :closable="false"
+          >
+            <department-and-staff-select
+              v-model:staff-list-value="staffListValue"
+              layout-mode="vertical"
+              :width="610"
+              :is-multiple="true"
+            />
             <div style="padding-top: 4px; margin-bottom: 8px">
-              <a-button :disabled="staffListValue.length === 0" @click="handleAddRoleUser" type="primary" style="width: 200px;margin-left: 70px;">添加</a-button>
-              <a-button :disabled="staffListValue.length === 0" @click="handleDeleteRoleUser" type="primary" danger style="width: 200px;margin-left: 70px;">解绑</a-button>
+              <a-button
+                :disabled="staffListValue.length === 0"
+                type="primary"
+                style="width: 200px;margin-left: 70px;"
+                @click="handleAddRoleUser"
+              >
+                添加
+              </a-button>
+              <a-button
+                :disabled="staffListValue.length === 0"
+                type="primary"
+                danger
+                style="width: 200px;margin-left: 70px;"
+                @click="handleDeleteRoleUser"
+              >
+                解绑
+              </a-button>
             </div>
-            <a-card size="small" title="已绑定用户">
+            <a-card
+              size="small"
+              title="已绑定用户"
+            >
               <template #extra>
-                <a-input-search v-model:value="searchUserName" @search="handleSearchUser" style="width: 200px;margin-right: 10px;" enter-button />
-                <delete-pop-confirm btn-content="解绑所有用户" pop-content="确认解绑全部用户吗？该操作不可恢复！" @delete-event="handleUnbindAllRoleUser" size="middle" />
+                <a-input-search
+                  v-model:value="searchUserName"
+                  style="width: 200px;margin-right: 10px;"
+                  enter-button
+                  @search="handleSearchUser"
+                />
+                <delete-pop-confirm
+                  btn-content="解绑所有用户"
+                  pop-content="确认解绑全部用户吗？该操作不可恢复！"
+                  size="middle"
+                  @delete-event="handleUnbindAllRoleUser"
+                />
               </template>
               <a-empty v-if="!userList.length" />
-              <div v-else class="tag-box">
-                <a-tag v-for="user in userList" :key="user.value" color="blue" closable @close="handleUnbindRoleUser(user.value)" style="margin-top: 5px">{{ user.label }}</a-tag>
+              <div
+                v-else
+                class="tag-box"
+              >
+                <a-tag
+                  v-for="user in userList"
+                  :key="user.value"
+                  color="blue"
+                  closable
+                  style="margin-top: 5px"
+                  @close="handleUnbindRoleUser(user.value)"
+                >
+                  {{ user.label }}
+                </a-tag>
               </div>
             </a-card>
           </a-tab-pane>
@@ -68,16 +167,35 @@
         </div>
       </a-layout-content>
     </a-layout>
-    <dialog-box title="添加角色" v-model:visible="addRoleBoxVisible" :width="600">
+    <dialog-box
+      v-model:visible="addRoleBoxVisible"
+      title="添加角色"
+      :width="600"
+    >
       <add-and-edit-role-form @callback="handleAddRole" />
     </dialog-box>
-    <dialog-box title="编辑角色" v-model:visible="editRoleBoxVisible" :width="600">
-      <add-and-edit-role-form @callback="handleEditRole" :form-data="currentRoleDate" />
+    <dialog-box
+      v-model:visible="editRoleBoxVisible"
+      title="编辑角色"
+      :width="600"
+    >
+      <add-and-edit-role-form
+        :form-data="currentRoleDate"
+        @callback="handleEditRole"
+      />
     </dialog-box>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import * as _ from 'lodash'
+import { Ref } from 'vue'
+
+import { initRoleData, RoleDataType } from '../type'
+import AddAndEditRoleForm from './AddAndEditRoleForm/index.vue'
+
+import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
 import {
   addRole,
   bindRolePermission,
@@ -87,17 +205,11 @@ import {
   getRolePermissionListById,
   getRolePermissionTree,
   unbindRolePermission
-} from "@/framework/apis/admin/rolePermission"
-import {Ref} from "vue"
-import {initRoleData, RoleDataType} from "../type"
-import * as _ from "lodash";
-import {EDIT, LINK, QUERY_INTERVAL, VIEW} from "@/framework/utils/constant"
-import AddAndEditRoleForm from './AddAndEditRoleForm/index.vue'
-import {getCompletePermissionTree} from "@/framework/apis/admin/navEdit"
-import {DataNode} from "ant-design-vue/es/vc-tree/interface"
-import {bindRoleUserList, getRoleUserList, unbindRoleUser, unbindRoleUserList} from "@/framework/apis/admin/roleUser";
-import {ValueLabelArray} from "@/framework/utils/type";
-import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
+} from '@/framework/apis/admin/rolePermission'
+import { bindRoleUserList, getRoleUserList, unbindRoleUser, unbindRoleUserList } from '@/framework/apis/admin/roleUser'
+import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
+import { EDIT, LINK, QUERY_INTERVAL, VIEW } from '@/framework/utils/constant'
+import { ValueLabelArray } from '@/framework/utils/type'
 
 let inputRoleName: Ref<string> = ref('')
 let activateItemIndex:Ref<number> = ref(-1)

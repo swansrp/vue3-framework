@@ -1,31 +1,38 @@
 <template>
-  <ul v-if="isNotEmpty(args.column)" class="popup">
+  <ul
+    v-if="isNotEmpty(args.column)"
+    class="popup"
+  >
     <template v-if="isNotEmpty(args.recordIndexs)">
       <li
         v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
         class="popup-item"
-        @click="() => emit('resetCell', args)">
+        @click="() => emit('resetCell', args)"
+      >
         <history-outlined />
         撤销修改
       </li>
       <li
         v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
         class="popup-item"
-        @click="() => emit('saveCell', args)">
+        @click="() => emit('saveCell', args)"
+      >
         <save-outlined />
         保存单元格
       </li>
       <li
         v-if="!config.readOnly && prop.isRowUpdate(args.recordIndexs[0])"
         class="popup-item"
-        @click="() => emit('saveRow', args)">
+        @click="() => emit('saveRow', args)"
+      >
         <delivered-procedure-outlined />
         保存整行
       </li>
       <li
         v-if="!prop.isRowUpdate(args.recordIndexs[0])"
         class="popup-item"
-        @click="() => emit('detailRow', args)">
+        @click="() => emit('detailRow', args)"
+      >
         <search-outlined />
         查看详情
       </li>
@@ -33,7 +40,8 @@
     <li
       v-if="association"
       class="popup-item"
-      @click="() => emit('association', args)">
+      @click="() => emit('association', args)"
+    >
       <deployment-unit-outlined />
       关联信息
     </li>
@@ -41,21 +49,24 @@
       <li
         v-if="prop.rowAllowEdit(args) && config.editModalAble"
         class="popup-item"
-        @click="() => emit('editRow', args)">
+        @click="() => emit('editRow', args)"
+      >
         <form-outlined />
         编辑记录
       </li>
       <li
         v-if="config.addModalAble"
         class="popup-item"
-        @click="() => emit('copyRow', args)">
+        @click="() => emit('copyRow', args)"
+      >
         <copy-outlined />
         复制记录
       </li>
       <li
         v-if="prop.rowAllowDelete(args) && config.deleteAble"
         class="popup-item"
-        @click="() => emit('deleteRow', args)">
+        @click="() => emit('deleteRow', args)"
+      >
         <delete-outlined />
         删除记录
       </li>
@@ -74,8 +85,9 @@ import {
   SaveOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue'
+
 import { TableConfigType } from '@/framework/components/common/Portal/type'
-import { isNotEmpty } from "@/framework/utils/common";
+import { isNotEmpty } from '@/framework/utils/common'
 
 const prop = defineProps<{
   args: any
@@ -96,7 +108,7 @@ const emit = defineEmits<{
   (e: 'deleteRow', args: any): void
   (e: 'association', args: any): void
 }>()
-const {args, config, association} = toRefs(prop)
+const { args, config, association } = toRefs(prop)
 </script>
 
 <style lang="less" scoped>

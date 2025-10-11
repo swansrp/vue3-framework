@@ -2,15 +2,20 @@
   <dialog-box
     v-model:visible="_show"
     :title="config.title"
-    is-full>
-    <content-layout :width="400" style="margin-top: 20px">
+    is-full
+  >
+    <content-layout
+      :width="400"
+      style="margin-top: 20px"
+    >
       <template #side>
         <portal
           :advance-condition="groupAdvanceCondition"
           :bind-default-value="defaultValue"
           table-id="SysPortalIndicatorGroup"
           tree-mode
-          @selected-data="onSelectedData" />
+          @selected-data="onSelectedData"
+        />
       </template>
       <template #content>
         <portal
@@ -23,14 +28,21 @@
           style="margin-top: 10px"
           table-id="SysPortalIndicator"
         >
-          <template #left-btns v-if="!indicatorData">
+          <template
+            v-if="!indicatorData"
+            #left-btns
+          >
             <a-tooltip placement="top">
               <template #title>
                 <span>字典指标</span>
               </template>
               <a-button
-                shape="circle" size="middle" style="margin-left: 3px" type="primary"
-                @click="showDictGenerator = true">
+                shape="circle"
+                size="middle"
+                style="margin-left: 3px"
+                type="primary"
+                @click="showDictGenerator = true"
+              >
                 <template #icon>
                   <ThunderboltOutlined />
                 </template>
@@ -89,16 +101,20 @@
 
 <script lang="ts" setup>
 
-import { buildCondition } from '@/framework/components/common/Portal/utils'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { ThunderboltOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+
+import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
+import IndicatorForm from './components/IndicatorForm.vue'
+
+import { addEntity, updateEntitySelective } from '@/framework/apis/portal'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
-import { message } from 'ant-design-vue'
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
-import { addEntity, updateEntitySelective } from '@/framework/apis/portal'
-import IndicatorForm from './components/IndicatorForm.vue'
-import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
-import { ThunderboltOutlined } from '@ant-design/icons-vue'
+
+
 
 const props = withDefaults(
   defineProps<{

@@ -1,6 +1,7 @@
-import { Ref } from 'vue'
-import { localStorageMethods } from '@/framework/utils/common'
 import { ColumnsType } from 'ant-design-vue/es/table'
+import { Ref } from 'vue'
+
+import { localStorageMethods } from '@/framework/utils/common'
 
 const updateColumns = (updatedColumns: Ref, newColumns: Ref, tableId: Ref | undefined) => {
   if (tableId === undefined) throw new Error('请先为 surely table 设置 tableId 后在使用其表头拖拽功能')

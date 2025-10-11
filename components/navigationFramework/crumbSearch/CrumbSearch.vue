@@ -1,19 +1,25 @@
 <template>
   <div class="crumb-search">
-    <a-breadcrumb class="bread-crumb" separator=">">
-      <a-breadcrumb-item v-for="item in breadCrumbData" :key="item">
+    <a-breadcrumb
+      class="bread-crumb"
+      separator=">"
+    >
+      <a-breadcrumb-item
+        v-for="item in breadCrumbData"
+        :key="item"
+      >
         {{ item }}
       </a-breadcrumb-item>
     </a-breadcrumb>
     <!--定义插槽，用于存放搜索框-->
-    <slot></slot>
+    <slot />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { useTabStore } from "@/framework/store/nav"
-import {useRouteStore} from "@/framework/store/route"
-import pinia from "@/framework/store";
+import pinia from '@/framework/store'
+import { useTabStore } from '@/framework/store/nav'
+import { useRouteStore } from '@/framework/store/route'
 
 const store = useTabStore(pinia)
 const routeStore = useRouteStore(pinia)
@@ -23,7 +29,7 @@ const currentRoutePath = routeStore.currentRoutePath
 const titlePath = routeStore.routePath2RouteTitlePathMap[currentRoutePath as keyof typeof routeStore.routePath2RouteTitlePathMap]
 let breadCrumbData = ref(titlePath ? titlePath.split('/') : [])
 
-watch(() => store.titlePath, () => breadCrumbData.value =  store.titlePath || [">"])
+watch(() => store.titlePath, () => breadCrumbData.value =  store.titlePath || ['>'])
 
 </script>
 

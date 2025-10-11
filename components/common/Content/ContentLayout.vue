@@ -6,16 +6,19 @@
       class="side-wrapper"
     >
       <div style="margin: 10px">
-        <slot name="side"></slot>
+        <slot name="side" />
       </div>
     </a-layout-sider>
-    <div id="resize" class="resize-container">
+    <div
+      id="resize"
+      class="resize-container"
+    >
       <!-- 拖拽控制条 -->
       <div class="drag-handle">
         <div class="drag-indicator">
-          <div class="drag-dot"></div>
-          <div class="drag-dot"></div>
-          <div class="drag-dot"></div>
+          <div class="drag-dot" />
+          <div class="drag-dot" />
+          <div class="drag-dot" />
         </div>
       </div>
       
@@ -26,7 +29,8 @@
           class="collapse-button collapse-button-expand"
           type="text"
           size="small"
-          @click="toggleCollapsed">
+          @click="toggleCollapsed"
+        >
           <RightOutlined />
         </a-button>
         <a-button
@@ -34,23 +38,25 @@
           class="collapse-button collapse-button-collapse"
           type="text"
           size="small"
-          @click="toggleCollapsed">
+          @click="toggleCollapsed"
+        >
           <LeftOutlined />
         </a-button>
       </div>
     </div>
     <a-layout-content
-      style="margin-left: 10px; margin-right: 10px; height: 100%; overflow: auto">
-      <slot name="content"></slot>
+      style="margin-left: 10px; margin-right: 10px; height: 100%; overflow: auto"
+    >
+      <slot name="content" />
     </a-layout-content>
   </a-layout>
-
 </template>
 
 <script lang="ts" setup>
-import {LeftOutlined, RightOutlined} from '@ant-design/icons-vue'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { Ref } from 'vue'
+
 import bus, { PORTAL_RESIZE } from '@/framework/mitt'
-import {Ref} from 'vue'
 
 const props = withDefaults(
   defineProps<{

@@ -1,5 +1,8 @@
 <template>
-  <div v-if="!collapsed" class="left-panel">
+  <div
+    v-if="!collapsed"
+    class="left-panel"
+  >
     <div class="panel-header">
       <h3>指标树</h3>
     </div>
@@ -18,12 +21,12 @@
 
       <!-- 指标树 -->
       <a-directory-tree
-        v-model:expandedKeys="expandedKeys"
+        v-model:expanded-keys="expandedKeys"
         :allow-drop="() => false"
         :draggable="true"
         :tree-data="treeDataFormatted"
         class="indicator-tree"
-        showIcon
+        show-icon
         @dragend="onDragEnd"
         @dragenter="onDragEnter"
         @dragover="onDragOver"
@@ -37,8 +40,7 @@
             :data-key="key"
             :data-title="title"
             v-html="title"
-          >
-          </span>
+          />
         </template>
       </a-directory-tree>
     </div>
@@ -46,8 +48,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref, toRefs, watch } from 'vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
+import { computed, onMounted, onUnmounted, ref, toRefs, watch } from 'vue'
 
 // 接口定义
 interface IndicatorItem {

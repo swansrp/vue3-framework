@@ -2,43 +2,60 @@
   <div class="hr-indicator-dashboard">
     <!-- 左侧指标树面板 -->
     <indicator-tree-panel
-      :collapsed="leftPanelCollapsed" :indicator-tree-data="indicatorTreeData"
-      @drag-start="onDragStart" @drag-end="onDragEnd" />
+      :collapsed="leftPanelCollapsed"
+      :indicator-tree-data="indicatorTreeData"
+      @drag-start="onDragStart"
+      @drag-end="onDragEnd"
+    />
 
     <!-- 右侧配置面板 -->
     <config-panel
-      v-model:data-metrics="dataMetrics" v-model:filter-dimension="filterDimension"
-      v-model:first-dimension="firstDimension" v-model:second-dimension="secondDimension"
-      v-model:selected-filter-items="selectedFilterItems" :available-data-types="availableDataTypes"
-      :left-panel-collapsed="leftPanelCollapsed" @toggle-left-panel="toggleLeftPanel" @generate-chart="generateChart"
-      @clear-chart="clearChart" @reset-config="$emit('reset-config')" />
+      v-model:data-metrics="dataMetrics"
+      v-model:filter-dimension="filterDimension"
+      v-model:first-dimension="firstDimension"
+      v-model:second-dimension="secondDimension"
+      v-model:selected-filter-items="selectedFilterItems"
+      :available-data-types="availableDataTypes"
+      :left-panel-collapsed="leftPanelCollapsed"
+      @toggle-left-panel="toggleLeftPanel"
+      @generate-chart="generateChart"
+      @clear-chart="clearChart"
+      @reset-config="$emit('reset-config')"
+    />
 
     <!-- 中间展示区域 -->
     <ChartDisplayArea
-      ref="chartDisplayAreaRef" :config="config" :received-data="dimensionIndicatorsFilter"
-      class="chart-display-area" />
+      ref="chartDisplayAreaRef"
+      :config="config"
+      :received-data="dimensionIndicatorsFilter"
+      class="chart-display-area"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, provide, ref, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
+import { onMounted, provide, ref, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
+
+import ConfigPanel from './indicator/config/ConfigPanel.vue'
+import ChartDisplayArea from './indicator/dashboard/ChartDisplayArea.vue'
+import IndicatorTreePanel from './indicator/tree/IndicatorTreePanel.vue'
+
 import { getIndicatorConfig } from '@/framework/apis/portal'
-import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import { getPortalConfig } from '@/framework/apis/portal/config'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import {
   ConditionGroup,
   DataMetric,
   DimensionIndicatorsFilter,
   IndicatorGroup as TalentIndicatorGroup
 } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
-import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
 // 导入子组件
-import IndicatorTreePanel from './indicator/tree/IndicatorTreePanel.vue'
-import ConfigPanel from './indicator/config/ConfigPanel.vue'
-import ChartDisplayArea from './indicator/dashboard/ChartDisplayArea.vue'
-import { getPortalConfig } from "@/framework/apis/portal/config"
-import { useRouter } from 'vue-router'
+
+
 
 // 接口定义
 interface IndicatorItem {
@@ -187,16 +204,16 @@ const convertToTalentIndicatorGroup = (group: IndicatorGroup | null): TalentIndi
 // 解析单位配置函数：解析格式如"2,10000"的配置
 const parseUnitConfig = (unitConfig: string): { fix: number; unit: number; displayUnit: string } => {
   if (!unitConfig || typeof unitConfig !== 'string') {
-    return { fix: 2, unit: 1, displayUnit: '元' };
+    return { fix: 2, unit: 1, displayUnit: '元' }
   }
 
-  const parts = unitConfig.split(',');
+  const parts = unitConfig.split(',')
   if (parts.length !== 2) {
-    return { fix: 2, unit: 1, displayUnit: '元' };
+    return { fix: 2, unit: 1, displayUnit: '元' }
   }
 
-  const fix = parseInt(parts[0], 10) || 2;
-  const unit = parseInt(parts[1], 10) || 1;
+  const fix = parseInt(parts[0], 10) || 2
+  const unit = parseInt(parts[1], 10) || 1
 
   // 根据单位数值生成显示单位
   const unitMap: Record<number, string> = {
@@ -205,24 +222,24 @@ const parseUnitConfig = (unitConfig: string): { fix: number; unit: number; displ
     100: '百元',
     1000: '千元',
     10000: '万元'
-  };
+  }
 
-  const displayUnit = unitMap[unit] || `${unit}元`;
+  const displayUnit = unitMap[unit] || `${unit}元`
 
-  return { fix, unit, displayUnit };
-};
+  return { fix, unit, displayUnit }
+}
 
 // 单位转换函数：将数字单位转换为中文单位（保持向后兼容）
 const convertUnitToChineseUnit = (unitValue: string | number): string => {
   if (typeof unitValue === 'string' && unitValue.includes(',')) {
-    const { displayUnit } = parseUnitConfig(unitValue);
-    return displayUnit;
+    const { displayUnit } = parseUnitConfig(unitValue)
+    return displayUnit
   }
 
-  const numericUnit = typeof unitValue === 'string' ? parseInt(unitValue, 10) : unitValue;
+  const numericUnit = typeof unitValue === 'string' ? parseInt(unitValue, 10) : unitValue
 
   if (isNaN(numericUnit)) {
-    return unitValue?.toString() || '';
+    return unitValue?.toString() || ''
   }
 
   const unitMap: Record<number, string> = {
@@ -231,16 +248,16 @@ const convertUnitToChineseUnit = (unitValue: string | number): string => {
     100: '百元',
     1000: '千元',
     10000: '万元'
-  };
+  }
 
-  return unitMap[numericUnit] || `${numericUnit}元`;
-};
+  return unitMap[numericUnit] || `${numericUnit}元`
+}
 
 // 转换函数：将DataMetricUI转换为DataMetric
 const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
   // 解析单位配置以获取格式化参数
-  const unitConfig = metric.unitConfig; // 不设置默认值，只有金额字段才有值
-  const { fix, unit: unitDivisor } = unitConfig ? parseUnitConfig(unitConfig) : { fix: 0, unit: 1 };
+  const unitConfig = metric.unitConfig // 不设置默认值，只有金额字段才有值
+  const { fix, unit: unitDivisor } = unitConfig ? parseUnitConfig(unitConfig) : { fix: 0, unit: 1 }
 
   return {
     dataName: metric.dataName,
@@ -253,8 +270,8 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
     unitConfig: unitConfig, // 使用处理后的unitConfig（金额字段有值，其他字段为undefined）
     formatConfig: { fix, unitDivisor }, // 添加格式化配置
     itemColors: metric.itemColors || {} as Record<string, string>
-  };
-};
+  }
+}
 
 // 转换函数：将selectedFilterItems转换为ConditionGroup
 const convertToConditionGroup = (filterItems: string[], filterDimension: IndicatorGroup | null): ConditionGroup => {
@@ -357,12 +374,12 @@ const generateChart = async () => {
   }
 
   // 转换为DimensionIndicatorsFilter类型并输出
-  const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value);
-  const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value);
+  const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value)
+  const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value)
 
   if (!firstDimensionConverted) {
-    message.error('一级维度转换失败，请检查数据格式');
-    return;
+    message.error('一级维度转换失败，请检查数据格式')
+    return
   }
 
   const filterData: DimensionIndicatorsFilter = {
@@ -373,19 +390,19 @@ const generateChart = async () => {
   }
 
   // 更新维度指标过滤器数据
-  dimensionIndicatorsFilter.value = filterData;
+  dimensionIndicatorsFilter.value = filterData
 
   // 等待下一个tick，确保props已经传递给子组件
-  await nextTick();
+  await nextTick()
 
   // 调用子组件的生成图表方法
   if (chartDisplayAreaRef.value) {
     try {
-      await chartDisplayAreaRef.value.generateChart();
+      await chartDisplayAreaRef.value.generateChart()
       message.success('图表生成成功')
     } catch (error) {
-      console.error('图表生成失败:', error);
-      message.error('图表生成失败，请检查数据配置或网络连接');
+      console.error('图表生成失败:', error)
+      message.error('图表生成失败，请检查数据配置或网络连接')
     }
   } else {
     message.error('图表组件未找到')
@@ -396,9 +413,9 @@ const generateChart = async () => {
 const clearChart = () => {
   if (chartDisplayAreaRef.value) {
     try {
-      chartDisplayAreaRef.value.clearChart();
+      chartDisplayAreaRef.value.clearChart()
     } catch (error) {
-      console.error('清除图表失败:', error);
+      console.error('清除图表失败:', error)
     }
   }
 }

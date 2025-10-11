@@ -10,7 +10,8 @@
     }]"
     list-mode
     single-select
-    table-id="SysDictType" />
+    table-id="SysDictType"
+  />
 </template>
 
 <script lang="ts" setup>

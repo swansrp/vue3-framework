@@ -1,11 +1,12 @@
-import router from '@/framework/router'
 import { defineStore } from 'pinia'
+import { RouteLocationNormalized } from 'vue-router'
+
 import { getRouteTree } from '@/framework/apis/nav/route'
-import { MAIN_CONTENT } from '@/framework/utils/constant'
 import { NavListType } from '@/framework/components/navigationFramework/navMenu/type'
+import router from '@/framework/router'
 import pinia from '@/framework/store/index'
 import { setField } from '@/framework/utils/common'
-import { RouteLocationNormalized } from 'vue-router'
+
 export const getComponent = (component: string) => {
   const modules = import.meta.glob('@/**/*.vue')
   if (component.endsWith('.vue')) {

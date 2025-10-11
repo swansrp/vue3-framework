@@ -2,9 +2,14 @@
   <a-select
     v-model:value="_value"
     style="width: 60px; margin-left: -30px"
-    @change="onChange">
-    <a-select-option value="0">与</a-select-option>
-    <a-select-option value="1">或</a-select-option>
+    @change="onChange"
+  >
+    <a-select-option value="0">
+      与
+    </a-select-option>
+    <a-select-option value="1">
+      或
+    </a-select-option>
   </a-select>
 </template>
 

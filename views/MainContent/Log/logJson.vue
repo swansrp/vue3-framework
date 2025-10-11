@@ -7,17 +7,31 @@
     title="JSON格式化"
   >
     <template #extra>
-      <a-button style="margin-right: 8px" @click="emit('update:show', false)">关闭</a-button>
-      <a-button type="primary" @click="onCopy">复制</a-button>
+      <a-button
+        style="margin-right: 8px"
+        @click="emit('update:show', false)"
+      >
+        关闭
+      </a-button>
+      <a-button
+        type="primary"
+        @click="onCopy"
+      >
+        复制
+      </a-button>
     </template>
-    <b-ace-editor v-model="data" height="100%" theme="chrome" />
+    <b-ace-editor
+      v-model="data"
+      height="100%"
+      theme="chrome"
+    />
   </a-drawer>
 </template>
 
 <script lang="ts" setup>
 
-import { ref } from 'vue'
 import BAceEditor from 'bin-editor-next'
+import { ref } from 'vue'
 import 'brace/ext/emmet'
 import 'brace/ext/language_tools'
 import 'brace/mode/json'

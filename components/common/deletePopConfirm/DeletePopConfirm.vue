@@ -1,21 +1,31 @@
 <template>
   <a-popconfirm
     placement="left"
-    :okButtonProps="{danger: true}"
-    @confirm="handleDeleteEvent">
+    :ok-button-props="{danger: true}"
+    @confirm="handleDeleteEvent"
+  >
     <template #icon>
       <WarningFilled style="color: red;font-size: 21px;" />
     </template>
     <template #title>
-      <div class="pop-confirm-title">{{ popContent }}</div>
+      <div class="pop-confirm-title">
+        {{ popContent }}
+      </div>
     </template>
-    <a-button :class="type ? '' : 'item-delete-btn'" :size="size" :type="type" danger>{{ btnContent }}</a-button>
+    <a-button
+      :class="type ? '' : 'item-delete-btn'"
+      :size="size"
+      :type="type"
+      danger
+    >
+      {{ btnContent }}
+    </a-button>
   </a-popconfirm>
 </template>
 
 <script lang="ts" setup>
-import {WarningFilled} from "@ant-design/icons-vue"
-import {Ref} from "vue"
+import { WarningFilled } from '@ant-design/icons-vue'
+import { Ref } from 'vue'
 
 const props = defineProps<{size?: string, btnContent?: string, popContent?: string, type?: string}>()
 const size: Ref<string> = ref(props.size || 'small')

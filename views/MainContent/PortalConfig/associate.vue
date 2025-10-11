@@ -1,7 +1,8 @@
 <template>
   <portal
     :default-sort-column="[{property:'displayOrder', type:1}]"
-    table-id="SysPortalAssociate" />
+    table-id="SysPortalAssociate"
+  />
 </template>
 
 <script lang="ts" setup>

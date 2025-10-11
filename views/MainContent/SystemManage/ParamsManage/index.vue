@@ -1,45 +1,84 @@
 <template>
-  <div ref="paramsConfigSpace" class="params-config-space">
-    <a-button type="primary" @click="refresh" style="position: absolute; right: 20px;top: 15px;">刷新</a-button>
+  <div
+    ref="paramsConfigSpace"
+    class="params-config-space"
+  >
+    <a-button
+      type="primary"
+      style="position: absolute; right: 20px;top: 15px;"
+      @click="refresh"
+    >
+      刷新
+    </a-button>
     <div>
       <surely-table
         :columns="surelyTableColumns"
         :data-source="surelyTableData"
         :table-height="tableHeight"
         :table-width="tableWidth"
-        @change="tableChange"
         table-id="paramsTemplateTable"
+        @change="tableChange"
         @handle-search="handleSearch"
-        @handle-reset="handleReset">
+        @handle-reset="handleReset"
+      >
         <template #bodyCell="{ column, record }">
           <template v-if="(column as any).dataIndex === 'operation'">
             <div class="table-operation-btns">
-              <a-button size="small" type="primary" @click="handleEditParams(record)">编辑</a-button>
+              <a-button
+                size="small"
+                type="primary"
+                @click="handleEditParams(record)"
+              >
+                编辑
+              </a-button>
               <delete-pop-confirm @delete-event="handleDeleteParams(record)" />
             </div>
           </template>
         </template>
-        <template #customFilterIcon><search-outlined /></template>
+        <template #customFilterIcon>
+          <search-outlined />
+        </template>
       </surely-table>
       <a-pagination
         v-model:current="currentPage"
-        v-model:pageSize="pageSize"
+        v-model:page-size="pageSize"
         :page-size-options="pageSizeOptions"
         :total="totalPageNumber"
         class="pagination"
         show-quick-jumper
         show-size-changer
-        @change="paginationChange" />
+        @change="paginationChange"
+      />
     </div>
-    <dialog-box v-model:visible="paramsBoxVisible" title="参数修改" :width="500">
-      <a-form :model="paramsForm" @finish="editParams" labelAlign="right">
+    <dialog-box
+      v-model:visible="paramsBoxVisible"
+      title="参数修改"
+      :width="500"
+    >
+      <a-form
+        :model="paramsForm"
+        label-align="right"
+        @finish="editParams"
+      >
         <a-form-item
-          label="参数键值" name="configValue" required
-          :rules="[{required: true, message: '请输入参数键值!'}]">
-          <a-input v-model:value="paramsForm['configValue']" placeholder="请输入手机号" />
+          label="参数键值"
+          name="configValue"
+          required
+          :rules="[{required: true, message: '请输入参数键值!'}]"
+        >
+          <a-input
+            v-model:value="paramsForm['configValue']"
+            placeholder="请输入手机号"
+          />
         </a-form-item>
         <a-form-item>
-          <a-button html-type="submit" type="primary" style="float: right;width: 370px;">提交</a-button>
+          <a-button
+            html-type="submit"
+            type="primary"
+            style="float: right;width: 370px;"
+          >
+            提交
+          </a-button>
         </a-form-item>
       </a-form>
     </dialog-box>
@@ -47,22 +86,24 @@
 </template>
 
 <script lang="ts" setup>
-import {Ref} from "vue";
-import * as _ from "lodash";
-import {deleteParams, queryParams, refreshParams, updateParams} from "@/framework/apis/params";
-import surelyTableColumns from "./constant";
-import {SearchOutlined} from "@ant-design/icons-vue";
-import {DataNode} from "ant-design-vue/es/vc-tree/interface";
-import {DEFAULT_PAGE_SIZE_OPTION} from "@/framework/utils/constant";
-import {QueryConditionType, SORT_TYPE, SortObjType} from "@/framework/components/common/surelyTable/contant";
-import SurelyTable from "@/framework/components/common/surelyTable/SurelyTable.vue";
-import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
-import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
-import {useRouter} from 'vue-router'
-import {updateTableSize} from "@/framework/utils/common";
+import { SearchOutlined } from '@ant-design/icons-vue'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import * as _ from 'lodash'
+import { Ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const { currentRoute } = useRouter();
-const route = currentRoute.value;
+import surelyTableColumns from './constant'
+
+import { deleteParams, queryParams, refreshParams, updateParams } from '@/framework/apis/params'
+import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
+import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
+import { QueryConditionType, SORT_TYPE, SortObjType } from '@/framework/components/common/surelyTable/contant'
+import SurelyTable from '@/framework/components/common/surelyTable/SurelyTable.vue'
+import { updateTableSize } from '@/framework/utils/common'
+import { DEFAULT_PAGE_SIZE_OPTION } from '@/framework/utils/constant'
+
+const { currentRoute } = useRouter()
+const route = currentRoute.value
 
 const baseDomain = route.query ? route.query.domain ? '/' + route.query.domain : undefined : undefined
 
@@ -76,19 +117,19 @@ let sortList: SortObjType[] = []
 let myQueryCondition: QueryConditionType | {} = {}
 
 let paramsBoxVisible: Ref<boolean> = ref(false)
-let paramsForm: {configValue: string, configId: string} = {configValue: '', configId: ''}
+let paramsForm: {configValue: string, configId: string} = { configValue: '', configId: '' }
 
 const tableChange = (_pagination: any, _filters: any, sorter: any) => {
   if (!Array.isArray(sorter)){
     const property = sorter.field
     const type = SORT_TYPE[sorter.order]
-    sortList = [{property, type}]
+    sortList = [{ property, type }]
   }
   else {
     sortList = sorter.map(item => {
       const property = item.field
       const type = SORT_TYPE[item.order]
-      return {property, type}
+      return { property, type }
     })
   }
   getParamsTableData()
@@ -131,7 +172,7 @@ const getParamsTableData = () => {
     surelyTableData.value = res.payload.records
     totalPageNumber.value = res.payload.total
     surelyTableData.value.forEach((item: any, index: number) => {
-      item['key'] = item.configKey;
+      item['key'] = item.configKey
       item['index'] = index + 1
     })
   })

@@ -7,14 +7,21 @@
     :placeholder="placeholder"
     :style="{width: width + 'px'}"
     :virtual="false"
-    allowClear
+    allow-clear
     label-in-value
     show-search
-    @search="handleInputChange">
+    @search="handleInputChange"
+  >
     <template #option="{label, avatar}">
       <div style="display: flex;">
-        <img v-lazy="staffAvatar(avatar)" alt="头像" class="avatar" />
-        <div style="margin-top: 10px">{{ label }}</div>
+        <img
+          v-lazy="staffAvatar(avatar)"
+          alt="头像"
+          class="avatar"
+        >
+        <div style="margin-top: 10px">
+          {{ label }}
+        </div>
       </div>
     </template>
   </a-select>
@@ -22,9 +29,10 @@
 
 <script lang="ts" setup>
 import _ from 'lodash'
-import { QUERY_INTERVAL } from '@/framework/utils/constant'
-import { getAccountInfo } from '@/framework/components/common/departmentAndStaffSelect/api'
+
 import getImgUrl from '@/framework/assets/imgs/getImgUrl'
+import { getAccountInfo } from '@/framework/components/common/departmentAndStaffSelect/api'
+import { QUERY_INTERVAL } from '@/framework/utils/constant'
 
 const props = withDefaults(
   defineProps<{
@@ -48,8 +56,8 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any): void
 }>()
-const {modelValue, width, placeholder, active, labelInValue} = toRefs(props)
-const selectUserValue = ref({value: '', label: ''} as any)
+const { modelValue, width, placeholder, active, labelInValue } = toRefs(props)
+const selectUserValue = ref({ value: '', label: '' } as any)
 const staffList = ref([] as Array<any>)
 const handleInputChange = _.debounce((value: string) => getSelectOption(value), QUERY_INTERVAL)
 const defaultAvatar = getImgUrl('defaultAvatar.png')

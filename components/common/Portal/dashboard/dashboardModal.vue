@@ -2,8 +2,9 @@
   <dialog-box
     v-model:visible="_show"
     :title="config.title"
-    is-full>
-    <dashboard :tableId="config.tableId" />
+    is-full
+  >
+    <dashboard :table-id="config.tableId" />
   </dialog-box>
 </template>
 

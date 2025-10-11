@@ -1,16 +1,25 @@
 <template>
   <div class="body">
-    <content-layout :width="width" class="dark-content-layout">
+    <content-layout
+      :width="width"
+      class="dark-content-layout"
+    >
       <template #side>
         <div class="desc-wrapper">
-          <a-descriptions :column="1" class="scrollable-descriptions" layout="vertical">
-            <slot name="side"></slot>
+          <a-descriptions
+            :column="1"
+            class="scrollable-descriptions"
+            layout="vertical"
+          >
+            <slot name="side" />
           </a-descriptions>
         </div>
       </template>
       <template #content>
         <div class="dark-dialog">
-          <div class="title">{{ router.currentRoute.value.meta.title }}</div>
+          <div class="title">
+            {{ router.currentRoute.value.meta.title }}
+          </div>
           <div class="dialog-info">
             <portal
               v-bind="$attrs"
@@ -28,13 +37,18 @@
               hide-refresh
               hide-row-selection
               read-only
-              multi-header>
+              multi-header
+            >
               <!-- 转发所有具名插槽 -->
               <template
                 v-for="(slotFn, name) in $slots"
                 :key="name"
-                #[name]="slotProps">
-                <component :is="slotFn" v-bind="slotProps" />
+                #[name]="slotProps"
+              >
+                <component
+                  :is="slotFn"
+                  v-bind="slotProps"
+                />
               </template>
             </portal>
           </div>
@@ -45,9 +59,10 @@
 </template>
 
 <script lang="ts" setup>
+import { Ref } from 'vue'
+
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { QuerySortType } from '@/framework/components/common/Portal/type'
-import { Ref } from 'vue'
 
 /**
  * 左侧筛选栏只需要写 a-descriptions-item

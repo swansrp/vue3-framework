@@ -1,9 +1,12 @@
 <template>
-  <a-tabs v-model:activeKey="activeKey">
+  <a-tabs v-model:active-key="activeKey">
     <a-tab-pane
-      v-for="(item, index) of columns" :key="index" :disabled="isEmpty(record[item.dataIndex])"
-      :tab="strRemoveLF(item.title)">
-      <div v-html="strLF2HtmlLF(record[item.dataIndex])"></div>
+      v-for="(item, index) of columns"
+      :key="index"
+      :disabled="isEmpty(record[item.dataIndex])"
+      :tab="strRemoveLF(item.title)"
+    >
+      <div v-html="strLF2HtmlLF(record[item.dataIndex])" />
     </a-tab-pane>
   </a-tabs>
 </template>

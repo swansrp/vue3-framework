@@ -1,9 +1,9 @@
-import type {App} from 'vue'
-import {createVNode} from "vue"
 import * as Icons from '@ant-design/icons-vue'
+import type { App } from 'vue'
+import { createVNode } from 'vue'
 
 const Icon = (props: {icon: string}) => {
-  const {icon} = props
+  const { icon } = props
   return createVNode(Icons[icon as keyof typeof Icons])
 }
 

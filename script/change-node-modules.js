@@ -1,5 +1,5 @@
 import fs from 'fs'
-import path from "path"
+import path from 'path'
 
 // region 解决 node_modules 修改源码，导致重新装包而要手动替换源码的重复操作。
 // 将 scripts/node_modules 内的文件 覆盖 真正的 node_modules
@@ -76,7 +76,7 @@ const getCurrentTime = () => {
 
 const printCompileTime = () => {
   const filePath = './public/compileTime.json'
-  fs.writeFile(filePath, JSON.stringify({time: getCurrentTime()}), null, err => (err ? console.log(err) : console.log('编译时间文件生成成功！')))
+  fs.writeFile(filePath, JSON.stringify({ time: getCurrentTime() }), null, err => (err ? console.log(err) : console.log('编译时间文件生成成功！')))
 }
 
 printCompileTime()

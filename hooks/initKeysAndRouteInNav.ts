@@ -1,8 +1,8 @@
-import {message} from "ant-design-vue"
-import {goBackTo} from "@/framework/router/utils"
-import {MAIN_CONTENT} from "@/framework/utils/constant"
+import { message } from 'ant-design-vue'
 import { Key } from 'ant-design-vue/es/table/interface'
-import {NavListType} from "@/framework/components/navigationFramework/navMenu/type"
+
+import { NavListType } from '@/framework/components/navigationFramework/navMenu/type'
+import { goBackTo } from '@/framework/router/utils'
 
 // 根据左侧导航的展开项的key，找到其对应的title路径，从而用于组件CrumbSearch中面包屑的展示
 const getTitlePathByKey = (tree: Array<any>, targetKey: Key) => {
@@ -28,14 +28,14 @@ const getTitlePathByKey = (tree: Array<any>, targetKey: Key) => {
     }
   }
   getPath(tree, targetKey)
-  return {titlePath: nodeTitlePathArray.reverse(), keyPath: nodePathArray}
+  return { titlePath: nodeTitlePathArray.reverse(), keyPath: nodePathArray }
 }
 
 
 // 模拟antd的menu的select事件，根据左侧导航列表，找到左侧导航第一个根节点，用于初始化T形屏的content部分
 export const genAntdMenuFirstSelectObject = (node: NavListType, selectLeftNav: Function) => {
   if (!node) {
-    message.error({content: () => '该路由尚未配置，请联系管理员! 3秒后将转跳到首页', style: {marginTop: '10vh'}})
+    message.error({ content: () => '该路由尚未配置，请联系管理员! 3秒后将转跳到首页', style: { marginTop: '10vh' } })
     goBackTo('/', 3500, true)
     return
   }
@@ -45,6 +45,6 @@ export const genAntdMenuFirstSelectObject = (node: NavListType, selectLeftNav: F
     if (node.children) node = node.children[0]
     else break
   }
-  selectLeftNav({item:defaultNode})
+  selectLeftNav({ item:defaultNode })
 }
-export  {getTitlePathByKey}
+export  { getTitlePathByKey }

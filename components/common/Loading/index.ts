@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+
 import myLoad from '@/framework/components/common/Loading/index.vue'
 
 let hasInsert = false

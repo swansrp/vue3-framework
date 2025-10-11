@@ -1,14 +1,21 @@
 <template>
   <div class="universal-chart-container">
-    <a-spin :spinning="loading" tip="正在加载图表数据...">
-      <div ref="chartRef" class="echarts-container"></div>
+    <a-spin
+      :spinning="loading"
+      tip="正在加载图表数据..."
+    >
+      <div
+        ref="chartRef"
+        class="echarts-container"
+      />
     </a-spin>
   </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
+import { computed, defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 
@@ -63,31 +70,31 @@ export default defineComponent({
     // 解析单位配置函数
     const parseUnitConfig = (unitConfig?: string): { fix: number; unit: number } => {
       if (!unitConfig || typeof unitConfig !== 'string') {
-        return { fix: 0, unit: 1 }; // 不需要小数位，单位为1（不转换）
+        return { fix: 0, unit: 1 } // 不需要小数位，单位为1（不转换）
       }
 
-      const parts = unitConfig.split(',');
+      const parts = unitConfig.split(',')
       if (parts.length !== 2) {
-        return { fix: 0, unit: 1 };
+        return { fix: 0, unit: 1 }
       }
 
-      const fix = parseInt(parts[0], 10);
-      const unit = parseInt(parts[1], 10);
+      const fix = parseInt(parts[0], 10)
+      const unit = parseInt(parts[1], 10)
 
       // 确保解析结果有效，对于金额字段应该正确解析小数位
       return {
         fix: isNaN(fix) ? 0 : fix,
         unit: isNaN(unit) ? 1 : unit
-      };
-    };
+      }
+    }
 
     // Y轴格式化函数：显示整数，不保留小数位
     const formatYAxisValue = (value: number): string => {
       return Number(value).toLocaleString(undefined, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
-      });
-    };
+      })
+    }
 
     // formatValueWithUnit 函数已移除，格式化逻辑直接内联到各个使用位置
 
@@ -202,10 +209,10 @@ export default defineComponent({
               || `hsl(${((statIndex * categories.length + categoryIndex) * 30) % 360}, 70%, 50%)`
 
             // 对数据值进行单位转换
-            const originalValue = item ? item.statistic : 0;
-            const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 };
+            const originalValue = item ? item.statistic : 0
+            const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
             // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
-            const convertedValue = metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue);
+            const convertedValue = metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
 
             return {
               value: convertedValue,
@@ -244,20 +251,20 @@ export default defineComponent({
               position: 'inside',
               formatter: (params: any) => {
                 // 在无二级维度时，seriesName就是statType，直接匹配
-                const metric = props.dataMetrics.find(m => m.dataName === params.seriesName);
+                const metric = props.dataMetrics.find(m => m.dataName === params.seriesName)
 
                 if (metric?.unitConfig) {
-                  const { fix } = parseUnitConfig(metric.unitConfig);
+                  const { fix } = parseUnitConfig(metric.unitConfig)
                   return Number(params.value).toLocaleString(undefined, {
                     minimumFractionDigits: fix,
                     maximumFractionDigits: fix
-                  });
+                  })
                 }
                 // 非金额指标显示为整数
                 return Number(params.value).toLocaleString(undefined, {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0
-                });
+                })
               },
               fontSize: 10,
               color: '#fff',
@@ -294,10 +301,10 @@ export default defineComponent({
                 d.statisticType === statType
               )
               // 对数据值进行单位转换
-              const originalValue = item ? item.statistic : 0;
-              const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 };
+              const originalValue = item ? item.statistic : 0
+              const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
               // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
-              return metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue);
+              return metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
             })
 
             // 根据指标配置决定使用哪个y轴
@@ -342,20 +349,20 @@ export default defineComponent({
                 position: 'inside', // 所有标签都在柱子内部显示
                 formatter: (params: any) => {
                   // 有二级维度时，seriesName格式是 "二级维度&&统计类型"，所以统计类型是split('&&')[1]
-                  const metric = props.dataMetrics.find(m => m.dataName === params.seriesName.split('&&')[1]);
+                  const metric = props.dataMetrics.find(m => m.dataName === params.seriesName.split('&&')[1])
 
                   if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig);
+                    const { fix } = parseUnitConfig(metric.unitConfig)
                     return Number(params.value).toLocaleString(undefined, {
                       minimumFractionDigits: fix,
                       maximumFractionDigits: fix
-                    });
+                    })
                   }
                   // 非金额指标显示为整数
                   return Number(params.value).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
-                  });
+                  })
                 },
                 fontSize: 10,
                 color: '#fff',
@@ -395,14 +402,14 @@ export default defineComponent({
             axisLabel: {
               formatter: (value: number) => {
                 const formatted = (() => {
-                  const metric = leftMetrics[0];
+                  const metric = leftMetrics[0]
                   if (metric?.unitConfig) {
                     // Y轴显示整数，不保留小数位
-                    return formatYAxisValue(value);
+                    return formatYAxisValue(value)
                   }
-                  return value.toString();
-                })();
-                return `${formatted}${leftMetrics[0].unit || ''}`;
+                  return value.toString()
+                })()
+                return `${formatted}${leftMetrics[0].unit || ''}`
               },
               fontSize: 12
             },
@@ -445,15 +452,15 @@ export default defineComponent({
                   axisLabel: {
                     formatter: (value: number) => {
                       // 对于合并的指标，使用第一个指标的unitConfig
-                      const firstMetric = sameStackMetrics?.[0];
+                      const firstMetric = sameStackMetrics?.[0]
                       const formatted = (() => {
                         if (firstMetric?.unitConfig) {
                           // Y轴显示整数，不保留小数位
-                          return formatYAxisValue(value);
+                          return formatYAxisValue(value)
                         }
-                        return value.toString();
-                      })();
-                      return `${formatted}${combinedUnit}`;
+                        return value.toString()
+                      })()
+                      return `${formatted}${combinedUnit}`
                     },
                     fontSize: 12
                   },
@@ -483,11 +490,11 @@ export default defineComponent({
                     const formatted = (() => {
                       if (metric?.unitConfig) {
                         // Y轴显示整数，不保留小数位
-                        return formatYAxisValue(value);
+                        return formatYAxisValue(value)
                       }
-                      return value.toString();
-                    })();
-                    return `${formatted}${metric.unit || ''}`;
+                      return value.toString()
+                    })()
+                    return `${formatted}${metric.unit || ''}`
                   },
                   fontSize: 12
                 },
@@ -590,59 +597,59 @@ export default defineComponent({
                   const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
                   const unit = getUnitByStatType(statType)
                   const formattedValue = (() => {
-                    const metric = props.dataMetrics.find(m => m.dataName === statType);
+                    const metric = props.dataMetrics.find(m => m.dataName === statType)
                     if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig);
+                      const { fix } = parseUnitConfig(metric.unitConfig)
                       return Number(param.value).toLocaleString(undefined, {
                         minimumFractionDigits: fix,
                         maximumFractionDigits: fix
-                      });
+                      })
                     }
                     // 非金额指标显示为整数
                     return Number(param.value).toLocaleString(undefined, {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 0
-                    });
-                  })();
+                    })
+                  })()
                   result += `${param.marker}${param.secondDimension}: ${formattedValue}${unit} (${percentage}%)<br/>`
                 })
 
-                const metric = props.dataMetrics.find(m => m.dataName === statType);
+                const metric = props.dataMetrics.find(m => m.dataName === statType)
                 const formattedTotal = (() => {
                   if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig);
+                    const { fix } = parseUnitConfig(metric.unitConfig)
                     return Number(total).toLocaleString(undefined, {
                       minimumFractionDigits: fix,
                       maximumFractionDigits: fix
-                    });
+                    })
                   }
                   // 非金额指标显示为整数
                   return Number(total).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
-                  });
-                })();
+                  })
+                })()
                 result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${getUnitByStatType(statType)}</span></div>`
               })
             } else {
               // 没有第二维度时，直接显示每个系列的数据
               params.forEach((param: any) => {
                 const unit = getUnitByStatType(param.seriesName)
-                const metric = props.dataMetrics.find(m => m.dataName === param.seriesName);
+                const metric = props.dataMetrics.find(m => m.dataName === param.seriesName)
                 const formattedValue = (() => {
                   if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig);
+                    const { fix } = parseUnitConfig(metric.unitConfig)
                     return Number(param.value).toLocaleString(undefined, {
                       minimumFractionDigits: fix,
                       maximumFractionDigits: fix
-                    });
+                    })
                   }
                   // 非金额指标显示为整数
                   return Number(param.value).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
-                  });
-                })();
+                  })
+                })()
                 result += `${param.marker}${param.seriesName}: ${formattedValue}${unit}<br/>`
               })
             }
@@ -706,10 +713,10 @@ export default defineComponent({
               || `hsl(${((statIndex * categories.length + categoryIndex) * 30) % 360}, 70%, 50%)`
 
             // 对数据值进行单位转换
-            const originalValue = item ? item.statistic : 0;
-            const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 };
+            const originalValue = item ? item.statistic : 0
+            const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
             // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
-            const convertedValue = metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue);
+            const convertedValue = metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
 
             return {
               value: convertedValue,
@@ -735,19 +742,19 @@ export default defineComponent({
             label: {
               show: true,
               formatter: (params: any) => {
-                const metric = props.dataMetrics.find(m => m.dataName === params.seriesName || m.dataName === params.seriesName.split('&&')[1]);
+                const metric = props.dataMetrics.find(m => m.dataName === params.seriesName || m.dataName === params.seriesName.split('&&')[1])
                 if (metric?.unitConfig) {
-                  const { fix } = parseUnitConfig(metric.unitConfig);
+                  const { fix } = parseUnitConfig(metric.unitConfig)
                   return Number(params.value).toLocaleString(undefined, {
                     minimumFractionDigits: fix,
                     maximumFractionDigits: fix
-                  });
+                  })
                 }
                 // 非金额指标显示为整数
                 return Number(params.value).toLocaleString(undefined, {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0
-                });
+                })
               },
               fontSize: 10,
               color: metric.color || `hsl(${(statIndex * 60) % 360}, 70%, 50%)`
@@ -786,10 +793,10 @@ export default defineComponent({
                 d.statisticType === statType
               )
               // 对数据值进行单位转换
-              const originalValue = item ? item.statistic : 0;
-              const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 };
+              const originalValue = item ? item.statistic : 0
+              const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
               // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
-              return metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue);
+              return metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
             })
 
             const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
@@ -823,19 +830,19 @@ export default defineComponent({
                 show: true,
                 formatter: (params: any) => {
                   // 有二级维度的折线图标签格式化
-                  const metric = props.dataMetrics.find(m => m.dataName === params.seriesName.split('&&')[1]);
+                  const metric = props.dataMetrics.find(m => m.dataName === params.seriesName.split('&&')[1])
                   if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig);
+                    const { fix } = parseUnitConfig(metric.unitConfig)
                     return Number(params.value).toLocaleString(undefined, {
                       minimumFractionDigits: fix,
                       maximumFractionDigits: fix
-                    });
+                    })
                   }
                   // 非金额指标显示为整数
                   return Number(params.value).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
-                  });
+                  })
                 },
                 fontSize: 10,
                 color: itemColor
@@ -877,14 +884,14 @@ export default defineComponent({
             axisLabel: {
               formatter: (value: number) => {
                 const formatted = (() => {
-                  const metric = leftMetrics[0];
+                  const metric = leftMetrics[0]
                   if (metric?.unitConfig) {
                     // Y轴显示整数，不保留小数位
-                    return formatYAxisValue(value);
+                    return formatYAxisValue(value)
                   }
-                  return value.toString();
-                })();
-                return `${formatted}${leftMetrics[0].unit || ''}`;
+                  return value.toString()
+                })()
+                return `${formatted}${leftMetrics[0].unit || ''}`
               },
               fontSize: 12
             },
@@ -1003,59 +1010,59 @@ export default defineComponent({
                   const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
                   const unit = getUnitByStatType(statType)
                   const formattedValue = (() => {
-                    const metric = props.dataMetrics.find(m => m.dataName === statType);
+                    const metric = props.dataMetrics.find(m => m.dataName === statType)
                     if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig);
+                      const { fix } = parseUnitConfig(metric.unitConfig)
                       return Number(param.value).toLocaleString(undefined, {
                         minimumFractionDigits: fix,
                         maximumFractionDigits: fix
-                      });
+                      })
                     }
                     // 非金额指标显示为整数
                     return Number(param.value).toLocaleString(undefined, {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 0
-                    });
-                  })();
+                    })
+                  })()
                   result += `${param.marker}${param.secondDimension}: ${formattedValue}${unit} (${percentage}%)<br/>`
                 })
 
-                const metric = props.dataMetrics.find(m => m.dataName === statType);
+                const metric = props.dataMetrics.find(m => m.dataName === statType)
                 const formattedTotal = (() => {
                   if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig);
+                    const { fix } = parseUnitConfig(metric.unitConfig)
                     return Number(total).toLocaleString(undefined, {
                       minimumFractionDigits: fix,
                       maximumFractionDigits: fix
-                    });
+                    })
                   }
                   // 非金额指标显示为整数
                   return Number(total).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
-                  });
-                })();
+                  })
+                })()
                 result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${getUnitByStatType(statType)}</span></div>`
               })
             } else {
               // 没有第二维度时，直接显示每个系列的数据
               params.forEach((param: any) => {
                 const unit = getUnitByStatType(param.seriesName)
-                const metric = props.dataMetrics.find(m => m.dataName === param.seriesName);
+                const metric = props.dataMetrics.find(m => m.dataName === param.seriesName)
                 const formattedValue = (() => {
                   if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig);
+                    const { fix } = parseUnitConfig(metric.unitConfig)
                     return Number(param.value).toLocaleString(undefined, {
                       minimumFractionDigits: fix,
                       maximumFractionDigits: fix
-                    });
+                    })
                   }
                   // 非金额指标显示为整数
                   return Number(param.value).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
-                  });
-                })();
+                  })
+                })()
                 result += `${param.marker}${param.seriesName}: ${formattedValue}${unit}<br/>`
               })
             }
@@ -1114,10 +1121,10 @@ export default defineComponent({
           || `hsl(${(categoryIndex * 30) % 360}, 70%, 50%)`
 
         // 对数据值进行单位转换
-        const originalValue = item ? item.statistic : 0;
-        const { unit: unitDivisor } = pieMetric.unitConfig ? parseUnitConfig(pieMetric.unitConfig) : { unit: 1 };
+        const originalValue = item ? item.statistic : 0
+        const { unit: unitDivisor } = pieMetric.unitConfig ? parseUnitConfig(pieMetric.unitConfig) : { unit: 1 }
         // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
-        const convertedValue = pieMetric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue);
+        const convertedValue = pieMetric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
 
         return {
           name: category,
@@ -1181,18 +1188,18 @@ export default defineComponent({
             // 格式化饼图数值显示
             const formattedValue = (() => {
               if (pieMetric?.unitConfig) {
-                const { fix } = parseUnitConfig(pieMetric.unitConfig);
+                const { fix } = parseUnitConfig(pieMetric.unitConfig)
                 return Number(params.value).toLocaleString(undefined, {
                   minimumFractionDigits: fix,
                   maximumFractionDigits: fix
-                });
+                })
               }
               // 非金额指标显示为整数
               return Number(params.value).toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
-              });
-            })();
+              })
+            })()
             result += `${params.marker}${params.name}: ${formattedValue}${unit} (${params.percent}%)<br/>`
             result += `<span style="color: #666; font-size: 12px;">数值: ${formattedValue}${unit}</span></div>`
             return result
@@ -1211,20 +1218,20 @@ export default defineComponent({
             const unit = pieMetric.unit || ''
             // 格式化图例中的数值显示
             const formattedValue = (() => {
-              const value = item?.value || 0;
+              const value = item?.value || 0
               if (pieMetric?.unitConfig) {
-                const { fix } = parseUnitConfig(pieMetric.unitConfig);
+                const { fix } = parseUnitConfig(pieMetric.unitConfig)
                 return Number(value).toLocaleString(undefined, {
                   minimumFractionDigits: fix,
                   maximumFractionDigits: fix
-                });
+                })
               }
               // 非金额指标显示为整数
               return Number(value).toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
-              });
-            })();
+              })
+            })()
             return `${name}: ${formattedValue}${unit}`
           }
         },

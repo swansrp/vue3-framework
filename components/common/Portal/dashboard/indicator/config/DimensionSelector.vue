@@ -1,20 +1,36 @@
 <template>
   <div class="dimension-section">
-    <div class="section-header" @click="toggleCollapse">
+    <div
+      class="section-header"
+      @click="toggleCollapse"
+    >
       <h4>维度选择</h4>
-      <a-button class="collapse-btn" size="small" type="text">
+      <a-button
+        class="collapse-btn"
+        size="small"
+        type="text"
+      >
         <DownOutlined v-if="!collapsed" />
         <RightOutlined v-else />
       </a-button>
     </div>
 
-    <div v-show="!collapsed" class="section-content">
+    <div
+      v-show="!collapsed"
+      class="section-content"
+    >
       <!-- 一级维度 -->
       <div class="dimension-item">
         <div class="dimension-header">
           <span>一级维度（横坐标）</span>
           <span class="required">*</span>
-          <a-button v-if="firstDimension" class="clear-btn" size="small" type="text" @click="clearFirstDimension">
+          <a-button
+            v-if="firstDimension"
+            class="clear-btn"
+            size="small"
+            type="text"
+            @click="clearFirstDimension"
+          >
             清空
           </a-button>
         </div>
@@ -23,22 +39,37 @@
             'has-content': firstDimension,
             'drag-over': dragOverFirst,
             'drag-forbidden': dragOverFirst && dragData && isDuplicateDimension(dragData.value?.key || '', 'first')
-          }" class="drop-zone compact" @dragleave="onDragLeaveFirst" @drop="onDropFirstDimension"
-          @dragover.prevent="onDragOverFirst">
+          }"
+          class="drop-zone compact"
+          @dragleave="onDragLeaveFirst"
+          @drop="onDropFirstDimension"
+          @dragover.prevent="onDragOverFirst"
+        >
           <!-- 禁止拖入的视觉提示 -->
           <div
             v-if="dragOverFirst && dragData && isDuplicateDimension(dragData.value?.key || '', 'first')"
-            class="drop-forbidden-overlay">
-            <div class="forbidden-icon">✕</div>
-            <div class="forbidden-text">禁止重复选择</div>
+            class="drop-forbidden-overlay"
+          >
+            <div class="forbidden-icon">
+              ✕
+            </div>
+            <div class="forbidden-text">
+              禁止重复选择
+            </div>
           </div>
 
           <!-- 正常状态显示 -->
           <template v-else>
-            <div v-if="!firstDimension" class="drop-placeholder">
+            <div
+              v-if="!firstDimension"
+              class="drop-placeholder"
+            >
               拖拽指标到此处
             </div>
-            <div v-else class="dimension-content">
+            <div
+              v-else
+              class="dimension-content"
+            >
               <div class="dimension-info-line">
                 <span class="dimension-title">{{ firstDimension.title }}</span>
                 <span class="info-text">{{ firstDimension.items?.length || 0 }}个指标项</span>
@@ -52,8 +83,17 @@
       <div class="dimension-item">
         <div class="dimension-header">
           <span>二级维度（数据集）</span>
-          <span v-if="!firstDimension" class="dimension-tip">需先选择一级维度</span>
-          <a-button v-if="secondDimension" class="clear-btn" size="small" type="text" @click="clearSecondDimension">
+          <span
+            v-if="!firstDimension"
+            class="dimension-tip"
+          >需先选择一级维度</span>
+          <a-button
+            v-if="secondDimension"
+            class="clear-btn"
+            size="small"
+            type="text"
+            @click="clearSecondDimension"
+          >
             清空
           </a-button>
         </div>
@@ -63,22 +103,38 @@
             'drag-over': dragOverSecond && firstDimension,
             'drag-forbidden': (dragOverSecond && dragData && isDuplicateDimension(dragData.value?.key || '', 'second')) || !firstDimension,
             'disabled': !firstDimension
-          }" class="drop-zone compact" @dragleave="onDragLeaveSecond" @drop="onDropSecondDimension"
-          @dragover.prevent="onDragOverSecond">
+          }"
+          class="drop-zone compact"
+          @dragleave="onDragLeaveSecond"
+          @drop="onDropSecondDimension"
+          @dragover.prevent="onDragOverSecond"
+        >
           <!-- 禁止拖入的视觉提示 -->
           <div
             v-if="dragOverSecond && dragData && isDuplicateDimension(dragData.value?.key || '', 'second')"
-            class="drop-forbidden-overlay">
-            <div class="forbidden-icon">✕</div>
-            <div class="forbidden-text">禁止重复选择</div>
+            class="drop-forbidden-overlay"
+          >
+            <div class="forbidden-icon">
+              ✕
+            </div>
+            <div class="forbidden-text">
+              禁止重复选择
+            </div>
           </div>
 
           <!-- 正常状态显示 -->
           <template v-else>
-            <div v-if="!secondDimension" :class="{ 'warning-hint': !firstDimension }" class="drop-placeholder">
+            <div
+              v-if="!secondDimension"
+              :class="{ 'warning-hint': !firstDimension }"
+              class="drop-placeholder"
+            >
               {{ firstDimension ? '拖拽指标到此处（可选）' : '请先选择一级维度' }}
             </div>
-            <div v-else class="dimension-content">
+            <div
+              v-else
+              class="dimension-content"
+            >
               <div class="dimension-info-line">
                 <span class="dimension-title">{{ secondDimension?.title }}</span>
                 <span class="info-text">{{ secondDimension.items?.length || 0 }}个指标项</span>
@@ -92,9 +148,9 @@
 </template>
 
 <script lang="ts" setup>
-import { inject, ref } from 'vue'
-import { message } from 'ant-design-vue'
 import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { inject, ref } from 'vue'
 
 // 接口定义
 interface IndicatorItem {

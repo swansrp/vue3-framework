@@ -1,7 +1,12 @@
 <template>
   <a-modal
-    v-model:open="modalVisible" width="95%" :footer="null" :body-style="{ padding: '16px', height: '90vh' }"
-    :style="{ marginTop: '-75px' }" @cancel="handleClose">
+    v-model:open="modalVisible"
+    width="95%"
+    :footer="null"
+    :body-style="{ padding: '16px', height: '90vh' }"
+    :style="{ marginTop: '-75px' }"
+    @cancel="handleClose"
+  >
     <div class="detail-container">
       <!-- 维度信息区域 -->
       <div class="dimension-info-card">
@@ -35,8 +40,13 @@
         </div>
         <div class="table-container">
           <portal
-            :tableId="tableId" :advance-condition="condition" :advance="false" :action-width="0" hide-refresh
-            hide-row-selection />
+            :table-id="tableId"
+            :advance-condition="condition"
+            :advance="false"
+            :action-width="0"
+            hide-refresh
+            hide-row-selection
+          />
         </div>
       </div>
     </div>
@@ -45,7 +55,9 @@
 
 <script lang="ts" setup>
 import { computed } from 'vue'
+
 import type { SelectedBarInfo } from '../../type/ChartTypes'
+
 import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 const props = defineProps<{

@@ -1,7 +1,13 @@
 <template>
-  <template v-for="(tag, index) in data" :key="tag">
+  <template
+    v-for="(tag, index) in data"
+    :key="tag"
+  >
     <div class="block-message-tag">
-      <marquee :content="tag" :width="width" />
+      <marquee
+        :content="tag"
+        :width="width"
+      />
       <CloseOutlined @click="handleTagClose(index)" />
     </div>
   </template>
@@ -15,17 +21,20 @@
     @keyup.enter="handleInputConfirm"
   />
   <a-tag
-    v-else style="background: #fff; margin-top:2px; border-style: dashed"
-    @click="inputVisible = true">
+    v-else
+    style="background: #fff; margin-top:2px; border-style: dashed"
+    @click="inputVisible = true"
+  >
     <plus-outlined />
     {{ '添加' + title }}
   </a-tag>
 </template>
 
 <script lang="ts" setup>
-import { localStorageMethods, parseCssValue } from '@/framework/utils/common'
 import { CloseOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { Ref } from 'vue'
+
+import { localStorageMethods, parseCssValue } from '@/framework/utils/common'
 
 const props = withDefaults(
   defineProps<{

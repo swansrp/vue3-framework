@@ -1,7 +1,7 @@
 <template>
   <a-modal
-    :maskClosable="false"
-    :okText="config.modal.type === 'add' ? '保存' : '更新'"
+    :mask-closable="false"
+    :ok-text="config.modal.type === 'add' ? '保存' : '更新'"
     :open="config.modal.show"
     :title="config.modal.type === 'add' ? '新增数据' : '编辑数据'"
     :width="config.modal.type === 'add' ? config.addWidth : config.editWidth"
@@ -9,8 +9,13 @@
     :z-index="999"
     @cancel="() => emit('cancel')"
     @close="() => emit('close')"
-    @ok="() => editModalRef.validate().then(() => emit('confirm')).catch(() => {})">
-    <a-form ref="editModalRef" :model="config.modal.data" layout="vertical">
+    @ok="() => editModalRef.validate().then(() => emit('confirm')).catch(() => {})"
+  >
+    <a-form
+      ref="editModalRef"
+      :model="config.modal.data"
+      layout="vertical"
+    >
       <a-descriptions
         v-for="(value, index) in columnDisplayEditMap"
         :key="index"
@@ -22,16 +27,19 @@
       >
         <template
           v-for="column in value[1].filter(item => { return config.modal.type === 'add' ? item.addShow : item.editShow })"
-          :key="column.dataIndex">
+          :key="column.dataIndex"
+        >
           <a-descriptions-item
             :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
             :label="strRemoveLF(column.title) + (column.required ? '(*)' : '')"
             :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
-            :span="config.modal.type === 'add' ? column.addSize : column.editSize">
+            :span="config.modal.type === 'add' ? column.addSize : column.editSize"
+          >
             <a-form-item
               :label="strRemoveLF(column.title)"
               :name="column.dataIndex"
-              :required="column.required">
+              :required="column.required"
+            >
               <a-input
                 v-if="column.fieldType === FIELD_TYPE.INPUT"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
@@ -53,9 +61,9 @@
                 v-else-if="column.fieldType === FIELD_TYPE.SWITCH"
                 v-model:checked="config.modal.data[column.dataIndex]"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                checkedValue="1"
+                checked-value="1"
                 style="width: 40px;"
-                unCheckedValue="0"
+                un-checked-value="0"
               />
               <a-select
                 v-else-if="column.fieldType === FIELD_TYPE.SELECT||
@@ -99,7 +107,7 @@
                 v-else-if="column.fieldType === FIELD_TYPE.HREF
                   || column.fieldType === FIELD_TYPE.HTML
                   || column.fieldType === FIELD_TYPE.TEXT_AREA"
-                :autoSize="{ minRows: 3 }"
+                :auto-size="{ minRows: 3 }"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                 :placeholder="column.defaultValue"
                 :value="config.modal.data[column.dataIndex]"
@@ -109,45 +117,57 @@
               <div
                 v-else-if="column.fieldType === FIELD_TYPE.IMAGE || column.fieldType === FIELD_TYPE.AUDIO || 
                   column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE"
-                style="display: flex; justify-content: center">
+                style="display: flex; justify-content: center"
+              >
                 <div
-                  v-if="config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])">
+                  v-if="config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
+                >
                   <multimedia
                     v-model="config.modal.data[column.dataIndex]"
                     :delete-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
-                    :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35" :type="column.fieldType"
+                    :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35"
+                    :type="column.fieldType"
                     :upload-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
                     :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80"
                     use-original-file-name
-                    @delete="cleanUpload(column)" />
+                    @delete="cleanUpload(column)"
+                  />
                 </div>
                 <a-button
                   v-else
                   :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                   :type="'dashed'"
-                  @click="showUploadDialogBox(column)">{{ '点击上传' + column.title }}
+                  @click="showUploadDialogBox(column)"
+                >
+                  {{ '点击上传' + column.title }}
                 </a-button>
               </div>
               <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY_CONDITION">
                 <delete-outlined
                   v-if="config.modal.data[column.dataIndex] !== null"
                   :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                  @click="cleanEntityCondition(column)" />
+                  @click="cleanEntityCondition(column)"
+                />
                 <a-button
                   :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                   :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
-                  @click="showEntityConditionDialogBox(column, config.modal.data[column.dataIndex])">设置条件
+                  @click="showEntityConditionDialogBox(column, config.modal.data[column.dataIndex])"
+                >
+                  设置条件
                 </a-button>
               </div>
               <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY">
                 <delete-outlined
                   v-if="config.modal.data[column.dataIndex] !== null"
                   :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                  @click="cleanEntity(column)" />
+                  @click="cleanEntity(column)"
+                />
                 <a-button
                   :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                   :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
-                  @click="showEntityDialogBox(column)">{{ strRemoveLF(getEntityDialogBoxLabel(column)) }}
+                  @click="showEntityDialogBox(column)"
+                >
+                  {{ strRemoveLF(getEntityDialogBoxLabel(column)) }}
                 </a-button>
               </div>
             </a-form-item>
@@ -157,7 +177,8 @@
             :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
             :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
             :span="config.modal.type === 'add' ? column.addPadding : column.editPadding"
-            label="" />
+            label=""
+          />
         </template>
       </a-descriptions>
     </a-form>
@@ -165,34 +186,44 @@
   <dialog-box
     v-model:visible="entityDialogBox.show"
     :title="'配置 ' + strRemoveLF(entityDialogBox.column.title)"
-    is-full>
+    is-full
+  >
     <portal
       :advance-condition="entityDialogBox.column.entityCondition"
       :table-id="entityDialogBox.column.referenceDict"
-      read-only>
+      read-only
+    >
       <template #action="{ portalConfig, column, record }">
-        <a-button type="link" @click="bind(portalConfig, column, record)">确认</a-button>
+        <a-button
+          type="link"
+          @click="bind(portalConfig, column, record)"
+        >
+          确认
+        </a-button>
       </template>
     </portal>
   </dialog-box>
   <upload-file
     ref="uploadFileModal"
     v-model:url="config.modal.data[uploadDialogBox.column.dataIndex]"
-    :folder="config.tableId" />
+    :folder="config.tableId"
+  />
   <portal-advanced-search-modal
     :advanced-condition="advancedCondition"
-    @confirm="handleAdvanceSearchConfirm" />
+    @confirm="handleAdvanceSearchConfirm"
+  />
 </template>
 
 <script lang="ts" setup>
-import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
-import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
-import dayjs from 'dayjs'
-import { FormInstance } from 'ant-design-vue'
 import { DeleteOutlined } from '@ant-design/icons-vue'
+import { FormInstance } from 'ant-design-vue'
+import dayjs from 'dayjs'
+
 import { getPortalConfig } from '@/framework/apis/portal/config'
-import { dictStore } from '@/framework/store/common'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
+import { dictStore } from '@/framework/store/common'
+import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 
 const _ = getInstance()
 const uploadFileModal = ref()
@@ -200,10 +231,10 @@ const prop = defineProps<{
   config: TableConfigType,
   columnDisplayMap: Map<any, Array<ColumnType>>
 }>()
-const {config} = toRefs(prop)
+const { config } = toRefs(prop)
 watch(config, (config) => {
   emit('update:config', config)
-}, {deep: true})
+}, { deep: true })
 const columnDisplayEditMap = computed(() => {
   const map = new Map()
   prop.columnDisplayMap.forEach((value, key) => {
@@ -241,8 +272,8 @@ const emit = defineEmits<{
    */
   (e: 'update:entityDialogBox', entityDialogBox: { show: boolean, column: ColumnType }): void
 }>()
-const entityDialogBox: { show: boolean, column: ColumnType } = reactive({show: false, column: {} as ColumnType})
-const uploadDialogBox: { url: string, column: ColumnType } = reactive({url: '', column: {} as ColumnType})
+const entityDialogBox: { show: boolean, column: ColumnType } = reactive({ show: false, column: {} as ColumnType })
+const uploadDialogBox: { url: string, column: ColumnType } = reactive({ url: '', column: {} as ColumnType })
 const editModalRef = ref<FormInstance>()
 const getEntityDialogBoxLabel = (column: ColumnType) => {
   if (config.value.modal.data[column.dataIndex] == null) {

@@ -7,11 +7,13 @@
     @close="advancedConditionDrawClose"
   >
     <template #extra>
-      <slot name="extra">
-      </slot>
+      <slot name="extra" />
     </template>
     <a-form-item label="数据条目名称">
-      <a-input v-model:value="advancedCondition.name" @press-enter="(arg: any) => advancedCondition.name = arg" />
+      <a-input
+        v-model:value="advancedCondition.name"
+        @press-enter="(arg: any) => advancedCondition.name = arg"
+      />
     </a-form-item>
     <advanced-search
       :key="key"
@@ -20,7 +22,8 @@
       :columns="advancedCondition.columnArray"
       :condition="advancedCondition.condition"
       :ok-text="advancedCondition.okText"
-      @get-condition="handleAdvancedConditionConfirm" />
+      @get-condition="handleAdvancedConditionConfirm"
+    />
   </a-drawer>
 </template>
 

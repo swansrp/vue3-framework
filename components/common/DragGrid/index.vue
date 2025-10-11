@@ -2,7 +2,7 @@
   <grid-layout
     v-model:layout="list"
     :col-num="maxCol"
-    :isDraggable="isDraggable"
+    :is-draggable="isDraggable"
     :row-height="rowHeight"
     @layout-updated="layoutUpdated"
     @layout-ready="layoutReady"
@@ -18,15 +18,19 @@
       :y="item.y"
       @move="moveEvent"
     >
-      <slot :item="item" name="render"></slot>
+      <slot
+        :item="item"
+        name="render"
+      />
     </grid-item>
   </grid-layout>
 </template>
 
 <script lang="ts" setup>
+import { GridItem, GridLayout } from 'grid-layout-plus'
 import { LayoutItem } from 'grid-layout-plus/src/helpers/types'
-import {GridItem, GridLayout} from 'grid-layout-plus'
-import bus, {DRAG_GRID_RESIZE} from '@/framework/mitt'
+
+import bus, { DRAG_GRID_RESIZE } from '@/framework/mitt'
 const list = ref([] as Array<any>)
 const props = withDefaults(
     defineProps<{
@@ -67,7 +71,7 @@ const getNode = (position: number, data: any, x: number, y: number) => {
 }
 const map = new Map()
 const positionMap = new Map()
-let currentMovedNode: {i: string, newX: number, newY: number} | null = null;
+let currentMovedNode: {i: string, newX: number, newY: number} | null = null
 function moveEvent(i: string, newX: number, newY: number) {
   if (map.get(i).y > newY) {
     map.get(i).direction = -1
@@ -86,7 +90,7 @@ function moveEvent(i: string, newX: number, newY: number) {
 }
 function layoutReady(): void {
   nextTick(() => {
-    bus.emit(DRAG_GRID_RESIZE);
+    bus.emit(DRAG_GRID_RESIZE)
   })
 }
 function layoutUpdated() {
@@ -115,7 +119,7 @@ function layoutUpdated() {
       }
     }
     console.log(0, i, map.get(i).node.label, '(' + map.get(i).x + ', ' + map.get(i).y + ')->(' + map.get(i).node.x + ', ' + map.get(i).node.y + ') ',
-        map.get(i).node.position + '->' + position + " " + "direction: " + map.get(i).direction)
+        map.get(i).node.position + '->' + position + ' ' + 'direction: ' + map.get(i).direction)
     if (map.get(i).direction > 0) {
       for (let index = 0; index < map.get(i).node.position; index++) {
         const { x, y } = positionMap.get(index)
@@ -187,7 +191,7 @@ function layoutUpdated() {
     emit('update:modelValue', modelValue.value)
     emit('moved', modelValue.value)
     currentMovedNode = null
-    bus.emit(DRAG_GRID_RESIZE);
+    bus.emit(DRAG_GRID_RESIZE)
   })
 }
 

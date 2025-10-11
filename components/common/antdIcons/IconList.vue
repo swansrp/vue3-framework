@@ -1,10 +1,16 @@
 <template>
-  <Icon v-for="icon in icons" :key="icon" :icon="icon" class="icons" @click="emitIconName(icon)" />
+  <Icon
+    v-for="icon in icons"
+    :key="icon"
+    :icon="icon"
+    class="icons"
+    @click="emitIconName(icon)"
+  />
 </template>
 
 <script lang="ts" setup>
 const props = defineProps<{ icons: Array<string> }>()
-const {icons} = toRefs(props)
+const { icons } = toRefs(props)
 const emit = defineEmits(['getIconName'])
 const emitIconName = (icon: string) => emit('getIconName', icon)
 </script>

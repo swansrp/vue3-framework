@@ -1,5 +1,5 @@
-import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 
 export type TableConfigType = {
   // domain
@@ -13,7 +13,7 @@ export type TableConfigType = {
   // 表格中文名称
   title: string,
   // 表格大小
-  size:  "middle" | "small" | "default",
+  size:  'middle' | 'small' | 'default',
   // 表格中作为id的Column
   rowKey: string,
   // 表格中作为名字的Column

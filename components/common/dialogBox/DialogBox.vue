@@ -6,24 +6,41 @@
     :width="_width"
     :wrap-class-name="_isFull ? 'full-modal' : 'box-modal'"
     :z-index="_isFull ? 999 : 1000"
-    destroyOnClose
-    @cancel="$emit('update:visible', false)">
-    <slot></slot>
+    destroy-on-close
+    @cancel="$emit('update:visible', false)"
+  >
+    <slot />
     <template #title>
       <slot name="title">
-        <div v-if="_title" ref="modalTitleRef" class="dialog-title" :style="{ cursor: draggable ? 'move' : 'auto'}">
-          <img v-if="_iconPath" :src="_iconPath" alt="" class="icon-img" />
+        <div
+          v-if="_title"
+          ref="modalTitleRef"
+          class="dialog-title"
+          :style="{ cursor: draggable ? 'move' : 'auto'}"
+        >
+          <img
+            v-if="_iconPath"
+            :src="_iconPath"
+            alt=""
+            class="icon-img"
+          >
           {{ _title }}
         </div>
       </slot>
     </template>
     <template #footer>
       <slot name="footer">
-        <slot v-if="props.footer" name="footer"></slot>
-        <div v-else></div>
+        <slot
+          v-if="props.footer"
+          name="footer"
+        />
+        <div v-else />
       </slot>
     </template>
-    <template v-if="!_isFull && draggable" #modalRender="{ originVNode }">
+    <template
+      v-if="!_isFull && draggable"
+      #modalRender="{ originVNode }"
+    >
       <div :style="transformStyle">
         <component :is="originVNode" />
       </div>
@@ -31,8 +48,9 @@
   </a-modal>
 </template>
 <script lang="ts" setup>
-import { computed, CSSProperties, ref, watch, watchEffect } from 'vue'
 import { useDraggable } from '@vueuse/core'
+import { computed, CSSProperties, ref, watch, watchEffect } from 'vue'
+
 import { useRouteStore } from '@/framework/store/route'
 
 const routerStore = useRouteStore()

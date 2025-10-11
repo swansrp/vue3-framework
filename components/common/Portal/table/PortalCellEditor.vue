@@ -1,6 +1,11 @@
 <template>
   <template v-if="!prop.rowAllowEdit(record)">
-    <div style="width: 100%" @mouseover="doFunctions(closeEditor)">{{ modelValue }}</div>
+    <div
+      style="width: 100%"
+      @mouseover="doFunctions(closeEditor)"
+    >
+      {{ modelValue }}
+    </div>
   </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.INPUT">
     <a-input
@@ -38,9 +43,9 @@
       <a-switch
         :ref="editorRef"
         :checked="modelValue"
-        checkedValue="1"
+        checked-value="1"
         style="width: 40px;"
-        unCheckedValue="0"
+        un-checked-value="0"
         @keydown.esc="closeEditor"
         @update:checked="
           v => {
@@ -54,7 +59,8 @@
   </template>
   <template
     v-else-if="column.fieldType === FIELD_TYPE.SELECT||
-      column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE">
+      column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+  >
     <a-select
       :ref="editorRef"
       :bordered="false"
@@ -75,7 +81,8 @@
   </template>
   <template
     v-else-if="column.fieldType === FIELD_TYPE.TREE||
-      column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE">
+      column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+  >
     <a-tree-select
       :ref="editorRef"
       :bordered="false"
@@ -144,13 +151,17 @@
   <template
     v-else-if="column.fieldType === FIELD_TYPE.HREF
       || column.fieldType === FIELD_TYPE.HTML
-      || column.fieldType === FIELD_TYPE.TEXT_AREA">
+      || column.fieldType === FIELD_TYPE.TEXT_AREA"
+  >
     <a-modal
-      :title="'编辑 ' + column.title" open @cancel="closeEditor"
-      @ok="doFunctions(save, closeEditor)">
+      :title="'编辑 ' + column.title"
+      open
+      @cancel="closeEditor"
+      @ok="doFunctions(save, closeEditor)"
+    >
       <a-textarea
         :ref="editorRef"
-        :autoSize="{ minRows: 3 }"
+        :auto-size="{ minRows: 3 }"
         :placeholder="column.defaultValue"
         :value="modelValue"
         style="width: 100%; margin: 0px 3px"
@@ -166,6 +177,7 @@
 <script lang="ts" setup>
 
 import dayjs from 'dayjs'
+
 import { FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { doFunctions } from '@/framework/utils/common'
 
@@ -185,10 +197,10 @@ const emit = defineEmits<{
   (e: 'cellUpdate', index: number, dataIndex: string, v: any): void
   (e: 'update:modelValue', v: any): void
 }>()
-const {column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs} = toRefs(prop)
+const { column, modelValue, save, closeEditor, editorRef, getPopupContainer, recordIndexs } = toRefs(prop)
 watch(modelValue, (value) => {
   emit('update:modelValue', value)
-}, {deep: true})
+}, { deep: true })
 const cellUpdate = (index: number, dataIndex: string, v: any) => {
   emit('cellUpdate', index, dataIndex, v)
 }

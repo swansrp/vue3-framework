@@ -1,4 +1,4 @@
-import {Key} from "ant-design-vue/es/_util/type";
+import { Key } from 'ant-design-vue/es/_util/type'
 
 interface NavListType extends NavNodeType {
     children: Array<NavListType>,
@@ -17,4 +17,4 @@ interface NavNodeType {
     name: string
 }
 
-export type {NavNodeType, NavListType}
+export type { NavNodeType, NavListType }

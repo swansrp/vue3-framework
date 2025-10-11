@@ -1,5 +1,9 @@
 <template>
-  <div ref="root" class="root" v-bind="$attrs">
+  <div
+    ref="root"
+    class="root"
+    v-bind="$attrs"
+  >
     <a-layout v-if="isTreeMode || isListMode">
       <a-layout-sider
         v-if="layoutSiderDisplay"
@@ -21,7 +25,8 @@
               @handle-menu-context-add="handleMenuContextAdd"
               @handle-menu-context-modify="handleMenuContextModify"
               @handle-menu-context-copy="handleMenuContextCopy"
-              @handle-menu-context-delete="handleMenuContextDelete">
+              @handle-menu-context-delete="handleMenuContextDelete"
+            >
               <template #end-action>
                 <portal-mode-button
                   v-if="!modeLock"
@@ -33,8 +38,17 @@
                 />
               </template>
             </portal-tree-mode>
-            <div v-else style="display: flex; justify-content: flex-end">
-              <a-button size="small" type="primary" @click="handleMenuContextAdd(null)">新增根节点</a-button>
+            <div
+              v-else
+              style="display: flex; justify-content: flex-end"
+            >
+              <a-button
+                size="small"
+                type="primary"
+                @click="handleMenuContextAdd(null)"
+              >
+                新增根节点
+              </a-button>
             </div>
           </template>
           <portal-list-mode
@@ -51,9 +65,13 @@
             @handle-menu-context-add="handleMenuContextAdd"
             @handle-menu-context-modify="handleMenuContextModify"
             @handle-menu-context-copy="handleMenuContextCopy"
-            @handle-menu-context-delete="handleMenuContextDelete">
+            @handle-menu-context-delete="handleMenuContextDelete"
+          >
             <template #display="{record}">
-              <slot :record="record.record" name="list-mode-display"></slot>
+              <slot
+                :record="record.record"
+                name="list-mode-display"
+              />
             </template>
             <template #end-action>
               <portal-mode-button
@@ -71,12 +89,17 @@
       </a-layout-sider>
       <a-layout-content
         v-if="isBindTabExisted"
-        style="margin-left: 10px; margin-right: 10px">
-        <div v-if="isNotEmpty(selectedEntityName)" style="margin-top: 10px; font-size: 20px; font-weight: bold;">
+        style="margin-left: 10px; margin-right: 10px"
+      >
+        <div
+          v-if="isNotEmpty(selectedEntityName)"
+          style="margin-top: 10px; font-size: 20px; font-weight: bold;"
+        >
           <caret-right-outlined
             :rotate="layoutSiderDisplay ? 180 : 0"
             style="color: #1677ff;font-size: 15px;margin-right: 5px"
-            @click="handleLayoutSiderDisplay" />
+            @click="handleLayoutSiderDisplay"
+          />
           <span>{{ selectedEntityName }}</span>
         </div>
         <portal-bind-tab
@@ -84,30 +107,42 @@
           :bind-tabs="bindTabs"
           :entity-name="props.tableId"
           :record="selectedRecord"
-          :row-key="config.rowKey" />
+          :row-key="config.rowKey"
+        />
       </a-layout-content>
     </a-layout>
     <template v-else>
       <!-- region 树形配置 -->
-      <div v-if="config.treeMenuShow" class="menu-tree">
-        <div class="menu-category">{{ config.title }}</div>
+      <div
+        v-if="config.treeMenuShow"
+        class="menu-tree"
+      >
+        <div class="menu-category">
+          {{ config.title }}
+        </div>
         <!--如果treeData的length为0，说明没有数据，展示提示信息-->
-        <div v-if="!treeData || !treeData.length" class="no-data">暂无数据</div>
+        <div
+          v-if="!treeData || !treeData.length"
+          class="no-data"
+        >
+          暂无数据
+        </div>
         <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
         <a-tree
           :key="treeData"
-          :defaultExpandAll="true"
+          :default-expand-all="true"
           :draggable="!config.readOnly && config.treeDragAble"
           :show-line="true"
           :tree-data="treeData"
-          @drop="updateTree" />
+          @drop="updateTree"
+        />
       </div>
       <!-- endregion 树形配置 -->
       <!-- region 数据 -->
       <div style="width: 100%;">
         <!-- region 按钮区 -->
         <portal-button-action
-          :advancedCondition="advancedCondition"
+          :advanced-condition="advancedCondition"
           :config="config"
           :is-tree-data-empty="treeData.length === 0"
           @download="download"
@@ -117,17 +152,21 @@
           @add-row="addRow"
           @save-all="saveAll"
           @delete-selected="deleteSelected"
-          @open-upload-modal="openUploadModal">
+          @open-upload-modal="openUploadModal"
+        >
           <template #left-btns>
-            <slot name="left-btns"></slot>
+            <slot name="left-btns" />
           </template>
           <template #right-btns>
-            <slot name="right-btns"></slot>
+            <slot name="right-btns" />
           </template>
         </portal-button-action>
         <!-- endregion -->
         <!-- region 表格区 -->
-        <div ref="portalConfigSpace" class="portal-table-space">
+        <div
+          ref="portalConfigSpace"
+          class="portal-table-space"
+        >
           <div class="portal-table">
             <!-- region 表格 -->
             <s-table
@@ -139,50 +178,73 @@
               :range-selection="false"
               :row-expandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
               :row-selection="hideRowSelection ? null : rowSelection"
-              :rowKey="config.rowKey"
+              :row-key="config.rowKey"
               :scroll="{x: getTableWidth(), y: getTableHeight()}"
               :size="config.size"
               :style="{width: autoWidth ? undefined : tableWidth + 'px'}"
               :table-id="config.tableId"
               auto-header-height
               bordered
-              columnDrag
-              deepWatchColumns
-              deepWatchDataSource
-              showSorterTooltip
+              column-drag
+              deep-watch-columns
+              deep-watch-data-source
+              show-sorter-tooltip
               sticky
               stripe
               summary-fixed
               @change="handleTableChange"
               @expand="handleExpand"
               @column-drag-end="handleColumnDragEnd"
-              @row-drag-end="() => isNotEmpty(rowDragEnd) ? rowDragEnd(dataSource, config.currentPage, config.pageSize) : handleRowDragEnd()">
+              @row-drag-end="() => isNotEmpty(rowDragEnd) ? rowDragEnd(dataSource, config.currentPage, config.pageSize) : handleRowDragEnd()"
+            >
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
-                <slot :column="column" :name="'headerCell_' + column.dataIndex" :title="title">
+                <slot
+                  :column="column"
+                  :name="'headerCell_' + column.dataIndex"
+                  :title="title"
+                >
                   <div
                     v-if="title?.indexOf('\n') !== -1"
                     :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
-                    class="table-title-cell">
-                    <div v-for="(item, index) in title?.split('\n')" :key="index">{{ item }}</div>
+                    class="table-title-cell"
+                  >
+                    <div
+                      v-for="(item, index) in title?.split('\n')"
+                      :key="index"
+                    >
+                      {{ item }}
+                    </div>
                   </div>
                   <div
                     v-else-if="title?.indexOf('\\n') !== -1"
                     :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
-                    class="table-title-cell">
-                    <div v-for="(item, index) in title?.split('\\n')" :key="index">{{ item }}</div>
+                    class="table-title-cell"
+                  >
+                    <div
+                      v-for="(item, index) in title?.split('\\n')"
+                      :key="index"
+                    >
+                      {{ item }}
+                    </div>
                   </div>
                   <span v-else-if="column.dataIndex === 'index'">{{ title }}</span>
                   <span
                     v-else
                     :style="column.editable === 'cellEditorSlot' ? { borderBottom: '1px ridge'} : { borderBottom: '0px ridge'}"
-                    class="table-title-cell">{{ title }}</span>
+                    class="table-title-cell"
+                  >{{ title }}</span>
                 </slot>
               </template>
               <!-- endregion -->
               <!-- region 单元格样式-->
               <template #bodyCell="{ column, record, index }">
-                <slot :column="column" :index="index" :name="'bodyCell_' + column.dataIndex" :record="record">
+                <slot
+                  :column="column"
+                  :index="index"
+                  :name="'bodyCell_' + column.dataIndex"
+                  :record="record"
+                >
                   <portal-body-cell
                     v-if="isNotEmpty($slots.action) || isNotEmpty($slots.index) || !config.readOnly"
                     :key="modifyCellMap.get(index + column.dataIndex).current"
@@ -192,39 +254,49 @@
                     :display-map="modifyCellMap"
                     :index="index"
                     :is-cell-update="isCellUpdate"
-                    :record="record">
+                    :record="record"
+                  >
                     <template #action="{}">
                       <slot
                         :column="column"
                         :columns="columns"
-                        :parsedRecord="parsedDataSource[index]"
+                        :parsed-record="parsedDataSource[index]"
                         :portal-config="config"
                         :record="record"
-                        name="action">
-                      </slot>
+                        name="action"
+                      />
                     </template>
                     <template #index="{}">
                       <slot
                         :column="column"
                         :columns="columns"
-                        :parsedRecord="parsedDataSource[index]"
+                        :parsed-record="parsedDataSource[index]"
                         :portal-config="config"
                         :record="record"
-                        name="index">
-                      </slot>
+                        name="index"
+                      />
                     </template>
                   </portal-body-cell>
                   <template v-else>
                     <template v-if="column.fieldType === FIELD_TYPE.IMAGE">
                       <multimedia
-                        v-model="record[column.dataIndex]" :height="column.referenceDict?.split(',')[1] || 120"
-                        :type="column.fieldType" :width="column.referenceDict?.split(',')[0] || 120"
-                        use-original-file-name />
+                        v-model="record[column.dataIndex]"
+                        :height="column.referenceDict?.split(',')[1] || 120"
+                        :type="column.fieldType"
+                        :width="column.referenceDict?.split(',')[0] || 120"
+                        use-original-file-name
+                      />
                     </template>
                     <template
                       v-else-if="column.fieldType === FIELD_TYPE.AUDIO || column.fieldType === FIELD_TYPE.VIDEO ||
-                        column.fieldType === FIELD_TYPE.FILE">
-                      <multimedia v-model="record[column.dataIndex]" :height="35" :type="column.fieldType" :width="80" />
+                        column.fieldType === FIELD_TYPE.FILE"
+                    >
+                      <multimedia
+                        v-model="record[column.dataIndex]"
+                        :height="35"
+                        :type="column.fieldType"
+                        :width="80"
+                      />
                     </template>
                     <span
                       v-else
@@ -234,7 +306,8 @@
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
                                                 height: '100%'} :
-                        {display: 'block', textAlign: column.contentAlign || 'center'}">
+                        {display: 'block', textAlign: column.contentAlign || 'center'}"
+                    >
                       {{ parsedDataSource[index] && parsedDataSource[index][column.dataIndex] }}
                     </span>
                   </template>
@@ -246,7 +319,7 @@
                 <portal-summary
                   :columns="columns"
                   :config="config"
-                  :dataSummary="dataSummary"
+                  :data-summary="dataSummary"
                   :hide-row-selection="hideRowSelection"
                   :is-expanded="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
                 />
@@ -259,7 +332,10 @@
               <!-- endregion -->
               <!-- region 右键菜单样式 -->
               <template #contextmenuPopup="args">
-                <slot :args="args" :name="'contextmenuPopup_' + args?.column?.dataIndex">
+                <slot
+                  :args="args"
+                  :name="'contextmenuPopup_' + args?.column?.dataIndex"
+                >
                   <portal-context-menu-popup
                     :args="args"
                     :association="isBindTabExisted"
@@ -282,26 +358,50 @@
               <!-- endregion -->
               <!-- region 下拉搜索样式 -->
               <template #menuIcon="{ column, filtered }">
-                <bars-outlined v-if="column.dataIndex === 'index'" :class="filtered && 'filter-active'" />
-                <filter-outlined v-else-if="column.filterAble" :class="filtered && 'filter-active'" />
+                <bars-outlined
+                  v-if="column.dataIndex === 'index'"
+                  :class="filtered && 'filter-active'"
+                />
+                <filter-outlined
+                  v-else-if="column.filterAble"
+                  :class="filtered && 'filter-active'"
+                />
               </template>
               <template
-                #menuPopup="{ column }">
+                #menuPopup="{ column }"
+              >
                 <!-- region 列显示选择 -->
                 <div v-if="column.dataIndex === 'index'">
                   <div class="menu-popup-container">
                     <ul class="menu-popup">
-                      <li class="menu-popup-item" style="border-bottom: 1px solid #f0f0f0">
-                        <a-checkbox v-model:checked="checkedAll" :indeterminate="indeterminate" style="margin: 2px;">
+                      <li
+                        class="menu-popup-item"
+                        style="border-bottom: 1px solid #f0f0f0"
+                      >
+                        <a-checkbox
+                          v-model:checked="checkedAll"
+                          :indeterminate="indeterminate"
+                          style="margin: 2px;"
+                        >
                           全选 / 取消选择
                         </a-checkbox>
-                        <a-tooltip placement="right" title="恢复默认">
-                          <a-button size="small" type="ghost" @click="handleColumnReset">
+                        <a-tooltip
+                          placement="right"
+                          title="恢复默认"
+                        >
+                          <a-button
+                            size="small"
+                            type="ghost"
+                            @click="handleColumnReset"
+                          >
                             <RedoOutlined />
                           </a-button>
                         </a-tooltip>
                       </li>
-                      <template v-for="col in columnArray" :key="col.key">
+                      <template
+                        v-for="col in columnArray"
+                        :key="col.key"
+                      >
                         <li class="menu-popup-item">
                           <a-checkbox
                             v-model:checked="col.checked"
@@ -327,16 +427,20 @@
                 #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
               >
                 <slot
-                  :clearFilters="clearFilters" :column="column"
-                  :name="'customFilterDropdown_' + column.dataIndex" :selectedKeys="selectedKeys"
-                  :setSelectedKeys="setSelectedKeys" confirm="confirm">
+                  :clear-filters="clearFilters"
+                  :column="column"
+                  :name="'customFilterDropdown_' + column.dataIndex"
+                  :selected-keys="selectedKeys"
+                  :set-selected-keys="setSelectedKeys"
+                  confirm="confirm"
+                >
                   <portal-column-condition
                     ref="filterDropdownRef"
-                    :clearFilters="clearFilters"
+                    :clear-filters="clearFilters"
                     :column="column"
                     :confirm="confirm"
-                    :selectedKeysRef="selectedKeys"
-                    :setSelectedKeys="setSelectedKeys"
+                    :selected-keys-ref="selectedKeys"
+                    :set-selected-keys="setSelectedKeys"
                     @handle-search-condition-changed="handleSearchConditionChanged"
                   />
                 </slot>
@@ -353,22 +457,28 @@
               <!-- endregion -->
               <!-- region 单元格编辑样式 -->
               <template
-                #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, record, recordIndexs }">
+                #cellEditor="{ column, modelValue, save, closeEditor, editorRef, getPopupContainer, record, recordIndexs }"
+              >
                 <slot
-                  :closeEditor="closeEditor" :column="column" :editorRef="editorRef"
-                  :getPopupContainer="getPopupContainer"
-                  :modelValue="modelValue"
-                  :name="'cellEditor_' + column.dataIndex" :record="record" :save="save"
-                  recordIndexs="recordIndexs">
+                  :close-editor="closeEditor"
+                  :column="column"
+                  :editor-ref="editorRef"
+                  :get-popup-container="getPopupContainer"
+                  :model-value="modelValue"
+                  :name="'cellEditor_' + column.dataIndex"
+                  :record="record"
+                  :save="save"
+                  record-indexs="recordIndexs"
+                >
                   <portal-cell-editor
-                    :closeEditor="closeEditor"
+                    :close-editor="closeEditor"
                     :column="column"
                     :config="config"
-                    :editorRef="editorRef"
-                    :getPopupContainer="getPopupContainer"
-                    :modelValue="modelValue"
+                    :editor-ref="editorRef"
+                    :get-popup-container="getPopupContainer"
+                    :model-value="modelValue"
                     :record="record"
-                    :recordIndexs="recordIndexs"
+                    :record-indexs="recordIndexs"
                     :row-allow-edit="rowAllowEdit"
                     :save="save"
                     @cell-update="cellUpdate"
@@ -377,28 +487,38 @@
               </template>
               <template
                 v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
-                #expandedRowRender="{record, index}">
+                #expandedRowRender="{record, index}"
+              >
                 <slot
-                  v-if="isNotEmpty($slots.expandedRowRender)" :parseRecord="parsedDataSource[index]"
-                  :record="record" name="expandedRowRender"></slot>
+                  v-if="isNotEmpty($slots.expandedRowRender)"
+                  :parse-record="parsedDataSource[index]"
+                  :record="record"
+                  name="expandedRowRender"
+                />
                 <portal-text-area-expanded
-                  v-else-if="props.textAreaInExpanded" :columns="textAreaColumns"
-                  :record="record" />
+                  v-else-if="props.textAreaInExpanded"
+                  :columns="textAreaColumns"
+                  :record="record"
+                />
               </template>
               <template #footer>
                 <div class="pagination">
-                  <a-button v-if="_statisticButton" type="text" @click="statisticShow = true">
+                  <a-button
+                    v-if="_statisticButton"
+                    type="text"
+                    @click="statisticShow = true"
+                  >
                     <template #icon>
                       <PieChartOutlined />
                     </template>
                   </a-button>
                   <div>
-                    <slot name="footer-action"></slot>
+                    <slot name="footer-action" />
                   </div>
                   <div style="display: flex">
                     <a-pagination
                       v-model:current="config.currentPage"
-                      v-model:pageSize="config.pageSize"
+                      v-model:page-size="config.pageSize"
                       :page-size-options="['10','20','30','50','100','200', '500', '1000']"
                       :show-total="total => `共 ${total} 项`"
                       :size="config.size"
@@ -406,17 +526,27 @@
                       show-less-items
                       show-quick-jumper
                       show-size-changer
-                      @change="paginationChange">
+                      @change="paginationChange"
+                    >
                       <template #itemRender="{ type, originalElement }">
                         <a v-if="type === 'prev'">&lt;</a>
                         <a v-else-if="type === 'next'">&gt;</a>
-                        <component :is="originalElement" v-else />
+                        <component
+                          :is="originalElement"
+                          v-else
+                        />
                       </template>
                       <template #buildOptionText="prop">
-                        <span v-if="+prop.value <= 500" style="width: 60px; display: inline-block">
+                        <span
+                          v-if="+prop.value <= 500"
+                          style="width: 60px; display: inline-block"
+                        >
                           {{ prop.value }}条/页
                         </span>
-                        <span v-else style="width: 60px; display: inline-block">全部</span>
+                        <span
+                          v-else
+                          style="width: 60px; display: inline-block"
+                        >全部</span>
                       </template>
                     </a-pagination>
                     <portal-mode-button
@@ -441,19 +571,28 @@
     </template>
     <!-- region 详情框 -->
     <slot
-      v-if="config.modal.type === 'view'" :dataSource="dataSource" :modal="config.modal" :modifyCellMap="modifyCellMap"
-      name="view">
+      v-if="config.modal.type === 'view'"
+      :data-source="dataSource"
+      :modal="config.modal"
+      :modify-cell-map="modifyCellMap"
+      name="view"
+    >
       <portal-view-modal
-        :columnDisplayMap="columnDisplayMap"
+        :column-display-map="columnDisplayMap"
         :config="config"
-        :dataSource="dataSource"
-        :modifyCellMap="modifyCellMap"
+        :data-source="dataSource"
+        :modify-cell-map="modifyCellMap"
         @cancel="handleModalCancel"
         @close="handleModalClose"
         @confirm="handleModalConfirm"
       />
     </slot>
-    <slot v-else-if="config.modal.type === 'association'" :bindTabs="bindTabs" :modal="config.modal" name="association">
+    <slot
+      v-else-if="config.modal.type === 'association'"
+      :bind-tabs="bindTabs"
+      :modal="config.modal"
+      name="association"
+    >
       <portal-association-modal
         :bind-tabs="bindTabs"
         :config="config"
@@ -463,20 +602,28 @@
       />
     </slot>
     <slot
-      v-else-if="config.modal.type === 'modify'" :columnDisplayMap="columnDisplayMap" :modal="config.modal"
-      name="modify">
+      v-else-if="config.modal.type === 'modify'"
+      :column-display-map="columnDisplayMap"
+      :modal="config.modal"
+      name="modify"
+    >
       <portal-edit-modal
         v-model:config="config"
-        :columnDisplayMap="columnDisplayMap"
+        :column-display-map="columnDisplayMap"
         @cancel="handleModalCancel"
         @close="handleModalClose"
         @confirm="handleModalConfirm"
       />
     </slot>
-    <slot v-else-if="config.modal.type === 'add'" :columnDisplayMap="columnDisplayMap" :modal="config.modal" name="add">
+    <slot
+      v-else-if="config.modal.type === 'add'"
+      :column-display-map="columnDisplayMap"
+      :modal="config.modal"
+      name="add"
+    >
       <portal-edit-modal
         v-model:config="config"
-        :columnDisplayMap="columnDisplayMap"
+        :column-display-map="columnDisplayMap"
         @cancel="handleModalCancel"
         @close="handleModalClose"
         @confirm="handleModalConfirm"
@@ -497,7 +644,24 @@
   </div>
 </template>
 <script lang="ts" setup>
+import {
+  BarsOutlined,
+  CaretRightOutlined,
+  ExclamationCircleOutlined,
+  FilterOutlined,
+  PieChartOutlined,
+  RedoOutlined,
+  SearchOutlined
+} from '@ant-design/icons-vue'
 import Table from '@surely-vue/table'
+import { message, Modal } from 'ant-design-vue'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import * as _ from 'lodash'
+import { createVNode, Ref, useSlots } from 'vue'
+
+import { name } from '@/../package.json'
 import {
   addEntity,
   advancedQuery,
@@ -520,8 +684,20 @@ import {
   updateTreePid
 } from '@/framework/apis/portal'
 import { getPortalConfig } from '@/framework/apis/portal/config'
-import { dictStore, useTreeStore } from '@/framework/store/common'
-import * as _ from 'lodash'
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
+import {
+  actionColumn,
+  AUTO_UUID_ROW_KEY,
+  defaultColumn,
+  getDefaultFilterType,
+  indexColumn
+} from '@/framework/components/common/Portal/constant'
+import DashboardModal from '@/framework/components/common/Portal/dashboard/dashboardModal.vue'
+import { db } from '@/framework/components/common/Portal/db'
+import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
+import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import {
   ColumnType,
   FIELD_TYPE,
@@ -533,15 +709,10 @@ import {
   TableConfigType,
   UpdateOrderType
 } from '@/framework/components/common/Portal/type'
-import {
-  BarsOutlined,
-  CaretRightOutlined,
-  ExclamationCircleOutlined,
-  FilterOutlined,
-  PieChartOutlined,
-  RedoOutlined,
-  SearchOutlined
-} from '@ant-design/icons-vue'
+import { parse } from '@/framework/components/common/Portal/utils'
+import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
+import bus, { PORTAL_RESIZE } from '@/framework/mitt'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 import {
   doFunctions,
   getAllParentNodes,
@@ -552,31 +723,8 @@ import {
   updateTableSize,
   uuid
 } from '@/framework/utils/common'
-import {
-  actionColumn,
-  AUTO_UUID_ROW_KEY,
-  defaultColumn,
-  getDefaultFilterType,
-  indexColumn
-} from '@/framework/components/common/Portal/constant'
 import { AUTO } from '@/framework/utils/constant'
-import { createVNode, Ref, useSlots } from 'vue'
-import { message, Modal } from 'ant-design-vue'
-import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
-import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
-import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
-import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
-import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
-import bus, { PORTAL_RESIZE } from '@/framework/mitt'
-import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
-import { parse } from '@/framework/components/common/Portal/utils'
 import { excelExport } from '@/framework/utils/excel'
-import { name } from '@/../package.json'
-import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
-import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
-import DashboardModal from '@/framework/components/common/Portal/dashboard/dashboardModal.vue'
-import { db } from '@/framework/components/common/Portal/db'
 
 const __ = getInstance()
 /**
@@ -1456,7 +1604,7 @@ const initQueryCondition = () => {
 }
 
 const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, relation: any, filterStrict: boolean) => {
-  console.log("handleSearchConditionChanged", selectedKeys, dataIndex, relation, filterStrict)
+  console.log('handleSearchConditionChanged', selectedKeys, dataIndex, relation, filterStrict)
   const condition = {} as ConditionListType
   if (relation === FILTER_TYPE.BETWEEN && !filterStrict) {
     condition.andOr = '0'

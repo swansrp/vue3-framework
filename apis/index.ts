@@ -1,8 +1,9 @@
 import { Method } from 'axios'
+
 import { name } from '@/../package.json'
-import { download, request, upload } from '@/framework/network/request'
-import { QuerySortType, QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { QuerySortType, QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
+import { download, request, upload } from '@/framework/network/request'
 
 const baseDomain = '/' + name
 const apiType: any = {

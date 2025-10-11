@@ -1,5 +1,6 @@
-import { colorList, setEchartsOptionsAndResize } from "../utils"
 import { MetricStatisticType, NameValue } from '../type'
+import { colorList, setEchartsOptionsAndResize } from '../utils'
+
 import { formatPercent } from '@/framework/utils/formatter'
 
 export const processSingleMetricData = (data: Array<MetricStatisticType>): Array<NameValue> => {
@@ -17,8 +18,8 @@ export const echartsPie = (myChart: any, data: Array<NameValue>) => {
   const series = getPie3DSeries(data)
   const option = getPie3DOption(series, data)
   setEchartsOptionsAndResize(myChart, option, true)
-  myChart.off("mouseover")
-  myChart.on("mouseover", function (params: any) {
+  myChart.off('mouseover')
+  myChart.on('mouseover', function (params: any) {
     // 准备重新渲染扇形所需的参数
     let isSelected
     let isHovered
@@ -44,7 +45,7 @@ export const echartsPie = (myChart: any, data: Array<NameValue>) => {
       }
 
       // 如果触发 mouseover 的扇形不是透明圆环，将其高亮（对 option 更新）
-      if (params.seriesName !== "mouseoutSeries" && option.series[params.seriesIndex].pieStatus) {
+      if (params.seriesName !== 'mouseoutSeries' && option.series[params.seriesIndex].pieStatus) {
         // 从 option.series 中读取重新渲染扇形所需的参数，将是否高亮设置为 true。
         isSelected = option.series[params.seriesIndex].pieStatus.selected
         isHovered = true
@@ -73,13 +74,13 @@ const getPie3DSeries = (pieData: Array<NameValue>) => {
     sumValue += pieData[i].value
     const seriesItem = {
       name: pieData[i].name,
-      type: "surface",
+      type: 'surface',
       parametric: true,
       wireframe: { show: false },
       pieData: pieData[i],
       pieStatus: { selected: false, hovered: false, k: k },
-      radius: "50%",
-      center: ["10", "10%"],
+      radius: '50%',
+      center: ['10', '10%'],
       itemStyle: pieData[i].itemStyle
     }
     series.push(seriesItem)
@@ -150,7 +151,7 @@ const getParametricEquation = (startRatio: number, endRatio: number, isSelected:
   // 如果只有一个扇形，则不实现选中效果。
   if (startRatio === 0 && endRatio === 1) isSelected = false
   // 通过扇形内径/外径的值，换算出辅助参数 k（默认值 1/3）
-  k = typeof k !== "undefined" ? k : 1 / 3
+  k = typeof k !== 'undefined' ? k : 1 / 3
   // 计算选中效果分别在 x 轴、y 轴方向上的位移（未选中，则位移均为 0）
   const offsetX = isSelected ? Math.cos(midRadian) * 0.1 : 0
   const offsetY = isSelected ? Math.sin(midRadian) * 0.1 : 0

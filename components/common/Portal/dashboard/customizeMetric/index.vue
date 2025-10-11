@@ -1,10 +1,20 @@
 <template>
-  <div :id="'bar-3d-'+index" :style="{zIndex: 1-showNoData, opacity: 1-showNoData}" class="bar-3d-css"></div>
-  <div :style="{zIndex: showNoData, opacity: showNoData}" class="bar-3d-no-data">暂无数据</div>
+  <div
+    :id="'bar-3d-'+index"
+    :style="{zIndex: 1-showNoData, opacity: 1-showNoData}"
+    class="bar-3d-css"
+  />
+  <div
+    :style="{zIndex: showNoData, opacity: showNoData}"
+    class="bar-3d-no-data"
+  >
+    暂无数据
+  </div>
 </template>
 
 <script lang="ts" setup>
 import { getEchartsBar3dOption } from './echart-option'
+
 import { MetricStatisticType } from '@/framework/components/common/Portal/dashboard/type'
 import {
   disposeEcharts,

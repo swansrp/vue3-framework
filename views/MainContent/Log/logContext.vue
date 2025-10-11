@@ -13,9 +13,13 @@
         v-model:checked="state.checkAll"
         :indeterminate="state.indeterminate"
         @change="onCheckAllChange"
-      >ALL
+      >
+        ALL
       </a-checkbox>
-      <a-checkbox-group v-model:value="state.checkedList" :options="plainOptions" />
+      <a-checkbox-group
+        v-model:value="state.checkedList"
+        :options="plainOptions"
+      />
       <a-button
         style="margin-left: 10px;"
         type="primary"
@@ -27,55 +31,93 @@
         </template>
       </a-button>
     </template>
-    <div ref="logContainer" class="log-container">
+    <div
+      ref="logContainer"
+      class="log-container"
+    >
       <div class="log-list">
         <div
           v-for="({expand, log}, index) in dataSource"
           :key="index"
           :style="{height: expand === false ? 'auto' : '30px'}"
-          class="log-item tip">
+          class="log-item tip"
+        >
           <a-dropdown :trigger="['contextmenu']">
             <template #overlay>
               <a-menu @click="handleContextMenuClick($event, log)">
-                <a-menu-item key="json">JSON格式化</a-menu-item>
-                <a-menu-item v-if="isSQL(log.content)" key="sql">SQL格式化</a-menu-item>
+                <a-menu-item key="json">
+                  JSON格式化
+                </a-menu-item>
+                <a-menu-item
+                  v-if="isSQL(log.content)"
+                  key="sql"
+                >
+                  SQL格式化
+                </a-menu-item>
               </a-menu>
             </template>
             <div>
               <a-tooltip
-                :overlayStyle="{ maxWidth: '500px'}" :title="`${log.className}-${log.methodName}`" color="#777"
-                placement="topLeft">
+                :overlay-style="{ maxWidth: '500px'}"
+                :title="`${log.className}-${log.methodName}`"
+                color="#777"
+                placement="topLeft"
+              >
                 <span :class="[getLogLevelClass(log.logLevel)]">{{ formatDate(log.createTime) }}</span>
               </a-tooltip>
-              <a-button size="small" type="text" @click="expandLog(data.get(log.logId))">
+              <a-button
+                size="small"
+                type="text"
+                @click="expandLog(data.get(log.logId))"
+              >
                 <template #icon>
-                  <PlusOutlined v-if="expand" style="color: blue" />
+                  <PlusOutlined
+                    v-if="expand"
+                    style="color: blue"
+                  />
                   <MinusOutlined
-                    v-else :style="{color: expand === null ? 'grey' : 'blue'}" />
+                    v-else
+                    :style="{color: expand === null ? 'grey' : 'blue'}"
+                  />
                 </template>
               </a-button>
               <span
-                v-if="expand" :class="['contentCss', getLogLevelClass(log.logLevel)]"
-                v-html="log.content.substring(0, expandWidth)"></span>
-              <span v-else :class="['contentCss', getLogLevelClass(log.logLevel)]" v-html="log.content"></span>
+                v-if="expand"
+                :class="['contentCss', getLogLevelClass(log.logLevel)]"
+                v-html="log.content.substring(0, expandWidth)"
+              />
+              <span
+                v-else
+                :class="['contentCss', getLogLevelClass(log.logLevel)]"
+                v-html="log.content"
+              />
             </div>
           </a-dropdown>
         </div>
       </div>
     </div>
   </a-drawer>
-  <log-json-draw v-if="isNotEmpty(jsonData)" v-model:show="showJson" :data="jsonData" />
-  <log-sql-draw v-model:show="showSql" :sql="sqlData" />
+  <log-json-draw
+    v-if="isNotEmpty(jsonData)"
+    v-model:show="showJson"
+    :data="jsonData"
+  />
+  <log-sql-draw
+    v-model:show="showSql"
+    :sql="sqlData"
+  />
 </template>
 
 <script lang="ts" setup>
 import { ColumnHeightOutlined, MinusOutlined, PlusOutlined, VerticalAlignMiddleOutlined } from '@ant-design/icons-vue'
-import { isNotEmpty, scrollToBottom } from '@/framework/utils/common'
+import { message } from 'ant-design-vue'
+import { ref } from 'vue'
+
 import LogJsonDraw from './logJson.vue'
 import LogSqlDraw from './logSql.vue'
 import { expandLog, formatDate, getLogLevelClass, isJson, isSQL } from './logUtil'
-import { message } from 'ant-design-vue'
-import { ref } from 'vue'
+
+import { isNotEmpty, scrollToBottom } from '@/framework/utils/common'
 
 const [messageApi, contextHolder] = message.useMessage()
 const logContainer = ref()

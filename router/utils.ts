@@ -1,7 +1,7 @@
-import pinia from "@/framework/store"
-import router from "@/framework/router/index"
-import {useTabStore} from "@/framework/store/nav"
-import {useRouteStore} from "@/framework/store/route"
+import router from '@/framework/router/index'
+import pinia from '@/framework/store'
+import { useTabStore } from '@/framework/store/nav'
+import { useRouteStore } from '@/framework/store/route'
 
 const tabStore = useTabStore(pinia)
 

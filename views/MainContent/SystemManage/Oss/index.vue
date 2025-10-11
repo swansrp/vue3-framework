@@ -7,7 +7,10 @@
       />
     </template>
     <template #content>
-      <div v-if="_.$isNotEmpty(currentCategory)" style="margin-top: 20px">
+      <div
+        v-if="_.$isNotEmpty(currentCategory)"
+        style="margin-top: 20px"
+      >
         <portal
           :key="currentCategory"
           ref="portalRef"
@@ -19,40 +22,72 @@
           mode-lock
           read-only
           hide-refresh
-          table-id="SaObjectStorage">
+          table-id="SaObjectStorage"
+        >
           <template #bodyCell_uri="{record}">
             <multimedia
-              v-if="record.type === '5'" v-model="record.uri" :download-able="false" :type="FIELD_TYPE.AUDIO"
-              useOriginalFileName />
+              v-if="record.type === '5'"
+              v-model="record.uri"
+              :download-able="false"
+              :type="FIELD_TYPE.AUDIO"
+              use-original-file-name
+            />
             <multimedia
-              v-else-if="record.type === '2'" v-model="record.uri" :download-able="false" :type="FIELD_TYPE.IMAGE"
-              useOriginalFileName />
-            <div v-else>{{ record.uri }}</div>
+              v-else-if="record.type === '2'"
+              v-model="record.uri"
+              :download-able="false"
+              :type="FIELD_TYPE.IMAGE"
+              use-original-file-name
+            />
+            <div v-else>
+              {{ record.uri }}
+            </div>
           </template>
           <template #action="{record}">
             <div style="display: flex;justify-content: center">
-              <a-button type="link" @click="copy(record.uri)">复制地址</a-button>
-              <a-button type="link" @click="downloadUrl(record.uri, record.name)">下载</a-button>
+              <a-button
+                type="link"
+                @click="copy(record.uri)"
+              >
+                复制地址
+              </a-button>
+              <a-button
+                type="link"
+                @click="downloadUrl(record.uri, record.name)"
+              >
+                下载
+              </a-button>
             </div>
           </template>
           <template #left-btns>
-            <a-button style="margin-left: 10px" type="primary" @click="upload.showUploadDialogBox('')">上传</a-button>
+            <a-button
+              style="margin-left: 10px"
+              type="primary"
+              @click="upload.showUploadDialogBox('')"
+            >
+              上传
+            </a-button>
           </template>
         </portal>
       </div>
     </template>
   </content-layout>
-  <upload-file ref="upload" use-original-file-name @after-confirm="portalRef.queryData()" />
+  <upload-file
+    ref="upload"
+    use-original-file-name
+    @after-confirm="portalRef.queryData()"
+  />
 </template>
 
 <script lang="ts" setup>
 
-import Portal from "@/framework/components/common/Portal/index.vue";
-import { FIELD_TYPE, FILTER_TYPE } from "@/framework/components/common/Portal/type";
-import { Ref } from "vue";
-import { ConditionListType } from "@/framework/components/common/AdvancedSearch/ConditionList/type";
-import { message } from "ant-design-vue";
-import { downloadUrl } from "@/framework/network/request";
+import { message } from 'ant-design-vue'
+import { Ref } from 'vue'
+
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import Portal from '@/framework/components/common/Portal/index.vue'
+import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { downloadUrl } from '@/framework/network/request'
 const _ = getInstance()
 const portalRef = ref()
 const currentCategory = ref()

@@ -1,6 +1,6 @@
-import icon from './assets/imgs/double-metric-icon.svg'
 import { MetricStatisticType, NameValue } from '../type'
 import { colorList } from '../utils'
+import icon from './assets/imgs/double-metric-icon.svg'
 
 export interface DoubleMetricDataType {
   innerData: Array<NameValue>,

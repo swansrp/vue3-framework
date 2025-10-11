@@ -1,83 +1,136 @@
 <template>
   <s-table
+    v-if="updatedColumns.length"
+    v-model:pagination="pagination"
     :bordered="bordered"
     summary-fixed
     :stripe="stripe"
-    v-if="updatedColumns.length"
-    v-model:pagination="pagination"
     :columns="updatedColumns"
     :data-source="dataSource"
     :animate-rows="false"
-    :rowClassName="rowClassName"
+    :row-class-name="rowClassName"
     :scroll="{x: getTableWidth(), y: getTableHeight()}"
     :style="{width: String(_tableWidth) === 'auto' ? '100%' : _tableWidth + 'px'}"
-    :customRow="customRow"
-    :customHeaderCell="customHeaderCell"
+    :custom-row="customRow"
+    :custom-header-cell="customHeaderCell"
+    :row-height="rowHeight"
     @row-drag-end="rowDragEnd"
     @expanded-rows-change="expandedRowsChange"
     @change="change"
-    :row-height="rowHeight"
-    @column-drag-end="columnDragEnd">
-    <template v-if="needTitle" #title>
-      <slot name="title"></slot>
+    @column-drag-end="columnDragEnd"
+  >
+    <template
+      v-if="needTitle"
+      #title
+    >
+      <slot name="title" />
     </template>
     <template #headerCell="{title}">
       <span v-if="title.indexOf('/') === -1">{{ title }}</span>
-      <div v-else class="table-title-cell">
-        <div v-for="(item, index) in title.split('/')" :key="index">{{ item }}</div>
+      <div
+        v-else
+        class="table-title-cell"
+      >
+        <div
+          v-for="(item, index) in title.split('/')"
+          :key="index"
+        >
+          {{ item }}
+        </div>
       </div>
     </template>
-    <template v-if="needExpandedRowRender" #expandedRowRender="{ record }">
-      <slot :record="record" name="expandedRowRender"></slot>
+    <template
+      v-if="needExpandedRowRender"
+      #expandedRowRender="{ record }"
+    >
+      <slot
+        :record="record"
+        name="expandedRowRender"
+      />
     </template>
-    <template v-if="summaryList" #summary>
+    <template
+      v-if="summaryList"
+      #summary
+    >
       <s-table-summary-row>
-        <s-table-summary-cell v-for="(item, index) in summaryList" :key="index" :index="index">
-          <template v-if="item || item === 0">{{ item }}</template>
-          <template v-else></template>
+        <s-table-summary-cell
+          v-for="(item, index) in summaryList"
+          :key="index"
+          :index="index"
+        >
+          <template v-if="item || item === 0">
+            {{ item }}
+          </template>
+          <template v-else />
         </s-table-summary-cell>
       </s-table-summary-row>
     </template>
     <template #bodyCell="{column, record, text}">
-      <slot :column="column" :record="record" :text="text" name="bodyCell"></slot>
+      <slot
+        :column="column"
+        :record="record"
+        :text="text"
+        name="bodyCell"
+      />
     </template>
     <template #customFilterDropdown="{setSelectedKeys, selectedKeys, confirm, clearFilters, column}">
       <div style="padding: 8px">
         <a-input
-          ref="searchInput"
           v-if="column.filterComponentType === FILTER_COMPONENT_TYPE.INPUT"
+          ref="searchInput"
           :placeholder="`搜索${column.title}`"
           :value="selectedKeys[0]"
           style="width: 188px; margin-bottom: 8px; display: block"
           @change="e => inputOnChange(column, e, setSelectedKeys)"
           @press-enter="handleSearch"
         />
-        <a-button size="small" style="width: 90px;margin-right: 8px" type="primary" @click="handleSearch">
-          <template #icon><search-outlined /></template>搜索
+        <a-button
+          size="small"
+          style="width: 90px;margin-right: 8px"
+          type="primary"
+          @click="handleSearch"
+        >
+          <template #icon>
+            <search-outlined />
+          </template>搜索
         </a-button>
-        <a-button size="small" style="width: 90px" @click="handleReset(column, clearFilters)">清空</a-button>
+        <a-button
+          size="small"
+          style="width: 90px"
+          @click="handleReset(column, clearFilters)"
+        >
+          清空
+        </a-button>
       </div>
       <slot
         name="customFilterDropdown"
-        :setSelectedKeys="setSelectedKeys" :selectedKeys="selectedKeys"
-        :confirm="confirm" :clearFilters="clearFilters" :column="column">
-      </slot>
+        :set-selected-keys="setSelectedKeys"
+        :selected-keys="selectedKeys"
+        :confirm="confirm"
+        :clear-filters="clearFilters"
+        :column="column"
+      />
     </template>
     <template #customFilterIcon="{ filtered }">
-      <slot :filtered="filtered" name="customFilterIcon"></slot>
+      <slot
+        :filtered="filtered"
+        name="customFilterIcon"
+      />
     </template>
   </s-table>
 </template>
 
 <script lang="ts" setup>
-import {AUTO} from "@/framework/utils/constant"
-import {localStorageMethods} from '@/framework/utils/common'
-import {updateColumns} from '@/framework/hooks/updateSurelyTableColumns'
-import {STable, STablePaginationConfig, STableSummaryCell, STableSummaryRow} from '@surely-vue/table'
-import {Ref} from "vue"
-import {SearchOutlined} from "@ant-design/icons-vue";
-import {TableColumnType} from "ant-design-vue";
-import {FILTER_COMPONENT_TYPE, QueryConditionType} from "./contant";
+import { SearchOutlined } from '@ant-design/icons-vue'
+import { STable, STablePaginationConfig, STableSummaryCell, STableSummaryRow } from '@surely-vue/table'
+import { TableColumnType } from 'ant-design-vue'
+import { Ref } from 'vue'
+
+import { FILTER_COMPONENT_TYPE, QueryConditionType } from './contant'
+
+import { updateColumns } from '@/framework/hooks/updateSurelyTableColumns'
+import { localStorageMethods } from '@/framework/utils/common'
+import { AUTO } from '@/framework/utils/constant'
 
 const props = defineProps<{
   tableId?: string,
@@ -95,7 +148,7 @@ const props = defineProps<{
   rowHeight?: any
 }>()
 
-const slots = useSlots();
+const slots = useSlots()
 let needTitle = ref(slots['title'])
 let needExpandedRowRender = ref(slots['expandedRowRender'])
 const emit = defineEmits(['onRowDrag', 'pageChange', 'expandedRowsChange', 'handleSearch', 'handleReset', 'change'])
@@ -104,7 +157,7 @@ let updatedColumns:Ref<any[]> = ref([])
 let _tableHeight = ref<number | undefined>()
 let _tableWidth = ref<number | undefined>()
 let pagination = ref(props.pagination)
-let {tableId, columns, dataSource, rowClassName, stripe, customRow, customHeaderCell, rowHeight} = toRefs(props)
+let { tableId, columns, dataSource, rowClassName, stripe, customRow, customHeaderCell, rowHeight } = toRefs(props)
 let bordered = computed(() => props.bordered === undefined ? true : props.bordered)
 let queryCondition: QueryConditionType | {[key: string]: string} = {}
 
@@ -167,7 +220,7 @@ initPagination()
 updateColumns(updatedColumns, columns, tableId)
 
 watch(() => props.tableWidth, value => value && (_tableWidth.value = value))
-watch(() => props.tableHeight, value => value && (_tableHeight.value = value), {immediate: true})
+watch(() => props.tableHeight, value => value && (_tableHeight.value = value), { immediate: true })
 
 </script>
 

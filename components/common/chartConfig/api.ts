@@ -1,10 +1,11 @@
 // 个人仪表盘API接口定义
 
-import { get, post } from '@/framework/network/request'
-import { apiType, baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import type { DashboardItem, IndicatorNode } from './types'
+
+import { apiType, baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { addEntity, deleteEntity, updateEntitySelective, updateOrder, updateTreePid } from '@/framework/apis/portal'
 import { UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
+import { get, post } from '@/framework/network/request'
 
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.portal + '/dashboard', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.portal + '/dashboard', domain)

@@ -4,7 +4,8 @@
       <a-input
         v-model:value="value"
         placeholder="请输入属性值"
-        @change="$emit('update:conditionContentValue', value)" />
+        @change="$emit('update:conditionContentValue', value)"
+      />
     </template>
     <template v-else-if="type === FIELD_TYPE.NUMBER">
       <a-input-number
@@ -13,10 +14,12 @@
         class="full-width"
         placeholder="请输入属性值"
         type="number"
-        @change="$emit('update:conditionContentValue', value)" />
+        @change="$emit('update:conditionContentValue', value)"
+      />
       <a-input-group
         v-else-if="+relation === FILTER_TYPE.BETWEEN"
-        compact>
+        compact
+      >
         <a-input-number
           v-model:value="valueArray[0]"
           placeholder="大于等于"
@@ -41,13 +44,15 @@
         v-else-if="+relation === FILTER_TYPE.IN"
         v-model:value="value"
         placeholder="输入属性值(逗号隔开)"
-        @change="$emit('update:conditionContentValue', value.split(','))" />
+        @change="$emit('update:conditionContentValue', value.split(','))"
+      />
     </template>
     <template v-else-if="type === FIELD_TYPE.SWITCH">
       <a-switch
         v-model:checked="value"
         placeholder="请输入属性值"
-        @change="$emit('update:conditionContentValue', value)" />
+        @change="$emit('update:conditionContentValue', value)"
+      />
     </template>
     <template v-else-if="type === FIELD_TYPE.SELECT || type === FIELD_TYPE.SELECT_MULTI_IN_ONE">
       <a-select
@@ -56,7 +61,8 @@
         class="full-width"
         mode="multiple"
         placeholder="请选择属性值"
-        @change="$emit('update:conditionContentValue', valueArray)" />
+        @change="$emit('update:conditionContentValue', valueArray)"
+      />
     </template>
     <template v-else-if="type === FIELD_TYPE.DATE">
       <a-range-picker
@@ -64,13 +70,14 @@
         v-model:value="value"
         :locale="locale"
         class="full-width"
-        valueFormat="YYYY-MM-DD HH:mm:ss"
+        value-format="YYYY-MM-DD HH:mm:ss"
         @change="onDayChange"
       />
       <a-date-picker
         v-else
         v-model:value="value"
-        @change="emit('update:conditionContentValue', value)" />
+        @change="emit('update:conditionContentValue', value)"
+      />
     </template>
     <template v-else-if="type === FIELD_TYPE.DATETIME">
       <a-range-picker
@@ -79,14 +86,15 @@
         :locale="locale"
         :show-time="true"
         class="full-width"
-        valueFormat="YYYY-MM-DD HH:mm:ss"
+        value-format="YYYY-MM-DD HH:mm:ss"
         @change="onDayTimeChange"
       />
       <a-date-picker
         v-else
         v-model:value="value"
         show-time
-        @change="emit('update:conditionContentValue', value)" />
+        @change="emit('update:conditionContentValue', value)"
+      />
     </template>
     <template v-else-if="type === FIELD_TYPE.HREF">
       <a-textarea
@@ -94,16 +102,18 @@
         :rows="1"
         class="full-width"
         placeholder="请输入属性值"
-        @change="$emit('update:conditionContentValue', value)" />
+        @change="$emit('update:conditionContentValue', value)"
+      />
     </template>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { Ref } from 'vue'
-import { ValueLabel } from '@/framework/utils/type'
-import { FIELD_TYPE, FILTER_TYPE } from "@/framework/components/common/Portal/type"
 import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
+import { Ref } from 'vue'
+
+import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { ValueLabel } from '@/framework/utils/type'
 
 
 const value: Ref = ref()

@@ -1,4 +1,4 @@
-import {ConditionListType} from './ConditionList/type'
+import { ConditionListType } from './ConditionList/type'
 
 export interface ConditionType {
     conditionList: Array<ConditionListType>

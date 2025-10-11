@@ -1,5 +1,5 @@
-import { download, get, post, upload } from '@/framework/network/request'
 import { apiType, baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/apis'
+import { download, get, post, upload } from '@/framework/network/request'
 
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.portal + '/admin', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.portal + '/admin', domain)

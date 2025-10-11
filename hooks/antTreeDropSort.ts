@@ -1,6 +1,6 @@
-import {TreeProps} from "ant-design-vue"
-import {AntTreeNodeDropEvent} from "ant-design-vue/es/tree"
-import {Ref} from "vue"
+import { TreeProps } from 'ant-design-vue'
+import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
+import { Ref } from 'vue'
 
 // 这个函数来源于antd 官网 可以理解为直接搬运过来的, 获得拖拽后的tree数据
 const getDroppedData = (info: AntTreeNodeDropEvent, treeData: Ref) => {
@@ -35,7 +35,7 @@ const getDroppedData = (info: AntTreeNodeDropEvent, treeData: Ref) => {
         item.children.unshift(dragObj)
       })
     } else {
-      let ar: TreeProps['treeData'] = [];
+      let ar: TreeProps['treeData'] = []
       let i = 0
       loop(data, dropKey, (_item: TreeDataItem, index: number, arr: TreeProps['treeData']) => {
         ar = arr
@@ -47,4 +47,4 @@ const getDroppedData = (info: AntTreeNodeDropEvent, treeData: Ref) => {
     return data
 }
 
-export {getDroppedData}
+export { getDroppedData }

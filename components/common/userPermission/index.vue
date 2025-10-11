@@ -1,78 +1,135 @@
 <template>
   <department-and-staff-select
-    v-model:departmentListValue="departmentListValue" v-model:staffListValue="staffListValue"
-    :staff-max-tag-count="1" :width="500" is-multiple layout-mode="vertical" />
-  <a-form-item v-if="needDefaultPermissionSelect" label="用户权限">
-    <a-select v-model:value="currentPermission" placeholder="请选择权限" style="width: 285px">
-      <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
+    v-model:department-list-value="departmentListValue"
+    v-model:staff-list-value="staffListValue"
+    :staff-max-tag-count="1"
+    :width="500"
+    is-multiple
+    layout-mode="vertical"
+  />
+  <a-form-item
+    v-if="needDefaultPermissionSelect"
+    label="用户权限"
+  >
+    <a-select
+      v-model:value="currentPermission"
+      placeholder="请选择权限"
+      style="width: 285px"
+    >
+      <a-select-option
+        v-for="item in permissionList"
+        :key="item.value"
+        :value="item.value"
+      >
         {{ item.label }}
       </a-select-option>
     </a-select>
   </a-form-item>
   <div style="padding-top: 4px; margin-bottom: 8px">
     <a-button
-      :disabled="staffListValue.length === 0" style="width: 200px;margin-left: 70px;" type="primary"
-      @click="handleAddUser">添加
+      :disabled="staffListValue.length === 0"
+      style="width: 200px;margin-left: 70px;"
+      type="primary"
+      @click="handleAddUser"
+    >
+      添加
     </a-button>
     <a-button
-      :disabled="staffListValue.length === 0" danger style="width: 200px;margin-left: 70px;" type="primary"
-      @click="handleDeleteUser">解绑
+      :disabled="staffListValue.length === 0"
+      danger
+      style="width: 200px;margin-left: 70px;"
+      type="primary"
+      @click="handleDeleteUser"
+    >
+      解绑
     </a-button>
   </div>
-  <a-card size="small" style="height: calc(100vh - 410px)" title="已绑定用户">
+  <a-card
+    size="small"
+    style="height: calc(100vh - 410px)"
+    title="已绑定用户"
+  >
     <template #extra>
-      <a-select v-model:value="selectPermission" placeholder="请选择权限" style="width: 200px">
-        <a-select-option v-for="item in permissionList" :key="item.value" :value="item.value">
+      <a-select
+        v-model:value="selectPermission"
+        placeholder="请选择权限"
+        style="width: 200px"
+      >
+        <a-select-option
+          v-for="item in permissionList"
+          :key="item.value"
+          :value="item.value"
+        >
           {{ item.label }}
         </a-select-option>
       </a-select>
       <a-input-search
-        v-model:value="searchUserName" enter-button placeholder="请输入职工名"
-        style="width: 200px;margin-right: 10px;" @search="handleSearchUser" />
+        v-model:value="searchUserName"
+        enter-button
+        placeholder="请输入职工名"
+        style="width: 200px;margin-right: 10px;"
+        @search="handleSearchUser"
+      />
       <delete-pop-confirm
-        btn-content="解绑所有用户" pop-content="确认解绑全部用户吗？该操作不可恢复！"
-        size="middle" @delete-event="handleUnbindAllUser" />
+        btn-content="解绑所有用户"
+        pop-content="确认解绑全部用户吗？该操作不可恢复！"
+        size="middle"
+        @delete-event="handleUnbindAllUser"
+      />
     </template>
     <a-empty v-if="!userList.length" />
-    <div v-else class="tag-box">
+    <div
+      v-else
+      class="tag-box"
+    >
       <a-tag
-        v-for="user in userList" :key="user.value"
-        closable color="blue" style="margin-top: 5px; cursor: pointer;"
+        v-for="user in userList"
+        :key="user.value"
+        closable
+        color="blue"
+        style="margin-top: 5px; cursor: pointer;"
         @click="handleChangePermission(user)"
-        @close="handleUnbindUser(user.userId)">
+        @close="handleUnbindUser(user.userId)"
+      >
         {{ user.label }}-{{ user.dataScopeDisplay }}
       </a-tag>
     </div>
   </a-card>
 
-  <dialog-box v-model:visible="editUserPermissionVisible" :title="`为${currentUserInfo.name}配置权限`">
+  <dialog-box
+    v-model:visible="editUserPermissionVisible"
+    :title="`为${currentUserInfo.name}配置权限`"
+  >
     <EditUserPermission
-      :data-scope="currentUserInfo.dataScope" :permission-list="permissionList"
-      @callback="handleEditUserPermission" />
+      :data-scope="currentUserInfo.dataScope"
+      :permission-list="permissionList"
+      @callback="handleEditUserPermission"
+    />
   </dialog-box>
 </template>
 
 <script lang="ts" setup>
 
-import DepartmentAndStaffSelect
-  from "@/framework/components/common/departmentAndStaffSelect/DepartmentAndStaffSelect.vue";
-import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
+import { Ref } from 'vue'
+
 import {
   bindUserGroupList,
   editUserPermission,
   getBindUser,
   unbindAllUserGroupList,
   unbindUserGroupList
-} from "@/framework/apis/admin/userGroup";
-import { Ref } from "vue";
-import { IdName, ValueLabel, ValueLabelArray } from "@/framework/utils/type";
-import DialogBox from "@/framework/components/common/dialogBox/DialogBox.vue";
+} from '@/framework/apis/admin/userGroup'
+import { getDictListByDictName } from '@/framework/apis/common/common'
+import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
+import DepartmentAndStaffSelect
+  from '@/framework/components/common/departmentAndStaffSelect/DepartmentAndStaffSelect.vue'
+import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
+import { IdName, ValueLabel, ValueLabelArray } from '@/framework/utils/type'
 import EditUserPermission
-  from "@/framework/views/MainContent/SystemManage/UserGroupMaintenance/editUserPermission/index.vue";
-import { getDictListByDictName } from "@/framework/apis/common/common";
+  from '@/framework/views/MainContent/SystemManage/UserGroupMaintenance/editUserPermission/index.vue'
 
 const props = defineProps<{ currentUserGroupInfo: IdName, renderBindUserFlag: number, needDefaultPermissionSelect?: boolean }>()
-const {currentUserGroupInfo, renderBindUserFlag, needDefaultPermissionSelect} = toRefs(props)
+const { currentUserGroupInfo, renderBindUserFlag, needDefaultPermissionSelect } = toRefs(props)
 
 let permissionList: Ref<ValueLabelArray> = ref([])
 getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList).then(() => currentPermission.value = permissionList.value[0].value)
@@ -148,6 +205,6 @@ const renderBindUser = () =>
 
 watch(searchUserName, renderBindUser)
 watch(selectPermission, renderBindUser)
-watch(renderBindUserFlag, renderBindUser, {immediate: true})
+watch(renderBindUserFlag, renderBindUser, { immediate: true })
 
 </script>

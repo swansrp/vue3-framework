@@ -1,9 +1,10 @@
-import {defineStore} from "pinia"
-import {Key} from 'ant-design-vue/lib/table/interface'
-import {TabType} from "@/framework/components/navigationFramework/historyTab/type";
-import {MAIN_CONTENT} from "@/framework/utils/constant";
-import {getQueryObject} from "@/framework/network/utils";
-import {LocationQueryRaw} from "vue-router";
+import { Key } from 'ant-design-vue/lib/table/interface'
+import { defineStore } from 'pinia'
+import { LocationQueryRaw } from 'vue-router'
+
+import { TabType } from '@/framework/components/navigationFramework/historyTab/type'
+import { getQueryObject } from '@/framework/network/utils'
+
 
 export const useTabStore = defineStore('tabStore', {
   state: () => {
@@ -38,7 +39,7 @@ export const useTabStore = defineStore('tabStore', {
       if (!this._historyTabSet.has(key)) {
         this._historyTabSet.add(key)
         this._historyTabArray.push(tab)
-        console.log('addHistoryTab', key, tab, hrefFullPath);
+        console.log('addHistoryTab', key, tab, hrefFullPath)
       }
       this._key2HistoryTabMap[key] = tab
       this._key2HistoryTabMap[key].fullPath = hrefFullPath
@@ -51,7 +52,7 @@ export const useTabStore = defineStore('tabStore', {
     },
     // 保存用户最后选择的openKeys和tab
     changeTab(key: Key) {
-      console.log('changeTab', key);
+      console.log('changeTab', key)
       const fullPath = this._key2HistoryTabMap[key].fullPath
       const fullPathArray = fullPath.split('/')
       // 通知topNav选中对应的菜单项

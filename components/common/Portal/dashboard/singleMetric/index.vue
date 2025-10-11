@@ -1,13 +1,23 @@
 <template>
-  <div :id="'pie-3d-'+index" :style="{zIndex: 2-showNoData, opacity: 1-showNoData}" class="pie-3d"></div>
-  <div :style="{zIndex: showNoData, opacity: showNoData}" class="pie-3d-no-data">暂无数据</div>
-  <slot></slot>
+  <div
+    :id="'pie-3d-'+index"
+    :style="{zIndex: 2-showNoData, opacity: 1-showNoData}"
+    class="pie-3d"
+  />
+  <div
+    :style="{zIndex: showNoData, opacity: showNoData}"
+    class="pie-3d-no-data"
+  >
+    暂无数据
+  </div>
+  <slot />
 </template>
 
 <script lang="ts" setup>
 import 'echarts-gl'
 import { echartsPie, processSingleMetricData } from './echart-option'
-import { disposeEcharts, getInitEchart } from "../utils"
+import { disposeEcharts, getInitEchart } from '../utils'
+
 import { MetricStatisticType } from '@/framework/components/common/Portal/dashboard/type'
 
 const props = defineProps<{ index: any, data: Array<MetricStatisticType> }>()
@@ -35,7 +45,7 @@ const renderRadar = () => {
 onMounted(renderRadar)
 onUnmounted(() => {
   if (chart) {
-    chart.off("mouseover")
+    chart.off('mouseover')
     disposeEcharts(chart)
   }
 })

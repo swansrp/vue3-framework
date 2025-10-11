@@ -1,4 +1,3 @@
-import {request} from "@/framework/network/request";
 import {
   baseDomain,
   apiType,
@@ -7,13 +6,14 @@ import {
   deleteRequest,
   generalQueryRequest,
   updateRequest
-} from "@/framework/apis";
+} from '@/framework/apis'
+import { request } from '@/framework/network/request'
 
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.config, domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.config, domain)
 const configAdminApi = apiType.config + '/admin'
 
-export const getConfig = (configKey: string) => request(buildGetApi(""), {configKey}) as Promise<any>
+export const getConfig = (configKey: string) => request(buildGetApi(''), { configKey }) as Promise<any>
 
 export const queryParams = (conditionList: Array<any>, sortList: Array<any>, pageSize: number, currentPage: number, domain: string = baseDomain) =>
   generalQueryRequest(configAdminApi, undefined, conditionList, sortList, pageSize, currentPage, domain)
@@ -21,4 +21,4 @@ export const updateParams = (data: object, domain: string = baseDomain) => updat
 export const deleteParams = (id: string, domain: string = baseDomain) => deleteRequest(configAdminApi, id, domain)
 
 export const refreshParams = (domain: string = baseDomain) =>
-    request(buildPostApi("/admin/refresh", domain), {}, {}, true, true) as Promise<any>
+    request(buildPostApi('/admin/refresh', domain), {}, {}, true, true) as Promise<any>

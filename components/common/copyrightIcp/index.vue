@@ -1,14 +1,19 @@
 <template>
-  <div class="icp">{{ `© ${year} ${author} ` }}<a href="http://beian.miit.gov.cn/" target="_blank">{{ icp }}</a></div>
+  <div class="icp">
+    {{ `© ${year} ${author} ` }}<a
+      href="http://beian.miit.gov.cn/"
+      target="_blank"
+    >{{ icp }}</a>
+  </div>
 </template>
 
 <script lang="ts" setup>
-import {useCopyrightStore} from "@/framework/store/copyright/copyright";
+import { useCopyrightStore } from '@/framework/store/copyright/copyright'
 
 const copyrightStore = useCopyrightStore()
-const year = new Date().getFullYear();        // 一般都是最新的一年
-const author = copyrightStore.getAuthor;					// 作者名
-const icp = copyrightStore.getIcp;			// 备案号
+const year = new Date().getFullYear()        // 一般都是最新的一年
+const author = copyrightStore.getAuthor					// 作者名
+const icp = copyrightStore.getIcp			// 备案号
 </script>
 
 <style>

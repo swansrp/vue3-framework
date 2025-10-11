@@ -1,5 +1,4 @@
-import { isEmpty } from '@/framework/utils/common'
-import {isNumber} from "lodash";
+import { isNumber } from 'lodash'
 
 export const formatMoney = (money: number, fix = 2, unit = 10000) => {
   if (!isNumber(money)) {
@@ -9,7 +8,7 @@ export const formatMoney = (money: number, fix = 2, unit = 10000) => {
   } else {
     try {
       const res = (money / unit).toFixed(fix)
-      return Number(res).toLocaleString(undefined, {minimumFractionDigits: fix})
+      return Number(res).toLocaleString(undefined, { minimumFractionDigits: fix })
     } catch (e) {
       return '--'
     }
@@ -23,7 +22,7 @@ export const formatPercent = (src: number, fix = 2, dist = 100) => {
   } else {
     try {
       const res = (percent * 100).toFixed(fix)
-      return Number(res).toLocaleString(undefined, {minimumFractionDigits: fix}) + '%'
+      return Number(res).toLocaleString(undefined, { minimumFractionDigits: fix }) + '%'
     } catch (e) {
       return '--%'
     }

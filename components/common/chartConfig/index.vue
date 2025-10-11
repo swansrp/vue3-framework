@@ -1,11 +1,17 @@
 <template>
   <div class="talent-review-dashboard">
     <!-- 页面头部 -->
-    <div v-if="showHeader" class="dashboard-header">
+    <div
+      v-if="showHeader"
+      class="dashboard-header"
+    >
       <h1>{{ title || currentRoute.meta.title }}</h1>
       <div class="header-actions">
         <slot name="header-actions">
-          <a-button @click="refreshDashboard" type="primary">
+          <a-button
+            type="primary"
+            @click="refreshDashboard"
+          >
             <ReloadOutlined />
             刷新
           </a-button>
@@ -17,49 +23,71 @@
     <div class="dashboard-main">
       <!-- 左侧指标树 -->
       <indicator-tree
-        v-if="showIndicatorTree" :collapsed="sidebarCollapsed" :common-indicators="commonIndicators"
-        :expanded-common-keys="expandedCommonKeys" :expanded-personal-keys="expandedPersonalKeys"
-        :personal-indicators="personalIndicators" :selected-common-indicators="selectedCommonIndicators"
-        :selected-personal-indicators="selectedPersonalIndicators" :show-personal-indicators="showPersonalIndicators"
+        v-if="showIndicatorTree"
+        :collapsed="sidebarCollapsed"
+        :common-indicators="commonIndicators"
+        :expanded-common-keys="expandedCommonKeys"
+        :expanded-personal-keys="expandedPersonalKeys"
+        :personal-indicators="personalIndicators"
+        :selected-common-indicators="selectedCommonIndicators"
+        :selected-personal-indicators="selectedPersonalIndicators"
+        :show-personal-indicators="showPersonalIndicators"
         :common-indicator-permissions="commonIndicatorPermissions"
-        :personal-indicator-permissions="personalIndicatorPermissions" @update:collapsed="updateSidebarCollapsed"
+        :personal-indicator-permissions="personalIndicatorPermissions"
+        @update:collapsed="updateSidebarCollapsed"
         @update:selected-common="updateSelectedCommonIndicators"
-        @update:selected-personal="updateSelectedPersonalIndicators" @add-indicator="openIndicatorConfig"
-        @edit-indicator="openIndicatorConfig" @delete-indicator="deleteIndicator" @add-dashboard="addDashboardFromTree"
-        @delete-dashboard="deleteDashboardFromTree" @reload-data="loadDashboardData" />
+        @update:selected-personal="updateSelectedPersonalIndicators"
+        @add-indicator="openIndicatorConfig"
+        @edit-indicator="openIndicatorConfig"
+        @delete-indicator="deleteIndicator"
+        @add-dashboard="addDashboardFromTree"
+        @delete-dashboard="deleteDashboardFromTree"
+        @reload-data="loadDashboardData"
+      />
 
       <!-- 主体图表区域 -->
-      <div class="dashboard-content" :class="{ 'full-width': !showIndicatorTree }">
+      <div
+        class="dashboard-content"
+        :class="{ 'full-width': !showIndicatorTree }"
+      >
         <chart-grid
-          ref="chartGridRef" :indicators="displayedIndicators" :loading="loading" :grid-columns="GRID_COLUMNS"
+          ref="chartGridRef"
+          :indicators="displayedIndicators"
+          :loading="loading"
+          :grid-columns="GRID_COLUMNS"
           :can-edit-common-indicators="canEditCommonIndicators"
           :can-edit-personal-indicators="canEditPersonalIndicators"
           :can-delete-common-indicators="commonIndicatorPermissions?.delete ?? true"
           :can-delete-personal-indicators="personalIndicatorPermissions?.delete ?? true"
           :can-resize-common-indicators="canResizeCommonIndicators"
           :can-resize-personal-indicators="canResizePersonalIndicators"
-          @add-indicator="(ids: string[]) => addDashboard(ids, false)" @edit-indicator="editIndicatorFromChart"
-          @delete-indicator="deleteDashboard" @resize-indicator="handleResizeIndicator"
-          @reorder-indicators="handleReorderIndicators" />
+          @add-indicator="(ids: string[]) => addDashboard(ids, false)"
+          @edit-indicator="editIndicatorFromChart"
+          @delete-indicator="deleteDashboard"
+          @resize-indicator="handleResizeIndicator"
+          @reorder-indicators="handleReorderIndicators"
+        />
       </div>
     </div>
 
     <!-- 图表配置弹窗 -->
     <chart-config-modal
-      v-model:visible="chartConfigModalVisible" :table-id="computedTableId"
-      :edit-data="currentEditData" :is-edit-mode="isEditMode" :is-common-indicator="!showPersonalIndicators"
-      @save="handleChartConfigSave" />
+      v-model:visible="chartConfigModalVisible"
+      :table-id="computedTableId"
+      :edit-data="currentEditData"
+      :is-edit-mode="isEditMode"
+      :is-common-indicator="!showPersonalIndicators"
+      @save="handleChartConfigSave"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
+import { ReloadOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, ref, readonly, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
-import { ReloadOutlined } from '@ant-design/icons-vue'
-import IndicatorTree from '@/framework/components/common/chartConfig/IndicatorTree.vue'
-import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
-import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
+
 import {
   addPersonalDashboard,
   deletePersonalDashboard,
@@ -71,6 +99,11 @@ import {
   updatePersonalDashboard
 } from './api'
 import type { DashboardItem, IndicatorNode } from './types'
+
+import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
+import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
+import IndicatorTree from '@/framework/components/common/chartConfig/IndicatorTree.vue'
+
 
 // 权限接口定义
 interface IndicatorPermissions {

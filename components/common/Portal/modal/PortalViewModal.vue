@@ -4,41 +4,49 @@
     :open="config.modal.show"
     :width="config.detailWidth"
     :wrap-class-name="config.detailWidth==='100%' ? 'full-modal' : ''"
-    okText="确定"
+    ok-text="确定"
     title="查看详情"
     @cancel="() => emit('cancel')"
     @close="() => emit('close')"
-    @ok="() => emit('confirm')">
+    @ok="() => emit('confirm')"
+  >
     <a-descriptions
       v-for="(value, index) in columnDisplayViewMap"
       :key="index"
       :column="config.descriptionCount"
       :size="config.size"
-      :title="value[0] || ''" bordered
-      style="margin-top: 20px">
+      :title="value[0] || ''"
+      bordered
+      style="margin-top: 20px"
+    >
       <template
         v-for="column in value[1].filter(item => item.detailShow)"
-        :key="column.dataIndex">
+        :key="column.dataIndex"
+      >
         <a-descriptions-item
           :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
           :label="strRemoveLF(column.title)"
           :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
-          :span="column.detailSize">
+          :span="column.detailSize"
+        >
           <template v-if="column.fieldType === FIELD_TYPE.SWITCH">
             <a-switch
               v-model:checked="config.modal.data[`${column.dataIndex}`]"
-              checkedValue="1"
+              checked-value="1"
               disabled
-              unCheckedValue="0" />
+              un-checked-value="0"
+            />
           </template>
           <template
             v-else-if="column.fieldType === FIELD_TYPE.SELECT||
-              column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE">
+              column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+          >
             {{ dict.getLabel(column.referenceDict, config.modal.data[`${column.dataIndex}`]) }}
           </template>
           <template
             v-else-if="column.fieldType === FIELD_TYPE.TREE||
-              column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE">
+              column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+          >
             {{ treeDict.getLabel(column.referenceDict, config.modal.data[`${column.dataIndex}`]) }}
           </template>
           <template v-else-if="column.fieldType === FIELD_TYPE.DATE">
@@ -69,12 +77,14 @@
           </template>
           <template
             v-else-if="column.fieldType === FIELD_TYPE.IMAGE || column.fieldType === FIELD_TYPE.AUDIO ||
-              column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE">
+              column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE"
+          >
             <multimedia
               v-model="config.modal.data[column.dataIndex]"
               :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35"
               :type="column.fieldType"
-              :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80" />
+              :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80"
+            />
           </template>
           <template v-else>
             {{ config.modal.data[column.dataIndex] }}
@@ -83,17 +93,19 @@
         <a-descriptions-item
           v-if="column.detailPadding !== 0"
           :span="column.detailPadding"
-          label="" />
+          label=""
+        />
       </template>
     </a-descriptions>
   </a-modal>
 </template>
 
 <script lang="ts" setup>
-import { dictStore, useTreeStore } from '@/framework/store/common'
-import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
-import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 import dayjs from 'dayjs'
+
+import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
+import { dictStore, useTreeStore } from '@/framework/store/common'
+import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const prop = defineProps<{
@@ -101,7 +113,7 @@ const prop = defineProps<{
   config: TableConfigType,
   columnDisplayMap: Map<any, Array<ColumnType>>
 }>()
-const {config} = toRefs(prop)
+const { config } = toRefs(prop)
 const columnDisplayViewMap = computed(() => {
   const map = new Map()
   prop.columnDisplayMap.forEach((value, key) => {

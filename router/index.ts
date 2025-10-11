@@ -1,9 +1,3 @@
-import pinia from '@/framework/store'
-import { useTabStore } from '@/framework/store/nav'
-import { getComponent, useRouteStore } from '@/framework/store/route'
-import { getQueryObject } from '@/framework/network/utils'
-import { enterFirstDynamicRoute } from '@/framework/router/utils'
-import { I_MAIN_CONTENT, MAIN_CONTENT } from '@/framework/utils/constant'
 import {
   createRouter,
   createWebHashHistory,
@@ -12,6 +6,13 @@ import {
   RouteLocationNormalized,
   RouteRecordRaw
 } from 'vue-router'
+
+import { getQueryObject } from '@/framework/network/utils'
+import { enterFirstDynamicRoute } from '@/framework/router/utils'
+import pinia from '@/framework/store'
+import { useTabStore } from '@/framework/store/nav'
+import { getComponent, useRouteStore } from '@/framework/store/route'
+
 
 const tabStore = useTabStore(pinia)
 const NotFound = () => import('@/framework/views/NotFound/index.vue')
@@ -43,7 +44,7 @@ const router = createRouter({
 })
 
 export const createStaticRoutes = (path: string, component: string) => {
-  router.addRoute({path: path, name: path, component: getComponent(component), meta: { public: true }})
+  router.addRoute({ path: path, name: path, component: getComponent(component), meta: { public: true } })
 }
 
 export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
@@ -71,7 +72,7 @@ export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocati
     const leftNavPath = enterFirstDynamicRoute()
     const queryStr = routeStore.dynamicRouteMap[leftNavPath] ? routeStore.dynamicRouteMap[leftNavPath].query : null
     const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
-    next({path: `/${leftNavPath}`, query})
+    next({ path: `/${leftNavPath}`, query })
   } else {
     next()
   }

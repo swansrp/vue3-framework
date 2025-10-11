@@ -1,14 +1,21 @@
 <template>
   <div
-    :id="'double-circular-'+index" class="double-circular-css"
-    :style="{zIndex: 1-showNoData, opacity: 1-showNoData}"></div>
-  <div :style="{zIndex: showNoData, opacity: showNoData}" class="double-circular-no-data">暂无数据</div>
+    :id="'double-circular-'+index"
+    class="double-circular-css"
+    :style="{zIndex: 1-showNoData, opacity: 1-showNoData}"
+  />
+  <div
+    :style="{zIndex: showNoData, opacity: showNoData}"
+    class="double-circular-no-data"
+  >
+    暂无数据
+  </div>
 </template>
 
 <script lang="ts" setup>
 import { MetricStatisticType, NameValue } from '../type'
 import { DoubleMetricDataType, getEchartsDoubleMetricOption, processDoubleMetricData } from './echart-option'
-import { disposeEcharts, getInitEchart, setEchartsOptionsAndResize } from "../utils"
+import { disposeEcharts, getInitEchart, setEchartsOptionsAndResize } from '../utils'
 
 const props = defineProps<{ index: any, data: Array<MetricStatisticType> }>()
 const { index, data } = toRefs(props)

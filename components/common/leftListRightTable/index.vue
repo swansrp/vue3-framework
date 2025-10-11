@@ -1,39 +1,62 @@
 <template>
   <div class="config">
-    <a-list size="small" bordered :data-source="listData" class="config-list">
+    <a-list
+      size="small"
+      bordered
+      :data-source="listData"
+      class="config-list"
+    >
       <template #renderItem="{ item, index }">
-        <a-list-item @click="getCurrentName(item.value, index)" :class="{'activate-item': activateDictItem === index}">{{ item.label }}</a-list-item>
+        <a-list-item
+          :class="{'activate-item': activateDictItem === index}"
+          @click="getCurrentName(item.value, index)"
+        >
+          {{ item.label }}
+        </a-list-item>
       </template>
       <template #header>
-        <a-input-search v-model:value="inputName" placeholder="请输入名称" enter-button @search="onSearch" />
+        <a-input-search
+          v-model:value="inputName"
+          placeholder="请输入名称"
+          enter-button
+          @search="onSearch"
+        />
       </template>
     </a-list>
-    <div class="config-space" ref="configSpace">
+    <div
+      ref="configSpace"
+      class="config-space"
+    >
       <div v-show="showConfigSpace">
-        <slot name="top_btn_list"></slot>
+        <slot name="top_btn_list" />
         <surely-table
           ref="tableRef"
           :columns="columns"
           :data-source="surelyTableData"
           :table-height="tableHeight"
-          :table-width="tableWidth">
+          :table-width="tableWidth"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="(column as any).dataIndex === 'operation'">
               <div class="table-operation-btns">
-                <slot name="table_btn_list" :record="record"></slot>
+                <slot
+                  name="table_btn_list"
+                  :record="record"
+                />
               </div>
             </template>
           </template>
         </surely-table>
         <a-pagination
           v-model:current="currentPage"
-          v-model:pageSize="pageSize"
+          v-model:page-size="pageSize"
           :page-size-options="DEFAULT_PAGE_SIZE_OPTION"
           :total="totalPageNumber"
           show-quick-jumper
           show-size-changer
           class="pagination"
-          @change="paginationChange" />
+          @change="paginationChange"
+        />
       </div>
     </div>
   </div>
@@ -41,22 +64,23 @@
 
 <script setup lang="ts">
 
-import {Ref} from "vue";
-import * as _ from "lodash";
-import {DataNode} from "ant-design-vue/es/vc-tree/interface";
-import SurelyTable from "@/framework/components/common/surelyTable/SurelyTable.vue";
-import {ColumnsType} from "ant-design-vue/es/table";
-import {updateTableSize} from "@/framework/utils/common";
+import { ColumnsType } from 'ant-design-vue/es/table'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import * as _ from 'lodash'
+import { Ref } from 'vue'
+
+import SurelyTable from '@/framework/components/common/surelyTable/SurelyTable.vue'
+import { updateTableSize } from '@/framework/utils/common'
 import {
   DEFAULT_CURRENT_PAGE,
   DEFAULT_PAGE_SIZE,
   DEFAULT_PAGE_SIZE_OPTION,
   QUERY_INTERVAL
-} from "@/framework/utils/constant";
+} from '@/framework/utils/constant'
 
 
 const props = defineProps<{columns: ColumnsType[], updateTableFlag: number}>()
-const {columns} = toRefs(props)
+const { columns } = toRefs(props)
 
 let inputName:Ref<string> = ref('')
 let listData = ref<Array<DataNode>>([])
@@ -89,11 +113,11 @@ const onSearch = () => renderLeftItemList()
 
 const getLeftItem = () => {
   emit('getTableByItem',
-    {platform: currentItemValue.value, currentPage: currentPage.value, pageSize: pageSize.value},
+    { platform: currentItemValue.value, currentPage: currentPage.value, pageSize: pageSize.value },
     (res: any) => {
       surelyTableData.value = res.payload.records
       surelyTableData.value.forEach((item: any, index: number) => {
-        item.index = index + 1;
+        item.index = index + 1
         item.key = item.id
       })
       totalPageNumber.value =res.payload.total

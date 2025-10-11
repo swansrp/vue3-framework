@@ -45,11 +45,17 @@
           </div>
 
           <!-- 字典项预览区域 -->
-          <div v-if="dictItems.length > 0" class="dict-preview-section">
+          <div
+            v-if="dictItems.length > 0"
+            class="dict-preview-section"
+          >
             <h4 class="section-title">
               <EyeOutlined />
               字典项预览
-              <a-tag color="blue" style="margin-left: 8px">
+              <a-tag
+                color="blue"
+                style="margin-left: 8px"
+              >
                 共 {{ dictItems.length }} 项
               </a-tag>
             </h4>
@@ -60,7 +66,10 @@
                   :key="item.dictId"
                   :span="6"
                 >
-                  <a-card class="dict-item-card" size="small">
+                  <a-card
+                    class="dict-item-card"
+                    size="small"
+                  >
                     <div class="dict-item-content">
                       <div class="dict-item-value">
                         <strong>{{ item.dictValue }}</strong>
@@ -76,14 +85,22 @@
           </div>
 
           <!-- 生成配置区域 -->
-          <div v-if="dictItems.length > 0" v-show="false" class="generation-config-section">
+          <div
+            v-if="dictItems.length > 0"
+            v-show="false"
+            class="generation-config-section"
+          >
             <h4 class="section-title">
               <SettingOutlined />
               生成配置
             </h4>
             <a-row :gutter="16">
               <a-col :span="8">
-                <a-form-item :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }" label="指标名称前缀">
+                <a-form-item
+                  :label-col="{ span: 8 }"
+                  :wrapper-col="{ span: 16 }"
+                  label="指标名称前缀"
+                >
                   <a-input
                     v-model:value="namePrefix"
                     :maxlength="10"
@@ -93,7 +110,11 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }" label="指标名称后缀">
+                <a-form-item
+                  :label-col="{ span: 8 }"
+                  :wrapper-col="{ span: 16 }"
+                  label="指标名称后缀"
+                >
                   <a-input
                     v-model:value="nameSuffix"
                     :maxlength="10"
@@ -103,7 +124,11 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }" label="指标值前缀">
+                <a-form-item
+                  :label-col="{ span: 8 }"
+                  :wrapper-col="{ span: 16 }"
+                  label="指标值前缀"
+                >
                   <a-input
                     v-model:value="valuePrefix"
                     :maxlength="10"
@@ -113,7 +138,11 @@
                 </a-form-item>
               </a-col>
             </a-row>
-            <a-form-item :label-col="{ span: 3 }" :wrapper-col="{ span: 21 }" label="通用备注">
+            <a-form-item
+              :label-col="{ span: 3 }"
+              :wrapper-col="{ span: 21 }"
+              label="通用备注"
+            >
               <a-textarea
                 v-model:value="commonComment"
                 :maxlength="200"
@@ -125,11 +154,17 @@
           </div>
 
           <!-- 生成预览区域 -->
-          <div v-if="previewData.length > 0" class="preview-section">
+          <div
+            v-if="previewData.length > 0"
+            class="preview-section"
+          >
             <h4 class="section-title">
               <FolderViewOutlined />
               生成预览
-              <a-tag color="green" style="margin-left: 8px">
+              <a-tag
+                color="green"
+                style="margin-left: 8px"
+              >
                 将生成 {{ previewData.length }} 个指标
               </a-tag>
             </h4>
@@ -145,7 +180,9 @@
                   {{ record.index }}
                 </template>
                 <template v-else-if="column.key === 'itemValue'">
-                  <a-tag color="blue">{{ record.itemValue }}</a-tag>
+                  <a-tag color="blue">
+                    {{ record.itemValue }}
+                  </a-tag>
                 </template>
                 <template v-else-if="column.key === 'itemName'">
                   <strong>{{ record.itemName }}</strong>
@@ -190,8 +227,6 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { message } from 'ant-design-vue'
 import {
   CloseOutlined,
   DatabaseOutlined,
@@ -200,6 +235,9 @@ import {
   SettingOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { computed, onMounted, ref, watch } from 'vue'
+
 import { getDictItemByName } from '@/framework/apis/dict/dict'
 import { addEntity } from '@/framework/apis/portal'
 import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
@@ -290,7 +328,7 @@ watch(
     const columnArray = config.value.columns
       .filter(
         (item: { filterAble: string; show: string }) =>
-          item.filterAble === "1" && item.show === "1"
+          item.filterAble === '1' && item.show === '1'
       )
     dictList.value.length = 0
     for (let item of columnArray) {

@@ -1,20 +1,28 @@
 <template>
-  <div class="left-nav-container" :style="{width: collapsed ? '50px' : `${menuWidth}px`}">
+  <div
+    class="left-nav-container"
+    :style="{width: collapsed ? '50px' : `${menuWidth}px`}"
+  >
     <a-menu
       v-if="tabStore.isNeedLeftNav"
-      v-model:openKeys="keys.openKeys"
-      v-model:selectedKeys="keys.selectedKeys"
+      v-model:open-keys="keys.openKeys"
+      v-model:selected-keys="keys.selectedKeys"
       :inline-collapsed="collapsed"
       :style="{width: collapsed ? '50px' : `${menuWidth}px`}"
       class="left-menu"
       mode="inline"
       theme="dark"
-      @select="selectLeftNav">
+      @select="selectLeftNav"
+    >
       <template v-for="item in navList">
         <template v-if="!item.children || item.children?.length === 0">
           <a-menu-item
-            :id="item.key" :key="item.key" :path="item.name || item.path" :query="item.query"
-            :title="item.title">
+            :id="item.key"
+            :key="item.key"
+            :path="item.name || item.path"
+            :query="item.query"
+            :title="item.title"
+          >
             <template #icon>
               <Icon :icon="item.icon" />
             </template>
@@ -22,7 +30,11 @@
           </a-menu-item>
         </template>
         <template v-else>
-          <sub-nav :id="item.key" :key="item.key" :subNavList="item" />
+          <sub-nav
+            :id="item.key"
+            :key="item.key"
+            :sub-nav-list="item"
+          />
         </template>
       </template>
     </a-menu>
@@ -31,15 +43,15 @@
     <div 
       v-if="!collapsed"
       class="resize-handle"
+      :class="{hovering: isHovering}"
       @mousedown="startResize"
       @mouseover="handleHover"
       @mouseleave="handleLeave"
-      :class="{hovering: isHovering}"
     >
       <div class="resize-indicator">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
+        <div class="dot" />
+        <div class="dot" />
+        <div class="dot" />
       </div>
     </div>
     
@@ -59,33 +71,38 @@
       @mouseleave="toggleHovering = false"
     >
       <div class="toggle-icon">
-        <div class="arrow" :class="collapsed ? 'arrow-right' : 'arrow-left'"></div>
+        <div
+          class="arrow"
+          :class="collapsed ? 'arrow-right' : 'arrow-left'"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import mitt from '@/framework/utils/mitt'
 import { LocationQueryRaw, useRouter } from 'vue-router'
+
 import { NavListType } from '../type'
-import { useTabStore } from '@/framework/store/nav'
-import { useRouteStore } from '@/framework/store/route'
-import { CHANGE_TAB } from '@/framework/utils/constant'
-import { genAntdMenuFirstSelectObject, getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
+
 import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
+import { genAntdMenuFirstSelectObject, getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
 import { getQueryObject } from '@/framework/network/utils'
 import pinia from '@/framework/store'
+import { useTabStore } from '@/framework/store/nav'
+import { useRouteStore } from '@/framework/store/route'
 import { isNotEmpty } from '@/framework/utils/common'
+import { CHANGE_TAB } from '@/framework/utils/constant'
+import mitt from '@/framework/utils/mitt'
 
 
 const router = useRouter()
 const tabStore = useTabStore(pinia)
 const routeStore = useRouteStore(pinia)
 
-let {topNavPath} = tabStore
+let { topNavPath } = tabStore
 let navList = ref([] as Array<NavListType>)
-const keys = reactive({openKeys: [] as Array<string>, selectedKeys: [] as Array<string>})
+const keys = reactive({ openKeys: [] as Array<string>, selectedKeys: [] as Array<string> })
 const collapsed = ref(false)
 
 // 拖拽相关状态
@@ -248,7 +265,7 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
     console.log('====== 外链 ============')
     // 外链菜单：在打开外链前立即设置菜单高亮状态
     keys.selectedKeys = [selectedKey]
-    const {keyPath} = getTitlePathByKey(navList.value, selectedKey)
+    const { keyPath } = getTitlePathByKey(navList.value, selectedKey)
     keys.openKeys = keyPath
     
     // 打开外链
@@ -257,7 +274,7 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
       const routeUrl = fullPath.substring(urlArray[0].length)
       window.open(routeUrl, '_blank')
     } else {
-      const routeUrl = router.resolve({path: fullPath, query})
+      const routeUrl = router.resolve({ path: fullPath, query })
       window.open(routeUrl.href, '_blank')
     }
   } else {
@@ -301,7 +318,7 @@ watch(
         
         // 如果通过全局路由没找到合适的openKeys，回退到navList查找
         if (openKeys.length === 0 && navList.value.length > 0) {
-          const {titlePath: fallbackTitlePath, keyPath: fallbackKeyPath} = getTitlePathByKey(navList.value, selectedKey)
+          const { titlePath: fallbackTitlePath, keyPath: fallbackKeyPath } = getTitlePathByKey(navList.value, selectedKey)
           return {
             openKeys: fallbackKeyPath,
             titlePath: fallbackTitlePath
@@ -314,7 +331,7 @@ watch(
         }
       }
       
-      const {openKeys, titlePath} = getMenuKeysFromGlobalRoute(selectedKey)
+      const { openKeys, titlePath } = getMenuKeysFromGlobalRoute(selectedKey)
       keys.openKeys = openKeys
       
       // 选中左侧菜单后， 为面包屑提供数据
@@ -352,7 +369,7 @@ watch(
 )
 
 const getObjectByLeftNavPath = (currentNode: NavListType) => {
-  selectLeftNav({item: currentNode}, false)
+  selectLeftNav({ item: currentNode }, false)
 }
 
 const initLeftNavList = () => {

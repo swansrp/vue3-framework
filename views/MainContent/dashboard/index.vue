@@ -2,13 +2,20 @@
   <div class="personal-dashboard">
     <!-- 使用封装的TalentReviewDashboard公共组件 -->
     <talent-review-dashboard
-      :table-id="tableId" :show-header="true"
+      ref="dashboardRef"
+      :table-id="tableId"
+      :show-header="true"
       :title="typeof currentRoute.meta.title === 'string' ? currentRoute.meta.title : undefined"
-      :show-indicator-tree="true" :common-indicator-permissions="commonPermissions"
-      :personal-indicator-permissions="personalPermissions" ref="dashboardRef">
+      :show-indicator-tree="true"
+      :common-indicator-permissions="commonPermissions"
+      :personal-indicator-permissions="personalPermissions"
+    >
       <!-- 自定义头部操作按钮 -->
       <template #header-actions>
-        <a-button @click="refreshDashboard" type="primary">
+        <a-button
+          type="primary"
+          @click="refreshDashboard"
+        >
           <ReloadOutlined />
           刷新
         </a-button>
@@ -18,9 +25,10 @@
 </template>
 
 <script lang="ts" setup>
+import { ReloadOutlined } from '@ant-design/icons-vue'
 import { computed, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ReloadOutlined } from '@ant-design/icons-vue'
+
 import TalentReviewDashboard from '@/framework/components/common/chartConfig/index.vue'
 
 // 权限配置

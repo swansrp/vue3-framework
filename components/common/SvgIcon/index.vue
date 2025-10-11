@@ -1,6 +1,14 @@
 <template>
-  <svg aria-hidden="true" class="svg-icon" :width="width" :height="height">
-    <use :xlink:href="symbolId" :fill="color" />
+  <svg
+    aria-hidden="true"
+    class="svg-icon"
+    :width="width"
+    :height="height"
+  >
+    <use
+      :xlink:href="symbolId"
+      :fill="color"
+    />
   </svg>
 </template>
 

@@ -2,7 +2,7 @@
   <div class="filter-column">
     <a-select
       v-if="column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
-      :filterOption="filterOption"
+      :filter-option="filterOption"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       :options="column.referenceDictOption"
       :placeholder="'选择' + strRemoveLF(column.title)"
@@ -30,7 +30,7 @@
       v-model:value="_selectedKeysRef"
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       style="width: 250px; margin-bottom: 8px; display: flex"
-      valueFormat="YYYY-MM-DD HH:mm:ss"
+      value-format="YYYY-MM-DD HH:mm:ss"
       @change="e => {
         if(e) {
           e[0] = e[0].split(' ')[0] + ' 00:00:00'
@@ -45,19 +45,22 @@
       :get-popup-container="(triggerNode) => triggerNode.parentNode"
       show-time
       style="width: 330px; margin-bottom: 8px; display: flex"
-      valueFormat="YYYY-MM-DD HH:mm:ss"
+      value-format="YYYY-MM-DD HH:mm:ss"
       @change="e => handleSearchConditionChanged(e || [], column)"
     />
     <div
       v-else-if="column.fieldType === FIELD_TYPE.NUMBER || column.fieldType === FIELD_TYPE.MONEY || column.fieldType === FIELD_TYPE.PERCENT"
-      style="display: flex; align-items: center;">
+      style="display: flex; align-items: center;"
+    >
       <lock-switch
         v-model="column.filterStrict"
         style="margin-bottom: 8px; margin-right: 5px"
         @click="() => handleNumberConditionChanged([_selectedKeysRef[0], _selectedKeysRef[1]], column)"
       />
       <a-input-group
-        compact style=" margin-bottom: 8px; ">
+        compact
+        style=" margin-bottom: 8px; "
+      >
         <a-input-number
           v-model:value="_selectedKeysRef[0]"
           :placeholder="column.filterStrict ? '大于等于' : '大于'"
@@ -79,7 +82,10 @@
         />
       </a-input-group>
     </div>
-    <div v-else style="display: flex; align-items: center;">
+    <div
+      v-else
+      style="display: flex; align-items: center;"
+    >
       <lock-switch
         v-model="column.filterStrict"
         style="margin-bottom: 8px; margin-right: 5px"
@@ -109,14 +115,20 @@
         </a-button>
         <template #overlay>
           <a-menu @click="({ key: menuKey }) => handleNullSearch(menuKey, column)">
-            <a-menu-item key="1">查询为空</a-menu-item>
-            <a-menu-item key="0">查询非空</a-menu-item>
+            <a-menu-item key="1">
+              查询为空
+            </a-menu-item>
+            <a-menu-item key="0">
+              查询非空
+            </a-menu-item>
           </a-menu>
         </template>
       </a-dropdown>
       <a-button
-        size="small" style="width: 90px"
-        @click="handleReset(column)">
+        size="small"
+        style="width: 90px"
+        @click="handleReset(column)"
+      >
         重置
       </a-button>
     </div>
@@ -124,13 +136,14 @@
 </template>
 
 <script lang="ts" setup>
-import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { SearchOutlined } from '@ant-design/icons-vue'
-import { filterOption } from '@/framework/components/common/utils'
-import { strRemoveLF } from '@/framework/utils/common'
-import { TreeSelect } from 'ant-design-vue';
+import { TreeSelect } from 'ant-design-vue'
+
 import LockSwitch from '@/framework/components/common/lockSwitch/index.vue'
 import { getDefaultFilterType } from '@/framework/components/common/Portal/constant'
+import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { filterOption } from '@/framework/components/common/utils'
+import { strRemoveLF } from '@/framework/utils/common'
 
 const prop = defineProps<{
   column: any,
@@ -143,10 +156,10 @@ const emit = defineEmits<{
   (e: 'handleSearchConditionChanged', selectedKeys: any, dataIndex: any, relation: any, filterStrict: boolean): void
   (e: 'update:column', column: any): void
 }>()
-const {column, setSelectedKeys, selectedKeysRef, confirm, clearFilters} = toRefs(prop)
+const { column, setSelectedKeys, selectedKeysRef, confirm, clearFilters } = toRefs(prop)
 watch(column, (column) => {
   emit('update:column', column)
-}, {deep: true})
+}, { deep: true })
 
 const _selectedKeysRef = ref(selectedKeysRef.value)
 watch(

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import {ValueLabel} from "@/framework/utils/type"
+
+import { ValueLabel } from '@/framework/utils/type'
 
 
 interface SelectConditionMapType { [key: string]: ValueLabel }

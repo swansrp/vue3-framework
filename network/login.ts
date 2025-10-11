@@ -1,14 +1,16 @@
-import { getToken, getUserInfo, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
-import { isNotEmpty, localStorageMethods } from '@/framework/utils/common'
-import { AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
 import qs from 'qs'
-import { useRouteStore } from '@/framework/store/route'
-import pinia from '@/framework/store'
-import { useUserStore } from '@/framework/store/user'
-import { useCommonStore } from '@/framework/store/common'
+import { LocationQueryRaw } from 'vue-router'
+
+import { getToken, getUserInfo, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
 import { getQueryObject, removeURLParameter } from '@/framework/network/utils'
 import router from '@/framework/router'
-import { LocationQueryRaw } from 'vue-router'
+import pinia from '@/framework/store'
+import { useCommonStore } from '@/framework/store/common'
+import { useRouteStore } from '@/framework/store/route'
+import { useUserStore } from '@/framework/store/user'
+import { isNotEmpty, localStorageMethods } from '@/framework/utils/common'
+import { AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
+
 
 const userStore = useUserStore(pinia)
 const commonStore = useCommonStore(pinia)
@@ -24,7 +26,7 @@ export const navigation2Login = () => {
       const redirect_uri = url === 'login' ? undefined : url
       return router.replace({
         path: ssoLoginUrl,
-        query: {redirect_uri} as LocationQueryRaw
+        query: { redirect_uri } as LocationQueryRaw
       }).then(() => window.location.reload())
     }
   } else {
@@ -42,7 +44,7 @@ const _executeLogin = (token: any) => {
     const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
     localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
     const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
-    return router.replace({path: ssoLoginUrl, query: {redirect_uri: url} as LocationQueryRaw})
+    return router.replace({ path: ssoLoginUrl, query: { redirect_uri: url } as LocationQueryRaw })
   } else {
     return ssoLogin(userStore.getIdToken)
       .then(res => {
@@ -83,7 +85,7 @@ export const checkLoginState = async () => {
     if (isNotEmpty(queryObject.target_url)) {
       const targetUrl = queryObject.target_url
       delete queryObject.target_url
-      window.location.href = targetUrl + '?' + qs.stringify(queryObject, {arrayFormat: 'repeat'})
+      window.location.href = targetUrl + '?' + qs.stringify(queryObject, { arrayFormat: 'repeat' })
     } else if (isNotEmpty(queryObject.id_token)) {
       userStore.setIdToken(<string>queryObject.id_token).then(() => {
         window.location.href = removeURLParameter(window.location.href, ID_TOKEN)

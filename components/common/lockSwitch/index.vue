@@ -4,13 +4,15 @@
     @click="() => {
       emit('update:modelValue', !modelValue)
       emit('onClick')
-    }" />
+    }"
+  />
   <unlock-outlined
     v-else
     @click="() => {
       emit('update:modelValue', !modelValue)
       emit('onClick')
-    }" />
+    }"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -28,7 +30,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'onClick'): void
 }>()
-const {modelValue} = toRefs(props)
+const { modelValue } = toRefs(props)
 onMounted(() => {
 })
 </script>

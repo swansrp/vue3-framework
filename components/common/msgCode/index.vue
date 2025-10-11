@@ -1,30 +1,60 @@
 <template>
-  <a-form :model="_formData" layout="horizontal" @finish="onFinish">
-    <slot></slot>
-    <a-form-item :rules="[{ validator: phoneNumberValidatorHandler, trigger: 'blur' }]" name="phoneNumber">
+  <a-form
+    :model="_formData"
+    layout="horizontal"
+    @finish="onFinish"
+  >
+    <slot />
+    <a-form-item
+      :rules="[{ validator: phoneNumberValidatorHandler, trigger: 'blur' }]"
+      name="phoneNumber"
+    >
       <a-input
-        v-model:value="_formData.phoneNumber" :maxlength="11" autocomplete="off" placeholder="手机号码" size="large">
+        v-model:value="_formData.phoneNumber"
+        :maxlength="11"
+        autocomplete="off"
+        placeholder="手机号码"
+        size="large"
+      >
         <template #prefix>
           <PhoneOutlined />
         </template>
       </a-input>
     </a-form-item>
-    <a-form-item :rules="[{ required: true, message: '请输入验证码!', trigger: 'blur' }]" name="captcha">
+    <a-form-item
+      :rules="[{ required: true, message: '请输入验证码!', trigger: 'blur' }]"
+      name="captcha"
+    >
       <a-input
-        v-model:value="_formData.captcha" :maxlength="4" placeholder="验证码" size="large">
+        v-model:value="_formData.captcha"
+        :maxlength="4"
+        placeholder="验证码"
+        size="large"
+      >
         <template #prefix>
           <SafetyOutlined />
         </template>
         <template #suffix>
           <img
-            :height="40" :src="captchaUrl" alt="验证码" class="absolute right-0 h-full cursor-pointer"
-            @click="updateCaptchaUrl" />
+            :height="40"
+            :src="captchaUrl"
+            alt="验证码"
+            class="absolute right-0 h-full cursor-pointer"
+            @click="updateCaptchaUrl"
+          >
         </template>
       </a-input>
     </a-form-item>
-    <a-form-item :rules="[{ required: true, message: '请输入短信验证码!', trigger: 'change' }]" name="msgCode">
+    <a-form-item
+      :rules="[{ required: true, message: '请输入短信验证码!', trigger: 'change' }]"
+      name="msgCode"
+    >
       <a-input
-        v-model:value="_formData.msgCode" autocomplete="off" placeholder="短信验证码" size="large">
+        v-model:value="_formData.msgCode"
+        autocomplete="off"
+        placeholder="短信验证码"
+        size="large"
+      >
         <template #prefix>
           <CodeOutlined />
         </template>
@@ -35,32 +65,45 @@
             class="msg-code-btn"
             size="small"
             type="primary"
-            @click="getLoginMsgCode(_formData.phoneNumber, _formData.captcha)">
+            @click="getLoginMsgCode(_formData.phoneNumber, _formData.captcha)"
+          >
             获取码
           </a-button>
-          <span v-else class="countdown-text">
+          <span
+            v-else
+            class="countdown-text"
+          >
             {{ countDown }}秒后重发
           </span>
         </template>
       </a-input>
     </a-form-item>
     <a-form-item>
-      <a-button :loading="loading" block html-type="submit" size="large" type="primary">{{ submitText }}</a-button>
+      <a-button
+        :loading="loading"
+        block
+        html-type="submit"
+        size="large"
+        type="primary"
+      >
+        {{ submitText }}
+      </a-button>
     </a-form-item>
   </a-form>
-  <slot name="footer"></slot>
+  <slot name="footer" />
 </template>
 
 <script lang="ts" setup>
-import { Ref } from 'vue'
-import { isEmpty, localStorageMethods, startTimer, stopTimer } from '@/framework/utils/common'
-import { getMsgCode } from '@/framework/apis/login/login'
 import { CodeOutlined, PhoneOutlined, SafetyOutlined } from '@ant-design/icons-vue'
-import { baseURL } from '@/framework/network/request'
-import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 import { message } from 'ant-design-vue'
-import { TimerType } from '@/framework/utils/type'
+import { Ref } from 'vue'
+
 import { userAlreadyExisted, userExisted } from '@/framework/apis/admin/user'
+import { getMsgCode } from '@/framework/apis/login/login'
+import { baseURL } from '@/framework/network/request'
+import { isEmpty, localStorageMethods, startTimer, stopTimer } from '@/framework/utils/common'
+import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
+import { TimerType } from '@/framework/utils/type'
 
 const countDown = ref(-1)
 const loading: Ref<boolean> = ref(false)
@@ -78,7 +121,7 @@ const props = withDefaults(
     phoneNumberExisted: undefined
   }
 )
-const {smsType, phoneNumberExisted} = toRefs(props)
+const { smsType, phoneNumberExisted } = toRefs(props)
 const emit = defineEmits<{
   (e: 'update:formData', value: any): void
 }>()
@@ -100,7 +143,7 @@ const getLoginMsgCode = (phoneNumber: string, captcha: string) => {
       }
     })
     message.destroy()
-    message.success({content: () => resp.payload.message, style: {marginTop: '10vh'}})
+    message.success({ content: () => resp.payload.message, style: { marginTop: '10vh' } })
   })
 }
 watch(

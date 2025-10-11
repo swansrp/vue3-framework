@@ -1,23 +1,37 @@
 <template>
   <a-list
     v-if="!multi"
-    :data-source="_listData" :disabled="disable" bordered size="small">
+    :data-source="_listData"
+    :disabled="disable"
+    bordered
+    size="small"
+  >
     <template #renderItem="{ item }">
       <a-list-item
         :class="{'activate-item':
           labelInValue ?
             selectedData.findIndex(data=>data.value === item[valueField]) !== -1
             : selectedData.indexOf(item[valueField]) !== -1}"
-        @click="checkListNode(item)">
-        <slot :item="item" name="title">
+        @click="checkListNode(item)"
+      >
+        <slot
+          :item="item"
+          name="title"
+        >
           <span>{{ item[props.labelField] }}</span>
         </slot>
       </a-list-item>
     </template>
-    <template v-if="searchAble" #header>
+    <template
+      v-if="searchAble"
+      #header
+    >
       <a-input-search
-        v-model:value="inputSearch" placeholder="请输入搜索" size="small"
-        @search="onSearch" />
+        v-model:value="inputSearch"
+        placeholder="请输入搜索"
+        size="small"
+        @search="onSearch"
+      />
     </template>
   </a-list>
   <template v-else>
@@ -26,13 +40,19 @@
       v-model:value="inputSearch"
       placeholder="请输入搜索"
       size="small"
-      @search="onSearch" />
+      @search="onSearch"
+    />
     <a-checkbox
-      v-for="(item, index) in _listData" :key="index"
+      v-for="(item, index) in _listData"
+      :key="index"
       v-model:checked="item.checked"
       style="width: 100%;margin-top: 10px"
-      @change="handleChecked(item)">
-      <slot :item="item" name="title">
+      @change="handleChecked(item)"
+    >
+      <slot
+        :item="item"
+        name="title"
+      >
         <span class="normal">{{ item[props.labelField] }}</span>
       </slot>
     </a-checkbox>
@@ -41,6 +61,7 @@
 
 <script lang="ts" setup>
 import { Ref } from 'vue'
+
 import { isNotEmpty } from '@/framework/utils/common'
 
 const props = withDefaults(

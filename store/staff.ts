@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { getStaff } from "@/framework/components/common/departmentAndStaffSelect/api";
+
+import { getStaff } from '@/framework/components/common/departmentAndStaffSelect/api'
 
 export const useStaffStore = defineStore('staffStore', {
   state: () => {
@@ -11,7 +12,7 @@ export const useStaffStore = defineStore('staffStore', {
     async getStaffInfo(customerNumber: string) {
       const staffInfo = this.staffObj[customerNumber]
       if (staffInfo) return staffInfo
-      return await getStaff([customerNumber]).then(({payload}) => {
+      return await getStaff([customerNumber]).then(({ payload }) => {
         this.staffObj[customerNumber] = payload[0]
         return payload[0]
       })

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import {localStorageMethods} from "@/framework/utils/common";
-import {ID_TOKEN} from "@/framework/utils/constant";
+
+import { localStorageMethods } from '@/framework/utils/common'
+import { ID_TOKEN } from '@/framework/utils/constant'
 
 export const useUserStore = defineStore('userStore', {
   state: () => {

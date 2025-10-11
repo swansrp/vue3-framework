@@ -1,21 +1,42 @@
 <template>
-  <div id="advancedSearch" :style="{width}">
-    <Entity v-model:condition="advancedCondition" :advanced="advanced" class="search-item" />
+  <div
+    id="advancedSearch"
+    :style="{width}"
+  >
+    <Entity
+      v-model:condition="advancedCondition"
+      :advanced="advanced"
+      class="search-item"
+    />
   </div>
-  <a-button style="margin-left: 15px" type="primary" @click="getCondition">{{ okText }}</a-button>
-  <a-button style="margin-left: 15px" type="primary" @click="resetCondition">{{ resetText }}</a-button>
+  <a-button
+    style="margin-left: 15px"
+    type="primary"
+    @click="getCondition"
+  >
+    {{ okText }}
+  </a-button>
+  <a-button
+    style="margin-left: 15px"
+    type="primary"
+    @click="resetCondition"
+  >
+    {{ resetText }}
+  </a-button>
 </template>
 
 <script lang="ts" setup>
+import { Ref } from 'vue'
+
 import Entity from './Entity/index.vue'
-import {useAdvancedSearch} from '@/framework/store/AdvancedSearch'
+
+import { AND, genEmptyCondition } from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import pinia from '@/framework/store'
-import {ValueLabel} from '@/framework/utils/type'
-import {AND, genEmptyCondition} from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
-import {ConditionType} from '@/framework/components/common/AdvancedSearch/type'
-import {dictStore} from '@/framework/store/common'
-import {isNotEmpty} from '@/framework/utils/common'
-import {Ref} from 'vue'
+import { useAdvancedSearch } from '@/framework/store/AdvancedSearch'
+import { dictStore } from '@/framework/store/common'
+import { isNotEmpty } from '@/framework/utils/common'
+import { ValueLabel } from '@/framework/utils/type'
 
 
 const useAdvancedSearchStore = useAdvancedSearch(pinia)
@@ -32,13 +53,13 @@ const props = withDefaults(defineProps<{
       okText: '查询',
       width: 1000,
       resetText: '重置',
-      condition: () => ({conditionList: [genEmptyCondition()], andOr: AND}),
+      condition: () => ({ conditionList: [genEmptyCondition()], andOr: AND }),
       advanced: true
     }
 )
-const {okText, resetText, condition} = toRefs(props)
+const { okText, resetText, condition } = toRefs(props)
 const width = computed(() => props.width ? props.width + 'px' : '1000px')
-const advancedCondition:Ref = ref({conditionList: [genEmptyCondition()], andOr: AND})
+const advancedCondition:Ref = ref({ conditionList: [genEmptyCondition()], andOr: AND })
 const emit = defineEmits(['getCondition'])
 const getCondition = () => emit('getCondition', advancedCondition.value)
 const resetCondition = () => {
@@ -66,7 +87,7 @@ onBeforeMount(async () => {
   updateAdvancedConditionFromProps()
 })
 
-watch(() => props.condition, () => updateAdvancedConditionFromProps, {immediate: true})
+watch(() => props.condition, () => updateAdvancedConditionFromProps, { immediate: true })
 
 </script>
 

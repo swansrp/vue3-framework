@@ -1,5 +1,5 @@
-import { QuerySortType } from '@/framework/components/common/Portal/type'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { QuerySortType } from '@/framework/components/common/Portal/type'
 
 export type PortalBindType = {
   /**

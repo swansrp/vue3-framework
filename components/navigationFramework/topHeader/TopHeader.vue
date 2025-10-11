@@ -1,34 +1,59 @@
 <template>
   <div id="top">
-    <div :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'" class="top_title">
-      <img v-if="tabStore.isNeedLeftNav" alt="公司标志" src="../../../../../public/icon.png" style="margin-right: 5px" />
+    <div
+      :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'"
+      class="top_title"
+    >
+      <img
+        v-if="tabStore.isNeedLeftNav"
+        alt="公司标志"
+        src="../../../../../public/icon.png"
+        style="margin-right: 5px"
+      >
       {{ projectName }}
     </div>
     <top-nav class="top_nav" />
     <div class="top_user">
       <div class="user-avatar-wrapper">
-        <a-avatar v-if="isNotEmpty(userStore.avatar)" class="user-avatar">
+        <a-avatar
+          v-if="isNotEmpty(userStore.avatar)"
+          class="user-avatar"
+        >
           <template #icon>
-            <img :src="userStore.avatar" />
+            <img :src="userStore.avatar">
           </template>
         </a-avatar>
-        <a-avatar v-else class="user-avatar">
+        <a-avatar
+          v-else
+          class="user-avatar"
+        >
           <template #icon>
             <user-outlined />
           </template>
         </a-avatar>
-        <div class="user-status-indicator"></div>
+        <div class="user-status-indicator" />
       </div>
       <div class="user-info">
         <div class="user-name">
-          <marquee :content="userStore.name" :width="100" />
+          <marquee
+            :content="userStore.name"
+            :width="100"
+          />
         </div>
-        <div v-if="userStore.deptName" class="user-role">{{ userStore.deptName }}</div>
+        <div
+          v-if="userStore.deptName"
+          class="user-role"
+        >
+          {{ userStore.deptName }}
+        </div>
       </div>
       <div class="top_user_setting">
         <a-dropdown trigger="click">
           <template #overlay>
-            <a-menu @click="handleMenuClick" class="user-dropdown-menu">
+            <a-menu
+              class="user-dropdown-menu"
+              @click="handleMenuClick"
+            >
               <a-menu-item key="1">
                 <RedoOutlined />
                 重新登录
@@ -50,7 +75,12 @@
             </a-menu>
           </template>
           <div class="setting-button-wrapper">
-            <a-button shape="circle" size="large" type="text" class="setting-button">
+            <a-button
+              shape="circle"
+              size="large"
+              type="text"
+              class="setting-button"
+            >
               <template #icon>
                 <SettingOutlined />
               </template>
@@ -60,21 +90,32 @@
       </div>
     </div>
     <a-modal
-      v-model:open="modifyPasswordModal.open" cancel-text="取消" ok-text="确认" title="设置密码"
-      @ok="modifyPassword">
+      v-model:open="modifyPasswordModal.open"
+      cancel-text="取消"
+      ok-text="确认"
+      title="设置密码"
+      @ok="modifyPassword"
+    >
       <a-form
-        :labelCol="{style: { width: '100px', marginTop: '4px' }}" :model="modifyPasswordModal"
-        :wrapperCol="{ span: 16 }"
-        layout="horizontal">
+        :label-col="{style: { width: '100px', marginTop: '4px' }}"
+        :model="modifyPasswordModal"
+        :wrapper-col="{ span: 16 }"
+        layout="horizontal"
+      >
         <a-form-item
           :rules="[
             { required: true, message: '请输入密码' }]"
           has-feedback
           label="输入旧密码"
-          name="oldPassword">
+          name="oldPassword"
+        >
           <a-input-password
-            v-model:value="modifyPasswordModal.oldPassword" autocomplete="off" placeholder="密码" size="large"
-            type="password" />
+            v-model:value="modifyPasswordModal.oldPassword"
+            autocomplete="off"
+            placeholder="密码"
+            size="large"
+            type="password"
+          />
         </a-form-item>
         <a-form-item
           :rules="[
@@ -83,52 +124,91 @@
             { validator: lxStr, trigger: 'change' }]"
           has-feedback
           label="输入新密码"
-          name="password">
+          name="password"
+        >
           <a-input-password
-            v-model:value="modifyPasswordModal.password" autocomplete="off" placeholder="密码" size="large"
-            type="password" />
+            v-model:value="modifyPasswordModal.password"
+            autocomplete="off"
+            placeholder="密码"
+            size="large"
+            type="password"
+          />
         </a-form-item>
         <a-form-item
           :rules="[{ required: true, message: '两次密码不一致', pattern: new RegExp('^'+ modifyPasswordModal.password + '$') }]"
           has-feedback
           label="确认密码"
-          name="passwordConfirm">
+          name="passwordConfirm"
+        >
           <a-input-password
-            v-model:value="modifyPasswordModal.passwordConfirm" autocomplete="off" placeholder="确认密码"
-            size="large" type="password" />
+            v-model:value="modifyPasswordModal.passwordConfirm"
+            autocomplete="off"
+            placeholder="确认密码"
+            size="large"
+            type="password"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
     <a-modal
-      v-model:open="userInfoModal.open" cancel-text="取消" ok-text="确认" title="设置个人信息"
-      @ok="updateInfo">
+      v-model:open="userInfoModal.open"
+      cancel-text="取消"
+      ok-text="确认"
+      title="设置个人信息"
+      @ok="updateInfo"
+    >
       <a-form
-        :labelCol="{style: { width: '100px' }}" :model="userInfoModal"
-        :wrapperCol="{ span: 16 }"
-        layout="horizontal">
+        :label-col="{style: { width: '100px' }}"
+        :model="userInfoModal"
+        :wrapper-col="{ span: 16 }"
+        layout="horizontal"
+      >
         <a-form-item
           label="昵称"
-          name="nickName">
-          <a-input v-model:value="userInfoModal.nickName" autocomplete="off" placeholder="请输入昵称" />
+          name="nickName"
+        >
+          <a-input
+            v-model:value="userInfoModal.nickName"
+            autocomplete="off"
+            placeholder="请输入昵称"
+          />
         </a-form-item>
         <a-form-item
           label="姓名"
-          name="name">
-          <a-input v-model:value="userInfoModal.name" autocomplete="off" placeholder="请输入姓名" />
+          name="name"
+        >
+          <a-input
+            v-model:value="userInfoModal.name"
+            autocomplete="off"
+            placeholder="请输入姓名"
+          />
         </a-form-item>
         <a-form-item
           label="性别"
-          name="sex">
-          <a-select v-model:value="userInfoModal.sex" placeholder="请选择性别">
-            <a-select-option v-for="item in genderOptionList" :key="item.value" :value="item.value">
+          name="sex"
+        >
+          <a-select
+            v-model:value="userInfoModal.sex"
+            placeholder="请选择性别"
+          >
+            <a-select-option
+              v-for="item in genderOptionList"
+              :key="item.value"
+              :value="item.value"
+            >
               {{ item.label }}
             </a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item
           label="头像"
-          name="avatar">
-          <multimedia v-model="userInfoModal.avatar" delete-able upload-able />
+          name="avatar"
+        >
+          <multimedia
+            v-model="userInfoModal.avatar"
+            delete-able
+            upload-able
+          />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -136,19 +216,21 @@
 </template>
 
 <script lang="ts" setup>
-import { changePassword, getUserInfo, logoff, reLogin, updateUserInfo } from "@/framework/apis/login/login"
-import { useUserStore } from "@/framework/store/user"
-import { isNotEmpty, localStorageMethods } from "@/framework/utils/common"
-import { title as projectName } from '../../../../../package.json'
-import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from "@/framework/utils/constant"
-import { PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons-vue"
-import TopNav from "@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue";
-import { useTabStore } from "@/framework/store/nav";
-import pinia from "@/framework/store";
-import { afterLogin } from "@/framework/network/login";
+import { PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { Md5 } from 'ts-md5'
-import Marquee from '@/framework/components/common/marquee/index.vue';
+
+import { title as projectName } from '../../../../../package.json'
+
+import { changePassword, getUserInfo, logoff, reLogin, updateUserInfo } from '@/framework/apis/login/login'
+import Marquee from '@/framework/components/common/marquee/index.vue'
+import TopNav from '@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue'
+import { afterLogin } from '@/framework/network/login'
+import pinia from '@/framework/store'
 import { dictStore } from '@/framework/store/common'
+import { useTabStore } from '@/framework/store/nav'
+import { useUserStore } from '@/framework/store/user'
+import { isNotEmpty, localStorageMethods } from '@/framework/utils/common'
+import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
@@ -177,7 +259,7 @@ const modifyPassword = () => {
 
 // 判断密码是否为连续的数字或字母
 const lxStr = () => {
-  const {password} = modifyPasswordModal
+  const { password } = modifyPasswordModal
   let arr = password.split('')
   for (let i = 1; i < arr.length - 1; i++) {
     let firstIndex = arr[i - 1].charCodeAt(0)

@@ -1,12 +1,25 @@
 <template>
   <div class="chart-panel">
     <!-- 维度控制面板 - Tab页形式 -->
-    <div v-if="chartData.length > 0" class="dimension-controls">
-      <a-tabs v-model:activeKey="activeTabKey" size="small" type="card">
+    <div
+      v-if="chartData.length > 0"
+      class="dimension-controls"
+    >
+      <a-tabs
+        v-model:active-key="activeTabKey"
+        size="small"
+        type="card"
+      >
         <!-- 第一维度控制 -->
-        <a-tab-pane key="first" :tab="firstDimensionName">
+        <a-tab-pane
+          key="first"
+          :tab="firstDimensionName"
+        >
           <template #tab>
-            <a-tooltip :title="firstDimensionName" placement="top">
+            <a-tooltip
+              :title="firstDimensionName"
+              placement="top"
+            >
               <span class="tab-title">
                 <DatabaseOutlined /> {{ firstDimensionName }}
               </span>
@@ -14,19 +27,33 @@
           </template>
           <div class="tab-content">
             <a-checkbox-group v-model:value="visibleFirstDimensions">
-              <a-checkbox v-for="dimension in allFirstDimensions" :key="dimension" :value="dimension">
-                <a-tooltip :title="dimension" placement="top">
+              <a-checkbox
+                v-for="dimension in allFirstDimensions"
+                :key="dimension"
+                :value="dimension"
+              >
+                <a-tooltip
+                  :title="dimension"
+                  placement="top"
+                >
                   <span class="checkbox-text">{{ dimension }}</span>
                 </a-tooltip>
               </a-checkbox>
             </a-checkbox-group>
             <div class="tab-actions">
-              <a-button size="small" type="link" @click="toggleAllFirstDimensions">
+              <a-button
+                size="small"
+                type="link"
+                @click="toggleAllFirstDimensions"
+              >
                 全部选中
               </a-button>
               <a-button
-                size="small" type="link" :disabled="isFirstDimensionInvertDisabled"
-                @click="invertFirstDimensionsSelection">
+                size="small"
+                type="link"
+                :disabled="isFirstDimensionInvertDisabled"
+                @click="invertFirstDimensionsSelection"
+              >
                 反选
               </a-button>
             </div>
@@ -34,9 +61,16 @@
         </a-tab-pane>
 
         <!-- 第二维度控制 -->
-        <a-tab-pane v-if="hasSecondDimension" key="second" :tab="secondDimensionName">
+        <a-tab-pane
+          v-if="hasSecondDimension"
+          key="second"
+          :tab="secondDimensionName"
+        >
           <template #tab>
-            <a-tooltip :title="secondDimensionName" placement="top">
+            <a-tooltip
+              :title="secondDimensionName"
+              placement="top"
+            >
               <span class="tab-title">
                 <AppstoreOutlined /> {{ secondDimensionName }}
               </span>
@@ -44,19 +78,33 @@
           </template>
           <div class="tab-content">
             <a-checkbox-group v-model:value="visibleSecondDimensions">
-              <a-checkbox v-for="dimension in allSecondDimensions" :key="dimension" :value="dimension">
-                <a-tooltip :title="dimension" placement="top">
+              <a-checkbox
+                v-for="dimension in allSecondDimensions"
+                :key="dimension"
+                :value="dimension"
+              >
+                <a-tooltip
+                  :title="dimension"
+                  placement="top"
+                >
                   <span class="checkbox-text">{{ dimension }}</span>
                 </a-tooltip>
               </a-checkbox>
             </a-checkbox-group>
             <div class="tab-actions">
-              <a-button size="small" type="link" @click="toggleAllSecondDimensions">
+              <a-button
+                size="small"
+                type="link"
+                @click="toggleAllSecondDimensions"
+              >
                 全部选中
               </a-button>
               <a-button
-                size="small" type="link" :disabled="isSecondDimensionInvertDisabled"
-                @click="invertSecondDimensionsSelection">
+                size="small"
+                type="link"
+                :disabled="isSecondDimensionInvertDisabled"
+                @click="invertSecondDimensionsSelection"
+              >
                 反选
               </a-button>
             </div>
@@ -64,25 +112,42 @@
         </a-tab-pane>
 
         <!-- 统计指标控制 -->
-        <a-tab-pane key="statistics" tab="统计指标">
+        <a-tab-pane
+          key="statistics"
+          tab="统计指标"
+        >
           <template #tab>
             <PieChartOutlined /> 统计指标
           </template>
           <div class="tab-content">
             <a-checkbox-group v-model:value="visibleStatisticTypes">
-              <a-checkbox v-for="statType in allStatisticTypes" :key="statType" :value="statType">
-                <a-tooltip :title="statType" placement="top">
+              <a-checkbox
+                v-for="statType in allStatisticTypes"
+                :key="statType"
+                :value="statType"
+              >
+                <a-tooltip
+                  :title="statType"
+                  placement="top"
+                >
                   <span class="checkbox-text">{{ statType }}</span>
                 </a-tooltip>
               </a-checkbox>
             </a-checkbox-group>
             <div class="tab-actions">
-              <a-button size="small" type="link" @click="toggleAllStatisticTypes">
+              <a-button
+                size="small"
+                type="link"
+                @click="toggleAllStatisticTypes"
+              >
                 全部选中
               </a-button>
               <a-button
-                size="small" type="link" :disabled="isStatisticTypesInvertDisabled"
-                @click="invertStatisticTypesSelection">
+                size="small"
+                type="link"
+                :disabled="isStatisticTypesInvertDisabled"
+                @click="invertStatisticTypesSelection"
+              >
                 反选
               </a-button>
             </div>
@@ -94,13 +159,24 @@
     <div class="chart-container">
       <!-- 当有数据时显示图表 -->
       <UniversalChart
-        ref="chartRef" v-if="chartData && chartData.length > 0 && receivedData"
-        :categories="chartCategories" :chartType="autoChartType" :data="filteredChartData"
-        :dataMetrics="receivedData.dataMetrics || []" :dimensionValueMap="dimensionValueMap" :loading="loading"
-        :title="chartTitle" height="100%" @click="handleChartClick" />
+        v-if="chartData && chartData.length > 0 && receivedData"
+        ref="chartRef"
+        :categories="chartCategories"
+        :chart-type="autoChartType"
+        :data="filteredChartData"
+        :data-metrics="receivedData.dataMetrics || []"
+        :dimension-value-map="dimensionValueMap"
+        :loading="loading"
+        :title="chartTitle"
+        height="100%"
+        @click="handleChartClick"
+      />
 
       <!-- 当没有数据时显示占位符 -->
-      <div v-else class="chart-placeholder">
+      <div
+        v-else
+        class="chart-placeholder"
+      >
         <div class="placeholder-content">
           <BarChartOutlined class="placeholder-icon" />
           <p>配置维度后点击"生成图表"按钮</p>
@@ -110,26 +186,31 @@
 
     <!-- 数据详情弹窗组件 -->
     <dashboard-detail-modal
-      v-model:open="detailModalVisible" :selected-bar-info="selectedBarInfo" :table-id="tableId"
-      @close="closeDetailModal" />
+      v-model:open="detailModalVisible"
+      :selected-bar-info="selectedBarInfo"
+      :table-id="tableId"
+      @close="closeDetailModal"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, toRefs, watch } from 'vue'
-import { message } from 'ant-design-vue'
 import { BarChartOutlined, DatabaseOutlined, AppstoreOutlined, PieChartOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { computed, ref, toRefs, watch } from 'vue'
+
+import DashboardDetailModal from './DashboardDetail.vue'
+import UniversalChart from './UniversalChart.vue'
+import type { SelectedBarInfo } from '../../type/ChartTypes'
+
+import { advancedStatisticRequest } from '@/framework/apis'
 import {
   ConvertOptions,
   DimensionIndicatorsFilter,
   IndicatorGroup,
   MetricCondition,
   RequestParams
-} from "@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq"
-import { advancedStatisticRequest } from '@/framework/apis'
-import type { SelectedBarInfo } from '../../type/ChartTypes'
-import UniversalChart from './UniversalChart.vue'
-import DashboardDetailModal from './DashboardDetail.vue'
+} from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import type { ChartDataItem } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
 // Props - 接收外部传入的维度配置数据
@@ -153,7 +234,7 @@ const loading = ref(false)
 const chartData = ref<ChartDataItem[]>([])
 
 // 调试：监听receivedData变化
-watch(receivedData, () => { }, { immediate: true, deep: true });
+watch(receivedData, () => { }, { immediate: true, deep: true })
 
 // 维度显示控制
 const visibleFirstDimensions = ref<string[]>([])
@@ -416,7 +497,7 @@ const buildFirstDimensionConditions = (firstDim: string) => {
   }
 
   return {
-    andOr: firstDimItem.queryConditions.andOr || "0",
+    andOr: firstDimItem.queryConditions.andOr || '0',
     conditionList: [...firstDimItem.queryConditions.conditionList],
     // 附加信息：原始条件
     firstDimensionCondition: firstDimItem.queryConditions,
@@ -464,7 +545,7 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
     : [...firstDimItem.queryConditions.conditionList]
 
   return {
-    andOr: "0", // 使用 AND 连接
+    andOr: '0', // 使用 AND 连接
     conditionList: combinedConditionList,
     // 附加信息：原始条件
     firstDimensionCondition: firstDimItem.queryConditions,
@@ -564,19 +645,19 @@ const invertStatisticTypesSelection = () => {
 const fetchChartData = async () => {
 
   if (!receivedData.value) {
-    console.warn('receivedData 未定义，无法获取图表数据');
-    message.error('数据配置不完整，请重新配置维度信息');
-    return;
+    console.warn('receivedData 未定义，无法获取图表数据')
+    message.error('数据配置不完整，请重新配置维度信息')
+    return
   }
 
   // 检查一级维度是否存在
   if (!receivedData.value.firstDimension) {
-    console.warn('一级维度未配置');
-    message.error('一级维度未配置，请先选择一级维度');
-    return;
+    console.warn('一级维度未配置')
+    message.error('一级维度未配置，请先选择一级维度')
+    return
   }
 
-  loading.value = true;
+  loading.value = true
 
   try {
     // 预清理，避免上一次筛选残留对本次过滤造成影响
@@ -586,27 +667,27 @@ const fetchChartData = async () => {
     visibleStatisticTypes.value = []
 
     // 调用真实的API获取数据（增加防缓存标识）
-    const result = await fetchTalentStatisticData(receivedData.value, {});
+    const result = await fetchTalentStatisticData(receivedData.value, {})
 
     if (result && result.payload) {
-      chartData.value = result.payload;
+      chartData.value = result.payload
 
       // 更新维度数据
-      updateDimensionData(result.payload);
+      updateDimensionData(result.payload)
 
       // 触发图表生成事件
-      emit('chartGenerated', result.payload);
+      emit('chartGenerated', result.payload)
     } else {
-      console.warn('API返回数据为空或格式不正确:', result);
-      message.warning('暂无数据，请检查筛选条件或数据源');
-      chartData.value = [];
+      console.warn('API返回数据为空或格式不正确:', result)
+      message.warning('暂无数据，请检查筛选条件或数据源')
+      chartData.value = []
     }
   } catch (error: any) {
-    console.error('获取图表数据失败:', error);
-    message.error(`获取图表数据失败: ${error?.message || '未知错误'}`);
-    chartData.value = [];
+    console.error('获取图表数据失败:', error)
+    message.error(`获取图表数据失败: ${error?.message || '未知错误'}`)
+    chartData.value = []
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
@@ -637,8 +718,8 @@ const convertDataToCrossMetricConditions = (
 
   // 检查一级维度是否存在
   if (!receivedData.firstDimension || !receivedData.firstDimension.indicatorItems || receivedData.firstDimension.indicatorItems.length === 0) {
-    console.error('一级维度数据不完整:', receivedData.firstDimension);
-    throw new Error('一级维度数据不完整，无法生成图表');
+    console.error('一级维度数据不完整:', receivedData.firstDimension)
+    throw new Error('一级维度数据不完整，无法生成图表')
   }
 
   // 如果两个维度都存在，进行交叉组合
@@ -675,8 +756,8 @@ const convertDataToCrossMetricConditions = (
 
   // 检查是否有指标条件
   if (metricConditions.length === 0) {
-    console.error('无法生成有效的指标条件');
-    throw new Error('无法生成有效的指标条件，请检查维度配置');
+    console.error('无法生成有效的指标条件')
+    throw new Error('无法生成有效的指标条件，请检查维度配置')
   }
 
   // 构造请求参数
