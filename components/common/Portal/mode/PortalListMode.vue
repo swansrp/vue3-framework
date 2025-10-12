@@ -81,7 +81,7 @@
     <template #footer>
       <div class="pagination">
         <div>
-          <slot name="footer-action" />
+          <slot name="footer-action"></slot>
         </div>
         <div style="display: flex;">
           <a-pagination
@@ -104,7 +104,7 @@
             </template>
           </a-pagination>
           <div>
-            <slot name="end-action" />
+            <slot name="end-action"></slot>
           </div>
         </div>
       </div>

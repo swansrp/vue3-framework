@@ -128,7 +128,7 @@
               <Icon icon="WarningFilled" />
             </template>
             <template #description>
-              确认删除当前节点？<br><b>说明：只有当前接节点不含有子节点时才允许删除该节点</b>
+              确认删除当前节点？<br /><b>说明：只有当前接节点不含有子节点时才允许删除该节点</b>
             </template>
           </a-alert>
           <a-button

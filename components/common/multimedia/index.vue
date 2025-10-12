@@ -20,14 +20,14 @@
           width="0"
           @pause="stopFile(false)"
           @play="playFile(false)"
-        />
+        ></video>
       </template>
       <div style="position: relative">
         <img
           :src="iconURL"
           :style="{width: isNaN(Number(width))?width:width+'px', height: isNaN(Number(height))?height:height+'px',objectFit:'cover'}"
           alt="file_icon_preview"
-        >
+        />
         <div class="icons-box">
           <PauseOutlined
             v-if="playing"
@@ -47,7 +47,7 @@
       dot
     >
       <a-dropdown>
-        <div style="width: 10px; height: 10px; margin-left: -10px; background: transparent" />
+        <div style="width: 10px; height: 10px; margin-left: -10px; background: transparent"></div>
         <template #overlay>
           <a-menu>
             <a-menu-item

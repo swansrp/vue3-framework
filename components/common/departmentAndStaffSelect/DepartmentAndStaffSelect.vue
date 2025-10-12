@@ -10,7 +10,6 @@
           :style="{width: inputWidth}"
           :options="departmentListOption"
           :show-search="{ cascaderFilter }"
-          :show-search="true"
           max-tag-count="responsive"
           multiple
           placeholder="请选择公司部门"
@@ -50,7 +49,7 @@
             v-lazy="staffAvatar(staffId2AvatarMap[value])"
             alt="头像"
             class="avatar"
-          >
+          />
           {{ label }}
         </template>
         <template

@@ -9,7 +9,7 @@
     destroy-on-close
     @cancel="$emit('update:visible', false)"
   >
-    <slot />
+    <slot></slot>
     <template #title>
       <slot name="title">
         <div
@@ -23,7 +23,7 @@
             :src="_iconPath"
             alt=""
             class="icon-img"
-          >
+          />
           {{ _title }}
         </div>
       </slot>
@@ -33,8 +33,8 @@
         <slot
           v-if="props.footer"
           name="footer"
-        />
-        <div v-else />
+        ></slot>
+        <div v-else></div>
       </slot>
     </template>
     <template

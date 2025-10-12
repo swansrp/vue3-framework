@@ -32,7 +32,7 @@
       status="success"
       title="完成"
     >
-      <template #extra />
+      <template #extra></template>
     </a-result>
     <a-result
       v-if="config.type === 'FAILED'"

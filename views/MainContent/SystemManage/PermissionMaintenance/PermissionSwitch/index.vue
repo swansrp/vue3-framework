@@ -3,7 +3,7 @@
     <a-typography-title :level="2">
       将系统超级管理员的权限切换到指定用户
     </a-typography-title>
-    <br>
+    <br />
     <department-and-staff-select
       v-model:staff-list-value="staffListValue"
       :is-multiple="false"

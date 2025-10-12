@@ -16,7 +16,7 @@
   <div
     v-dompurify-html="content"
     style="height: 200px;width: 200px;background-color: pink"
-  />
+  ></div>
 </template>
 
 <script setup lang="ts">

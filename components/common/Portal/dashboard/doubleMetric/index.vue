@@ -3,7 +3,7 @@
     :id="'double-circular-'+index"
     class="double-circular-css"
     :style="{zIndex: 1-showNoData, opacity: 1-showNoData}"
-  />
+  ></div>
   <div
     :style="{zIndex: showNoData, opacity: showNoData}"
     class="double-circular-no-data"

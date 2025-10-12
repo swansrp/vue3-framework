@@ -67,7 +67,7 @@
           )}`,
           gridRow: `${dragPosition.row} / span ${draggingIndicator?.yGrid || 1}`,
         }"
-      />
+      ></div>
     </div>
   </div>
 </template>

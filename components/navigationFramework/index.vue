@@ -18,11 +18,11 @@
     >
       <history-tab v-if="isNeedNav" />
       <crumb-search v-if="isNeedNav" />
-      <slot name="router-view" />
+      <slot name="router-view"></slot>
     </div>
   </div>
   <div v-else>
-    <slot name="content" />
+    <slot name="content"></slot>
   </div>
 </template>
 

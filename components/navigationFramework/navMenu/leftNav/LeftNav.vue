@@ -49,9 +49,9 @@
       @mouseleave="handleLeave"
     >
       <div class="resize-indicator">
-        <div class="dot" />
-        <div class="dot" />
-        <div class="dot" />
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
       </div>
     </div>
     
@@ -74,7 +74,7 @@
         <div
           class="arrow"
           :class="collapsed ? 'arrow-right' : 'arrow-left'"
-        />
+        ></div>
       </div>
     </div>
   </div>

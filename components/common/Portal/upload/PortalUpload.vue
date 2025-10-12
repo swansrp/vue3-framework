@@ -31,7 +31,7 @@
         点击或者拖拽文件至此上传
       </p>
       <p class="ant-upload-hint">
-        注意请使用系统提供的模版填充数据<br>模版格式不正确可能导致数据无法被处理
+        注意请使用系统提供的模版填充数据<br />模版格式不正确可能导致数据无法被处理
       </p>
     </a-upload-dragger>
     <a-result
@@ -58,7 +58,7 @@
       status="success"
       title="上传数据成功"
     >
-      <template #extra />
+      <template #extra></template>
     </a-result>
     <a-result
       v-if="config.type === 'FAILED'"

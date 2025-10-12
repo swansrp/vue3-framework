@@ -92,7 +92,7 @@
         @drop.prevent="handleDrop"
       >
         <div class="drop-zone-content">
-          <div class="drop-zone-indicator" />
+          <div class="drop-zone-indicator"></div>
           <!--          <div class="drop-zone-text">拖拽到此处放置</div>-->
         </div>
       </div>
@@ -103,17 +103,17 @@
       v-if="canResize"
       class="resize-handle right"
       @mousedown="startResize('right', $event)"
-    />
+    ></div>
     <div
       v-if="canResize"
       class="resize-handle bottom"
       @mousedown="startResize('bottom', $event)"
-    />
+    ></div>
     <div
       v-if="canResize"
       class="resize-handle corner"
       @mousedown="startResize('corner', $event)"
-    />
+    ></div>
 
     <!-- 图表详情弹窗 -->
     <DashboardDetail

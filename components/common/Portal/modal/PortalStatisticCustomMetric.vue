@@ -7,7 +7,7 @@
     @close="advancedConditionDrawClose"
   >
     <template #extra>
-      <slot name="extra" />
+      <slot name="extra"></slot>
     </template>
     <a-form-item label="数据条目名称">
       <a-input

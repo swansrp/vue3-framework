@@ -215,12 +215,12 @@
                     v-if="expand"
                     :class="['contentCss', getLogLevelClass(log.logLevel)]"
                     v-html="log.content.substring(0, EXPAND_WIDTH)"
-                  />
+                  ></span>
                   <span
                     v-else
                     :class="['contentCss', getLogLevelClass(log.logLevel)]"
                     v-html="log.content"
-                  />
+                  ></span>
                 </div>
               </a-dropdown>
             </div>

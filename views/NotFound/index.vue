@@ -6,22 +6,22 @@
           :src="img404"
           alt="404"
           class="pic-404__parent"
-        >
+        />
         <img
           :src="img404Cloud"
           alt="404"
           class="pic-404__child left"
-        >
+        />
         <img
           :src="img404Cloud"
           alt="404"
           class="pic-404__child mid"
-        >
+        />
         <img
           :src="img404Cloud"
           alt="404"
           class="pic-404__child right"
-        >
+        />
       </div>
       <div class="bullshit">
         <div class="bullshit__oops">

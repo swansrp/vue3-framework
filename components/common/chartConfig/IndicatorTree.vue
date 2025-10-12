@@ -17,7 +17,7 @@
       v-if="!collapsed"
       class="resize-handle"
       @mousedown="startResize"
-    />
+    ></div>
 
     <!-- 树形面板内容 -->
     <div

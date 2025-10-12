@@ -9,7 +9,7 @@
         alt="公司标志"
         src="../../../../../public/icon.png"
         style="margin-right: 5px"
-      >
+      />
       {{ projectName }}
     </div>
     <top-nav class="top_nav" />
@@ -20,7 +20,7 @@
           class="user-avatar"
         >
           <template #icon>
-            <img :src="userStore.avatar">
+            <img :src="userStore.avatar" />
           </template>
         </a-avatar>
         <a-avatar
@@ -31,7 +31,7 @@
             <user-outlined />
           </template>
         </a-avatar>
-        <div class="user-status-indicator" />
+        <div class="user-status-indicator"></div>
       </div>
       <div class="user-info">
         <div class="user-name">

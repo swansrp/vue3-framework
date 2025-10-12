@@ -39,7 +39,7 @@
     </template>
   </a-tree>
   <div style="margin-top: 20px">
-    <slot name="end-action" />
+    <slot name="end-action"></slot>
   </div>
 </template>
 

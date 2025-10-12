@@ -11,7 +11,7 @@
             class="scrollable-descriptions"
             layout="vertical"
           >
-            <slot name="side" />
+            <slot name="side"></slot>
           </a-descriptions>
         </div>
       </template>

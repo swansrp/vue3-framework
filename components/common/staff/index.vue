@@ -18,7 +18,7 @@
           v-lazy="staffAvatar(avatar)"
           alt="头像"
           class="avatar"
-        >
+        />
         <div style="margin-top: 10px">
           {{ label }}
         </div>

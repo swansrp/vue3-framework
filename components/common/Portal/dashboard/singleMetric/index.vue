@@ -3,14 +3,14 @@
     :id="'pie-3d-'+index"
     :style="{zIndex: 2-showNoData, opacity: 1-showNoData}"
     class="pie-3d"
-  />
+  ></div>
   <div
     :style="{zIndex: showNoData, opacity: showNoData}"
     class="pie-3d-no-data"
   >
     暂无数据
   </div>
-  <slot />
+  <slot></slot>
 </template>
 
 <script lang="ts" setup>

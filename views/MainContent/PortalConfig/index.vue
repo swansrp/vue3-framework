@@ -60,7 +60,7 @@
                     :title="item.label"
                     class="item-label"
                     v-html="highlightSearchText(item.label)"
-                  />
+                  ></span>
                   <template
                     v-if="selectedRole === '0'"
                     #overlay
@@ -119,7 +119,7 @@
                   :title="item.label"
                   class="item-label"
                   v-html="highlightSearchText(item.label)"
-                />
+                ></span>
               </div>
             </div>
           </div>
@@ -679,7 +679,7 @@
             </div>
           </template>
           <template #tooltipTitle="{ value }">
-            <div v-html="strLF2HtmlLF(value)" />
+            <div v-html="strLF2HtmlLF(value)"></div>
           </template>
           <template #menuIcon="{ filtered }">
             <filter-outlined :class="filtered && 'filter-active'" />

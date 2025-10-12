@@ -28,7 +28,7 @@
       class="config-space"
     >
       <div v-show="showConfigSpace">
-        <slot name="top_btn_list" />
+        <slot name="top_btn_list"></slot>
         <surely-table
           ref="tableRef"
           :columns="columns"
@@ -42,7 +42,7 @@
                 <slot
                   name="table_btn_list"
                   :record="record"
-                />
+                ></slot>
               </div>
             </template>
           </template>

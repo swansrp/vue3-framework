@@ -3,7 +3,7 @@
     :id="'bar-3d-'+index"
     :style="{zIndex: 1-showNoData, opacity: 1-showNoData}"
     class="bar-3d-css"
-  />
+  ></div>
   <div
     :style="{zIndex: showNoData, opacity: showNoData}"
     class="bar-3d-no-data"

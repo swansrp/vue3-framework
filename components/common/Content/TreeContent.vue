@@ -15,7 +15,7 @@
         v-if="$slots.title"
         :item="dataRef"
         name="title"
-      />
+      ></slot>
       <span v-else>{{ dataRef[props.labelField] }}</span>
     </template>
   </a-tree>

@@ -23,7 +23,7 @@
       v-if="needTitle"
       #title
     >
-      <slot name="title" />
+      <slot name="title"></slot>
     </template>
     <template #headerCell="{title}">
       <span v-if="title.indexOf('/') === -1">{{ title }}</span>
@@ -46,7 +46,7 @@
       <slot
         :record="record"
         name="expandedRowRender"
-      />
+      ></slot>
     </template>
     <template
       v-if="summaryList"
@@ -61,7 +61,7 @@
           <template v-if="item || item === 0">
             {{ item }}
           </template>
-          <template v-else />
+          <template v-else></template>
         </s-table-summary-cell>
       </s-table-summary-row>
     </template>
@@ -71,7 +71,7 @@
         :record="record"
         :text="text"
         name="bodyCell"
-      />
+      ></slot>
     </template>
     <template #customFilterDropdown="{setSelectedKeys, selectedKeys, confirm, clearFilters, column}">
       <div style="padding: 8px">
@@ -109,13 +109,13 @@
         :confirm="confirm"
         :clear-filters="clearFilters"
         :column="column"
-      />
+      ></slot>
     </template>
     <template #customFilterIcon="{ filtered }">
       <slot
         :filtered="filtered"
         name="customFilterIcon"
-      />
+      ></slot>
     </template>
   </s-table>
 </template>

@@ -273,9 +273,9 @@
               </a-select-option>
             </a-select>
             <div class="stack-tip">
-              <small>提示：</small><br>
-              <small>• 不堆叠：第二维度并排显示</small><br>
-              <small>• 自堆叠：该指标的第二维度堆叠显示</small><br>
+              <small>提示：</small><br />
+              <small>• 不堆叠：第二维度并排显示</small><br />
+              <small>• 自堆叠：该指标的第二维度堆叠显示</small><br />
               <small>• 堆叠组：相同组且相同第二维度的指标堆叠，不同第二维度并排</small>
             </div>
           </a-form-item>

@@ -21,7 +21,7 @@
         :style="titleStyle"
         class="folder-title"
         v-html="highlightSearchText(folderKey || '')"
-      />
+      ></span>
       <span
         :style="countStyle"
         class="folder-count"
@@ -85,7 +85,7 @@
               :title="item.shortLabel || item.label"
               class="item-label"
               v-html="highlightSearchText(item.shortLabel || item.label)"
-            />
+            ></span>
             <template
               v-if="selectedRole === '0'"
               #overlay
@@ -145,7 +145,7 @@
             :title="item.shortLabel || item.label"
             class="item-label"
             v-html="highlightSearchText(item.shortLabel || item.label)"
-          />
+          ></span>
         </div>
       </div>
     </div>

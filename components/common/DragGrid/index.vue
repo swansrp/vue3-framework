@@ -21,7 +21,7 @@
       <slot
         :item="item"
         name="render"
-      />
+      ></slot>
     </grid-item>
   </grid-layout>
 </template>

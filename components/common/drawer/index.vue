@@ -18,7 +18,7 @@
 
       <!-- Body -->
       <div class="drawer-body">
-        <slot name="drawerBody" />
+        <slot name="drawerBody"></slot>
       </div>
 
       <!-- Footer -->
@@ -26,7 +26,7 @@
         v-if="$slots.footer"
         class="drawer-footer"
       >
-        <slot name="footer" />
+        <slot name="footer"></slot>
       </div>
 
       <!-- 拖动宽度控制条 -->
@@ -34,7 +34,7 @@
         :class="placement"
         class="resizer"
         @mousedown="startResize"
-      />
+      ></div>
     </div>
 
     <!-- 主体内容 -->
@@ -43,7 +43,7 @@
       :style="shiftStyle"
       class="drawer-main"
     >
-      <slot />
+      <slot></slot>
     </div>
   </div>
 </template>

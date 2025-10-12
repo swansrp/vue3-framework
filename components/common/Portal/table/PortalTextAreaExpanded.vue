@@ -6,7 +6,7 @@
       :disabled="isEmpty(record[item.dataIndex])"
       :tab="strRemoveLF(item.title)"
     >
-      <div v-html="strLF2HtmlLF(record[item.dataIndex])" />
+      <div v-html="strLF2HtmlLF(record[item.dataIndex])"></div>
     </a-tab-pane>
   </a-tabs>
 </template>

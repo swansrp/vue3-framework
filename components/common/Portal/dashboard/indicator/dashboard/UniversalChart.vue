@@ -7,7 +7,7 @@
       <div
         ref="chartRef"
         class="echarts-container"
-      />
+      ></div>
     </a-spin>
   </div>
 </template>

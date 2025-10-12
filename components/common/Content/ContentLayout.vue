@@ -6,7 +6,7 @@
       class="side-wrapper"
     >
       <div style="margin: 10px">
-        <slot name="side" />
+        <slot name="side"></slot>
       </div>
     </a-layout-sider>
     <div
@@ -16,9 +16,9 @@
       <!-- 拖拽控制条 -->
       <div class="drag-handle">
         <div class="drag-indicator">
-          <div class="drag-dot" />
-          <div class="drag-dot" />
-          <div class="drag-dot" />
+          <div class="drag-dot"></div>
+          <div class="drag-dot"></div>
+          <div class="drag-dot"></div>
         </div>
       </div>
       
@@ -47,7 +47,7 @@
     <a-layout-content
       style="margin-left: 10px; margin-right: 10px; height: 100%; overflow: auto"
     >
-      <slot name="content" />
+      <slot name="content"></slot>
     </a-layout-content>
   </a-layout>
 </template>

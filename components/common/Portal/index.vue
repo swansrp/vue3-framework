@@ -71,7 +71,7 @@
               <slot
                 :record="record.record"
                 name="list-mode-display"
-              />
+              ></slot>
             </template>
             <template #end-action>
               <portal-mode-button
@@ -155,10 +155,10 @@
           @open-upload-modal="openUploadModal"
         >
           <template #left-btns>
-            <slot name="left-btns" />
+            <slot name="left-btns"></slot>
           </template>
           <template #right-btns>
-            <slot name="right-btns" />
+            <slot name="right-btns"></slot>
           </template>
         </portal-button-action>
         <!-- endregion -->
@@ -264,7 +264,7 @@
                         :portal-config="config"
                         :record="record"
                         name="action"
-                      />
+                      ></slot>
                     </template>
                     <template #index="{}">
                       <slot
@@ -274,7 +274,7 @@
                         :portal-config="config"
                         :record="record"
                         name="index"
-                      />
+                      ></slot>
                     </template>
                   </portal-body-cell>
                   <template v-else>
@@ -494,7 +494,7 @@
                   :parse-record="parsedDataSource[index]"
                   :record="record"
                   name="expandedRowRender"
-                />
+                ></slot>
                 <portal-text-area-expanded
                   v-else-if="props.textAreaInExpanded"
                   :columns="textAreaColumns"
@@ -513,7 +513,7 @@
                     </template>
                   </a-button>
                   <div>
-                    <slot name="footer-action" />
+                    <slot name="footer-action"></slot>
                   </div>
                   <div style="display: flex">
                     <a-pagination

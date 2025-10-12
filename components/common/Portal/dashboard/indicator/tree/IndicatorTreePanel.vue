@@ -40,7 +40,7 @@
             :data-key="key"
             :data-title="title"
             v-html="title"
-          />
+          ></span>
         </template>
       </a-directory-tree>
     </div>

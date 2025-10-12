@@ -59,12 +59,12 @@
           </template>
         </a-button>
       </a-tooltip>
-      <slot name="left-btns" />
+      <slot name="left-btns"></slot>
     </div>
     <!-- endregion 左侧按钮区 -->
     <!-- region 右侧按钮区 -->
     <div style="display: flex">
-      <slot name="right-btns" />
+      <slot name="right-btns"></slot>
       <a-tooltip
         v-if="!config.plain && config.advancedSearchButton"
         placement="top"

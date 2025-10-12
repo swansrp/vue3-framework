@@ -4,7 +4,7 @@
     layout="horizontal"
     @finish="onFinish"
   >
-    <slot />
+    <slot></slot>
     <a-form-item
       :rules="[{ validator: phoneNumberValidatorHandler, trigger: 'blur' }]"
       name="phoneNumber"
@@ -41,7 +41,7 @@
             alt="验证码"
             class="absolute right-0 h-full cursor-pointer"
             @click="updateCaptchaUrl"
-          >
+          />
         </template>
       </a-input>
     </a-form-item>
@@ -90,7 +90,7 @@
       </a-button>
     </a-form-item>
   </a-form>
-  <slot name="footer" />
+  <slot name="footer"></slot>
 </template>
 
 <script lang="ts" setup>

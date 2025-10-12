@@ -35,10 +35,10 @@
                 :portal-config="portalConfig"
                 :record="record"
                 name="action"
-              />
+              ></slot>
             </template>
             <template #right-btns>
-              <slot name="bind-right-btns" />
+              <slot name="bind-right-btns"></slot>
             </template>
           </Portal>
         </div>

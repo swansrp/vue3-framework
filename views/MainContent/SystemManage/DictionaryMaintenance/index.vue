@@ -176,7 +176,7 @@
               <Icon icon="WarningFilled" />
             </template>
             <template #description>
-              确认删除当前字典？<br><b>说明：该操作会删除掉当前字典对应的所有字典项</b>
+              确认删除当前字典？<br /><b>说明：该操作会删除掉当前字典对应的所有字典项</b>
             </template>
           </a-alert>
           <a-button

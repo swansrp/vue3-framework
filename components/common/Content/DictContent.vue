@@ -13,7 +13,7 @@
         v-if="$slots.title"
         :item="item"
         name="title"
-      />
+      ></slot>
       <span v-else>{{ item && item[props.labelField] }}</span>
     </template>
   </tree-content>
@@ -31,7 +31,7 @@
         v-if="$slots.title"
         :item="item"
         name="title"
-      />
+      ></slot>
       <span v-else>{{ item && item[props.labelField] }}</span>
     </template>
   </list-content>

@@ -8,7 +8,7 @@
     @close="advancedConditionDrawClose"
   >
     <template #extra>
-      <slot name="extra" />
+      <slot name="extra"></slot>
     </template>
     <advanced-search
       :key="key"

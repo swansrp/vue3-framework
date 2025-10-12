@@ -7,7 +7,7 @@
           alt="登录图案"
           src="../../../assets/image/login/logo.png"
           class="logo-img"
-        >
+        />
         <h1 class="login-title">
           {{ title }}
         </h1>
@@ -64,7 +64,7 @@
                   alt="验证码"
                   class="absolute right-0 h-full cursor-pointer"
                   @click="updateCaptchaUrl('INIT_PASSWORD_CAPTCHA')"
-                >
+                />
               </template>
             </a-input>
           </a-form-item>
@@ -193,7 +193,7 @@
                     alt="验证码"
                     class="absolute right-0 h-full cursor-pointer"
                     @click="updateCaptchaUrl('REGISTER_CAPTCHA')"
-                  >
+                  />
                 </template>
               </a-input>
             </a-form-item>
@@ -289,7 +289,7 @@
                       alt="验证码"
                       class="absolute right-0 h-full cursor-pointer"
                       @click="updateCaptchaUrl('LOGIN_CAPTCHA')"
-                    >
+                    />
                   </template>
                 </a-input>
               </a-form-item>

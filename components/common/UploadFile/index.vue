@@ -61,7 +61,7 @@
       status="success"
       title="上传数据成功"
     >
-      <template #extra />
+      <template #extra></template>
     </a-result>
     <a-result
       v-if="config.type === 'FAILED'"

@@ -1,11 +1,11 @@
 import { Method } from 'axios'
 
-import { name } from '@/../package.json'
+
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { QuerySortType, QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 import { download, request, upload } from '@/framework/network/request'
-
-const baseDomain = '/' + name
+import { domain } from '@/framework/network/request'
+const baseDomain = domain
 const apiType: any = {
   navEdit: '/admin/menu',
   permit: '/permit',

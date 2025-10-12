@@ -1,6 +1,6 @@
 <template>
   <div style="width: 100%;height: 50px;background-color: rgba(31, 180, 255, 0.12);position: relative">
-    <div class="top-line" />
+    <div class="top-line"></div>
     <swiper
       class="swiper"
       loop
@@ -23,7 +23,7 @@
         </div>
       </swiper-slide>
     </swiper>
-    <div class="bottom-line" />
+    <div class="bottom-line"></div>
   </div>
 </template>
 

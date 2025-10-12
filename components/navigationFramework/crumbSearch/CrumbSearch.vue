@@ -12,7 +12,7 @@
       </a-breadcrumb-item>
     </a-breadcrumb>
     <!--定义插槽，用于存放搜索框-->
-    <slot />
+    <slot></slot>
   </div>
 </template>
 

@@ -8,7 +8,7 @@
       <div v-if="index === (1 + isExpanded ? 1 : 0)">
         总计
       </div>
-      <div v-else-if="index === columns.length + (hideRowSelection ? 0 : 1)" />
+      <div v-else-if="index === columns.length + (hideRowSelection ? 0 : 1)"></div>
       <div
         v-else-if="columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].fieldType === FIELD_TYPE.NUMBER"
         :style="{textAlign: 'center'}"

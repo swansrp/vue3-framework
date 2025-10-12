@@ -7,7 +7,7 @@
       :portal-config="config"
       :record="record"
       name="index"
-    />
+    ></slot>
     <div
       v-else
       :style="{textAlign: 'center'}"
@@ -130,7 +130,7 @@
       :portal-config="config"
       :record="record"
       name="action"
-    />
+    ></slot>
   </template>
   <template v-else>
     <a-badge-ribbon
@@ -146,7 +146,7 @@
                  overflow: 'hidden',
                  height: '100%'}"
         v-html="strLF2HtmlLF(displayMap.get(index+column.dataIndex).current || record[column.dataIndex])"
-      />
+      ></div>
     </a-badge-ribbon>
   </template>
 </template>

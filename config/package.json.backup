@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run bidr && npm run optimize && vite --config ./src/framework/config/vite.config.ts",
+    "dev": "npm run install && npm run bidr && npm run optimize && vite --config ./src/framework/config/vite.config.ts",
     "build:prod": "npm run bidr && vite --config ./src/framework/config/vite.config.ts build --mode production",
     "bidr": "node src/framework/script/change-node-modules.js",
     "preview": "vite preview",
