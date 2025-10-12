@@ -5,8 +5,11 @@ import { ConditionType } from '@/framework/components/common/AdvancedSearch/type
 import { QuerySortType, QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 import { download, request, upload } from '@/framework/network/request'
 import { domain } from '@/framework/network/request'
-const baseDomain = domain
-const apiType: any = {
+// 先导出 baseDomain，确保其他模块导入时已经初始化
+export const baseDomain = domain
+
+// 先导出 apiType，确保其他模块导入时已经初始化
+export const apiType: any = {
   navEdit: '/admin/menu',
   permit: '/permit',
   dict: '/dict',
@@ -765,8 +768,6 @@ export const bindInfoListRequest = (
 
 
 export {
-  apiType,
-  baseDomain,
   buildGetApiByType,
   buildPostApiByType
 }
