@@ -344,8 +344,188 @@ function generatePathSuffix(path, summary) {
   return ''; // 如果都没有匹配到，返回空字符串
 }
 
+// 转换Swagger类型到TypeScript类型
+function swaggerTypeToTSType(swaggerType, format) {
+  switch (swaggerType) {
+    case 'integer':
+    case 'number':
+      return 'number';
+    case 'string':
+      if (format === 'date' || format === 'date-time') {
+        return 'string'; // 可以改为 Date 如果需要
+      }
+      return 'string';
+    case 'boolean':
+      return 'boolean';
+    case 'array':
+      return 'array';
+    case 'object':
+      return 'object';
+    default:
+      return 'any';
+  }
+}
+
+// 解析Swagger schema到TypeScript接口
+function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas = new Set()) {
+  if (processedSchemas.has(schemaName)) {
+    return '';
+  }
+  processedSchemas.add(schemaName);
+  
+  let interfaceCode = `export interface ${schemaName} {\n`;
+  
+  if (schema.properties) {
+    Object.keys(schema.properties).forEach(propName => {
+      const prop = schema.properties[propName];
+      const isRequired = schema.required && schema.required.includes(propName);
+      const optional = isRequired ? '' : '?';
+      
+      // 添加描述注释
+      if (prop.description) {
+        interfaceCode += `  /** ${prop.description} */\n`;
+      }
+      
+      let propType = 'any';
+      
+      if (prop.$ref) {
+        // 引用其他类型
+        propType = prop.$ref.split('/').pop();
+      } else if (prop.type === 'array') {
+        if (prop.items && prop.items.$ref) {
+          const itemType = prop.items.$ref.split('/').pop();
+          propType = `${itemType}[]`;
+        } else if (prop.items && prop.items.type) {
+          const itemType = swaggerTypeToTSType(prop.items.type, prop.items.format);
+          propType = `${itemType}[]`;
+        } else {
+          propType = 'any[]';
+        }
+      } else if (prop.type) {
+        propType = swaggerTypeToTSType(prop.type, prop.format);
+      }
+      
+      interfaceCode += `  ${propName}${optional}: ${propType}\n`;
+    });
+  }
+  
+  interfaceCode += '}\n\n';
+  
+  return interfaceCode;
+}
+
+// 从 Swagger 定义中提取类型信息
+function extractTypeInfo(operation, controllerName, allSchemas) {
+  const typeInfo = {
+    requestTypes: [],
+    responseTypes: [],
+    relatedTypes: [],
+    usedSchemas: new Set() // 记录使用的schema
+  };
+  
+  // 提取请求体类型
+  if (operation.requestBody && operation.requestBody.content) {
+    const content = operation.requestBody.content;
+    Object.keys(content).forEach(mediaType => {
+      const schema = content[mediaType].schema;
+      extractSchemaTypes(schema, typeInfo, 'request');
+    });
+  }
+  
+  // 提取响应类型
+  if (operation.responses) {
+    Object.keys(operation.responses).forEach(statusCode => {
+      if (statusCode === '200' || statusCode === '201') { // 只处理成功响应
+        const response = operation.responses[statusCode];
+        if (response.content) {
+          Object.keys(response.content).forEach(mediaType => {
+            const schema = response.content[mediaType].schema;
+            extractSchemaTypes(schema, typeInfo, 'response');
+          });
+        }
+      }
+    });
+  }
+  
+  // 提取参数类型
+  if (operation.parameters) {
+    operation.parameters.forEach(param => {
+      if (param.schema) {
+        extractSchemaTypes(param.schema, typeInfo, 'related');
+      }
+    });
+  }
+  
+  return typeInfo;
+}
+
+// 递归提取schema中的类型
+function extractSchemaTypes(schema, typeInfo, category = 'related') {
+  if (!schema) return;
+  
+  if (schema.$ref) {
+    // 直接引用类型
+    const typeName = schema.$ref.split('/').pop();
+    addTypeToCategory(typeInfo, typeName, category);
+    typeInfo.usedSchemas.add(typeName);
+  } else if (schema.type === 'array' && schema.items) {
+    // 数组类型
+    if (schema.items.$ref) {
+      const itemType = schema.items.$ref.split('/').pop();
+      addTypeToCategory(typeInfo, `${itemType}[]`, category);
+      typeInfo.usedSchemas.add(itemType);
+    } else {
+      extractSchemaTypes(schema.items, typeInfo, category);
+    }
+  } else if (schema.properties) {
+    // 对象类型 - 检查特殊的通用响应格式
+    if (schema.properties.payload) {
+      // ResponseDataType 格式: { payload: T }
+      extractSchemaTypes(schema.properties.payload, typeInfo, category);
+    } else if (schema.properties.records) {
+      // Page 格式: { records: T[] }
+      extractSchemaTypes(schema.properties.records, typeInfo, category);
+    } else if (schema.properties.list) {
+      // 自定义分页格式: { list: T[] }
+      extractSchemaTypes(schema.properties.list, typeInfo, category);
+    }
+  } else if (schema.allOf) {
+    // 处理 allOf 组合
+    schema.allOf.forEach(subSchema => {
+      extractSchemaTypes(subSchema, typeInfo, category);
+    });
+  } else if (schema.oneOf) {
+    // 处理 oneOf 组合
+    schema.oneOf.forEach(subSchema => {
+      extractSchemaTypes(subSchema, typeInfo, category);
+    });
+  }
+}
+
+// 将类型添加到对应的分类中
+function addTypeToCategory(typeInfo, typeName, category) {
+  switch (category) {
+    case 'request':
+      if (!typeInfo.requestTypes.includes(typeName)) {
+        typeInfo.requestTypes.push(typeName);
+      }
+      break;
+    case 'response':
+      if (!typeInfo.responseTypes.includes(typeName)) {
+        typeInfo.responseTypes.push(typeName);
+      }
+      break;
+    case 'related':
+    default:
+      if (!typeInfo.relatedTypes.includes(typeName)) {
+        typeInfo.relatedTypes.push(typeName);
+      }
+      break;
+  }
+}
+
 // 生成API函数
-function generateApiFunction(path, method, operation, envConfig, usedNames, controllerPrefix = '') {
+function generateApiFunction(path, method, operation, envConfig, usedNames, controllerPrefix = '', controllerName = '', allSchemas = {}) {
   // 生成函数名（去除Using后缀）
   let baseFunctionName = cleanFunctionName(operation.operationId, method, path, new Set()); // 先生成基础函数名
   
@@ -395,6 +575,9 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   // 清理API路径（移除项目前缀）
   const cleanPath = cleanApiPath(path, envConfig.projectName);
   
+  // 提取类型信息
+  const typeInfo = extractTypeInfo(operation, controllerName, allSchemas);
+  
   // 检测参数类型
   const pathParams = (cleanPath.match(/{([^}]+)}/g) || []).map(p => p.slice(1, -1));
   const queryParams = (operation.parameters || []).filter(p => p.in === 'query');
@@ -427,8 +610,28 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
     apiPath = apiPath.replace(`{${param}}`, `\${${param}}`);
   });
   
-  // 生成函数代码
-  let code = `/**\n * ${summary}\n */\n`;
+  // 生成带类型信息的注释
+  let code = `/**\n * ${summary}\n`;
+  
+  // 添加API路径信息
+  code += ` * @api ${httpMethod} ${cleanPath}\n`;
+  
+  // 添加类型信息
+  if (typeInfo.requestTypes.length > 0) {
+    code += ` * @requestTypes ${typeInfo.requestTypes.join(', ')}\n`;
+  }
+  if (typeInfo.responseTypes.length > 0) {
+    code += ` * @responseTypes ${typeInfo.responseTypes.join(', ')}\n`;
+  }
+  if (typeInfo.relatedTypes.length > 0) {
+    code += ` * @relatedTypes ${typeInfo.relatedTypes.join(', ')}\n`;
+  }
+  
+  // 添加types文件引用
+  const typesFileName = `${controllerName}Types`;
+  code += ` * @see {@link @/apis/types/${typesFileName}} - 相关类型定义\n`;
+  
+  code += ` */\n`;
   code += `export const ${finalName} = (${params.join(', ')}) => {\n`;
   
   const builderFunc = httpMethod === 'GET' ? 'buildGetApiByType' : 'buildPostApiByType';
@@ -446,14 +649,17 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   
   code += '};\n\n';
   
-  return code;
+  return { code, usedSchemas: typeInfo.usedSchemas };
 }
 
 // 生成按operation的tag description分组的API文件
 function generateApiByController(swaggerData, envConfig) {
-  const { paths, tags: swaggerTags, info } = swaggerData;
+  const { paths, tags: swaggerTags, info, components } = swaggerData;
   const controllerGroups = {};
   let ignoredCount = 0;
+  
+  // 获取所有schemas
+  const allSchemas = (components && components.schemas) || {};
   
   // 按每个operation的tag description分组，每个operation一个文件
   Object.keys(paths).forEach(pathKey => {
@@ -495,16 +701,24 @@ function generateApiByController(swaggerData, envConfig) {
           description: operation.description || '',
           functions: [],
           usedNames: new Set(), // 用于跟踪已使用的函数名
-          controllerPrefix: getControllerPrefix(controllerName, tagDescription) // 添加控制器前缀
+          controllerPrefix: getControllerPrefix(controllerName, tagDescription), // 添加控制器前缀
+          usedSchemas: new Set() // 记录使用的schemas
         };
       }
       
-      const apiFunction = generateApiFunction(pathKey, method, operation, envConfig, controllerGroups[controllerName].usedNames, controllerGroups[controllerName].controllerPrefix);
-      controllerGroups[controllerName].functions.push(apiFunction);
+      const apiResult = generateApiFunction(pathKey, method, operation, envConfig, controllerGroups[controllerName].usedNames, controllerGroups[controllerName].controllerPrefix, controllerName, allSchemas);
+      controllerGroups[controllerName].functions.push(apiResult.code);
+      
+      // 收集使用的schemas
+      if (apiResult.usedSchemas) {
+        apiResult.usedSchemas.forEach(schema => {
+          controllerGroups[controllerName].usedSchemas.add(schema);
+        });
+      }
     });
   });
   
-  return { controllerGroups, ignoredCount };
+  return { controllerGroups, ignoredCount, allSchemas };
 }
 
 // 生成单个文件内容（按tag description分组）
@@ -524,6 +738,114 @@ function generateControllerFile(controllerName, controllerData, envConfig) {
   
   // API函数
   content += controllerData.functions.join('');
+  
+  return content;
+}
+
+// 生成Types文件内容
+function generateTypesFile(controllerName, controllerData, usedSchemas, allSchemas, envConfig) {
+  let content = `// ==================== ${controllerData.tagDescription || controllerData.tag} Types ====================\n`;
+  content += `// 项目: ${envConfig.projectName}\n`;
+  content += `// 文件: ${controllerName}Types.ts\n`;
+  content += `// Tag: ${controllerData.tag}\n`;
+  if (controllerData.tagDescription && controllerData.tagDescription !== controllerData.tag) {
+    content += `// Tag Description: ${controllerData.tagDescription}\n`;
+  }
+  content += `// ============================================================\n\n`;
+  
+  content += `// ResponseDataType 是全局类型，不需要导入\n\n`;
+  
+  // 生成用到的类型定义
+  const processedSchemas = new Set();
+  const schemasToProcess = Array.from(usedSchemas);
+  
+  // 处理依赖关系，确保被引用的类型也被包含
+  function addDependentSchemas(schemaName) {
+    if (processedSchemas.has(schemaName) || !allSchemas[schemaName]) {
+      return;
+    }
+    
+    processedSchemas.add(schemaName);
+    const schema = allSchemas[schemaName];
+    
+    if (schema.properties) {
+      Object.values(schema.properties).forEach(prop => {
+        if (prop.$ref) {
+          const refType = prop.$ref.split('/').pop();
+          if (!processedSchemas.has(refType)) {
+            schemasToProcess.push(refType);
+          }
+        } else if (prop.type === 'array' && prop.items && prop.items.$ref) {
+          const refType = prop.items.$ref.split('/').pop();
+          if (!processedSchemas.has(refType)) {
+            schemasToProcess.push(refType);
+          }
+        }
+      });
+    }
+  }
+  
+  // 处理所有schema
+  while (schemasToProcess.length > 0) {
+    const schemaName = schemasToProcess.shift();
+    if (!processedSchemas.has(schemaName) && allSchemas[schemaName]) {
+      addDependentSchemas(schemaName);
+      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, new Set());
+      content += interfaceCode;
+    }
+  }
+  
+  // 生成响应类型
+  const responseTypes = new Set();
+  Array.from(usedSchemas).forEach(schemaName => {
+    if (allSchemas[schemaName]) {
+      // 生成基本响应类型
+      responseTypes.add(`export type ${schemaName}Response = ResponseDataType & {
+  payload: ${schemaName}
+}
+
+`);
+      responseTypes.add(`export type ${schemaName}ListResponse = ResponseDataType & {
+  payload: ${schemaName}[]
+}
+
+`);
+      responseTypes.add(`export type ${schemaName}PageResponse = ResponseDataType & {
+  payload: {
+    list: ${schemaName}[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+`);
+    }
+  });
+  
+  // 添加响应类型
+  Array.from(responseTypes).forEach(responseType => {
+    content += responseType;
+  });
+  
+  return content;
+}
+
+// 生成基本的Types文件（当没有复杂类型时）
+function generateBasicTypesFile(controllerName, controllerData, envConfig) {
+  let content = `// ==================== ${controllerData.tagDescription || controllerData.tag} Types ====================\n`;
+  content += `// 项目: ${envConfig.projectName}\n`;
+  content += `// 文件: ${controllerName}Types.ts\n`;
+  content += `// Tag: ${controllerData.tag}\n`;
+  if (controllerData.tagDescription && controllerData.tagDescription !== controllerData.tag) {
+    content += `// Tag Description: ${controllerData.tagDescription}\n`;
+  }
+  content += `// ============================================================\n\n`;
+  
+  content += `// ResponseDataType 是全局类型，不需要导入\n\n`;
+  
+  content += `// 此控制器的API不使用复杂类型，只有基本响应类型\n`;
+  content += `export type BasicResponse = ResponseDataType;\n\n`;
   
   return content;
 }
@@ -567,15 +889,19 @@ async function main() {
     console.log(`  - 发现 ${pathCount} 个API端点\n`);
     
     // 按每个API operation的tag description生成API
-    const { controllerGroups, ignoredCount } = generateApiByController(swaggerData, envConfig);
+    const { controllerGroups, ignoredCount, allSchemas } = generateApiByController(swaggerData, envConfig);
     const controllerCount = Object.keys(controllerGroups).length;
     console.log(`📁 按Tag Description分文件: ${controllerCount} 个文件`);
     console.log(`ℹ️  忽略以'系统'开头的API: ${ignoredCount} 个\n`);
     
     // 确保输出目录存在 - 修改为src/apis
     const outputDir = path.resolve(__dirname, '../../../src/apis');
+    const typesDir = path.resolve(__dirname, '../../../src/apis/types');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
+    }
+    if (!fs.existsSync(typesDir)) {
+      fs.mkdirSync(typesDir, { recursive: true });
     }
     
     // 清理旧文件（除了examples.ts）
@@ -586,17 +912,47 @@ async function main() {
       }
     });
     
+    // 清理types目录下的旧文件
+    if (fs.existsSync(typesDir)) {
+      const existingTypesFiles = fs.readdirSync(typesDir);
+      existingTypesFiles.forEach(file => {
+        if (file.endsWith('.ts')) {
+          fs.unlinkSync(path.join(typesDir, file));
+        }
+      });
+    }
+    
     // 生成每个文件（按tag description分组）
     let totalFunctions = 0;
     Object.keys(controllerGroups).forEach(controllerName => {
       const controllerData = controllerGroups[controllerName];
-      const fileContent = generateControllerFile(controllerName, controllerData, envConfig);
       
+      // 生成API文件
+      const fileContent = generateControllerFile(controllerName, controllerData, envConfig);
       const outputFile = path.join(outputDir, `${controllerName}.ts`);
       fs.writeFileSync(outputFile, fileContent, 'utf-8');
       
+      // 生成Types文件 - 只要有任何schema就生成，即使只有一个
+      if (controllerData.usedSchemas.size > 0) {
+        const typesContent = generateTypesFile(controllerName, controllerData, controllerData.usedSchemas, allSchemas, envConfig);
+        const typesOutputFile = path.join(typesDir, `${controllerName}Types.ts`);
+        fs.writeFileSync(typesOutputFile, typesContent, 'utf-8');
+      } else {
+        // 即使没有复杂类型，也创建一个基本的types文件
+        const basicTypesContent = generateBasicTypesFile(controllerName, controllerData, envConfig);
+        const typesOutputFile = path.join(typesDir, `${controllerName}Types.ts`);
+        fs.writeFileSync(typesOutputFile, basicTypesContent, 'utf-8');
+      }
+      
       const description = controllerData.tagDescription || controllerData.tag || '无描述';
       console.log(`✓ 生成 ${controllerName}.ts (${controllerData.functions.length} 个API) - ${description}`);
+      
+      if (controllerData.usedSchemas.size > 0) {
+        console.log(`  → 生成 ${controllerName}Types.ts (${controllerData.usedSchemas.size} 个类型)`);
+      } else {
+        console.log(`  → 生成 ${controllerName}Types.ts (基本类型)`);
+      }
+      
       totalFunctions += controllerData.functions.length;
     });
     
@@ -606,10 +962,29 @@ async function main() {
     fs.writeFileSync(indexFile, indexContent, 'utf-8');
     console.log(`✓ 生成 index.ts`);
     
+    // 生成types的索引文件
+    let typesIndexContent = `// ==================== 自动生成的Types导出 ====================\n`;
+    typesIndexContent += `// 位置: src/apis/types/\n`;
+    typesIndexContent += `// 说明: 每个API控制器的类型定义\n`;
+    typesIndexContent += `// ============================================================\n\n`;
+    
+    Object.keys(controllerGroups).forEach(controllerName => {
+      const controllerData = controllerGroups[controllerName];
+      const description = controllerData.tagDescription || controllerData.tag || '无描述';
+      typesIndexContent += `// ${description}\n`;
+      typesIndexContent += `export * from './${controllerName}Types';\n\n`;
+    });
+    
+    const typesIndexFile = path.join(typesDir, 'index.ts');
+    fs.writeFileSync(typesIndexFile, typesIndexContent, 'utf-8');
+    console.log(`✓ 生成 types/index.ts`);
+    
     // 输出统计信息
+    const totalTypes = Object.values(controllerGroups).reduce((sum, group) => sum + group.usedSchemas.size, 0);
     console.log('\n📊 生成统计:');
     console.log(`  - 按Tag Description分文件: ${controllerCount} 个`);
     console.log(`  - API函数总数: ${totalFunctions} 个`);
+    console.log(`  - 生成类型总数: ${totalTypes} 个`);
     console.log(`  - 忽略的API: ${ignoredCount} 个 (以'系统'开头)`);
     console.log(`  - 平均每个文件: ${Math.round(totalFunctions / controllerCount)} 个API`);
     
@@ -617,6 +992,7 @@ async function main() {
     console.log('\n🎉 API生成完成！');
     console.log('\n📖 使用方式:');
     console.log('  import { functionName } from "@/apis";');
+    console.log('  import { TypeName } from "@/apis/types";');
     
   } catch (error) {
     console.error('\n❌ 生成失败:', error.message);
