@@ -38,7 +38,10 @@
     </div>
 
     <!-- 网格内容区域 -->
-    <div class="grid-content">
+    <div 
+      class="grid-content"
+      :style="{ gridTemplateColumns }"
+    >
       <div
         v-for="(record, index) in dataSource"
         :key="record.value"
@@ -200,10 +203,17 @@ const prop = defineProps<{
   titleColumn: ColumnType,
   dataSource: Array<any>,
   paginationChange: (page: number, pageSize: number) => void,
-  rowSelection: any
+  rowSelection: any,
+  cardWidth?: number
 }>()
 
-const { dataSource, config, rowSelection } = toRefs(prop)
+const { dataSource, config, rowSelection, cardWidth } = toRefs(prop)
+
+// 计算grid列配置
+const gridTemplateColumns = computed(() => {
+  const width = cardWidth?.value || 350
+  return `repeat(auto-fill, minmax(${width}px, 1fr))`
+})
 
 const emit = defineEmits<{
   /**
@@ -390,7 +400,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
     padding: 16px;
     overflow-y: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
     align-content: start;
     /* 自适应内容高度 */
@@ -591,7 +600,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 // 响应式设计 - 智能配置每行个数
 @media (min-width: 2800px) and (min-height: 1700px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 32px;
     padding: 32px;
     
@@ -610,7 +618,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 /* 大屏幕 (1400px+) - 4-5列 */
 @media (min-width: 1400px) and (max-width: 2799px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 24px;
     padding: 24px;
   }
@@ -619,7 +626,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 /* 中等屏幕 (1024px-1399px) - 3-4列 */
 @media (min-width: 1024px) and (max-width: 1399px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
     padding: 20px;
   }
@@ -628,7 +634,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 /* 平板横屏 (768px-1023px) - 2-3列 */
 @media (min-width: 768px) and (max-width: 1023px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
     padding: 16px;
     
@@ -642,7 +647,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 /* 平板竖屏 (480px-767px) - 2列 */
 @media (min-width: 480px) and (max-width: 767px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     padding: 12px;
     
@@ -660,7 +664,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 /* 手机 (479px以下) - 1-2列 */
 @media (max-width: 479px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 8px;
     padding: 8px;
     
@@ -678,7 +681,6 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 /* 超小屏幕 (320px以下) - 强制1列 */
 @media (max-width: 320px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: 1fr;
     gap: 6px;
     padding: 6px;
   }

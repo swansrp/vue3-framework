@@ -92,6 +92,7 @@
             :pagination-change="paginationChange"
             :row-selection="hideRowSelection ? null : rowSelection"
             :title-column="titleColumn"
+            :card-width="props.gridCardWidth"
             class="grid-mode-table"
             @search="onListDataSearch"
             @row-drag-end="_updateOrder"
@@ -817,6 +818,7 @@ const __ = getInstance()
  * @param columnDisplayCustom 列显示自定义方法
  * @param downloadFileName 下载文件命名方法
  * @param showLoading 查询时是否显示加载中
+ * @param gridCardWidth grid模式卡片宽度
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -865,6 +867,7 @@ const props = withDefaults(defineProps<{
     columnDisplayCustom?: any
     downloadFileName?: (config: TableConfigType) => string
     showLoading?: boolean
+    gridCardWidth?: number
   }>(),
   {
     baseDomain: '/' + name,
@@ -910,7 +913,8 @@ const props = withDefaults(defineProps<{
     columnFilter: (column: ColumnType) => column.checked,
     columnDisplayCustom: new Map<string, string>(),
     downloadFileName: (config: TableConfigType) => config.title,
-    showLoading: false
+    showLoading: false,
+    gridCardWidth: 350
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
