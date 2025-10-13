@@ -59,7 +59,6 @@
         @drop="handleDrop($event, index)"
         @dragend="handleDragEnd"
       >
-        
         <!-- 拖拽指示器 -->
         <div
           v-if="isDragMode"
@@ -188,7 +187,6 @@ import {
   DeleteOutlined,
   DragOutlined, 
   EditOutlined,
-  EllipsisOutlined,
   EyeOutlined,
   HolderOutlined, 
   LockOutlined,
