@@ -1,77 +1,77 @@
 <template>
-  <ul
-    v-if="isNotEmpty(args.column)"
-    class="popup"
-  >
+  <a-menu v-if="isNotEmpty(args.column)">
     <template v-if="isNotEmpty(args.recordIndexs)">
-      <li
+      <a-menu-item
         v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
-        class="popup-item"
+        key="reset"
         @click="() => emit('resetCell', args)"
       >
         <history-outlined />
         撤销修改
-      </li>
-      <li
+      </a-menu-item>
+      <a-menu-item
         v-if="!config.readOnly && args.column.editable && prop.isCellUpdate(args.recordIndexs[0], args.column)"
-        class="popup-item"
+        key="saveCell"
         @click="() => emit('saveCell', args)"
       >
         <save-outlined />
         保存单元格
-      </li>
-      <li
+      </a-menu-item>
+      <a-menu-item
         v-if="!config.readOnly && prop.isRowUpdate(args.recordIndexs[0])"
-        class="popup-item"
+        key="saveRow"
         @click="() => emit('saveRow', args)"
       >
         <delivered-procedure-outlined />
         保存整行
-      </li>
-      <li
+      </a-menu-item>
+      <a-menu-item
         v-if="!prop.isRowUpdate(args.recordIndexs[0])"
-        class="popup-item"
+        key="detail"
         @click="() => emit('detailRow', args)"
       >
-        <search-outlined />
+        <eye-outlined />
         查看详情
-      </li>
+      </a-menu-item>
     </template>
-    <li
+    <a-menu-item
       v-if="association"
-      class="popup-item"
+      key="association"
       @click="() => emit('association', args)"
     >
       <deployment-unit-outlined />
       关联信息
-    </li>
+    </a-menu-item>
     <template v-if="!config.readOnly">
-      <li
+      <a-menu-divider v-if="isNotEmpty(args.recordIndexs) || association" />
+      <a-menu-item
         v-if="prop.rowAllowEdit(args) && config.editModalAble"
-        class="popup-item"
+        key="edit"
         @click="() => emit('editRow', args)"
       >
-        <form-outlined />
+        <edit-outlined />
         编辑记录
-      </li>
-      <li
+      </a-menu-item>
+      <a-menu-item
         v-if="config.addModalAble"
-        class="popup-item"
+        key="copy"
         @click="() => emit('copyRow', args)"
       >
         <copy-outlined />
         复制记录
-      </li>
-      <li
+      </a-menu-item>
+      <a-menu-divider v-if="prop.rowAllowDelete(args) && config.deleteAble" />
+      <a-menu-item
         v-if="prop.rowAllowDelete(args) && config.deleteAble"
-        class="popup-item"
+        key="delete"
+        danger
         @click="() => emit('deleteRow', args)"
       >
         <delete-outlined />
         删除记录
-      </li>
+      </a-menu-item>
     </template>
-  </ul>
+  </a-menu>
 </template>
 
 <script lang="ts" setup>
@@ -80,10 +80,10 @@ import {
   DeleteOutlined,
   DeliveredProcedureOutlined,
   DeploymentUnitOutlined,
-  FormOutlined,
+  EditOutlined,
+  EyeOutlined,
   HistoryOutlined,
-  SaveOutlined,
-  SearchOutlined
+  SaveOutlined
 } from '@ant-design/icons-vue'
 
 import { TableConfigType } from '@/framework/components/common/Portal/type'
@@ -112,22 +112,29 @@ const { args, config, association } = toRefs(prop)
 </script>
 
 <style lang="less" scoped>
-.popup {
-  width: 120px;
-  height: 20px;
+:deep(.ant-menu) {
+  padding: 4px 0;
+  min-width: 160px;
+}
 
-  .popup-item {
-    cursor: pointer;
-    padding: 8px;
-
-    &:hover {
-      background-color: var(--surely-table-row-hover-bg);
-    }
-
-    &.disabled {
-      color: var(--surely-table-disabled-color);
-      cursor: not-allowed;
-    }
+:deep(.ant-menu-item) {
+  height: 30px;
+  line-height: 30px;
+  padding: 0 16px;
+  margin: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  
+  .anticon {
+    font-size: 14px;
+    margin-right: 8px;
+    flex-shrink: 0;
   }
+}
+
+:deep(.ant-menu-item-divider) {
+  margin: 4px 0;
 }
 </style>

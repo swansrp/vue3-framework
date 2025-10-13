@@ -4,7 +4,7 @@
     class="root"
     v-bind="$attrs"
   >
-    <a-layout v-if="isTreeMode || isListMode">
+    <a-layout v-if="isTreeMode || isListMode || isGridMode">
       <a-layout-sider
         v-if="layoutSiderDisplay"
         :class="[isBindTabExisted ? 'portal-tree-bind-wrapper':'portal-tree-wrapper']"
@@ -80,10 +80,52 @@
                 :is-list-mode="isListMode"
                 :is-tree-data-empty="treeData.length === 0"
                 :is-tree-mode="isTreeMode"
+                :is-grid-mode="isGridMode"
                 @on-display-changed="handleDisplayModeChange"
               />
             </template>
           </portal-list-mode>
+          <portal-grid-mode
+            v-else-if="isGridMode"
+            :config="config"
+            :data-source="listData"
+            :pagination-change="paginationChange"
+            :row-selection="hideRowSelection ? null : rowSelection"
+            :title-column="titleColumn"
+            class="grid-mode-table"
+            @search="onListDataSearch"
+            @row-drag-end="_updateOrder"
+            @handle-menu-context-view="handleMenuContextView"
+            @handle-menu-context-add="handleMenuContextAdd"
+            @handle-menu-context-modify="handleMenuContextModify"
+            @handle-menu-context-copy="handleMenuContextCopy"
+            @handle-menu-context-delete="handleMenuContextDelete"
+          >
+            <template #display="{record}">
+              <slot
+                :record="record.record"
+                name="grid-mode-display"
+              ></slot>
+            </template>
+            <template #item-actions="{record, index}">
+              <slot
+                :record="record"
+                :index="index"
+                name="grid-mode-item-actions"
+              ></slot>
+            </template>
+            <template #end-action>
+              <portal-mode-button
+                v-if="!modeLock"
+                :config="config"
+                :is-list-mode="isListMode"
+                :is-tree-data-empty="treeData.length === 0"
+                :is-tree-mode="isTreeMode"
+                :is-grid-mode="isGridMode"
+                @on-display-changed="handleDisplayModeChange"
+              />
+            </template>
+          </portal-grid-mode>
           <a-empty v-else />
         </div>
       </a-layout-sider>
@@ -555,6 +597,7 @@
                       :is-list-mode="isListMode"
                       :is-tree-data-empty="treeData.length === 0"
                       :is-tree-mode="isTreeMode"
+                      :is-grid-mode="isGridMode"
                       @on-display-changed="handleDisplayModeChange"
                     />
                   </div>
@@ -697,6 +740,7 @@ import {
 import DashboardModal from '@/framework/components/common/Portal/dashboard/dashboardModal.vue'
 import { db } from '@/framework/components/common/Portal/db'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
+import PortalGridMode from '@/framework/components/common/Portal/mode/PortalGridMode.vue'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import {
   ColumnType,
@@ -759,6 +803,7 @@ const __ = getInstance()
  * @param showTree 默认显示树形结构
  * @param treeMode 是否以树形结构展示
  * @param listMode 是否以列表形式展示
+ * @param gridMode 是否以网格形式展示
  * @param modeLock 是否锁定模式
  * @param bindTabs 显示需要绑定的数据标签
  * @param treeCheckAble 绑定操作树是否有可选框
@@ -806,6 +851,7 @@ const props = withDefaults(defineProps<{
     showTree?: boolean,
     treeMode?: boolean,
     listMode?: boolean,
+    gridMode?: boolean,
     modeLock?: boolean,
     bindTabs?: Array<PortalBindType>,
     treeCheckAble?: boolean,
@@ -851,6 +897,7 @@ const props = withDefaults(defineProps<{
     showTree: false,
     treeMode: false,
     listMode: false,
+    gridMode: false,
     modeLock: true,
     bindTabs: undefined,
     treeCheckAble: false,
@@ -882,6 +929,7 @@ const isBindTabExisted = computed(() => {
 const bindTabs: Ref<Array<PortalBindType>> = ref(props.bindTabs || [] as Array<PortalBindType>)
 const isTreeMode: Ref<boolean> = ref(props.treeMode)
 const isListMode: Ref<boolean> = ref(props.listMode)
+const isGridMode: Ref<boolean> = ref(props.gridMode)
 const statisticShow: Ref<boolean> = ref(false)
 const layoutSiderDisplay = ref(true)
 const $attrs = useAttrs()
@@ -1021,10 +1069,10 @@ const indeterminate = computed(() => {
   return checkedCount > 0 && checkedCount < columns.value.length
 })
 const selectedRecord = computed(() => {
-  if (isListMode && isNotEmpty(selectedListDataItem.value)) {
+  if ((isListMode.value || isGridMode.value) && isNotEmpty(selectedListDataItem.value)) {
     console.debug('selectedRecord', dataSourceMap.value, selectedListDataItem.value[0][config.rowKey], dataSourceMap.value.get(selectedListDataItem.value[0][config.rowKey]))
     return dataSourceMap.value.get(selectedListDataItem.value[0][config.rowKey])
-  } else if (isTreeMode && isNotEmpty(selectedTreeDataNode.value)) {
+  } else if (isTreeMode.value && isNotEmpty(selectedTreeDataNode.value)) {
     return dataSourceMap.value.get(selectedTreeDataNode.value.key)
   } else {
     return null
@@ -1049,14 +1097,22 @@ const handleDisplayModeChange = (menuKey: any) => {
     case 'tableMode':
       isListMode.value = false
       isTreeMode.value = false
+      isGridMode.value = false
       break
     case 'listMode':
       isListMode.value = true
       isTreeMode.value = false
+      isGridMode.value = false
+      break
+    case 'gridMode':
+      isListMode.value = false
+      isTreeMode.value = false
+      isGridMode.value = true
       break
     case 'treeMode':
       isTreeMode.value = true
       isListMode.value = false
+      isGridMode.value = false
       break
   }
 }
@@ -1644,7 +1700,7 @@ const onSelectChange = (changedRowKeys: any) => {
   const selectedData = selectedRowKeys.value.map(key => {
     return dataSourceMap.value.get(key)
   })
-  if (isListMode.value) {
+  if (isListMode.value || isGridMode.value) {
     selectedListDataItem.value = selectedData || []
   }
   if (isNotEmpty(selectedRowKeys.value)) {

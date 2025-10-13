@@ -3,7 +3,7 @@
     <template #overlay>
       <a-menu @click="({ key: menuKey }) => emit('onDisplayChanged', menuKey)">
         <a-menu-item
-          v-if="isListMode || isTreeMode"
+          v-if="isListMode || isTreeMode || isGridMode"
           key="tableMode"
         >
           表格模式
@@ -13,6 +13,12 @@
           key="listMode"
         >
           列表模式
+        </a-menu-item>
+        <a-menu-item
+          v-if="!isGridMode"
+          key="gridMode"
+        >
+          网格模式
         </a-menu-item>
         <a-menu-item
           v-if="config.treeMode && !isTreeMode && !isTreeDataEmpty"
@@ -27,8 +33,9 @@
       type="text"
     >
       <template #icon>
-        <table-outlined v-if="!(isListMode || isTreeMode)" />
+        <table-outlined v-if="!(isListMode || isTreeMode || isGridMode)" />
         <bars-outlined v-if="isListMode" />
+        <appstore-outlined v-if="isGridMode" />
         <cluster-outlined
           v-if="isTreeMode"
           :rotate="-90"
@@ -39,7 +46,7 @@
 </template>
 
 <script lang="ts" setup>
-import { BarsOutlined, ClusterOutlined, TableOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, BarsOutlined, ClusterOutlined, TableOutlined } from '@ant-design/icons-vue'
 
 import { TableConfigType } from '@/framework/components/common/Portal/type'
 
@@ -47,9 +54,10 @@ const prop = defineProps<{
   config: TableConfigType
   isListMode?: boolean,
   isTreeMode?: boolean,
+  isGridMode?: boolean,
   isTreeDataEmpty: boolean
 }>()
-const { config, isListMode, isTreeMode, isTreeDataEmpty } = toRefs(prop)
+const { config, isListMode, isTreeMode, isGridMode, isTreeDataEmpty } = toRefs(prop)
 const emit = defineEmits<{
   (e: 'onDisplayChanged', menuKey: any): void
 }>()
