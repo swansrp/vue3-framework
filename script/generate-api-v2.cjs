@@ -239,24 +239,7 @@ function getControllerNameFromTags(swaggerTags, operationTags) {
 
 // 根据控制器名称生成业务前缀
 function getControllerPrefix(controllerName, tagDescription) {
-  // 定义业务前缀映射
-  const prefixMap = {
-    'evaluationPortalController': 'evaluation',
-    'examPortalController': 'exam', 
-    'examRefereePortalController': 'examReferee',
-    'examRoomPortalController': 'examRoom',
-    'examTesterPortalController': 'examTester',
-    'examEvaluationBindController': 'examEvaluation',
-    'examRoomRefereeBindController': 'roomReferee',
-    'examRoomTesterBindController': 'roomTester'
-  };
-  
-  // 如果有预定义的前缀，使用预定义的
-  if (prefixMap[controllerName]) {
-    return prefixMap[controllerName];
-  }
-  
-  // 否则基于控制器名称生成前缀
+  // 基于控制器名称生成前缀
   return controllerName
     .replace(/PortalController|BindController|Controller$/i, '')
     .replace(/([A-Z])/g, (match, p1, offset) => offset > 0 ? p1 : p1.toLowerCase())
@@ -366,14 +349,85 @@ function swaggerTypeToTSType(swaggerType, format) {
   }
 }
 
+// 处理schema名称，正确转换泛型表示
+function processSchemaName(schemaName) {
+  // 处理 Page«Type» 或 Page<Type> 格式
+  const genericMatch = schemaName.match(/^([A-Za-z]+)[«<]([A-Za-z0-9]+)[»>]$/);
+  if (genericMatch) {
+    const [, containerType, itemType] = genericMatch;
+    return {
+      name: `${containerType}${itemType}`,
+      isGeneric: true,
+      containerType,
+      itemType,
+      originalName: schemaName
+    };
+  }
+  
+  // 普通类型名称清理
+  const cleanName = schemaName
+    .replace(/[^a-zA-Z0-9_]/g, '') // 移除特殊字符但保持基本结构
+    .replace(/^[0-9]/, 'T$&'); // 如果以数字开头，添加T前缀
+  
+  return {
+    name: cleanName,
+    isGeneric: false,
+    originalName: schemaName
+  };
+}
+
+// 为了向后兼容，保留原函数名
+function cleanSchemaName(schemaName) {
+  return processSchemaName(schemaName).name;
+}
+
 // 解析Swagger schema到TypeScript接口
 function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas = new Set()) {
-  if (processedSchemas.has(schemaName)) {
+  // 处理schema名称
+  const schemaInfo = processSchemaName(schemaName);
+  const cleanedSchemaName = schemaInfo.name;
+  
+  if (processedSchemas.has(cleanedSchemaName)) {
     return '';
   }
-  processedSchemas.add(schemaName);
+  processedSchemas.add(cleanedSchemaName);
   
-  let interfaceCode = `export interface ${schemaName} {\n`;
+  // 如果是泛型类型，生成特殊的接口定义
+  if (schemaInfo.isGeneric && schemaInfo.containerType === 'Page') {
+    const itemType = cleanSchemaName(schemaInfo.itemType);
+    let interfaceCode = `/**
+ * 分页响应类型 - 原始类型: ${schemaInfo.originalName}
+ * @description 这个接口描述了分页响应的结构，其中 records 字段包含 ${schemaInfo.itemType} 类型的数组
+ */
+`;
+    interfaceCode += `export interface ${cleanedSchemaName} {\n`;
+    interfaceCode += `  countId?: string\n`;
+    interfaceCode += `  current?: number\n`;
+    interfaceCode += `  maxLimit?: number\n`;
+    interfaceCode += `  optimizeCountSql?: boolean\n`;
+    interfaceCode += `  orders?: OrderItem[]\n`;
+    interfaceCode += `  pages?: number\n`;
+    interfaceCode += `  /** 分页数据列表 - 包含 ${schemaInfo.itemType} 类型的数组 */\n`;
+    interfaceCode += `  records?: ${itemType}[]\n`;
+    interfaceCode += `  searchCount?: boolean\n`;
+    interfaceCode += `  size?: number\n`;
+    interfaceCode += `  total?: number\n`;
+    interfaceCode += '}\n\n';
+    
+    // 确保 OrderItem 类型被包含
+    if (!processedSchemas.has('OrderItem')) {
+      interfaceCode += `export interface OrderItem {\n`;
+      interfaceCode += `  asc?: boolean\n`;
+      interfaceCode += `  column?: string\n`;
+      interfaceCode += '}\n\n';
+      processedSchemas.add('OrderItem');
+    }
+    
+    return interfaceCode;
+  }
+  
+  // 普通接口处理
+  let interfaceCode = `export interface ${cleanedSchemaName} {\n`;
   
   if (schema.properties) {
     Object.keys(schema.properties).forEach(propName => {
@@ -390,11 +444,13 @@ function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas
       
       if (prop.$ref) {
         // 引用其他类型
-        propType = prop.$ref.split('/').pop();
+        const refTypeName = prop.$ref.split('/').pop();
+        propType = cleanSchemaName(refTypeName);
       } else if (prop.type === 'array') {
         if (prop.items && prop.items.$ref) {
           const itemType = prop.items.$ref.split('/').pop();
-          propType = `${itemType}[]`;
+          const cleanedItemType = cleanSchemaName(itemType);
+          propType = `${cleanedItemType}[]`;
         } else if (prop.items && prop.items.type) {
           const itemType = swaggerTypeToTSType(prop.items.type, prop.items.format);
           propType = `${itemType}[]`;
@@ -466,14 +522,23 @@ function extractSchemaTypes(schema, typeInfo, category = 'related') {
   if (schema.$ref) {
     // 直接引用类型
     const typeName = schema.$ref.split('/').pop();
-    addTypeToCategory(typeInfo, typeName, category);
-    typeInfo.usedSchemas.add(typeName);
+    const schemaInfo = processSchemaName(typeName);
+    const cleanedTypeName = schemaInfo.name;
+    addTypeToCategory(typeInfo, cleanedTypeName, category);
+    typeInfo.usedSchemas.add(typeName); // 使用原始名称作为key
+    
+    // 如果是泛型类型，也要添加其元素类型
+    if (schemaInfo.isGeneric) {
+      typeInfo.usedSchemas.add(schemaInfo.itemType); // 也使用原始名称
+    }
   } else if (schema.type === 'array' && schema.items) {
     // 数组类型
     if (schema.items.$ref) {
       const itemType = schema.items.$ref.split('/').pop();
-      addTypeToCategory(typeInfo, `${itemType}[]`, category);
-      typeInfo.usedSchemas.add(itemType);
+      const schemaInfo = processSchemaName(itemType);
+      const cleanedItemType = schemaInfo.name;
+      addTypeToCategory(typeInfo, `${cleanedItemType}[]`, category);
+      typeInfo.usedSchemas.add(itemType); // 使用原始名称
     } else {
       extractSchemaTypes(schema.items, typeInfo, category);
     }
@@ -757,27 +822,39 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
   
   // 生成用到的类型定义
   const processedSchemas = new Set();
-  const schemasToProcess = Array.from(usedSchemas);
+  const schemasToProcess = Array.from(usedSchemas); // 使用原始schema名称
   
   // 处理依赖关系，确保被引用的类型也被包含
   function addDependentSchemas(schemaName) {
-    if (processedSchemas.has(schemaName) || !allSchemas[schemaName]) {
+    const schemaInfo = processSchemaName(schemaName);
+    const cleanedSchemaName = schemaInfo.name;
+    if (processedSchemas.has(cleanedSchemaName) || !allSchemas[schemaName]) {
       return;
     }
     
-    processedSchemas.add(schemaName);
+    processedSchemas.add(cleanedSchemaName);
     const schema = allSchemas[schemaName];
+    
+    // 如果是泛型类型，也需要处理其元素类型
+    if (schemaInfo.isGeneric && schemaInfo.itemType) {
+      const itemTypeSchema = allSchemas[schemaInfo.itemType];
+      if (itemTypeSchema && !processedSchemas.has(cleanSchemaName(schemaInfo.itemType))) {
+        schemasToProcess.push(schemaInfo.itemType);
+      }
+    }
     
     if (schema.properties) {
       Object.values(schema.properties).forEach(prop => {
         if (prop.$ref) {
           const refType = prop.$ref.split('/').pop();
-          if (!processedSchemas.has(refType)) {
+          const refSchemaInfo = processSchemaName(refType);
+          if (!processedSchemas.has(refSchemaInfo.name)) {
             schemasToProcess.push(refType);
           }
         } else if (prop.type === 'array' && prop.items && prop.items.$ref) {
           const refType = prop.items.$ref.split('/').pop();
-          if (!processedSchemas.has(refType)) {
+          const refSchemaInfo = processSchemaName(refType);
+          if (!processedSchemas.has(refSchemaInfo.name)) {
             schemasToProcess.push(refType);
           }
         }
@@ -785,34 +862,52 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
     }
   }
   
-  // 处理所有schema
+  // 处理所有schema，确保接口定义被正确生成
   while (schemasToProcess.length > 0) {
     const schemaName = schemasToProcess.shift();
-    if (!processedSchemas.has(schemaName) && allSchemas[schemaName]) {
+    const schemaInfo = processSchemaName(schemaName);
+    const cleanedSchemaName = schemaInfo.name;
+    
+    // 只要schema存在且还没有被处理，就生成接口
+    if (allSchemas[schemaName] && !processedSchemas.has(cleanedSchemaName)) {
+      // 先添加依赖的schema到待处理列表
       addDependentSchemas(schemaName);
-      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, new Set());
+      // 生成接口定义，为每个接口创建独立的processedSchemas
+      const tempProcessedSchemas = new Set(); // 每个接口独立的处理记录
+      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, tempProcessedSchemas);
       content += interfaceCode;
     }
   }
   
   // 生成响应类型
   const responseTypes = new Set();
-  Array.from(usedSchemas).forEach(schemaName => {
-    if (allSchemas[schemaName]) {
+  Array.from(usedSchemas).forEach(originalSchemaName => {
+    const schemaInfo = processSchemaName(originalSchemaName);
+    const cleanedSchemaName = schemaInfo.name;
+    if (allSchemas[originalSchemaName]) {
       // 生成基本响应类型
-      responseTypes.add(`export type ${schemaName}Response = ResponseDataType & {
-  payload: ${schemaName}
+      responseTypes.add(`export type ${cleanedSchemaName}Response = ResponseDataType & {
+  payload: ${cleanedSchemaName}
 }
 
 `);
-      responseTypes.add(`export type ${schemaName}ListResponse = ResponseDataType & {
-  payload: ${schemaName}[]
+      responseTypes.add(`export type ${cleanedSchemaName}ListResponse = ResponseDataType & {
+  payload: ${cleanedSchemaName}[]
 }
 
 `);
-      responseTypes.add(`export type ${schemaName}PageResponse = ResponseDataType & {
+      
+      // 对于分页类型，生成更精确的响应类型
+      if (schemaInfo.isGeneric && schemaInfo.containerType === 'Page') {
+        responseTypes.add(`export type ${cleanedSchemaName}PageResponse = ResponseDataType & {
+  payload: ${cleanedSchemaName}
+}
+
+`);
+      } else {
+        responseTypes.add(`export type ${cleanedSchemaName}PageResponse = ResponseDataType & {
   payload: {
-    list: ${schemaName}[]
+    records: ${cleanedSchemaName}[]
     total: number
     currentPage: number
     pageSize: number
@@ -820,6 +915,7 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
 }
 
 `);
+      }
     }
   });
   
