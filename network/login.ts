@@ -104,8 +104,10 @@ export const checkLoginState = async () => {
             return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
           } else {
             return _executeLogin(token).then(() => {
-              if (window.location.hash !== '#/login') {
-                return afterLogin()
+              if (import.meta.env.VITE_ssoDomain !== 'localhost') {
+                if (window.location.hash !== '#/login') {
+                  return afterLogin()
+                }
               }
             })
           }
