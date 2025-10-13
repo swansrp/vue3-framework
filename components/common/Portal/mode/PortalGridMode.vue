@@ -56,31 +56,6 @@
         @drop="handleDrop($event, index)"
         @dragend="handleDragEnd"
       >
-        <!-- 更多功能菜单 -->
-        <div
-          v-if="!isDragMode && $slots['item-actions']"
-          class="grid-item-more"
-        >
-          <a-dropdown :trigger="['click']">
-            <a-button
-              type="text"
-              size="small"
-              @click.stop
-            >
-              <template #icon>
-                <ellipsis-outlined />
-              </template>
-            </a-button>
-            <template #overlay>
-              <slot
-                name="item-actions"
-                :record="record"
-                :index="index"
-              >
-              </slot>
-            </template>
-          </a-dropdown>
-        </div>
         
         <!-- 拖拽指示器 -->
         <div
@@ -189,7 +164,10 @@
               复制记录
             </a-menu-item>
             <a-menu-divider />
-            <a-menu-item key="5" danger>
+            <a-menu-item
+              key="5"
+              danger
+            >
               <delete-outlined />
               删除记录
             </a-menu-item>
@@ -216,7 +194,6 @@ import {
 } from '@ant-design/icons-vue'
 
 import { ColumnType, TableConfigType, UpdateOrderType } from '@/framework/components/common/Portal/type'
-import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 
 const prop = defineProps<{
   config: TableConfigType,
@@ -413,20 +390,29 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
     padding: 16px;
     overflow-y: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
     align-content: start;
+    /* 自适应内容高度 */
+    grid-auto-rows: max-content;
 
     .grid-item {
       position: relative;
       background: #ffffff;
       border: 1px solid #e6e8eb;
-      border-radius: 8px;
-      padding: 16px;
+      border-radius: 12px;
+      padding: 20px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       user-select: none;
+      /* 自动撑开内容 */
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      /* 黄金比例 1.618 */
+      aspect-ratio: auto;
+      overflow: hidden;
 
       &:hover {
         border-color: #1677ff;
@@ -519,9 +505,14 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 
       .grid-item-content {
         width: 100%;
-        height: 100%;
+        flex: 1;
         margin-top: 8px;
-
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        /* 确保内容能够撑开卡片 */
+        min-height: 0;
+        
         .grid-item-name {
           font-size: 14px;
           font-weight: 500;
@@ -597,20 +588,99 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
   }
 }
 
-// 响应式设计
-@media (max-width: 768px) {
+// 响应式设计 - 智能配置每行个数
+@media (min-width: 2800px) and (min-height: 1700px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-    padding: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 32px;
+    padding: 32px;
+    
+    .grid-item {
+      min-height: 240px;
+      padding: 32px;
+      border-radius: 16px;
+      
+      .grid-item-content .grid-item-name {
+        font-size: 18px;
+      }
+    }
   }
 }
 
-@media (max-width: 480px) {
+/* 大屏幕 (1400px+) - 4-5列 */
+@media (min-width: 1400px) and (max-width: 2799px) {
   .portal-grid-mode .grid-content {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    padding: 24px;
+  }
+}
+
+/* 中等屏幕 (1024px-1399px) - 3-4列 */
+@media (min-width: 1024px) and (max-width: 1399px) {
+  .portal-grid-mode .grid-content {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+}
+
+/* 平板横屏 (768px-1023px) - 2-3列 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .portal-grid-mode .grid-content {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    padding: 16px;
+    
+    .grid-item {
+      min-height: 160px;
+      padding: 16px;
+    }
+  }
+}
+
+/* 平板竖屏 (480px-767px) - 2列 */
+@media (min-width: 480px) and (max-width: 767px) {
+  .portal-grid-mode .grid-content {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 12px;
+    
+    .grid-item {
+      min-height: 140px;
+      padding: 14px;
+      
+      .grid-item-content .grid-item-name {
+        font-size: 13px;
+      }
+    }
+  }
+}
+
+/* 手机 (479px以下) - 1-2列 */
+@media (max-width: 479px) {
+  .portal-grid-mode .grid-content {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 8px;
     padding: 8px;
+    
+    .grid-item {
+      min-height: 120px;
+      padding: 12px;
+      
+      .grid-item-content .grid-item-name {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+/* 超小屏幕 (320px以下) - 强制1列 */
+@media (max-width: 320px) {
+  .portal-grid-mode .grid-content {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 6px;
   }
 }
 </style>
