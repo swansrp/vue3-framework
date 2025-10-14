@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 import { baseDomain } from '@/framework/apis'
 import { getDictList, getTreeList } from '@/framework/apis/common/common'
 import { getAllTreeDict, getDictNameList } from '@/framework/apis/dict/dict'
-import { getConfig } from '@/framework/apis/params'
 import { getAllNodes, isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { ValueLabel } from '@/framework/utils/type'
 
@@ -28,10 +27,10 @@ export const parameterStore = defineStore('parameterStore', {
       if (isNotEmpty(result)) {
         return result
       }
-      return await getConfig(parameterName).then(res => {
+      return await import('@/framework/apis/params').then(m => m.getConfig(parameterName).then(res => {
         this.map.set(parameterName, res.payload)
         return res.payload
-      })
+      }))
     }
   }, getters: {}
 })

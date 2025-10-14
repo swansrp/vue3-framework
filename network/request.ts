@@ -5,14 +5,13 @@ import qs from 'qs'
 import { name } from '@/../package.json'
 import { load } from '@/framework/components/common/Loading'
 import { navigation2Login } from '@/framework/network/login'
-import pinia from '@/framework/store'
-import { useCommonStore } from '@/framework/store/common'
+
 import { isEmpty, localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 export const domain = '/' + name
 message.config({ maxCount: 1 })
-const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
-const commonStore = useCommonStore(pinia)
+
+
 const web = '/web'
 const baseURL = import.meta.env.VITE_baseURL + domain + web
 
