@@ -5,7 +5,6 @@ import qs from 'qs'
 import { name } from '@/../package.json'
 import { load } from '@/framework/components/common/Loading'
 import { navigation2Login } from '@/framework/network/login'
-
 import { isEmpty, localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 export const domain = '/' + name
