@@ -20,14 +20,12 @@ import path from 'path'
 
 import { ESLint } from 'eslint'
 
-const IGNORE_DIRS = ['node_modules', 'dist', 'build', 'public', 'coverage']
-
 async function eslintOptimize(targetDir) {
     const eslint = new ESLint({
         fix: true,
         useEslintrc: false,
         baseConfig: {
-            parser: 'vue-eslint-parser', // 解析 .vue 文件
+            parser: 'vue-eslint-parser',
             parserOptions: {
                 parser: '@typescript-eslint/parser',
                 ecmaVersion: 2020,
@@ -70,16 +68,14 @@ async function eslintOptimize(targetDir) {
                     'error',
                     {
                         html: {
-                            void: 'always',        // <img> → <img />
-                            normal: 'never',       // <div></div> 不加 /
-                            component: 'always'    // <MyComp /> 自闭合
+                            void: 'always',
+                            normal: 'never',
+                            component: 'always'
                         },
                         svg: 'always',
                         math: 'always'
                     }
                 ],
-
-                // 可选警告
                 'no-console': 'warn',
                 'no-debugger': 'warn'
             }
@@ -90,6 +86,21 @@ async function eslintOptimize(targetDir) {
     console.log(`🚀 ESLint 优化中: ${targetDir}`)
     const results = await eslint.lintFiles([`${targetDir}/**/*.{js,ts,jsx,tsx,vue}`])
     await ESLint.outputFixes(results)
+
+    // ✅ 新增：强制 LF 换行符
+    for (const r of results) {
+        if (r.output) {
+            const filePath = path.resolve(r.filePath)
+            try {
+                let content = fs.readFileSync(filePath, 'utf8')
+                // 统一换行符
+                content = content.replace(/\r\n/g, '\n')
+                fs.writeFileSync(filePath, content, 'utf8')
+            } catch (e) {
+                console.warn(`⚠️ 无法处理文件: ${r.filePath}`, e.message)
+            }
+        }
+    }
 
     let removedImports = 0
     let removedVars = 0
