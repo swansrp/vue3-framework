@@ -15,6 +15,7 @@
  *   node optimize-eslint-vue.js [根目录]
  */
 
+import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -100,6 +101,25 @@ async function eslintOptimize(targetDir) {
                 console.warn(`⚠️ 无法处理文件: ${r.filePath}`, e.message)
             }
         }
+    }
+
+    const gitattributesPath = path.resolve(targetDir, '.gitattributes')
+    if (!fs.existsSync(gitattributesPath)) {
+        console.log('\n🚀 开始同步 Git 换行符策略...')
+        fs.writeFileSync(gitattributesPath, '# 强制所有文本文件使用 LF\n', 'utf8')
+        fs.writeFileSync(gitattributesPath, '* text eol=lf\n', 'utf8')
+        fs.writeFileSync(gitattributesPath, '# 可选：对二进制文件禁用文本处理\n', 'utf8')
+        fs.writeFileSync(gitattributesPath, '*.png binary\n', 'utf8')
+        fs.writeFileSync(gitattributesPath, '*.jpg binary\n', 'utf8')
+        fs.writeFileSync(gitattributesPath, '*.zip binary\n', 'utf8')
+        fs.writeFileSync(gitattributesPath, '*.ttf binary\n', 'utf8')
+        fs.writeFileSync(gitattributesPath, '*.svg binary\n', 'utf8')
+        console.log('✅ 已生成 .gitattributes')
+        console.log('\n🚀 执行 Git 命令（同步）')
+        execSync('git add src/.gitattributes', { stdio: 'inherit' })
+        execSync('git rm --cached -r .', { stdio: 'inherit' })
+        execSync('git reset --hard', { stdio: 'inherit' })
+        console.log('✅ Git 换行符策略同步完成\n')
     }
 
     let removedImports = 0
