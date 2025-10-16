@@ -2,8 +2,7 @@
 /**
  * ESLint-only 代码优化脚本（Vue 兼容版）
  * 功能：
- *   ✅ 删除未使用 import
- *   ✅ 删除未使用变量
+ *   ✅ 删除未使用 import/变量
  *   ✅ 排序 import
  *   ✅ 去掉分号
  *   ✅ 统一单引号
@@ -12,7 +11,7 @@
  * 特点：
  *   ⚠️ Vue 模板 <template> 保留 {{ ... }} 空格、换行和空行
  * 用法：
- *   node optimize-eslint-vue.js [根目录]
+ *   node optimize-eslint-vue.js [优化目录]
  */
 
 import { execSync } from 'child_process'
@@ -21,7 +20,7 @@ import path from 'path'
 
 import { ESLint } from 'eslint'
 
-async function eslintOptimize(targetDir) {
+async function eslintOptimize(targetDir, rootDir) {
     const eslint = new ESLint({
         fix: true,
         useEslintrc: false,
@@ -64,15 +63,11 @@ async function eslintOptimize(targetDir) {
                 // 对象/解构空格
                 'object-curly-spacing': ['error', 'always'],
 
-                // ✅ Vue 模板自闭合规范
+                // Vue 模板自闭合规范
                 'vue/html-self-closing': [
                     'error',
                     {
-                        html: {
-                            void: 'always',
-                            normal: 'never',
-                            component: 'always'
-                        },
+                        html: { void: 'always', normal: 'never', component: 'always' },
                         svg: 'always',
                         math: 'always'
                     }
@@ -88,13 +83,12 @@ async function eslintOptimize(targetDir) {
     const results = await eslint.lintFiles([`${targetDir}/**/*.{js,ts,jsx,tsx,vue}`])
     await ESLint.outputFixes(results)
 
-    // ✅ 新增：强制 LF 换行符
+    // 强制 LF 换行符
     for (const r of results) {
         if (r.output) {
             const filePath = path.resolve(r.filePath)
             try {
                 let content = fs.readFileSync(filePath, 'utf8')
-                // 统一换行符
                 content = content.replace(/\r\n/g, '\n')
                 fs.writeFileSync(filePath, content, 'utf8')
             } catch (e) {
@@ -103,25 +97,34 @@ async function eslintOptimize(targetDir) {
         }
     }
 
-    const gitattributesPath = path.resolve(targetDir, '.gitattributes')
+    // 根目录 .gitattributes
+    const gitattributesPath = path.resolve(rootDir, '.gitattributes')
     if (!fs.existsSync(gitattributesPath)) {
-        console.log('\n🚀 开始同步 Git 换行符策略...')
-        fs.writeFileSync(gitattributesPath, '# 强制所有文本文件使用 LF\n', 'utf8')
-        fs.writeFileSync(gitattributesPath, '* text eol=lf\n', 'utf8')
-        fs.writeFileSync(gitattributesPath, '# 可选：对二进制文件禁用文本处理\n', 'utf8')
-        fs.writeFileSync(gitattributesPath, '*.png binary\n', 'utf8')
-        fs.writeFileSync(gitattributesPath, '*.jpg binary\n', 'utf8')
-        fs.writeFileSync(gitattributesPath, '*.zip binary\n', 'utf8')
-        fs.writeFileSync(gitattributesPath, '*.ttf binary\n', 'utf8')
-        fs.writeFileSync(gitattributesPath, '*.svg binary\n', 'utf8')
+        console.log('\n🚀 开始生成 Git 换行符策略 (.gitattributes)...')
+        const content = `# 强制所有文本文件使用 LF
+* text eol=lf
+# 可选：对二进制文件禁用文本处理
+*.png binary
+*.jpg binary
+*.zip binary
+*.ttf binary
+*.svg binary
+`
+        fs.writeFileSync(gitattributesPath, content, 'utf8')
         console.log('✅ 已生成 .gitattributes')
-        console.log('\n🚀 执行 Git 命令（同步）')
-        execSync('git add src/.gitattributes', { stdio: 'inherit' })
-        execSync('git rm --cached -r .', { stdio: 'inherit' })
-        execSync('git reset --hard', { stdio: 'inherit' })
-        console.log('✅ Git 换行符策略同步完成\n')
     }
 
+    // 安全同步到 Git
+    try {
+        console.log('\n🚀 同步 .gitattributes 到 Git')
+        execSync('git add .gitattributes', { stdio: 'inherit' })
+        execSync('git add --renormalize .', { stdio: 'inherit' })
+        console.log('✅ Git 换行符策略同步完成\n')
+    } catch (e) {
+        console.warn('⚠️ Git 同步失败，请检查 Git 状态', e.message)
+    }
+
+    // 统计结果
     let removedImports = 0
     let removedVars = 0
     let fixedFiles = 0
@@ -143,14 +146,17 @@ async function eslintOptimize(targetDir) {
 
 async function main() {
     const inputDir = process.argv[2]
-    const targetDir = inputDir ? path.resolve(inputDir.replace(/^['"]|['"]$/g, '')) : path.resolve('src')
+    const rootDir = process.cwd() // 项目根目录
+    const targetDir = inputDir
+        ? path.resolve(inputDir.replace(/^['"]|['"]$/g, ''))
+        : path.resolve(rootDir, 'src')
 
     if (!fs.existsSync(targetDir)) {
         console.error(`❌ 目录不存在: ${targetDir}`)
         process.exit(1)
     }
 
-    await eslintOptimize(targetDir)
+    await eslintOptimize(targetDir, rootDir)
 }
 
 main().catch((err) => {
