@@ -180,13 +180,6 @@ const props = withDefaults(defineProps<FolderComponentProps>(), {
   selectedRole: '0'
 })
 
-// 定义emit
-const emit = defineEmits<{
-  'refresh-config': [value: string]
-  'open-copy-modal': [item: any]
-  'delete-config': [value: string]
-}>()
-
 // 计算属性
 const baseIndent = 10  // 基础缩进
 const indentStep = 15  // 缩进步长

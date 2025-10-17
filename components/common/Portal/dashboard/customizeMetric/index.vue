@@ -26,9 +26,7 @@ const props = defineProps<{ index: any, data: Array<MetricStatisticType>, isPerc
 const { index, data, isPercent } = toRefs(props)
 const showNoData = computed(() => data.value.length ? 0 : 1)
 let chart: any = null
-const emit = defineEmits<{
-  (e: 'click', categoryId: string): void
-}>()
+
 const renderRadar = () => {
   watch(
     () => props.data,
