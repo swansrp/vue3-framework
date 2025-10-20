@@ -39,7 +39,6 @@ export const useTabStore = defineStore('tabStore', {
       if (!this._historyTabSet.has(key)) {
         this._historyTabSet.add(key)
         this._historyTabArray.push(tab)
-        console.log('addHistoryTab', key, tab, hrefFullPath)
       }
       this._key2HistoryTabMap[key] = tab
       this._key2HistoryTabMap[key].fullPath = hrefFullPath

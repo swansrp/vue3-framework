@@ -5,17 +5,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run install && npm run bidr && npm run optimize && vite --config ./src/framework/config/vite.config.ts",
+    "dev": "npm run install && npm run bidr && vite --config ./src/framework/config/vite.config.ts",
     "build:prod": "npm run bidr && vite --config ./src/framework/config/vite.config.ts build --mode production",
     "bidr": "node src/framework/script/change-node-modules.js",
     "preview": "vite preview",
     "generate-api": "node src/framework/script/generate-api-v2.cjs && npm run optimize ./src/apis/",
-    "optimize": "node src/framework/script/optimize-code-style.js"
+    "optimize": "node src/framework/script/optimize-code-style.js",
+    "install": "node src/framework/script/check-install.js"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^6.1.0",
     "@kjgl77/datav-vue3": "^1.7.3",
-    "@surely-vue/table": "5.0.3",
+    "@surely-vue/table": "5.0.9",
     "@tinymce/tinymce-vue": "^5.1.0",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.3.4",

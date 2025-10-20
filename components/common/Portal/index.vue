@@ -560,6 +560,7 @@
                   </div>
                   <div style="display: flex">
                     <a-pagination
+                      v-if="config.total > config.pageSize || !hidePagination"
                       v-model:current="config.currentPage"
                       v-model:page-size="config.pageSize"
                       :page-size-options="['10','20','30','50','100','200', '500', '1000']"
@@ -797,6 +798,7 @@ const __ = getInstance()
  * @param hideEdit 隐藏修改按钮
  * @param hideDelete 隐藏删除按钮
  * @param hideAssociation 隐藏关联信息
+ * @param hidePagination 隐藏分页信息
  * @param rowAllowEdit 该行右键是否能够编辑
  * @param rowAllowDelete 该行右键是否能够删除
  * @param rowSelectProps 行选择属性配置函数
@@ -846,6 +848,7 @@ const props = withDefaults(defineProps<{
     hideEdit?: boolean,
     hideDelete?: boolean,
     hideAssociation?: boolean,
+    hidePagination?: boolean,
     rowAllowEdit?: (record: any) => boolean,
     rowAllowDelete?: (record: any) => boolean,
     rowSelectProps?: (record: any) => any
@@ -893,6 +896,7 @@ const props = withDefaults(defineProps<{
     hideEdit: false,
     hideDelete: false,
     hideAssociation: false,
+    hidePagination: false,
     rowAllowEdit: () => true,
     rowAllowDelete: () => true,
     rowSelectProps: undefined,
