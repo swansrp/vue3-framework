@@ -101,13 +101,37 @@ async function eslintOptimize(targetDir, rootDir) {
     const gitattributesPath = path.resolve(rootDir, '.gitattributes')
     if (!fs.existsSync(gitattributesPath)) {
         console.log('\n🚀 开始生成 Git 换行符策略 (.gitattributes)...')
-        const content = `# 强制所有文本文件使用 LF
+        const content = `
+# 强制所有文本文件使用 LF
+# ========== 基础文本配置 ==========
+# 所有文本文件强制使用 LF 换行符
 * text eol=lf
-# 可选：对二进制文件禁用文本处理
+
+# 常见源码文件显式标注（可防止特殊 IDE 自动转 CRLF）
+*.js text eol=lf
+*.ts text eol=lf
+*.vue text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.java text eol=lf
+
+# ========== 二进制文件配置 ==========
 *.png binary
 *.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
 *.zip binary
+*.tar binary
+*.gz binary
 *.ttf binary
+*.woff binary
+*.woff2 binary
 *.svg binary
 `
         fs.writeFileSync(gitattributesPath, content, 'utf8')
