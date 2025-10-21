@@ -2228,7 +2228,7 @@ watch(
   }
 )
 watch(
-  () => columnDisplayCustom.value,
+  () => [columnDisplayCustom.value, columnArray.value],
   () => {
     columnArray.value.forEach((column: ColumnType) => {
       column.title = columnDisplayCustom.value.get(column.dataIndex) || columnRaw.get(column.dataIndex)?.title || column.title
