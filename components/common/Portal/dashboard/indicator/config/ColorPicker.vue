@@ -118,7 +118,7 @@ const hueWheelRef = ref<HTMLElement>()
 const svSquareRef = ref<HTMLElement>()
 const alphaSliderRef = ref<HTMLElement>()
 
-const selectedColor = ref('#1890ff')
+const selectedColor = ref(props.initialColor || '#1890ff')
 
 // 计算属性
 const currentHueColor = computed(() => {
@@ -192,10 +192,54 @@ const rgbToHex = (r: number, g: number, b: number): string => {
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
 }
 
-const hexToHsv = (hex: string) => {
-  const rgb = hexToRgb(hex)
+const hexToHsv = (color: string) => {
+  // 如果是 HSL 格式，先转换为 RGB
+  if (color.startsWith('hsl')) {
+    const rgb = hslToRgb(color)
+    return rgbToHsv(rgb.r, rgb.g, rgb.b)
+  }
+  
+  // 如果是十六进制格式，转换为 RGB
+  const rgb = hexToRgb(color)
   if (!rgb) return { h: 0, s: 0, v: 0 }
   return rgbToHsv(rgb.r, rgb.g, rgb.b)
+}
+
+const hslToRgb = (hsl: string) => {
+  const match = hsl.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/)
+  if (!match) return { r: 0, g: 0, b: 0 }
+  
+  const h = parseInt(match[1]) / 360
+  const s = parseInt(match[2]) / 100
+  const l = parseInt(match[3]) / 100
+  
+  let r, g, b
+  
+  if (s === 0) {
+    r = g = b = l
+  } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1
+      if (t > 1) t -= 1
+      if (t < 1/6) return p + (q - p) * 6 * t
+      if (t < 1/2) return q
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
+      return p
+    }
+    
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+    const p = 2 * l - q
+    
+    r = hue2rgb(p, q, h + 1/3)
+    g = hue2rgb(p, q, h)
+    b = hue2rgb(p, q, h - 1/3)
+  }
+  
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255)
+  }
 }
 
 const hexToRgb = (hex: string) => {
@@ -253,7 +297,12 @@ const isValidColor = (color: string): boolean => {
   // 检查是否为RGB或RGBA值
   const rgbColorRegex = /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/
   const rgbaColorRegex = /^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[01]?(\.\d+)?\s*\)$/
-  return rgbColorRegex.test(color) || rgbaColorRegex.test(color)
+  if (rgbColorRegex.test(color) || rgbaColorRegex.test(color)) return true
+  
+  // 检查是否为HSL或HSLA值
+  const hslColorRegex = /^hsl\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*\)$/
+  const hslaColorRegex = /^hsla\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*,\s*[01]?(\.\d+)?\s*\)$/
+  return hslColorRegex.test(color) || hslaColorRegex.test(color)
 }
 
 // 更新选中的颜色
@@ -267,18 +316,22 @@ const updateSelectedColor = () => {
   }
 }
 
-// 监听HSV值的变化
-watch([hue, saturation, value, alpha], () => {
-  updateSelectedColor()
-}, { immediate: true })
-
-// 监听初始颜色变化
+// 监听初始颜色变化和模态框可见性
 watch(
-  () => props.initialColor,
-  (newColor) => {
-    if (newColor && isValidColor(newColor)) {
+  [() => props.initialColor, () => props.visible],
+  ([newColor, isVisible], [_oldColor, wasVisible]) => {
+    console.log('=== ColorPicker Watch Debug ===')
+    console.log('newColor:', newColor)
+    console.log('isVisible:', isVisible)
+    console.log('wasVisible:', wasVisible)
+    console.log('condition:', isVisible && !wasVisible, newColor && isValidColor(newColor))
+    
+    // 当模态框打开时，重置为初始颜色
+    if (isVisible && !wasVisible && newColor && isValidColor(newColor)) {
+      console.log('执行颜色重置，设置颜色为:', newColor)
       selectedColor.value = newColor
       const hsv = hexToHsv(newColor)
+      console.log('转换后的HSV值:', hsv)
       hue.value = hsv.h
       saturation.value = hsv.s
       value.value = hsv.v
@@ -292,10 +345,22 @@ watch(
       } else {
         alpha.value = 1
       }
+    } else {
+      console.log('不执行颜色重置，原因:')
+      if (!isVisible) console.log('- 模态框未打开')
+      if (wasVisible) console.log('- 模态框之前就是打开的')
+      if (!newColor) console.log('- 没有传入颜色')
+      if (newColor && !isValidColor(newColor)) console.log('- 传入的颜色无效:', newColor)
     }
+    console.log('=== End ColorPicker Watch Debug ===')
   },
   { immediate: true }
 )
+
+// 监听HSV值的变化
+watch([hue, saturation, value, alpha], () => {
+  updateSelectedColor()
+})
 
 // 色调拖拽处理
 const startHueDrag = (e: MouseEvent) => {

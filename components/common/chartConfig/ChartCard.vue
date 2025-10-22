@@ -507,6 +507,7 @@ const onBarClick = (params: any) => {
     ? buildCombinedConditions(firstDim, secondDim)
     : buildFirstDimensionConditions(firstDim)
 
+
   if (!combinedConditions) {
     console.warn('无法构建查询条件')
     return

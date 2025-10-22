@@ -148,9 +148,10 @@
 </template>
 
 <script lang="ts" setup>
-import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
-import { inject, ref } from 'vue'
+import {DownOutlined, RightOutlined} from '@ant-design/icons-vue'
+import {message} from 'ant-design-vue'
+import {inject, ref} from 'vue'
+import {generateDistinctColors, getRandomColor} from '@/framework/utils/colorUtils'
 
 // 接口定义
 interface IndicatorItem {
@@ -205,19 +206,6 @@ let dragOverSecondChecked = false
 // 注入全局拖拽数据
 const dragData = inject<{ value: DragData | null }>('dragData')
 
-// 默认颜色配置
-const defaultColors = ref<string[]>([
-  '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
-  '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#2f54eb'
-])
-
-// 预设颜色
-const presetColors = [
-  '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
-  '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#2f54eb',
-  '#fa541c', '#1890ff', '#722ed1', '#eb2f96', '#52c41a',
-  '#faad14', '#13c2c2', '#f5222d', '#fa8c16', '#a0d911'
-]
 
 // 拖拽悬停事件
 const onDragOverFirst = (e: DragEvent) => {
@@ -366,18 +354,14 @@ const onDropSecondDimension = (e: DragEvent) => {
 const isDuplicateDimension = (key: string, current: 'first' | 'second' | null) => {
   if (current === 'first') {
     // 检查是否与二级维度或筛选维度重复
-    const result = props.secondDimension?.key === key || props.filterDimension?.key === key
-    return result
+    return props.secondDimension?.key === key
   } else if (current === 'second') {
     // 检查是否与一级维度或筛选维度重复
-    const result = props.firstDimension?.key === key || props.filterDimension?.key === key
-    return result
+    return props.firstDimension?.key === key
   } else {
     // 检查是否已存在于任何维度（用于拖拽开始时的检查）
-    const result = props.firstDimension?.key === key ||
-      props.secondDimension?.key === key ||
-      props.filterDimension?.key === key
-    return result
+    return props.firstDimension?.key === key ||
+        props.secondDimension?.key === key
   }
 }
 
@@ -397,35 +381,6 @@ const toggleCollapse = () => {
   collapsed.value = !collapsed.value
 }
 
-// 颜色生成函数
-const getRandomColor = () => {
-  const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
-  return colors[Math.floor(Math.random() * colors.length)]
-}
-
-const generateDistinctColors = (count: number): string[] => {
-  if (count <= 0) return []
-
-  const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
-
-  if (count === 1) return [colors[0]]
-  if (count <= colors.length) {
-    // 如果需要的颜色数量小于等于预设颜色数量，均匀选取
-    const step = Math.floor(colors.length / count)
-    const result: string[] = []
-    for (let i = 0; i < count; i++) {
-      result.push(colors[i * step])
-    }
-    return result
-  } else {
-    // 如果需要的颜色数量大于预设颜色数量，先用完所有预设颜色，再随机生成
-    const result = [...colors]
-    for (let i = colors.length; i < count; i++) {
-      result.push(colors[i % colors.length])
-    }
-    return result
-  }
-}
 </script>
 
 <style lang="less" scoped>

@@ -294,9 +294,9 @@
 </template>
 
 <script lang="ts" setup>
-import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
-import { ref, computed } from 'vue'
+import {DownOutlined, RightOutlined} from '@ant-design/icons-vue'
+import {message} from 'ant-design-vue'
+import {ref, computed, watch} from 'vue'
 
 import ColorPicker from './ColorPicker.vue'
 
@@ -364,24 +364,24 @@ const collapsed = ref(false)
 
 // 配置选项
 const chartTypeOptions = ref<ChartTypeOption[]>([
-  { label: '柱状图', value: 'bar' },
-  { label: '折线图', value: 'line' },
-  { label: '饼图', value: 'pie' }
+  {label: '柱状图', value: 'bar'},
+  {label: '折线图', value: 'line'},
+  {label: '饼图', value: 'pie'}
 ])
 
 const axisPositionOptions = ref<{ label: string; value: string }[]>([
-  { value: 'left', label: '左侧' },
-  { value: 'right', label: '右侧' }
+  {value: 'left', label: '左侧'},
+  {value: 'right', label: '右侧'}
 ])
 
 const stackOptions = ref<{ label: string; value: string }[]>([
-  { label: '不堆叠', value: 'noStack' },
-  { label: '自堆叠', value: 'selfStack' },
-  { label: '堆叠组1', value: 'stack1' },
-  { label: '堆叠组2', value: 'stack2' },
-  { label: '堆叠组3', value: 'stack3' },
-  { label: '堆叠组4', value: 'stack4' },
-  { label: '堆叠组5', value: 'stack5' }
+  {label: '不堆叠', value: 'noStack'},
+  {label: '自堆叠', value: 'selfStack'},
+  {label: '堆叠组1', value: 'stack1'},
+  {label: '堆叠组2', value: 'stack2'},
+  {label: '堆叠组3', value: 'stack3'},
+  {label: '堆叠组4', value: 'stack4'},
+  {label: '堆叠组5', value: 'stack5'}
 ])
 
 // 数据配置相关状态
@@ -391,13 +391,14 @@ const dataFormMode = ref<'add' | 'edit'>('add')
 
 // 数据项颜色配置相关状态
 const dataItemColorPickerVisible = ref(false)
-const currentDataItemTarget = ref<{ metricId: string; itemKey: string }>({ metricId: '', itemKey: '' })
+const currentDataItemTarget = ref<{ metricId: string; itemKey: string }>({metricId: '', itemKey: ''})
 
 // 计算属性
 const currentDataItemColor = computed(() => {
   if (!currentDataItemTarget.value.metricId || !currentDataItemTarget.value.itemKey) {
     return '#1890ff'
   }
+  // 确保获取到的是当前实际显示的颜色
   return getDataItemColor(currentDataItemTarget.value.metricId, currentDataItemTarget.value.itemKey)
 })
 
@@ -429,7 +430,7 @@ const availableChartTypeOptions = computed(() => {
         disabledReason: canSelectPie ? '' : '饼图只能作为第一个数据指标'
       }
     }
-    return { ...option, disabled: false, disabledReason: '' }
+    return {...option, disabled: false, disabledReason: ''}
   })
 })
 
@@ -442,7 +443,7 @@ const defaultColors = ref<string[]>([
 const presetColors = [
   '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
   '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#2f54eb',
-  '#fa541c', '#1890ff', '#722ed1', '#eb2f96', '#52c41a',
+  '#fa541c', '#8c8c8c', '#722ed1', '#eb2f96', '#52c41a',
   '#faad14', '#13c2c2', '#f5222d', '#fa8c16', '#a0d911'
 ]
 
@@ -485,7 +486,7 @@ const onChartTypeChange = (value: any) => {
   if (chartType === 'pie') {
     // 如果选择饼图，检查是否已经有其他饼图
     const existingPieChart = props.dataMetrics.find(m =>
-      m.chartType === 'pie' && m.id !== editingDataMetric.value?.id
+        m.chartType === 'pie' && m.id !== editingDataMetric.value?.id
     )
 
     if (existingPieChart) {
@@ -512,8 +513,8 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
   if (mode === 'add') {
     // 获取上一个数据的堆叠组
     const lastMetric = props.dataMetrics.length > 0
-      ? props.dataMetrics[props.dataMetrics.length - 1]
-      : null
+        ? props.dataMetrics[props.dataMetrics.length - 1]
+        : null
 
     // 默认堆叠组为noStack
     let defaultStackGroup = 'noStack'
@@ -543,7 +544,7 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
       itemColors: {}
     }
   } else if (metric) {
-    editingDataMetric.value = { ...metric }
+    editingDataMetric.value = {...metric}
   }
 
   dataConfigVisible.value = true
@@ -564,8 +565,8 @@ const onDataTypeChange = (value: any) => {
 
 const isDataTypeUsed = (dataField: string): boolean => {
   return props.dataMetrics.some(metric =>
-    metric.dataField === dataField &&
-    metric.id !== editingDataMetric.value?.id
+      metric.dataField === dataField &&
+      metric.id !== editingDataMetric.value?.id
   )
 }
 
@@ -586,28 +587,24 @@ const confirmDataConfig = () => {
 
     if (props.secondDimension?.items) {
       // 如果有二级维度，使用二级维度的项
-      const itemCount = props.secondDimension.items.length
-      const distinctColors = generateDistinctColors(itemCount)
-
-      props.secondDimension.items.forEach((item, index) => {
-        editingDataMetric.value!.itemColors![item.key] = distinctColors[index] || getRandomColor()
+      props.secondDimension.items.forEach((item) => {
+        // 为每个维度项生成全新的随机颜色，不与其他数据指标保持一致
+        editingDataMetric.value!.itemColors![item.key] = getRandomColor()
       })
     } else if (props.firstDimension?.items) {
       // 如果只有一级维度，使用一级维度的项
-      const itemCount = props.firstDimension.items.length
-      const distinctColors = generateDistinctColors(itemCount)
-
-      props.firstDimension.items.forEach((item, index) => {
-        editingDataMetric.value!.itemColors![item.key] = distinctColors[index] || getRandomColor()
+      props.firstDimension.items.forEach((item) => {
+        // 为每个维度项生成全新的随机颜色，不与其他数据指标保持一致
+        editingDataMetric.value!.itemColors![item.key] = getRandomColor()
       })
     }
 
-    newMetrics.push({ ...editingDataMetric.value })
+    newMetrics.push({...editingDataMetric.value})
     message.success('数据添加成功')
   } else {
     const index = newMetrics.findIndex(m => m.id === editingDataMetric.value!.id)
     if (index !== -1) {
-      newMetrics[index] = { ...editingDataMetric.value }
+      newMetrics[index] = {...editingDataMetric.value}
       message.success('数据修改成功')
     }
   }
@@ -630,20 +627,22 @@ const getDataItemColor = (metricId: string, itemKey: string): string => {
 
 // 打开数据项颜色选择器
 const openDataItemColorPicker = (metricId: string, itemKey: string) => {
-  currentDataItemTarget.value = { metricId, itemKey }
+  currentDataItemTarget.value = {metricId, itemKey}
   dataItemColorPickerVisible.value = true
 }
 
 // 确认数据项颜色更改
 const confirmDataItemColorChange = (color: string) => {
-  const { metricId, itemKey } = currentDataItemTarget.value
+  const {metricId, itemKey} = currentDataItemTarget.value
   const newMetrics = [...props.dataMetrics]
   const metricIndex = newMetrics.findIndex(m => m.id === metricId)
 
   if (metricIndex !== -1) {
+    // 确保itemColors对象存在，但不重置已有的颜色
     if (!newMetrics[metricIndex].itemColors) {
       newMetrics[metricIndex].itemColors = {}
     }
+    // 只更新当前项的颜色，保留其他项的颜色
     newMetrics[metricIndex].itemColors![itemKey] = color
     emit('update:dataMetrics', newMetrics)
   }
@@ -652,30 +651,200 @@ const confirmDataItemColorChange = (color: string) => {
 // 颜色生成函数
 const getRandomColor = () => {
   const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
-  return colors[Math.floor(Math.random() * colors.length)]
+  // 使用时间戳和随机数结合，确保每次调用都得到不同的颜色
+  const randomIndex = Math.floor((Math.random() + Date.now() * 0.001) % 1 * colors.length)
+  return colors[randomIndex]
+}
+
+// HSL 转 RGB 函数
+const hslToRgb = (hsl: string) => {
+  // 修改正则表达式，支持小数和更灵活的格式
+  const match = hsl.match(/hsl\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)%\s*,\s*(\d+(?:\.\d+)?)%\s*\)/)
+  if (!match) {
+    return {r: 0, g: 0, b: 0}
+  }
+
+  // 使用 parseFloat 支持小数，而不是 parseInt
+  const h = parseFloat(match[1])
+  const s = parseFloat(match[2])
+  const l = parseFloat(match[3])
+
+  const hNormalized = h / 360
+  const sNormalized = s / 100
+  const lNormalized = l / 100
+
+  let r, g, b
+
+  if (sNormalized === 0) {
+    r = g = b = lNormalized
+  } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      // 确保 t 在 0-1 范围内
+      let adjustedT = t
+      if (adjustedT < 0) adjustedT += 1
+      if (adjustedT > 1) adjustedT -= 1
+
+      // 使用更精确的计算，避免浮点数精度问题
+      if (adjustedT < 1 / 6) {
+        const result = p + (q - p) * 6 * adjustedT
+        return Math.max(0, Math.min(1, result)) // 确保结果在 0-1 范围内
+      }
+      if (adjustedT < 1 / 2) {
+        return q
+      }
+      if (adjustedT < 2 / 3) {
+        const result = p + (q - p) * (2 / 3 - adjustedT) * 6
+        return Math.max(0, Math.min(1, result)) // 确保结果在 0-1 范围内
+      }
+      return p
+    }
+
+    const q = lNormalized < 0.5 ? lNormalized * (1 + sNormalized) : lNormalized + sNormalized - lNormalized * sNormalized
+    const p = 2 * lNormalized - q
+
+    r = hue2rgb(p, q, hNormalized + 1 / 3)
+    g = hue2rgb(p, q, hNormalized)
+    b = hue2rgb(p, q, hNormalized - 1 / 3)
+  }
+
+  // 转换为整数 RGB 值
+  const rInt = Math.round(r * 255)
+  const gInt = Math.round(g * 255)
+  const bInt = Math.round(b * 255)
+
+  return {
+    r: rInt,
+    g: gInt,
+    b: bInt
+  }
+}
+
+// RGB 转 十六进制函数
+const rgbToHex = (r: number, g: number, b: number): string => {
+  // 确保 RGB 值在 0-255 范围内
+  r = Math.max(0, Math.min(255, r))
+  g = Math.max(0, Math.min(255, g))
+  b = Math.max(0, Math.min(255, b))
+
+  // 转换为十六进制并确保两位数格式
+  const toHex = (c: number) => {
+    const hex = c.toString(16)
+    return hex.length === 1 ? '0' + hex : hex
+  }
+
+  return '#' + toHex(r) + toHex(g) + toHex(b)
 }
 
 const generateDistinctColors = (count: number): string[] => {
   if (count <= 0) return []
 
   const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
+  const currentTime = Date.now()
 
-  if (count === 1) return [colors[0]]
+  if (count === 1) {
+    return [colors[0]]
+  }
+
+  // 基于当前时间计算起始偏移量
+  const timeOffset = Math.floor(currentTime / 1000) % colors.length
+
   if (count <= colors.length) {
     // 如果需要的颜色数量小于等于预设颜色数量，均匀选取
     const step = Math.floor(colors.length / count)
     const result: string[] = []
+
     for (let i = 0; i < count; i++) {
-      result.push(colors[i * step])
+      // 基于时间偏移量计算索引，确保每次生成的起始颜色不同
+      const index = (timeOffset + i * step) % colors.length
+      result.push(colors[index])
     }
+
     return result
   } else {
-    // 如果需要的颜色数量大于预设颜色数量，先用完所有预设颜色，再随机生成
-    const result = [...colors]
-    for (let i = colors.length; i < count; i++) {
-      result.push(colors[i % colors.length])
+    // 如果需要的颜色数量大于预设颜色数量，先生成扩展的颜色数组
+    const extendedColors = [...colors]
+
+    // 使用HSL颜色空间生成更多颜色，然后转换为十六进制格式
+    for (let i = colors.length; i < count * 2; i++) {
+      const hue = (i * 137.508) % 360
+      const saturation = 70 + (i % 3) * 10
+      const lightness = 45 + (i % 4) * 10
+
+      // 先生成HSL格式的颜色
+      const hslColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`
+      // 将HSL转换为RGB，再转换为十六进制
+      const rgbColor = hslToRgb(hslColor)
+      const hexColor = rgbToHex(rgbColor.r, rgbColor.g, rgbColor.b)
+
+      extendedColors.push(hexColor)
     }
+
+    // 从扩展的颜色数组中均匀选取指定数量的颜色
+    const step = Math.floor(extendedColors.length / count)
+    const result: string[] = []
+
+    for (let i = 0; i < count; i++) {
+      // 基于时间偏移量计算索引
+      const index = (timeOffset + i * step) % extendedColors.length
+      const selectedColor = extendedColors[index]
+
+      result.push(selectedColor)
+    }
+
     return result
+  }
+}
+
+// 监听维度变化，当第二维度变化时更新颜色配置
+watch(
+    () => [props.firstDimension, props.secondDimension],
+    ([_newFirstDim, newSecondDim], [_oldFirstDim, oldSecondDim]) => {
+      // 检查第二维度是否发生变化
+      const secondDimensionChanged = newSecondDim?.key !== oldSecondDim?.key
+
+      // 如果第二维度发生了变化，更新所有数据指标的颜色配置
+      if (secondDimensionChanged && newSecondDim?.items) {
+        updateDataMetricsWithSecondDimensionColors(newSecondDim.items)
+      }
+    },
+    {deep: true}
+)
+
+// 更新数据指标的颜色配置以匹配第二维度
+const updateDataMetricsWithSecondDimensionColors = (secondDimensionItems: IndicatorItem[]) => {
+  if (secondDimensionItems.length === 0) return
+
+  const newMetrics = [...props.dataMetrics]
+  let updated = false
+
+  // 首先生成第二维度项的全局颜色映射，确保每个维度项在所有数据指标中使用相同的颜色
+  const itemCount = secondDimensionItems.length
+  const distinctColors = generateDistinctColors(itemCount)
+
+  // 创建维度项到颜色的映射
+  const dimensionColorMap: Record<string, string> = {}
+  secondDimensionItems.forEach((item, itemIndex) => {
+    dimensionColorMap[item.key] = distinctColors[itemIndex] || getRandomColor()
+  })
+
+  // 为每个数据指标更新颜色配置，使用全局颜色映射
+  newMetrics.forEach((metric, _index) => {
+    if (!metric.itemColors) {
+      metric.itemColors = {}
+    }
+
+    secondDimensionItems.forEach((item, _itemIndex) => {
+      // 为每个项分配颜色，如果已存在颜色则保留，否则使用全局颜色映射
+      if (!metric.itemColors![item.key]) {
+        metric.itemColors![item.key] = dimensionColorMap[item.key]
+        updated = true
+      }
+    })
+  })
+
+  // 如果有更新，触发数据指标更新事件
+  if (updated) {
+    emit('update:dataMetrics', newMetrics)
   }
 }
 
