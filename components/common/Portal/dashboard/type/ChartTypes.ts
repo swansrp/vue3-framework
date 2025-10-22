@@ -85,5 +85,5 @@ export interface SelectedBarInfo {
   statisticData: any,
   combinedConditions: any
   title: string
-  color: string
+  color?: string
 }

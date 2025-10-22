@@ -42,7 +42,6 @@
           <portal
             :table-id="tableId"
             :advance-condition="condition"
-            :advance="false"
             :action-width="0"
             hide-refresh
             hide-row-selection
@@ -57,7 +56,6 @@
 import { computed } from 'vue'
 
 import type { SelectedBarInfo } from '../../type/ChartTypes'
-
 import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 const props = defineProps<{
@@ -83,8 +81,12 @@ const tableId = computed(() => {
 const handleClose = () => {
   emit('close')
 }
+
+/**
+ * 构建查询条件
+ * 使用 selectedBarInfo 中的 combinedConditions，按照 ConditionListType 格式返回
+ */
 const condition = computed(() => {
-  // 使用 selectedBarInfo 中的 combinedConditions，按照 ConditionListType 格式返回
   if (props.selectedBarInfo?.combinedConditions?.conditionList) {
     return {
       conditionList: props.selectedBarInfo.combinedConditions.conditionList

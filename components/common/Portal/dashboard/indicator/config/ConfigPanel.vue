@@ -38,14 +38,14 @@
       <DimensionSelector
         v-model:first-dimension="firstDimension"
         v-model:second-dimension="secondDimension"
-        :filter-dimension="filterDimension"
+        :filter-dimension="filterDimensions[0]"
         @dimension-changed="onDimensionChanged"
       />
 
       <!-- 全局筛选条件 -->
       <FilterCondition
-        v-model:filter-dimension="filterDimension"
-        v-model:selected-filter-items="selectedFilterItems"
+        v-model:filter-dimensions="filterDimensions"
+        v-model:selected-filter-items="selectedFilterItemsArray"
       />
 
       <!-- 数据配置 -->
@@ -63,7 +63,7 @@
 <script lang="ts" setup>
 import { MenuFoldOutlined, MenuUnfoldOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import DataConfiguration from './DataConfiguration.vue'
 import DimensionSelector from './DimensionSelector.vue'
@@ -110,8 +110,8 @@ const props = defineProps<{
   leftPanelCollapsed: boolean
   firstDimension: IndicatorGroup | null
   secondDimension: IndicatorGroup | null
-  filterDimension: IndicatorGroup | null
-  selectedFilterItems: string[]
+  filterDimensions: (IndicatorGroup | null)[]
+  selectedFilterItemsArray: string[][]
   dataMetrics: DataMetricUI[]
   availableDataTypes: DataTypeOption[]
 }>()
@@ -121,14 +121,14 @@ const emit = defineEmits<{
   'toggleLeftPanel': [status?: boolean]
   'update:firstDimension': [dimension: IndicatorGroup | null]
   'update:secondDimension': [dimension: IndicatorGroup | null]
-  'update:filterDimension': [dimension: IndicatorGroup | null]
-  'update:selectedFilterItems': [items: string[]]
+  'update:filterDimensions': [dimensions: (IndicatorGroup | null)[]]
+  'update:selectedFilterItemsArray': [items: string[][]]
   'update:dataMetrics': [metrics: DataMetricUI[]]
   'generateChart': [chartData: {
     firstDimension: IndicatorGroup | null,
     secondDimension: IndicatorGroup | null,
-    filterDimension: IndicatorGroup | null,
-    selectedFilterItems: string[],
+    filterDimensions: (IndicatorGroup | null)[],
+    selectedFilterItemsArray: string[][],
     dataMetrics: DataMetricUI[]
   } | undefined]
   'clearChart': []
@@ -138,8 +138,8 @@ const emit = defineEmits<{
 // 本地状态
 const firstDimension = ref(props.firstDimension)
 const secondDimension = ref(props.secondDimension)
-const filterDimension = ref(props.filterDimension)
-const selectedFilterItems = ref([...props.selectedFilterItems])
+const filterDimensions = ref<[...(IndicatorGroup | null)[], (IndicatorGroup | null) | null]>([...(props.filterDimensions as any)] as any)
+const selectedFilterItemsArray = ref<string[][]>([...props.selectedFilterItemsArray])
 const dataMetrics = ref([...props.dataMetrics])
 
 // 事件处理
@@ -147,27 +147,29 @@ const toggleLeftPanel = () => {
   emit('toggleLeftPanel')
 }
 
+// 监听数据指标变化
 watch(
   () => dataMetrics.value,
   () => emit('update:dataMetrics', dataMetrics.value)
 )
 
-// 监听 filterDimension 变化
+// 监听筛选维度变化
 watch(
-  () => filterDimension.value,
+  () => filterDimensions.value,
   (newValue) => {
-    if (newValue !== props.filterDimension) {
-      emit('update:filterDimension', newValue)
+    if (JSON.stringify(newValue) !== JSON.stringify(props.filterDimensions)) {
+      emit('update:filterDimensions', newValue)
     }
-  }
+  },
+  { deep: true }
 )
 
-// 监听 selectedFilterItems 变化
+// 监听选中的筛选项变化
 watch(
-  () => selectedFilterItems.value,
+  () => selectedFilterItemsArray.value,
   (newValue) => {
-    if (JSON.stringify(newValue) !== JSON.stringify(props.selectedFilterItems)) {
-      emit('update:selectedFilterItems', [...newValue])
+    if (JSON.stringify(newValue) !== JSON.stringify(props.selectedFilterItemsArray)) {
+      emit('update:selectedFilterItemsArray', [...newValue])
     }
   },
   { deep: true }
@@ -185,29 +187,44 @@ watch(
   },
   { deep: true, immediate: true }
 )
+
 watch(
-  () => props.filterDimension,
+  () => props.filterDimensions,
   (newValue) => {
-    if (newValue !== filterDimension.value) {
-      filterDimension.value = newValue
+    if (JSON.stringify(newValue) !== JSON.stringify(filterDimensions.value)) {
+      filterDimensions.value = [...newValue] as any
     }
-  }
+  },
+  { deep: true }
 )
 
 watch(
-  () => props.selectedFilterItems,
+  () => props.selectedFilterItemsArray,
   (newValue) => {
-    if (JSON.stringify(newValue) !== JSON.stringify(selectedFilterItems.value)) {
-      selectedFilterItems.value = [...newValue]
+    if (JSON.stringify(newValue) !== JSON.stringify(selectedFilterItemsArray.value)) {
+      selectedFilterItemsArray.value = [...newValue]
     }
-  }
+  },
+  { deep: true }
 )
 
+// 修复维度数据的双向绑定
 watch(
   () => props.firstDimension,
   (newValue) => {
     if (newValue !== firstDimension.value) {
       firstDimension.value = newValue
+    }
+  },
+  { immediate: true }
+)
+
+// 当本地firstDimension变化时，通知父组件
+watch(
+  () => firstDimension.value,
+  (newValue) => {
+    if (newValue !== props.firstDimension) {
+      emit('update:firstDimension', newValue)
     }
   }
 )
@@ -218,38 +235,28 @@ watch(
     if (newValue !== secondDimension.value) {
       secondDimension.value = newValue
     }
+  },
+  { immediate: true }
+)
+
+// 当本地secondDimension变化时，通知父组件
+watch(
+  () => secondDimension.value,
+  (newValue) => {
+    if (newValue !== props.secondDimension) {
+      emit('update:secondDimension', newValue)
+    }
   }
 )
 
+// 维度变化事件处理
 const onDimensionChanged = () => {
-  // 维度变化时需要重新初始化数据配置的颜色
-  dataMetrics.value.forEach(metric => {
-    metric.itemColors = {}
-
-    if (secondDimension.value?.items) {
-      // 如果有二级维度，使用二级维度的项
-      const itemCount = secondDimension.value.items.length
-      const distinctColors = generateDistinctColors(itemCount)
-
-      secondDimension.value.items.forEach((item, index) => {
-        metric.itemColors![item.key] = distinctColors[index] || getRandomColor()
-      })
-    } else if (firstDimension.value?.items) {
-      // 如果只有一级维度，使用一级维度的项
-      const itemCount = firstDimension.value.items.length
-      const distinctColors = generateDistinctColors(itemCount)
-      firstDimension.value.items.forEach((item, index) => {
-        metric.itemColors![item.key] = distinctColors[index] || getRandomColor()
-      })
-    }
-  })
-
-  // 发出更新事件
-  emit('update:firstDimension', firstDimension.value)
-  emit('update:secondDimension', secondDimension.value)
-  emit('update:dataMetrics', dataMetrics.value)
+  // 当维度发生变化时，可能需要重新计算一些依赖维度的数据
+  console.log('维度发生变化')
+  // 这里不需要做额外处理，因为数据配置组件会通过watch监听维度变化
 }
 
+// 数据配置更新事件处理
 const updateMetricField = (metricId: string, field: string, value: any) => {
   const metric = dataMetrics.value.find(m => m.id === metricId)
   if (metric) {
@@ -269,7 +276,10 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
   }
 }
 
+// 生成图表事件处理
 const generateChart = () => {
+  console.log('generateChart called, firstDimension.value:', firstDimension.value)
+  
   // 校验一级维度是否选择
   if (!firstDimension.value) {
     message.error('请先选择一级维度（横坐标）')
@@ -309,8 +319,8 @@ const generateChart = () => {
   emit('generateChart', {
     firstDimension: firstDimension.value,
     secondDimension: secondDimension.value,
-    filterDimension: filterDimension.value,
-    selectedFilterItems: selectedFilterItems.value,
+    filterDimensions: filterDimensions.value,
+    selectedFilterItemsArray: selectedFilterItemsArray.value,
     dataMetrics: dataMetrics.value
   })
 }
@@ -320,8 +330,8 @@ const resetConfiguration = () => {
   // 重置所有配置到初始状态
   firstDimension.value = null
   secondDimension.value = null
-  filterDimension.value = null
-  selectedFilterItems.value = []
+  filterDimensions.value = [null]
+  selectedFilterItemsArray.value = [[]]
 
   //默认添加分布统计数据配置
   const defaultDataMetric: DataMetricUI = {
@@ -332,77 +342,30 @@ const resetConfiguration = () => {
     color: '#1890ff',
     yAxisPosition: 'left',
     stackGroup: 'noStack',
-    unit: '',
+    unit: '个',
     itemColors: {}
   }
 
   dataMetrics.value = [defaultDataMetric]
 
-  // 发出更新事件通知父组件
-  emit('update:firstDimension', null)
-  emit('update:secondDimension', null)
-  emit('update:filterDimension', null)
-  emit('update:selectedFilterItems', [])
-  emit('update:dataMetrics', [defaultDataMetric])
-  emit('toggleLeftPanel', false)
-
-  // 清除右侧图表
-  emit('clearChart')
-
-  // 发射重置配置事件
-  emit('resetConfig')
-}
-
-// 颜色生成函数
-const defaultColors = ref<string[]>([
-  '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
-  '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#2f54eb'
-])
-
-const presetColors = [
-  '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
-  '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#2f54eb',
-  '#fa541c', '#1890ff', '#722ed1', '#eb2f96', '#52c41a',
-  '#faad14', '#13c2c2', '#f5222d', '#fa8c16', '#a0d911'
-]
-
-const getRandomColor = () => {
-  const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
-  return colors[Math.floor(Math.random() * colors.length)]
-}
-
-const generateDistinctColors = (count: number): string[] => {
-  if (count <= 0) return []
-
-  const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
-
-  if (count === 1) return [colors[0]]
-  if (count <= colors.length) {
-    // 如果需要的颜色数量小于等于预设颜色数量，均匀选取
-    const step = Math.floor(colors.length / count)
-    const result: string[] = []
-    for (let i = 0; i < count; i++) {
-      result.push(colors[i * step])
-    }
-    return result
-  } else {
-    // 如果需要的颜色数量大于预设颜色数量，先用完所有预设颜色，再随机生成
-    const result = [...colors]
-    for (let i = colors.length; i < count; i++) {
-      result.push(colors[i % colors.length])
-    }
-    return result
-  }
+  // 发出更新事件
+  emit('update:firstDimension', firstDimension.value)
+  emit('update:secondDimension', secondDimension.value)
+  emit('update:filterDimensions', filterDimensions.value)
+  emit('update:selectedFilterItemsArray', selectedFilterItemsArray.value)
+  emit('update:dataMetrics', dataMetrics.value)
 }
 </script>
 
-<style lang="less" scoped>
+<style scoped lang="less">
 .right-panel {
   width: 350px;
   background: white;
   border-left: 1px solid #e8e8e8;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0; // 防止被压缩
+  box-sizing: border-box;
 
   .config-header {
     display: flex;
@@ -413,75 +376,33 @@ const generateDistinctColors = (count: number): string[] => {
     background: #fafafa;
     height: 64px;
     box-sizing: border-box;
-
+    
     .config-header-content {
       display: flex;
       align-items: center;
       gap: 8px;
-
+      
       .collapse-btn {
         color: #666;
-
+        
         &:hover {
           color: #1890ff;
         }
       }
-    }
+    }  // 这里是.config-header-content的闭合大括号
 
     h3 {
       margin: 0;
       font-size: 16px;
       font-weight: 600;
     }
-
-    .action-buttons {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      .reset-btn {
-        color: #8c8c8c;
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        transition: all 0.2s;
-
-        &:hover:not(:disabled) {
-          color: #1890ff;
-          background-color: #e6f7ff;
-        }
-
-        &:disabled {
-          color: #d9d9d9;
-          cursor: not-allowed;
-        }
-      }
-
-      .ant-btn {
-        &:not(.ant-btn-primary) {
-          color: #595959;
-
-          &:hover {
-            border-color: #40a9ff;
-            color: #40a9ff;
-          }
-
-          &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
-        }
-      }
-    }
-  }
+  }  // 这里是.config-header的闭合大括号
 
   .config-content {
     flex: 1;
     padding: 16px;
     overflow-y: auto;
+    box-sizing: border-box;
   }
-}
+}  // 这里是.right-panel的闭合大括号
 </style>

@@ -10,11 +10,11 @@
 
     <!-- 右侧配置面板 -->
     <config-panel
-      v-model:data-metrics="dataMetrics"
-      v-model:filter-dimension="filterDimension"
       v-model:first-dimension="firstDimension"
       v-model:second-dimension="secondDimension"
-      v-model:selected-filter-items="selectedFilterItems"
+      v-model:filter-dimensions="filterDimensions"
+      v-model:data-metrics="dataMetrics"
+      v-model:selected-filter-items-array="selectedFilterItemsArray"
       :available-data-types="availableDataTypes"
       :left-panel-collapsed="leftPanelCollapsed"
       @toggle-left-panel="toggleLeftPanel"
@@ -35,7 +35,7 @@
 
 <script lang="ts" setup>
 import { message } from 'ant-design-vue'
-import { onMounted, provide, ref, nextTick } from 'vue'
+import { onMounted, provide, ref, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import ConfigPanel from './indicator/config/ConfigPanel.vue'
@@ -119,8 +119,8 @@ const indicatorTreeData = ref<IndicatorGroup[]>([])
 // 维度配置
 const firstDimension = ref<IndicatorGroup | null>(null)
 const secondDimension = ref<IndicatorGroup | null>(null)
-const filterDimension = ref<IndicatorGroup | null>(null)
-const selectedFilterItems = ref<string[]>([])
+const filterDimensions = ref<(IndicatorGroup | null)[]>([null])
+const selectedFilterItemsArray = ref<string[][]>([[]])
 
 // 数据配置
 const dataMetrics = ref<DataMetricUI[]>([
@@ -224,39 +224,24 @@ const parseUnitConfig = (unitConfig: string): { fix: number; unit: number; displ
     10000: '万元'
   }
 
-  const displayUnit = unitMap[unit] || `${unit}元`
-
-  return { fix, unit, displayUnit }
+  return { fix, unit, displayUnit: unitMap[unit] || '元' }
 }
 
-// 单位转换函数：将数字单位转换为中文单位（保持向后兼容）
-const convertUnitToChineseUnit = (unitValue: string | number): string => {
-  if (typeof unitValue === 'string' && unitValue.includes(',')) {
-    const { displayUnit } = parseUnitConfig(unitValue)
-    return displayUnit
-  }
-
-  const numericUnit = typeof unitValue === 'string' ? parseInt(unitValue, 10) : unitValue
-
-  if (isNaN(numericUnit)) {
-    return unitValue?.toString() || ''
-  }
-
-  const unitMap: Record<number, string> = {
-    1: '元',
-    10: '十元',
-    100: '百元',
-    1000: '千元',
-    10000: '万元'
-  }
-
-  return unitMap[numericUnit] || `${numericUnit}元`
+// 转换单位配置为中文单位显示
+const convertUnitToChineseUnit = (unitConfig: string): string => {
+  const { displayUnit } = parseUnitConfig(unitConfig)
+  return displayUnit
 }
 
 // 转换函数：将DataMetricUI转换为DataMetric
 const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
-  // 解析单位配置以获取格式化参数
-  const unitConfig = metric.unitConfig // 不设置默认值，只有金额字段才有值
+  // 处理金额字段的单位配置
+  let unitConfig: string | undefined
+  const matchingType = availableDataTypes.value.find(type => type.dataField === metric.dataField)
+  if (matchingType && matchingType.unitConfig) {
+    unitConfig = matchingType.unitConfig
+  }
+
   const { fix, unit: unitDivisor } = unitConfig ? parseUnitConfig(unitConfig) : { fix: 0, unit: 1 }
 
   return {
@@ -274,10 +259,9 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
 }
 
 // 转换函数：将selectedFilterItems转换为ConditionGroup
-const convertToConditionGroup = (filterItems: string[], filterDimension: IndicatorGroup | null): ConditionGroup => {
-
+const convertToConditionGroup = (filterItemsArray: string[][], filterDimensions: (IndicatorGroup | null)[]): ConditionGroup => {
   // 如果没有筛选维度或没有选中的筛选项，返回空条件
-  if (!filterDimension || !filterItems || filterItems.length === 0) {
+  if (!filterDimensions || filterDimensions.length === 0 || filterItemsArray.length === 0) {
     return {
       conditionList: [],
       andOr: '0'
@@ -285,71 +269,113 @@ const convertToConditionGroup = (filterItems: string[], filterDimension: Indicat
   }
 
   // 根据选中的筛选项，构建条件组
-  const itemConditionGroups: ConditionListType[] = []
+  const allConditionGroups: ConditionListType[] = []
 
-  filterItems.forEach(itemKey => {
-    const filterItem = filterDimension.items?.find(item => item.key === itemKey)
+  // 遍历所有筛选维度
+  filterDimensions.forEach((filterDimension, index) => {
+    if (!filterDimension || !filterItemsArray[index] || filterItemsArray[index].length === 0) {
+      return
+    }
 
-    if (filterItem && filterItem.condition) {
-      try {
-        // 解析筛选项的条件
-        const itemConditions = parseConditionGroup(filterItem.condition)
+    const filterItems = filterItemsArray[index]
+    const itemConditionGroups: ConditionListType[] = []
 
-        // 将每个筛选项作为一个独立的条件组
-        if (itemConditions.conditionList && itemConditions.conditionList.length > 0) {
-          // 如果只有一个条件，直接使用
-          if (itemConditions.conditionList.length === 1) {
-            itemConditionGroups.push(itemConditions.conditionList[0])
-          } else {
-            // 如果有多个条件，作为一个子条件组
-            const subConditionGroup: ConditionListType = {
-              property: null,
-              value: null,
-              relation: null,
-              conditionList: itemConditions.conditionList,
-              andOr: itemConditions.andOr // 保持原有的逻辑关系
+    filterItems.forEach(itemKey => {
+      const filterItem = filterDimension.items?.find(item => item.key === itemKey)
+
+      if (filterItem && filterItem.condition) {
+        try {
+          // 解析筛选项的条件
+          const itemConditions = parseConditionGroup(filterItem.condition)
+
+          // 将每个筛选项作为一个独立的条件组
+          if (itemConditions.conditionList && itemConditions.conditionList.length > 0) {
+            // 如果只有一个条件，直接使用
+            if (itemConditions.conditionList.length === 1) {
+              itemConditionGroups.push(itemConditions.conditionList[0])
+            } else {
+              // 如果有多个条件，作为一个子条件组
+              const subConditionGroup: ConditionListType = {
+                property: null,
+                value: null,
+                relation: null,
+                conditionList: itemConditions.conditionList,
+                andOr: itemConditions.andOr // 保持原有的逻辑关系
+              }
+              itemConditionGroups.push(subConditionGroup)
             }
-            itemConditionGroups.push(subConditionGroup)
           }
+        } catch (error) {
+          console.warn('解析筛选项条件失败:', {
+            itemKey,
+            condition: filterItem.condition,
+            error
+          })
         }
-      } catch (error) {
-        console.warn('解析筛选项条件失败:', {
+      } else {
+        console.warn('未找到筛选项或筛选项无条件:', {
           itemKey,
-          condition: filterItem.condition,
-          error
+          filterItem
         })
       }
-    } else {
-      console.warn('未找到筛选项或筛选项无条件:', {
-        itemKey,
-        filterItem
-      })
+    })
+
+    // 如果当前筛选维度有选中项，将这些项作为一个条件组（使用OR连接）
+    if (itemConditionGroups.length > 0) {
+      const dimensionConditionGroup: ConditionListType = {
+        property: null,
+        value: null,
+        relation: null,
+        conditionList: itemConditionGroups,
+        andOr: '1' // 多个筛选项之间用OR连接（选择了司局级 OR 处级）
+      }
+      allConditionGroups.push(dimensionConditionGroup)
     }
   })
 
   const result = {
-    conditionList: itemConditionGroups,
-    andOr: '1' as '0' | '1' // 多个筛选项之间用OR连接（选择了司局级 OR 处级）
+    conditionList: allConditionGroups,
+    andOr: '0' as '0' | '1' // 多个筛选维度之间用AND连接
   }
 
   return result
 }
 
-const generateChart = async () => {
-  if (!firstDimension.value) {
+const generateChart = async (chartData?: {
+  firstDimension: IndicatorGroup | null,
+  secondDimension: IndicatorGroup | null,
+  filterDimensions: (IndicatorGroup | null)[],
+  selectedFilterItemsArray: string[][],
+  dataMetrics: DataMetricUI[]
+}) => {
+  console.log('generateChart called in dashboard.vue')
+  console.log('chartData:', chartData)
+  console.log('firstDimension.value:', firstDimension.value)
+  
+  // 如果传递了chartData，使用其中的数据
+  const firstDim = chartData?.firstDimension || firstDimension.value
+  const secondDim = chartData?.secondDimension || secondDimension.value
+  const filterDims = chartData?.filterDimensions || filterDimensions.value
+  const selectedFilterItems = chartData?.selectedFilterItemsArray || selectedFilterItemsArray.value
+  const dataMetricsData = chartData?.dataMetrics || dataMetrics.value
+  
+  console.log('firstDim:', firstDim)
+  
+  if (!firstDim) {
+    console.log('firstDimension is null')
     message.error('请先选择一级维度（横坐标）')
     return
   }
 
-  if (dataMetrics.value.length === 0) {
+  if (dataMetricsData.length === 0) {
     message.error('请至少添加一个数据配置')
     return
   }
 
   // 校验规则1: 存在二级维度时，不能选择饼图
-  if (secondDimension.value) {
+  if (secondDim) {
     // 有二级维度时，不能选择饼图
-    const pieChartMetrics = dataMetrics.value.filter(metric => metric.chartType === 'pie')
+    const pieChartMetrics = dataMetricsData.filter(metric => metric.chartType === 'pie')
     if (pieChartMetrics.length > 0) {
       message.error('存在二级维度时，不能选择饼图')
       return
@@ -358,7 +384,7 @@ const generateChart = async () => {
 
   // 校验规则2: 当数据选择的堆叠组一致时，必须确保选择的坐标轴位置也一致
   const stackGroups = new Map<string, string>() // stackGroup -> yAxisPosition
-  for (const metric of dataMetrics.value) {
+  for (const metric of dataMetricsData) {
     if (metric.stackGroup && metric.stackGroup !== 'single') {
       if (stackGroups.has(metric.stackGroup)) {
         // 如果已经有这个堆叠组，检查坐标轴位置是否一致
@@ -374,8 +400,8 @@ const generateChart = async () => {
   }
 
   // 转换为DimensionIndicatorsFilter类型并输出
-  const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value)
-  const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value)
+  const firstDimensionConverted = convertToTalentIndicatorGroup(firstDim)
+  const secondDimensionConverted = convertToTalentIndicatorGroup(secondDim)
 
   if (!firstDimensionConverted) {
     message.error('一级维度转换失败，请检查数据格式')
@@ -385,8 +411,8 @@ const generateChart = async () => {
   const filterData: DimensionIndicatorsFilter = {
     firstDimension: firstDimensionConverted,
     secondDimension: secondDimensionConverted, // 二级维度可以为null
-    filterConditions: convertToConditionGroup(selectedFilterItems.value, filterDimension.value),
-    dataMetrics: dataMetrics.value.map(convertToDataMetric)
+    filterConditions: convertToConditionGroup(selectedFilterItems, filterDims),
+    dataMetrics: dataMetricsData.map(convertToDataMetric)
   }
 
   // 更新维度指标过滤器数据
@@ -399,10 +425,16 @@ const generateChart = async () => {
   if (chartDisplayAreaRef.value) {
     try {
       await chartDisplayAreaRef.value.generateChart()
+      // 只有在成功生成图表后才显示成功消息
       message.success('图表生成成功')
     } catch (error) {
       console.error('图表生成失败:', error)
-      message.error('图表生成失败，请检查数据配置或网络连接')
+      // 显示具体的错误信息
+      if (error instanceof Error) {
+        message.error(`图表生成失败: ${error.message || '未知错误'}`)
+      } else {
+        message.error('图表生成失败，请检查数据配置或网络连接')
+      }
     }
   } else {
     message.error('图表组件未找到')
@@ -557,8 +589,8 @@ const deepEqual = (a: any, b: any): boolean => {
 
 // 基于 filterConditions 在整棵指标树中推断筛选维度与选中项
 const tryReconstructFilterFromConditions = (savedConfig: any) => {
-  filterDimension.value = null
-  selectedFilterItems.value = []
+  filterDimensions.value = [null]
+  selectedFilterItemsArray.value = [[]]
 
   const filter = savedConfig?.filterConditions
   if (!filter || !Array.isArray(filter.conditionList) || filter.conditionList.length === 0) {
@@ -606,8 +638,8 @@ const tryReconstructFilterFromConditions = (savedConfig: any) => {
   }
 
   if (bestMatchGroup && bestMatchItemKeys.length) {
-    filterDimension.value = bestMatchGroup
-    selectedFilterItems.value = bestMatchItemKeys
+    filterDimensions.value = [bestMatchGroup]
+    selectedFilterItemsArray.value = [bestMatchItemKeys]
   }
 }
 
@@ -643,6 +675,23 @@ const restoreConfig = async (savedConfig: any) => {
     // 根据 filterConditions 在整棵指标树中推断筛选维度
     tryReconstructFilterFromConditions(savedConfig)
 
+    // 回显多个筛选条件（如果存在）
+    if (savedConfig.filterDimensions && Array.isArray(savedConfig.filterDimensions)) {
+      filterDimensions.value = savedConfig.filterDimensions.map((dim: any) => mapSavedGroupToUi(dim))
+    } else {
+      // 兼容旧格式
+      const filterDim = mapSavedGroupToUi(savedConfig.filterDimension)
+      filterDimensions.value = [filterDim]
+    }
+
+    // 回显选中的筛选项
+    if (savedConfig.selectedFilterItemsArray && Array.isArray(savedConfig.selectedFilterItemsArray)) {
+      selectedFilterItemsArray.value = savedConfig.selectedFilterItemsArray
+    } else {
+      // 兼容旧格式
+      selectedFilterItemsArray.value = [savedConfig.selectedFilterItems || []]
+    }
+
     // 同步给图表展示，并记录待生成
     dimensionIndicatorsFilter.value = savedConfig
     pendingSavedConfig.value = savedConfig
@@ -677,8 +726,8 @@ defineExpose({
   dimensionIndicatorsFilter,
   firstDimension,
   secondDimension,
-  filterDimension,
-  selectedFilterItems,
+  filterDimensions,
+  selectedFilterItemsArray,
   dataMetrics,
   clearChart,
   generateChart,
