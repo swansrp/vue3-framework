@@ -148,10 +148,11 @@
 </template>
 
 <script lang="ts" setup>
-import {DownOutlined, RightOutlined} from '@ant-design/icons-vue'
-import {message} from 'ant-design-vue'
-import {inject, ref} from 'vue'
-import {generateDistinctColors, getRandomColor} from '@/framework/utils/colorUtils'
+import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { inject, ref } from 'vue'
+
+import { generateDistinctColors, getRandomColor } from '@/framework/utils/colorUtils'
 
 // 接口定义
 interface IndicatorItem {

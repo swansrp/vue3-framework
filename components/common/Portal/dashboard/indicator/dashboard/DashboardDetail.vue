@@ -56,6 +56,7 @@
 import { computed } from 'vue'
 
 import type { SelectedBarInfo } from '../../type/ChartTypes'
+
 import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 const props = defineProps<{

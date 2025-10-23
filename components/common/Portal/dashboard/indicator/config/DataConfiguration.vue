@@ -294,9 +294,9 @@
 </template>
 
 <script lang="ts" setup>
-import {DownOutlined, RightOutlined} from '@ant-design/icons-vue'
-import {message} from 'ant-design-vue'
-import {ref, computed, watch} from 'vue'
+import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { ref, computed, watch } from 'vue'
 
 import ColorPicker from './ColorPicker.vue'
 
@@ -364,24 +364,24 @@ const collapsed = ref(false)
 
 // 配置选项
 const chartTypeOptions = ref<ChartTypeOption[]>([
-  {label: '柱状图', value: 'bar'},
-  {label: '折线图', value: 'line'},
-  {label: '饼图', value: 'pie'}
+  { label: '柱状图', value: 'bar' },
+  { label: '折线图', value: 'line' },
+  { label: '饼图', value: 'pie' }
 ])
 
 const axisPositionOptions = ref<{ label: string; value: string }[]>([
-  {value: 'left', label: '左侧'},
-  {value: 'right', label: '右侧'}
+  { value: 'left', label: '左侧' },
+  { value: 'right', label: '右侧' }
 ])
 
 const stackOptions = ref<{ label: string; value: string }[]>([
-  {label: '不堆叠', value: 'noStack'},
-  {label: '自堆叠', value: 'selfStack'},
-  {label: '堆叠组1', value: 'stack1'},
-  {label: '堆叠组2', value: 'stack2'},
-  {label: '堆叠组3', value: 'stack3'},
-  {label: '堆叠组4', value: 'stack4'},
-  {label: '堆叠组5', value: 'stack5'}
+  { label: '不堆叠', value: 'noStack' },
+  { label: '自堆叠', value: 'selfStack' },
+  { label: '堆叠组1', value: 'stack1' },
+  { label: '堆叠组2', value: 'stack2' },
+  { label: '堆叠组3', value: 'stack3' },
+  { label: '堆叠组4', value: 'stack4' },
+  { label: '堆叠组5', value: 'stack5' }
 ])
 
 // 数据配置相关状态
@@ -391,7 +391,7 @@ const dataFormMode = ref<'add' | 'edit'>('add')
 
 // 数据项颜色配置相关状态
 const dataItemColorPickerVisible = ref(false)
-const currentDataItemTarget = ref<{ metricId: string; itemKey: string }>({metricId: '', itemKey: ''})
+const currentDataItemTarget = ref<{ metricId: string; itemKey: string }>({ metricId: '', itemKey: '' })
 
 // 计算属性
 const currentDataItemColor = computed(() => {
@@ -430,7 +430,7 @@ const availableChartTypeOptions = computed(() => {
         disabledReason: canSelectPie ? '' : '饼图只能作为第一个数据指标'
       }
     }
-    return {...option, disabled: false, disabledReason: ''}
+    return { ...option, disabled: false, disabledReason: '' }
   })
 })
 
@@ -544,7 +544,7 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
       itemColors: {}
     }
   } else if (metric) {
-    editingDataMetric.value = {...metric}
+    editingDataMetric.value = { ...metric }
   }
 
   dataConfigVisible.value = true
@@ -599,12 +599,12 @@ const confirmDataConfig = () => {
       })
     }
 
-    newMetrics.push({...editingDataMetric.value})
+    newMetrics.push({ ...editingDataMetric.value })
     message.success('数据添加成功')
   } else {
     const index = newMetrics.findIndex(m => m.id === editingDataMetric.value!.id)
     if (index !== -1) {
-      newMetrics[index] = {...editingDataMetric.value}
+      newMetrics[index] = { ...editingDataMetric.value }
       message.success('数据修改成功')
     }
   }
@@ -627,13 +627,13 @@ const getDataItemColor = (metricId: string, itemKey: string): string => {
 
 // 打开数据项颜色选择器
 const openDataItemColorPicker = (metricId: string, itemKey: string) => {
-  currentDataItemTarget.value = {metricId, itemKey}
+  currentDataItemTarget.value = { metricId, itemKey }
   dataItemColorPickerVisible.value = true
 }
 
 // 确认数据项颜色更改
 const confirmDataItemColorChange = (color: string) => {
-  const {metricId, itemKey} = currentDataItemTarget.value
+  const { metricId, itemKey } = currentDataItemTarget.value
   const newMetrics = [...props.dataMetrics]
   const metricIndex = newMetrics.findIndex(m => m.id === metricId)
 
@@ -661,7 +661,7 @@ const hslToRgb = (hsl: string) => {
   // 修改正则表达式，支持小数和更灵活的格式
   const match = hsl.match(/hsl\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)%\s*,\s*(\d+(?:\.\d+)?)%\s*\)/)
   if (!match) {
-    return {r: 0, g: 0, b: 0}
+    return { r: 0, g: 0, b: 0 }
   }
 
   // 使用 parseFloat 支持小数，而不是 parseInt
@@ -807,7 +807,7 @@ watch(
         updateDataMetricsWithSecondDimensionColors(newSecondDim.items)
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
 // 更新数据指标的颜色配置以匹配第二维度

@@ -214,8 +214,8 @@
 
 <script lang="ts" setup>
 import { DownOutlined, RightOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
-import { inject, ref, watch, computed } from 'vue'
 import { message } from 'ant-design-vue'
+import { inject, ref, watch, computed } from 'vue'
 
 // 接口定义
 interface IndicatorItem {

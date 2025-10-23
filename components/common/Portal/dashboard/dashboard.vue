@@ -35,7 +35,7 @@
 
 <script lang="ts" setup>
 import { message } from 'ant-design-vue'
-import { onMounted, provide, ref, nextTick, watch } from 'vue'
+import { onMounted, provide, ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 
 import ConfigPanel from './indicator/config/ConfigPanel.vue'
