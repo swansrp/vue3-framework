@@ -331,7 +331,7 @@ watch(
         }
       }
       
-      const { openKeys, titlePath } = getMenuKeysFromGlobalRoute(selectedKey)
+      const { openKeys, titlePath } = getMenuKeysFromGlobalRoute()
       keys.openKeys = openKeys
       
       // 选中左侧菜单后， 为面包屑提供数据
@@ -443,7 +443,7 @@ onMounted(() => {
 .left-nav-container {
   position: relative;
   height: 100%;
-  transition: width 0.3s ease;
+  transition: width 0.2s ease;
 }
 
 :deep(.ant-menu) {
@@ -454,14 +454,14 @@ onMounted(() => {
   box-shadow: 5px 0 5px 0 rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 999;
-  transition: width 0.3s ease;
+  transition: width 0.2s ease;
 }
 
 /* 左侧菜单项基础样式优化 - 统一缩小边框间距 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
   margin: 2px 6px;
   border-radius: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   padding: 0 16px;
@@ -490,27 +490,29 @@ onMounted(() => {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* 选中菜单项样式 - 强化发光效果 */
+/* 选中菜单项样式 - 按下去的凹陷效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected) {
   background: linear-gradient(135deg, 
-    rgba(24, 144, 255, 0.35) 0%, 
-    rgba(24, 144, 255, 0.25) 50%,
-    rgba(24, 144, 255, 0.15) 100%) !important;
+    rgba(10, 90, 180, 0.5) 0%, 
+    rgba(24, 144, 255, 0.4) 50%,
+    rgba(10, 90, 180, 0.5) 100%) !important;
   color: #ffffff !important;
-  border: 1px solid rgba(24, 144, 255, 0.6) !important;
-  /* 增强的发光效果 */
+  border: 2px solid rgba(24, 144, 255, 0.7) !important;
+  /* 凹陷效果：内阴影 + 向内的位移 */
   box-shadow: 
-    0 0 25px rgba(24, 144, 255, 0.5),
-    0 0 12px rgba(24, 144, 255, 0.4),
-    0 6px 20px rgba(24, 144, 255, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 0 rgba(24, 144, 255, 0.3);
-  transform: translateY(-2px);
+    inset 0 4px 12px rgba(0, 0, 0, 0.5),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 30px rgba(0, 0, 0, 0.2),
+    0 0 30px rgba(24, 144, 255, 0.6),
+    0 0 15px rgba(24, 144, 255, 0.4);
+  transform: translateY(1px) scale(0.98);
   position: relative;
-  font-weight: 600;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* 选中菜单项的内部光晕 - 增强效果 */
+/* 选中菜单项的内部阴影增强 - 凹陷效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected::before) {
   content: '';
   position: absolute;
@@ -519,44 +521,67 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.2) 0%, 
-    rgba(24, 144, 255, 0.1) 30%,
+    rgba(0, 0, 0, 0.3) 0%, 
+    rgba(0, 0, 0, 0.1) 30%,
     transparent 70%, 
-    rgba(24, 144, 255, 0.15) 100%);
+    rgba(0, 0, 0, 0.2) 100%);
   border-radius: 5px;
   pointer-events: none;
 }
 
-/* 添加左侧高亮边框 */
+/* 添加左侧超明显高亮边框 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected::after) {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
+  top: -2px;
+  left: -2px;
+  width: 6px;
+  height: calc(100% + 4px);
   background: linear-gradient(180deg, 
-    rgba(24, 144, 255, 1) 0%, 
-    rgba(24, 144, 255, 0.8) 50%,
-    rgba(24, 144, 255, 1) 100%);
-  border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 8px rgba(24, 144, 255, 0.6);
+    rgba(64, 169, 255, 1) 0%, 
+    rgba(24, 144, 255, 1) 20%,
+    rgba(64, 169, 255, 1) 50%,
+    rgba(24, 144, 255, 1) 80%,
+    rgba(64, 169, 255, 1) 100%);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 
+    0 0 15px rgba(24, 144, 255, 0.9),
+    0 0 8px rgba(64, 169, 255, 0.7);
   pointer-events: none;
+  animation: pulse-border 2s ease-in-out infinite;
 }
 
-/* 选中菜单项图标样式 - 增强效果 */
+@keyframes pulse-border {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 
+      0 0 15px rgba(24, 144, 255, 0.9),
+      0 0 8px rgba(64, 169, 255, 0.7);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 
+      0 0 18px rgba(24, 144, 255, 1),
+      0 0 10px rgba(64, 169, 255, 0.9);
+  }
+}
+
+/* 选中菜单项图标样式 - 超强增强效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected .anticon) {
   color: #ffffff !important;
-  filter: drop-shadow(0 0 8px rgba(24, 144, 255, 0.8)) drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
-  transform: scale(1.1);
-  transition: all 0.3s ease;
-  text-shadow: 0 0 8px rgba(24, 144, 255, 0.6);
+  filter: 
+    drop-shadow(0 0 12px rgba(24, 144, 255, 1))
+    drop-shadow(0 0 6px rgba(64, 169, 255, 0.8))
+    drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+  transform: scale(1.15);
+  transition: all 0.15s ease;
+  text-shadow: 0 0 12px rgba(24, 144, 255, 0.8);
 }
 
 /* 普通菜单项图标样式 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item .anticon) {
   color: rgba(255, 255, 255, 0.75);
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
   margin-right: 12px;
 }
 
@@ -571,7 +596,7 @@ onMounted(() => {
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title) {
   margin: 2px 6px;
   border-radius: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 16px;
   height: 36px;
   line-height: 34px;
@@ -613,7 +638,7 @@ onMounted(() => {
 /* 子菜单箭头图标 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title .ant-menu-submenu-arrow) {
   color: rgba(255, 255, 255, 0.75);
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
 }
 
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title:hover .ant-menu-submenu-arrow) {
@@ -680,53 +705,62 @@ onMounted(() => {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* 子菜单选中项样式 - 增强效果 */
+/* 子菜单选中项样式 - 按下去的凹陷效果 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item-selected) {
   background: linear-gradient(135deg, 
-    rgba(24, 144, 255, 0.3) 0%, 
-    rgba(24, 144, 255, 0.2) 50%,
-    rgba(24, 144, 255, 0.12) 100%) !important;
+    rgba(10, 90, 180, 0.45) 0%, 
+    rgba(24, 144, 255, 0.35) 50%,
+    rgba(10, 90, 180, 0.45) 100%) !important;
   color: #ffffff !important;
-  border: 1px solid rgba(24, 144, 255, 0.5) !important;
+  border: 2px solid rgba(24, 144, 255, 0.65) !important;
   box-shadow: 
-    0 0 20px rgba(24, 144, 255, 0.4),
-    0 0 10px rgba(24, 144, 255, 0.3),
-    0 4px 16px rgba(24, 144, 255, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  font-weight: 600;
+    inset 0 3px 10px rgba(0, 0, 0, 0.45),
+    inset 0 2px 5px rgba(0, 0, 0, 0.35),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.25),
+    inset 0 0 25px rgba(0, 0, 0, 0.15),
+    0 0 25px rgba(24, 144, 255, 0.5),
+    0 0 12px rgba(24, 144, 255, 0.35);
+  transform: translateY(1px) scale(0.98);
+  font-weight: 700;
   position: relative;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* 子菜单选中项的左侧高亮边框 */
+/* 子菜单选中项的左侧超明显高亮边框 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item-selected::after) {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 3px;
-  height: 100%;
+  top: -2px;
+  left: -2px;
+  width: 5px;
+  height: calc(100% + 4px);
   background: linear-gradient(180deg, 
-    rgba(24, 144, 255, 1) 0%, 
-    rgba(24, 144, 255, 0.8) 50%,
-    rgba(24, 144, 255, 1) 100%);
-  border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 6px rgba(24, 144, 255, 0.6);
+    rgba(64, 169, 255, 1) 0%, 
+    rgba(24, 144, 255, 1) 20%,
+    rgba(64, 169, 255, 1) 50%,
+    rgba(24, 144, 255, 1) 80%,
+    rgba(64, 169, 255, 1) 100%);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 
+    0 0 12px rgba(24, 144, 255, 0.8),
+    0 0 6px rgba(64, 169, 255, 0.6);
   pointer-events: none;
+  animation: pulse-border 2s ease-in-out infinite;
 }
 
-/* 收起状态下选中项的强化发光效果 */
+/* 收起状态下选中项的凹陷效果 */
 :deep(.ant-menu-dark.ant-menu-inline-collapsed .ant-menu-item-selected) {
   box-shadow: 
-    0 0 30px rgba(24, 144, 255, 0.6),
-    0 0 15px rgba(24, 144, 255, 0.5),
-    0 6px 20px rgba(24, 144, 255, 0.4),
-    inset 0 0 15px rgba(24, 144, 255, 0.3);
+    inset 0 4px 12px rgba(0, 0, 0, 0.5),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 0 30px rgba(0, 0, 0, 0.2),
+    0 0 35px rgba(24, 144, 255, 0.7),
+    0 0 20px rgba(24, 144, 255, 0.5);
   background: linear-gradient(135deg, 
-    rgba(24, 144, 255, 0.4) 0%, 
-    rgba(24, 144, 255, 0.25) 100%) !important;
-  border: 2px solid rgba(24, 144, 255, 0.7) !important;
-  transform: translateY(-2px) scale(1.02);
+    rgba(10, 90, 180, 0.55) 0%, 
+    rgba(24, 144, 255, 0.4) 100%) !important;
+  border: 3px solid rgba(24, 144, 255, 0.8) !important;
+  transform: translateY(1px) scale(0.97);
 }
 
 /* 拖拽控制条样式 */
@@ -744,7 +778,7 @@ onMounted(() => {
   justify-content: center;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   opacity: 0;
 }
 
@@ -767,7 +801,7 @@ onMounted(() => {
   height: 3px;
   background: rgba(255, 255, 255, 0.6);
   border-radius: 50%;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .resize-handle:hover .dot,
@@ -788,7 +822,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   user-select: none;
 }
 
@@ -833,7 +867,7 @@ onMounted(() => {
   width: 0;
   height: 0;
   border-style: solid;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .arrow-left {
