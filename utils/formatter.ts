@@ -17,7 +17,7 @@ export const formatMoney = (money: number, fix = 2, unit = 10000) => {
 
 export const formatPercent = (src: number, fix = 2, dist = 100) => {
   const percent = src / dist
-  if (isNaN(percent) || !Number.isFinite(percent)) {
+  if (isEmpty(src) || isNaN(percent) || !Number.isFinite(percent)) {
     return '--%'
   } else {
     try {
