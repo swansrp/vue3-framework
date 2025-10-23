@@ -279,7 +279,7 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
 // 生成图表事件处理
 const generateChart = () => {
   console.log('generateChart called, firstDimension.value:', firstDimension.value)
-  
+
   // 校验一级维度是否选择
   if (!firstDimension.value) {
     message.error('请先选择一级维度（横坐标）')
@@ -310,11 +310,12 @@ const generateChart = () => {
     // 校验是否为饼图类型
     const pieMetric = dataMetrics.value[0]
     if (pieMetric.chartType !== 'pie') {
-      message.error('当前配置不支持混合图表类型，请保持一致的图表类型')
+      message.error('饼图不能与其他图表类型混合使用')
       return
     }
   }
 
+  // 柱状图和折线图可以混合使用，无需额外校验
   // 发出生成图表事件，传递完整数据
   emit('generateChart', {
     firstDimension: firstDimension.value,
@@ -376,27 +377,31 @@ const resetConfiguration = () => {
     background: #fafafa;
     height: 64px;
     box-sizing: border-box;
-    
+
     .config-header-content {
       display: flex;
       align-items: center;
       gap: 8px;
-      
+
       .collapse-btn {
         color: #666;
-        
+
         &:hover {
           color: #1890ff;
         }
       }
-    }  // 这里是.config-header-content的闭合大括号
+    }
+
+    // 这里是.config-header-content的闭合大括号
 
     h3 {
       margin: 0;
       font-size: 16px;
       font-weight: 600;
     }
-  }  // 这里是.config-header的闭合大括号
+  }
+
+  // 这里是.config-header的闭合大括号
 
   .config-content {
     flex: 1;
@@ -404,5 +409,6 @@ const resetConfiguration = () => {
     overflow-y: auto;
     box-sizing: border-box;
   }
-}  // 这里是.right-panel的闭合大括号
-</style>
+}
+
+// 这里是.right-panel的闭合大括号</style>

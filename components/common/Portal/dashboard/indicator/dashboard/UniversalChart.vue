@@ -104,6 +104,15 @@ export default defineComponent({
       if (props.dataMetrics && props.dataMetrics.length === 1 && props.dataMetrics[0].chartType === 'pie') {
         return 'pie'
       }
+
+      // 检查是否有混合图表类型（柱状图 + 折线图）
+      const hasBar = props.dataMetrics.some(m => m.chartType === 'bar')
+      const hasLine = props.dataMetrics.some(m => m.chartType === 'line')
+
+      if (hasBar && hasLine) {
+        return 'mixed' // 混合图表类型
+      }
+
       // 否则使用传入的chartType
       return props.chartType || 'bar'
     })
@@ -1091,6 +1100,575 @@ export default defineComponent({
       }
     }
 
+    // 生成混合图表配置（柱状图 + 折线图）
+    const generateMixedChartOption = (processedData: any): echarts.EChartsOption => {
+      const { firstDimensionGroups, secondDimensionGroups, statisticTypes, flattenedData } = processedData
+
+      // 使用props.categories或默认的firstDimensionGroups
+      const categories = props.categories || firstDimensionGroups
+
+      const series: any[] = []
+
+      // 当secondDimensionGroups为空时，只使用categories和statisticTypes生成系列
+      if (isEmpty(secondDimensionGroups)) {
+        // 没有第二维度，直接按统计类型创建系列
+        statisticTypes.forEach((statType: string, statIndex: number) => {
+          const metric = props.dataMetrics.find(m => m.dataName === statType)
+          if (!metric) return
+
+          const seriesData = categories.map((category: string, categoryIndex: number) => {
+            const item = flattenedData.find((d: any) =>
+              d.firstDimension === category &&
+              d.statisticType === statType
+            )
+            const itemColor = (props.dimensionValueMap
+              && metric.itemColors
+              && props.dimensionValueMap.first
+              && metric.itemColors[props.dimensionValueMap.first[category]])
+              || metric.color
+              || `hsl(${((statIndex * categories.length + categoryIndex) * 30) % 360}, 70%, 50%)`
+
+            // 对数据值进行单位转换
+            const originalValue = item ? item.statistic : 0
+            const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
+            const convertedValue = metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
+
+            return {
+              value: convertedValue,
+              itemStyle: {
+                color: itemColor
+              }
+            }
+          })
+
+          // 根据指标配置决定使用哪个y轴
+          const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
+
+          // 根据图表类型创建不同的系列
+          if (metric.chartType === 'bar') {
+            // 柱状图系列
+            let stackKey: string | undefined = undefined
+            if (metric.stackGroup) {
+              if (metric.stackGroup === 'noStack') {
+                stackKey = undefined
+              } else if (metric.stackGroup === 'selfStack') {
+                stackKey = `${metric.dataField}__y${yAxisIndex}`
+              } else {
+                stackKey = `${metric.stackGroup}__y${yAxisIndex}`
+              }
+            }
+
+            series.push({
+              name: statType,
+              type: 'bar',
+              yAxisIndex,
+              stack: stackKey,
+              data: seriesData,
+              label: {
+                show: true,
+                position: 'inside',
+                formatter: (params: any) => {
+                  const metric = props.dataMetrics.find(m => m.dataName === params.seriesName)
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(params.value).toLocaleString(undefined, {
+                      minimumFractionDigits: fix,
+                      maximumFractionDigits: fix
+                    })
+                  }
+                  return Number(params.value).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  })
+                },
+                fontSize: 10,
+                color: '#fff',
+                fontWeight: 'bold',
+                textShadowColor: 'rgba(0,0,0,0.5)',
+                textShadowBlur: 2
+              },
+              emphasis: {
+                focus: 'series',
+                itemStyle: {
+                  borderWidth: 2,
+                  borderColor: '#fff',
+                  shadowBlur: 5,
+                  shadowColor: 'rgba(0,0,0,0.3)'
+                }
+              },
+              triggerLineEvent: true,
+              animationDelay: (idx: number) => idx * 50
+            })
+          } else if (metric.chartType === 'line') {
+            // 折线图系列
+            series.push({
+              name: statType,
+              type: 'line',
+              yAxisIndex,
+              data: seriesData,
+              lineStyle: {
+                color: metric.color || `hsl(${(statIndex * 60) % 360}, 70%, 50%)`,
+                width: 2
+              },
+              symbol: 'circle',
+              symbolSize: 6,
+              label: {
+                show: true,
+                formatter: (params: any) => {
+                  const metric = props.dataMetrics.find(m => m.dataName === params.seriesName)
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(params.value).toLocaleString(undefined, {
+                      minimumFractionDigits: fix,
+                      maximumFractionDigits: fix
+                    })
+                  }
+                  return Number(params.value).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  })
+                },
+                fontSize: 10,
+                color: metric.color || `hsl(${(statIndex * 60) % 360}, 70%, 50%)`
+              },
+              emphasis: {
+                focus: 'series',
+                lineStyle: {
+                  width: 4,
+                  shadowBlur: 5,
+                  shadowColor: 'rgba(0,0,0,0.3)'
+                },
+                itemStyle: {
+                  borderWidth: 3,
+                  borderColor: '#fff',
+                  shadowBlur: 5,
+                  shadowColor: 'rgba(0,0,0,0.3)'
+                }
+              },
+              triggerLineEvent: true,
+              animationDelay: (idx: number) => idx * 50
+            })
+          }
+        })
+      } else {
+        // 有第二维度，按原有逻辑生成系列数据
+        secondDimensionGroups.forEach((secondDim: string) => {
+          statisticTypes.forEach((statType: string) => {
+            const metric = props.dataMetrics.find(m => m.dataName === statType)
+            if (!metric) return
+
+            const seriesData = categories.map((category: string) => {
+              const item = flattenedData.find((d: any) =>
+                d.firstDimension === category &&
+                d.secondDimension === secondDim &&
+                d.statisticType === statType
+              )
+              const originalValue = item ? item.statistic : 0
+              const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
+              return metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
+            })
+
+            const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
+
+            const mappedCode = props.dimensionValueMap?.second?.[secondDim]
+            const fallbackCode = (secondDimensionGroups.indexOf(secondDim) + 1).toString().padStart(2, '0')
+            const itemValueCode = mappedCode || fallbackCode
+            const itemColor = metric.itemColors?.[itemValueCode] ||
+              metric.color ||
+              `hsl(${(series.length * 60) % 360}, 70%, 50%)`
+
+            // 根据图表类型创建不同的系列
+            if (metric.chartType === 'bar') {
+              // 柱状图系列
+              let stackKey: string | undefined = undefined
+              if (metric.stackGroup) {
+                if (metric.stackGroup === 'noStack') {
+                  stackKey = undefined
+                } else if (metric.stackGroup === 'selfStack') {
+                  stackKey = `${metric.dataField}__y${yAxisIndex}`
+                } else {
+                  stackKey = `${metric.stackGroup}__${secondDim}__y${yAxisIndex}`
+                }
+              }
+
+              series.push({
+                name: `${secondDim}&&${statType}`,
+                type: 'bar',
+                yAxisIndex,
+                stack: stackKey,
+                data: seriesData,
+                itemStyle: {
+                  color: itemColor
+                },
+                label: {
+                  show: true,
+                  position: 'inside',
+                  formatter: (params: any) => {
+                    const metric = props.dataMetrics.find(m => m.dataName === params.seriesName.split('&&')[1])
+                    if (metric?.unitConfig) {
+                      const { fix } = parseUnitConfig(metric.unitConfig)
+                      return Number(params.value).toLocaleString(undefined, {
+                        minimumFractionDigits: fix,
+                        maximumFractionDigits: fix
+                      })
+                    }
+                    return Number(params.value).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    })
+                  },
+                  fontSize: 10,
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  textShadowColor: 'rgba(0,0,0,0.5)',
+                  textShadowBlur: 2
+                },
+                emphasis: {
+                  focus: 'series',
+                  itemStyle: {
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    shadowBlur: 5,
+                    shadowColor: 'rgba(0,0,0,0.3)'
+                  }
+                },
+                triggerLineEvent: true,
+                animationDelay: (idx: number) => idx * 50
+              })
+            } else if (metric.chartType === 'line') {
+              // 折线图系列
+              series.push({
+                name: `${secondDim}&&${statType}`,
+                type: 'line',
+                yAxisIndex,
+                data: seriesData,
+                lineStyle: {
+                  color: itemColor,
+                  width: 2
+                },
+                itemStyle: {
+                  color: itemColor
+                },
+                symbol: 'circle',
+                symbolSize: 6,
+                label: {
+                  show: true,
+                  formatter: (params: any) => {
+                    const metric = props.dataMetrics.find(m => m.dataName === params.seriesName.split('&&')[1])
+                    if (metric?.unitConfig) {
+                      const { fix } = parseUnitConfig(metric.unitConfig)
+                      return Number(params.value).toLocaleString(undefined, {
+                        minimumFractionDigits: fix,
+                        maximumFractionDigits: fix
+                      })
+                    }
+                    return Number(params.value).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    })
+                  },
+                  fontSize: 10,
+                  color: itemColor
+                },
+                emphasis: {
+                  focus: 'series',
+                  lineStyle: {
+                    width: 4,
+                    shadowBlur: 5,
+                    shadowColor: 'rgba(0,0,0,0.3)'
+                  },
+                  itemStyle: {
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    shadowBlur: 5,
+                    shadowColor: 'rgba(0,0,0,0.3)'
+                  }
+                },
+                triggerLineEvent: true,
+                animationDelay: (idx: number) => idx * 50
+              })
+            }
+          })
+        })
+      }
+
+      // 动态生成y轴配置（与柱状图相同的逻辑）
+      const generateYAxes = () => {
+        const yAxes: any[] = []
+
+        // 左y轴配置
+        const leftMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'left')
+        if (leftMetrics.length > 0) {
+          yAxes.push({
+            type: 'value',
+            name: leftMetrics.map(m => m.dataName).join('/'),
+            position: 'left',
+            axisLabel: {
+              formatter: (value: number) => {
+                const formatted = (() => {
+                  const metric = leftMetrics[0]
+                  if (metric?.unitConfig) {
+                    return formatYAxisValue(value)
+                  }
+                  return value.toString()
+                })()
+                return `${formatted}${leftMetrics[0].unit || ''}`
+              },
+              fontSize: 12
+            },
+            splitLine: {
+              show: true
+            }
+          })
+        }
+
+        // 右y轴配置
+        const rightMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'right')
+        if (rightMetrics.length > 0) {
+          const stackGroups = new Map<string, any[]>()
+          rightMetrics.forEach(metric => {
+            if (metric.stackGroup) {
+              if (!stackGroups.has(metric.stackGroup)) {
+                stackGroups.set(metric.stackGroup, [])
+              }
+              stackGroups.get(metric.stackGroup)!.push(metric)
+            }
+          })
+
+          const processedStackGroups = new Set<string>()
+          const nonStackedMetrics: any[] = []
+
+          rightMetrics.forEach(metric => {
+            if (metric.stackGroup && !processedStackGroups.has(metric.stackGroup)) {
+              const sameStackMetrics = stackGroups.get(metric.stackGroup)
+              if (sameStackMetrics && sameStackMetrics.length > 1) {
+                const units = [...new Set(sameStackMetrics.map((m: any) => m.unit))]
+                const combinedUnit = units.length === 1 ? units[0] : units.join('/')
+                const namesText = sameStackMetrics.map((m: any) => m.dataName).join('/')
+
+                yAxes.push({
+                  type: 'value',
+                  name: namesText,
+                  position: 'right',
+                  axisLabel: {
+                    formatter: (value: number) => {
+                      const firstMetric = sameStackMetrics?.[0]
+                      const formatted = (() => {
+                        if (firstMetric?.unitConfig) {
+                          return formatYAxisValue(value)
+                        }
+                        return value.toString()
+                      })()
+                      return `${formatted}${combinedUnit}`
+                    },
+                    fontSize: 12
+                  },
+                  splitLine: {
+                    show: false
+                  }
+                })
+                processedStackGroups.add(metric.stackGroup)
+              } else {
+                nonStackedMetrics.push(metric)
+              }
+            } else if (!metric.stackGroup) {
+              nonStackedMetrics.push(metric)
+            }
+          })
+
+          if (nonStackedMetrics.length > 0) {
+            nonStackedMetrics.forEach((metric: any) => {
+              yAxes.push({
+                type: 'value',
+                name: metric.dataName,
+                position: 'right',
+                offset: (yAxes.filter((axis: any) => axis.position === 'right').length) * 60,
+                axisLabel: {
+                  formatter: (value: number) => {
+                    const formatted = (() => {
+                      if (metric?.unitConfig) {
+                        return formatYAxisValue(value)
+                      }
+                      return value.toString()
+                    })()
+                    return `${formatted}${metric.unit || ''}`
+                  },
+                  fontSize: 12
+                },
+                splitLine: {
+                  show: false
+                }
+              })
+            })
+          }
+        }
+
+        return yAxes
+      }
+
+      return {
+        title: {
+          text: props.title,
+          left: 'center',
+          top: '0%',
+          textStyle: {
+            fontSize: 18,
+            fontWeight: 'bold'
+          }
+        },
+        legend: {
+          type: 'scroll',
+          orient: 'horizontal',
+          top: '5%',
+          left: 'center',
+          width: '80%',
+          itemGap: 15,
+          itemHeight: 14,
+          itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {}
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow'
+          },
+          enterable: true,
+          triggerOn: 'mousemove|click',
+          confine: false,
+          appendToBody: true,
+          position: function (point: any, params: any, dom: any, rect: any, size: any) {
+            let x = point[0]
+            let y = point[1]
+            const boxWidth = size.contentSize[0]
+            const boxHeight = size.contentSize[1]
+
+            if (x + boxWidth > size.viewSize[0]) {
+              x = point[0] - boxWidth
+            }
+
+            if (y + boxHeight > size.viewSize[1]) {
+              y = point[1] - boxHeight
+            }
+
+            return [x, y]
+          },
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          borderColor: '#ddd',
+          borderWidth: 1,
+          textStyle: {
+            color: '#333',
+            fontSize: 12
+          },
+          extraCssText: 'max-height: 600px; max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
+          formatter: (params: any) => {
+            let result = `<strong>${params[0].axisValue}</strong><br/>`
+
+            const hasSecondDimension = isNotEmpty(secondDimensionGroups)
+
+            if (hasSecondDimension) {
+              const groupedParams = params.reduce((acc: any, param: any) => {
+                const parts = param.seriesName.split('&&')
+                const secondDimension = parts[0]
+                const statType = parts[1]
+
+                if (!acc[statType]) {
+                  acc[statType] = []
+                }
+                acc[statType].push({ ...param, secondDimension })
+                return acc
+              }, {})
+
+              Object.keys(groupedParams).forEach(statType => {
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
+
+                const typeParams = groupedParams[statType]
+                const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
+
+                typeParams.forEach((param: any) => {
+                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
+                  const unit = getUnitByStatType(statType)
+                  const formattedValue = (() => {
+                    const metric = props.dataMetrics.find(m => m.dataName === statType)
+                    if (metric?.unitConfig) {
+                      const { fix } = parseUnitConfig(metric.unitConfig)
+                      return Number(param.value).toLocaleString(undefined, {
+                        minimumFractionDigits: fix,
+                        maximumFractionDigits: fix
+                      })
+                    }
+                    return Number(param.value).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    })
+                  })()
+                  result += `${param.marker}${param.secondDimension}: ${formattedValue}${unit} (${percentage}%)<br/>`
+                })
+
+                const metric = props.dataMetrics.find(m => m.dataName === statType)
+                const formattedTotal = (() => {
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(total).toLocaleString(undefined, {
+                      minimumFractionDigits: fix,
+                      maximumFractionDigits: fix
+                    })
+                  }
+                  return Number(total).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  })
+                })()
+                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${getUnitByStatType(statType)}</span></div>`
+              })
+            } else {
+              params.forEach((param: any) => {
+                const unit = getUnitByStatType(param.seriesName)
+                const metric = props.dataMetrics.find(m => m.dataName === param.seriesName)
+                const formattedValue = (() => {
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(param.value).toLocaleString(undefined, {
+                      minimumFractionDigits: fix,
+                      maximumFractionDigits: fix
+                    })
+                  }
+                  return Number(param.value).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  })
+                })()
+                result += `${param.marker}${param.seriesName}: ${formattedValue}${unit}<br/>`
+              })
+            }
+
+            return result
+          }
+        },
+        grid: {
+          left: '5%',
+          right: '5%',
+          bottom: '5%',
+          top: '15%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: categories,
+          axisPointer: {
+            type: 'shadow'
+          },
+          axisLabel: {
+            fontSize: 12,
+            interval: 0,
+            rotate: categories.length > 6 ? 45 : 0
+          }
+        },
+        yAxis: generateYAxes(),
+        series: series as echarts.SeriesOption[],
+        animationEasing: 'elasticOut',
+        animationDelayUpdate: (idx: number) => idx * 5
+      }
+    }
+
     // 生成饼图配置
     const generatePieChartOption = (processedData: any): echarts.EChartsOption => {
       const { firstDimensionGroups, flattenedData } = processedData
@@ -1280,6 +1858,8 @@ export default defineComponent({
       switch (finalChartType.value) {
         case 'pie':
           return generatePieChartOption(processedData)
+        case 'mixed':
+          return generateMixedChartOption(processedData)
         case 'line':
           return generateLineChartOption(processedData)
         case 'bar':
