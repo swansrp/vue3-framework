@@ -13,7 +13,7 @@ import { execSync } from 'child_process'
  *   desc: 命令描述（可选）
  */
 const hooks = [
-    { cmd: 'npm run optimize --staged', desc: 'ESLint staged 文件格式化' },
+    { cmd: 'npm run optimize -- --staged', desc: 'ESLint staged 文件格式化' },
     // { cmd: 'node scripts/hooks/test-pre-commit.js --option', desc: '示例测试脚本' },
 ]
 
