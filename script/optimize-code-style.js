@@ -11,21 +11,17 @@
  * 特点：
  *   ⚠️ Vue 模板 <template> 保留 {{ ... }} 空格、换行和空行
  * 用法：
- *   node optimize-eslint-vue.js [优化目录]
+ *   node optimize-eslint-vue.js [优化目录] [--staged]
  */
 
 import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
-
 import { ESLint } from 'eslint'
+
 const gitattributesContent = `
 # 强制所有文本文件使用 LF
-# ========== 基础文本配置 ==========
-# 所有文本文件强制使用 LF 换行符
 * text eol=lf
-
-# 常见源码文件显式标注（可防止特殊 IDE 自动转 CRLF）
 *.js text eol=lf
 *.ts text eol=lf
 *.vue text eol=lf
@@ -38,7 +34,7 @@ const gitattributesContent = `
 *.html text eol=lf
 *.java text eol=lf
 
-# ========== 二进制文件配置 ==========
+# 二进制文件
 *.png binary
 *.jpg binary
 *.jpeg binary
@@ -52,7 +48,24 @@ const gitattributesContent = `
 *.woff2 binary
 *.svg binary
 `
-async function eslintOptimize(targetDir, rootDir) {
+
+/**
+ * 获取 Git staged 文件列表
+ */
+function getStagedFiles() {
+    try {
+        const output = execSync('git diff --cached --name-only --diff-filter=ACM').toString()
+        return output
+            .split('\n')
+            .map(f => f.trim())
+            .filter(f => f && /\.(js|ts|jsx|tsx|vue)$/.test(f))
+    } catch (e) {
+        console.warn('⚠️ 获取 staged 文件失败，格式化全部目录')
+        return []
+    }
+}
+
+async function eslintOptimize(targetFilesOrDir, rootDir, stagedOnly = false) {
     const eslint = new ESLint({
         fix: true,
         useEslintrc: false,
@@ -66,19 +79,11 @@ async function eslintOptimize(targetDir, rootDir) {
             plugins: ['vue', 'unused-imports', 'import', '@typescript-eslint'],
             extends: ['plugin:vue/vue3-recommended'],
             rules: {
-                // 删除未使用 import/变量
                 'unused-imports/no-unused-imports': 'error',
                 'unused-imports/no-unused-vars': [
                     'warn',
-                    {
-                        vars: 'all',
-                        args: 'after-used',
-                        varsIgnorePattern: '^_',
-                        argsIgnorePattern: '^_'
-                    }
+                    { vars: 'all', args: 'after-used', varsIgnorePattern: '^_', argsIgnorePattern: '^_' }
                 ],
-
-                // import 排序
                 'import/order': [
                     'warn',
                     {
@@ -87,22 +92,12 @@ async function eslintOptimize(targetDir, rootDir) {
                         alphabetize: { order: 'asc', caseInsensitive: true }
                     }
                 ],
-
-                // 单引号 & 去掉分号
                 quotes: ['error', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
                 semi: ['error', 'never'],
-
-                // 对象/解构空格
                 'object-curly-spacing': ['error', 'always'],
-
-                // Vue 模板自闭合规范
                 'vue/html-self-closing': [
                     'error',
-                    {
-                        html: { void: 'always', normal: 'never', component: 'always' },
-                        svg: 'always',
-                        math: 'always'
-                    }
+                    { html: { void: 'always', normal: 'never', component: 'always' }, svg: 'always', math: 'always' }
                 ],
                 'no-console': 'warn',
                 'no-debugger': 'warn'
@@ -111,9 +106,31 @@ async function eslintOptimize(targetDir, rootDir) {
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.vue']
     })
 
-    console.log(`🚀 ESLint 优化中: ${targetDir}`)
-    const results = await eslint.lintFiles([`${targetDir}/**/*.{js,ts,jsx,tsx,vue}`])
+    let targets = []
+
+    if (stagedOnly) {
+        targets = getStagedFiles()
+        if (targets.length === 0) {
+            console.log('⚡ 没有 staged 文件，跳过 ESLint')
+            return
+        }
+        console.log(`🚀 ESLint 优化 staged 文件: ${targets.join(', ')}`)
+    } else {
+        targets = [`${targetFilesOrDir}/**/*.{js,ts,jsx,tsx,vue}`]
+        console.log(`🚀 ESLint 优化目录: ${targetFilesOrDir}`)
+    }
+
+    const results = await eslint.lintFiles(targets)
     await ESLint.outputFixes(results)
+
+    // 如果是 staged 模式，把修复的文件重新 add
+    if (stagedOnly) {
+        const fixedFilePaths = results.filter(r => r.output).map(r => r.filePath)
+        if (fixedFilePaths.length > 0) {
+            execSync(`git add ${fixedFilePaths.map(f => `"${f}"`).join(' ')}`)
+            console.log(`✅ 已将 ESLint 修复文件加入 Git staged: ${fixedFilePaths.length} 个`)
+        }
+    }
 
     // 强制 LF 换行符
     for (const r of results) {
@@ -137,19 +154,6 @@ async function eslintOptimize(targetDir, rootDir) {
         console.log('✅ 已生成 .gitattributes')
     }
 
-    // 安全同步到 Git
-    try {
-        console.log('\n🚀 同步 .gitattributes 到 Git')
-        // 如果文件刚生成，先提交一次
-        execSync('git add .gitattributes', { stdio: 'inherit' })
-        execSync('git commit -m "chore: add .gitattributes for LF and binary rules" --no-verify', { stdio: 'inherit' })
-        // 现在规则已在 HEAD 中，Git 才能正确识别 binary 文件
-        execSync('git add --renormalize .', { stdio: 'inherit' })
-        console.log('✅ Git 换行符策略同步完成\n')
-    } catch (e) {
-        console.warn('⚠️ Git 同步失败，请检查 Git 状态', e.message)
-    }
-
     // 统计结果
     let removedImports = 0
     let removedVars = 0
@@ -171,18 +175,20 @@ async function eslintOptimize(targetDir, rootDir) {
 }
 
 async function main() {
-    const inputDir = process.argv[2]
-    const rootDir = process.cwd() // 项目根目录
+    const args = process.argv.slice(2)
+    const stagedOnly = args.includes('--staged')
+    const inputDir = args.find(a => a !== '--staged')
+    const rootDir = process.cwd()
     const targetDir = inputDir
         ? path.resolve(inputDir.replace(/^['"]|['"]$/g, ''))
         : path.resolve(rootDir, 'src')
 
-    if (!fs.existsSync(targetDir)) {
+    if (!stagedOnly && !fs.existsSync(targetDir)) {
         console.error(`❌ 目录不存在: ${targetDir}`)
         process.exit(1)
     }
 
-    await eslintOptimize(targetDir, rootDir)
+    await eslintOptimize(targetDir, rootDir, stagedOnly)
 }
 
 main().catch((err) => {
