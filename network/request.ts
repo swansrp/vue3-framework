@@ -14,6 +14,12 @@ message.config({ maxCount: 1 })
 const web = '/web'
 const baseURL = import.meta.env.VITE_baseURL + domain + web
 
+// 延迟显示时间（避免快闪）
+const showDelay = 500
+// 最小展示时长（避免刚显示就消失）
+const minDuration = 500
+const loadMap = new WeakMap()
+
 const errCode = {
   SUCCESS: 0,
   SESSION_TIME_OUT: 401
@@ -22,10 +28,20 @@ const axiosInstance = axios.create({})
 axiosInstance.interceptors.request.use(
   (config) => {
     const { data, showLoading } = config.data as configDataType
-    if (showLoading) load.show()
     config.data = data
     const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
     if (token) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+
+    if (showLoading) {
+      const record: any = { startAt: Date.now(), shownAt: null }
+      // 延迟展示 loading
+      record.timer = setTimeout(() => {
+        load.show()
+        record.shownAt = Date.now()
+      }, showDelay)
+      loadMap.set(config, record)
+    }
+
     return config
   }, err => {
     console.log(err)
@@ -34,13 +50,34 @@ axiosInstance.interceptors.request.use(
   }
 )
 
+const closeLoading = (config: any) => {
+  const record = loadMap.get(config)
+  if (!record) return
+
+  clearTimeout(record.timer)
+
+  // 若未显示 → 直接不显示
+  if (!record.shownAt) {
+    loadMap.delete(config)
+    return
+  }
+
+  // 若已显示 → 确保显示满最小时长
+  const visibleTime = Date.now() - record.shownAt
+  const remain = Math.max(0, minDuration - visibleTime)
+  setTimeout(() => {
+    load.close()
+    loadMap.delete(config)
+  }, remain)
+}
+
 axiosInstance.interceptors.response.use(
   (resp) => {
-    load.close()
+    closeLoading(resp.config)
     _handleTimeOut(resp.data)
     return Promise.resolve(resp)
   }, err => {
-    load.close()
+    closeLoading(resp.config)
     _handleTimeOut(err.response.data)
     if (err.response.status === 404)
       message.error('抱歉,尚未支持该服务!')
