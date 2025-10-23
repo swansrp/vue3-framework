@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "npm run install && npm run bidr && vite --config ./src/framework/config/vite.config.ts",
     "build:prod": "npm run bidr && vite --config ./src/framework/config/vite.config.ts build --mode production",
-    "bidr": "node src/framework/script/change-node-modules.js",
+    "bidr": "npm run install && node src/framework/script/change-node-modules.js && node src/framework/script/git/install-pre-commit.js",
     "preview": "vite preview",
     "generate-api": "node src/framework/script/generate-api-v2.cjs && npm run optimize ./src/apis/",
     "optimize": "node src/framework/script/optimize-code-style.js",
