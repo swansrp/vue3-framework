@@ -140,7 +140,10 @@ async function eslintOptimize(targetDir, rootDir) {
     // 安全同步到 Git
     try {
         console.log('\n🚀 同步 .gitattributes 到 Git')
+        // 如果文件刚生成，先提交一次
         execSync('git add .gitattributes', { stdio: 'inherit' })
+        execSync('git commit -m "chore: add .gitattributes for LF and binary rules" --no-verify', { stdio: 'inherit' })
+        // 现在规则已在 HEAD 中，Git 才能正确识别 binary 文件
         execSync('git add --renormalize .', { stdio: 'inherit' })
         console.log('✅ Git 换行符策略同步完成\n')
     } catch (e) {
