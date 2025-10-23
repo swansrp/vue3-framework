@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 
 const gitHookPath = path.resolve('.git/hooks/pre-commit')
-const runnerPath = path.resolve('src/framework/scripts/git/hooks-runner.js')
+const runnerPath = path.resolve('src/framework/script/git/hooks-runner.js')
 
 // 预生成的钩子内容
 const hookContent = `#!/bin/sh
@@ -33,7 +33,7 @@ function installHook() {
     }
 
     fs.writeFileSync(gitHookPath, hookContent, { mode: 0o755 })
-    console.log('✅ pre-commit 钩子安装成功，调用 framework/scripts/git/hooks-runner.js')
+    console.log('✅ pre-commit 钩子安装成功，调用 framework/script/git/hooks-runner.js')
 }
 
 installHook()
