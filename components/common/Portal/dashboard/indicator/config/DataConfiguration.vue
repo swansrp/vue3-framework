@@ -287,6 +287,7 @@
         v-model:visible="dataItemColorPickerVisible"
         title="选择数据项颜色"
         :initial-color="currentDataItemColor"
+        :used-colors="usedColorsInCurrentMetric"
         @confirm="confirmDataItemColorChange"
       />
     </div>
@@ -402,6 +403,18 @@ const currentDataItemColor = computed(() => {
   return getDataItemColor(currentDataItemTarget.value.metricId, currentDataItemTarget.value.itemKey)
 })
 
+// 获取当前数据指标中已使用的颜色列表（用于颜色重复检测）
+const usedColorsInCurrentMetric = computed(() => {
+  const { metricId } = currentDataItemTarget.value
+  if (!metricId) return []
+
+  const metric = props.dataMetrics.find(m => m.id === metricId)
+  if (!metric || !metric.itemColors) return []
+
+  // 收集当前指标中所有已使用的颜色
+  return Object.values(metric.itemColors).filter(color => color)
+})
+
 // 判断是否有饼图类型的数据指标
 const hasPieChart = computed(() => {
   return props.dataMetrics.some(metric => metric.chartType === 'pie')
@@ -486,7 +499,7 @@ const onChartTypeChange = (value: any) => {
   if (chartType === 'pie') {
     // 如果选择饼图，检查是否已经有其他饼图
     const existingPieChart = props.dataMetrics.find(m =>
-        m.chartType === 'pie' && m.id !== editingDataMetric.value?.id
+      m.chartType === 'pie' && m.id !== editingDataMetric.value?.id
     )
 
     if (existingPieChart) {
@@ -513,8 +526,8 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
   if (mode === 'add') {
     // 获取上一个数据的堆叠组
     const lastMetric = props.dataMetrics.length > 0
-        ? props.dataMetrics[props.dataMetrics.length - 1]
-        : null
+      ? props.dataMetrics[props.dataMetrics.length - 1]
+      : null
 
     // 默认堆叠组为noStack
     let defaultStackGroup = 'noStack'
@@ -565,8 +578,8 @@ const onDataTypeChange = (value: any) => {
 
 const isDataTypeUsed = (dataField: string): boolean => {
   return props.dataMetrics.some(metric =>
-      metric.dataField === dataField &&
-      metric.id !== editingDataMetric.value?.id
+    metric.dataField === dataField &&
+    metric.id !== editingDataMetric.value?.id
   )
 }
 
@@ -797,17 +810,17 @@ const generateDistinctColors = (count: number): string[] => {
 
 // 监听维度变化，当第二维度变化时更新颜色配置
 watch(
-    () => [props.firstDimension, props.secondDimension],
-    ([_newFirstDim, newSecondDim], [_oldFirstDim, oldSecondDim]) => {
-      // 检查第二维度是否发生变化
-      const secondDimensionChanged = newSecondDim?.key !== oldSecondDim?.key
+  () => [props.firstDimension, props.secondDimension],
+  ([_newFirstDim, newSecondDim], [_oldFirstDim, oldSecondDim]) => {
+    // 检查第二维度是否发生变化
+    const secondDimensionChanged = newSecondDim?.key !== oldSecondDim?.key
 
-      // 如果第二维度发生了变化，更新所有数据指标的颜色配置
-      if (secondDimensionChanged && newSecondDim?.items) {
-        updateDataMetricsWithSecondDimensionColors(newSecondDim.items)
-      }
-    },
-    { deep: true }
+    // 如果第二维度发生了变化，更新所有数据指标的颜色配置
+    if (secondDimensionChanged && newSecondDim?.items) {
+      updateDataMetricsWithSecondDimensionColors(newSecondDim.items)
+    }
+  },
+  { deep: true }
 )
 
 // 更新数据指标的颜色配置以匹配第二维度

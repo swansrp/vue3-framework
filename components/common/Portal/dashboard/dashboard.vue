@@ -351,16 +351,16 @@ const generateChart = async (chartData?: {
   console.log('generateChart called in dashboard.vue')
   console.log('chartData:', chartData)
   console.log('firstDimension.value:', firstDimension.value)
-  
+
   // 如果传递了chartData，使用其中的数据
   const firstDim = chartData?.firstDimension || firstDimension.value
   const secondDim = chartData?.secondDimension || secondDimension.value
   const filterDims = chartData?.filterDimensions || filterDimensions.value
   const selectedFilterItems = chartData?.selectedFilterItemsArray || selectedFilterItemsArray.value
   const dataMetricsData = chartData?.dataMetrics || dataMetrics.value
-  
+
   console.log('firstDim:', firstDim)
-  
+
   if (!firstDim) {
     console.log('firstDimension is null')
     message.error('请先选择一级维度（横坐标）')
@@ -382,14 +382,16 @@ const generateChart = async (chartData?: {
     }
   }
 
-  // 校验规则2: 当数据选择的堆叠组一致时，必须确保选择的坐标轴位置也一致
+  // 校验规则2: 当柱状图数据选择的堆叠组一致时，必须确保选择的坐标轴位置也一致
+  // 注意：折线图不支持堆叠，所以只检查柱状图
   const stackGroups = new Map<string, string>() // stackGroup -> yAxisPosition
   for (const metric of dataMetricsData) {
-    if (metric.stackGroup && metric.stackGroup !== 'single') {
+    // 只对柱状图进行堆叠组验证（折线图不支持堆叠）
+    if (metric.chartType === 'bar' && metric.stackGroup && metric.stackGroup !== 'noStack') {
       if (stackGroups.has(metric.stackGroup)) {
         // 如果已经有这个堆叠组，检查坐标轴位置是否一致
         if (stackGroups.get(metric.stackGroup) !== metric.yAxisPosition) {
-          message.error(`堆叠组 "${metric.stackGroup}" 的数据必须使用相同的坐标轴位置`)
+          message.error(`堆叠组 "${metric.stackGroup}" 的柱状图数据必须使用相同的坐标轴位置`)
           return
         }
       } else {
