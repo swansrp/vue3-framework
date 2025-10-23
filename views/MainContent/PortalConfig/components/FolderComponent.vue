@@ -65,8 +65,7 @@
         :class="['table-item', { 'activate-item': tableConfig.name === item.value }]"
         :style="getItemStyle()"
         @click="getTableConfigByName(item.value)"
-        @mouseenter="onItemMouseEnter"
-        @mouseleave="onItemMouseLeave"
+        @contextmenu.prevent="(e) => handleContextMenu(e, item)"
       >
         <div
           :style="getItemContentStyle()"
@@ -76,71 +75,7 @@
             :style="fileIconStyle"
             class="file-icon"
           />
-          <a-dropdown
-            v-if="tableList.length !== 0"
-            :trigger="['contextmenu']"
-          >
-            <span
-              :style="itemLabelStyle"
-              :title="item.shortLabel || item.label"
-              class="item-label"
-              v-html="highlightSearchText(item.shortLabel || item.label)"
-            ></span>
-            <template
-              v-if="selectedRole === '0'"
-              #overlay
-            >
-              <a-menu>
-                <a-menu-item key="0">
-                  <a-popconfirm
-                    title="注意 即将恢复该配置到默认状态"
-                    @confirm="$emit('refresh-config', item.value)"
-                  >
-                    <a-button
-                      type="text"
-                      size="small"
-                    >
-                      恢复
-                      <template #icon>
-                        <UndoOutlined />
-                      </template>
-                    </a-button>
-                  </a-popconfirm>
-                </a-menu-item>
-                <a-menu-item key="1">
-                  <a-button
-                    type="text"
-                    size="small"
-                    @click="$emit('open-copy-modal', item)"
-                  >
-                    复制
-                    <template #icon>
-                      <CopyOutlined />
-                    </template>
-                  </a-button>
-                </a-menu-item>
-                <a-menu-item key="2">
-                  <a-popconfirm
-                    title="注意 即将删除该配置"
-                    @confirm="$emit('delete-config', item.value)"
-                  >
-                    <a-button
-                      type="text"
-                      size="small"
-                    >
-                      删除
-                      <template #icon>
-                        <DeleteOutlined />
-                      </template>
-                    </a-button>
-                  </a-popconfirm>
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
-          <!-- 如果没有右键菜单权限，直接显示标签 -->
           <span
-            v-else
             :style="itemLabelStyle"
             :title="item.shortLabel || item.label"
             class="item-label"
@@ -148,13 +83,78 @@
           ></span>
         </div>
       </div>
+      <!-- 右键菜单 -->
+      <a-dropdown
+        v-if="tableList.length !== 0 && selectedRole === '0'"
+        v-model:open="contextMenuVisible"
+        :trigger="['contextmenu']"
+      >
+        <div
+          :style="{
+            position: 'fixed',
+            left: contextMenuPosition.x + 'px',
+            top: contextMenuPosition.y + 'px',
+            width: '1px',
+            height: '1px',
+            pointerEvents: 'none'
+          }"
+        ></div>
+        <template #overlay>
+          <a-menu v-if="contextMenuItem">
+            <a-menu-item key="0">
+              <a-popconfirm
+                title="注意 即将恢复该配置到默认状态"
+                @confirm="handleRefreshConfig"
+              >
+                <a-button
+                  type="text"
+                  size="small"
+                >
+                  恢复
+                  <template #icon>
+                    <UndoOutlined />
+                  </template>
+                </a-button>
+              </a-popconfirm>
+            </a-menu-item>
+            <a-menu-item key="1">
+              <a-button
+                type="text"
+                size="small"
+                @click="handleOpenCopyModal"
+              >
+                复制
+                <template #icon>
+                  <CopyOutlined />
+                </template>
+              </a-button>
+            </a-menu-item>
+            <a-menu-item key="2">
+              <a-popconfirm
+                title="注意 即将删除该配置"
+                @confirm="handleDeleteConfig"
+              >
+                <a-button
+                  type="text"
+                  size="small"
+                >
+                  删除
+                  <template #icon>
+                    <DeleteOutlined />
+                  </template>
+                </a-button>
+              </a-popconfirm>
+            </a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { CaretDownOutlined, CaretRightOutlined, FileTextOutlined, FolderOutlined, UndoOutlined, CopyOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 // 定义Props接口
 interface FolderComponentProps {
@@ -179,6 +179,47 @@ const props = withDefaults(defineProps<FolderComponentProps>(), {
   parentPath: '',
   selectedRole: '0'
 })
+
+// 定义 emits
+const emit = defineEmits(['refresh-config', 'open-copy-modal', 'delete-config'])
+
+// 右键菜单状态
+const contextMenuVisible = ref(false)
+const contextMenuItem = ref<any>(null)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+
+// 处理右键菜单
+const handleContextMenu = (e: MouseEvent, item: any) => {
+  if (props.tableList.length === 0 || props.selectedRole !== '0') {
+    return
+  }
+  e.preventDefault()
+  contextMenuItem.value = item
+  contextMenuPosition.value = { x: e.clientX, y: e.clientY }
+  contextMenuVisible.value = true
+}
+
+// 菜单操作处理
+const handleRefreshConfig = () => {
+  if (contextMenuItem.value) {
+    emit('refresh-config', contextMenuItem.value.value)
+    contextMenuVisible.value = false
+  }
+}
+
+const handleOpenCopyModal = () => {
+  if (contextMenuItem.value) {
+    emit('open-copy-modal', contextMenuItem.value)
+    contextMenuVisible.value = false
+  }
+}
+
+const handleDeleteConfig = () => {
+  if (contextMenuItem.value) {
+    emit('delete-config', contextMenuItem.value.value)
+    contextMenuVisible.value = false
+  }
+}
 
 // 计算属性
 const baseIndent = 10  // 基础缩进
@@ -226,7 +267,7 @@ const getHeaderStyle = () => ({
   cursor: 'pointer',
   borderBottom: '1px solid #e9ecef',
   color: '#262626',  // 更深的颜色，提升锐利度
-  transition: 'all 0.2s'
+  transition: 'all 0.15s'
 })
 
 const getBackgroundColor = () => {
@@ -255,7 +296,7 @@ const getItemStyle = () => ({
   padding: '12px 0',
   cursor: 'pointer',
   borderBottom: '1px solid #f0f0f0',
-  transition: 'all 0.2s',
+  transition: 'all 0.15s',
   background: 'white'
 })
 
@@ -303,7 +344,7 @@ const itemLabelStyle = {
   lineHeight: '1.4'
 }
 
-// 事件处理
+// 事件处理 - 文件夹头部
 const onMouseEnter = (e: Event) => {
   const target = e.target as HTMLElement
   const depth = props.depth || 0
@@ -321,20 +362,6 @@ const onMouseLeave = (e: Event) => {
       (depth === 0 ? '#dee2e6' : depth === 1 ? '#e8e8e8' : '#e0e0e0') :
       (depth === 0 ? '#f8f9fa' : depth === 1 ? '#fafafa' : '#f5f5f5')
   target.style.color = '#262626'  // 恢复为默认的锐利颜色
-}
-
-const onItemMouseEnter = (e: Event) => {
-  const target = e.target as HTMLElement
-  target.style.backgroundColor = '#e6f7ff'
-  target.style.borderRight = '3px solid #1890ff'
-}
-
-const onItemMouseLeave = (e: Event) => {
-  const target = e.target as HTMLElement
-  if (props.tableConfig.name !== (e.target as any).closest('.table-item')?.querySelector('.item-label')?.title) {
-    target.style.backgroundColor = 'white'
-    target.style.borderRight = 'none'
-  }
 }
 </script>
 
@@ -364,7 +391,7 @@ const onItemMouseLeave = (e: Event) => {
 }
 
 .folder-header {
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .folder-content {
@@ -373,17 +400,20 @@ const onItemMouseLeave = (e: Event) => {
 }
 
 .table-item {
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  border-left: 4px solid transparent;
 }
 
-.table-item:hover {
-  background-color: #e6f7ff !important;
-  border-right: 3px solid #1890ff !important;
+.table-item:hover:not(.activate-item) {
+  background-color: #f0f8ff !important;
+  border-left-color: #91d5ff !important;
 }
 
 .activate-item {
-  background-color: #e6f7ff !important;
-  border-right: 3px solid #1890ff !important;
+  background-color: #d6edff !important;
+  border-left-color: #1890ff !important;
+  box-shadow: inset 2px 0 4px rgba(24, 144, 255, 0.1) !important;
 }
 
 .file-icon {
@@ -413,7 +443,7 @@ const onItemMouseLeave = (e: Event) => {
   border-bottom: 1px solid #e9ecef;
   font-weight: 600;
   color: #262626 !important;  /* 优化文件夹标题颜色 */
-  transition: all 0.2s;
+  transition: all 0.15s;
   font-size: 14px !important;
 }
 
@@ -510,13 +540,15 @@ const onItemMouseLeave = (e: Event) => {
   padding: 12px 0;
   cursor: pointer;
   border-bottom: 1px solid #f0f0f0;
-  transition: all 0.2s;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
   background: white;
+  position: relative;
+  border-left: 4px solid transparent;
 }
 
-.table-item:hover {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+.table-item:hover:not(.activate-item) {
+  background-color: #f0f8ff;
+  border-left-color: #91d5ff;
 }
 
 .table-item:last-child {
@@ -544,7 +576,8 @@ const onItemMouseLeave = (e: Event) => {
 }
 
 .activate-item {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: #d6edff;
+  border-left-color: #1890ff;
+  box-shadow: inset 2px 0 4px rgba(24, 144, 255, 0.1);
 }
 </style>
