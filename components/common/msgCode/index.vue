@@ -5,6 +5,7 @@
     :wrapper-col="wrapperCol"
     :layout="layout"
     :class="formClass"
+    autocomplete="off"
     @finish="onFinish"
   >
     <slot></slot>
@@ -17,6 +18,7 @@
         v-model:value="_formData.phoneNumber"
         :maxlength="11"
         autocomplete="off"
+        name="phone-number-login"
         placeholder="手机号码"
         size="large"
       >
@@ -33,6 +35,7 @@
       <a-input
         v-model:value="_formData.captcha"
         :maxlength="4"
+        autocomplete="off"
         placeholder="验证码"
         size="large"
       >
@@ -58,6 +61,7 @@
       <a-input
         v-model:value="_formData.msgCode"
         autocomplete="off"
+        name="sms-code-login"
         placeholder="短信验证码"
         size="large"
       >
