@@ -316,45 +316,53 @@ onMounted(() => {
   height: 50px;
   display: flex;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .top_title {
   width: 250px;
   height: 100%;
   font-size: 17px;
-  line-height: 50px;
-  padding-left: 5px;
-  padding-right: 15px;
+  padding: 0 20px;
   font-weight: bold;
-  text-align: center;
   box-sizing: border-box;
-  color: rgb(0, 21, 41);
-  background-color: #fff;
+  color: #ffffff;
+  /* 增强立体感的深色渐变 - 增加光影层次 */
+  background: linear-gradient(135deg, 
+    #1a2332 0%, 
+    #252f42 25%,
+    #2d3a52 50%,
+    #252f42 75%,
+    #1a2332 100%);
   flex: 0 0 auto;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   position: relative;
   z-index: 999;
+  /* 添加与左侧菜单一致的右侧阴影 */
+  box-shadow: 5px 0 5px 0 rgba(0, 0, 0, 0.5);
+  /* 添加内阴影增强立体感 */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* 顶部标题和菜单之间的分割线 */
-.top_title::after {
+/* LOGO区域内部光影效果 - 增强立体感 */
+.top_title::before {
   content: '';
   position: absolute;
+  top: 0;
+  left: 0;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1px;
-  height: 30px;
-  background: linear-gradient(to bottom, 
-    transparent 0%, 
-    rgba(0, 21, 41, 0.1) 20%, 
-    rgba(0, 21, 41, 0.15) 50%, 
-    rgba(0, 21, 41, 0.1) 80%, 
+  height: 50%;
+  background: linear-gradient(to bottom,
+    rgba(255, 255, 255, 0.08) 0%,
     transparent 100%);
-  opacity: 0.6;
+  pointer-events: none;
+  border-radius: 0;
 }
 
 .show-left-nav {
@@ -373,8 +381,11 @@ onMounted(() => {
 
 .top_nav {
   flex: 1 0 auto;
-  margin-left: 12px;
+  margin-left: 0;
   position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .top_user {
@@ -385,22 +396,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   box-sizing: border-box;
-  padding: 8px 16px 8px 12px;
+  padding: 0 16px 0 12px;
   flex: 0 0 auto;
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.95) 0%, 
-    rgba(255, 255, 255, 0.9) 100%);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid #e8eaed !important;
+  background: transparent;
   position: relative;
   transition: all 0.3s ease;
 }
 
 .top_user:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.98) 0%, 
-    rgba(240, 248, 255, 0.95) 100%);
-  box-shadow: inset 0 0 20px rgba(24, 144, 255, 0.1);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
 }
 
 /* 用户头像区域 */
@@ -411,14 +416,14 @@ onMounted(() => {
 }
 
 .user-avatar {
-  border: 2px solid rgba(24, 144, 255, 0.2);
+  border: 2px solid rgba(24, 144, 255, 0.3);
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .user-avatar:hover {
-  border-color: rgba(24, 144, 255, 0.5);
-  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.2);
+  border-color: rgba(24, 144, 255, 0.6);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
   transform: translateY(-1px);
 }
 
@@ -458,24 +463,25 @@ onMounted(() => {
 .user-name {
   font-size: 14px;
   font-weight: 600;
-  color: rgba(0, 21, 41, 0.88);
+  color: #1a1f36;
   line-height: 1.2;
   margin-bottom: 2px;
 }
 
 .user-role {
   font-size: 12px;
-  color: rgba(0, 21, 41, 0.65);
+  color: #5a5e66;
   line-height: 1;
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.1), rgba(24, 144, 255, 0.05));
-  padding: 2px 6px;
-  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.08), rgba(24, 144, 255, 0.04));
+  padding: 2px 8px;
+  border-radius: 10px;
   display: inline-block;
   font-weight: 500;
   max-width: 100px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  border: 1px solid rgba(24, 144, 255, 0.15);
 }
 
 /* 设置按钮区域 */
@@ -485,24 +491,19 @@ onMounted(() => {
 }
 
 .setting-button {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.8) 0%, 
-    rgba(248, 250, 252, 0.9) 100%) !important;
-  border: 1px solid rgba(24, 144, 255, 0.2) !important;
-  color: rgba(0, 21, 41, 0.75) !important;
+  background: #f5f7fa !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #5a5e66 !important;
   transition: all 0.3s ease !important;
-  backdrop-filter: blur(5px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .setting-button:hover {
-  background: linear-gradient(135deg, 
-    rgba(24, 144, 255, 0.1) 0%, 
-    rgba(24, 144, 255, 0.05) 100%) !important;
-  border-color: rgba(24, 144, 255, 0.4) !important;
-  color: rgba(24, 144, 255, 0.9) !important;
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(24, 144, 255, 0.05) 100%) !important;
+  border-color: rgba(24, 144, 255, 0.25) !important;
+  color: #1890ff !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.15);
 }
 
 .setting-button:active {

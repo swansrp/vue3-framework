@@ -37,9 +37,14 @@ watch(() => store.titlePath, () => breadCrumbData.value =  store.titlePath || ['
 .crumb-search {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: none;
   box-sizing: border-box;
-  padding: 3px 0 3px 15px;
+  padding: 12px 20px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  position: relative;
+  margin: 8px 12px 0 12px;
+  border-radius: 8px;
 }
 
 .bread-crumb {

@@ -14,10 +14,9 @@
     />
     <div
       class="content-body"
-      :style="{ backgroundColor: isNeedNav ? '#fff' : 'transparent'}"
+      :style="{ backgroundColor: isNeedNav ? '#f5f7fa' : 'transparent'}"
     >
       <history-tab v-if="isNeedNav" />
-      <crumb-search v-if="isNeedNav" />
       <slot name="router-view"></slot>
     </div>
   </div>
@@ -34,7 +33,6 @@ import { useSlots } from 'vue'
 import TopHeader from './topHeader/TopHeader.vue'
 import { title } from '../../../../package.json'
 
-import CrumbSearch from '@/framework/components/navigationFramework/crumbSearch/CrumbSearch.vue'
 import HistoryTab from '@/framework/components/navigationFramework/historyTab/HistoryTab.vue'
 import LeftNav from '@/framework/components/navigationFramework/navMenu/leftNav/LeftNav.vue'
 import pinia from '@/framework/store'

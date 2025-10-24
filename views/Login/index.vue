@@ -97,7 +97,9 @@
         <div class="login-content-wrapper">
           <!-- 注册页面标题，与登录页面的 tabs 对齐 -->
           <div class="register-header">
-            <div class="register-title">注册账号</div>
+            <div class="register-title">
+              注册账号
+            </div>
           </div>
           <msg-code
             v-if="registerWithPhoneNumber"
@@ -152,7 +154,11 @@
             </a-form-item>
             <template #footer>
               <div style="display: flex; justify-content: flex-end; margin-top: -5px">
-                <a-button class="login-mode-btn" type="text" @click="changeToLoginMode">
+                <a-button
+                  class="login-mode-btn"
+                  type="text"
+                  @click="changeToLoginMode"
+                >
                   已有账号
                 </a-button>
               </div>
@@ -243,15 +249,28 @@
             </a-form-item>
           </a-form>
           <div class="login-footer-links">
-            <a-button class="login-mode-btn" type="text" @click="changeToLoginMode">
+            <a-button
+              class="login-mode-btn"
+              type="text"
+              @click="changeToLoginMode"
+            >
               已有账号
             </a-button>
           </div>
         </div>
       </template>
-      <div v-else class="login-content-wrapper">
-        <a-tabs v-model:active-key="activeKey" class="login-tabs">
-          <a-tab-pane key="1" tab="账号登录">
+      <div
+        v-else
+        class="login-content-wrapper"
+      >
+        <a-tabs
+          v-model:active-key="activeKey"
+          class="login-tabs"
+        >
+          <a-tab-pane
+            key="1"
+            tab="账号登录"
+          >
             <a-form
               :model="formInline"
               layout="horizontal"
@@ -329,7 +348,10 @@
               </a-form-item>
             </a-form>
           </a-tab-pane>
-          <a-tab-pane key="2" tab="手机登录">
+          <a-tab-pane
+            key="2"
+            tab="手机登录"
+          >
             <msg-code
               :key="msgCodeKey"
               v-model:form-data="msgLoginForm"
@@ -360,12 +382,12 @@
 </template>
 
 <script lang="ts" setup>
-import { LockOutlined, SafetyOutlined, UserOutlined } from "@ant-design/icons-vue";
-import { Md5 } from "ts-md5";
-import { reactive, Ref } from "vue";
-import { useRouter } from "vue-router";
+import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { Md5 } from 'ts-md5'
+import { reactive, Ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-import { userAlreadyExisted } from "@/framework/apis/admin/user";
+import { userAlreadyExisted } from '@/framework/apis/admin/user'
 import {
   getToken,
   initPasswordAndLogin,
@@ -373,57 +395,57 @@ import {
   msgCodeLogin,
   msgCodeRegister,
   passwordRegister,
-} from "@/framework/apis/login/login";
-import CopyrightIcp from "@/framework/components/common/copyrightIcp/index.vue";
-import MsgCode from "@/framework/components/common/msgCode/index.vue";
-import { checkLoginState } from "@/framework/network/login";
-import { baseURL } from "@/framework/network/request";
-import { parameterStore } from "@/framework/store/common";
-import { localStorageMethods } from "@/framework/utils/common";
-import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from "@/framework/utils/constant";
+} from '@/framework/apis/login/login'
+import CopyrightIcp from '@/framework/components/common/copyrightIcp/index.vue'
+import MsgCode from '@/framework/components/common/msgCode/index.vue'
+import { checkLoginState } from '@/framework/network/login'
+import { baseURL } from '@/framework/network/request'
+import { parameterStore } from '@/framework/store/common'
+import { localStorageMethods } from '@/framework/utils/common'
+import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
 
-const activeKey = ref("1");
+const activeKey = ref('1')
 
-const title: Ref<string> = ref(document.title);
-const router = useRouter();
-let captchaUrl: Ref<string> = ref("");
-let loading: Ref<boolean> = ref(false);
-const formInline = reactive({ userName: "", password: "", captcha: "" });
-const passwordResetMode: Ref<Boolean> = ref(false);
-const passwordResetForm = reactive({ password: "", passwordConfirm: "", captcha: "" });
-const registerMode: Ref<Boolean> = ref(false);
+const title: Ref<string> = ref(document.title)
+const router = useRouter()
+let captchaUrl: Ref<string> = ref('')
+let loading: Ref<boolean> = ref(false)
+const formInline = reactive({ userName: '', password: '', captcha: '' })
+const passwordResetMode: Ref<Boolean> = ref(false)
+const passwordResetForm = reactive({ password: '', passwordConfirm: '', captcha: '' })
+const registerMode: Ref<Boolean> = ref(false)
 let registerForm = reactive({
-  phoneNumber: "",
-  msgCode: "",
-  captcha: "",
-  loginId: "",
-  password: "",
-});
-const registerWithPhoneNumber: Ref<boolean> = ref(false);
-let msgLoginForm = reactive({ phoneNumber: "", msgCode: "", captcha: "" });
-const msgCodeKey = ref(0);
+  phoneNumber: '',
+  msgCode: '',
+  captcha: '',
+  loginId: '',
+  password: '',
+})
+const registerWithPhoneNumber: Ref<boolean> = ref(false)
+let msgLoginForm = reactive({ phoneNumber: '', msgCode: '', captcha: '' })
+const msgCodeKey = ref(0)
 const getCaptchaUrl = (captchaType: string) =>
   baseURL +
-  "/captcha.jpg?token=" +
+  '/captcha.jpg?token=' +
   localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN) +
-  "&captchaType=" +
-  captchaType;
+  '&captchaType=' +
+  captchaType
 const updateCaptchaUrl = (captchaType: string) =>
-  (captchaUrl.value = getCaptchaUrl(captchaType) + "&r=" + Math.random());
+  (captchaUrl.value = getCaptchaUrl(captchaType) + '&r=' + Math.random())
 
 // 移除 readonly 属性以阻止浏览器自动填充
 const removeReadonly = (event: FocusEvent) => {
-  const target = event.target as HTMLInputElement;
+  const target = event.target as HTMLInputElement
   if (target) {
-    target.removeAttribute("readonly");
+    target.removeAttribute('readonly')
   }
-};
+}
 
 const recoveryFun = (captchaType: string) => {
-  registerMode.value = false;
-  updateCaptchaUrl(captchaType);
-  loading.value = false;
-};
+  registerMode.value = false
+  updateCaptchaUrl(captchaType)
+  loading.value = false
+}
 
 const userNameValidator = () => {
   if (isNotEmpty(registerForm.loginId)) {
@@ -433,71 +455,71 @@ const userNameValidator = () => {
       registerForm.loginId,
       undefined,
       undefined
-    );
+    )
   } else {
-    return Promise.reject("请输入用户名!");
+    return Promise.reject('请输入用户名!')
   }
-};
+}
 
 const handleSubmit = () => {
-  const { userName, password, captcha } = formInline;
-  let captchaType = "LOGIN_CAPTCHA";
-  loading.value = true;
+  const { userName, password, captcha } = formInline
+  let captchaType = 'LOGIN_CAPTCHA'
+  loading.value = true
   login(captcha, userName, Md5.hashStr(password))
     .then((res) => {
-      afterLogin(res);
+      afterLogin(res)
     })
     .catch((err) => {
-      if (err.message === "AC_PASSWORD_NOT_EXISTED") {
-        passwordResetMode.value = true;
-        title.value = "首次登录-设置密码";
-        captchaType = "INIT_PASSWORD_CAPTCHA";
+      if (err.message === 'AC_PASSWORD_NOT_EXISTED') {
+        passwordResetMode.value = true
+        title.value = '首次登录-设置密码'
+        captchaType = 'INIT_PASSWORD_CAPTCHA'
       }
-      recoveryFun(captchaType);
-    });
-};
+      recoveryFun(captchaType)
+    })
+}
 const handleRegister = () => {
-  const { loginId, password, captcha } = registerForm;
-  loading.value = true;
+  const { loginId, password, captcha } = registerForm
+  loading.value = true
   return passwordRegister(captcha, loginId, Md5.hashStr(password))
     .then((res) => {
-      afterLogin(res);
+      afterLogin(res)
     })
     .catch(() => {
-      recoveryFun("LOGIN_CAPTCHA");
-    });
-};
+      recoveryFun('LOGIN_CAPTCHA')
+    })
+}
 const handleMsgRegister = (data: any) => {
-  loading.value = true;
+  loading.value = true
   return msgCodeRegister(data)
     .then((res) => {
-      afterLogin(res);
+      afterLogin(res)
     })
     .catch(() => {
-      recoveryFun("LOGIN_CAPTCHA");
-    });
-};
+      recoveryFun('LOGIN_CAPTCHA')
+    })
+}
 const handleMsgLogin = (data: any) => {
-  loading.value = true;
+  loading.value = true
   return msgCodeLogin(data.phoneNumber, data.msgCode)
     .then((res) => {
-      afterLogin(res);
+      afterLogin(res)
     })
     .catch(() => {
-      msgCodeKey.value = msgCodeKey.value + 1;
-    });
-};
+      msgCodeKey.value = msgCodeKey.value + 1
+    })
+}
 
 const afterLogin = (res: any) => {
-  const route = router.currentRoute.value;
+  const route = router.currentRoute.value
   const redirect_uri = route.query
     ? route.query.redirect_uri
-      ? "/" + route.query.redirect_uri
+      ? '/' + route.query.redirect_uri
       : undefined
-    : undefined;
+    : undefined
 
   // 创建现代化成功提示
-  const successElement = document.createElement("div");
+  const successElement = document.createElement('div')
   successElement.innerHTML = `
     <div style="
       position: fixed;
@@ -595,10 +617,10 @@ const afterLogin = (res: any) => {
         "></div>
       </div>
     </div>
-  `;
+  `
 
   // 添加动画样式
-  const style = document.createElement("style");
+  const style = document.createElement('style')
   style.textContent = `
     @keyframes successSlideIn {
       0% {
@@ -620,59 +642,59 @@ const afterLogin = (res: any) => {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
-  `;
-  document.head.appendChild(style);
-  document.body.appendChild(successElement);
+  `
+  document.head.appendChild(style)
+  document.body.appendChild(successElement)
 
   // 保存登录信息
-  const { accessToken, refreshToken } = res.payload;
-  localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken);
-  localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken);
-  loading.value = false;
+  const { accessToken, refreshToken } = res.payload
+  localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
+  localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
+  loading.value = false
 
   // 2.5秒后开始退场动画，完成后再跳转页面
   setTimeout(() => {
     if (successElement.parentNode) {
       successElement.style.animation =
-        "successSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) reverse";
+        'successSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) reverse'
       setTimeout(() => {
         if (successElement.parentNode) {
-          document.body.removeChild(successElement);
+          document.body.removeChild(successElement)
         }
         if (document.head.contains(style)) {
-          document.head.removeChild(style);
+          document.head.removeChild(style)
         }
         // 确保提示完全消失后再进行页面跳转
         setTimeout(() => {
           checkLoginState()
             .then(() => {
-              router.replace(redirect_uri || "/");
+              router.replace(redirect_uri || '/')
             })
             .catch(() => {
               // 如果登录状态检查失败，直接跳转
-              router.replace(redirect_uri || "/");
-            });
-        }, 100);
-      }, 400);
+              router.replace(redirect_uri || '/')
+            })
+        }, 100)
+      }, 400)
     } else {
       // 如果元素已经被移除，直接跳转
       setTimeout(() => {
         checkLoginState()
           .then(() => {
-            router.replace(redirect_uri || "/");
+            router.replace(redirect_uri || '/')
           })
           .catch(() => {
-            router.replace(redirect_uri || "/");
-          });
-      }, 100);
+            router.replace(redirect_uri || '/')
+          })
+      }, 100)
     }
-  }, 2500);
-};
+  }, 2500)
+}
 
 const handleInitPassword = () => {
-  loading.value = true;
-  const { password, passwordConfirm, captcha } = passwordResetForm;
-  const { userName } = formInline;
+  loading.value = true
+  const { password, passwordConfirm, captcha } = passwordResetForm
+  const { userName } = formInline
   initPasswordAndLogin(
     userName,
     Md5.hashStr(password),
@@ -680,92 +702,92 @@ const handleInitPassword = () => {
     captcha
   )
     .then((res) => {
-      afterLogin(res);
+      afterLogin(res)
     })
     .catch(() => {
-      passwordResetMode.value = false;
-      title.value = document.title;
-      recoveryFun("LOGIN_CAPTCHA");
-    });
-};
+      passwordResetMode.value = false
+      title.value = document.title
+      recoveryFun('LOGIN_CAPTCHA')
+    })
+}
 
 const passwordResetValidator = () => {
-  return lxStr(passwordResetForm.password);
-};
+  return lxStr(passwordResetForm.password)
+}
 
 const passwordLoginValidator = () => {
-  return lxStr(registerForm.password);
-};
+  return lxStr(registerForm.password)
+}
 
 // 判断密码强度和安全性
 const lxStr = (password: string) => {
-  console.log("lxStr", password);
+  console.log('lxStr', password)
   if (isEmpty(password)) {
-    return Promise.reject("请输入密码");
+    return Promise.reject('请输入密码')
   }
 
   // 密码长度至少8位
   if (password.length < 8) {
-    return Promise.reject("密码长度至少8位");
+    return Promise.reject('密码长度至少8位')
   }
 
   // 检查是否包含数字
-  const hasNumber = /[0-9]/.test(password);
+  const hasNumber = /[0-9]/.test(password)
   // 检查是否包含字母
-  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasLetter = /[a-zA-Z]/.test(password)
 
   // 必须同时包含数字和字母
   if (!hasNumber || !hasLetter) {
-    return Promise.reject("密码必须包含数字和字母");
+    return Promise.reject('密码必须包含数字和字母')
   }
 
   // 检查是否有3位相同的字符
-  let arr = password.split("");
+  let arr = password.split('')
   for (let i = 0; i < arr.length - 2; i++) {
     if (arr[i] === arr[i + 1] && arr[i + 1] === arr[i + 2]) {
-      return Promise.reject("密码不能包含3位相同的字符");
+      return Promise.reject('密码不能包含3位相同的字符')
     }
   }
 
   // 检查是否有3位连续的数字或字母
   for (let i = 0; i < arr.length - 2; i++) {
-    let firstCode = arr[i].charCodeAt(0);
-    let secondCode = arr[i + 1].charCodeAt(0);
-    let thirdCode = arr[i + 2].charCodeAt(0);
+    let firstCode = arr[i].charCodeAt(0)
+    let secondCode = arr[i + 1].charCodeAt(0)
+    let thirdCode = arr[i + 2].charCodeAt(0)
 
     // 检查递增连续（如123, abc）
     if (secondCode - firstCode === 1 && thirdCode - secondCode === 1) {
-      return Promise.reject("密码不能包含3位连续的字符");
+      return Promise.reject('密码不能包含3位连续的字符')
     }
 
     // 检查递减连续（如321, cba）
     if (firstCode - secondCode === 1 && secondCode - thirdCode === 1) {
-      return Promise.reject("密码不能包含3位连续的字符");
+      return Promise.reject('密码不能包含3位连续的字符')
     }
   }
 
-  return Promise.resolve();
-};
+  return Promise.resolve()
+}
 
 const changeToLoginMode = () => {
-  registerMode.value = false;
-  updateCaptchaUrl("LOGIN_CAPTCHA");
-};
+  registerMode.value = false
+  updateCaptchaUrl('LOGIN_CAPTCHA')
+}
 
 onBeforeMount(() =>
   getToken().then((res) => {
-    const { token } = res.payload;
-    localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token);
-    updateCaptchaUrl("LOGIN_CAPTCHA");
+    const { token } = res.payload
+    localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
+    updateCaptchaUrl('LOGIN_CAPTCHA')
   })
-);
+)
 onMounted(() => {
   parameterStore()
-    .getParameter("PHONE_NUMBER_REGISTER")
+    .getParameter('PHONE_NUMBER_REGISTER')
     .then((resp) => {
-      registerWithPhoneNumber.value = resp === "1";
-    });
-});
+      registerWithPhoneNumber.value = resp === '1'
+    })
+})
 </script>
 
 <style lang="less" scoped>

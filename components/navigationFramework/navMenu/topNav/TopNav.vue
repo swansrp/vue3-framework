@@ -1,169 +1,244 @@
 <template>
-  <!--默认，顶部导航只有一级菜单，没有子菜单-->
+  <!--顶部导航菜单支持多级菜单-->
   <a-menu
     :key="componentKey"
     v-model:selected-keys="keys.selectedKeys"
     mode="horizontal"
+    :items="menuItems"
+    trigger-sub-menu-action="click"
     @select="selectTopNav"
-  >
-    <!--顶部导航菜单只可能有一级，不会有子菜单-->
-    <a-menu-item
-      v-for="item in navList"
-      :id="item.key.toString()"
-      :key="item.path"
-      :title="item.title"
-    >
-      <template #icon>
-        <Icon :icon="item.icon" />
-      </template>
-      {{ item.title }}
-    </a-menu-item>
-  </a-menu>
+  />
 </template>
 
 <script lang="ts" setup>
+import * as Icons from '@ant-design/icons-vue'
+
 import { NavListType } from '../type'
 
 import router from '@/framework/router'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
 import { useRouteStore } from '@/framework/store/route'
-
+const store = useTabStore(pinia)
 // 本组件中，使用接口返回的path字段作为a-menu组件的key
 // 因为path会被用于leftNav和HistoryTab等组件，用于当前顶部导航的判断
-
-const store = useTabStore(pinia)
+const iconMap: Record<string, any> = Icons
 const routeStore = useRouteStore(pinia)
-let navList = ref([] as Array<NavListType>)
 const keys = reactive({ selectedKeys: [] as Array<string> })
 // 组件的key，用于更新a-menu的样式，因为有的时候，虽然我每次只设置一个selectedKeys，但是有时会出现两个菜单项都选中的现象
 // 所以需要使用一个key，更新组件的UI
 let componentKey = ref('')
+let currentMenuItemKey = ref('')
+// 转换后的菜单项数据，用于a-menu渲染
+const menuItems = computed(() => {
+  return routeStore.dynamicRoute.map(item => convertToMenuItem(item))
+})
 
-const initTopNavData = () => {
-  navList.value = routeStore.dynamicRoute
-  const currentTopNav = routeStore.currentTopNav
-  if (currentTopNav) keys.selectedKeys = [currentTopNav]
-}
+/**
+ * 将NavListType转换为Ant Design Vue菜单项格式
+ */
+const convertToMenuItem = (item: NavListType, parentPaths: string[] = []) => {
+  const fullPathArray = [...parentPaths, item.path || '']
+  const fullPath = fullPathArray.join('/').replace(/\/\/+/g, '/') // 用 / 拼接并去掉重复 //
+  const menuItem: any = {
+    key: item.path,
+    path: fullPath, // ✅ 保留完整路径以便跳转
+    label: item.meta?.title || item.title || item.name || '未命名',
+    title: item.meta?.title || item.title || item.name || '未命名'
+  }
 
-const setSelectedKey = (topNavPath: string) => {
-  keys.selectedKeys = [topNavPath]
-  componentKey.value = topNavPath
+  const loadIcon = (name: string) => {
+    try {
+      const IconComp = iconMap[name]
+      return IconComp ? h(IconComp) : null
+    } catch (e) {
+      console.warn('icon not found:', name, e)
+      return null
+    }
+  }
+  
+  // 处理图标
+  if (item.icon) {
+    try {
+      const IconComp = loadIcon(item.icon)
+      menuItem.icon = () => (IconComp ? h(IconComp) : null)
+    } catch (e) {
+      console.warn(`无法解析图标: ${item.icon}`, e)
+    }
+  }
+  
+  // 处理子菜单
+  if (item.children && item.children.length > 0) {
+    menuItem.children = item.children.map(child => convertToMenuItem(child, fullPathArray))
+  }
+  
+  return menuItem
 }
 
 const selectTopNav = (obj: any) => {
-  let path = obj.key
-  router.replace(`/${path}`).then(() => store.setTopNavPath(path))
+  router.replace('/' + obj.keyPath.join('/')).then(() => store.setTopNavPath(obj.keyPath[0]))
 }
 
-watch(() => store.topNavPath, topNavPath => setSelectedKey(topNavPath), { immediate: true })
+watch(
+    () => routeStore.currentRoutePath,
+    () => {
+      const pathArray = routeStore.currentRoutePath.split('/')
+      currentMenuItemKey.value = pathArray[pathArray.length - 1]
+    },
+    {
+      immediate: true,
+      deep: true
+    }
+)
 
-// 只用于功能路由守卫中，默认加载第一个动态路由的功能
-// 使用store.updateTopNav标志位，强制更新topNavPath的触发
-watch(() => store.updateTopNav, () => {
-  // 尚未设置store.topNavPath时，使用地址栏中的地址，提取出顶部导航的TopNavPath
-  if (!store.topNavPath) setSelectedKey(routeStore.currentTopNav)
-  else setSelectedKey(store.topNavPath)
-}, { immediate: true })
-
-onBeforeMount(initTopNavData)
+watch (
+    () => [menuItems.value, currentMenuItemKey.value],
+    () => {
+      keys.selectedKeys = [currentMenuItemKey.value]
+      componentKey.value = currentMenuItemKey.value + Date.now()
+    },
+    {
+      immediate: true,
+      deep: true
+    }
+)
 
 </script>
 <style scoped>
 * {
-    user-select: none;
+  user-select: none;
 }
 
-/* 顶部菜单容器样式 - 简洁菜单风格 */
+/* 顶部菜单容器样式 - 简洁水平布局 */
 :global(.ant-menu.ant-menu-horizontal) {
-    line-height: 50px !important;
-    background: #ffffff !important;
-    border-bottom: 1px solid #e8eaed !important;
-    padding: 0 20px !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
-    position: relative !important;
-    z-index: 10 !important;
+  line-height: 50px !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  padding: 0 20px !important;
+  box-shadow: none !important;
+  position: relative !important;
+  z-index: 10 !important;
+  display: flex !important;
+  gap: 4px !important;
 }
 
-/* 顶部菜单项基础样式 - 菜单风格设计 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item) {
-    margin: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    position: relative !important;
-    height: 50px !important;
-    line-height: 50px !important;
-    border: none !important;
-    padding: 0 20px !important;
-    color: #404040 !important;
-    font-weight: 500 !important;
-    font-size: 14px !important;
-    text-rendering: optimizeLegibility !important;
-    -webkit-font-smoothing: antialiased !important;
-    -moz-osx-font-smoothing: grayscale !important;
+/* 顶部菜单项基础样式 */
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-item),
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu) {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: all 0.25s ease !important;
+  position: relative !important;
+  height: 50px !important;
+  line-height: 50px !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  padding: 0 20px !important;
+  color: #303133 !important;
+  font-weight: 400 !important;
+  font-size: 14px !important;
 }
 
-/* 悬停效果 - 轻微背景变化 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item:hover) {
-    background: rgba(24, 144, 255, 0.04) !important;
-    color: #1890ff !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1), inset 0 -2px 0 rgba(24, 144, 255, 0.3) !important;
-    border-color: transparent !important;
+/* 悬停效果 */
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-item:hover),
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu:hover),
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-active) {
+  background: transparent !important;
+  color: #1890ff !important;
+  border-bottom-color: rgba(24, 144, 255, 0.4) !important;
 }
 
-/* 激活状态 - 底部线条标识 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item-selected) {
-    background: rgba(24, 144, 255, 0.06) !important;
-    color: #1890ff !important;
-    font-weight: 600 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 8px rgba(24, 144, 255, 0.15), inset 0 -3px 0 #1890ff !important;
-    border-color: transparent !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* 激活状态 */
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-item-selected),
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-selected) {
+  background: transparent !important;
+  color: #1890ff !important;
+  font-weight: 500 !important;
+  border-bottom-color: #1890ff !important;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.25) !important;
 }
 
-/* 激活状态底部线条 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item-selected::after) {
-    content: '' !important;
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 2px !important;
-    background: #1890ff !important;
-    border-radius: 0 !important;
+/* 隐藏 Ant Design 默认的底部边框，避免双层蓝线 */
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-item-selected::after),
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-selected::after),
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-item::after),
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu::after) {
+  display: none !important;
+  border-bottom: none !important;
 }
 
-/* 图标样式 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item .anticon) {
-    margin-right: 8px !important;
-    font-size: 16px !important;
-    transition: color 0.2s ease !important;
+/* submenu 标题样式 */
+:global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu .ant-menu-submenu-title) {
+  padding: 0 !important;
+  color: inherit !important;
 }
 
-/* 激活状态图标颜色 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item-selected .anticon) {
-    color: #1890ff !important;
+/* 下拉菜单容器样式 */
+:global(.ant-menu-submenu-popup) {
+  background: #ffffff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+  margin-top: 4px !important;
+  overflow: hidden !important;
 }
 
-/* 移除默认的底部边框 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item::before) {
-    display: none !important;
+/* 下拉菜单内容容器 */
+:global(.ant-menu-submenu-popup .ant-menu) {
+  padding: 0 !important;
 }
 
-/* 菜单项之间的分隔 */
-:global(.ant-menu.ant-menu-horizontal .ant-menu-item + .ant-menu-item) {
-    margin-left: 0 !important;
+/* 下拉菜单项样式 */
+:global(.ant-menu-submenu-popup .ant-menu-item) {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 20px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  color: #303133 !important;
+  transition: all 0.2s ease !important;
+  font-weight: 400 !important;
+  font-size: 14px !important;
+  width: 100% !important;
 }
 
-/* 响应式设计 */
+/* 下拉菜单中的submenu标题样式 */
+:global(.ant-menu-submenu-popup .ant-menu-submenu .ant-menu-submenu-title) {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 20px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  color: #303133 !important;
+  transition: all 0.2s ease !important;
+  font-weight: 400 !important;
+  font-size: 14px !important;
+  width: 100% !important;
+}
+
+/* 下拉菜单项悬停 */
+:global(.ant-menu-submenu-popup .ant-menu-item:hover),
+:global(.ant-menu-submenu-popup .ant-menu-submenu-title:hover) {
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.06), rgba(64, 169, 255, 0.08)) !important;
+  color: #1890ff !important;
+  font-weight: 500 !important;
+}
+
+/* 下拉菜单项选中 */
+:global(.ant-menu-submenu-popup .ant-menu-item-selected) {
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.1), rgba(64, 169, 255, 0.15)) !important;
+  color: #1890ff !important;
+  font-weight: 500 !important;
+  box-shadow: inset 3px 0 0 #1890ff !important;
+}
+
+/* 响应式 */
 @media (max-width: 768px) {
-    :global(.ant-menu.ant-menu-horizontal .ant-menu-item) {
-        padding: 0 16px !important;
-        font-size: 13px !important;
-    }
+  :global(.ant-menu.ant-menu-horizontal > .ant-menu-item),
+  :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu) {
+    padding: 0 16px !important;
+    font-size: 13px !important;
+  }
 }
 </style>

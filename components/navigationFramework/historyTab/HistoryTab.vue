@@ -132,14 +132,18 @@ watch(() => store._historyTabArray.length, () => tabs.value = store._historyTabA
 
 <style>
 .history-tags {
-  height: 38px;
-  padding: 4px 6px;
+  height: 36px;
+  padding: 4px 20px 0 20px;
   box-sizing: border-box;
-  background-color: #ffffff;
-  border-bottom: 1px solid #f0f0f0;
+  background: transparent;
+  border-bottom: none;
   user-select: none;
   display: flex;
   align-items: center;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 
 /* 去掉pane面板，以只保留顶部选择tab */
@@ -153,87 +157,102 @@ watch(() => store._historyTabArray.length, () => tabs.value = store._historyTabA
   height: 100%;
   display: flex;
   align-items: center;
+  overflow: visible;
 }
 
 .history-tags .ant-tabs-nav {
   margin: 0;
   height: 100%;
+  overflow: visible;
 }
 
 .history-tags .ant-tabs-nav-wrap {
   height: 100%;
   display: flex;
   align-items: center;
+  overflow: visible;
 }
 
 .history-tags .ant-tabs-nav-list {
   height: 100%;
   display: flex;
   align-items: center;
+  overflow: visible;
 }
 
-/* Tab项基础样式 - 简约现代风格 */
+/* Tab项基础样式 - 轻量扁平设计 */
 .history-tags .ant-tabs-tab {
   margin: 0 1px !important;
   border: none !important;
-  border-radius: 6px !important;
-  background: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
-  transition: all 0.15s ease;
+  border-radius: 4px 4px 0 0 !important;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.05) 0%, 
+    rgba(255, 255, 255, 0.02) 100%);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+              0 1px 2px rgba(0, 0, 0, 0.05);
+  backdrop-filter: none;
+  transition: all 0.2s ease;
   position: relative;
-  height: 30px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
 }
 
-/* Tab悬停效果 - 微妙的交互反馈 */
+/* Tab悬停效果 - 轻微提亮 */
 .history-tags .ant-tabs-tab:hover {
-  background-color: #f8f9fa;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16), 0 2px 4px rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, 
+    rgba(24, 144, 255, 0.06) 0%, 
+    rgba(64, 169, 255, 0.08) 100%);
+  box-shadow: inset 0 -1px 0 rgba(24, 144, 255, 0.15),
+              0 2px 6px rgba(0, 0, 0, 0.08),
+              0 0 12px rgba(24, 144, 255, 0.1);
+  transform: none;
+  border-color: transparent !important;
 }
 
 /* Tab按钮内容样式 */
 .history-tags .ant-tabs-tab .ant-tabs-tab-btn {
-  color: #2d3748;
-  font-weight: 500;
-  font-size: 13px;
-  padding: 0 6px;
-  transition: color 0.15s ease;
+  color: #606266;
+  font-weight: 400;
+  font-size: 12px;
+  padding: 0 2px;
+  transition: color 0.2s ease;
   line-height: 1.3;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: 0.01em;
 }
 
 /* Tab悬停时文字颜色 */
 .history-tags .ant-tabs-tab:hover .ant-tabs-tab-btn {
-  color: #1a202c;
+  color: #1890ff;
 }
 
-/* 激活状态的Tab样式 - 极简设计 */
+/* 激活状态的Tab样式 - 简洁蓝色 */
 .history-tags .ant-tabs.ant-tabs-card .ant-tabs-nav .ant-tabs-tab-active {
-  background-color: #ffffff;
-  box-shadow: 0 6px 12px rgba(24, 144, 255, 0.2), 0 3px 6px rgba(24, 144, 255, 0.15);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.08) 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08),
+              inset 0 1px 2px rgba(0, 0, 0, 0.06),
+              0 0 8px rgba(24, 144, 255, 0.25),
+              0 0 16px rgba(24, 144, 255, 0.15),
+              0 0 24px rgba(24, 144, 255, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15);
   border: none !important;
+  border-bottom: 2px solid rgba(24, 144, 255, 0.4) !important;
   position: relative;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  z-index: 10;
 }
 
-/* 激活状态底部指示线 */
+/* 移除底部指示线 */
 .history-tags .ant-tabs.ant-tabs-card .ant-tabs-nav .ant-tabs-tab-active::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 3px;
-  background-color: #1890ff;
-  border-radius: 1.5px;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.4);
+  display: none;
 }
 
 /* 激活状态的Tab文字和关闭按钮颜色 */
@@ -244,42 +263,48 @@ watch(() => store._historyTabArray.length, () => tabs.value = store._historyTabA
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: 0.01em;
 }
 
-/* 关闭按钮样式优化 - 精致小巧 */
+/* 关闭按钮样式优化 - 圆形设计 */
 .history-tags .ant-tabs-tab-remove {
   margin-left: 4px;
   color: #bfbfbf;
-  transition: all 0.15s ease;
-  border-radius: 3px;
-  width: 12px;
-  height: 12px;
+  transition: all 0.2s ease;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
   line-height: 1;
+  background: transparent;
 }
 
 /* 关闭按钮悬停效果 */
 .history-tags .ant-tabs-tab-remove:hover {
   color: #ff4d4f;
-  background-color: #fff1f0;
+  background: rgba(255, 77, 79, 0.1);
+  transform: scale(1.15);
+}
+
+/* 激活状态Tab的关闭按钮 */
+.history-tags .ant-tabs-tab-active .ant-tabs-tab-remove {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* 激活状态Tab的关闭按钮悬停效果 */
 .history-tags .ant-tabs-tab-active .ant-tabs-tab-remove:hover {
-  color: #ff4d4f;
-  background-color: #fff1f0;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Tab内容区域样式 */
 .history-tags .ant-tabs-card.ant-tabs-small > .ant-tabs-nav .ant-tabs-tab {
-  padding: 4px 8px;
-  min-width: 60px;
+  padding: 0 8px;
+  min-width: 45px;
   text-align: center;
-  height: 30px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,6 +350,6 @@ watch(() => store._historyTabArray.length, () => tabs.value = store._historyTabA
 
 /* 优化Tab之间的间距 */
 .history-tags .ant-tabs-nav-list {
-  gap: 2px;
+  gap: 0;
 }
 </style>
