@@ -1,12 +1,16 @@
 <template>
   <a-form
     :model="_formData"
-    layout="horizontal"
+    :label-col="labelCol"
+    :wrapper-col="wrapperCol"
+    :layout="layout"
+    :class="formClass"
     @finish="onFinish"
   >
     <slot></slot>
     <a-form-item
       :rules="[{ validator: phoneNumberValidatorHandler, trigger: 'blur' }]"
+      :label="showLabel ? '手机号码：' : undefined"
       name="phoneNumber"
     >
       <a-input
@@ -23,6 +27,7 @@
     </a-form-item>
     <a-form-item
       :rules="[{ required: true, message: '请输入验证码!', trigger: 'blur' }]"
+      :label="showLabel ? '验证码：' : undefined"
       name="captcha"
     >
       <a-input
@@ -47,6 +52,7 @@
     </a-form-item>
     <a-form-item
       :rules="[{ required: true, message: '请输入短信验证码!', trigger: 'change' }]"
+      :label="showLabel ? '短信验证码：' : undefined"
       name="msgCode"
     >
       <a-input
@@ -115,10 +121,25 @@ const props = withDefaults(
     submitText?: string
     formData: { phoneNumber: string, msgCode: string, captcha: string }
     finish: (formData: any) => Promise<void>
+    // 是否显示label
+    showLabel?: boolean
+    // 表单布局
+    layout?: 'horizontal' | 'vertical'
+    // label列容器配置
+    labelCol?: { span: number }
+    // 输入框列容器配置
+    wrapperCol?: { span: number }
+    // 表单class
+    formClass?: string
   }>(),
   {
     submitText: '登录',
-    phoneNumberExisted: undefined
+    phoneNumberExisted: undefined,
+    showLabel: false,
+    layout: 'horizontal',
+    labelCol: undefined,
+    wrapperCol: undefined,
+    formClass: ''
   }
 )
 const { smsType, phoneNumberExisted } = toRefs(props)

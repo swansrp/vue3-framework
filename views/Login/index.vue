@@ -15,20 +15,23 @@
       <a-form
         v-if="passwordResetMode"
         :model="passwordResetForm"
-        layout="horizontal"
+        :label-col="{ span: 24 }"
+        :wrapper-col="{ span: 24 }"
+        layout="vertical"
+        class="password-reset-form"
         @finish="handleInitPassword"
       >
         <div class="login-content-wrapper">
           <a-form-item
             :rules="[{ validator: passwordResetValidator, trigger: 'change' }]"
             has-feedback
-            label="输入密码"
+            label="输入密码："
             name="password"
           >
             <a-input-password
               v-model:value="passwordResetForm.password"
               autocomplete="off"
-              placeholder="密码"
+              placeholder="至少8位，需含数字和字母"
               size="large"
               type="password"
             />
@@ -36,19 +39,20 @@
           <a-form-item
             :rules="[{ required: true, message: '两次密码不一致', pattern: new RegExp('^'+ passwordResetForm.password + '$') }]"
             has-feedback
-            label="确认密码"
+            label="确认密码："
             name="passwordConfirm"
           >
             <a-input-password
               v-model:value="passwordResetForm.passwordConfirm"
               autocomplete="off"
-              placeholder="确认密码"
+              placeholder="请再次输入密码"
               size="large"
               type="password"
             />
           </a-form-item>
           <a-form-item
             :rules="[{ required: true, message: '请输入验证码' }]"
+            label="验证码："
             name="captcha"
           >
             <a-input
@@ -91,17 +95,23 @@
             v-model:form-data="registerForm"
             :finish="handleMsgRegister"
             :phone-number-existed="false"
+            :show-label="true"
+            :label-col="{ span: 24 }"
+            :wrapper-col="{ span: 24 }"
+            layout="vertical"
+            form-class="register-form"
             sms-type="REGISTER_MSG_CODE"
             submit-text="注册并登录"
           >
             <a-form-item
               :rules="[{ required: true, message: '请输入用户名!', trigger: 'change' }, { validator: userNameValidator, trigger: 'blur' }]"
+              label="用户名："
               name="userName"
             >
               <a-input
                 v-model:value="registerForm.loginId"
                 autocomplete="off"
-                placeholder="用户名"
+                placeholder="请输入用户名"
                 size="large"
               >
                 <template #prefix>
@@ -112,12 +122,13 @@
             <a-form-item
               :rules="[{ validator: passwordLoginValidator, trigger: 'change' }]"
               has-feedback
+              label="密码："
               name="password"
             >
               <a-input-password
                 v-model:value="registerForm.password"
                 autocomplete="off"
-                placeholder="密码"
+                placeholder="至少8位，需含数字和字母"
                 size="large"
                 type="password"
               >
@@ -141,17 +152,21 @@
           <a-form
             v-else
             :model="registerForm"
-            layout="horizontal"
+            :label-col="{ span: 24 }"
+            :wrapper-col="{ span: 24 }"
+            layout="vertical"
+            class="register-form"
             @finish="handleRegister"
           >
             <a-form-item
               :rules="[{ required: true, message: '请输入用户名!', trigger: 'change' }, { validator: userNameValidator, trigger: 'blur' }]"
+              label="用户名："
               name="loginId"
             >
               <a-input
                 v-model:value="registerForm.loginId"
                 autocomplete="off"
-                placeholder="用户名"
+                placeholder="请输入用户名"
                 size="large"
               >
                 <template #prefix>
@@ -162,12 +177,13 @@
             <a-form-item
               :rules="[{ validator: passwordLoginValidator, trigger: 'change' }]"
               has-feedback
+              label="密码："
               name="password"
             >
               <a-input-password
                 v-model:value="registerForm.password"
                 autocomplete="off"
-                placeholder="密码"
+                placeholder="至少8位，需含数字和字母"
                 size="large"
                 type="password"
               >
@@ -178,6 +194,7 @@
             </a-form-item>
             <a-form-item
               :rules="[{ required: true, message: '请输入验证码' }]"
+              label="验证码："
               name="captcha"
             >
               <a-input
@@ -624,30 +641,53 @@ const passwordLoginValidator = () => {
   return lxStr(registerForm.password)
 }
 
-// 判断密码是否为连续的数字或字母
+// 判断密码强度和安全性
 const lxStr = (password: string) => {
   console.log('lxStr', password)
   if (isEmpty(password)) {
     return Promise.reject('请输入密码')
   }
-  if (!password.match('^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{5,}$')) {
-    return Promise.reject('请输入5位以上数字和字母')
+  
+  // 密码长度至少8位
+  if (password.length < 8) {
+    return Promise.reject('密码长度至少8位')
   }
+  
+  // 检查是否包含数字
+  const hasNumber = /[0-9]/.test(password)
+  // 检查是否包含字母
+  const hasLetter = /[a-zA-Z]/.test(password)
+  
+  // 必须同时包含数字和字母
+  if (!hasNumber || !hasLetter) {
+    return Promise.reject('密码必须包含数字和字母')
+  }
+  
+  // 检查是否有3位相同的字符
   let arr = password.split('')
-  for (let i = 1; i < arr.length - 1; i++) {
-    let firstIndex = arr[i - 1].charCodeAt(0)
-    let secondIndex = arr[i].charCodeAt(0)
-    let thirdIndex = arr[i + 1].charCodeAt(0)
-    if ((thirdIndex === secondIndex) && (secondIndex === firstIndex)) {
-      return Promise.reject('3位相同的字母或数字')
-    }
-    if ((thirdIndex - secondIndex === 1) && (secondIndex - firstIndex === 1)) {
-      return Promise.reject('3位连续的字母或数字')
-    }
-    if ((firstIndex - secondIndex === 1) && (secondIndex - thirdIndex === 1)) {
-      return Promise.reject('3位连续的字母或数字')
+  for (let i = 0; i < arr.length - 2; i++) {
+    if (arr[i] === arr[i + 1] && arr[i + 1] === arr[i + 2]) {
+      return Promise.reject('密码不能包含3位相同的字符')
     }
   }
+  
+  // 检查是否有3位连续的数字或字母
+  for (let i = 0; i < arr.length - 2; i++) {
+    let firstCode = arr[i].charCodeAt(0)
+    let secondCode = arr[i + 1].charCodeAt(0)
+    let thirdCode = arr[i + 2].charCodeAt(0)
+    
+    // 检查递增连续（如123, abc）
+    if ((secondCode - firstCode === 1) && (thirdCode - secondCode === 1)) {
+      return Promise.reject('密码不能包含3位连续的字符')
+    }
+    
+    // 检查递减连续（如321, cba）
+    if ((firstCode - secondCode === 1) && (secondCode - thirdCode === 1)) {
+      return Promise.reject('密码不能包含3位连续的字符')
+    }
+  }
+  
   return Promise.resolve()
 }
 
@@ -973,6 +1013,54 @@ onMounted(() => {
     }
   }
   
+  // 重置密码表单专用样式
+  :deep(.password-reset-form) {
+    .ant-form-item-label {
+      padding-bottom: 8px;
+      
+      > label {
+        color: rgba(255, 255, 255, 0.95) !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+        letter-spacing: 0.5px;
+        height: auto !important;
+        
+        &::before {
+          display: none !important; // 隐藏必填星号
+        }
+      }
+    }
+    
+    .ant-form-item {
+      margin-bottom: 24px;
+    }
+  }
+  
+  // 注册表单专用样式
+  :deep(.register-form) {
+    .ant-form-item-label {
+      padding-bottom: 8px;
+      
+      > label {
+        color: rgba(255, 255, 255, 0.95) !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+        letter-spacing: 0.5px;
+        height: auto !important;
+        
+        &::before {
+          display: none !important; // 隐藏必填星号
+        }
+      }
+    }
+    
+    .ant-form-item {
+      margin-bottom: 24px;
+    }
+  }
+  
   :deep(.ant-form-item) {
     margin-bottom: 20px;
     
@@ -1074,7 +1162,7 @@ onMounted(() => {
       rgba(25, 40, 65, 0.90) 0%,
       rgba(30, 45, 70, 0.85) 100%);
     backdrop-filter: blur(15px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     box-shadow: 
       inset 0 1px 0 rgba(255, 180, 120, 0.15),
@@ -1098,7 +1186,7 @@ onMounted(() => {
       mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       mask-composite: subtract;
       opacity: 0;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.15s ease;
       z-index: -1;
     }
     
@@ -1143,6 +1231,7 @@ onMounted(() => {
       color: rgba(255, 180, 120, 0.9);
       font-size: 16px;
       filter: drop-shadow(0 0 3px rgba(255, 180, 120, 0.4));
+      transition: all 0.15s ease;
     }
     
     &:hover {
@@ -1152,8 +1241,8 @@ onMounted(() => {
         rgba(35, 50, 80, 0.90) 100%);
       box-shadow: 
         inset 0 1px 0 rgba(255, 180, 120, 0.25),
-        0 4px 20px rgba(255, 180, 120, 0.15),
-        0 2px 10px rgba(0, 0, 0, 0.4);
+        0 2px 12px rgba(255, 180, 120, 0.12),
+        0 1px 6px rgba(0, 0, 0, 0.4);
       
       &::before {
         opacity: 1;
@@ -1171,9 +1260,10 @@ onMounted(() => {
         rgba(35, 50, 85, 0.95) 0%,
         rgba(40, 55, 90, 0.90) 100%);
       box-shadow: 
-        inset 0 1px 0 rgba(255, 180, 120, 0.3),
-        0 0 25px rgba(255, 180, 120, 0.25),
-        0 4px 20px rgba(0, 0, 0, 0.5);
+        inset 0 2px 4px rgba(0, 0, 0, 0.2),
+        0 0 20px rgba(255, 180, 120, 0.2),
+        0 2px 12px rgba(0, 0, 0, 0.5);
+      transform: translateY(1px);
       
       &::before {
         opacity: 1;
@@ -1214,6 +1304,7 @@ onMounted(() => {
       inset 0 1px 0 rgba(100, 255, 218, 0.1),
       0 2px 10px rgba(0, 0, 0, 0.3) !important;
     padding: 0 16px !important;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
     
     .ant-input {
       padding-right: 0 !important;
@@ -1256,6 +1347,7 @@ onMounted(() => {
         color: rgba(255, 180, 120, 0.9) !important;
         font-size: 16px !important;
         filter: drop-shadow(0 0 3px rgba(255, 180, 120, 0.4)) !important;
+        transition: all 0.15s ease !important;
       }
     }
     
@@ -1266,8 +1358,8 @@ onMounted(() => {
         rgba(20, 35, 65, 0.95) 100%) !important;
       box-shadow: 
         inset 0 1px 0 rgba(100, 255, 218, 0.2),
-        0 4px 20px rgba(100, 255, 218, 0.1),
-        0 2px 10px rgba(0, 0, 0, 0.4) !important;
+        0 2px 12px rgba(100, 255, 218, 0.08),
+        0 1px 6px rgba(0, 0, 0, 0.4) !important;
     }
     
     &:focus-within {
@@ -1276,9 +1368,10 @@ onMounted(() => {
         rgba(20, 35, 70, 0.98) 0%,
         rgba(25, 40, 75, 0.95) 100%) !important;
       box-shadow: 
-        inset 0 1px 0 rgba(100, 255, 218, 0.3),
-        0 0 25px rgba(100, 255, 218, 0.2),
-        0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        inset 0 2px 4px rgba(0, 0, 0, 0.2),
+        0 0 20px rgba(100, 255, 218, 0.15),
+        0 2px 12px rgba(0, 0, 0, 0.5) !important;
+      transform: translateY(1px) !important;
     }
     
     @media (max-width: 480px) {
@@ -1320,7 +1413,7 @@ onMounted(() => {
     box-shadow: 
       0 4px 15px rgba(0, 191, 255, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     
@@ -1339,16 +1432,15 @@ onMounted(() => {
     }
     
     &:hover {
-      transform: translateY(-2px);
       border-color: rgba(0, 255, 255, 0.8);
       background: linear-gradient(145deg, 
         rgba(0, 120, 240, 0.95) 0%,
         rgba(0, 180, 255, 0.9) 50%,
         rgba(0, 140, 250, 0.95) 100%);
       box-shadow: 
-        0 8px 25px rgba(0, 191, 255, 0.5),
+        0 6px 20px rgba(0, 191, 255, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.3),
-        0 0 30px rgba(0, 255, 255, 0.3);
+        0 0 25px rgba(0, 255, 255, 0.25);
       
       &::before {
         left: 100%;
@@ -1356,9 +1448,9 @@ onMounted(() => {
     }
     
     &:active {
-      transform: translateY(0);
+      transform: translateY(2px);
       box-shadow: 
-        0 2px 10px rgba(0, 191, 255, 0.4),
+        0 2px 8px rgba(0, 191, 255, 0.3),
         inset 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     
@@ -1452,7 +1544,7 @@ onMounted(() => {
         inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
       font-size: 13px !important;
       font-weight: 500 !important;
-      transition: all 0.3s ease !important;
+      transition: all 0.15s ease !important;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
       backdrop-filter: blur(8px) !important;
       
@@ -1463,9 +1555,8 @@ onMounted(() => {
           rgba(255, 220, 160, 0.20) 50%,
           rgba(255, 240, 180, 0.25) 100%) !important;
         border-color: rgba(255, 200, 140, 0.6) !important;
-        transform: translateY(-1px) !important;
         box-shadow: 
-          0 4px 12px rgba(255, 180, 120, 0.3),
+          0 3px 10px rgba(255, 180, 120, 0.25),
           inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
         text-shadow: 
           0 1px 3px rgba(0, 0, 0, 0.9),
@@ -1473,7 +1564,7 @@ onMounted(() => {
       }
       
       &:active {
-        transform: translateY(0px) !important;
+        transform: translateY(1px) !important;
         box-shadow: 
           0 1px 4px rgba(255, 180, 120, 0.2),
           inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
