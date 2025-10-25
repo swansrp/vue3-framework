@@ -77,7 +77,7 @@ const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
 
 // tab切换后的回调函数
 const changeActivateKey = (key: Key) => {
-  console.log('changeActivateKey===', key, store.getRouterTarget(key))
+  console.log('80, changeActivateKey', key)
   // 不要更换这两句话的顺序，否则会产生bug
   // 保存用户最后选择的openKeys和tab
   router.push(store.getRouterTarget(key)).then(() => {
@@ -92,7 +92,8 @@ const changeActivateKey = (key: Key) => {
 }
 
 // 用于监听左侧导航栏中的选项选中情况，以及时更新tab
-watch(() => store.tabActivateKey,
+watch(
+    () => store.tabActivateKey,
     key => {
       // 如果key不为空，则设置为当前key
       if (key) {
@@ -104,30 +105,11 @@ watch(() => store.tabActivateKey,
     { immediate: true }
 )
 
-watch(() => store._historyTabArray.length, () => tabs.value = store._historyTabArray)
+watch(
+    () => store._historyTabArray.length,
+    () => tabs.value = store._historyTabArray
+)
 
-/** 暂时删除这个监听 */
-// // 监听浏览器的返回按钮
-// window.addEventListener('popstate', (event) => {
-//   // 路由守卫的return重定向，也会触发这个事件，但是此处只需要监听浏览器返回按钮的点击事件
-//   // 所以需要使用event.state区分到底是谁触发的这个事件，路由守卫的重定向触发时，event.state会为null
-//   if (!event.state) return
-//   // 如果只有一个，就保持跳转到当前界面，相当于在浏览器返回上一个页面后，再跳转回来
-//   // 此时我也不知道所谓的返回到上一个页面是啥，但是只要再跳回来，就相当于没有跳啦
-//   if (historyPath.length === 1) {
-//     const key = historyPath[0]
-//     activeKey.value = key
-//     changeActivateKey(key)
-//   } else {
-//     // 需要弹出两次，第一次弹出当前页面对应的key；第二次才是上一次的界面对应的key
-//     historyPath.pop()
-//     const key = historyPath.pop() as string
-//     // 需要为tabs设定激活的key，这样才能使对应tab高亮
-//     activeKey.value = key
-//     // 更改路由、左侧及顶部导航
-//     changeActivateKey(key)
-//   }
-// }, false)
 </script>
 
 <style>

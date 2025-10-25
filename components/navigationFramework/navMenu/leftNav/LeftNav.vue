@@ -298,7 +298,7 @@ watch(
       const getMenuKeysFromGlobalRoute = () => {
         const currentRoutePath = router.currentRoute.value.fullPath.slice(1).split('?')[0]
         const pathSegments = currentRoutePath.split('/')
-        
+
         // 如果有多级路径，需要找到所有父级菜单的key来展开
         const openKeys: string[] = []
         const titlePath: string[] = []
@@ -421,6 +421,15 @@ watch(() => tabStore.topNavPath, (value) => {
   topNavPath = value
   initLeftNavList()
 })
+
+// 监听来着TopNav组件的菜单项选中事件
+watch(
+    () => router.currentRoute,
+    () => initLeftNavList(),
+    {
+      deep: true
+    }
+)
 
 // 监听来着HistoryTab组件的tab变更事件
 mitt.on(CHANGE_TAB, () => {

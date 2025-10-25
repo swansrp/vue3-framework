@@ -30,7 +30,7 @@ export const enterFirstDynamicRoute = () => {
   tabStore.topNavPath = topNavPath
   // 通知TopNav组件，更新topNavPath以及顶部导航的高亮
   tabStore.updateTopNav += 1
-  tabStore.tabActivateKey = leftNavPath
+  tabStore.tabActivateKey = node.key || ''
   // 用于LeftNav判断是否为指定的路由路径
   tabStore.updateLeftNav = true
   return [topNavPath, leftNavPath.substring(1, leftNavPath.length)].join('/')
