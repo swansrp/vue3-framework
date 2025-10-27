@@ -333,6 +333,15 @@ html body .dark-content-layout .portal-table .surely-table-row {
     color: #1FC6FF !important;
 }
 
+/* 分页器下拉菜单的 z-index 设置，确保高于总计栏 */
+:deep(.ant-select-dropdown) {
+    z-index: 1050 !important;
+}
+
+:deep(.ant-pagination .ant-select-dropdown) {
+    z-index: 1050 !important;
+}
+
 :deep(.ant-pagination-item-ellipsis) {
     color: #fff !important;
 }
@@ -375,10 +384,12 @@ html body .dark-content-layout .portal-table .surely-table-row {
 
 :deep(.surely-table-summary), :deep(.surely-table-summary-cell) {
     background: #0E3D55;
+    z-index: 1 !important;
 }
 
 :deep(.surely-table-summary-scrollbar) {
     border: none;
+    z-index: 1 !important;
 }
 
 /* 新增：强化表格主体区域的深色主题 */
@@ -512,6 +523,12 @@ html body .dark-content-layout .portal-table .surely-table-row {
     color: #1FC6FF !important;
 }
 
+/* DarkTable 组件中 SVG 内部元素的填充颜色 */
+:deep(span[role="img"][aria-label="caret-up"].surely-table-column-sorter-up.active svg),
+:deep(span[role="img"][aria-label="caret-down"].surely-table-column-sorter-down.active svg) {
+    fill: #1FC6FF !important;
+}
+
 /* 展开图标样式 */
 :deep(.surely-table-row-expand-icon-cell) {
     color: white;
@@ -534,12 +551,16 @@ html body .dark-content-layout .portal-table .surely-table-row {
     background: linear-gradient(145deg, rgba(14, 61, 85, 0.8), rgba(27, 71, 93, 0.8)) !important;
     border-top: 1px solid rgba(31, 198, 255, 0.3) !important;
     backdrop-filter: blur(8px);
+    position: relative;
+    z-index: 10 !important;
 }
 
 /* 表格底部分页区域 */
 :deep(.surely-table-footer) {
     background: linear-gradient(145deg, rgba(14, 61, 85, 0.8), rgba(27, 71, 93, 0.8)) !important;
     border-top: 1px solid rgba(31, 198, 255, 0.3) !important;
+    position: relative;
+    z-index: 10 !important;
 }
 
 /* =========================== */
