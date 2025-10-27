@@ -1,12 +1,10 @@
 <template>
   <!--顶部导航菜单支持多级菜单-->
   <a-menu
-    :key="componentKey"
     v-model:selected-keys="keys.selectedKeys"
-    mode="horizontal"
     :items="menuItems"
-    trigger-sub-menu-action="click"
-    @select="selectTopNav"
+    mode="horizontal"
+    @select="selectNav"
   />
 </template>
 
@@ -19,16 +17,14 @@ import router from '@/framework/router'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
 import { useRouteStore } from '@/framework/store/route'
+
 const store = useTabStore(pinia)
 // 本组件中，使用接口返回的path字段作为a-menu组件的key
 // 因为path会被用于leftNav和HistoryTab等组件，用于当前顶部导航的判断
 const iconMap: Record<string, any> = Icons
 const routeStore = useRouteStore(pinia)
 const keys = reactive({ selectedKeys: [] as Array<string> })
-// 组件的key，用于更新a-menu的样式，因为有的时候，虽然我每次只设置一个selectedKeys，但是有时会出现两个菜单项都选中的现象
-// 所以需要使用一个key，更新组件的UI
-let componentKey = ref('')
-let currentMenuItemKey = ref('')
+
 // 转换后的菜单项数据，用于a-menu渲染
 const menuItems = computed(() => {
   return routeStore.dynamicRoute.map(item => convertToMenuItem(item))
@@ -41,7 +37,7 @@ const convertToMenuItem = (item: NavListType, parentPaths: string[] = []) => {
   const fullPathArray = [...parentPaths, item.path || '']
   const fullPath = fullPathArray.join('/').replace(/\/\/+/g, '/') // 用 / 拼接并去掉重复 //
   const menuItem: any = {
-    key: item.path,
+    key: fullPath,
     path: fullPath, // ✅ 保留完整路径以便跳转
     label: item.meta?.title || item.title || item.name || '未命名',
     title: item.meta?.title || item.title || item.name || '未命名'
@@ -56,46 +52,44 @@ const convertToMenuItem = (item: NavListType, parentPaths: string[] = []) => {
       return null
     }
   }
-  
+
   // 处理图标
   if (item.icon) {
     try {
       const IconComp = loadIcon(item.icon)
       menuItem.icon = () => (IconComp ? h(IconComp) : null)
     } catch (e) {
-      console.warn(`无法解析图标: ${item.icon}`, e)
+      console.warn(`无法解析图标: ${ item.icon }`, e)
     }
   }
-  
+
   // 处理子菜单
   if (item.children && item.children.length > 0) {
     menuItem.children = item.children.map(child => convertToMenuItem(child, fullPathArray))
   }
-  
+  menuItem.onTitleClick = () => clickNav(fullPath, menuItem.children)
+
   return menuItem
 }
 
-const selectTopNav = (obj: any) => {
-  router.replace('/' + obj.keyPath.join('/')).then(() => store.setTopNavPath(obj.keyPath[0]))
+const clickNav = (path: any, children: any) => {
+  let child = children[0] || {}
+  while (isNotEmpty(child.children)) {
+    child = child.children[0]
+  }
+  if (path.split('/').length === 1 && isNotEmpty(child)) {
+    router.push(`/${ child.path }`).then(() => store.setTopNavPath(path))
+  }
+}
+
+const selectNav = (obj: any) => {
+  router.push('/' + obj.key).then(() => store.setTopNavPath(obj.keyPath[0]))
 }
 
 watch(
-    () => routeStore.currentRoutePath,
+    () => [menuItems.value, routeStore.currentRoutePath],
     () => {
-      const pathArray = routeStore.currentRoutePath.split('/')
-      currentMenuItemKey.value = pathArray[pathArray.length - 1]
-    },
-    {
-      immediate: true,
-      deep: true
-    }
-)
-
-watch (
-    () => [menuItems.value, currentMenuItemKey.value],
-    () => {
-      keys.selectedKeys = [currentMenuItemKey.value]
-      componentKey.value = currentMenuItemKey.value + Date.now()
+      keys.selectedKeys = [routeStore.currentRoutePath]
     },
     {
       immediate: true,
