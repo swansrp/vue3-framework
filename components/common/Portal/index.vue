@@ -1669,27 +1669,30 @@ const initQueryCondition = () => {
 
 const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, relation: any, filterStrict: boolean) => {
   console.log('handleSearchConditionChanged', selectedKeys, dataIndex, relation, filterStrict)
-  const condition = {} as ConditionListType
-  if (relation === FILTER_TYPE.BETWEEN && !filterStrict) {
-    condition.andOr = '0'
-    condition.conditionList = [
-      {
-        property: dataIndex,
-        value: [selectedKeys[0]],
-        relation: FILTER_TYPE.GREATER
-      } as ConditionListType,
-      {
-        property: dataIndex,
-        value: [selectedKeys[1]],
-        relation: FILTER_TYPE.LESS
-      } as ConditionListType]
-  } else {
-    condition.property = dataIndex
-    condition.value = selectedKeys
-    condition.relation = relation
-  }
   if (isNotEmpty(selectedKeys)) {
-    queryConditionMap.set(dataIndex as string, condition)
+    if (relation === FILTER_TYPE.BETWEEN && !filterStrict) {
+      const conditionArray = [] as Array<ConditionListType>
+      conditionArray.push(
+        {
+          property: dataIndex,
+          value: [selectedKeys[0]],
+          relation: FILTER_TYPE.GREATER
+        } as ConditionListType,
+        {
+          property: dataIndex,
+          value: [selectedKeys[1]],
+          relation: FILTER_TYPE.LESS
+        } as ConditionListType
+      )
+      queryConditionMap.set(dataIndex + '0', conditionArray[0])
+      queryConditionMap.set(dataIndex + '1', conditionArray[1])
+    } else {
+      const condition = {} as ConditionListType
+      condition.property = dataIndex
+      condition.value = selectedKeys
+      condition.relation = relation
+      queryConditionMap.set(dataIndex as string, condition)
+    }
   } else {
     queryConditionMap.delete(dataIndex as string)
   }

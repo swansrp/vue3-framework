@@ -524,8 +524,9 @@ html body .dark-content-layout .portal-table .surely-table-row {
 }
 
 /* DarkTable 组件中 SVG 内部元素的填充颜色 */
-:deep(span[role="img"][aria-label="caret-up"].surely-table-column-sorter-up.active svg),
-:deep(span[role="img"][aria-label="caret-down"].surely-table-column-sorter-down.active svg) {
+:deep(.surely-table-header-cell .surely-table-filter-trigger.active span[role="img"][aria-label="search"] svg),
+:deep(.surely-table-header-cell span[role="img"][aria-label="caret-up"].surely-table-column-sorter-up.active svg),
+:deep(.surely-table-header-cell span[role="img"][aria-label="caret-down"].surely-table-column-sorter-down.active svg) {
     fill: #1FC6FF !important;
 }
 

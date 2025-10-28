@@ -1629,9 +1629,11 @@ const buildNestedFolders = (items: Array<ValueLabel>, searchTerm?: string) => {
   const root: any = { children: {}, items: [] }
 
   items.forEach((item) => {
-    // 如果有搜索词，只处理匹配的项
+    // 如果有搜索词，只处理匹配的项（同时匹配 label 和 value）
     if (searchTerm) {
-      const isMatch = item.label.toLowerCase().includes(searchTerm)
+      const labelMatch = item.label.toLowerCase().includes(searchTerm)
+      const valueMatch = String(item.value).toLowerCase().includes(searchTerm)
+      const isMatch = labelMatch || valueMatch
       if (!isMatch) return
     }
 
@@ -1964,11 +1966,25 @@ const onSearch = () => {
         autoExpandMatchedFolders()
       } else {
         // 如果没有搜索词，初始化所有文件夹为展开状态
-        Object.keys(folderStructure.value).forEach((folderKey) => {
-          if (expandedFolders[folderKey] === undefined) {
-            expandedFolders[folderKey] = true
-          }
-        })
+        // 递归初始化所有嵌套文件夹的展开状态
+        const initFolderExpanded = (children: any, parentPath = '') => {
+          if (!children || typeof children !== 'object') return
+          
+          Object.keys(children).forEach((folderKey) => {
+            const fullPath = parentPath ? `${parentPath}-${folderKey}` : folderKey
+            expandedFolders[fullPath] = true
+            
+            // 递归处理子文件夹
+            if (children[folderKey]?.children) {
+              initFolderExpanded(children[folderKey].children, fullPath)
+            }
+          })
+        }
+        
+        // 初始化所有文件夹
+        if (folderStructure.value?.children) {
+          initFolderExpanded(folderStructure.value.children)
+        }
       }
     })
   })
@@ -2236,11 +2252,13 @@ const autoExpandMatchedFolders = () => {
   const expandMatchedPaths = (obj: any, currentPath = ''): boolean => {
     let hasMatch = false
 
-    // 检查当前层级的项目
+    // 检查当前层级的项目（同时匹配 label 和 value）
     if (obj.items) {
-      hasMatch = obj.items.some((item: any) =>
-        item.label.toLowerCase().includes(searchTerm)
-      )
+      hasMatch = obj.items.some((item: any) => {
+        const labelMatch = item.label.toLowerCase().includes(searchTerm)
+        const valueMatch = String(item.value).toLowerCase().includes(searchTerm)
+        return labelMatch || valueMatch
+      })
     }
 
     // 检查子文件夹
