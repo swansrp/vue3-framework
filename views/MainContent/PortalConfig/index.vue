@@ -287,7 +287,7 @@
           <a-button
             style="margin-right: 10px"
             type="primary"
-            @click="talentReviewModalShow = true"
+            @click="publicDashboardModalShow = true"
           >
             通用指标
           </a-button>
@@ -1523,7 +1523,7 @@
     />
     <!-- 通用指标弹窗 -->
     <a-modal
-      v-model:open="talentReviewModalShow"
+      v-model:open="publicDashboardModalShow"
       width="99vw"
       :style="{ top: '0px', maxWidth: '99vw' }"
       :body-style="{ padding: '0' }"
@@ -1538,9 +1538,9 @@
           <a-button
             type="primary"
             size="middle"
-            :loading="talentReviewRefreshing"
+            :loading="publicDashboardRefreshing"
             style="margin-right: 30px; display: flex; align-items: center; justify-content: center;"
-            @click="handleTalentReviewRefresh"
+            @click="handlePublicDashboardRefresh"
           >
             <template #icon>
               <ReloadOutlined />
@@ -1549,9 +1549,9 @@
           </a-button>
         </div>
       </template>
-      <talent-review
-        v-if="talentReviewModalShow"
-        ref="talentReviewRef"
+      <public-dashboard
+        v-if="publicDashboardModalShow"
+        ref="publicDashboardRef"
         :table-id="tableConfig.name"
         :show-header="false"
         :show-personal-indicators="false"
@@ -1608,7 +1608,7 @@ import {
   updatePortalConfig
 } from '@/framework/apis/portal/config'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
-import TalentReview from '@/framework/components/common/chartConfig/index.vue'
+import PublicDashboard from '@/framework/components/common/chartConfig/index.vue'
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
@@ -1715,9 +1715,9 @@ let copyConfigModal = reactive({
 const showSql: Ref<boolean> = ref(false)
 const sqlData: Ref<string> = ref('')
 const indicatorModalShow: Ref<boolean> = ref(false)
-const talentReviewModalShow: Ref<boolean> = ref(false)
-const talentReviewRefreshing: Ref<boolean> = ref(false)
-const talentReviewRef = ref()
+const publicDashboardModalShow: Ref<boolean> = ref(false)
+const publicDashboardRefreshing: Ref<boolean> = ref(false)
+const publicDashboardRef = ref()
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
 }
@@ -1737,20 +1737,20 @@ const copyConfig = () => {
 }
 
 // 处理通用指标刷新
-const handleTalentReviewRefresh = async () => {
-  if (!talentReviewRef.value) {
-    console.warn('TalentReview组件引用未找到')
+const handlePublicDashboardRefresh = async () => {
+  if (!publicDashboardRef.value) {
+    console.warn('publicDashboard组件引用未找到')
     return
   }
 
   try {
-    talentReviewRefreshing.value = true
-    // 调用TalentReview组件的refreshDashboard方法
-    await talentReviewRef.value.refreshDashboard()
+    publicDashboardRefreshing.value = true
+    // 调用publicDashboard组件的refreshDashboard方法
+    await publicDashboardRef.value.refreshDashboard()
   } catch (error) {
     console.error('刷新通用指标失败:', error)
   } finally {
-    talentReviewRefreshing.value = false
+    publicDashboardRefreshing.value = false
   }
 }
 
@@ -2683,8 +2683,8 @@ const onSqlShow = () => {
     flex-direction: column;
   }
 
-  /* 确保TalentReview组件占满剩余空间 */
-  .talent-review-dashboard {
+  /* 确保组件占满剩余空间 */
+  .public-dashboard {
     height: 100%;
   }
 }

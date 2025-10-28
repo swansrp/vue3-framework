@@ -536,8 +536,7 @@ export default defineComponent({
           width: '80%',
           itemGap: 15,
           itemHeight: 14,
-          // 当没有第二维度时，不显示色块
-          itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {}
+          show: isNotEmpty(secondDimensionGroups)
         },
         tooltip: {
           trigger: 'axis',
@@ -952,8 +951,7 @@ export default defineComponent({
           width: '80%',
           itemGap: 15,
           itemHeight: 14,
-          // 当没有第二维度时，不显示色块
-          itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {}
+          show: isNotEmpty(secondDimensionGroups)
         },
         tooltip: {
           trigger: 'axis',
