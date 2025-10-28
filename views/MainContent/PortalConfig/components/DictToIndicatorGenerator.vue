@@ -49,26 +49,84 @@
             v-if="dictItems.length > 0"
             class="dict-preview-section"
           >
-            <h4 class="section-title">
-              <EyeOutlined />
-              字典项预览
-              <a-tag
-                color="blue"
-                style="margin-left: 8px"
+            <div class="section-header">
+              <h4 class="section-title">
+                <EyeOutlined />
+                字典项预览
+                <a-tag
+                  color="blue"
+                  style="margin-left: 8px"
+                >
+                  共 {{ dictItems.length }} 项
+                </a-tag>
+                <a-tag
+                  v-if="searchKeyword"
+                  color="orange"
+                  style="margin-left: 8px"
+                >
+                  筛选 {{ filteredDictItems.length }} 项
+                </a-tag>
+                <a-tag
+                  color="green"
+                  style="margin-left: 8px"
+                >
+                  已选 {{ selectedDictItems.size }} 项
+                </a-tag>
+              </h4>
+              <a-space>
+                <a-button
+                  size="small"
+                  @click="handleSelectAll"
+                >
+                  全选
+                </a-button>
+                <a-button
+                  size="small"
+                  @click="handleInvertSelection"
+                >
+                  反选
+                </a-button>
+                <a-button
+                  size="small"
+                  @click="handleDeselectAll"
+                >
+                  清空
+                </a-button>
+              </a-space>
+            </div>
+            
+            <!-- 搜索框 -->
+            <div class="search-section">
+              <a-input
+                v-model:value="searchKeyword"
+                placeholder="搜索字典项（值或名称）"
+                allow-clear
+                @change="onSearchChange"
               >
-                共 {{ dictItems.length }} 项
-              </a-tag>
-            </h4>
+                <template #prefix>
+                  <SearchOutlined />
+                </template>
+              </a-input>
+            </div>
+            
             <div class="dict-items-container">
-              <a-row :gutter="[8, 8]">
+              <a-empty
+                v-if="filteredDictItems.length === 0"
+                description="没有符合条件的字典项"
+              />
+              <a-row
+                v-else
+                :gutter="[8, 8]"
+              >
                 <a-col
-                  v-for="item in dictItems"
+                  v-for="item in filteredDictItems"
                   :key="item.dictId"
                   :span="6"
                 >
                   <a-card
-                    class="dict-item-card"
+                    :class="['dict-item-card', { 'selected': isSelected(item.dictId) }]"
                     size="small"
+                    @click="toggleSelection(item.dictId)"
                   >
                     <div class="dict-item-content">
                       <div class="dict-item-value">
@@ -76,6 +134,9 @@
                       </div>
                       <div class="dict-item-label">
                         {{ item.dictLabel }}
+                      </div>
+                      <div class="dict-item-check">
+                        <CheckOutlined v-if="isSelected(item.dictId)" />
                       </div>
                     </div>
                   </a-card>
@@ -228,10 +289,12 @@
 
 <script lang="ts" setup>
 import {
+  CheckOutlined,
   CloseOutlined,
   DatabaseOutlined,
   EyeOutlined,
   FolderViewOutlined,
+  SearchOutlined,
   SettingOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons-vue'
@@ -280,6 +343,8 @@ const handleClose = () => {
 const dictList = ref<Array<{ label: string; value: string }>>([])
 const selectedDict = ref<string>('')
 const dictItems = ref<Array<any>>([])
+const selectedDictItems = ref<Set<string | number>>(new Set())
+const searchKeyword = ref<string>('')
 const targetGroupId = ref<string | number>('')
 
 // 生成配置
@@ -306,14 +371,29 @@ const previewColumns = [
 ]
 
 // 计算属性
+const filteredDictItems = computed(() => {
+  if (!searchKeyword.value) {
+    return dictItems.value
+  }
+  
+  const keyword = searchKeyword.value.toLowerCase()
+  return dictItems.value.filter(item => {
+    const valueMatch = item.dictValue?.toString().toLowerCase().includes(keyword)
+    const labelMatch = item.dictLabel?.toString().toLowerCase().includes(keyword)
+    return valueMatch || labelMatch
+  })
+})
+
 const canGenerate = computed(() => {
-  return selectedDict.value && targetGroupId.value && dictItems.value.length > 0 && !generating.value
+  return selectedDict.value && targetGroupId.value && selectedDictItems.value.size > 0 && !generating.value
 })
 
 const previewData = computed(() => {
   if (dictItems.value.length === 0) return []
 
-  return dictItems.value.map((item, index) => ({
+  return dictItems.value
+    .filter(item => isSelected(item.dictId))
+    .map((item, index) => ({
     index: index + 1,
     itemValue: (valuePrefix.value || '') + item.dictValue,
     itemName: (namePrefix.value || '') + item.dictLabel + (nameSuffix.value || ''),
@@ -348,11 +428,14 @@ const loadDictItems = async (dictName: string) => {
     const response = await getDictItemByName({ dictName })
     if (response && response.payload) {
       dictItems.value = response.payload
+      // 默认全选
+      handleSelectAll()
     }
   } catch (error) {
     console.error('加载字典项失败:', error)
     message.error('加载字典项失败')
     dictItems.value = []
+    selectedDictItems.value.clear()
   }
 }
 
@@ -360,7 +443,7 @@ const filterDict = (input: string, option: any) => {
   return option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
 }
 
-const onDictChange = async (value: string) => {
+const onDictChange = async (value: string | undefined) => {
   dictValidateStatus.value = ''
   dictErrorMessage.value = ''
 
@@ -372,7 +455,56 @@ const onDictChange = async (value: string) => {
     }
   } else {
     dictItems.value = []
+    selectedDictItems.value.clear()
   }
+}
+
+// 搜索相关方法
+const onSearchChange = () => {
+  // 搜索时不需要额外处理，computed 会自动更新
+}
+
+// 选中/排除相关方法
+const isSelected = (dictId: string | number) => {
+  return selectedDictItems.value.has(dictId)
+}
+
+const toggleSelection = (dictId: string | number) => {
+  if (selectedDictItems.value.has(dictId)) {
+    selectedDictItems.value.delete(dictId)
+  } else {
+    selectedDictItems.value.add(dictId)
+  }
+  // 触发响应式更新
+  selectedDictItems.value = new Set(selectedDictItems.value)
+}
+
+// 全选：针对筛选后的结果
+const handleSelectAll = () => {
+  filteredDictItems.value.forEach(item => {
+    selectedDictItems.value.add(item.dictId)
+  })
+  selectedDictItems.value = new Set(selectedDictItems.value)
+}
+
+// 清空：针对筛选后的结果
+const handleDeselectAll = () => {
+  filteredDictItems.value.forEach(item => {
+    selectedDictItems.value.delete(item.dictId)
+  })
+  selectedDictItems.value = new Set(selectedDictItems.value)
+}
+
+// 反选：针对筛选后的结果
+const handleInvertSelection = () => {
+  filteredDictItems.value.forEach(item => {
+    if (selectedDictItems.value.has(item.dictId)) {
+      selectedDictItems.value.delete(item.dictId)
+    } else {
+      selectedDictItems.value.add(item.dictId)
+    }
+  })
+  selectedDictItems.value = new Set(selectedDictItems.value)
 }
 
 const validateForm = () => {
@@ -384,9 +516,9 @@ const validateForm = () => {
     isValid = false
   }
 
-  if (dictItems.value.length === 0) {
+  if (selectedDictItems.value.size === 0) {
     dictValidateStatus.value = 'error'
-    dictErrorMessage.value = '所选字典没有可用的字典项'
+    dictErrorMessage.value = '请至少选择一个字典项'
     isValid = false
   }
 
@@ -403,8 +535,10 @@ const handleGenerate = async () => {
   try {
     const generatedData = []
 
-    // 为每个字典项生成指标
-    for (const item of dictItems.value) {
+    // 只为选中的字典项生成指标
+    const selectedItems = dictItems.value.filter(item => isSelected(item.dictId))
+    
+    for (const item of selectedItems) {
       const indicatorData = {
         itemValue: (valuePrefix.value || '') + item.dictValue,
         itemName: (namePrefix.value || '') + item.dictLabel + (nameSuffix.value || ''),
@@ -470,6 +604,8 @@ const generateConditionByDictItem = (dictItem: any) => {
 const handleReset = () => {
   selectedDict.value = ''
   dictItems.value = []
+  selectedDictItems.value.clear()
+  searchKeyword.value = ''
   targetGroupId.value = ''
   namePrefix.value = ''
   nameSuffix.value = ''
@@ -526,29 +662,79 @@ defineExpose({
       border: 1px solid #f0f0f0;
     }
 
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+
+      .section-title {
+        margin-bottom: 0;
+      }
+    }
+
+    .search-section {
+      margin-bottom: 16px;
+
+      :deep(.ant-input-affix-wrapper) {
+        transition: all 0.15s ease;
+
+        &:focus,
+        &:focus-within {
+          border-color: #40a9ff;
+          box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+      }
+    }
+
     .dict-items-container {
       max-height: 300px;
       overflow-y: auto;
 
       .dict-item-card {
-        transition: all 0.2s ease;
-        cursor: default;
+        position: relative;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
 
         &:hover {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          transform: translateY(-1px);
+          transform: scale(0.98);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+
+        &.selected {
+          border-color: #1890ff;
+          background: #e6f7ff;
+
+          .dict-item-value {
+            color: #1890ff;
+          }
         }
 
         .dict-item-content {
           .dict-item-value {
-            color: #1890ff;
+            color: #666;
             font-size: 14px;
             margin-bottom: 4px;
+            transition: color 0.15s ease;
           }
 
           .dict-item-label {
             color: #666;
             font-size: 12px;
+          }
+
+          .dict-item-check {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            color: #1890ff;
+            font-size: 16px;
+            font-weight: bold;
           }
         }
       }
