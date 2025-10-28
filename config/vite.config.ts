@@ -51,8 +51,10 @@ export default defineConfig({
       dts: 'src/components.d.ts'
     }),
     viteMockServe({
-      logger: false,
-      mockPath: 'src/mock'
+      mockPath: 'src/mock',
+      enable: process.env.NODE_ENV === 'development',
+      watchFiles: true,
+      logger: true,
     }),
     legacyPlugin({
       targets: ['chrome 52'],
