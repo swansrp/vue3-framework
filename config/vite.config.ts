@@ -8,7 +8,6 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
 import eslintPlugin from 'vite-plugin-eslint'
-import { viteMockServe } from 'vite-plugin-mock'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import VueSetupExtend from 'vite-plugin-vue-setup-extend'
@@ -49,12 +48,6 @@ export default defineConfig({
       })],
       dirs: ['src/components', 'src/framework/components'],
       dts: 'src/components.d.ts'
-    }),
-    viteMockServe({
-      mockPath: 'src/mock',
-      enable: process.env.NODE_ENV === 'development',
-      watchFiles: true,
-      logger: true,
     }),
     legacyPlugin({
       targets: ['chrome 52'],
