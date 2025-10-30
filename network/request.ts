@@ -77,20 +77,25 @@ axiosInstance.interceptors.response.use(
     _handleTimeOut(resp.data)
     return Promise.resolve(resp)
   }, err => {
-    closeLoading(resp.config)
-    _handleTimeOut(err.response.data)
-    if (err.response.status === 404)
-      message.error('抱歉,尚未支持该服务!')
-    else if (err.response.status === 504)
-      message.error('服务开小差了,请稍后再试...')
-    else if (err.response.status === 403)
-      message.error('权限不足,请联系管理员!')
-    else if (err.response.status === 500)
-      message.error('系统错误,联系管理员!')
-    else if (err.response.status === 502)
-      message.error('服务正在快马加鞭,请稍等!')
-    else
-      console.log(err)
+    load.close()
+    if(err.response) {
+      _handleTimeOut(err.response.data)
+      if (err.response.status === 404)
+        message.error('抱歉,尚未支持该服务!')
+      else if (err.response.status === 504)
+        message.error('服务开小差了,请稍后再试...')
+      else if (err.response.status === 403)
+        message.error('权限不足,请联系管理员!')
+      else if (err.response.status === 500)
+        message.error('系统错误,联系管理员!')
+      else if (err.response.status === 502)
+        message.error('服务正在快马加鞭,请稍等!')
+      else
+        console.log(err)
+    } else {
+      message.error('网络异常')
+    }
+
     throw new Error(err)
   }
 )
