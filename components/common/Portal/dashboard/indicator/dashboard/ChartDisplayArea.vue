@@ -233,6 +233,7 @@ const emit = defineEmits<{
 // 响应式数据
 const loading = ref(false)
 const chartData = ref<ChartDataItem[]>([])
+const isRestoringConfig = ref(false) // 标记是否正在恢复配置
 
 // 维度显示控制
 const visibleFirstDimensions = ref<string[]>([])
@@ -249,6 +250,7 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 
 // 图表实例引用
 const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
+
 
 // 获取图表分类数据（x轴）
 const chartCategories = computed(() => {
@@ -355,7 +357,7 @@ const isStatisticTypesInvertDisabled = computed(() => {
  */
 const transformConditionList = (conditionList: any[]): any[] => {
   const result: any[] = []
-  
+
   const traverse = (conditions: any[], parentAndOr = '0') => {
     conditions.forEach(condition => {
       // 如果是叶子节点条件（有property属性且不为null），直接添加
@@ -372,16 +374,16 @@ const transformConditionList = (conditionList: any[]): any[] => {
         if (condition.andOr !== undefined) {
           // 递归处理子条件
           const transformedSubConditions = transformConditionList(condition.conditionList)
-          
+
           // 如果子条件只有一个且是叶子节点，直接添加
-          if (transformedSubConditions.length === 1 && 
-              transformedSubConditions[0].property !== undefined && 
-              transformedSubConditions[0].property !== null) {
+          if (transformedSubConditions.length === 1 &&
+            transformedSubConditions[0].property !== undefined &&
+            transformedSubConditions[0].property !== null) {
             result.push(transformedSubConditions[0])
-          } 
+          }
           // 如果有多个子条件且都是叶子节点，构建嵌套结构
-          else if (transformedSubConditions.length > 0 && 
-                   transformedSubConditions.every(sub => sub.property !== undefined && sub.property !== null)) {
+          else if (transformedSubConditions.length > 0 &&
+            transformedSubConditions.every(sub => sub.property !== undefined && sub.property !== null)) {
             result.push({
               property: null,
               value: null,
@@ -393,11 +395,11 @@ const transformConditionList = (conditionList: any[]): any[] => {
           // 如果子条件中有嵌套结构，保持原有结构
           else if (transformedSubConditions.length > 0) {
             // 只有当子条件不为空时才添加
-            const nonEmptyConditions = transformedSubConditions.filter(sub => 
-              sub.property !== null || 
+            const nonEmptyConditions = transformedSubConditions.filter(sub =>
+              sub.property !== null ||
               (sub.conditionList && Array.isArray(sub.conditionList) && sub.conditionList.length > 0)
             )
-            
+
             if (nonEmptyConditions.length > 0) {
               result.push({
                 property: null,
@@ -408,7 +410,7 @@ const transformConditionList = (conditionList: any[]): any[] => {
               })
             }
           }
-        } 
+        }
         // 如果没有andOr属性，递归处理
         else {
           traverse(condition.conditionList, parentAndOr)
@@ -416,7 +418,7 @@ const transformConditionList = (conditionList: any[]): any[] => {
       }
     })
   }
-  
+
   traverse(conditionList)
   return result
 }
@@ -491,7 +493,7 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
   // 合并查询条件：全局筛选条件 + 第一维度条件 + 第二维度条件
   const globalConditions = receivedData.value.filterConditions?.conditionList || []
   const firstDimConditions = firstDimItem.queryConditions.conditionList || []
-  const secondDimConditions = secondDimItem 
+  const secondDimConditions = secondDimItem
     ? secondDimItem.queryConditions.conditionList || []
     : []
 
@@ -706,8 +708,9 @@ const onPieClick = (params: any) => {
 /**
  * 更新维度数据的函数
  * @param data 图表数据
+ * @param restoreVisibility 是否从配置中恢复可见性状态
  */
-const updateDimensionData = (data: ChartDataItem[]) => {
+const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) => {
   // 以配置顺序为主，回退到数据中的顺序
   const configFirst = receivedData.value?.firstDimension?.indicatorItems?.map(i => i.itemName) || []
   const dataFirst = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[0]))]
@@ -720,21 +723,51 @@ const updateDimensionData = (data: ChartDataItem[]) => {
   // 提取统计类型
   const statisticTypes = [...new Set(data.flatMap((item: any) => item.children.map((child: any) => child.metric)))]
 
-  // 每次重新生成图表时都刷新三组维度的"所有项"和"可见项"，避免旧选择造成过滤为空
+  // 更新所有项列表
   allFirstDimensions.value = [...firstDimensionGroups]
-  visibleFirstDimensions.value = [...firstDimensionGroups]
-
   allSecondDimensions.value = [...secondDimensionGroups]
-  visibleSecondDimensions.value = [...secondDimensionGroups]
-
   allStatisticTypes.value = [...statisticTypes]
-  visibleStatisticTypes.value = [...statisticTypes]
+
+  // 如果需要从配置中恢复可见性状态
+  if (restoreVisibility && receivedData.value) {
+    // 从配置中恢复可见性状态
+    if (receivedData.value.visibleFirstDimensions && Array.isArray(receivedData.value.visibleFirstDimensions)) {
+      // 只保留在当前数据中存在的项
+      visibleFirstDimensions.value = receivedData.value.visibleFirstDimensions.filter(
+        item => firstDimensionGroups.includes(item)
+      )
+    } else {
+      visibleFirstDimensions.value = [...firstDimensionGroups]
+    }
+
+    if (receivedData.value.visibleSecondDimensions && Array.isArray(receivedData.value.visibleSecondDimensions)) {
+      visibleSecondDimensions.value = receivedData.value.visibleSecondDimensions.filter(
+        item => secondDimensionGroups.includes(item)
+      )
+    } else {
+      visibleSecondDimensions.value = [...secondDimensionGroups]
+    }
+
+    if (receivedData.value.visibleStatisticTypes && Array.isArray(receivedData.value.visibleStatisticTypes)) {
+      visibleStatisticTypes.value = receivedData.value.visibleStatisticTypes.filter(
+        item => statisticTypes.includes(item)
+      )
+    } else {
+      visibleStatisticTypes.value = [...statisticTypes]
+    }
+  } else {
+    // 默认全部可见
+    visibleFirstDimensions.value = [...firstDimensionGroups]
+    visibleSecondDimensions.value = [...secondDimensionGroups]
+    visibleStatisticTypes.value = [...statisticTypes]
+  }
 }
 
 /**
  * 获取图表数据
+ * @param shouldRestoreVisibility 是否应该恢复可见性配置（用于编辑回显）
  */
-const fetchChartData = async () => {
+const fetchChartData = async (shouldRestoreVisibility = false) => {
   if (!receivedData.value) {
     message.error('数据配置不完整，请重新配置维度信息')
     throw new Error('数据配置不完整，请重新配置维度信息')
@@ -744,6 +777,11 @@ const fetchChartData = async () => {
   if (!receivedData.value.firstDimension) {
     message.error('一级维度未配置，请先选择一级维度')
     throw new Error('一级维度未配置，请先选择一级维度')
+  }
+
+  // 标记正在恢复配置
+  if (shouldRestoreVisibility) {
+    isRestoringConfig.value = true
   }
 
   loading.value = true
@@ -761,8 +799,8 @@ const fetchChartData = async () => {
     if (result && result.payload) {
       chartData.value = result.payload
 
-      // 更新维度数据
-      updateDimensionData(result.payload)
+      // 更新维度数据，如果需要则恢复可见性配置
+      updateDimensionData(result.payload, shouldRestoreVisibility)
 
       // 触发图表生成事件
       emit('chartGenerated', result.payload)
@@ -778,6 +816,12 @@ const fetchChartData = async () => {
     throw error
   } finally {
     loading.value = false
+    // 清除恢复配置标记
+    if (shouldRestoreVisibility) {
+      setTimeout(() => {
+        isRestoringConfig.value = false
+      }, 100)
+    }
   }
 }
 
@@ -924,6 +968,15 @@ const forceRecalculateLayout = async () => {
   }
 }
 
+// 获取当前的统计指标可见性配置
+const getVisibilityConfig = () => {
+  return {
+    visibleStatisticTypes: [...visibleStatisticTypes.value],
+    visibleFirstDimensions: [...visibleFirstDimensions.value],
+    visibleSecondDimensions: [...visibleSecondDimensions.value]
+  }
+}
+
 // 暴露方法供父组件调用
 defineExpose({
   generateChart: fetchChartData,
@@ -937,7 +990,8 @@ defineExpose({
     allStatisticTypes.value = []
     loading.value = false
   },
-  forceRecalculateLayout
+  forceRecalculateLayout,
+  getVisibilityConfig
 })
 </script>
 

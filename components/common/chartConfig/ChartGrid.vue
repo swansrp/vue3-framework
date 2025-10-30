@@ -21,7 +21,7 @@
     >
       <div
         v-for="indicator in localIndicators"
-        :key="indicator.id"
+        :key="`${indicator.id}-${chartRefreshKey}`"
         class="chart-item"
         :class="{
           'chart-item-placeholder': isDragging && draggingIndicator?.id === indicator.id,
@@ -40,6 +40,7 @@
         @mousedown="startDrag($event, indicator)"
       >
         <ChartCard
+          :ref="el => setChartCardRef(el, indicator.id)"
           :indicator="indicator"
           :loading="loading"
           :grid-unit-width="gridUnitWidth"
@@ -156,11 +157,11 @@ const getIndicatorResizePermission = (indicator: DashboardItem): boolean => {
 // 本地预览用数据
 const localIndicators = ref<DashboardItem[]>([])
 watch(
-    () => props.indicators,
-    (val) => {
-      localIndicators.value = val.map((v) => ({ ...v }))
-    },
-    { immediate: true, deep: true }
+  () => props.indicators,
+  (val) => {
+    localIndicators.value = val.map((v) => ({ ...v }))
+  },
+  { immediate: true, deep: true }
 )
 
 // 拖拽状态
@@ -175,8 +176,8 @@ let resizeObserver: ResizeObserver | null = null
 
 // 检查拖拽位置是否与其他卡片重叠
 const checkDragOverlap = (
-    position: { col: number; row: number },
-    indicator: DashboardItem
+  position: { col: number; row: number },
+  indicator: DashboardItem
 ) => {
   if (!indicator.xGrid || !indicator.yGrid) return false
 
@@ -199,10 +200,10 @@ const checkDragOverlap = (
 
     // 检查是否重叠
     if (
-        dragLeft <= itemRight &&
-        dragRight >= itemLeft &&
-        dragTop <= itemBottom &&
-        dragBottom >= itemTop
+      dragLeft <= itemRight &&
+      dragRight >= itemLeft &&
+      dragTop <= itemBottom &&
+      dragBottom >= itemTop
     ) {
       return true
     }
@@ -271,8 +272,8 @@ const startDrag = (e: MouseEvent, indicator: DashboardItem) => {
 
 // 检查两个组件是否重叠
 const isOverlapping = (
-    item1: { xPosition: number; yPosition: number; xGrid: number; yGrid: number },
-    item2: { xPosition: number; yPosition: number; xGrid: number; yGrid: number }
+  item1: { xPosition: number; yPosition: number; xGrid: number; yGrid: number },
+  item2: { xPosition: number; yPosition: number; xGrid: number; yGrid: number }
 ): boolean => {
   const left1 = item1.xPosition
   const right1 = item1.xPosition + item1.xGrid - 1
@@ -289,9 +290,9 @@ const isOverlapping = (
 
 // 查找下一个可用位置
 const findNextAvailablePosition = (
-    items: DashboardItem[],
-    targetItem: { xPosition: number; yPosition: number; xGrid: number; yGrid: number },
-    excludeId?: string
+  items: DashboardItem[],
+  targetItem: { xPosition: number; yPosition: number; xGrid: number; yGrid: number },
+  excludeId?: string
 ): { col: number; row: number } => {
   const gridColumns = props.gridColumns
 
@@ -340,9 +341,9 @@ const findNextAvailablePosition = (
 
 // 重新计算所有组件布局，避免重叠
 const recalculateLayout = (
-    indicators: DashboardItem[],
-    changedItemId: string,
-    newSize: { xGrid: number; yGrid: number }
+  indicators: DashboardItem[],
+  changedItemId: string,
+  newSize: { xGrid: number; yGrid: number }
 ): DashboardItem[] => {
   const result = [...indicators]
   const changedIndex = result.findIndex(item => item.id === changedItemId)
@@ -365,18 +366,18 @@ const recalculateLayout = (
 
     const item = result[i]
     if (isOverlapping(
-        {
-          xPosition: changedItem.xPosition || 1,
-          yPosition: changedItem.yPosition || 1,
-          xGrid: changedItem.xGrid || 1,
-          yGrid: changedItem.yGrid || 1
-        },
-        {
-          xPosition: item.xPosition || 1,
-          yPosition: item.yPosition || 1,
-          xGrid: item.xGrid || 1,
-          yGrid: item.yGrid || 1
-        }
+      {
+        xPosition: changedItem.xPosition || 1,
+        yPosition: changedItem.yPosition || 1,
+        xGrid: changedItem.xGrid || 1,
+        yGrid: changedItem.yGrid || 1
+      },
+      {
+        xPosition: item.xPosition || 1,
+        yPosition: item.yPosition || 1,
+        xGrid: item.xGrid || 1,
+        yGrid: item.yGrid || 1
+      }
     )) {
       affectedItems.push(item)
     }
@@ -385,14 +386,14 @@ const recalculateLayout = (
   // 为受影响的组件重新分配位置
   for (const affectedItem of affectedItems) {
     const newPosition = findNextAvailablePosition(
-        result,
-        {
-          xPosition: affectedItem.xPosition || 1,
-          yPosition: affectedItem.yPosition || 1,
-          xGrid: affectedItem.xGrid || 1,
-          yGrid: affectedItem.yGrid || 1
-        },
-        affectedItem.id
+      result,
+      {
+        xPosition: affectedItem.xPosition || 1,
+        yPosition: affectedItem.yPosition || 1,
+        xGrid: affectedItem.xGrid || 1,
+        yGrid: affectedItem.yGrid || 1
+      },
+      affectedItem.id
     )
 
     const affectedIndex = result.findIndex(item => item.id === affectedItem.id)
@@ -410,8 +411,8 @@ const recalculateLayout = (
 
 // 重新排序指标
 const reorderIndicators = (
-    indicatorId: string,
-    position: { col: number; row: number }
+  indicatorId: string,
+  position: { col: number; row: number }
 ) => {
   // 创建当前指标的副本
   const newOrder = [...props.indicators]
@@ -431,9 +432,9 @@ const reorderIndicators = (
 const handleResize = (indicatorId: string, xGrid: number, yGrid: number) => {
   // 重新计算布局，避免重叠
   const newLayout = recalculateLayout(
-      props.indicators,
-      indicatorId,
-      { xGrid, yGrid }
+    props.indicators,
+    indicatorId,
+    { xGrid, yGrid }
   )
 
   // 发出重新排序事件以应用新的布局
@@ -492,11 +493,11 @@ onMounted(() => {
   }
   // 指标数据变化后，等待 DOM 更新再计算
   watch(
-      () => props.indicators,
-      async () => {
-        await nextTick()
-        setTimeout(() => calcUnits(), 50)
-      }
+    () => props.indicators,
+    async () => {
+      await nextTick()
+      setTimeout(() => calcUnits(), 50)
+    }
   )
 })
 
@@ -511,9 +512,40 @@ onUnmounted(() => {
   }
 })
 
+// 存储所有 ChartCard 的引用
+const chartCardRefs = new Map<string, any>()
+
+// 设置 ChartCard 引用
+const setChartCardRef = (el: any, id: string) => {
+  if (el) {
+    chartCardRefs.set(id, el)
+  } else {
+    chartCardRefs.delete(id)
+  }
+}
+
+// 刷新所有图表（用于配置更新后强制重新渲染）
+const chartRefreshKey = ref(0)
+const refreshAllCharts = async () => {
+  // 通过修改key值强制重新渲染所有ChartCard组件
+  chartRefreshKey.value++
+  await nextTick()
+
+  // 强制每个卡片重新加载数据
+  const refreshPromises = Array.from(chartCardRefs.values()).map(cardRef => {
+    if (cardRef && typeof cardRef.forceRefresh === 'function') {
+      return cardRef.forceRefresh()
+    }
+    return Promise.resolve()
+  })
+
+  await Promise.all(refreshPromises)
+}
+
 // 暴露方法给父组件
 defineExpose({
-  forceRecalculateLayout
+  forceRecalculateLayout,
+  refreshAllCharts
 })
 </script>
 

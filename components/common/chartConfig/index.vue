@@ -590,6 +590,11 @@ const handleChartConfigSave = async (_data: any) => {
     // 如果是新增模式，跳过选中状态更新，保持原有选中状态
     const skipSelection = !isEditMode.value
     await loadDashboardData(skipSelection)
+
+    // 刷新外面的卡片显示（强制重新渲染）
+    if (chartGridRef.value && typeof chartGridRef.value.refreshAllCharts === 'function') {
+      await chartGridRef.value.refreshAllCharts()
+    }
   } catch (error) {
     console.error('重新加载数据失败:', error)
     message.error('重新加载数据失败')
