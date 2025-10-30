@@ -1965,14 +1965,14 @@ const onSearch = () => {
       if (inputTableName.value.trim()) {
         autoExpandMatchedFolders()
       } else {
-        // 如果没有搜索词，初始化所有文件夹为展开状态
-        // 递归初始化所有嵌套文件夹的展开状态
+        // 如果没有搜索词，初始化所有文件夹为关闭状态
+        // 递归初始化所有嵌套文件夹的关闭状态
         const initFolderExpanded = (children: any, parentPath = '') => {
           if (!children || typeof children !== 'object') return
           
           Object.keys(children).forEach((folderKey) => {
             const fullPath = parentPath ? `${parentPath}-${folderKey}` : folderKey
-            expandedFolders[fullPath] = true
+            expandedFolders[fullPath] = false
             
             // 递归处理子文件夹
             if (children[folderKey]?.children) {
