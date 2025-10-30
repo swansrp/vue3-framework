@@ -314,10 +314,28 @@ const convertToRequestParams = (config: any) => {
 
   // 处理一级维度
   if (config.firstDimension?.indicatorItems) {
+    // 获取可见的一级维度列表（如果有的话）
+    const visibleFirstDims = config.visibleFirstDimensions || []
+    // 过滤出可见的一级维度项
+    const firstItems = visibleFirstDims.length > 0
+      ? config.firstDimension.indicatorItems.filter((item: any) =>
+        visibleFirstDims.includes(item.itemName)
+      )
+      : config.firstDimension.indicatorItems
+
     if (config.secondDimension?.indicatorItems) {
+      // 获取可见的二级维度列表（如果有的话）
+      const visibleSecondDims = config.visibleSecondDimensions || []
+      // 过滤出可见的二级维度项
+      const secondItems = visibleSecondDims.length > 0
+        ? config.secondDimension.indicatorItems.filter((item: any) =>
+          visibleSecondDims.includes(item.itemName)
+        )
+        : config.secondDimension.indicatorItems
+
       // 有二级维度，进行交叉组合
-      config.firstDimension.indicatorItems.forEach((firstItem: any) => {
-        config.secondDimension.indicatorItems.forEach((secondItem: any) => {
+      firstItems.forEach((firstItem: any) => {
+        secondItems.forEach((secondItem: any) => {
           metricConditions.push({
             value: `${config.firstDimension.groupValue}&&${firstItem.itemValue}&&${config.secondDimension.groupValue}&&${secondItem.itemValue}`,
             label: `${firstItem.itemName}&&${secondItem.itemName}`,
@@ -333,7 +351,7 @@ const convertToRequestParams = (config: any) => {
       })
     } else {
       // 只有一级维度
-      config.firstDimension.indicatorItems.forEach((item: any) => {
+      firstItems.forEach((item: any) => {
         metricConditions.push({
           value: `${config.firstDimension.groupValue}&&${item.itemValue}`,
           label: item.itemName,
@@ -342,6 +360,15 @@ const convertToRequestParams = (config: any) => {
       })
     }
   }
+
+  // 获取可见的统计指标列表（如果有的话）
+  const visibleStatisticTypes = config.visibleStatisticTypes || []
+  // 过滤出可见的数据指标
+  const visibleDataMetrics = visibleStatisticTypes.length > 0
+    ? config.dataMetrics?.filter((metric: any) =>
+      visibleStatisticTypes.includes(metric.dataName)
+    )
+    : config.dataMetrics
 
   return {
     selectColumnCondition: {},
@@ -352,7 +379,7 @@ const convertToRequestParams = (config: any) => {
     sort: null,
     metricColumn: [],
     metricCondition: metricConditions,
-    statisticColumn: config.dataMetrics?.map((metric: any) => ({
+    statisticColumn: visibleDataMetrics?.map((metric: any) => ({
       value: metric.dataField,
       label: metric.dataName
     })) || [],
@@ -446,9 +473,14 @@ watch(
 )
 
 // 刷新图表
-const refreshChart = () => {
-  loadChartData()
+const refreshChart = async () => {
+  await loadChartData()
   message.success('图表已刷新')
+}
+
+// 强制刷新图表（不显示提示消息，用于外部调用）
+const forceRefresh = async () => {
+  await loadChartData()
 }
 
 // 重命名图表
@@ -819,7 +851,8 @@ onBeforeUnmount(() => {
 // 暴露方法给父组件使用
 defineExpose({
   showDropArea,
-  hideDropArea
+  hideDropArea,
+  forceRefresh
 })
 </script>
 

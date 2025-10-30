@@ -322,18 +322,10 @@ const updateSelectedColor = () => {
 watch(
   [() => props.initialColor, () => props.visible],
   ([newColor, isVisible], [_oldColor, wasVisible]) => {
-    console.log('=== ColorPicker Watch Debug ===')
-    console.log('newColor:', newColor)
-    console.log('isVisible:', isVisible)
-    console.log('wasVisible:', wasVisible)
-    console.log('condition:', isVisible && !wasVisible, newColor && isValidColor(newColor))
-
     // 当模态框打开时，重置为初始颜色
     if (isVisible && !wasVisible && newColor && isValidColor(newColor)) {
-      console.log('执行颜色重置，设置颜色为:', newColor)
       selectedColor.value = newColor
       const hsv = hexToHsv(newColor)
-      console.log('转换后的HSV值:', hsv)
       hue.value = hsv.h
       saturation.value = hsv.s
       value.value = hsv.v
@@ -347,14 +339,7 @@ watch(
       } else {
         alpha.value = 1
       }
-    } else {
-      console.log('不执行颜色重置，原因:')
-      if (!isVisible) console.log('- 模态框未打开')
-      if (wasVisible) console.log('- 模态框之前就是打开的')
-      if (!newColor) console.log('- 没有传入颜色')
-      if (newColor && !isValidColor(newColor)) console.log('- 传入的颜色无效:', newColor)
     }
-    console.log('=== End ColorPicker Watch Debug ===')
   },
   { immediate: true }
 )

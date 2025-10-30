@@ -536,7 +536,15 @@ export default defineComponent({
           width: '80%',
           itemGap: 15,
           itemHeight: 14,
-          show: isNotEmpty(secondDimensionGroups)
+          show: isNotEmpty(secondDimensionGroups),
+          formatter: (name: string) => {
+            // 将 "维度&&统计类型" 格式化为 "维度(统计类型)"
+            if (name.includes('&&')) {
+              const parts = name.split('&&')
+              return `${parts[0]}(${parts[1]})`
+            }
+            return name
+          }
         },
         tooltip: {
           trigger: 'axis',
@@ -951,7 +959,15 @@ export default defineComponent({
           width: '80%',
           itemGap: 15,
           itemHeight: 14,
-          show: isNotEmpty(secondDimensionGroups)
+          show: isNotEmpty(secondDimensionGroups),
+          formatter: (name: string) => {
+            // 将 "维度&&统计类型" 格式化为 "维度(统计类型)"
+            if (name.includes('&&')) {
+              const parts = name.split('&&')
+              return `${parts[0]}(${parts[1]})`
+            }
+            return name
+          }
         },
         tooltip: {
           trigger: 'axis',
@@ -1522,7 +1538,15 @@ export default defineComponent({
           width: '80%',
           itemGap: 15,
           itemHeight: 14,
-          itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {}
+          itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {},
+          formatter: (name: string) => {
+            // 将 "维度&&统计类型" 格式化为 "维度(统计类型)"
+            if (name.includes('&&')) {
+              const parts = name.split('&&')
+              return `${parts[0]}(${parts[1]})`
+            }
+            return name
+          }
         },
         tooltip: {
           trigger: 'axis',
@@ -1688,13 +1712,17 @@ export default defineComponent({
           d.statisticType === pieMetric.dataName
         )
 
-        // 计算颜色，按照您提供的逻辑
-        const itemColor = (props.dimensionValueMap
-          && pieMetric.itemColors
-          && props.dimensionValueMap.first
-          && pieMetric.itemColors[props.dimensionValueMap.first[category]])
-          || pieMetric.color
-          || `hsl(${(categoryIndex * 30) % 360}, 70%, 50%)`
+        // 计算颜色 - 饼图每个扇区应该有不同的颜色
+        let itemColor: string | undefined
+
+        // 优先使用配置的颜色映射
+        if (props.dimensionValueMap?.first && pieMetric.itemColors) {
+          const mappedCode = props.dimensionValueMap.first[category]
+          itemColor = pieMetric.itemColors[mappedCode]
+        }
+
+        // 如果没有配置颜色，使用HSL生成不同的颜色（不使用pieMetric.color，因为那是单一颜色）
+        const finalColor = itemColor || `hsl(${(categoryIndex * 137) % 360}, 70%, 50%)`
 
         // 对数据值进行单位转换
         const originalValue = item ? item.statistic : 0
@@ -1706,7 +1734,7 @@ export default defineComponent({
           name: category,
           value: convertedValue,
           itemStyle: {
-            color: itemColor
+            color: finalColor
           }
         }
       }).filter(item => item.value > 0) // 过滤掉值为0的项

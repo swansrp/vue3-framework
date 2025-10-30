@@ -10,6 +10,7 @@ export interface IndicatorItem {
     itemName: string
     itemValue: any
     queryConditions: ConditionGroup
+    isVisibleInChart?: boolean  // 在图表统计指标控制中是否可见，用于编辑回显
 }
 
 export interface IndicatorGroup {
@@ -30,6 +31,7 @@ export interface DataMetric {
     unitConfig?: string    // 原始单位配置，如 "2,10000"
     formatConfig?: { fix: number; unitDivisor: number }  // 格式化配置
     itemColors: Record<string, string>  // 维度项的颜色映射 {itemKey: color}
+    isVisibleInChart?: boolean  // 在图表统计指标控制中是否可见，用于编辑回显
 }
 
 export interface DimensionIndicatorsFilter {
@@ -37,6 +39,9 @@ export interface DimensionIndicatorsFilter {
     secondDimension: IndicatorGroup | null  // 允许为null
     filterConditions: ConditionGroup
     dataMetrics: Array<DataMetric>  // 新增数据配置数组
+    visibleStatisticTypes?: string[]  // 统计指标的可见性配置，用于编辑回显
+    visibleFirstDimensions?: string[]  // 一级维度的可见性配置，用于编辑回显
+    visibleSecondDimensions?: string[]  // 二级维度的可见性配置，用于编辑回显
 }
 
 // 返回的数据类型定义

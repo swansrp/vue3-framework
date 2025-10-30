@@ -218,8 +218,8 @@ const loadEditData = async () => {
     // 2) 如仍未获取到配置，则从接口返回的树形数据中递归查找对应 id
     if (!savedConfig) {
       const response = props.isCommonIndicator
-          ? await getCommonStatistic(props.tableId)
-          : await getPersonalStatistic(props.tableId)
+        ? await getCommonStatistic(props.tableId)
+        : await getPersonalStatistic(props.tableId)
       const personalStatistics = response.payload || []
 
       const findById = (nodes: any[], id: string | number): any | null => {
@@ -234,14 +234,14 @@ const loadEditData = async () => {
       }
 
       const currentNode = Array.isArray(personalStatistics)
-          ? findById(personalStatistics, props.editData.id)
-          : null
+        ? findById(personalStatistics, props.editData.id)
+        : null
 
       if (currentNode && currentNode.indicator) {
         try {
           savedConfig = typeof currentNode.indicator === 'string'
-              ? JSON.parse(currentNode.indicator)
-              : currentNode.indicator
+            ? JSON.parse(currentNode.indicator)
+            : currentNode.indicator
         } catch (e) {
           console.error('解析接口返回的 indicator 失败:', e)
         }
@@ -316,19 +316,18 @@ const handleSaveConfig = async () => {
         return
       }
 
-      // 先调用generateChart生成dimensionIndicatorsFilter
+      // 获取完整配置（包含当前的选中状态）
+      // 不要调用 generateChart()，因为它会重置选中状态为全选
       try {
-        await dashboardRef.value?.generateChart()
-      } catch (error) {
-        console.error('生成图表配置失败:', error)
-        message.error('生成图表配置失败，请检查配置')
-        return
-      }
+        dimensionIndicatorsFilter = dashboardRef.value?.getFullConfig()
 
-      // 获取生成的dimensionIndicatorsFilter
-      dimensionIndicatorsFilter = dashboardRef.value?.dimensionIndicatorsFilter
-      if (!dimensionIndicatorsFilter) {
-        message.error('获取图表配置失败')
+        if (!dimensionIndicatorsFilter) {
+          message.error('获取图表配置失败')
+          return
+        }
+      } catch (error) {
+        console.error('获取图表配置失败:', error)
+        message.error('获取图表配置失败，请检查配置')
         return
       }
     }

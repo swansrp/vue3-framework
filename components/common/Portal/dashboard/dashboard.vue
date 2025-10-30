@@ -8,7 +8,7 @@
       @drag-end="onDragEnd"
     />
 
-    <!-- 右侧配置面板 -->
+    <!-- 中间配置面板 -->
     <config-panel
       v-model:first-dimension="firstDimension"
       v-model:second-dimension="secondDimension"
@@ -23,7 +23,7 @@
       @reset-config="$emit('reset-config')"
     />
 
-    <!-- 中间展示区域 -->
+    <!-- 右侧展示区域 -->
     <ChartDisplayArea
       ref="chartDisplayAreaRef"
       :config="config"
@@ -348,9 +348,6 @@ const generateChart = async (chartData?: {
   selectedFilterItemsArray: string[][],
   dataMetrics: DataMetricUI[]
 }) => {
-  console.log('generateChart called in dashboard.vue')
-  console.log('chartData:', chartData)
-  console.log('firstDimension.value:', firstDimension.value)
 
   // 如果传递了chartData，使用其中的数据
   const firstDim = chartData?.firstDimension || firstDimension.value
@@ -426,7 +423,8 @@ const generateChart = async (chartData?: {
   // 调用子组件的生成图表方法
   if (chartDisplayAreaRef.value) {
     try {
-      await chartDisplayAreaRef.value.generateChart()
+      // 普通生成图表，不恢复可见性配置（默认全选）
+      await chartDisplayAreaRef.value.generateChart(false)
       // 只有在成功生成图表后才显示成功消息
       message.success('图表生成成功')
     } catch (error) {
@@ -527,7 +525,8 @@ onMounted(async () => {
       dimensionIndicatorsFilter.value = pendingSavedConfig.value
       await nextTick()
       if (chartDisplayAreaRef.value) {
-        await chartDisplayAreaRef.value.generateChart()
+        // 恢复配置时，传入true参数表示需要恢复可见性配置
+        await chartDisplayAreaRef.value.generateChart(true)
       }
     } catch (e) {
       console.warn('加载完成后自动生成图表失败:', e)
@@ -580,15 +579,6 @@ const mapSavedGroupToUi = (savedGroup: any): IndicatorGroup | null => {
   }
 }
 
-// 工具：判断两个对象是否深相等（简化版）
-const deepEqual = (a: any, b: any): boolean => {
-  try {
-    return JSON.stringify(a) === JSON.stringify(b)
-  } catch {
-    return false
-  }
-}
-
 // 基于 filterConditions 在整棵指标树中推断筛选维度与选中项
 const tryReconstructFilterFromConditions = (savedConfig: any) => {
   filterDimensions.value = [null]
@@ -599,49 +589,103 @@ const tryReconstructFilterFromConditions = (savedConfig: any) => {
     return
   }
 
-  // 扫描整棵指标树，找出与任一 filter 条件匹配的分组和项
-  let bestMatchGroup: IndicatorGroup | null = null
-  let bestMatchItemKeys: string[] = []
-
-  const groupsStack: IndicatorGroup[] = [...(indicatorTreeData.value || [])]
-  while (groupsStack.length) {
-    const grp = groupsStack.shift() as IndicatorGroup
-    if (grp.children && grp.children.length) groupsStack.push(...grp.children)
-
-    const items = grp.items || []
-    if (!items.length) continue
-
-    const matchedKeys: string[] = []
-    items.forEach((it: any) => {
-      const itemCond = parseConditionGroup(it.condition)
-      if (!itemCond || !Array.isArray(itemCond.conditionList)) return
-
-      // 情况1：单条件，直接与 filter.conditionList 的某一项对比
-      if (itemCond.conditionList.length === 1) {
-        const single = itemCond.conditionList[0]
-        const has = filter.conditionList.some((fc: any) => fc && !fc.conditionList && deepEqual(fc, single))
-        if (has) matchedKeys.push(String(it.key))
-      } else {
-        // 情况2：多条件，filter 中应以子分组的形式存在
-        const groupCandidate = { conditionList: itemCond.conditionList, andOr: itemCond.andOr }
-        const hasGroup = filter.conditionList.some((fc: any) => Array.isArray(fc?.conditionList) && deepEqual({ conditionList: fc.conditionList, andOr: fc.andOr }, groupCandidate))
-        if (hasGroup) matchedKeys.push(String(it.key))
+  // 展开嵌套的条件组，提取所有实际条件
+  const flattenConditions = (condList: any[]): any[] => {
+    const result: any[] = []
+    condList.forEach((cond: any) => {
+      if (cond.conditionList && Array.isArray(cond.conditionList) && cond.conditionList.length > 0) {
+        // 如果是条件组（有子条件列表），递归展开
+        result.push(...flattenConditions(cond.conditionList))
+      } else if (cond.property) {
+        // 如果是实际条件（有 property），直接添加
+        result.push(cond)
       }
     })
-
-    if (matchedKeys.length > bestMatchItemKeys.length) {
-      bestMatchGroup = {
-        key: grp.key,
-        title: grp.title,
-        items: (grp.items || []).map((x: any) => ({ ...x }))
-      }
-      bestMatchItemKeys = matchedKeys
-    }
+    return result
   }
 
-  if (bestMatchGroup && bestMatchItemKeys.length) {
-    filterDimensions.value = [bestMatchGroup]
-    selectedFilterItemsArray.value = [bestMatchItemKeys]
+  // 为每个顶层条件组分别匹配筛选维度
+  const topLevelConditionGroups = filter.conditionList.filter((cond: any) =>
+    cond.conditionList && Array.isArray(cond.conditionList) && cond.conditionList.length > 0
+  )
+
+  if (topLevelConditionGroups.length === 0) {
+    return
+  }
+
+  // 存储所有匹配结果
+  const allMatchedDimensions: (IndicatorGroup | null)[] = []
+  const allMatchedItemKeys: string[][] = []
+
+  // 对每个顶层条件组进行匹配
+  topLevelConditionGroups.forEach((topLevelGroup: any) => {
+    // 展开当前条件组的所有条件
+    const groupConditions = flattenConditions(topLevelGroup.conditionList)
+
+    if (groupConditions.length === 0) {
+      allMatchedDimensions.push(null)
+      allMatchedItemKeys.push([])
+      return
+    }
+
+    // 扫描整棵指标树，找出与当前条件组匹配的分组和项
+    let bestMatchGroup: IndicatorGroup | null = null
+    let bestMatchItemKeys: string[] = []
+
+    const groupsStack: IndicatorGroup[] = [...(indicatorTreeData.value || [])]
+    while (groupsStack.length) {
+      const grp = groupsStack.shift() as IndicatorGroup
+      if (grp.children && grp.children.length) groupsStack.push(...grp.children)
+
+      const items = grp.items || []
+      if (!items.length) continue
+
+      const matchedKeys: string[] = []
+      items.forEach((it: any) => {
+        const itemCond = parseConditionGroup(it.condition)
+        if (!itemCond || !Array.isArray(itemCond.conditionList)) return
+
+        // 展开项的条件
+        const itemConditions = flattenConditions(itemCond.conditionList)
+
+        // 检查项的任一条件是否在 groupConditions 中
+        const hasMatch = itemConditions.some((itemC: any) => {
+          return groupConditions.some((filterC: any) => {
+            // 比较核心字段：property, relation, value
+            return itemC.property === filterC.property &&
+              String(itemC.relation) === String(filterC.relation) &&
+              JSON.stringify(itemC.value) === JSON.stringify(filterC.value)
+          })
+        })
+
+        if (hasMatch) {
+          matchedKeys.push(String(it.key))
+        }
+      })
+
+      if (matchedKeys.length > bestMatchItemKeys.length) {
+        bestMatchGroup = {
+          key: grp.key,
+          title: grp.title,
+          items: (grp.items || []).map((x: any) => ({ ...x }))
+        }
+        bestMatchItemKeys = matchedKeys
+      }
+    }
+
+    // 保存当前条件组的匹配结果
+    allMatchedDimensions.push(bestMatchGroup)
+    allMatchedItemKeys.push(bestMatchItemKeys)
+  })
+
+  // 过滤掉没有匹配到的维度，如果全部都匹配到了，则设置结果
+  const hasAnyMatch = allMatchedDimensions.some((dim, idx) =>
+    dim !== null && allMatchedItemKeys[idx] && allMatchedItemKeys[idx].length > 0
+  )
+
+  if (hasAnyMatch) {
+    filterDimensions.value = allMatchedDimensions
+    selectedFilterItemsArray.value = allMatchedItemKeys
   }
 }
 
@@ -674,24 +718,26 @@ const restoreConfig = async (savedConfig: any) => {
       }))
     }
 
-    // 根据 filterConditions 在整棵指标树中推断筛选维度
-    tryReconstructFilterFromConditions(savedConfig)
-
-    // 回显多个筛选条件（如果存在）
-    if (savedConfig.filterDimensions && Array.isArray(savedConfig.filterDimensions)) {
+    // 优先从显式保存的筛选维度恢复（如果存在）
+    if (savedConfig.filterDimensions && Array.isArray(savedConfig.filterDimensions) && savedConfig.filterDimensions.length > 0) {
+      // 显式保存了 filterDimensions，使用保存的值
       filterDimensions.value = savedConfig.filterDimensions.map((dim: any) => mapSavedGroupToUi(dim))
-    } else {
-      // 兼容旧格式
+
+      // 恢复选中的筛选项
+      if (savedConfig.selectedFilterItemsArray && Array.isArray(savedConfig.selectedFilterItemsArray)) {
+        selectedFilterItemsArray.value = savedConfig.selectedFilterItemsArray
+      } else if (savedConfig.selectedFilterItems) {
+        // 兼容旧格式
+        selectedFilterItemsArray.value = [savedConfig.selectedFilterItems || []]
+      }
+    } else if (savedConfig.filterDimension) {
+      // 兼容旧格式：单个 filterDimension
       const filterDim = mapSavedGroupToUi(savedConfig.filterDimension)
       filterDimensions.value = [filterDim]
-    }
-
-    // 回显选中的筛选项
-    if (savedConfig.selectedFilterItemsArray && Array.isArray(savedConfig.selectedFilterItemsArray)) {
-      selectedFilterItemsArray.value = savedConfig.selectedFilterItemsArray
-    } else {
-      // 兼容旧格式
       selectedFilterItemsArray.value = [savedConfig.selectedFilterItems || []]
+    } else {
+      // 没有显式保存筛选维度，根据 filterConditions 推断
+      tryReconstructFilterFromConditions(savedConfig)
     }
 
     // 同步给图表展示，并记录待生成
@@ -702,7 +748,8 @@ const restoreConfig = async (savedConfig: any) => {
     if (config.value?.url && indicatorTreeData.value?.length && chartDisplayAreaRef.value) {
       await nextTick()
       try {
-        await chartDisplayAreaRef.value.generateChart()
+        // 恢复配置时，传入true参数表示需要恢复可见性配置
+        await chartDisplayAreaRef.value.generateChart(true)
       } catch (error) {
         console.error('生成图表失败:', error)
       } finally {
@@ -723,6 +770,28 @@ const forceRecalculateLayout = async () => {
   }
 }
 
+// 获取完整配置（包含统计指标可见性配置）
+const getFullConfig = () => {
+  // 获取实时的可见性配置
+  let visibilityConfig = {
+    visibleStatisticTypes: [] as string[],
+    visibleFirstDimensions: [] as string[],
+    visibleSecondDimensions: [] as string[]
+  }
+
+  if (chartDisplayAreaRef.value && chartDisplayAreaRef.value.getVisibilityConfig) {
+    visibilityConfig = chartDisplayAreaRef.value.getVisibilityConfig()
+  }
+
+  // 合并配置
+  return {
+    ...dimensionIndicatorsFilter.value,
+    visibleStatisticTypes: visibilityConfig.visibleStatisticTypes,
+    visibleFirstDimensions: visibilityConfig.visibleFirstDimensions,
+    visibleSecondDimensions: visibilityConfig.visibleSecondDimensions
+  }
+}
+
 // 暴露方法和数据给父组件
 defineExpose({
   dimensionIndicatorsFilter,
@@ -734,7 +803,8 @@ defineExpose({
   clearChart,
   generateChart,
   restoreConfig,
-  forceRecalculateLayout
+  forceRecalculateLayout,
+  getFullConfig
 })
 </script>
 
