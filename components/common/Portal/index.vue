@@ -1695,6 +1695,8 @@ const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, relatio
     }
   } else {
     queryConditionMap.delete(dataIndex as string)
+    queryConditionMap.delete(dataIndex + '0' as string)
+    queryConditionMap.delete(dataIndex + '1' as string)
   }
 }
 
