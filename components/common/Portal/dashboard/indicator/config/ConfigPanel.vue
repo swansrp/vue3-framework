@@ -39,7 +39,6 @@
         v-model:first-dimension="firstDimension"
         v-model:second-dimension="secondDimension"
         :filter-dimension="filterDimensions[0]"
-        @dimension-changed="onDimensionChanged"
       />
 
       <!-- 全局筛选条件 -->
@@ -249,13 +248,6 @@ watch(
   }
 )
 
-// 维度变化事件处理
-const onDimensionChanged = () => {
-  // 当维度发生变化时，可能需要重新计算一些依赖维度的数据
-  console.log('维度发生变化')
-  // 这里不需要做额外处理，因为数据配置组件会通过watch监听维度变化
-}
-
 // 数据配置更新事件处理
 const updateMetricField = (metricId: string, field: string, value: any) => {
   const metric = dataMetrics.value.find(m => m.id === metricId)
@@ -278,8 +270,6 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
 
 // 生成图表事件处理
 const generateChart = () => {
-  console.log('generateChart called, firstDimension.value:', firstDimension.value)
-
   // 校验一级维度是否选择
   if (!firstDimension.value) {
     message.error('请先选择一级维度（横坐标）')

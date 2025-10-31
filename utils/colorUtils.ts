@@ -41,18 +41,15 @@ export const generateDistinctColors = (count: number, colors: string[] = default
   const currentTime = Date.now()
 
   if (count === 1) {
-    console.log('只请求1个颜色，返回:', availableColors[0])
     return [availableColors[0]]
   }
   
   // 基于当前时间计算起始偏移量
   const timeOffset = Math.floor(currentTime / 1000) % availableColors.length
-  console.log('时间偏移量:', timeOffset)
-  
+
   if (count <= availableColors.length) {
     // 如果需要的颜色数量小于等于预设颜色数量，均匀选取
     const step = Math.floor(availableColors.length / count)
-    console.log('均匀分布步长:', step)
     const result: string[] = []
     
     for (let i = 0; i < count; i++) {
@@ -60,15 +57,12 @@ export const generateDistinctColors = (count: number, colors: string[] = default
       const index = (timeOffset + i * step) % availableColors.length
       result.push(availableColors[index])
     }
-    
-    console.log('最终生成的颜色数组:', result)
-    console.log('=== generateDistinctColors 调用结束 ===')
+
     return result
   } else {
     // 如果需要的颜色数量大于预设颜色数量，先生成扩展的颜色数组
     const extendedColors = [...availableColors]
-    console.log('需要扩展颜色数组，目标长度:', count * 2)
-    
+
     // 使用HSL颜色空间生成更多颜色
     for (let i = availableColors.length; i < count * 2; i++) {
       const hue = (i * 137.508) % 360
@@ -77,12 +71,9 @@ export const generateDistinctColors = (count: number, colors: string[] = default
       const newColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`
       extendedColors.push(newColor)
     }
-    
-    console.log('扩展后的颜色数组长度:', extendedColors.length)
-    
+
     // 从扩展的颜色数组中均匀选取指定数量的颜色
     const step = Math.floor(extendedColors.length / count)
-    console.log('扩展数组均匀分布步长:', step)
     const result: string[] = []
     
     for (let i = 0; i < count; i++) {
@@ -90,9 +81,7 @@ export const generateDistinctColors = (count: number, colors: string[] = default
       const index = (timeOffset + i * step) % extendedColors.length
       result.push(extendedColors[index])
     }
-    
-    console.log('最终生成的颜色数组:', result)
-    console.log('=== generateDistinctColors 调用结束 ===')
+
     return result
   }
 }

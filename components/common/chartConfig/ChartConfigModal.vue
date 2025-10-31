@@ -13,7 +13,7 @@
       <div class="modal-header">
         <span class="modal-title">{{ modalTitle }}</span>
         <div class="indicator-name-input">
-          <span class="input-label">指标名称：<span class="required-star">*</span></span>
+          <span class="input-label"><span class="required-star">* </span>指标名称：</span>
           <a-input
             v-model:value="indicatorName"
             placeholder="请输入指标名称（必填）"

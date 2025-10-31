@@ -153,6 +153,14 @@ const chartDisplayAreaRef = ref()
 const dimensionIndicatorsFilter = ref<DimensionIndicatorsFilter | undefined>(undefined)
 // 当 restoreConfig 在基础数据尚未加载完成时，暂存配置以便稍后渲染
 const pendingSavedConfig = ref<any | null>(null)
+// 保存上一次的配置快照，用于比较配置是否变化
+const lastConfigSnapshot = ref<{
+  firstDimension: IndicatorGroup | null,
+  secondDimension: IndicatorGroup | null,
+  filterDimensions: (IndicatorGroup | null)[],
+  selectedFilterItemsArray: string[][],
+  dataMetrics: DataMetricUI[]
+} | null>(null)
 
 // 事件处理
 const toggleLeftPanel = (status?: boolean) => {
@@ -341,6 +349,147 @@ const convertToConditionGroup = (filterItemsArray: string[][], filterDimensions:
   return result
 }
 
+// 比较两个配置是否相同
+const compareConfigs = (
+  config1: {
+    firstDimension: IndicatorGroup | null,
+    secondDimension: IndicatorGroup | null,
+    filterDimensions: (IndicatorGroup | null)[],
+    selectedFilterItemsArray: string[][],
+    dataMetrics: DataMetricUI[]
+  },
+  config2: {
+    firstDimension: IndicatorGroup | null,
+    secondDimension: IndicatorGroup | null,
+    filterDimensions: (IndicatorGroup | null)[],
+    selectedFilterItemsArray: string[][],
+    dataMetrics: DataMetricUI[]
+  }
+): boolean => {
+  // 比较一级维度
+  if (config1.firstDimension?.key !== config2.firstDimension?.key ||
+    config1.firstDimension?.title !== config2.firstDimension?.title) {
+    return false
+  }
+  // 比较一级维度的items数组长度
+  if ((config1.firstDimension?.items?.length || 0) !== (config2.firstDimension?.items?.length || 0)) {
+    return false
+  }
+
+  // 比较二级维度
+  if (config1.secondDimension?.key !== config2.secondDimension?.key ||
+    config1.secondDimension?.title !== config2.secondDimension?.title) {
+    return false
+  }
+  // 比较二级维度的items数组长度
+  if ((config1.secondDimension?.items?.length || 0) !== (config2.secondDimension?.items?.length || 0)) {
+    return false
+  }
+
+  // 比较筛选维度数组
+  if (config1.filterDimensions.length !== config2.filterDimensions.length) {
+    return false
+  }
+  for (let i = 0; i < config1.filterDimensions.length; i++) {
+    const dim1 = config1.filterDimensions[i]
+    const dim2 = config2.filterDimensions[i]
+    if (dim1?.key !== dim2?.key || dim1?.title !== dim2?.title) {
+      return false
+    }
+  }
+
+  // 比较选中的筛选项数组
+  if (config1.selectedFilterItemsArray.length !== config2.selectedFilterItemsArray.length) {
+    return false
+  }
+  for (let i = 0; i < config1.selectedFilterItemsArray.length; i++) {
+    const arr1 = config1.selectedFilterItemsArray[i].sort()
+    const arr2 = config2.selectedFilterItemsArray[i].sort()
+    if (JSON.stringify(arr1) !== JSON.stringify(arr2)) {
+      return false
+    }
+  }
+
+  // 比较数据指标数组
+  if (config1.dataMetrics.length !== config2.dataMetrics.length) {
+    return false
+  }
+  for (let i = 0; i < config1.dataMetrics.length; i++) {
+    const m1 = config1.dataMetrics[i]
+    const m2 = config2.dataMetrics[i]
+    if (m1.dataField !== m2.dataField ||
+      m1.chartType !== m2.chartType ||
+      m1.color !== m2.color ||
+      m1.yAxisPosition !== m2.yAxisPosition ||
+      m1.stackGroup !== m2.stackGroup ||
+      m1.unit !== m2.unit ||
+      JSON.stringify(m1.itemColors || {}) !== JSON.stringify(m2.itemColors || {})) {
+      return false
+    }
+  }
+
+  return true
+}
+
+// 比较配置的各个部分，返回哪些部分发生了变化
+const compareConfigParts = (
+  config1: {
+    firstDimension: IndicatorGroup | null,
+    secondDimension: IndicatorGroup | null,
+    filterDimensions: (IndicatorGroup | null)[],
+    selectedFilterItemsArray: string[][],
+    dataMetrics: DataMetricUI[]
+  },
+  config2: {
+    firstDimension: IndicatorGroup | null,
+    secondDimension: IndicatorGroup | null,
+    filterDimensions: (IndicatorGroup | null)[],
+    selectedFilterItemsArray: string[][],
+    dataMetrics: DataMetricUI[]
+  }
+): {
+  firstDimensionChanged: boolean
+  secondDimensionChanged: boolean
+  dataMetricsChanged: boolean
+} => {
+  // 比较一级维度
+  const firstDimensionChanged = config1.firstDimension?.key !== config2.firstDimension?.key ||
+    config1.firstDimension?.title !== config2.firstDimension?.title ||
+    (config1.firstDimension?.items?.length || 0) !== (config2.firstDimension?.items?.length || 0)
+
+  // 比较二级维度
+  const secondDimensionChanged = config1.secondDimension?.key !== config2.secondDimension?.key ||
+    config1.secondDimension?.title !== config2.secondDimension?.title ||
+    (config1.secondDimension?.items?.length || 0) !== (config2.secondDimension?.items?.length || 0)
+
+  // 比较数据指标数组
+  let dataMetricsChanged = false
+  if (config1.dataMetrics.length !== config2.dataMetrics.length) {
+    dataMetricsChanged = true
+  } else {
+    for (let i = 0; i < config1.dataMetrics.length; i++) {
+      const m1 = config1.dataMetrics[i]
+      const m2 = config2.dataMetrics[i]
+      if (m1.dataField !== m2.dataField ||
+        m1.chartType !== m2.chartType ||
+        m1.color !== m2.color ||
+        m1.yAxisPosition !== m2.yAxisPosition ||
+        m1.stackGroup !== m2.stackGroup ||
+        m1.unit !== m2.unit ||
+        JSON.stringify(m1.itemColors || {}) !== JSON.stringify(m2.itemColors || {})) {
+        dataMetricsChanged = true
+        break
+      }
+    }
+  }
+
+  return {
+    firstDimensionChanged,
+    secondDimensionChanged,
+    dataMetricsChanged
+  }
+}
+
 const generateChart = async (chartData?: {
   firstDimension: IndicatorGroup | null,
   secondDimension: IndicatorGroup | null,
@@ -352,14 +501,11 @@ const generateChart = async (chartData?: {
   // 如果传递了chartData，使用其中的数据
   const firstDim = chartData?.firstDimension || firstDimension.value
   const secondDim = chartData?.secondDimension || secondDimension.value
-  const filterDims = chartData?.filterDimensions || filterDimensions.value
+  const filterDims = chartData?.filterDimensions || filterDimensions.value || []
   const selectedFilterItems = chartData?.selectedFilterItemsArray || selectedFilterItemsArray.value
   const dataMetricsData = chartData?.dataMetrics || dataMetrics.value
 
-  console.log('firstDim:', firstDim)
-
   if (!firstDim) {
-    console.log('firstDimension is null')
     message.error('请先选择一级维度（横坐标）')
     return
   }
@@ -417,15 +563,150 @@ const generateChart = async (chartData?: {
   // 更新维度指标过滤器数据
   dimensionIndicatorsFilter.value = filterData
 
+  // 构建当前配置的快照
+  const currentConfig = {
+    firstDimension: firstDim,
+    secondDimension: secondDim,
+    filterDimensions: filterDims,
+    selectedFilterItemsArray: selectedFilterItems,
+    dataMetrics: dataMetricsData
+  }
+
+  // 保存是否是首次点击的状态（在保存快照之前）
+  const isFirstClick = lastConfigSnapshot.value === null
+
+  // 比较当前配置和上一次配置是否相同
+  const configUnchanged = lastConfigSnapshot.value !== null &&
+    compareConfigs(currentConfig, lastConfigSnapshot.value)
+
+  // 保存当前配置作为下一次比较的基准
+  lastConfigSnapshot.value = {
+    firstDimension: firstDim ? {
+      key: firstDim.key,
+      title: firstDim.title,
+      items: firstDim.items?.map((item: any) => ({ ...item })) || []
+    } : null,
+    secondDimension: secondDim ? {
+      key: secondDim.key,
+      title: secondDim.title,
+      items: secondDim.items?.map((item: any) => ({ ...item })) || []
+    } : null,
+    filterDimensions: (Array.isArray(filterDims) ? filterDims : []).map(dim => dim ? {
+      key: dim.key,
+      title: dim.title,
+      items: dim.items?.map((item: any) => ({ ...item })) || []
+    } : null),
+    selectedFilterItemsArray: selectedFilterItems.map(arr => [...arr]),
+    dataMetrics: dataMetricsData.map(metric => ({ ...metric }))
+  }
+
   // 等待下一个tick，确保props已经传递给子组件
   await nextTick()
 
-  // 调用子组件的生成图表方法
+  // 决定可见性配置的处理方式
+  let shouldRestoreVisibility = configUnchanged
+  let partialVisibilityConfig: {
+    visibleFirstDimensions?: string[]
+    visibleSecondDimensions?: string[]
+    visibleStatisticTypes?: string[]
+  } | null = null
+
+  // 如果配置没有变化，完全保持可见性配置
+  if (configUnchanged && chartDisplayAreaRef.value && chartDisplayAreaRef.value.getVisibilityConfig) {
+    const visibilityConfig = chartDisplayAreaRef.value.getVisibilityConfig()
+    partialVisibilityConfig = {
+      visibleFirstDimensions: visibilityConfig.visibleFirstDimensions,
+      visibleSecondDimensions: visibilityConfig.visibleSecondDimensions,
+      visibleStatisticTypes: visibilityConfig.visibleStatisticTypes
+    }
+  }
+  // 如果配置有变化，根据变化的部分决定可见性配置
+  else if (!configUnchanged && lastConfigSnapshot.value !== null) {
+    // 比较配置的各个部分
+    const configChanges = compareConfigParts(currentConfig, lastConfigSnapshot.value)
+
+    // 获取当前的可见性配置
+    const currentVisibilityConfig = chartDisplayAreaRef.value && chartDisplayAreaRef.value.getVisibilityConfig
+      ? chartDisplayAreaRef.value.getVisibilityConfig()
+      : {
+        visibleFirstDimensions: [],
+        visibleSecondDimensions: [],
+        visibleStatisticTypes: []
+      }
+
+    // 或者从 dimensionIndicatorsFilter 中获取
+    const savedVisibilityConfig = dimensionIndicatorsFilter.value ? {
+      visibleFirstDimensions: dimensionIndicatorsFilter.value.visibleFirstDimensions || [],
+      visibleSecondDimensions: dimensionIndicatorsFilter.value.visibleSecondDimensions || [],
+      visibleStatisticTypes: dimensionIndicatorsFilter.value.visibleStatisticTypes || []
+    } : {
+      visibleFirstDimensions: [],
+      visibleSecondDimensions: [],
+      visibleStatisticTypes: []
+    }
+
+    // 使用当前的可见性配置（优先使用图表组件的，如果没有则使用保存的）
+    const existingVisibility = currentVisibilityConfig.visibleFirstDimensions.length > 0 ||
+      currentVisibilityConfig.visibleSecondDimensions.length > 0 ||
+      currentVisibilityConfig.visibleStatisticTypes.length > 0
+      ? currentVisibilityConfig
+      : savedVisibilityConfig
+
+    // 根据变化的部分决定可见性配置
+    // 如果第一维度改变，第一维度的可见性重置为全选（设为undefined）；否则保持原有
+    // 如果第二维度改变，第二维度的可见性重置为全选（设为undefined）；否则保持原有
+    // 如果数据指标改变，统计指标的可见性重置为全选（设为undefined）；否则保持原有
+    partialVisibilityConfig = {
+      visibleFirstDimensions: configChanges.firstDimensionChanged
+        ? undefined
+        : (existingVisibility.visibleFirstDimensions.length > 0 ? existingVisibility.visibleFirstDimensions : undefined),
+      visibleSecondDimensions: configChanges.secondDimensionChanged
+        ? undefined
+        : (existingVisibility.visibleSecondDimensions.length > 0 ? existingVisibility.visibleSecondDimensions : undefined),
+      visibleStatisticTypes: configChanges.dataMetricsChanged
+        ? undefined
+        : (existingVisibility.visibleStatisticTypes.length > 0 ? existingVisibility.visibleStatisticTypes : undefined)
+    }
+
+    // 如果有任何部分需要保持可见性配置，或者有任何部分需要重置（undefined），都需要 shouldRestoreVisibility = true
+    // 这样 updateDimensionData 才能正确处理 undefined 的情况（重置为全选）
+    shouldRestoreVisibility = true
+  }
+  // 首次点击且已有可见性配置，保持可见性配置
+  else if (!configUnchanged && isFirstClick && chartDisplayAreaRef.value && chartDisplayAreaRef.value.getVisibilityConfig) {
+    const visibilityConfig = chartDisplayAreaRef.value.getVisibilityConfig()
+    const hasExistingVisibility = (
+      (dimensionIndicatorsFilter.value?.visibleFirstDimensions?.length || 0) > 0 ||
+      (dimensionIndicatorsFilter.value?.visibleSecondDimensions?.length || 0) > 0 ||
+      (dimensionIndicatorsFilter.value?.visibleStatisticTypes?.length || 0) > 0 ||
+      visibilityConfig.visibleFirstDimensions.length > 0 ||
+      visibilityConfig.visibleSecondDimensions.length > 0 ||
+      visibilityConfig.visibleStatisticTypes.length > 0
+    )
+    if (hasExistingVisibility) {
+      shouldRestoreVisibility = true
+      partialVisibilityConfig = {
+        visibleFirstDimensions: visibilityConfig.visibleFirstDimensions,
+        visibleSecondDimensions: visibilityConfig.visibleSecondDimensions,
+        visibleStatisticTypes: visibilityConfig.visibleStatisticTypes
+      }
+    }
+  }
+
+  // 保存可见性配置
+  if (partialVisibilityConfig) {
+    dimensionIndicatorsFilter.value = {
+      ...filterData,
+      visibleStatisticTypes: partialVisibilityConfig.visibleStatisticTypes,
+      visibleFirstDimensions: partialVisibilityConfig.visibleFirstDimensions,
+      visibleSecondDimensions: partialVisibilityConfig.visibleSecondDimensions
+    }
+  }
+
+  // 调用子组件生成图表
   if (chartDisplayAreaRef.value) {
     try {
-      // 普通生成图表，不恢复可见性配置（默认全选）
-      await chartDisplayAreaRef.value.generateChart(false)
-      // 只有在成功生成图表后才显示成功消息
+      await chartDisplayAreaRef.value.generateChart(shouldRestoreVisibility)
       message.success('图表生成成功')
     } catch (error) {
       console.error('图表生成失败:', error)
@@ -748,7 +1029,6 @@ const restoreConfig = async (savedConfig: any) => {
     if (config.value?.url && indicatorTreeData.value?.length && chartDisplayAreaRef.value) {
       await nextTick()
       try {
-        // 恢复配置时，传入true参数表示需要恢复可见性配置
         await chartDisplayAreaRef.value.generateChart(true)
       } catch (error) {
         console.error('生成图表失败:', error)
@@ -783,9 +1063,25 @@ const getFullConfig = () => {
     visibilityConfig = chartDisplayAreaRef.value.getVisibilityConfig()
   }
 
+  // 根据当前配置面板的实时状态构建配置，而不是使用缓存的 dimensionIndicatorsFilter
+  const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value)
+  const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value)
+
+  if (!firstDimensionConverted) {
+    console.warn('一级维度为空，无法生成完整配置')
+    return null
+  }
+
+  const currentConfig: DimensionIndicatorsFilter = {
+    firstDimension: firstDimensionConverted,
+    secondDimension: secondDimensionConverted, // 二级维度可以为null
+    filterConditions: convertToConditionGroup(selectedFilterItemsArray.value, filterDimensions.value),
+    dataMetrics: dataMetrics.value.map(convertToDataMetric)
+  }
+
   // 合并配置
   return {
-    ...dimensionIndicatorsFilter.value,
+    ...currentConfig,
     visibleStatisticTypes: visibilityConfig.visibleStatisticTypes,
     visibleFirstDimensions: visibilityConfig.visibleFirstDimensions,
     visibleSecondDimensions: visibilityConfig.visibleSecondDimensions
