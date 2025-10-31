@@ -1555,6 +1555,7 @@
         :table-id="tableConfig.name"
         :show-header="false"
         :show-personal-indicators="false"
+        :use-common-dashboard="true"
         :common-indicator-permissions="{ edit: true, delete: true }"
         :personal-indicator-permissions="{ edit: false, delete: false }"
       />

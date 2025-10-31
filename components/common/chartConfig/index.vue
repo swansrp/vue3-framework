@@ -89,11 +89,13 @@ import { computed, onMounted, onUnmounted, ref, readonly, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import {
+  addCommonDashboard,
   addPersonalDashboard,
   deletePersonalDashboard,
   deletePersonalStatistic,
   deleteCommonStatistic,
   getCommonStatistic,
+  getCommonDashboard,
   getPersonalDashboard,
   getPersonalStatistic,
   updatePersonalDashboard
@@ -120,6 +122,7 @@ interface Props {
   showPersonalIndicators?: boolean // 是否显示个人指标
   commonIndicatorPermissions?: IndicatorPermissions // 通用指标权限
   personalIndicatorPermissions?: IndicatorPermissions // 个人指标权限
+  useCommonDashboard?: boolean // 是否使用通用Dashboard模式（只显示和操作通用指标的dashboard配置）
 }
 
 // 事件定义
@@ -134,7 +137,8 @@ const props = withDefaults(defineProps<Props>(), {
   showIndicatorTree: true,
   showPersonalIndicators: true,
   commonIndicatorPermissions: () => ({ edit: true, delete: true }),
-  personalIndicatorPermissions: () => ({ edit: true, delete: true })
+  personalIndicatorPermissions: () => ({ edit: true, delete: true }),
+  useCommonDashboard: false
 })
 
 const emit = defineEmits<Emits>()
@@ -174,9 +178,11 @@ const expandedPersonalKeys = ref<string[]>([])
 
 // 计算属性 - 获取需要显示的指标（使用 getDashboard 的数据）
 const displayedIndicators = computed<DashboardItem[]>(() => {
-  if (!props.showPersonalIndicators) {
+  // 如果使用通用Dashboard模式或不显示个人指标，只返回通用指标
+  if (props.useCommonDashboard || !props.showPersonalIndicators) {
     // 如果不显示个人指标，只返回通用指标
     const commonItems = dashboardItems.value.filter(item => item.commonStatistic === '1')
+    console.log(180, dashboardItems.value, commonItems)
     return commonItems
   }
 
@@ -261,7 +267,7 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
     const [commonResp, personalResp, dashboardResp] = await Promise.all([
       getCommonStatistic(tableId),
       getPersonalStatistic(tableId),
-      getPersonalDashboard(tableId)
+      props.useCommonDashboard ? getCommonDashboard(tableId) : getPersonalDashboard(tableId)
     ])
 
     commonIndicators.value = commonResp.payload || []
@@ -788,7 +794,11 @@ const addDashboard = async (indicatorIds: string[], isCommon = false) => {
     })
 
     // 调用API添加dashboard项
-    await addPersonalDashboard(dashboardItemsData, computedTableId.value!)
+    if (props.useCommonDashboard) {
+      await addCommonDashboard(dashboardItemsData, computedTableId.value!)
+    } else {
+      await addPersonalDashboard(dashboardItemsData, computedTableId.value!)
+    }
 
     // 刷新数据
     await loadDashboardData()
@@ -854,30 +864,31 @@ const deleteDashboard = async (indicatorIds: string[]) => {
       return
     }
 
-    // 删除每个匹配的dashboard项（允许部分失败）
-    const deleteResults = await Promise.allSettled(
+    // 删除每个匹配的 dashboard 项（允许部分失败）
+    const deleteResults = await Promise.all(
       dashboardIds.map(async (id) => {
         try {
           const result = await deletePersonalDashboard(id)
-          return { id, success: true, result }
+          return { status: 'fulfilled', value: { id, success: true, result } }
         } catch (error) {
-          console.error(`删除dashboard项 ${id} 失败:`, error)
-          return { id, success: false, error }
+          console.error(`删除 dashboard 项 ${id} 失败:`, error)
+          return { status: 'rejected', reason: { id, success: false, error } }
         }
       })
     )
 
     // 统计删除结果
-    const successCount = deleteResults.filter(result =>
-      result.status === 'fulfilled' && result.value.success
+    const successCount = deleteResults.filter(
+      (r: any) => r.status === 'fulfilled' && r.value.success
     ).length
+
     const failureCount = deleteResults.length - successCount
 
     if (failureCount > 0) {
-      console.warn(`${failureCount} 个dashboard项删除失败，${successCount} 个删除成功`)
+      console.warn(`${failureCount} 个 dashboard 项删除失败，${successCount} 个删除成功`)
     }
 
-    // 立即更新本地dashboard数据，移除已删除的项目
+    // 立即更新本地 dashboard 数据，移除已删除的项目
     dashboardItems.value = dashboardItems.value.filter(item =>
       !dashboardIds.includes(item.id)
     )

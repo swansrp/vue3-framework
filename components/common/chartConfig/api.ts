@@ -44,15 +44,19 @@ export const deletePersonalStatistic = (id: string) => deleteEntity('portal/dash
 export const deleteCommonStatistic = (id: string) => deleteEntity('portal/dashboard/statistic', id)
 
 // 获取图表配置
-export const getPersonalDashboard = (tableId: string) => get(buildGetApi(''), {
-  tableId
-}, {}, false, false) as Promise<any>
+export const getPersonalDashboard = (tableId: string) => get(buildGetApi('/personal'), { tableId }, {}, false, false) as Promise<any>
+
+// 获取图表配置
+export const getCommonDashboard = (tableId: string) => get(buildGetApi('/common'), { tableId }, {}, false, false) as Promise<any>
 
 // 更新图表顺序
 export const updateDashboardOrder = (data: Array<UpdateOrderType>) => updateOrder('portal/dashboard', data)
 
 // 新增图表
-export const addPersonalDashboard = (data: Partial<DashboardItem>[], tableId: string) => post(buildPostApi(''), { tableId }, data, false, false) as Promise<any>
+export const addPersonalDashboard = (data: Partial<DashboardItem>[], tableId: string) => post(buildPostApi('/personal'), { tableId }, data, false, false) as Promise<any>
+
+// 新增图表
+export const addCommonDashboard = (data: Partial<DashboardItem>[], tableId: string) => post(buildPostApi('/common'), { tableId }, data, false, false) as Promise<any>
 
 // 更新图表配置
 export const updatePersonalDashboard = (data: Partial<DashboardItem>) => updateEntitySelective('portal/dashboard', data)
