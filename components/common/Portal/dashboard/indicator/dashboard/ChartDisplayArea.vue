@@ -260,7 +260,16 @@ const chartCategories = computed(() => {
   const configuredOrder = receivedData.value?.firstDimension?.indicatorItems?.map(i => i.itemName) || []
   const ordered = configuredOrder.filter(name => dataCatsSet.has(name))
   const extras = Array.from(dataCatsSet).filter(name => !configuredOrder.includes(name))
-  return [...ordered, ...extras]
+  const allCategories = [...ordered, ...extras]
+
+  // 根据第一维度的可见性过滤，只显示被选中的维度
+  if (visibleFirstDimensions.value.length === 0) {
+    // 如果没有选中任何维度，返回所有类别
+    return allCategories
+  } else {
+    // 只返回被选中的维度
+    return allCategories.filter(cat => visibleFirstDimensions.value.includes(cat))
+  }
 })
 
 // 过滤后的图表数据
@@ -736,7 +745,12 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
       visibleFirstDimensions.value = receivedData.value.visibleFirstDimensions.filter(
         item => firstDimensionGroups.includes(item)
       )
+      // 如果过滤后为空，默认全选
+      if (visibleFirstDimensions.value.length === 0 && firstDimensionGroups.length > 0) {
+        visibleFirstDimensions.value = [...firstDimensionGroups]
+      }
     } else {
+      // 如果没有配置，默认全选
       visibleFirstDimensions.value = [...firstDimensionGroups]
     }
 
@@ -744,22 +758,64 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
       visibleSecondDimensions.value = receivedData.value.visibleSecondDimensions.filter(
         item => secondDimensionGroups.includes(item)
       )
+      // 如果过滤后为空，默认全选
+      if (visibleSecondDimensions.value.length === 0 && secondDimensionGroups.length > 0) {
+        visibleSecondDimensions.value = [...secondDimensionGroups]
+      }
     } else {
+      // 如果没有配置，默认全选
       visibleSecondDimensions.value = [...secondDimensionGroups]
     }
 
     if (receivedData.value.visibleStatisticTypes && Array.isArray(receivedData.value.visibleStatisticTypes)) {
-      visibleStatisticTypes.value = receivedData.value.visibleStatisticTypes.filter(
+      const savedVisibleStatisticTypes = receivedData.value.visibleStatisticTypes
+      // 保留在当前数据中存在的项
+      const existingVisibleTypes = savedVisibleStatisticTypes.filter(
         item => statisticTypes.includes(item)
       )
+      // 找出新的统计指标（在当前统计类型中但不在可见性配置中的）
+      const newStatisticTypes = statisticTypes.filter(
+        item => !savedVisibleStatisticTypes.includes(item)
+      )
+      // 合并已有的可见性配置和新的统计指标
+      visibleStatisticTypes.value = [...existingVisibleTypes, ...newStatisticTypes]
+
+      // 如果合并后为空，检查是否是删除二级维度的情况，如果是则默认选中第一个统计指标
+      if (visibleStatisticTypes.value.length === 0 && statisticTypes.length > 0) {
+        // 如果没有二级维度，默认选中第一个统计指标；否则默认全选
+        if (secondDimensionGroups.length === 0) {
+          visibleStatisticTypes.value = [statisticTypes[0]]
+        } else {
+          visibleStatisticTypes.value = [...statisticTypes]
+        }
+      }
     } else {
-      visibleStatisticTypes.value = [...statisticTypes]
+      // 如果没有配置，检查是否是删除二级维度的情况
+      if (statisticTypes.length > 0) {
+        // 如果没有二级维度，默认选中第一个统计指标；否则默认全选
+        if (secondDimensionGroups.length === 0) {
+          visibleStatisticTypes.value = [statisticTypes[0]]
+        } else {
+          visibleStatisticTypes.value = [...statisticTypes]
+        }
+      } else {
+        visibleStatisticTypes.value = []
+      }
     }
   } else {
     // 默认全部可见
     visibleFirstDimensions.value = [...firstDimensionGroups]
     visibleSecondDimensions.value = [...secondDimensionGroups]
-    visibleStatisticTypes.value = [...statisticTypes]
+    // 如果没有二级维度，统计指标默认选中第一个；否则默认全选
+    if (statisticTypes.length > 0) {
+      if (secondDimensionGroups.length === 0) {
+        visibleStatisticTypes.value = [statisticTypes[0]]
+      } else {
+        visibleStatisticTypes.value = [...statisticTypes]
+      }
+    } else {
+      visibleStatisticTypes.value = []
+    }
   }
 }
 

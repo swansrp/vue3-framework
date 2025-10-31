@@ -297,7 +297,7 @@
 <script lang="ts" setup>
 import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 
 import ColorPicker from './ColorPicker.vue'
 
@@ -600,15 +600,19 @@ const confirmDataConfig = () => {
 
     if (props.secondDimension?.items) {
       // 如果有二级维度，使用二级维度的项
-      props.secondDimension.items.forEach((item) => {
-        // 为每个维度项生成全新的随机颜色，不与其他数据指标保持一致
-        editingDataMetric.value!.itemColors![item.key] = getRandomColor()
+      const itemCount = props.secondDimension.items.length
+      const distinctColors = generateDistinctColors(itemCount)
+      props.secondDimension.items.forEach((item, index) => {
+        // 为每个维度项分配不重复的颜色
+        editingDataMetric.value!.itemColors![item.key] = distinctColors[index] || getRandomColor()
       })
     } else if (props.firstDimension?.items) {
       // 如果只有一级维度，使用一级维度的项
-      props.firstDimension.items.forEach((item) => {
-        // 为每个维度项生成全新的随机颜色，不与其他数据指标保持一致
-        editingDataMetric.value!.itemColors![item.key] = getRandomColor()
+      const itemCount = props.firstDimension.items.length
+      const distinctColors = generateDistinctColors(itemCount)
+      props.firstDimension.items.forEach((item, index) => {
+        // 为每个维度项分配不重复的颜色
+        editingDataMetric.value!.itemColors![item.key] = distinctColors[index] || getRandomColor()
       })
     }
 
@@ -622,6 +626,19 @@ const confirmDataConfig = () => {
     }
   }
   emit('update:dataMetrics', newMetrics)
+
+  // 添加数据后，手动触发一次颜色更新，确保所有已有的数据指标颜色一致
+  if (dataFormMode.value === 'add') {
+    // 使用 nextTick 确保数据更新后再执行
+    nextTick(() => {
+      if (props.secondDimension?.items) {
+        updateDataMetricsWithDimensionColors(props.secondDimension.items)
+      } else if (props.firstDimension?.items) {
+        updateDataMetricsWithDimensionColors(props.firstDimension.items)
+      }
+    })
+  }
+
   dataConfigVisible.value = false
   editingDataMetric.value = null
 }
@@ -808,35 +825,45 @@ const generateDistinctColors = (count: number): string[] => {
   }
 }
 
-// 监听维度变化，当第二维度变化时更新颜色配置
+// 监听维度变化，当维度变化时更新颜色配置
 watch(
   () => [props.firstDimension, props.secondDimension],
-  ([_newFirstDim, newSecondDim], [_oldFirstDim, oldSecondDim]) => {
+  ([newFirstDim, newSecondDim], [oldFirstDim, oldSecondDim]) => {
     // 检查第二维度是否发生变化
     const secondDimensionChanged = newSecondDim?.key !== oldSecondDim?.key
+    // 检查第一维度是否发生变化
+    const firstDimensionChanged = newFirstDim?.key !== oldFirstDim?.key
 
-    // 如果第二维度发生了变化，更新所有数据指标的颜色配置
+    // 如果第二维度发生了变化，更新所有数据指标的颜色配置（优先处理第二维度）
     if (secondDimensionChanged && newSecondDim?.items) {
-      updateDataMetricsWithSecondDimensionColors(newSecondDim.items)
+      updateDataMetricsWithDimensionColors(newSecondDim.items)
+    }
+    // 如果只有第一维度，且第一维度发生了变化，更新所有数据指标的颜色配置
+    else if (firstDimensionChanged && !newSecondDim && newFirstDim?.items) {
+      updateDataMetricsWithDimensionColors(newFirstDim.items)
+    }
+    // 如果第二维度被移除了，切换到使用第一维度的颜色
+    else if (oldSecondDim && !newSecondDim && newFirstDim?.items) {
+      updateDataMetricsWithDimensionColors(newFirstDim.items)
     }
   },
   { deep: true }
 )
 
-// 更新数据指标的颜色配置以匹配第二维度
-const updateDataMetricsWithSecondDimensionColors = (secondDimensionItems: IndicatorItem[]) => {
-  if (secondDimensionItems.length === 0) return
+// 更新数据指标的颜色配置以匹配维度
+const updateDataMetricsWithDimensionColors = (dimensionItems: IndicatorItem[]) => {
+  if (dimensionItems.length === 0) return
 
   const newMetrics = [...props.dataMetrics]
   let updated = false
 
-  // 首先生成第二维度项的全局颜色映射，确保每个维度项在所有数据指标中使用相同的颜色
-  const itemCount = secondDimensionItems.length
+  // 首先生成维度项的全局颜色映射，确保每个维度项在所有数据指标中使用相同的颜色
+  const itemCount = dimensionItems.length
   const distinctColors = generateDistinctColors(itemCount)
 
   // 创建维度项到颜色的映射
   const dimensionColorMap: Record<string, string> = {}
-  secondDimensionItems.forEach((item, itemIndex) => {
+  dimensionItems.forEach((item, itemIndex) => {
     dimensionColorMap[item.key] = distinctColors[itemIndex] || getRandomColor()
   })
 
@@ -846,7 +873,7 @@ const updateDataMetricsWithSecondDimensionColors = (secondDimensionItems: Indica
       metric.itemColors = {}
     }
 
-    secondDimensionItems.forEach((item, _itemIndex) => {
+    dimensionItems.forEach((item, _itemIndex) => {
       // 为每个项分配颜色，如果已存在颜色则保留，否则使用全局颜色映射
       if (!metric.itemColors![item.key]) {
         metric.itemColors![item.key] = dimensionColorMap[item.key]
