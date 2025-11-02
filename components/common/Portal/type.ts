@@ -250,6 +250,7 @@ export enum FILTER_TYPE {
 }
 
 export enum FIELD_TYPE {
+  DIVIDER = '-1',
   DEFAULT = '0',
   INPUT = '1',
   SWITCH = '2',
