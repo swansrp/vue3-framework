@@ -13,6 +13,8 @@ export interface IndicatorNode {
   children?: IndicatorNode[]
   isLeaf?: boolean
   items?: any[] // 添加 items 属性
+  defaultXGrid?: number // 用户自定义的默认宽度
+  defaultYGrid?: number // 用户自定义的默认高度
 }
 
 // 右侧：仪表盘展示项（从指标派生，或直接由后端 dashboard 返回）
