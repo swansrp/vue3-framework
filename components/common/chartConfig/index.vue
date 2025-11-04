@@ -85,20 +85,22 @@
 <script lang="ts" setup>
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, onMounted, onUnmounted, ref, readonly, watch } from 'vue'
+import { computed, onMounted, onUnmounted, readonly, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import {
   addCommonDashboard,
   addPersonalDashboard,
+  deleteCommonStatistic,
   deletePersonalDashboard,
   deletePersonalStatistic,
-  deleteCommonStatistic,
-  getCommonStatistic,
   getCommonDashboard,
+  getCommonStatistic,
   getPersonalDashboard,
   getPersonalStatistic,
-  updatePersonalDashboard
+  updateCommonStatistic,
+  updatePersonalDashboard,
+  updatePersonalStatistic
 } from './api'
 import type { DashboardItem, IndicatorNode } from './types'
 
@@ -181,9 +183,7 @@ const displayedIndicators = computed<DashboardItem[]>(() => {
   // 如果使用通用Dashboard模式或不显示个人指标，只返回通用指标
   if (props.useCommonDashboard || !props.showPersonalIndicators) {
     // 如果不显示个人指标，只返回通用指标
-    const commonItems = dashboardItems.value.filter(item => item.commonStatistic === '1')
-    console.log(180, dashboardItems.value, commonItems)
-    return commonItems
+    return dashboardItems.value.filter(item => item.commonStatistic === '1')
   }
 
   // 显示所有指标（通用指标 + 个人指标）
@@ -270,8 +270,17 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
       props.useCommonDashboard ? getCommonDashboard(tableId) : getPersonalDashboard(tableId)
     ])
 
-    commonIndicators.value = commonResp.payload || []
-    personalIndicators.value = personalResp.payload || []
+    // 映射字段名：数据库使用 snake_case，前端使用 camelCase
+    const mapIndicatorFields = (indicators: any[]): IndicatorNode[] => {
+      return indicators.map((ind: any) => ({
+        ...ind,
+        defaultXGrid: ind.defaultXGrid ?? ind.default_x_grid ?? undefined,
+        defaultYGrid: ind.defaultYGrid ?? ind.default_y_grid ?? undefined
+      }))
+    }
+
+    commonIndicators.value = mapIndicatorFields(commonResp.payload || [])
+    personalIndicators.value = mapIndicatorFields(personalResp.payload || [])
 
     // 构建通用/个人指标顺序映射（来自左侧树的 order）
     const buildOrderMap = (nodes: any[]): Record<string, number> => {
@@ -297,7 +306,7 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
         const orderFromTree = (isCommon ? commonOrderMap : personalOrderMap)[String(d.statisticId)]
         const displayOrder = orderFromTree ?? Number(d.order ?? 0)
 
-        const item = {
+        return {
           id: d.id,
           title: d.title ?? '',
           displayOrder,
@@ -315,7 +324,6 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
           },
           indicatorId: d.statisticId
         }
-        return item
       })
       .sort((a: DashboardItem, b: DashboardItem) => a.displayOrder - b.displayOrder)
 
@@ -755,6 +763,105 @@ const deleteDashboardFromTree = async (indicatorIds: string[]) => {
   await deleteDashboard(indicatorIds)
 }
 
+// 防抖函数工具（提前定义，供后续使用）
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout
+  const debounced = (...args: any[]) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => func.apply(null, args), delay)
+  }
+  debounced.cancel = () => {
+    clearTimeout(timeoutId)
+  }
+  return debounced
+}
+
+// 从指标树中获取指标的默认尺寸
+const getIndicatorDefaultSize = (indicatorId: string): { xGrid: number; yGrid: number } => {
+  // 先在通用指标中查找
+  const findInTree = (nodes: IndicatorNode[]): IndicatorNode | null => {
+    for (const node of nodes) {
+      if (node.id === indicatorId) return node
+      if (node.children) {
+        const found = findInTree(node.children)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  const commonNode = findInTree(commonIndicators.value)
+  if (commonNode) {
+    if (commonNode.defaultXGrid && commonNode.defaultYGrid) {
+      return { xGrid: commonNode.defaultXGrid, yGrid: commonNode.defaultYGrid }
+    }
+  }
+
+  // 再在个人指标中查找
+  const personalNode = findInTree(personalIndicators.value)
+  if (personalNode) {
+    if (personalNode.defaultXGrid && personalNode.defaultYGrid) {
+      return { xGrid: personalNode.defaultXGrid, yGrid: personalNode.defaultYGrid }
+    }
+  }
+
+  // 默认返回 2x2
+  return { xGrid: 2, yGrid: 2 }
+}
+
+// 更新指标的默认尺寸到数据库
+const updateIndicatorDefaultSize = async (indicatorId: string, xGrid: number, yGrid: number) => {
+  try {
+    // 判断是通用指标还是个人指标
+    const findInTree = (nodes: IndicatorNode[]): IndicatorNode | null => {
+      for (const node of nodes) {
+        if (node.id === indicatorId) return node
+        if (node.children) {
+          const found = findInTree(node.children)
+          if (found) return found
+        }
+      }
+      return null
+    }
+
+    const isCommon = !!findInTree(commonIndicators.value)
+
+    // 先在内存中更新（立即生效）
+    const updateInTree = (nodes: IndicatorNode[]): boolean => {
+      for (const node of nodes) {
+        if (node.id === indicatorId) {
+          node.defaultXGrid = xGrid
+          node.defaultYGrid = yGrid
+          return true
+        }
+        if (node.children) {
+          if (updateInTree(node.children)) {
+            return true
+          }
+        }
+      }
+      return false
+    }
+
+    // 调用对应的更新API保存到服务器
+    if (isCommon) {
+      await updateCommonStatistic({
+        id: indicatorId,
+        defaultXGrid: xGrid,
+        defaultYGrid: yGrid
+      })
+    } else {
+      await updatePersonalStatistic({
+        id: indicatorId,
+        defaultXGrid: xGrid,
+        defaultYGrid: yGrid
+      })
+    }
+  } catch (error) {
+    console.error('更新指标默认尺寸失败:', error)
+  }
+}
+
 const addDashboard = async (indicatorIds: string[], isCommon = false) => {
   try {
     // 获取当前已有的仪表盘项，用于计算新卡片的位置
@@ -762,8 +869,10 @@ const addDashboard = async (indicatorIds: string[], isCommon = false) => {
 
     // 为每个indicatorId创建dashboard项
     const dashboardItemsData = indicatorIds.map((indicatorId, index) => {
-      // 计算新卡片的位置（确保2x2大小）
-      const cardSize = { xGrid: 2, yGrid: 2 }
+      // 从指标配置中获取用户自定义的默认尺寸
+      const cardSize = getIndicatorDefaultSize(indicatorId)
+
+      // 计算新卡片的位置（使用用户自定义的尺寸）
       const position = calculateNewCardPosition(currentItems, cardSize)
 
       // 将新添加的卡片也加入到currentItems中，确保下一个卡片不会与它重叠
@@ -793,7 +902,7 @@ const addDashboard = async (indicatorIds: string[], isCommon = false) => {
       }
     })
 
-    // 调用API添加dashboard项
+    // 调用API添加dashboard项（会保存到服务器）
     if (props.useCommonDashboard) {
       await addCommonDashboard(dashboardItemsData, computedTableId.value!)
     } else {
@@ -863,6 +972,20 @@ const deleteDashboard = async (indicatorIds: string[]) => {
       message.warning('未找到要删除的图表项')
       return
     }
+
+    // 在删除前，将当前尺寸保存到指标的默认尺寸中（用于之后恢复）
+    const updatePromises = itemsToDelete
+      .filter(item => item.indicatorId)
+      .map(item =>
+        updateIndicatorDefaultSize(
+          item.indicatorId!,
+          item.xGrid || 2,
+          item.yGrid || 2
+        )
+      )
+
+    // 等待所有尺寸更新完成
+    await Promise.all(updatePromises)
 
     // 删除每个匹配的 dashboard 项（允许部分失败）
     const deleteResults = await Promise.all(
@@ -957,19 +1080,6 @@ const saveDashboardOrder = async (newOrder: DashboardItem[]) => {
   }
 }
 
-// 防抖函数，避免频繁请求
-const debounce = (func: Function, delay: number) => {
-  let timeoutId: NodeJS.Timeout
-  const debounced = (...args: any[]) => {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => func.apply(null, args), delay)
-  }
-  debounced.cancel = () => {
-    clearTimeout(timeoutId)
-  }
-  return debounced
-}
-
 // 防抖后的调整大小处理函数
 const debouncedResizeHandler = debounce(async (
   indicatorId: string,
@@ -977,7 +1087,15 @@ const debouncedResizeHandler = debounce(async (
   yGrid: number
 ) => {
   try {
-    // 保存到服务器（更新单个图表尺寸）
+    // 找到对应的卡片，获取其 indicatorId（统计指标ID）
+    const dashboardItem = dashboardItems.value.find(item => item.id === indicatorId)
+
+    if (dashboardItem && dashboardItem.indicatorId) {
+      // 更新指标的默认尺寸到数据库
+      await updateIndicatorDefaultSize(dashboardItem.indicatorId, xGrid, yGrid)
+    }
+
+    // 保存到服务器（更新当前 dashboard 项的尺寸）
     await updatePersonalDashboard({ id: indicatorId, xGrid, yGrid })
     await loadDashboardData()
   } catch (error) {
