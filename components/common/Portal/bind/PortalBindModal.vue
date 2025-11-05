@@ -1,5 +1,44 @@
 <template>
+  <!-- 树形模式：使用抽屉 -->
+  <a-drawer
+    v-if="isTreeMode"
+    v-model:open="bindDialogBox.show"
+    :title="title + actionText"
+    :width="600"
+    placement="right"
+  >
+    <div style="height: calc(100vh - 120px);">
+      <div style="margin-bottom: 16px;">
+        <a-input-search
+          v-model:value="searchKeyword"
+          placeholder="搜索..."
+          allow-clear
+        />
+      </div>
+      <a-spin :spinning="treeLoading">
+        <a-tree
+          v-if="treeData.length > 0"
+          v-model:checked-keys="checkedKeys"
+          v-model:expanded-keys="expandedKeys"
+          :tree-data="filteredTreeData"
+          checkable
+          :check-strictly="false"
+          show-line
+          default-expand-all
+          @check="handleTreeCheck"
+        >
+          <template #title="{ dataRef }">
+            <span v-html="highlightKeyword(dataRef.title)"></span>
+          </template>
+        </a-tree>
+        <a-empty v-else description="暂无数据" />
+      </a-spin>
+    </div>
+  </a-drawer>
+
+  <!-- 非树形模式：使用全屏弹框 -->
   <dialog-box
+    v-else
     v-model:visible="bindDialogBox.show"
     :title="title + actionText"
     is-full
@@ -139,6 +178,8 @@ import {
   bindBatchAttach,
   bindReplaceAllAttach,
   bindReplaceBatchAttach,
+  getAllBindList,
+  getTreeData,
   queryAttachList,
   queryBindList,
   queryUnbindList,
@@ -146,6 +187,7 @@ import {
   unbindAttach,
   unbindBatchAttach
 } from '@/framework/apis/portal'
+import { getPortalConfig } from '@/framework/apis/portal/config'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { ColumnType, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
@@ -160,10 +202,12 @@ const prop = withDefaults(defineProps<{
   actionText?: string
   rowDragEnd?: (data: Array<any>, currentPage: number, pageSize: number, entityRecord: any) => Promise<any>
   attachCondition?: ConditionListType
+  treeMode?: boolean
 }>(), {
-  actionText: '授权'
+  actionText: '授权',
+  treeMode: false
 })
-const { entity, attachEntity, title } = toRefs(prop)
+const { entity, attachEntity, title, treeMode } = toRefs(prop)
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
@@ -178,11 +222,166 @@ const bindDialogBox: { show: boolean, entityName: string, entityId: any, tab: st
   attachName: attachEntity.value,
   entityRecord: null
 })
-const showBindDialogBox = (entityId: any, record: any) => {
+
+// 树形模式相关状态
+const isTreeMode = computed(() => prop.treeMode)
+const treeLoading = ref(false)
+const treeData = ref<any[]>([])
+const checkedKeys = ref<any[]>([])
+const originalCheckedKeys = ref<any[]>([])
+const expandedKeys = ref<any[]>([])
+const searchKeyword = ref('')
+const attachUrl = ref('')
+
+// 搜索过滤后的树数据
+const filteredTreeData = computed(() => {
+  if (!searchKeyword.value) return treeData.value
+  
+  const filterTree = (nodes: any[]): any[] => {
+    return nodes.reduce((acc, node) => {
+      const title = node.title || ''
+      const matches = title.toLowerCase().includes(searchKeyword.value.toLowerCase())
+      const children = node.children ? filterTree(node.children) : []
+      
+      if (matches || children.length > 0) {
+        acc.push({
+          ...node,
+          children
+        })
+      }
+      return acc
+    }, [] as any[])
+  }
+  
+  return filterTree(treeData.value)
+})
+
+// 高亮关键字
+const highlightKeyword = (text: string) => {
+  if (!searchKeyword.value || !text) return text
+  const keyword = searchKeyword.value
+  const regex = new RegExp(`(${keyword})`, 'gi')
+  return text.replace(regex, '<span style="color: #1890ff; font-weight: 700;">$1</span>')
+}
+const showBindDialogBox = async (entityId: any, record: any) => {
   bindDialogBox.tab = '0'
   bindDialogBox.entityId = entityId
   bindDialogBox.show = true
   bindDialogBox.entityRecord = record
+  
+  // 如果是树形模式，加载树数据和已绑定数据
+  if (prop.treeMode) {
+    await loadTreeData()
+  }
+}
+
+// 加载树形数据
+const loadTreeData = async () => {
+  treeLoading.value = true
+  try {
+    // 先获取 Portal 配置以获得正确的 URL
+    if (!attachUrl.value) {
+      const configRes = await getPortalConfig(bindDialogBox.attachName)
+      attachUrl.value = configRes.payload?.url || ''
+      if (!attachUrl.value) {
+        console.error('无法获取 attachEntity 的 URL 配置')
+        return
+      }
+    }
+    
+    // 加载所有树形数据
+    const treeRes = await getTreeData(
+      attachUrl.value,
+      {} as QueryType,
+      prop.baseDomain,
+      false,
+      false
+    )
+    treeData.value = treeRes.payload || []
+    
+    // 加载已绑定的数据
+    const bindRes = await getAllBindList(
+      bindDialogBox.entityName,
+      bindDialogBox.attachName,
+      bindDialogBox.entityId,
+      prop.baseDomain,
+      false,
+      false
+    )
+    
+    // 提取已绑定的key
+    const bindList = bindRes.payload || []
+    checkedKeys.value = bindList.map((item: any) => item.id || item.key)
+    originalCheckedKeys.value = [...checkedKeys.value]
+    
+    // 自动展开所有节点
+    const getAllKeys = (nodes: any[]): any[] => {
+      let keys: any[] = []
+      nodes.forEach(node => {
+        keys.push(node.key || node.id)
+        if (node.children && node.children.length > 0) {
+          keys = keys.concat(getAllKeys(node.children))
+        }
+      })
+      return keys
+    }
+    expandedKeys.value = getAllKeys(treeData.value)
+  } catch (error) {
+    console.error('加载树形数据失败:', error)
+  } finally {
+    treeLoading.value = false
+  }
+}
+
+// 处理树形勾选变化 - 实时绑定/解绑
+const handleTreeCheck = async (checkedKeysValue: any, e: any) => {
+  const { checked, node } = e
+  const nodeKey = node.key
+  
+  // 获取当前操作影响的所有节点（包括子节点）
+  const getAllChildKeys = (nodeData: any): any[] => {
+    let keys = [nodeData.key]
+    if (nodeData.children && nodeData.children.length > 0) {
+      nodeData.children.forEach((child: any) => {
+        keys = keys.concat(getAllChildKeys(child))
+      })
+    }
+    return keys
+  }
+  
+  const affectedKeys = getAllChildKeys(node.dataRef)
+  
+  try {
+    if (checked) {
+      // 勾选 - 批量绑定
+      await bindBatchAttach(
+        bindDialogBox.entityName,
+        bindDialogBox.attachName,
+        bindDialogBox.entityId,
+        affectedKeys,
+        prop.baseDomain,
+        false,
+        false
+      )
+    } else {
+      // 取消勾选 - 批量解绑
+      await unbindBatchAttach(
+        bindDialogBox.entityName,
+        bindDialogBox.attachName,
+        bindDialogBox.entityId,
+        affectedKeys,
+        prop.baseDomain,
+        false,
+        false
+      )
+    }
+    // 更新原始勾选状态
+    originalCheckedKeys.value = [...checkedKeys.value]
+  } catch (error) {
+    console.error('绑定操作失败:', error)
+    // 失败时恢复原状态
+    checkedKeys.value = [...originalCheckedKeys.value]
+  }
 }
 const bind = (portalConfig: TableConfigType, column: ColumnType, record: any) => {
   bindAttach(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, record[portalConfig.rowKey], prop.baseDomain)
@@ -267,13 +466,13 @@ const queryUnbindListFunc = async (url: string, query: QueryType) => {
 const queryAttachListFunc = async (url: string, query: QueryType) => {
   return queryAttachList(bindDialogBox.entityName, bindDialogBox.attachName, bindDialogBox.entityId, query, prop.baseDomain)
 }
-const handleTabChanged = (activeKey: string) => {
-  bindDialogBox.tab = activeKey
-  if (activeKey === '0') {
+const handleTabChanged = (activeKey: string | number) => {
+  bindDialogBox.tab = String(activeKey)
+  if (activeKey === '0' || activeKey === 0) {
     bindPortal.value?.queryData()
-  } else if (activeKey === '1') {
+  } else if (activeKey === '1' || activeKey === 1) {
     unbindPortal.value?.queryData()
-  } else if (activeKey === '2') {
+  } else if (activeKey === '2' || activeKey === 2) {
     allPortal.value?.queryData()
   }
 }
