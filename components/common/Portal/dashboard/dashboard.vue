@@ -1063,7 +1063,21 @@ const getFullConfig = () => {
     visibilityConfig = chartDisplayAreaRef.value.getVisibilityConfig()
   }
 
-  // 根据当前配置面板的实时状态构建配置，而不是使用缓存的 dimensionIndicatorsFilter
+  // 优先使用已经生成的dimensionIndicatorsFilter（包含用户拖拽后的排序）
+  // 如果存在，说明已经生成过图表，使用它以保留拖拽排序
+  if (dimensionIndicatorsFilter.value && dimensionIndicatorsFilter.value.firstDimension) {
+    // 使用已有的配置，但更新筛选条件和数据指标（这些可能在图表生成后被修改）
+    return {
+      ...dimensionIndicatorsFilter.value,
+      filterConditions: convertToConditionGroup(selectedFilterItemsArray.value, filterDimensions.value),
+      dataMetrics: dataMetrics.value.map(convertToDataMetric),
+      visibleStatisticTypes: visibilityConfig.visibleStatisticTypes,
+      visibleFirstDimensions: visibilityConfig.visibleFirstDimensions,
+      visibleSecondDimensions: visibilityConfig.visibleSecondDimensions
+    }
+  }
+
+  // 如果还没有生成图表，则从配置面板构建配置
   const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value)
   const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value)
 
