@@ -31,7 +31,10 @@
             <span v-html="highlightKeyword(dataRef.title)"></span>
           </template>
         </a-tree>
-        <a-empty v-else description="暂无数据" />
+        <a-empty
+          v-else
+          description="暂无数据"
+        />
       </a-spin>
     </div>
   </a-drawer>
