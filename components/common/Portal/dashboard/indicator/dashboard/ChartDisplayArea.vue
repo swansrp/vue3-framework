@@ -27,18 +27,32 @@
           </template>
           <div class="tab-content">
             <a-checkbox-group v-model:value="visibleFirstDimensions">
-              <a-checkbox
-                v-for="dimension in allFirstDimensions"
+              <div
+                v-for="(dimension, index) in allFirstDimensions"
                 :key="dimension"
-                :value="dimension"
+                class="checkbox-item-wrapper"
+                :class="{ 'drag-over': dragOverIndex === index && draggedItemIndex !== null }"
+                @dragover="handleDragOver($event, index)"
+                @dragleave="handleDragLeave"
+                @drop="handleFirstDimDrop($event, index)"
               >
-                <a-tooltip
-                  :title="dimension"
-                  placement="top"
+                <span
+                  class="drag-handle"
+                  draggable="true"
+                  @dragstart="handleFirstDimDragStart($event, index)"
+                  @dragend="handleDragEnd"
                 >
-                  <span class="checkbox-text">{{ dimension }}</span>
-                </a-tooltip>
-              </a-checkbox>
+                  <HolderOutlined />
+                </span>
+                <a-checkbox :value="dimension">
+                  <a-tooltip
+                    :title="dimension"
+                    placement="top"
+                  >
+                    <span class="checkbox-text">{{ dimension }}</span>
+                  </a-tooltip>
+                </a-checkbox>
+              </div>
             </a-checkbox-group>
             <div class="tab-actions">
               <a-button
@@ -78,18 +92,32 @@
           </template>
           <div class="tab-content">
             <a-checkbox-group v-model:value="visibleSecondDimensions">
-              <a-checkbox
-                v-for="dimension in allSecondDimensions"
+              <div
+                v-for="(dimension, index) in allSecondDimensions"
                 :key="dimension"
-                :value="dimension"
+                class="checkbox-item-wrapper"
+                :class="{ 'drag-over': dragOverIndex === index && draggedItemIndex !== null }"
+                @dragover="handleDragOver($event, index)"
+                @dragleave="handleDragLeave"
+                @drop="handleSecondDimDrop($event, index)"
               >
-                <a-tooltip
-                  :title="dimension"
-                  placement="top"
+                <span
+                  class="drag-handle"
+                  draggable="true"
+                  @dragstart="handleSecondDimDragStart($event, index)"
+                  @dragend="handleDragEnd"
                 >
-                  <span class="checkbox-text">{{ dimension }}</span>
-                </a-tooltip>
-              </a-checkbox>
+                  <HolderOutlined />
+                </span>
+                <a-checkbox :value="dimension">
+                  <a-tooltip
+                    :title="dimension"
+                    placement="top"
+                  >
+                    <span class="checkbox-text">{{ dimension }}</span>
+                  </a-tooltip>
+                </a-checkbox>
+              </div>
             </a-checkbox-group>
             <div class="tab-actions">
               <a-button
@@ -121,18 +149,32 @@
           </template>
           <div class="tab-content">
             <a-checkbox-group v-model:value="visibleStatisticTypes">
-              <a-checkbox
-                v-for="statType in allStatisticTypes"
+              <div
+                v-for="(statType, index) in allStatisticTypes"
                 :key="statType"
-                :value="statType"
+                class="checkbox-item-wrapper"
+                :class="{ 'drag-over': dragOverIndex === index && draggedItemIndex !== null }"
+                @dragover="handleDragOver($event, index)"
+                @dragleave="handleDragLeave"
+                @drop="handleStatTypeDrop($event, index)"
               >
-                <a-tooltip
-                  :title="statType"
-                  placement="top"
+                <span
+                  class="drag-handle"
+                  draggable="true"
+                  @dragstart="handleStatTypeDragStart($event, index)"
+                  @dragend="handleDragEnd"
                 >
-                  <span class="checkbox-text">{{ statType }}</span>
-                </a-tooltip>
-              </a-checkbox>
+                  <HolderOutlined />
+                </span>
+                <a-checkbox :value="statType">
+                  <a-tooltip
+                    :title="statType"
+                    placement="top"
+                  >
+                    <span class="checkbox-text">{{ statType }}</span>
+                  </a-tooltip>
+                </a-checkbox>
+              </div>
             </a-checkbox-group>
             <div class="tab-actions">
               <a-button
@@ -195,9 +237,15 @@
 </template>
 
 <script lang="ts" setup>
-import { BarChartOutlined, DatabaseOutlined, AppstoreOutlined, PieChartOutlined } from '@ant-design/icons-vue'
+import {
+  BarChartOutlined,
+  DatabaseOutlined,
+  AppstoreOutlined,
+  PieChartOutlined,
+  HolderOutlined
+} from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, ref, toRefs } from 'vue'
+import { computed, ref, toRefs, nextTick } from 'vue'
 
 import DashboardDetailModal from './DashboardDetail.vue'
 import UniversalChart from './UniversalChart.vue'
@@ -215,7 +263,7 @@ import type { ChartDataItem } from '@/framework/components/common/Portal/dashboa
 
 // Props - 接收外部传入的维度配置数据
 const props = defineProps<{
-  config: any,
+  config: any
   receivedData?: DimensionIndicatorsFilter
 }>()
 const { config, receivedData } = toRefs(props)
@@ -251,15 +299,193 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 // 图表实例引用
 const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
 
+// 拖拽状态
+const draggedItemIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+// ==================== 拖拽排序功能 ====================
+/**
+ * 第一维度拖拽开始
+ */
+const handleFirstDimDragStart = (event: DragEvent, index: number) => {
+  draggedItemIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+/**
+ * 第一维度拖拽放下
+ */
+const handleFirstDimDrop = async (event: DragEvent, dropIndex: number) => {
+  event.preventDefault()
+  const dragIndex = draggedItemIndex.value
+  if (dragIndex === null || dragIndex === dropIndex) {
+    dragOverIndex.value = null
+    return
+  }
+
+  // 重新排序
+  const newOrder = [...allFirstDimensions.value]
+  const [draggedItem] = newOrder.splice(dragIndex, 1)
+  newOrder.splice(dropIndex, 0, draggedItem)
+
+  allFirstDimensions.value = newOrder
+
+  // 同步更新receivedData中的indicatorItems顺序
+  if (receivedData.value?.firstDimension?.indicatorItems) {
+    const itemsMap = new Map(
+      receivedData.value.firstDimension.indicatorItems.map((item) => [item.itemName, item])
+    )
+    receivedData.value.firstDimension.indicatorItems = newOrder
+      .map((name) => itemsMap.get(name)!)
+      .filter(Boolean)
+  }
+
+  dragOverIndex.value = null
+
+  // 等待Vue更新完成后刷新图表
+  await nextTick()
+  // 触发图表重新渲染
+  if (chartRef.value && typeof chartRef.value.refresh === 'function') {
+    chartRef.value.refresh()
+  }
+}
+
+/**
+ * 第二维度拖拽开始
+ */
+const handleSecondDimDragStart = (event: DragEvent, index: number) => {
+  draggedItemIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+/**
+ * 第二维度拖拽放下
+ */
+const handleSecondDimDrop = async (event: DragEvent, dropIndex: number) => {
+  event.preventDefault()
+  const dragIndex = draggedItemIndex.value
+  if (dragIndex === null || dragIndex === dropIndex) {
+    dragOverIndex.value = null
+    return
+  }
+
+  // 重新排序
+  const newOrder = [...allSecondDimensions.value]
+  const [draggedItem] = newOrder.splice(dragIndex, 1)
+  newOrder.splice(dropIndex, 0, draggedItem)
+
+  allSecondDimensions.value = newOrder
+
+  // 同步更新receivedData中的indicatorItems顺序
+  if (receivedData.value?.secondDimension?.indicatorItems) {
+    const itemsMap = new Map(
+      receivedData.value.secondDimension.indicatorItems.map((item) => [item.itemName, item])
+    )
+    receivedData.value.secondDimension.indicatorItems = newOrder
+      .map((name) => itemsMap.get(name)!)
+      .filter(Boolean)
+  }
+
+  dragOverIndex.value = null
+
+  // 等待Vue更新完成后刷新图表
+  await nextTick()
+  // 触发图表重新渲染
+  if (chartRef.value && typeof chartRef.value.refresh === 'function') {
+    chartRef.value.refresh()
+  }
+}
+
+/**
+ * 统计指标拖拽开始
+ */
+const handleStatTypeDragStart = (event: DragEvent, index: number) => {
+  draggedItemIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+/**
+ * 统计指标拖拽放下
+ */
+const handleStatTypeDrop = async (event: DragEvent, dropIndex: number) => {
+  event.preventDefault()
+  const dragIndex = draggedItemIndex.value
+  if (dragIndex === null || dragIndex === dropIndex) {
+    dragOverIndex.value = null
+    return
+  }
+
+  // 重新排序
+  const newOrder = [...allStatisticTypes.value]
+  const [draggedItem] = newOrder.splice(dragIndex, 1)
+  newOrder.splice(dropIndex, 0, draggedItem)
+
+  allStatisticTypes.value = newOrder
+
+  // 同步更新receivedData中的dataMetrics顺序
+  if (receivedData.value?.dataMetrics) {
+    const metricsMap = new Map(
+      receivedData.value.dataMetrics.map((metric) => [metric.dataName, metric])
+    )
+    receivedData.value.dataMetrics = newOrder.map((name) => metricsMap.get(name)!).filter(Boolean)
+  }
+
+  dragOverIndex.value = null
+
+  // 等待Vue更新完成后刷新图表
+  await nextTick()
+  // 触发图表重新渲染
+  if (chartRef.value && typeof chartRef.value.refresh === 'function') {
+    chartRef.value.refresh()
+  }
+}
+
+/**
+ * 拖拽悬停
+ */
+const handleDragOver = (event: DragEvent, index?: number) => {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+  if (index !== undefined) {
+    dragOverIndex.value = index
+  }
+}
+
+/**
+ * 拖拽离开
+ */
+const handleDragLeave = () => {
+  dragOverIndex.value = null
+}
+
+/**
+ * 拖拽结束
+ */
+const handleDragEnd = () => {
+  draggedItemIndex.value = null
+  dragOverIndex.value = null
+}
 
 // 获取图表分类数据（x轴）
 const chartCategories = computed(() => {
   if (!chartData.value.length) return []
   // 以配置的第一维度顺序为准，和后端返回的数据做交集
   const dataCatsSet = new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))
-  const configuredOrder = receivedData.value?.firstDimension?.indicatorItems?.map(i => i.itemName) || []
-  const ordered = configuredOrder.filter(name => dataCatsSet.has(name))
-  const extras = Array.from(dataCatsSet).filter(name => !configuredOrder.includes(name))
+  const configuredOrder =
+    receivedData.value?.firstDimension?.indicatorItems?.map((i) => i.itemName) || []
+  const ordered = configuredOrder.filter((name) => dataCatsSet.has(name))
+  const extras = Array.from(dataCatsSet).filter((name) => !configuredOrder.includes(name))
   const allCategories = [...ordered, ...extras]
 
   // 根据第一维度的可见性过滤，只显示被选中的维度
@@ -268,7 +494,7 @@ const chartCategories = computed(() => {
     return allCategories
   } else {
     // 只返回被选中的维度
-    return allCategories.filter(cat => visibleFirstDimensions.value.includes(cat))
+    return allCategories.filter((cat) => visibleFirstDimensions.value.includes(cat))
   }
 })
 
@@ -277,26 +503,35 @@ const filteredChartData = computed(() => {
   if (!chartData.value.length) return []
 
   // 根据维度控制面板的选择过滤数据
-  return chartData.value.filter((item: any) => {
-    const parts = item.metricLabel.split('&&')
-    const firstDim = parts[0]
-    const secondDim = parts[1]
+  return chartData.value
+    .filter((item: any) => {
+      const parts = item.metricLabel.split('&&')
+      const firstDim = parts[0]
+      const secondDim = parts[1]
 
-    const firstDimVisible = visibleFirstDimensions.value.length === 0 || visibleFirstDimensions.value.includes(firstDim)
-    const secondDimVisible = visibleSecondDimensions.value.length === 0 || visibleSecondDimensions.value.includes(secondDim)
+      const firstDimVisible =
+        visibleFirstDimensions.value.length === 0 || visibleFirstDimensions.value.includes(firstDim)
+      const secondDimVisible =
+        visibleSecondDimensions.value.length === 0 ||
+        visibleSecondDimensions.value.includes(secondDim)
 
-    // 只有当两个维度都可见时才包含该项
-    return firstDimVisible && secondDimVisible
-  }).map((item: any) => {
-    // 创建新的对象，避免修改原始数据
-    return {
-      ...item,
-      children: item.children.filter((child: any) => {
-        const statType = child.metric
-        return visibleStatisticTypes.value.length === 0 || visibleStatisticTypes.value.includes(statType)
-      })
-    }
-  }).filter((item: any) => item.children.length > 0) // 只保留有children的项
+      // 只有当两个维度都可见时才包含该项
+      return firstDimVisible && secondDimVisible
+    })
+    .map((item: any) => {
+      // 创建新的对象，避免修改原始数据
+      return {
+        ...item,
+        children: item.children.filter((child: any) => {
+          const statType = child.metric
+          return (
+            visibleStatisticTypes.value.length === 0 ||
+            visibleStatisticTypes.value.includes(statType)
+          )
+        })
+      }
+    })
+    .filter((item: any) => item.children.length > 0) // 只保留有children的项
 })
 
 // 动态获取维度信息的计算属性
@@ -330,10 +565,10 @@ const chartTitle = computed(() => {
 const dimensionValueMap = computed(() => {
   const first: Record<string, string> = {}
   const second: Record<string, string> = {}
-  receivedData.value?.firstDimension?.indicatorItems?.forEach(it => {
+  receivedData.value?.firstDimension?.indicatorItems?.forEach((it) => {
     first[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
   })
-  receivedData.value?.secondDimension?.indicatorItems?.forEach(it => {
+  receivedData.value?.secondDimension?.indicatorItems?.forEach((it) => {
     second[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
   })
   return { first, second }
@@ -341,20 +576,26 @@ const dimensionValueMap = computed(() => {
 
 // 第一维度反选按钮是否应该禁用
 const isFirstDimensionInvertDisabled = computed(() => {
-  return visibleFirstDimensions.value.length === 0 ||
+  return (
+    visibleFirstDimensions.value.length === 0 ||
     visibleFirstDimensions.value.length === allFirstDimensions.value.length
+  )
 })
 
 // 第二维度反选按钮是否应该禁用
 const isSecondDimensionInvertDisabled = computed(() => {
-  return visibleSecondDimensions.value.length === 0 ||
+  return (
+    visibleSecondDimensions.value.length === 0 ||
     visibleSecondDimensions.value.length === allSecondDimensions.value.length
+  )
 })
 
 // 统计指标反选按钮是否应该禁用
 const isStatisticTypesInvertDisabled = computed(() => {
-  return visibleStatisticTypes.value.length === 0 ||
+  return (
+    visibleStatisticTypes.value.length === 0 ||
     visibleStatisticTypes.value.length === allStatisticTypes.value.length
+  )
 })
 
 // ==================== 函数定义 ====================
@@ -368,7 +609,7 @@ const transformConditionList = (conditionList: any[]): any[] => {
   const result: any[] = []
 
   const traverse = (conditions: any[], parentAndOr = '0') => {
-    conditions.forEach(condition => {
+    conditions.forEach((condition) => {
       // 如果是叶子节点条件（有property属性且不为null），直接添加
       if (condition.property !== undefined && condition.property !== null) {
         result.push({
@@ -378,21 +619,31 @@ const transformConditionList = (conditionList: any[]): any[] => {
         })
       }
       // 如果有条件列表且有逻辑关系（andOr），需要保持这个结构
-      else if (condition.conditionList && Array.isArray(condition.conditionList) && condition.conditionList.length > 0) {
+      else if (
+        condition.conditionList &&
+        Array.isArray(condition.conditionList) &&
+        condition.conditionList.length > 0
+      ) {
         // 如果是顶层的筛选维度条件组（有andOr属性），保持其结构
         if (condition.andOr !== undefined) {
           // 递归处理子条件
           const transformedSubConditions = transformConditionList(condition.conditionList)
 
           // 如果子条件只有一个且是叶子节点，直接添加
-          if (transformedSubConditions.length === 1 &&
+          if (
+            transformedSubConditions.length === 1 &&
             transformedSubConditions[0].property !== undefined &&
-            transformedSubConditions[0].property !== null) {
+            transformedSubConditions[0].property !== null
+          ) {
             result.push(transformedSubConditions[0])
           }
           // 如果有多个子条件且都是叶子节点，构建嵌套结构
-          else if (transformedSubConditions.length > 0 &&
-            transformedSubConditions.every(sub => sub.property !== undefined && sub.property !== null)) {
+          else if (
+            transformedSubConditions.length > 0 &&
+            transformedSubConditions.every(
+              (sub) => sub.property !== undefined && sub.property !== null
+            )
+          ) {
             result.push({
               property: null,
               value: null,
@@ -404,9 +655,12 @@ const transformConditionList = (conditionList: any[]): any[] => {
           // 如果子条件中有嵌套结构，保持原有结构
           else if (transformedSubConditions.length > 0) {
             // 只有当子条件不为空时才添加
-            const nonEmptyConditions = transformedSubConditions.filter(sub =>
-              sub.property !== null ||
-              (sub.conditionList && Array.isArray(sub.conditionList) && sub.conditionList.length > 0)
+            const nonEmptyConditions = transformedSubConditions.filter(
+              (sub) =>
+                sub.property !== null ||
+                (sub.conditionList &&
+                  Array.isArray(sub.conditionList) &&
+                  sub.conditionList.length > 0)
             )
 
             if (nonEmptyConditions.length > 0) {
@@ -443,7 +697,9 @@ const buildFirstDimensionConditions = (firstDim: string) => {
   }
 
   // 查找第一维度条件
-  const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find((item: any) => item.itemName === firstDim)
+  const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find(
+    (item: any) => item.itemName === firstDim
+  )
 
   if (!firstDimItem) {
     return null
@@ -483,7 +739,9 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
   }
 
   // 查找第一维度条件
-  const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find((item: any) => item.itemName === firstDim)
+  const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find(
+    (item: any) => item.itemName === firstDim
+  )
 
   if (!firstDimItem) {
     return null
@@ -491,7 +749,9 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
 
   // 查找第二维度条件（如果存在第二维度）
   const secondDimItem = hasSecondDimension.value
-    ? receivedData.value.secondDimension?.indicatorItems.find((item: any) => item.itemName === secondDim)
+    ? receivedData.value.secondDimension?.indicatorItems.find(
+        (item: any) => item.itemName === secondDim
+      )
     : null
 
   // 如果有第二维度但找不到对应条件，则报错
@@ -502,9 +762,7 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
   // 合并查询条件：全局筛选条件 + 第一维度条件 + 第二维度条件
   const globalConditions = receivedData.value.filterConditions?.conditionList || []
   const firstDimConditions = firstDimItem.queryConditions.conditionList || []
-  const secondDimConditions = secondDimItem
-    ? secondDimItem.queryConditions.conditionList || []
-    : []
+  const secondDimConditions = secondDimItem ? secondDimItem.queryConditions.conditionList || [] : []
 
   // 转换条件列表，保持逻辑关系
   const transformedConditions = transformConditionList([
@@ -521,7 +779,9 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
     secondDimensionCondition: secondDimItem?.queryConditions || null,
     // 附加信息：维度标识
     firstDimensionId: `${receivedData.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
-    secondDimensionId: secondDimItem ? `${receivedData.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}` : null
+    secondDimensionId: secondDimItem
+      ? `${receivedData.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}`
+      : null
   }
 }
 
@@ -544,7 +804,7 @@ const toggleAllFirstDimensions = () => {
 const invertFirstDimensionsSelection = () => {
   // 直接进行反选操作，UI层面的禁用状态已经通过disabled属性控制
   const invertedSelection = allFirstDimensions.value.filter(
-    dimension => !visibleFirstDimensions.value.includes(dimension)
+    (dimension) => !visibleFirstDimensions.value.includes(dimension)
   )
   visibleFirstDimensions.value = invertedSelection
 }
@@ -562,7 +822,7 @@ const toggleAllSecondDimensions = () => {
 const invertSecondDimensionsSelection = () => {
   // 直接进行反选操作，UI层面的禁用状态已经通过disabled属性控制
   const invertedSelection = allSecondDimensions.value.filter(
-    dimension => !visibleSecondDimensions.value.includes(dimension)
+    (dimension) => !visibleSecondDimensions.value.includes(dimension)
   )
   visibleSecondDimensions.value = invertedSelection
 }
@@ -583,7 +843,7 @@ const invertStatisticTypesSelection = () => {
     return
   }
   const invertedSelection = allStatisticTypes.value.filter(
-    statType => !visibleStatisticTypes.value.includes(statType)
+    (statType) => !visibleStatisticTypes.value.includes(statType)
   )
   visibleStatisticTypes.value = invertedSelection
 }
@@ -644,7 +904,8 @@ const onBarClick = (params: any) => {
     combinedConditions: combinedConditions,
     title: hasSecondDimension.value
       ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
-      : `${firstDimensionName.value}: ${firstDim} (${statType})`
+      : `${firstDimensionName.value}: ${firstDim} (${statType})`,
+    color: '#1890ff' // 默认颜色
   }
 
   // 显示弹窗
@@ -678,9 +939,10 @@ const onPieClick = (params: any) => {
   }
 
   // 获取组合条件
-  const combinedConditions = hasSecondDimension.value && secondDim
-    ? buildCombinedConditions(firstDim, secondDim)
-    : buildFirstDimensionConditions(firstDim)
+  const combinedConditions =
+    hasSecondDimension.value && secondDim
+      ? buildCombinedConditions(firstDim, secondDim)
+      : buildFirstDimensionConditions(firstDim)
 
   if (!combinedConditions) {
     return
@@ -705,9 +967,11 @@ const onPieClick = (params: any) => {
     statisticType: statType,
     statisticData: statisticData,
     combinedConditions: combinedConditions,
-    title: hasSecondDimension.value && secondDim
-      ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
-      : `${firstDimensionName.value}: ${firstDim} (${statType})`
+    title:
+      hasSecondDimension.value && secondDim
+        ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
+        : `${firstDimensionName.value}: ${firstDim} (${statType})`,
+    color: '#1890ff' // 默认颜色
   }
 
   // 显示弹窗
@@ -721,16 +985,19 @@ const onPieClick = (params: any) => {
  */
 const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) => {
   // 以配置顺序为主，回退到数据中的顺序
-  const configFirst = receivedData.value?.firstDimension?.indicatorItems?.map(i => i.itemName) || []
+  const configFirst = receivedData.value?.firstDimension?.indicatorItems?.map((i) => i.itemName) || []
   const dataFirst = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[0]))]
   const firstDimensionGroups = configFirst.length ? configFirst : dataFirst
 
-  const configSecond = receivedData.value?.secondDimension?.indicatorItems?.map(i => i.itemName) || []
+  const configSecond =
+    receivedData.value?.secondDimension?.indicatorItems?.map((i) => i.itemName) || []
   const dataSecond = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[1]))]
   const secondDimensionGroups = configSecond.length ? configSecond : dataSecond
 
   // 提取统计类型
-  const statisticTypes = [...new Set(data.flatMap((item: any) => item.children.map((child: any) => child.metric)))]
+  const statisticTypes = [
+    ...new Set(data.flatMap((item: any) => item.children.map((child: any) => child.metric)))
+  ]
 
   // 更新所有项列表
   allFirstDimensions.value = [...firstDimensionGroups]
@@ -740,10 +1007,13 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
   // 如果需要从配置中恢复可见性状态
   if (restoreVisibility && receivedData.value) {
     // 从配置中恢复可见性状态
-    if (receivedData.value.visibleFirstDimensions && Array.isArray(receivedData.value.visibleFirstDimensions)) {
+    if (
+      receivedData.value.visibleFirstDimensions &&
+      Array.isArray(receivedData.value.visibleFirstDimensions)
+    ) {
       // 只保留在当前数据中存在的项
-      visibleFirstDimensions.value = receivedData.value.visibleFirstDimensions.filter(
-        item => firstDimensionGroups.includes(item)
+      visibleFirstDimensions.value = receivedData.value.visibleFirstDimensions.filter((item) =>
+        firstDimensionGroups.includes(item)
       )
       // 如果过滤后为空，默认全选
       if (visibleFirstDimensions.value.length === 0 && firstDimensionGroups.length > 0) {
@@ -754,9 +1024,12 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
       visibleFirstDimensions.value = [...firstDimensionGroups]
     }
 
-    if (receivedData.value.visibleSecondDimensions && Array.isArray(receivedData.value.visibleSecondDimensions)) {
-      visibleSecondDimensions.value = receivedData.value.visibleSecondDimensions.filter(
-        item => secondDimensionGroups.includes(item)
+    if (
+      receivedData.value.visibleSecondDimensions &&
+      Array.isArray(receivedData.value.visibleSecondDimensions)
+    ) {
+      visibleSecondDimensions.value = receivedData.value.visibleSecondDimensions.filter((item) =>
+        secondDimensionGroups.includes(item)
       )
       // 如果过滤后为空，默认全选
       if (visibleSecondDimensions.value.length === 0 && secondDimensionGroups.length > 0) {
@@ -767,15 +1040,18 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
       visibleSecondDimensions.value = [...secondDimensionGroups]
     }
 
-    if (receivedData.value.visibleStatisticTypes && Array.isArray(receivedData.value.visibleStatisticTypes)) {
+    if (
+      receivedData.value.visibleStatisticTypes &&
+      Array.isArray(receivedData.value.visibleStatisticTypes)
+    ) {
       const savedVisibleStatisticTypes = receivedData.value.visibleStatisticTypes
       // 保留在当前数据中存在的项
-      const existingVisibleTypes = savedVisibleStatisticTypes.filter(
-        item => statisticTypes.includes(item)
+      const existingVisibleTypes = savedVisibleStatisticTypes.filter((item) =>
+        statisticTypes.includes(item)
       )
       // 找出新的统计指标（在当前统计类型中但不在可见性配置中的）
       const newStatisticTypes = statisticTypes.filter(
-        item => !savedVisibleStatisticTypes.includes(item)
+        (item) => !savedVisibleStatisticTypes.includes(item)
       )
       // 合并已有的可见性配置和新的统计指标
       visibleStatisticTypes.value = [...existingVisibleTypes, ...newStatisticTypes]
@@ -887,7 +1163,7 @@ const fetchChartData = async (shouldRestoreVisibility = false) => {
  * @returns 指标条件数组
  */
 const convertDimensionToMetricCondition = (dimension: IndicatorGroup): MetricCondition[] => {
-  return dimension.indicatorItems.map(item => ({
+  return dimension.indicatorItems.map((item) => ({
     value: `${dimension.groupValue}&&${item.itemValue}`, // 生成唯一标识
     label: item.itemName,
     condition: item.queryConditions
@@ -907,15 +1183,23 @@ const convertDataToCrossMetricConditions = (
   const metricConditions: MetricCondition[] = []
 
   // 检查一级维度是否存在
-  if (!receivedData.firstDimension || !receivedData.firstDimension.indicatorItems || receivedData.firstDimension.indicatorItems.length === 0) {
+  if (
+    !receivedData.firstDimension ||
+    !receivedData.firstDimension.indicatorItems ||
+    receivedData.firstDimension.indicatorItems.length === 0
+  ) {
     throw new Error('一级维度数据不完整，无法生成图表')
   }
 
   // 如果两个维度都存在，进行交叉组合
-  if (receivedData.firstDimension && receivedData.secondDimension &&
-    receivedData.secondDimension.indicatorItems && receivedData.secondDimension.indicatorItems.length > 0) {
-    receivedData.firstDimension.indicatorItems.forEach(firstItem => {
-      receivedData.secondDimension!.indicatorItems.forEach(secondItem => {
+  if (
+    receivedData.firstDimension &&
+    receivedData.secondDimension &&
+    receivedData.secondDimension.indicatorItems &&
+    receivedData.secondDimension.indicatorItems.length > 0
+  ) {
+    receivedData.firstDimension.indicatorItems.forEach((firstItem) => {
+      receivedData.secondDimension!.indicatorItems.forEach((secondItem) => {
         // 合并两个维度的查询条件
         const combinedConditionList = [
           ...((firstItem.queryConditions?.conditionList ?? []) as any),
@@ -958,10 +1242,13 @@ const convertDataToCrossMetricConditions = (
     sort: options.sort ?? null,
     metricColumn: options.metricColumn || [],
     metricCondition: metricConditions,
-    statisticColumn: options.statisticColumn || receivedData.dataMetrics?.map(metric => ({
-      value: metric.dataField,
-      label: metric.dataName
-    })) || [],
+    statisticColumn:
+      options.statisticColumn ||
+      receivedData.dataMetrics?.map((metric) => ({
+        value: metric.dataField,
+        label: metric.dataName
+      })) ||
+      [],
     majorCondition: options.majorCondition || ''
   }
 
@@ -1053,4 +1340,65 @@ defineExpose({
 
 <style lang="less" scoped>
 @import '../../styles/talentReview.less';
+
+// 拖拽样式
+.tab-content {
+  :deep(.ant-checkbox-group) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+
+    .checkbox-item-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+      position: relative;
+      border: 2px dashed transparent;
+
+      &:hover {
+        background: #f0f0f0;
+
+        .drag-handle {
+          opacity: 1;
+        }
+      }
+
+      // 拖拽悬停时的样式
+      &.drag-over {
+        background: #e6f7ff;
+        border-color: #1890ff;
+        transform: scale(1.02);
+      }
+
+      .drag-handle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        color: #8c8c8c;
+        font-size: 14px;
+        opacity: 0.5;
+        transition: all 0.3s ease;
+        padding: 2px;
+
+        &:hover {
+          color: #1890ff;
+          opacity: 1;
+          transform: scale(1.1);
+        }
+
+        &:active {
+          cursor: grabbing;
+        }
+      }
+
+      .ant-checkbox-wrapper {
+        margin: 0;
+      }
+    }
+  }
+}
 </style>
