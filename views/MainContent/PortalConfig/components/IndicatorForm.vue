@@ -297,7 +297,7 @@ const openConditionDraw = async () => {
     }))
   
   for (let item of entityCondition.columnArray) {
-    if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.referenceDict)) {
+    if ((item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) && isNotEmpty(item.referenceDict)) {
       item.referenceDictOption = (await dict.getDict(item.referenceDict)) || []
     }
   }

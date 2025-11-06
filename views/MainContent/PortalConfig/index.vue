@@ -289,7 +289,7 @@
             type="primary"
             @click="publicDashboardModalShow = true"
           >
-            通用指标
+            通用图表
           </a-button>
           <a-button
             style="margin-right: 10px"
@@ -1521,7 +1521,7 @@
       :config="tableConfig"
       :dict="entityColumnDict"
     />
-    <!-- 通用指标弹窗 -->
+    <!-- 通用图表弹窗 -->
     <a-modal
       v-model:open="publicDashboardModalShow"
       width="99vw"
@@ -1534,7 +1534,7 @@
     >
       <template #title>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 100%;">
-          <span style="line-height: 1;">通用指标</span>
+          <span style="line-height: 1;">通用图表</span>
           <a-button
             type="primary"
             size="middle"
@@ -2082,7 +2082,7 @@ const entityConditionDrawOpen = async () => {
       fieldType: item.fieldType,
     }))
   for (let item of entityCondition.columnArray) {
-    if (item.fieldType === FIELD_TYPE.SELECT && isNotEmpty(item.referenceDict)) {
+    if ((item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) && isNotEmpty(item.referenceDict)) {
       item.referenceDictOption = (await dict.getDict(item.referenceDict)) || []
     }
   }
