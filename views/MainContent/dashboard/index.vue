@@ -1,7 +1,7 @@
 <template>
   <div class="personal-dashboard">
     <!-- 使用封装的TalentReviewDashboard公共组件 -->
-    <talent-review-dashboard
+    <chart-config
       ref="dashboardRef"
       :table-id="tableId"
       :show-header="true"
@@ -9,27 +9,15 @@
       :show-indicator-tree="true"
       :common-indicator-permissions="commonPermissions"
       :personal-indicator-permissions="personalPermissions"
-    >
-      <!-- 自定义头部操作按钮 -->
-      <template #header-actions>
-        <a-button
-          type="primary"
-          @click="refreshDashboard"
-        >
-          <ReloadOutlined />
-          刷新
-        </a-button>
-      </template>
-    </talent-review-dashboard>
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ReloadOutlined } from '@ant-design/icons-vue'
 import { computed, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 
-import TalentReviewDashboard from '@/framework/components/common/chartConfig/index.vue'
+import ChartConfig from '@/framework/components/common/chartConfig/index.vue'
 
 // 权限配置
 const commonPermissions = reactive({ edit: false, delete: false })
@@ -48,7 +36,7 @@ const tableId = computed(
 )
 
 // 组件引用
-const dashboardRef = ref<InstanceType<typeof TalentReviewDashboard> | null>(null)
+const dashboardRef = ref<InstanceType<typeof ChartConfig> | null>(null)
 
 // 刷新仪表盘
 const refreshDashboard = () => {

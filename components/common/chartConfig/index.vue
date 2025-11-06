@@ -10,7 +10,7 @@
         <slot name="header-actions">
           <a-button
             type="primary"
-            @click="refreshDashboard"
+            @click="loadDashboardData"
           >
             <ReloadOutlined />
             刷新

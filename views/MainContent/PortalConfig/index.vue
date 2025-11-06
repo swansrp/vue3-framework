@@ -1749,7 +1749,7 @@ const handlePublicDashboardRefresh = async () => {
   try {
     publicDashboardRefreshing.value = true
     // 调用publicDashboard组件的refreshDashboard方法
-    await publicDashboardRef.value.refreshDashboard()
+    await publicDashboardRef.value.loadDashboardData()
   } catch (error) {
     console.error('刷新通用指标失败:', error)
   } finally {
