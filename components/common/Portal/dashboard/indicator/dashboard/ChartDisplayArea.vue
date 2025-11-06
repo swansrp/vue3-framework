@@ -25,53 +25,12 @@
               </span>
             </a-tooltip>
           </template>
-          <div class="tab-content">
-            <a-checkbox-group v-model:value="visibleFirstDimensions">
-              <div
-                v-for="(dimension, index) in allFirstDimensions"
-                :key="dimension"
-                class="checkbox-item-wrapper"
-                :class="{ 'drag-over': dragOverIndex === index && draggedItemIndex !== null }"
-                @dragover="handleDragOver($event, index)"
-                @dragleave="handleDragLeave"
-                @drop="handleFirstDimDrop($event, index)"
-              >
-                <span
-                  class="drag-handle"
-                  draggable="true"
-                  @dragstart="handleFirstDimDragStart($event, index)"
-                  @dragend="handleDragEnd"
-                >
-                  <HolderOutlined />
-                </span>
-                <a-checkbox :value="dimension">
-                  <a-tooltip
-                    :title="dimension"
-                    placement="top"
-                  >
-                    <span class="checkbox-text">{{ dimension }}</span>
-                  </a-tooltip>
-                </a-checkbox>
-              </div>
-            </a-checkbox-group>
-            <div class="tab-actions">
-              <a-button
-                size="small"
-                type="link"
-                @click="toggleAllFirstDimensions"
-              >
-                全部选中
-              </a-button>
-              <a-button
-                size="small"
-                type="link"
-                :disabled="isFirstDimensionInvertDisabled"
-                @click="invertFirstDimensionsSelection"
-              >
-                反选
-              </a-button>
-            </div>
-          </div>
+          <FirstDimensionControl
+            v-model:visible-dimensions="visibleFirstDimensions"
+            v-model:all-dimensions="allFirstDimensions"
+            :received-data="receivedData"
+            @order-changed="handleFirstDimensionOrderChanged"
+          />
         </a-tab-pane>
 
         <!-- 第二维度控制 -->
@@ -90,53 +49,12 @@
               </span>
             </a-tooltip>
           </template>
-          <div class="tab-content">
-            <a-checkbox-group v-model:value="visibleSecondDimensions">
-              <div
-                v-for="(dimension, index) in allSecondDimensions"
-                :key="dimension"
-                class="checkbox-item-wrapper"
-                :class="{ 'drag-over': dragOverIndex === index && draggedItemIndex !== null }"
-                @dragover="handleDragOver($event, index)"
-                @dragleave="handleDragLeave"
-                @drop="handleSecondDimDrop($event, index)"
-              >
-                <span
-                  class="drag-handle"
-                  draggable="true"
-                  @dragstart="handleSecondDimDragStart($event, index)"
-                  @dragend="handleDragEnd"
-                >
-                  <HolderOutlined />
-                </span>
-                <a-checkbox :value="dimension">
-                  <a-tooltip
-                    :title="dimension"
-                    placement="top"
-                  >
-                    <span class="checkbox-text">{{ dimension }}</span>
-                  </a-tooltip>
-                </a-checkbox>
-              </div>
-            </a-checkbox-group>
-            <div class="tab-actions">
-              <a-button
-                size="small"
-                type="link"
-                @click="toggleAllSecondDimensions"
-              >
-                全部选中
-              </a-button>
-              <a-button
-                size="small"
-                type="link"
-                :disabled="isSecondDimensionInvertDisabled"
-                @click="invertSecondDimensionsSelection"
-              >
-                反选
-              </a-button>
-            </div>
-          </div>
+          <SecondDimensionControl
+            v-model:visible-dimensions="visibleSecondDimensions"
+            v-model:all-dimensions="allSecondDimensions"
+            :received-data="receivedData"
+            @order-changed="handleSecondDimensionOrderChanged"
+          />
         </a-tab-pane>
 
         <!-- 统计指标控制 -->
@@ -147,53 +65,12 @@
           <template #tab>
             <PieChartOutlined /> 统计指标
           </template>
-          <div class="tab-content">
-            <a-checkbox-group v-model:value="visibleStatisticTypes">
-              <div
-                v-for="(statType, index) in allStatisticTypes"
-                :key="statType"
-                class="checkbox-item-wrapper"
-                :class="{ 'drag-over': dragOverIndex === index && draggedItemIndex !== null }"
-                @dragover="handleDragOver($event, index)"
-                @dragleave="handleDragLeave"
-                @drop="handleStatTypeDrop($event, index)"
-              >
-                <span
-                  class="drag-handle"
-                  draggable="true"
-                  @dragstart="handleStatTypeDragStart($event, index)"
-                  @dragend="handleDragEnd"
-                >
-                  <HolderOutlined />
-                </span>
-                <a-checkbox :value="statType">
-                  <a-tooltip
-                    :title="statType"
-                    placement="top"
-                  >
-                    <span class="checkbox-text">{{ statType }}</span>
-                  </a-tooltip>
-                </a-checkbox>
-              </div>
-            </a-checkbox-group>
-            <div class="tab-actions">
-              <a-button
-                size="small"
-                type="link"
-                @click="toggleAllStatisticTypes"
-              >
-                全部选中
-              </a-button>
-              <a-button
-                size="small"
-                type="link"
-                :disabled="isStatisticTypesInvertDisabled"
-                @click="invertStatisticTypesSelection"
-              >
-                反选
-              </a-button>
-            </div>
-          </div>
+          <StatisticControl
+            v-model:visible-statistics="visibleStatisticTypes"
+            v-model:all-statistics="allStatisticTypes"
+            :received-data="receivedData"
+            @order-changed="handleStatisticOrderChanged"
+          />
         </a-tab-pane>
       </a-tabs>
     </div>
@@ -237,16 +114,13 @@
 </template>
 
 <script lang="ts" setup>
-import {
-  BarChartOutlined,
-  DatabaseOutlined,
-  AppstoreOutlined,
-  PieChartOutlined,
-  HolderOutlined
-} from '@ant-design/icons-vue'
+import { AppstoreOutlined, BarChartOutlined, DatabaseOutlined, PieChartOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, ref, toRefs, nextTick } from 'vue'
+import { computed, nextTick, ref, toRefs } from 'vue'
 
+import FirstDimensionControl from './control/FirstDimensionControl.vue'
+import SecondDimensionControl from './control/SecondDimensionControl.vue'
+import StatisticControl from './control/StatisticControl.vue'
 import DashboardDetailModal from './DashboardDetail.vue'
 import UniversalChart from './UniversalChart.vue'
 import type { SelectedBarInfo } from '../../type/ChartTypes'
@@ -299,182 +173,65 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 // 图表实例引用
 const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
 
-// 拖拽状态
-const draggedItemIndex = ref<number | null>(null)
-const dragOverIndex = ref<number | null>(null)
-
-// ==================== 拖拽排序功能 ====================
+// ==================== 维度顺序变化处理 ====================
 /**
- * 第一维度拖拽开始
+ * 第一维度顺序变化处理
  */
-const handleFirstDimDragStart = (event: DragEvent, index: number) => {
-  draggedItemIndex.value = index
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', String(index))
-  }
-}
-
-/**
- * 第一维度拖拽放下
- */
-const handleFirstDimDrop = async (event: DragEvent, dropIndex: number) => {
-  event.preventDefault()
-  const dragIndex = draggedItemIndex.value
-  if (dragIndex === null || dragIndex === dropIndex) {
-    dragOverIndex.value = null
-    return
-  }
-
-  // 重新排序
-  const newOrder = [...allFirstDimensions.value]
-  const [draggedItem] = newOrder.splice(dragIndex, 1)
-  newOrder.splice(dropIndex, 0, draggedItem)
-
-  allFirstDimensions.value = newOrder
-
+const handleFirstDimensionOrderChanged = async () => {
   // 同步更新receivedData中的indicatorItems顺序
   if (receivedData.value?.firstDimension?.indicatorItems) {
     const itemsMap = new Map(
-      receivedData.value.firstDimension.indicatorItems.map((item) => [item.itemName, item])
+      receivedData.value.firstDimension.indicatorItems.map((item: any) => [item.itemName, item])
     )
-    receivedData.value.firstDimension.indicatorItems = newOrder
+    receivedData.value.firstDimension.indicatorItems = allFirstDimensions.value
       .map((name) => itemsMap.get(name)!)
       .filter(Boolean)
   }
 
-  dragOverIndex.value = null
-
-  // 等待Vue更新完成后刷新图表
   await nextTick()
-  // 触发图表重新渲染
   if (chartRef.value && typeof chartRef.value.refresh === 'function') {
     chartRef.value.refresh()
   }
 }
 
 /**
- * 第二维度拖拽开始
+ * 第二维度顺序变化处理
  */
-const handleSecondDimDragStart = (event: DragEvent, index: number) => {
-  draggedItemIndex.value = index
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', String(index))
-  }
-}
-
-/**
- * 第二维度拖拽放下
- */
-const handleSecondDimDrop = async (event: DragEvent, dropIndex: number) => {
-  event.preventDefault()
-  const dragIndex = draggedItemIndex.value
-  if (dragIndex === null || dragIndex === dropIndex) {
-    dragOverIndex.value = null
-    return
-  }
-
-  // 重新排序
-  const newOrder = [...allSecondDimensions.value]
-  const [draggedItem] = newOrder.splice(dragIndex, 1)
-  newOrder.splice(dropIndex, 0, draggedItem)
-
-  allSecondDimensions.value = newOrder
-
+const handleSecondDimensionOrderChanged = async () => {
   // 同步更新receivedData中的indicatorItems顺序
   if (receivedData.value?.secondDimension?.indicatorItems) {
     const itemsMap = new Map(
-      receivedData.value.secondDimension.indicatorItems.map((item) => [item.itemName, item])
+      receivedData.value.secondDimension.indicatorItems.map((item: any) => [item.itemName, item])
     )
-    receivedData.value.secondDimension.indicatorItems = newOrder
+    receivedData.value.secondDimension.indicatorItems = allSecondDimensions.value
       .map((name) => itemsMap.get(name)!)
       .filter(Boolean)
   }
 
-  dragOverIndex.value = null
-
-  // 等待Vue更新完成后刷新图表
   await nextTick()
-  // 触发图表重新渲染
   if (chartRef.value && typeof chartRef.value.refresh === 'function') {
     chartRef.value.refresh()
   }
 }
 
 /**
- * 统计指标拖拽开始
+ * 统计指标顺序变化处理
  */
-const handleStatTypeDragStart = (event: DragEvent, index: number) => {
-  draggedItemIndex.value = index
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', String(index))
-  }
-}
-
-/**
- * 统计指标拖拽放下
- */
-const handleStatTypeDrop = async (event: DragEvent, dropIndex: number) => {
-  event.preventDefault()
-  const dragIndex = draggedItemIndex.value
-  if (dragIndex === null || dragIndex === dropIndex) {
-    dragOverIndex.value = null
-    return
-  }
-
-  // 重新排序
-  const newOrder = [...allStatisticTypes.value]
-  const [draggedItem] = newOrder.splice(dragIndex, 1)
-  newOrder.splice(dropIndex, 0, draggedItem)
-
-  allStatisticTypes.value = newOrder
-
+const handleStatisticOrderChanged = async () => {
   // 同步更新receivedData中的dataMetrics顺序
   if (receivedData.value?.dataMetrics) {
     const metricsMap = new Map(
-      receivedData.value.dataMetrics.map((metric) => [metric.dataName, metric])
+      receivedData.value.dataMetrics.map((metric: any) => [metric.dataName, metric])
     )
-    receivedData.value.dataMetrics = newOrder.map((name) => metricsMap.get(name)!).filter(Boolean)
+    receivedData.value.dataMetrics = allStatisticTypes.value
+      .map((name) => metricsMap.get(name)!)
+      .filter(Boolean)
   }
 
-  dragOverIndex.value = null
-
-  // 等待Vue更新完成后刷新图表
   await nextTick()
-  // 触发图表重新渲染
   if (chartRef.value && typeof chartRef.value.refresh === 'function') {
     chartRef.value.refresh()
   }
-}
-
-/**
- * 拖拽悬停
- */
-const handleDragOver = (event: DragEvent, index?: number) => {
-  event.preventDefault()
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-  if (index !== undefined) {
-    dragOverIndex.value = index
-  }
-}
-
-/**
- * 拖拽离开
- */
-const handleDragLeave = () => {
-  dragOverIndex.value = null
-}
-
-/**
- * 拖拽结束
- */
-const handleDragEnd = () => {
-  draggedItemIndex.value = null
-  dragOverIndex.value = null
 }
 
 // 获取图表分类数据（x轴）
@@ -572,30 +329,6 @@ const dimensionValueMap = computed(() => {
     second[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
   })
   return { first, second }
-})
-
-// 第一维度反选按钮是否应该禁用
-const isFirstDimensionInvertDisabled = computed(() => {
-  return (
-    visibleFirstDimensions.value.length === 0 ||
-    visibleFirstDimensions.value.length === allFirstDimensions.value.length
-  )
-})
-
-// 第二维度反选按钮是否应该禁用
-const isSecondDimensionInvertDisabled = computed(() => {
-  return (
-    visibleSecondDimensions.value.length === 0 ||
-    visibleSecondDimensions.value.length === allSecondDimensions.value.length
-  )
-})
-
-// 统计指标反选按钮是否应该禁用
-const isStatisticTypesInvertDisabled = computed(() => {
-  return (
-    visibleStatisticTypes.value.length === 0 ||
-    visibleStatisticTypes.value.length === allStatisticTypes.value.length
-  )
 })
 
 // ==================== 函数定义 ====================
@@ -750,8 +483,8 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
   // 查找第二维度条件（如果存在第二维度）
   const secondDimItem = hasSecondDimension.value
     ? receivedData.value.secondDimension?.indicatorItems.find(
-        (item: any) => item.itemName === secondDim
-      )
+      (item: any) => item.itemName === secondDim
+    )
     : null
 
   // 如果有第二维度但找不到对应条件，则报错
@@ -789,63 +522,6 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
 const closeDetailModal = () => {
   detailModalVisible.value = false
   selectedBarInfo.value = null
-}
-
-// 全选第一维度
-const toggleAllFirstDimensions = () => {
-  // 如果已经全选，则不做任何操作
-  if (visibleFirstDimensions.value.length === allFirstDimensions.value.length) {
-    return
-  }
-  visibleFirstDimensions.value = [...allFirstDimensions.value]
-}
-
-// 第一维度反选功能
-const invertFirstDimensionsSelection = () => {
-  // 直接进行反选操作，UI层面的禁用状态已经通过disabled属性控制
-  const invertedSelection = allFirstDimensions.value.filter(
-    (dimension) => !visibleFirstDimensions.value.includes(dimension)
-  )
-  visibleFirstDimensions.value = invertedSelection
-}
-
-// 全选第二维度
-const toggleAllSecondDimensions = () => {
-  // 如果已经全选，则不做任何操作
-  if (visibleSecondDimensions.value.length === allSecondDimensions.value.length) {
-    return
-  }
-  visibleSecondDimensions.value = [...allSecondDimensions.value]
-}
-
-// 第二维度反选功能
-const invertSecondDimensionsSelection = () => {
-  // 直接进行反选操作，UI层面的禁用状态已经通过disabled属性控制
-  const invertedSelection = allSecondDimensions.value.filter(
-    (dimension) => !visibleSecondDimensions.value.includes(dimension)
-  )
-  visibleSecondDimensions.value = invertedSelection
-}
-
-// 全选统计类型
-const toggleAllStatisticTypes = () => {
-  // 如果已经全选，则不做任何操作
-  if (visibleStatisticTypes.value.length === allStatisticTypes.value.length) {
-    return
-  }
-  visibleStatisticTypes.value = [...allStatisticTypes.value]
-}
-
-// 统计类型反选功能
-const invertStatisticTypesSelection = () => {
-  // 如果当前是全选状态，则不做任何操作
-  if (visibleStatisticTypes.value.length === allStatisticTypes.value.length) {
-    return
-  }
-  const invertedSelection = allStatisticTypes.value.filter(
-    (statType) => !visibleStatisticTypes.value.includes(statType)
-  )
-  visibleStatisticTypes.value = invertedSelection
 }
 
 // 图表点击事件处理
@@ -1233,7 +909,7 @@ const convertDataToCrossMetricConditions = (
   }
 
   // 构造请求参数
-  const requestParams: RequestParams = {
+  return {
     selectColumnCondition: options.selectColumnCondition || {},
     condition: {
       conditionList: (receivedData.filterConditions?.conditionList ?? []) as any,
@@ -1243,16 +919,14 @@ const convertDataToCrossMetricConditions = (
     metricColumn: options.metricColumn || [],
     metricCondition: metricConditions,
     statisticColumn:
-      options.statisticColumn ||
-      receivedData.dataMetrics?.map((metric) => ({
-        value: metric.dataField,
-        label: metric.dataName
-      })) ||
-      [],
+        options.statisticColumn ||
+        receivedData.dataMetrics?.map((metric) => ({
+          value: metric.dataField,
+          label: metric.dataName
+        })) ||
+        [],
     majorCondition: options.majorCondition || ''
   }
-
-  return requestParams
 }
 
 /**
@@ -1270,18 +944,16 @@ const fetchTalentStatisticData = async (
     const requestParams = convertDataToCrossMetricConditions(receivedData, options)
 
     // 调用后端接口
-    const response = await advancedStatisticRequest(
-      config.value.url,
-      new Map(Object.entries(requestParams.selectColumnCondition || {})),
-      requestParams.condition,
-      requestParams.sort,
-      requestParams.metricColumn,
-      requestParams.metricCondition,
-      requestParams.statisticColumn,
-      requestParams.majorCondition
+    return await advancedStatisticRequest(
+        config.value.url,
+        new Map(Object.entries(requestParams.selectColumnCondition || {})),
+        requestParams.condition,
+        requestParams.sort,
+        requestParams.metricColumn,
+        requestParams.metricCondition,
+        requestParams.statisticColumn,
+        requestParams.majorCondition
     )
-
-    return response
   } catch (error) {
     throw error
   }
@@ -1340,65 +1012,4 @@ defineExpose({
 
 <style lang="less" scoped>
 @import '../../styles/talentReview.less';
-
-// 拖拽样式
-.tab-content {
-  :deep(.ant-checkbox-group) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-
-    .checkbox-item-wrapper {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-      position: relative;
-      border: 2px dashed transparent;
-
-      &:hover {
-        background: #f0f0f0;
-
-        .drag-handle {
-          opacity: 1;
-        }
-      }
-
-      // 拖拽悬停时的样式
-      &.drag-over {
-        background: #e6f7ff;
-        border-color: #1890ff;
-        transform: scale(1.02);
-      }
-
-      .drag-handle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        cursor: grab;
-        color: #8c8c8c;
-        font-size: 14px;
-        opacity: 0.5;
-        transition: all 0.3s ease;
-        padding: 2px;
-
-        &:hover {
-          color: #1890ff;
-          opacity: 1;
-          transform: scale(1.1);
-        }
-
-        &:active {
-          cursor: grabbing;
-        }
-      }
-
-      .ant-checkbox-wrapper {
-        margin: 0;
-      }
-    }
-  }
-}
 </style>
