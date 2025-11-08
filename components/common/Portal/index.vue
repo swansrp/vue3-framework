@@ -115,6 +115,9 @@
                 name="grid-mode-item-actions"
               ></slot>
             </template>
+            <template #header-action>
+              <slot name="header-action"></slot>
+            </template>
             <template #end-action>
               <portal-mode-button
                 v-if="!modeLock"
@@ -2269,7 +2272,7 @@ onUnmounted(() => {
   bus.off(PORTAL_RESIZE)
 })
 
-defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig, getData })
+defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig, getData, handleMenuContextAdd, addRow })
 </script>
 <style lang="less" scoped>
 // 主要容器样式
