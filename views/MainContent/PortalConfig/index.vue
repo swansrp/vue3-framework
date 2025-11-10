@@ -153,9 +153,9 @@
       <!-- 底部操作按钮 -->
       <div class="folder-footer-controls">
         <!-- 清空配置按钮 -->
-        <a-popconfirm 
-          v-if="selectedRole !== '0' && tableList.length > 0" 
-          title="注意清空该角色的所有配置, 该角色即将使用默认配置" 
+        <a-popconfirm
+          v-if="selectedRole !== '0' && tableList.length > 0"
+          title="注意清空该角色的所有配置, 该角色即将使用默认配置"
           @confirm="cleanPortalConfigByRole"
         >
           <a-button
@@ -168,7 +168,7 @@
             </template>
           </a-button>
         </a-popconfirm>
-        
+
         <!-- 初始化配置按钮 -->
         <a-dropdown v-if="selectedRole !== '0' && tableList.length === 0 && bindRoleDictList.length > 0">
           <template #overlay>
@@ -192,10 +192,10 @@
             </template>
           </a-button>
         </a-dropdown>
-        
+
         <!-- 当没有可绑定角色时的提示 -->
         <div
-          v-if="selectedRole !== '0' && tableList.length === 0 && bindRoleDictList.length === 0" 
+          v-if="selectedRole !== '0' && tableList.length === 0 && bindRoleDictList.length === 0"
           style="margin-top: 5px; padding: 8px 12px; font-size: 12px; color: #999; text-align: center; border: 1px dashed #d9d9d9; border-radius: 6px;"
         >
           暂无可用配置
@@ -1535,18 +1535,31 @@
       <template #title>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 100%;">
           <span style="line-height: 1;">通用图表</span>
-          <a-button
-            type="primary"
-            size="middle"
-            :loading="publicDashboardRefreshing"
-            style="margin-right: 30px; display: flex; align-items: center; justify-content: center;"
-            @click="handlePublicDashboardRefresh"
-          >
-            <template #icon>
-              <ReloadOutlined />
-            </template>
-            刷新
-          </a-button>
+          <div style="display: flex; gap: 10px; margin-right: 30px;">
+            <a-button
+              type="primary"
+              size="middle"
+              :loading="publicDashboardRefreshing"
+              style="display: flex; align-items: center; justify-content: center;"
+              @click="handlePublicDashboardRefreshDataOnly"
+            >
+              <template #icon>
+                <ReloadOutlined />
+              </template>
+              刷新数据
+            </a-button>
+            <a-button
+              size="middle"
+              :loading="publicDashboardRearranging"
+              style="display: flex; align-items: center; justify-content: center;"
+              @click="handlePublicDashboardRearrange"
+            >
+              <template #icon>
+                <AppstoreOutlined />
+              </template>
+              重新排列
+            </a-button>
+          </div>
         </div>
       </template>
       <public-dashboard
@@ -1565,6 +1578,7 @@
 
 <script lang="ts" setup>
 import {
+  AppstoreOutlined,
   ArrowDownOutlined,
   ArrowUpOutlined,
   ConsoleSqlOutlined,
@@ -1720,6 +1734,7 @@ const sqlData: Ref<string> = ref('')
 const indicatorModalShow: Ref<boolean> = ref(false)
 const publicDashboardModalShow: Ref<boolean> = ref(false)
 const publicDashboardRefreshing: Ref<boolean> = ref(false)
+const publicDashboardRearranging: Ref<boolean> = ref(false)
 const publicDashboardRef = ref()
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
@@ -1739,8 +1754,8 @@ const copyConfig = () => {
   })
 }
 
-// 处理通用指标刷新
-const handlePublicDashboardRefresh = async () => {
+// 处理通用指标刷新（只刷新数据）
+const handlePublicDashboardRefreshDataOnly = async () => {
   if (!publicDashboardRef.value) {
     console.warn('publicDashboard组件引用未找到')
     return
@@ -1748,12 +1763,30 @@ const handlePublicDashboardRefresh = async () => {
 
   try {
     publicDashboardRefreshing.value = true
-    // 调用publicDashboard组件的refreshDashboard方法
-    await publicDashboardRef.value.loadDashboardData()
+    // 调用publicDashboard组件的refreshDataOnly方法（只刷新数据，不重新排列）
+    await publicDashboardRef.value.refreshDataOnly()
   } catch (error) {
-    console.error('刷新通用指标失败:', error)
+    console.error('刷新数据失败:', error)
   } finally {
     publicDashboardRefreshing.value = false
+  }
+}
+
+// 处理通用指标重新排列
+const handlePublicDashboardRearrange = async () => {
+  if (!publicDashboardRef.value) {
+    console.warn('publicDashboard组件引用未找到')
+    return
+  }
+
+  try {
+    publicDashboardRearranging.value = true
+    // 调用publicDashboard组件的rearrangeChartsOnly方法（只重新排列，不刷新数据）
+    await publicDashboardRef.value.rearrangeChartsOnly()
+  } catch (error) {
+    console.error('重新排列失败:', error)
+  } finally {
+    publicDashboardRearranging.value = false
   }
 }
 
@@ -1970,18 +2003,18 @@ const onSearch = () => {
         // 递归初始化所有嵌套文件夹的关闭状态
         const initFolderExpanded = (children: any, parentPath = '') => {
           if (!children || typeof children !== 'object') return
-          
+
           Object.keys(children).forEach((folderKey) => {
             const fullPath = parentPath ? `${parentPath}-${folderKey}` : folderKey
             expandedFolders[fullPath] = false
-            
+
             // 递归处理子文件夹
             if (children[folderKey]?.children) {
               initFolderExpanded(children[folderKey].children, fullPath)
             }
           })
         }
-        
+
         // 初始化所有文件夹
         if (folderStructure.value?.children) {
           initFolderExpanded(folderStructure.value.children)
@@ -2296,10 +2329,6 @@ onMounted(() => {
 const root: Ref = ref()
 let tableWidth: Ref<number> = ref(0)
 let tableHeight: Ref<number> = ref(0)
-const _getTableWidth = () => {
-  if (tableWidth.value == undefined) return AUTO
-  return tableWidth.value - 20
-}
 const getTableHeight = () => {
   if (tableHeight.value == undefined) return AUTO
   return tableHeight.value
@@ -2336,375 +2365,4 @@ const onSqlShow = () => {
 }
 //endregion
 </script>
-<style lang="less" scoped>
-.root {
-  display: flex;
-  height: calc(100% - 80px);
-
-  .list-footer-content {
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-.table-list {
-  width: 250px;
-  height: 85vh;
-  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
-  margin: 10px 15px;
-  background: white;
-  display: flex;
-  flex-direction: column;
-  /* 移除 overflow 属性，由内部容器处理滚动 */
-}
-
-.folder-header-controls {
-  padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
-  flex-shrink: 0;
-  /* 防止被压缩 */
-}
-
-.folder-list-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
-  /* 确保内容区域可滚动 */
-}
-
-.folder-footer-controls {
-  padding: 12px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 60px;
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  /* 防止被压缩 */
-}
-
-.folder-group {
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.ungrouped-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  border-bottom: 1px solid #e9ecef;
-  font-weight: 500;
-  color: #6c757d;
-  font-size: 14px;
-  background: #f5f5f5;
-}
-
-.folder-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  cursor: pointer;
-  background: #f8f9fa !important;
-  border-bottom: 1px solid #e9ecef;
-  font-weight: 600;
-  color: #495057;
-  transition: all 0.2s;
-  font-size: 14px !important;
-}
-
-.folder-header:hover {
-  background: #e9ecef !important;
-  color: #212529;
-}
-
-.folder-header.folder-expanded {
-  background: #dee2e6 !important;
-  color: #212529;
-}
-
-/* 确保所有嵌套文件夹都有正确样式 */
-.folder-group .folder-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  cursor: pointer;
-  background: #f8f9fa !important;
-  border-bottom: 1px solid #e9ecef;
-  font-weight: 500;
-  color: #495057;
-  transition: all 0.2s;
-  font-size: 14px !important;
-}
-
-.folder-group .folder-header:hover {
-  background: #e9ecef !important;
-  color: #212529;
-}
-
-.folder-group .folder-header.folder-expanded {
-  background: #dee2e6 !important;
-  color: #212529;
-}
-
-/* 二级文件夹 */
-.folder-content .folder-group .folder-header {
-  background: #fafafa !important;
-  font-weight: 500;
-  font-size: 14px !important;
-}
-
-.folder-content .folder-group .folder-header:hover {
-  background: #f0f0f0 !important;
-}
-
-.folder-content .folder-group .folder-header.folder-expanded {
-  background: #e8e8e8 !important;
-}
-
-/* 三级及更深层文件夹 */
-.folder-content .folder-content .folder-group .folder-header {
-  background: #f5f5f5 !important;
-  font-weight: 400;
-  font-size: 14px !important;
-}
-
-.folder-content .folder-content .folder-group .folder-header:hover {
-  background: #ebebeb !important;
-}
-
-.folder-content .folder-content .folder-group .folder-header.folder-expanded {
-  background: #e0e0e0 !important;
-}
-
-/* 根据深度的样式类 */
-.folder-depth-0 {
-  background: #f8f9fa !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
-}
-
-.folder-depth-0:hover {
-  background: #e9ecef !important;
-}
-
-.folder-depth-0.folder-expanded {
-  background: #dee2e6 !important;
-}
-
-.folder-depth-1 {
-  background: #fafafa !important;
-  font-weight: 500 !important;
-  font-size: 14px !important;
-}
-
-.folder-depth-1:hover {
-  background: #f0f0f0 !important;
-}
-
-.folder-depth-1.folder-expanded {
-  background: #e8e8e8 !important;
-}
-
-.folder-depth-2,
-.folder-depth-3 {
-  background: #f5f5f5 !important;
-  font-weight: 400 !important;
-  font-size: 14px !important;
-}
-
-.folder-depth-2:hover,
-.folder-depth-3:hover {
-  background: #ebebeb !important;
-}
-
-.folder-depth-2.folder-expanded,
-.folder-depth-3.folder-expanded {
-  background: #e0e0e0 !important;
-}
-
-.folder-icon {
-  margin-right: 8px;
-  font-size: 14px !important;
-  color: #6c757d !important;
-}
-
-.folder-title {
-  flex: 1;
-  font-size: 14px !important;
-}
-
-.folder-count {
-  font-size: 12px;
-  color: #6c757d;
-  margin-left: 4px;
-}
-
-.folder-content {
-  background: white;
-  border-left: 2px solid #f0f0f0;
-}
-
-.table-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 0;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  transition: all 0.2s;
-  background: white;
-}
-
-.table-item:hover {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
-}
-
-.table-item:last-child {
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.table-item .item-content {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  width: 100%;
-  min-height: 20px;
-  /* 移除固定的 padding-left，由组件动态计算 */
-}
-
-.file-icon {
-  margin-right: 8px;
-  font-size: 14px;
-  color: #8c8c8c;
-}
-
-.item-label {
-  font-size: 14px;
-  color: #262626;
-  line-height: 1.4;
-}
-
-.highlight-text {
-  background-color: #ff4d4f !important;
-  color: #fff !important;
-  font-weight: bold !important;
-  padding: 1px 3px;
-  border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(255, 77, 79, 0.3);
-}
-
-/* 确保 v-html渲染的高亮样式正确显示 */
-:deep(.highlight-text) {
-  background-color: #ff4d4f !important;
-  color: #fff !important;
-  font-weight: bold !important;
-  padding: 1px 3px !important;
-  border-radius: 3px !important;
-  box-shadow: 0 1px 2px rgba(255, 77, 79, 0.3) !important;
-}
-
-.table-config {
-  width: calc(100vw - 540px);
-  margin-top: 10px;
-}
-
-:deep(.ant-descriptions-header) {
-  margin-bottom: 5px !important;
-}
-
-.activate-item {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
-}
-
-.column-list {
-  width: 250px;
-  height: calc(100% - 245px);
-  margin: 10px 0;
-}
-
-:deep(.column-list .ant-spin-container) {
-  max-height: 490px;
-  overflow: auto;
-  cursor: pointer;
-}
-
-:deep(.column-list .ant-spin-container li:hover) {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
-}
-
-:deep(.surely-table-popup-container-inner) {
-  width: 260px;
-  height: 400px;
-}
-
-:deep(.surely-table-popup-container) {
-  background-color: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.filter-active {
-  color: var(--surely-table-primary-color) !important;
-  opacity: 1 !important;
-}
-
-.popup {
-  width: 100px;
-  height: 20px;
-
-  .popup-item {
-    cursor: pointer;
-    padding: 8px;
-
-    &:hover {
-      background-color: var(--surely-table-row-hover-bg);
-    }
-
-    &.disabled {
-      color: var(--surely-table-disabled-color);
-      cursor: not-allowed;
-    }
-  }
-}
-
-/* 全屏弹窗样式 */
-:deep(.fullscreen-modal) {
-  .ant-modal {
-    max-width: 100vw;
-    margin: 0;
-    padding: 0;
-  }
-
-  .ant-modal-content {
-    height: 100vh;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .ant-modal-header {
-    flex-shrink: 0;
-    height: 55px;
-  }
-
-  .ant-modal-body {
-    flex: 1;
-    padding: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* 确保组件占满剩余空间 */
-  .public-dashboard {
-    height: 100%;
-  }
-}
-</style>
+<style lang="less" scoped src="./css/index.less"></style>
