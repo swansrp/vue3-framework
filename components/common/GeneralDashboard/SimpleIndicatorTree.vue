@@ -37,7 +37,7 @@ defineOptions({
 // Props
 interface Props {
   indicators: IndicatorNode[]
-  selectedNodeKey?: string | null
+  selectedNodeKey?: string | null | number
 }
 
 const props = defineProps<Props>()
@@ -116,13 +116,18 @@ const handleNodeClick = (selectedKeys: Key[], e: any) => {
   const hasChildren = e.node.children && e.node.children.length > 0
 
   if (hasChildren) {
-    // 父节点：切换展开/折叠状态
-    const index = expandedKeys.value.indexOf(clickedKey)
-    if (index > -1) {
-      expandedKeys.value = expandedKeys.value.filter(key => key !== clickedKey)
-    } else {
-      expandedKeys.value = [...expandedKeys.value, clickedKey]
-    }
+    // 父节点：触发展开/折叠
+    // 通过手动调用 handleExpand 来触发手风琴模式
+    const isExpanded = expandedKeys.value.includes(clickedKey)
+    handleExpand(
+      isExpanded 
+        ? expandedKeys.value.filter(key => key !== clickedKey)
+        : [...expandedKeys.value, clickedKey],
+      {
+        expanded: !isExpanded,
+        node: e.node
+      }
+    )
   }
   
   // 所有节点都发出点击事件

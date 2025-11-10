@@ -82,7 +82,7 @@
           >
             <div class="empty-content">
               <BarChartOutlined class="empty-icon" />
-              <p v-if="activeKeys.length === 0">
+              <p v-if="activeKeys === undefined || activeKeys.length === 0">
                 请在左侧展开折叠面板以查看图表
               </p>
               <p v-else>
@@ -268,7 +268,7 @@ const findParentNode = (nodes: IndicatorNode[], targetKey: string, parent: Indic
 // 根据当前展开的折叠面板和选中的节点显示图表
 const displayedDashboardItems = computed((): DashboardItem[] => {
   // 如果没有展开任何面板，不显示图表
-  if (activeKeys.value.length === 0) {
+  if (activeKeys.value === undefined || activeKeys.value.length === 0) {
     return []
   }
 
