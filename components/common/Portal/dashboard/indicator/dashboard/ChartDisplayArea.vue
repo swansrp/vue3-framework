@@ -1010,6 +1010,4 @@ defineExpose({
 })
 </script>
 
-<style lang="less" scoped>
-@import '../../styles/talentReview.less';
-</style>
+<style lang="less" scoped src="../../styles/talentReview.less"></style>

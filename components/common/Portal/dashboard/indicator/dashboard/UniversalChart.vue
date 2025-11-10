@@ -173,6 +173,4 @@ export default defineComponent({
 })
 </script>
 
-<style lang="less" scoped>
-@import '../../styles/universalChart.less';
-</style>
+<style lang="less" scoped src="../../styles/universalChart.less"></style>
