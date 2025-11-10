@@ -83,7 +83,38 @@ const clickNav = (path: any, children: any) => {
 }
 
 const selectNav = (obj: any) => {
-  router.push('/' + obj.key).then(() => store.setTopNavPath(obj.keyPath[0]))
+  // 添加安全检查
+  if (!obj || !obj.key) {
+    console.warn('selectNav: obj or obj.key is undefined', obj)
+    return
+  }
+  
+  const selectedKey = obj.key
+  const fullPath = '/' + selectedKey
+  
+  // 使用完整路径判断是否为外链
+  const fullPathForFrame = fullPath.startsWith('/') ? fullPath.substring(1) : fullPath
+  const isFrame = routeStore.routePathIsFrameMap[fullPathForFrame]
+  
+  if (isFrame) {
+    console.log('====== 外链 ============')
+    // 外链菜单：立即设置菜单高亮状态
+    keys.selectedKeys = [selectedKey]
+    
+    // 打开外链
+    const urlArray = fullPath.split('http')
+    if(urlArray.length > 1) {
+      const routeUrl = fullPath.substring(urlArray[0].length)
+      window.open(routeUrl, '_blank')
+    } else {
+      const routeUrl = router.resolve({ path: fullPath })
+      window.open(routeUrl.href, '_blank')
+    }
+  } else {
+    console.log('Navigation to:', fullPath)
+    // 普通导航
+    router.push(fullPath).then(() => store.setTopNavPath(obj.keyPath[0]))
+  }
 }
 
 watch(
