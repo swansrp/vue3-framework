@@ -33,6 +33,7 @@
           )}`,
           gridRow: `${indicator.yPosition} / span ${indicator.yGrid || 1}`,
         }"
+        :data-chart-id="indicator.id"
         :data-xgrid="indicator.xGrid"
         :data-ygrid="indicator.yGrid"
         :data-xposition="indicator.xPosition"
@@ -90,6 +91,7 @@ interface Props {
   canDeletePersonalIndicators?: boolean; // 是否可以删除个人指标
   canResizeCommonIndicators?: boolean; // 是否可以调整通用指标大小
   canResizePersonalIndicators?: boolean; // 是否可以调整个人指标大小
+  canDrag?: boolean; // 是否可以拖动卡片
 }
 
 interface Emits {
@@ -113,7 +115,8 @@ const props = withDefaults(defineProps<Props>(), {
   canDeleteCommonIndicators: true,
   canDeletePersonalIndicators: true,
   canResizeCommonIndicators: true,
-  canResizePersonalIndicators: true
+  canResizePersonalIndicators: true,
+  canDrag: true
 })
 
 const emit = defineEmits<Emits>()
@@ -214,6 +217,9 @@ const checkDragOverlap = (
 
 // 开始拖拽
 const startDrag = (e: MouseEvent, indicator: DashboardItem) => {
+  // 如果禁用拖动，直接返回
+  if (!props.canDrag) return
+
   // 只有在点击卡片标题栏时才允许拖拽
   const target = e.target as HTMLElement
   if (!target.closest('.chart-card-header')) return

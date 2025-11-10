@@ -10,10 +10,14 @@
         <slot name="header-actions">
           <a-button
             type="primary"
-            @click="loadDashboardData"
+            @click="refreshDataOnly"
           >
             <ReloadOutlined />
-            刷新
+            刷新数据
+          </a-button>
+          <a-button @click="rearrangeChartsOnly">
+            <AppstoreOutlined />
+            重新排列
           </a-button>
         </slot>
       </div>
@@ -43,6 +47,7 @@
         @add-dashboard="addDashboardFromTree"
         @delete-dashboard="deleteDashboardFromTree"
         @reload-data="loadDashboardData"
+        @node-title-click="handleNodeTitleClick"
       />
 
       <!-- 主体图表区域 -->
@@ -83,7 +88,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ReloadOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, readonly, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -522,9 +527,80 @@ const refreshDashboard = async () => {
   }
 }
 
+// 只刷新数据（不重新排列）
+const refreshDataOnly = async () => {
+  try {
+    await loadDashboardData()
+    message.success('数据刷新完成')
+  } catch (error) {
+    console.error('刷新数据失败:', error)
+    message.error('刷新数据失败，请重试')
+  }
+}
+
+// 只重新排列图表（不刷新数据）
+const rearrangeChartsOnly = async () => {
+  try {
+    // 基于当前显示范围（只通用或通用+个人）进行布局重排
+    const itemsToReorganize = displayedIndicators.value
+
+    if (itemsToReorganize && itemsToReorganize.length > 0) {
+      // 按顺序重新排列图表布局（仅作用于当前显示集合）
+      const reorganizedItems = reorganizeChartsLayout(itemsToReorganize)
+
+      // 保存新的布局到服务器（仅更新当前显示集合的坐标尺寸）
+      await saveReorganizedLayout(reorganizedItems)
+
+      // 再次加载数据以显示新布局
+      await loadDashboardData()
+    } else {
+      message.warning('暂无图表需要排列')
+    }
+  } catch (error) {
+    console.error('重新排列失败:', error)
+    message.error('重新排列失败，请重试')
+  }
+}
+
 // 更新侧边栏折叠状态
 const updateSidebarCollapsed = (collapsed: boolean) => {
   sidebarCollapsed.value = collapsed
+}
+
+// 处理节点标题点击，滚动到对应的图表
+const handleNodeTitleClick = (indicatorId: string) => {
+  // 在当前显示的仪表盘项中查找对应的图表
+  const targetChart = displayedIndicators.value.find(
+    item => String(item.indicatorId) === String(indicatorId)
+  )
+
+  if (!targetChart) {
+    console.warn('未找到对应的图表，indicatorId:', indicatorId)
+    return
+  }
+
+  // 使用 nextTick 确保 DOM 已更新
+  setTimeout(() => {
+    // 通过图表的 id 来定位 DOM 元素
+    const chartElement = document.querySelector(`[data-chart-id="${targetChart.id}"]`)
+
+    if (chartElement) {
+      // 滚动到图表位置
+      chartElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      })
+
+      // 添加高亮效果
+      chartElement.classList.add('chart-highlight')
+      setTimeout(() => {
+        chartElement.classList.remove('chart-highlight')
+      }, 2000)
+    } else {
+      console.warn('未找到图表 DOM 元素，chartId:', targetChart.id)
+    }
+  }, 100)
 }
 
 // 更新选中的通用指标
@@ -1205,6 +1281,8 @@ const forceRecalculateLayout = () => {
 // 暴露给父组件的方法
 defineExpose({
   refreshDashboard,
+  refreshDataOnly,
+  rearrangeChartsOnly,
   loadDashboardData,
   addDashboard,
   deleteDashboard,
@@ -1216,9 +1294,10 @@ defineExpose({
 
 <style lang="less" scoped>
 .talent-review-dashboard {
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: #f0f2f5;
 
   .dashboard-header {
@@ -1246,11 +1325,54 @@ defineExpose({
     flex: 1;
     display: flex;
     overflow: hidden;
+    min-height: 0;
 
     .dashboard-content {
       flex: 1;
-      overflow: auto;
+      overflow-y: auto;
+      overflow-x: hidden;
       padding: 16px;
+      scroll-behavior: smooth;
+
+      // 自定义滚动条样式
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f5f5f5;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #d9d9d9;
+        border-radius: 3px;
+
+        &:hover {
+          background: #bfbfbf;
+        }
+      }
+
+      // 图表高亮效果
+      :deep(.chart-highlight) {
+        animation: highlight-pulse 0.6s ease-in-out;
+        box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.3) !important;
+        transform: scale(1.02);
+        transition: all 0.3s ease;
+      }
+
+      @keyframes highlight-pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.7);
+        }
+
+        50% {
+          box-shadow: 0 0 0 10px rgba(24, 144, 255, 0.3);
+        }
+
+        100% {
+          box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.3);
+        }
+      }
 
       &.full-width {
         // 当不显示指标树时，图表区域占满整个宽度
