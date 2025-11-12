@@ -50,7 +50,10 @@
         :trigger="['click']"
         placement="bottomRight"
       >
-        <div class="menu-trigger" @click.stop>
+        <div
+          class="menu-trigger"
+          @click.stop
+        >
           <MoreOutlined />
         </div>
         <template #overlay>

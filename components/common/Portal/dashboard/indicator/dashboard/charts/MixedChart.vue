@@ -479,7 +479,7 @@ export default defineComponent({
                   }
                   return value.toString()
                 })()
-                return `${formatted}${leftMetrics[0].unit || ''}`
+                return leftMetrics[0].unit ? `${formatted}${leftMetrics[0].unit}` : formatted
               },
               fontSize: 12
             },
@@ -558,7 +558,7 @@ export default defineComponent({
                       }
                       return value.toString()
                     })()
-                    return `${formatted}${metric.unit || ''}`
+                    return metric.unit ? `${formatted}${metric.unit}` : formatted
                   },
                   fontSize: 12
                 },
@@ -675,7 +675,7 @@ export default defineComponent({
                       maximumFractionDigits: 0
                     })
                   })()
-                  result += `${param.marker}${param.secondDimension}: ${formattedValue}${unit} (${percentage}%)<br/>`
+                  result += `${param.marker}${param.secondDimension}: ${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
                 })
 
                 const metric = props.dataMetrics.find(m => m.dataName === statType)
@@ -692,7 +692,8 @@ export default defineComponent({
                     maximumFractionDigits: 0
                   })
                 })()
-                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${getUnitByStatType(statType)}</span></div>`
+                const subtotalUnit = getUnitByStatType(statType)
+                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
               })
             } else {
               params.forEach((param: any) => {
@@ -711,7 +712,7 @@ export default defineComponent({
                     maximumFractionDigits: 0
                   })
                 })()
-                result += `${param.marker}${param.seriesName}: ${formattedValue}${unit}<br/>`
+                result += `${param.marker}${param.seriesName}: ${formattedValue}${unit ? unit : ''}<br/>`
               })
             }
 

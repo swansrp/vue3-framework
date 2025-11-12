@@ -260,8 +260,8 @@ export default defineComponent({
                 maximumFractionDigits: 0
               })
             })()
-            result += `${params.marker}${params.name}: ${formattedValue}${unit} (${params.percent}%)<br/>`
-            result += `<span style="color: #666; font-size: 12px;">数值: ${formattedValue}${unit}</span></div>`
+            result += `${params.marker}${params.name}: ${formattedValue}${unit ? unit : ''} (${params.percent}%)<br/>`
+            result += `<span style="color: #666; font-size: 12px;">数值: ${formattedValue}${unit ? unit : ''}</span></div>`
             return result
           }
         },
@@ -292,7 +292,7 @@ export default defineComponent({
                 maximumFractionDigits: 0
               })
             })()
-            return `${name}: ${formattedValue}${unit}`
+            return `${name}: ${formattedValue}${unit ? unit : ''}`
           }
         },
         series: [
