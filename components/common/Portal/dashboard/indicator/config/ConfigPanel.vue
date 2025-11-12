@@ -53,6 +53,7 @@
         :available-data-types="availableDataTypes"
         :first-dimension="firstDimension"
         :second-dimension="secondDimension"
+        :convert-unit="convertUnit"
         @update-metric-field="updateMetricField"
       />
     </div>
@@ -113,6 +114,7 @@ const props = defineProps<{
   selectedFilterItemsArray: string[][]
   dataMetrics: DataMetricUI[]
   availableDataTypes: DataTypeOption[]
+  convertUnit?: (unitConfig: string) => string
 }>()
 
 // Emits
@@ -333,7 +335,7 @@ const resetConfiguration = () => {
     color: '#1890ff',
     yAxisPosition: 'left',
     stackGroup: 'noStack',
-    unit: '个',
+    unit: '',
     itemColors: {}
   }
 

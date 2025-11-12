@@ -121,6 +121,25 @@
                 </a-select>
               </span>
             </div>
+            <div class="data-row">
+              <span class="data-label">单位：</span>
+              <span class="data-value">
+                <a-input
+                  :value="metric.unit"
+                  size="small"
+                  :placeholder="getMetricUnitPlaceholder(metric)"
+                  :disabled="isMetricUnitDisabled(metric)"
+                  style="width: 120px"
+                  @change="(e) => updateMetricField(metric.id, 'unit', e.target.value)"
+                />
+                <a-tooltip
+                  v-if="isMetricUnitDisabled(metric)"
+                  title="金额数据单位由系统自动生成，无法修改"
+                >
+                  <InfoCircleOutlined style="margin-left: 4px; color: #666;" />
+                </a-tooltip>
+              </span>
+            </div>
 
             <!-- 二级维度值的颜色设置 -->
             <div
@@ -279,6 +298,21 @@
               <small>• 堆叠组：相同组且相同第二维度的指标堆叠，不同第二维度并排</small>
             </div>
           </a-form-item>
+
+          <a-form-item label="单位">
+            <a-input
+              v-model:value="editingDataMetric.unit"
+              :placeholder="getUnitPlaceholder()"
+              :disabled="hasUnitConfig()"
+              allow-clear
+            />
+            <div
+              v-if="hasUnitConfig()"
+              class="unit-tip"
+            >
+              <small style="color: #666;">金额单位由系统根据计算配置自动生成</small>
+            </div>
+          </a-form-item>
         </a-form>
       </a-modal>
 
@@ -295,7 +329,7 @@
 </template>
 
 <script lang="ts" setup>
-import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, RightOutlined, InfoCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { ref, computed, watch, nextTick } from 'vue'
 
@@ -328,7 +362,7 @@ interface DataMetricUI {
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
   unit?: string
-  unitConfig?: String
+  unitConfig?: string
   itemColors?: Record<string, string>
 }
 
@@ -336,7 +370,7 @@ interface DataTypeOption {
   dataName: string
   dataField: string
   unit?: string
-  unitConfig?: String
+  unitConfig?: string
 }
 
 interface ChartTypeOption {
@@ -352,6 +386,7 @@ const props = defineProps<{
   firstDimension: IndicatorGroup | null
   secondDimension: IndicatorGroup | null
   availableDataTypes: DataTypeOption[]
+  convertUnit?: (unitConfig: string) => string
 }>()
 
 // Emits
@@ -460,6 +495,43 @@ const presetColors = [
   '#faad14', '#13c2c2', '#f5222d', '#fa8c16', '#a0d911'
 ]
 
+// 单位配置解析逻辑已移至 dashboard.vue 中的 convertUnit 函数
+
+// 检查当前编辑的数据是否有unitConfig
+const hasUnitConfig = (): boolean => {
+  if (!editingDataMetric.value) return false
+  const dataType = props.availableDataTypes.find(dt => dt.dataField === editingDataMetric.value?.dataField)
+  return !!(dataType?.unitConfig)
+}
+
+// 获取单位输入框的占位符
+const getUnitPlaceholder = (): string => {
+  if (hasUnitConfig()) {
+    const dataType = props.availableDataTypes.find(dt => dt.dataField === editingDataMetric.value?.dataField)
+    if (dataType?.unitConfig && props.convertUnit) {
+      const displayUnit = props.convertUnit(dataType.unitConfig)
+      return `自动生成：${displayUnit}`
+    }
+  }
+  return '请输入单位，如：个、台、件等'
+}
+
+// 检查指定数据指标是否有unitConfig
+const isMetricUnitDisabled = (metric: DataMetricUI): boolean => {
+  const dataType = props.availableDataTypes.find(dt => dt.dataField === metric.dataField)
+  return !!(dataType?.unitConfig)
+}
+
+// 获取数据指标单位输入框的占位符
+const getMetricUnitPlaceholder = (metric: DataMetricUI): string => {
+  const dataType = props.availableDataTypes.find(dt => dt.dataField === metric.dataField)
+  if (dataType?.unitConfig && props.convertUnit) {
+    const displayUnit = props.convertUnit(dataType.unitConfig)
+    return `系统生成：${displayUnit}`
+  }
+  return '请输入单位'
+}
+
 // 方法
 const updateMetricField = (metricId: string, field: string, value: any) => {
   emit('updateMetricField', metricId, field, value)
@@ -554,6 +626,7 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
       yAxisPosition: defaultYAxisPosition,
       stackGroup: defaultStackGroup,
       unit: '',
+      unitConfig: '',
       itemColors: {}
     }
   } else if (metric) {
@@ -571,8 +644,18 @@ const onDataTypeChange = (value: any) => {
   if (dataType) {
     editingDataMetric.value.dataName = dataType.dataName
     editingDataMetric.value.dataField = dataType.dataField
-    editingDataMetric.value.unit = dataType.unit || ''
     editingDataMetric.value.unitConfig = dataType.unitConfig || ''
+
+    // 如果有unitConfig（金额数据），自动生成正确的单位
+    if (dataType.unitConfig && props.convertUnit) {
+      const displayUnit = props.convertUnit(dataType.unitConfig)
+      editingDataMetric.value.unit = displayUnit
+    } else {
+      // 只在添加模式下且用户未手动输入单位时，才使用数据类型的默认单位
+      if (dataFormMode.value === 'add' && !editingDataMetric.value.unit) {
+        editingDataMetric.value.unit = dataType.unit || ''
+      }
+    }
   }
 }
 
@@ -1091,6 +1174,11 @@ const toggleCollapse = () => {
   .disabled-tip {
     color: #ff4d4f;
     font-size: 11px;
+  }
+
+  .unit-tip {
+    margin-top: 4px;
+    color: #8c8c8c;
   }
 }
 </style>

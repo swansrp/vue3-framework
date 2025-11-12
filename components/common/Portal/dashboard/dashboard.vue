@@ -17,6 +17,7 @@
       v-model:selected-filter-items-array="selectedFilterItemsArray"
       :available-data-types="availableDataTypes"
       :left-panel-collapsed="leftPanelCollapsed"
+      :convert-unit="convertUnit"
       @toggle-left-panel="toggleLeftPanel"
       @generate-chart="generateChart"
       @clear-chart="clearChart"
@@ -132,7 +133,7 @@ const dataMetrics = ref<DataMetricUI[]>([
     color: '#1890ff',
     yAxisPosition: 'left',
     stackGroup: 'noStack',
-    unit: '个',
+    unit: '',
     itemColors: {}
   }
 ])
@@ -229,14 +230,18 @@ const parseUnitConfig = (unitConfig: string): { fix: number; unit: number; displ
     10: '十元',
     100: '百元',
     1000: '千元',
-    10000: '万元'
+    10000: '万元',
+    100000: '十万元',
+    1000000: '百万元',
+    10000000: '千万元',
+    100000000: '亿元'
   }
 
   return { fix, unit, displayUnit: unitMap[unit] || '元' }
 }
 
 // 转换单位配置为中文单位显示
-const convertUnitToChineseUnit = (unitConfig: string): string => {
+const convertUnit = (unitConfig: string): string => {
   const { displayUnit } = parseUnitConfig(unitConfig)
   return displayUnit
 }
@@ -747,7 +752,8 @@ onMounted(async () => {
     await getIndicatorConfig(tableId.value).then(resp => indicatorTreeData.value = resp.payload)
     availableDataTypes.value.push({
       dataName: '分布统计',
-      dataField: ''
+      dataField: '',
+      unit: ''
     })
     const resp: any = await getPortalConfig(tableId.value)
     config.value = resp.payload
@@ -761,7 +767,7 @@ onMounted(async () => {
         if (column.reference && column.reference.trim() !== '') {
           const rawUnitConfig = column.reference // 使用完整的reference，格式可能是 "2,10000"、"2,1000"、"2,100" 等
 
-          const convertedUnit = convertUnitToChineseUnit(rawUnitConfig)
+          const convertedUnit = convertUnit(rawUnitConfig)
 
           availableDataTypes.value.push({
             dataName: column.displayName,
@@ -774,7 +780,7 @@ onMounted(async () => {
           availableDataTypes.value.push({
             dataName: column.displayName,
             dataField: column.property,
-            unit: '元', // 默认单位
+            unit: '', // 不设置默认单位，让用户手动输入
             unitConfig: undefined // 不设置 unitConfig，表示不需要特殊格式化
           })
         }
@@ -782,7 +788,8 @@ onMounted(async () => {
       if (column.fieldType === FIELD_TYPE.NUMBER) {
         availableDataTypes.value.push({
           dataName: column.displayName,
-          dataField: column.property
+          dataField: column.property,
+          unit: '' // 明确设置为空字符串
         })
       }
     })
