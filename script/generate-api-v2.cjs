@@ -648,6 +648,65 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   const queryParams = (operation.parameters || []).filter(p => p.in === 'query');
   const hasRequestBody = !!operation.requestBody;
   
+  // 提取params和data的具体类型
+  let paramsType = 'object';
+  let dataType = 'any';
+  let paramsTypeName = '';
+  let dataTypeName = '';
+  let queryParamsInterface = ''; // 存储生成的query参数接口定义
+  
+  // 从query参数中提取类型信息
+  if (queryParams.length > 0) {
+    // 尝试从第一个query参数的schema中获取类型
+    const firstQueryParam = queryParams[0];
+    if (firstQueryParam.schema && firstQueryParam.schema.$ref) {
+      const refType = firstQueryParam.schema.$ref.split('/').pop();
+      paramsTypeName = cleanSchemaName(refType);
+      paramsType = paramsTypeName;
+    } else {
+      // 如果没有$ref引用，生成内联的接口定义
+      const queryParamFields = [];
+      queryParams.forEach(param => {
+        const paramName = param.name;
+        const isRequired = param.required || false;
+        const optional = isRequired ? '' : '?';
+        let paramType = 'any';
+        
+        if (param.schema) {
+          if (param.schema.type) {
+            paramType = swaggerTypeToTSType(param.schema.type, param.schema.format);
+          }
+        }
+        
+        // 添加描述注释
+        const description = param.description || '';
+        if (description) {
+          queryParamFields.push(`  /** ${description} */`);
+        }
+        queryParamFields.push(`  ${paramName}${optional}: ${paramType}`);
+      });
+      
+      // 生成内联接口
+      if (queryParamFields.length > 0) {
+        paramsType = `{\n${queryParamFields.join('\n')}\n}`;
+      }
+    }
+  }
+  
+  // 从requestBody中提取类型信息
+  if (hasRequestBody && operation.requestBody.content) {
+    const content = operation.requestBody.content;
+    const mediaTypes = Object.keys(content);
+    if (mediaTypes.length > 0) {
+      const schema = content[mediaTypes[0]].schema;
+      if (schema && schema.$ref) {
+        const refType = schema.$ref.split('/').pop();
+        dataTypeName = cleanSchemaName(refType);
+        dataType = dataTypeName;
+      }
+    }
+  }
+  
   // 构建参数列表
   let params = [];
   
@@ -656,18 +715,18 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
     params.push(`${param}: string | number`);
   });
   
-  // 查询参数
+  // 查询参数 - 使用具体类型
   if (queryParams.length > 0) {
-    params.push('params?: object');
+    params.push(`params?: ${paramsType}`);
   }
   
-  // 请求体
+  // 请求体 - 使用具体类型
   if (hasRequestBody) {
-    params.push('data?: any');
+    params.push(`data?: ${dataType}`);
   }
   
   // 默认参数
-  params.push('showSuccess = true', 'showLoading = false');
+  params.push('showSuccess = true', 'showLoading = false', 'showErr = true');
   
   // 构建路径
   let apiPath = cleanPath;
@@ -680,6 +739,14 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   
   // 添加API路径信息
   code += ` * @api ${httpMethod} ${cleanPath}\n`;
+  
+  // 添加参数类型信息
+  if (paramsTypeName) {
+    code += ` * @paramsType ${paramsTypeName}\n`;
+  }
+  if (dataTypeName) {
+    code += ` * @dataType ${dataTypeName}\n`;
+  }
   
   // 添加类型信息
   if (typeInfo.requestTypes.length > 0) {
@@ -703,18 +770,18 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   code += `  const api = ${builderFunc}('${apiPath}', '');\n`;
   
   if (queryParams.length > 0 && hasRequestBody) {
-    code += `  return request(api, params || {}, data || {}, showSuccess, showLoading);\n`;
+    code += `  return request(api, params || {}, data || {}, showSuccess, showLoading, showErr);\n`;
   } else if (queryParams.length > 0) {
-    code += `  return request(api, params || {}, {}, showSuccess, showLoading);\n`;
+    code += `  return request(api, params || {}, {}, showSuccess, showLoading, showErr);\n`;
   } else if (hasRequestBody) {
-    code += `  return request(api, {}, data || {}, showSuccess, showLoading);\n`;
+    code += `  return request(api, {}, data || {}, showSuccess, showLoading, showErr);\n`;
   } else {
-    code += `  return request(api, {}, {}, showSuccess, showLoading);\n`;
+    code += `  return request(api, {}, {}, showSuccess, showLoading, showErr);\n`;
   }
   
   code += '};\n\n';
   
-  return { code, usedSchemas: typeInfo.usedSchemas };
+  return { code, usedSchemas: typeInfo.usedSchemas, paramsTypeName, dataTypeName };
 }
 
 // 生成按operation的tag description分组的API文件
@@ -780,6 +847,17 @@ function generateApiByController(swaggerData, envConfig) {
           controllerGroups[controllerName].usedSchemas.add(schema);
         });
       }
+      
+      // 收集使用的类型名称（用于导入）
+      if (!controllerGroups[controllerName].usedTypeNames) {
+        controllerGroups[controllerName].usedTypeNames = new Set();
+      }
+      if (apiResult.paramsTypeName) {
+        controllerGroups[controllerName].usedTypeNames.add(apiResult.paramsTypeName);
+      }
+      if (apiResult.dataTypeName) {
+        controllerGroups[controllerName].usedTypeNames.add(apiResult.dataTypeName);
+      }
     });
   });
   
@@ -798,8 +876,16 @@ function generateControllerFile(controllerName, controllerData, envConfig) {
   content += `// ============================================================\n\n`;
   
   // 导入语句
-  content += `import { request } from '@/framework/network/request';\n`;
-  content += `import { buildGetApiByType, buildPostApiByType } from '@/framework/apis';\n\n`;
+  content += `import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'\n`;
+  content += `import { request } from '@/framework/network/request'\n`;
+  
+  // 如果有使用到的类型，导入类型
+  if (controllerData.usedTypeNames && controllerData.usedTypeNames.size > 0) {
+    const typeNames = Array.from(controllerData.usedTypeNames).sort();
+    content += `import type { ${typeNames.join(', ')} } from './types/${controllerName}Types'\n`;
+  }
+  
+  content += '\n';
   
   // API函数
   content += controllerData.functions.join('');
