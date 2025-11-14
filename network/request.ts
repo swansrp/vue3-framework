@@ -10,6 +10,20 @@ import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 export const domain = '/' + name
 message.config({ maxCount: 1 })
 
+/**
+ * 自定义JSON解析器，将大整数转换为字符串以避免精度丢失
+ * JavaScript的Number类型安全整数范围是 -(2^53-1) 到 (2^53-1)
+ */
+function parseBigInt(text: string): any {
+  // 匹配所有的 "id": 数字 的模式，将大整数转换为字符串
+  // 这里匹配 "id" 或以 "Id" 结尾的字段
+  const converted = text.replace(
+    /"(\w*[Ii]d)"\s*:\s*(\d{15,})/g,
+    '"$1":"$2"'
+  )
+  return JSON.parse(converted)
+}
+
 
 const web = '/web'
 const baseURL = import.meta.env.VITE_baseURL + domain + web
@@ -24,7 +38,20 @@ const errCode = {
   SUCCESS: 0,
   SESSION_TIME_OUT: 401
 }
-const axiosInstance = axios.create({})
+const axiosInstance = axios.create({
+  // 使用自定义的transformResponse来处理大整数
+  transformResponse: [(data) => {
+    if (typeof data === 'string') {
+      try {
+        return parseBigInt(data)
+      } catch (e) {
+        console.error('JSON解析失败:', e)
+        return data
+      }
+    }
+    return data
+  }]
+})
 axiosInstance.interceptors.request.use(
   (config) => {
     const { data, showLoading } = config.data as configDataType
