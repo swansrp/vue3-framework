@@ -227,7 +227,7 @@ const bindDialogBox: { show: boolean, entityName: string, entityId: any, tab: st
 })
 
 // 树形模式相关状态
-const isTreeMode = computed(() => prop.treeMode)
+const isTreeMode = computed(() => treeMode.value)
 const treeLoading = ref(false)
 const treeData = ref<any[]>([])
 const checkedKeys = ref<any[]>([])
@@ -273,7 +273,7 @@ const showBindDialogBox = async (entityId: any, record: any) => {
   bindDialogBox.entityRecord = record
   
   // 如果是树形模式，加载树数据和已绑定数据
-  if (prop.treeMode) {
+  if (treeMode.value) {
     await loadTreeData()
   }
 }
@@ -337,9 +337,8 @@ const loadTreeData = async () => {
 }
 
 // 处理树形勾选变化 - 实时绑定/解绑
-const handleTreeCheck = async (checkedKeysValue: any, e: any) => {
+const handleTreeCheck = async (_checkedKeysValue: any, e: any) => {
   const { checked, node } = e
-  const nodeKey = node.key
   
   // 获取当前操作影响的所有节点（包括子节点）
   const getAllChildKeys = (nodeData: any): any[] => {

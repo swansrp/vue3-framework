@@ -902,23 +902,6 @@ const updateIndicatorDefaultSize = async (indicatorId: string, xGrid: number, yG
 
     const isCommon = !!findInTree(commonIndicators.value)
 
-    // 先在内存中更新（立即生效）
-    const updateInTree = (nodes: IndicatorNode[]): boolean => {
-      for (const node of nodes) {
-        if (node.id === indicatorId) {
-          node.defaultXGrid = xGrid
-          node.defaultYGrid = yGrid
-          return true
-        }
-        if (node.children) {
-          if (updateInTree(node.children)) {
-            return true
-          }
-        }
-      }
-      return false
-    }
-
     // 调用对应的更新API保存到服务器
     if (isCommon) {
       await updateCommonStatistic({
