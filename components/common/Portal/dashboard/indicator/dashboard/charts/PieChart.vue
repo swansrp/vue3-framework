@@ -67,23 +67,16 @@ export default defineComponent({
 
     // 解析单位配置函数
     const parseUnitConfig = (unitConfig?: string): { fix: number; unit: number } => {
-      if (!unitConfig || typeof unitConfig !== 'string') {
-        return { fix: 0, unit: 1 } // 不需要小数位，单位为1（不转换）
+      if (!unitConfig) {
+        return { fix: 0, unit: 1 }
       }
-
       const parts = unitConfig.split(',')
       if (parts.length !== 2) {
         return { fix: 0, unit: 1 }
       }
-
       const fix = parseInt(parts[0], 10)
       const unit = parseInt(parts[1], 10)
-
-      // 确保解析结果有效，对于金额字段应该正确解析小数位
-      return {
-        fix: isNaN(fix) ? 0 : fix,
-        unit: isNaN(unit) ? 1 : unit
-      }
+      return { fix: isNaN(fix) ? 0 : fix, unit: isNaN(unit) ? 1 : unit }
     }
 
     // 处理数据为 ECharts 格式
@@ -245,7 +238,7 @@ export default defineComponent({
             const unit = pieMetric.unit || ''
             let result = `<strong>${params.name}</strong><br/>`
             result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${pieMetric.dataName}</strong><br/>`
-            // 格式化饼图数值显示
+            // 格式化当前扇区的数值显示
             const formattedValue = (() => {
               if (pieMetric?.unitConfig) {
                 const { fix } = parseUnitConfig(pieMetric.unitConfig)
@@ -254,14 +247,32 @@ export default defineComponent({
                   maximumFractionDigits: fix
                 })
               }
-              // 非金额指标显示为整数
               return Number(params.value).toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
               })
             })()
             result += `${params.marker}${params.name}: ${formattedValue}${unit ? unit : ''} (${params.percent}%)<br/>`
-            result += `<span style="color: #666; font-size: 12px;">数值: ${formattedValue}${unit ? unit : ''}</span></div>`
+
+            // 计算总计（基于当前饼图数据）并格式化
+            const totalValue = (Array.isArray(pieData) ? pieData : []).reduce((sum, d: any) => {
+              const v = typeof d?.value === 'number' ? d.value : 0
+              return sum + v
+            }, 0)
+            const formattedTotal = (() => {
+              if (pieMetric?.unitConfig) {
+                const { fix } = parseUnitConfig(pieMetric.unitConfig)
+                return Number(totalValue).toLocaleString(undefined, {
+                  minimumFractionDigits: fix,
+                  maximumFractionDigits: fix
+                })
+              }
+              return Number(totalValue).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+              })
+            })()
+            result += `<span style="color: #666; font-size: 12px;">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
             return result
           }
         },

@@ -68,23 +68,16 @@ export default defineComponent({
 
     // 解析单位配置函数
     const parseUnitConfig = (unitConfig?: string): { fix: number; unit: number } => {
-      if (!unitConfig || typeof unitConfig !== 'string') {
-        return { fix: 0, unit: 1 } // 不需要小数位，单位为1（不转换）
+      if (!unitConfig) {
+        return { fix: 0, unit: 1 }
       }
-
       const parts = unitConfig.split(',')
       if (parts.length !== 2) {
         return { fix: 0, unit: 1 }
       }
-
       const fix = parseInt(parts[0], 10)
       const unit = parseInt(parts[1], 10)
-
-      // 确保解析结果有效，对于金额字段应该正确解析小数位
-      return {
-        fix: isNaN(fix) ? 0 : fix,
-        unit: isNaN(unit) ? 1 : unit
-      }
+      return { fix: isNaN(fix) ? 0 : fix, unit: isNaN(unit) ? 1 : unit }
     }
 
     // Y轴格式化函数：显示整数，不保留小数位
@@ -537,26 +530,84 @@ export default defineComponent({
                 result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
               })
             } else {
-              // 没有第二维度时，直接显示每个系列的数据
-              params.forEach((param: any) => {
-                const unit = getUnitByStatType(param.seriesName)
-                const metric = props.dataMetrics.find(m => m.dataName === param.seriesName)
+              // 单维度：只展示“分组 + 数量(百分比) + 总计”，去掉同级分布列表
+              const categoryName = params[0].axisValue
+
+              // 预先计算各系列在所有类目下的总和（使用已转换后的值）
+              const totalsMap: Record<string, number> = {}
+              series.forEach((s: any) => {
+                if (s && s.name && Array.isArray(s.data)) {
+                  totalsMap[s.name] = s.data.reduce((sum: number, item: any) => {
+                    const v = typeof item === 'object' && item?.value != null ? item.value : item
+                    return sum + (typeof v === 'number' ? v : 0)
+                  }, 0)
+                }
+              })
+
+              const onlyOneStatType = statisticTypes.length === 1
+
+              if (onlyOneStatType) {
+                const statType = statisticTypes[0]
+                const param = params.find((p: any) => p.seriesName === statType) || params[0]
+                const unit = getUnitByStatType(statType)
+                const metric = props.dataMetrics.find(m => m.dataName === statType)
+
                 const formattedValue = (() => {
                   if (metric?.unitConfig) {
                     const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(param.value).toLocaleString(undefined, {
-                      minimumFractionDigits: fix,
-                      maximumFractionDigits: fix
-                    })
+                    return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
                   }
-                  // 非金额指标显示为整数
-                  return Number(param.value).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })
+                  return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
                 })()
-                result += `${param.marker}${param.seriesName}: ${formattedValue}${unit ? unit : ''}<br/>`
-              })
+
+                const total = totalsMap[statType] || 0
+                const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
+
+                // 区块：显示指标名 -> 蓝色块内显示带圆点的“分类名：值（%）” -> 总计
+                result += `<div style=\"margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;\"><strong>${metric?.dataName || statType}</strong><br/>`
+                result += `${param.marker}${categoryName}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
+
+                const formattedTotal = (() => {
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(total).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
+                  }
+                  return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                })()
+                result += `<span style=\"color: #666; font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+              } else {
+                // 多指标：每个指标单独成块，块内先显示指标名，再蓝色块显示（圆点 + 指标名：值（%））和总计
+                params.forEach((param: any) => {
+                  const statType = param.seriesName
+                  const metric = props.dataMetrics.find(m => m.dataName === statType)
+                  const unit = metric?.unit || ''
+
+                  const formattedValue = (() => {
+                    if (metric?.unitConfig) {
+                      const { fix } = parseUnitConfig(metric.unitConfig)
+                      return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
+                    }
+                    return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                  })()
+
+                  const total = totalsMap[statType] || 0
+                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
+
+                  result += `<div style=\"margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;\"><strong>${metric?.dataName || statType}</strong><br/>`
+                  // 多指标场景，值行使用指标名作为标签
+                  result += `${param.marker}${metric?.dataName || statType}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
+
+                  const formattedTotal = (() => {
+                    if (metric?.unitConfig) {
+                      const { fix } = parseUnitConfig(metric.unitConfig)
+                      return Number(total).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
+                    }
+                    return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                  })()
+
+                  result += `<span style=\"color: #666; font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+                })
+              }
             }
 
             return result

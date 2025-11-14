@@ -7,6 +7,48 @@
           {{ pageTitle }}
         </h1>
       </div>
+
+      <!-- 右侧筛选区域（已移出 header-left，放置到最右侧） -->
+      <div class="header-right">
+        <div class="global-filters">
+          <div class="filter-item">
+            <label class="filter-label">在职状态：</label>
+            <a-select
+              v-model:value="globalUserStatus"
+              mode="multiple"
+              size="middle"
+              :show-search="false"
+              :max-tag-count="1"
+              placeholder="请选择在职状态"
+              allow-clear
+              :options="userStatusOptions"
+              class="filter-select user-status-select"
+            />
+          </div>
+          <div class="filter-item">
+            <label class="filter-label">岗位：</label>
+            <a-select
+              v-model:value="globalPostSeqCode"
+              mode="multiple"
+              size="middle"
+              :show-search="false"
+              :max-tag-count="1"
+              placeholder="请选择岗位"
+              allow-clear
+              :options="postSeqCodeOptions"
+              class="filter-select post-select"
+            />
+          </div>
+          <a-button
+            type="primary"
+            size="small"
+            class="reset-btn"
+            @click="resetGlobalFilters"
+          >
+            重置
+          </a-button>
+        </div>
+      </div>
     </div>
 
     <!-- 下方左右分栏区域 -->
@@ -62,8 +104,8 @@
         <div class="charts-grid-wrapper">
           <!-- 有选中指标时显示图表 -->
           <chart-grid
-            v-if="displayedDashboardItems.length > 0"
-            :indicators="displayedDashboardItems"
+            v-if="filteredDashboardItems.length > 0"
+            :indicators="filteredDashboardItems"
             :loading="loading"
             :grid-columns="GRID_COLUMNS"
             :can-edit-common-indicators="false"
@@ -138,7 +180,7 @@ const selectedTableId = ref<string | null>(null)
 // 页面状态
 const loading = ref(false)
 
-// 数据状态 - 按 tableId 存储
+// 按表存储数据
 const tableDataMap = ref<Record<string, {
   indicators: IndicatorNode[]
   dashboardItems: DashboardItem[]
@@ -147,7 +189,36 @@ const tableDataMap = ref<Record<string, {
 // 统一的网格列数配置
 const GRID_COLUMNS = computed(() => props.gridColumns)
 
-// 加载指定表的数据
+// ================== 临时全局筛选 ==================
+const globalUserStatus = ref<string[]>([])
+const globalPostSeqCode = ref<string[]>([])
+
+const userStatusOptions = ref([
+  { value: '1', label: '在职' },
+  { value: '0', label: '离职' }
+])
+
+const postSeqCodeOptions = ref([
+  { value: '08', label: '企业管理岗' },
+  { value: '09', label: '市场开发岗位' },
+  { value: '10', label: '技术管理岗位' },
+  { value: '11', label: '专业技术（规划设计项目管理）岗位' }
+])
+
+const resetGlobalFilters = () => {
+  globalUserStatus.value = []
+  globalPostSeqCode.value = []
+}
+
+const buildGlobalGroup = (property: string, values: string[]) => ({
+  property: null,
+  value: null,
+  relation: null,
+  conditionList: values.map(v => ({ property, relation: 1, value: [v] })),
+  andOr: '1'
+})
+
+// ================== 数据加载 ==================
 const loadTableData = async (tableId: string) => {
   // 如果已经加载过，不重复加载
   if (tableDataMap.value[tableId]) {
@@ -169,22 +240,10 @@ const loadTableData = async (tableId: string) => {
     // 加载该表的仪表盘配置
     const dashboardResp = await getCommonDashboard(tableId)
     if (dashboardResp?.payload) {
-      const itemsWithTableId = dashboardResp.payload.map((item: any) => {
-        const indicatorIdValue = item.statisticId !== undefined && item.statisticId !== null
-          ? String(item.statisticId)
-          : undefined
-
-        return {
-          ...item,
-          indicatorId: indicatorIdValue,
-          config: {
-            ...(item.config || {}),
-            tableId: tableId,
-            indicator: item.indicator
-          }
-        }
-      })
-      dashboardItems.push(...itemsWithTableId)
+      dashboardItems.push(...dashboardResp.payload.map((item: any) => ({ ...item,
+        indicatorId: item.statisticId != null ? String(item.statisticId) : undefined,
+        config: { ...(item.config || {}), tableId, indicator: item.indicator }
+      })))
     }
 
     // 存储该表的数据
@@ -277,96 +336,103 @@ const displayedDashboardItems = computed((): DashboardItem[] => {
     return []
   }
 
-  const displayedItems: DashboardItem[] = []
-  const newItems: DashboardItem[] = [] // 需要自动布局的新指标
+  const data = tableDataMap.value[selectedTableId.value]
+  if (!data) return []
 
-  // 只处理选中节点所属的表
-  const tableId = selectedTableId.value
-  const data = tableDataMap.value[tableId]
-  if (!data) {
-    return []
-  }
-
-  // 提取选中节点下的叶子指标
   const selectedNode = findNodeInTree(data.indicators, selectedNodeKey.value)
-  if (!selectedNode) {
-    return []
-  }
-  
-  const leafIndicators = extractLeafIndicatorsFromNode(selectedNode)
-  
-  // 为每个指标创建或获取 DashboardItem
-  for (const indicator of leafIndicators) {
-    if (!indicator.id) continue
+  if (!selectedNode) return []
 
-    // 查找是否已经在 dashboardItems 中
-    const existingItem = data.dashboardItems.find(
-      item => String(item.indicatorId) === String(indicator.id)
-    )
+  const leaves = extractLeafIndicatorsFromNode(selectedNode)
+  const existing: DashboardItem[] = []
+  const newItems: DashboardItem[] = []
 
-    if (existingItem) {
-      // 使用已有的配置（保持原有位置）
-      displayedItems.push(existingItem)
+  leaves.forEach(ind => {
+    const ex = data.dashboardItems.find(d => String(d.indicatorId) === String(ind.id))
+    if (ex) {
+      existing.push(ex)
     } else {
-      // 创建新的 DashboardItem（自动布局）
       newItems.push({
-        id: `temp-${indicator.id}`,
-        title: indicator.title || '未命名指标',
+        id: `temp-${ind.id}`,
+        title: ind.title || '未命名指标',
         displayOrder: 999,
-        commonStatistic: indicator.id,
-        xGrid: indicator.defaultXGrid || 4,
-        yGrid: indicator.defaultYGrid || 3,
-        xPosition: 1, // 临时值，自动布局时计算
-        yPosition: 1, // 临时值，自动布局时计算
+        commonStatistic: ind.id,
+        xGrid: ind.defaultXGrid || 4,
+        yGrid: ind.defaultYGrid || 3,
+        xPosition: 1,
+        yPosition: 1,
         show: true,
-        config: {
-          tableId: tableId,
-          indicator: indicator.indicator
-        },
-        indicatorId: indicator.id
+        config: { tableId: selectedTableId.value, indicator: ind.indicator },
+        indicatorId: ind.id
       } as DashboardItem)
     }
-  }
+  })
 
-  // 对已有项按 displayOrder 排序
-  displayedItems.sort((a, b) => a.displayOrder - b.displayOrder)
+  existing.sort((a, b) => a.displayOrder - b.displayOrder)
 
-  // 自动布局新项
-  if (newItems.length > 0) {
-    // 找到已占用的最大 Y 位置
+  if (newItems.length) {
     let maxY = 1
-    displayedItems.forEach(item => {
-      const itemBottom = item.yPosition + (item.yGrid || 1)
-      if (itemBottom > maxY) {
-        maxY = itemBottom
-      }
+    existing.forEach(item => {
+      const bottom = item.yPosition + (item.yGrid || 1)
+      if (bottom > maxY) maxY = bottom
     })
 
-    // 自动布局算法：从已占用区域的下一行开始
-    let currentX = 1
-    let currentY = maxY
+    let curX = 1
+    let curY = maxY
 
     newItems.forEach(item => {
-      const itemWidth = item.xGrid || 4
-
-      // 检查当前行是否放得下
-      if (currentX + itemWidth - 1 > GRID_COLUMNS.value) {
-        // 换到下一行
-        currentX = 1
-        currentY = currentY + (item.yGrid || 3)
+      const w = item.xGrid || 4
+      if (curX + w - 1 > GRID_COLUMNS.value) {
+        curX = 1
+        curY += item.yGrid || 3
       }
-
-      item.xPosition = currentX
-      item.yPosition = currentY
-
-      // 移动到下一个位置
-      currentX += itemWidth
+      item.xPosition = curX
+      item.yPosition = curY
+      curX += w
     })
 
-    displayedItems.push(...newItems)
+    existing.push(...newItems)
   }
 
-  return displayedItems
+  return existing
+})
+
+// ================== 临时筛选合并 ==================
+const filteredDashboardItems = computed((): DashboardItem[] => {
+  const base = displayedDashboardItems.value
+  if (!base.length) return []
+
+  if (!globalUserStatus.value.length && !globalPostSeqCode.value.length) {
+    return base.map(i => ({ ...i }))
+  }
+
+  return base.map(item => {
+    const cloned: DashboardItem = { ...item, config: { ...item.config } }
+    let cfg: any
+    try {
+      cfg = typeof cloned.config.indicator === 'string'
+          ? JSON.parse(cloned.config.indicator || '{}')
+          : (cloned.config.indicator || {})
+    } catch {
+      cfg = {}
+    }
+
+    if (!cfg.filterConditions) {
+      cfg.filterConditions = { conditionList: [], andOr: '0' }
+    }
+    if (!Array.isArray(cfg.filterConditions.conditionList)) {
+      cfg.filterConditions.conditionList = []
+    }
+
+    if (globalUserStatus.value.length) {
+      cfg.filterConditions.conditionList.push(buildGlobalGroup('userStatus', globalUserStatus.value))
+    }
+    if (globalPostSeqCode.value.length) {
+      cfg.filterConditions.conditionList.push(buildGlobalGroup('postSeqCode', globalPostSeqCode.value))
+    }
+
+    cloned.config.indicator = JSON.stringify(cfg)
+    return cloned
+  })
 })
 
 // 处理树节点点击
@@ -479,274 +545,4 @@ onMounted(() => {
 })
 </script>
 
-<style scoped lang="less">
-.general-dashboard-page {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: #f0f2f5;
-  overflow: hidden;
-
-  // 顶部头部区域
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 24px;
-    background: #fff;
-    border-bottom: 1px solid #e8e8e8;
-    flex-shrink: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-
-    .header-left {
-      display: flex;
-      align-items: center;
-
-      .page-title {
-        padding-left: 15px;
-        margin: 0;
-        font-size: 24px;
-        font-weight: 600;
-        color: #262626;
-      }
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 12px;
-    }
-  }
-
-  // 下方左右分栏区域
-  .page-content {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-    min-height: 0;
-
-    // 左侧手风琴指标树区域
-    .indicator-tree-wrapper {
-      width: 280px;
-      flex-shrink: 0;
-      background: #fff;
-      border-right: 1px solid #e8e8e8;
-      overflow-y: auto;
-      overflow-x: hidden;
-
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: #f5f5f5;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: #d9d9d9;
-        border-radius: 3px;
-
-        &:hover {
-          background: #bfbfbf;
-        }
-      }
-
-      .indicator-collapse {
-        border: none;
-        background: transparent;
-
-        :deep(.ant-collapse-item) {
-          border-bottom: 1px solid #f0f0f0;
-
-          &:last-child {
-            border-bottom: none;
-          }
-        }
-
-        :deep(.ant-collapse-header) {
-          padding: 14px 12px;
-          font-size: 16px;
-          font-weight: 500;
-          color: #262626;
-          background: #fff;
-          transition: all 0.3s;
-
-          &:hover {
-            background: #fafafa;
-          }
-        }
-
-        :deep(.ant-collapse-item-active) {
-          .ant-collapse-header {
-            background: #f5f5f5;
-            border-left: 3px solid #1890ff;
-            padding-left: 9px;
-          }
-        }
-
-        :deep(.ant-collapse-content) {
-          background: #fafafa;
-          border-top: 1px solid #f0f0f0;
-        }
-
-        :deep(.ant-collapse-content-box) {
-          padding: 0;
-        }
-
-        .table-id-tag {
-          display: inline-block;
-          padding: 2px 10px;
-          font-size: 12px;
-          color: transparent;
-          background: transparent;
-          border-radius: 12px;
-          font-weight: normal;
-          user-select: text;
-          cursor: text;
-        }
-
-        .tree-content {
-          background: #fafafa;
-
-          :deep(.indicator-tree-panel) {
-            background: transparent;
-            border: none;
-          }
-        }
-      }
-    }
-
-    // 右侧图表区域
-    .charts-area {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      background: #f0f2f5;
-      scroll-behavior: smooth;
-      display: flex;
-      flex-direction: column;
-
-      // 节点过滤横幅
-      .node-filter-banner {
-        flex-shrink: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 12px 20px;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
-        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        animation: slideDown 0.3s ease-out;
-
-        .banner-content {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          color: #fff;
-
-          .banner-icon {
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            opacity: 0.9;
-          }
-
-          .banner-text {
-            font-size: 14px;
-            line-height: 1.5;
-
-            strong {
-              font-weight: 600;
-              color: #fff;
-              background: rgba(255, 255, 255, 0.15);
-              padding: 2px 8px;
-              border-radius: 4px;
-              margin: 0 4px;
-            }
-          }
-        }
-      }
-
-      @keyframes slideDown {
-        from {
-          transform: translateY(-100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: #f5f5f5;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: #d9d9d9;
-        border-radius: 3px;
-
-        &:hover {
-          background: #bfbfbf;
-        }
-      }
-
-      .charts-grid-wrapper {
-        flex: 1;
-        padding: 16px;
-
-        :deep(.chart-grid-container) {
-          width: 100%;
-        }
-
-        :deep(.chart-highlight) {
-          animation: highlight-pulse 0.6s ease-in-out;
-          box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.3) !important;
-          transform: scale(1.02);
-          transition: all 0.3s ease;
-        }
-
-        @keyframes highlight-pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.7);
-          }
-
-          50% {
-            box-shadow: 0 0 0 10px rgba(24, 144, 255, 0.3);
-          }
-
-          100% {
-            box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.3);
-          }
-        }
-
-        .empty-state {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 100%;
-          min-height: 400px;
-
-          .empty-content {
-            text-align: center;
-            color: #999;
-
-            .empty-icon {
-              font-size: 64px;
-              color: #d9d9d9;
-              margin-bottom: 16px;
-            }
-
-            p {
-              font-size: 12px;
-              color: #8c8c8c;
-              margin: 0;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-</style>
+<style scoped lang="less" src="./css/generalDashboard.less"></style>
