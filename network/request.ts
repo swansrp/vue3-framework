@@ -33,6 +33,8 @@ const showDelay = 500
 // 最小展示时长（避免刚显示就消失）
 const minDuration = 500
 const loadMap = new WeakMap()
+// 存储所有活跃的 timer,用于极端情况的清理
+const activeTimers = new Set<NodeJS.Timeout>()
 
 const errCode = {
   SUCCESS: 0,
@@ -65,7 +67,9 @@ axiosInstance.interceptors.request.use(
       record.timer = setTimeout(() => {
         load.show()
         record.shownAt = Date.now()
+        activeTimers.delete(record.timer)
       }, showDelay)
+      activeTimers.add(record.timer)
       loadMap.set(config, record)
     }
 
@@ -82,6 +86,7 @@ const closeLoading = (config: any) => {
   if (!record) return
 
   clearTimeout(record.timer)
+  activeTimers.delete(record.timer)
 
   // 若未显示 → 直接不显示
   if (!record.shownAt) {
@@ -98,13 +103,25 @@ const closeLoading = (config: any) => {
   }, remain)
 }
 
+// 清理所有活跃的 timer(用于极端情况)
+const clearAllTimers = () => {
+  activeTimers.forEach(timer => clearTimeout(timer))
+  activeTimers.clear()
+  load.close()
+}
+
 axiosInstance.interceptors.response.use(
   (resp) => {
     closeLoading(resp.config)
     _handleTimeOut(resp.data)
     return Promise.resolve(resp)
   }, err => {
-    load.close()
+    if (err.config) {
+      closeLoading(err.config)
+    } else {
+      // 极端情况:清理所有可能的 timer
+      clearAllTimers()
+    }
     if(err.response) {
       _handleTimeOut(err.response.data)
       if (err.response.status === 404)
