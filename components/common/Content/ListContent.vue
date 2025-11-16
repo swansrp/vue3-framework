@@ -75,6 +75,7 @@ const props = withDefaults(
     search?: (searchInput: any) => void
     searchAble?: boolean
     labelInValue?: boolean
+    defaultSelectFirst?: boolean
   }>(),
   {
     modelValue: [],
@@ -84,14 +85,21 @@ const props = withDefaults(
     disable: false,
     search: undefined,
     searchAble: false,
-    labelInValue: false
+    labelInValue: false,
+    defaultSelectFirst: false
   }
 )
-const { listData, modelValue, multi, valueField, labelField, search, labelInValue } = toRefs(props)
+const { listData, modelValue, multi, valueField, labelField, search, labelInValue, defaultSelectFirst } = toRefs(props)
 const _listData = ref(listData.value)
 watch(
   () => listData.value,
-  () => _listData.value = listData.value,
+  () => {
+    _listData.value = listData.value
+    // 当数据加载完成后，尝试默认选中第一个
+    nextTick(() => {
+      trySelectFirst()
+    })
+  },
   {
     deep: true,
     immediate: true
@@ -143,10 +151,32 @@ const handleChecked = (arg: any) => {
     }
   }
 }
+// 默认选中第一个的逻辑
+const trySelectFirst = () => {
+  if (defaultSelectFirst.value && listData.value.length > 0 && (!selectedData.value || selectedData.value.length === 0)) {
+    const firstItem = listData.value[0]
+    if (multi.value) {
+      firstItem.checked = true
+      if (labelInValue.value) {
+        selectedData.value.push({ value: firstItem[valueField.value], label: firstItem[labelField.value], data: firstItem })
+      } else {
+        selectedData.value.push(firstItem[valueField.value])
+      }
+    } else {
+      if (labelInValue.value) {
+        selectedData.value.push({ value: firstItem[valueField.value], label: firstItem[labelField.value], data: firstItem })
+      } else {
+        selectedData.value.push(firstItem[valueField.value])
+      }
+    }
+    // 通知父组件
+    emit('update:modelValue', selectedData.value)
+    emit('change', selectedData.value)
+  }
+}
 watch(
   () => selectedData.value,
   () => {
-    console.log('selectedData.value', selectedData.value)
     emit('update:modelValue', selectedData.value)
     emit('change', selectedData.value)
   },
@@ -155,6 +185,8 @@ watch(
   }
 )
 onMounted(() => {
+  // onMounted 时尝试默认选中（如果数据已经加载）
+  trySelectFirst()
 })
 </script>
 
