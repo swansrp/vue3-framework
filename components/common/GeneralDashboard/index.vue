@@ -8,46 +8,9 @@
         </h1>
       </div>
 
-      <!-- 右侧筛选区域（已移出 header-left，放置到最右侧） -->
+      <!-- 右侧筛选区域（通过插槽从外部传入） -->
       <div class="header-right">
-        <div class="global-filters">
-          <div class="filter-item">
-            <label class="filter-label">在职状态：</label>
-            <a-select
-              v-model:value="globalUserStatus"
-              mode="multiple"
-              size="middle"
-              :show-search="false"
-              :max-tag-count="1"
-              placeholder="请选择在职状态"
-              allow-clear
-              :options="userStatusOptions"
-              class="filter-select user-status-select"
-            />
-          </div>
-          <div class="filter-item">
-            <label class="filter-label">岗位：</label>
-            <a-select
-              v-model:value="globalPostSeqCode"
-              mode="multiple"
-              size="middle"
-              :show-search="false"
-              :max-tag-count="1"
-              placeholder="请选择岗位"
-              allow-clear
-              :options="postSeqCodeOptions"
-              class="filter-select post-select"
-            />
-          </div>
-          <a-button
-            type="primary"
-            size="small"
-            class="reset-btn"
-            @click="resetGlobalFilters"
-          >
-            重置
-          </a-button>
-        </div>
+        <slot name="filters"></slot>
       </div>
     </div>
 
@@ -151,6 +114,7 @@ import {
 } from '@/framework/components/common/chartConfig/api'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import type { DashboardItem, IndicatorNode } from '@/framework/components/common/chartConfig/types'
+import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 // 定义表配置接口
 export interface TableConfig {
@@ -163,11 +127,13 @@ interface Props {
   pageTitle?: string
   tableConfigs: TableConfig[]
   gridColumns?: number
+  globalConditions?: ConditionListType // 外部传入的全局筛选条件
 }
 
 const props = withDefaults(defineProps<Props>(), {
   pageTitle: '通用仪表盘',
-  gridColumns: 7
+  gridColumns: 7,
+  globalConditions: () => ({ conditionList: [], andOr: '0' })
 })
 
 // 手风琴当前激活的key
@@ -189,34 +155,8 @@ const tableDataMap = ref<Record<string, {
 // 统一的网格列数配置
 const GRID_COLUMNS = computed(() => props.gridColumns)
 
-// ================== 临时全局筛选 ==================
-const globalUserStatus = ref<string[]>([])
-const globalPostSeqCode = ref<string[]>([])
-
-const userStatusOptions = ref([
-  { value: '1', label: '在职' },
-  { value: '0', label: '离职' }
-])
-
-const postSeqCodeOptions = ref([
-  { value: '08', label: '企业管理岗' },
-  { value: '09', label: '市场开发岗位' },
-  { value: '10', label: '技术管理岗位' },
-  { value: '11', label: '专业技术（规划设计项目管理）岗位' }
-])
-
-const resetGlobalFilters = () => {
-  globalUserStatus.value = []
-  globalPostSeqCode.value = []
-}
-
-const buildGlobalGroup = (property: string, values: string[]) => ({
-  property: null,
-  value: null,
-  relation: null,
-  conditionList: values.map(v => ({ property, relation: 1, value: [v] })),
-  andOr: '1'
-})
+// ================== 全局筛选条件处理 ==================
+// （外部传入的条件通过 props.globalConditions）
 
 // ================== 数据加载 ==================
 const loadTableData = async (tableId: string) => {
@@ -396,15 +336,17 @@ const displayedDashboardItems = computed((): DashboardItem[] => {
   return existing
 })
 
-// ================== 临时筛选合并 ==================
+// ================== 全局筛选条件合并 ==================
 const filteredDashboardItems = computed((): DashboardItem[] => {
   const base = displayedDashboardItems.value
   if (!base.length) return []
 
-  if (!globalUserStatus.value.length && !globalPostSeqCode.value.length) {
+  // 如果没有全局筛选条件，直接返回
+  if (!props.globalConditions || !props.globalConditions.conditionList || props.globalConditions.conditionList.length === 0) {
     return base.map(i => ({ ...i }))
   }
 
+  // 将全局筛选条件合并到每个图表的配置中
   return base.map(item => {
     const cloned: DashboardItem = { ...item, config: { ...item.config } }
     let cfg: any
@@ -423,11 +365,25 @@ const filteredDashboardItems = computed((): DashboardItem[] => {
       cfg.filterConditions.conditionList = []
     }
 
-    if (globalUserStatus.value.length) {
-      cfg.filterConditions.conditionList.push(buildGlobalGroup('userStatus', globalUserStatus.value))
-    }
-    if (globalPostSeqCode.value.length) {
-      cfg.filterConditions.conditionList.push(buildGlobalGroup('postSeqCode', globalPostSeqCode.value))
+    // 将外部传入的全局筛选条件通过 AND 关系连接到原有条件
+    // 原有条件和全局条件之间是 AND 关系
+    if (props.globalConditions && props.globalConditions.conditionList.length > 0) {
+      // 如果原有条件为空，直接使用全局条件
+      if (cfg.filterConditions.conditionList.length === 0) {
+        cfg.filterConditions = props.globalConditions
+      } else {
+        // 原有条件和全局条件通过 AND 连接
+        cfg.filterConditions = {
+          property: null,
+          value: null,
+          relation: null,
+          conditionList: [
+            cfg.filterConditions, // 原有条件作为一个整体
+            props.globalConditions // 全局条件作为一个整体
+          ],
+          andOr: '0' // 0 表示 AND
+        }
+      }
     }
 
     cloned.config.indicator = JSON.stringify(cfg)
