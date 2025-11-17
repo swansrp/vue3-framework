@@ -360,17 +360,15 @@ const initializeExpandedKeys = () => {
   }
 }
 
-// 监听搜索关键词变化，更新展开状态
+// 监听搜索关键词变化,更新展开状态
 watch(
   () => searchKeyword.value,
   (newVal) => {
-    if (!newVal.trim()) {
-      // 如果搜索关键词为空，恢复默认展开状态
-      initializeExpandedKeys()
-    } else {
-      // 如果有搜索关键词，根据过滤结果更新展开状态
+    if (newVal.trim()) {
+      // 如果有搜索关键词,根据过滤结果更新展开状态
       updateExpandedKeysForSearch(newVal)
     }
+    // 搜索框清空时不再自动恢复展开状态,保持用户当前的展开状态
   }
 )
 
@@ -1074,10 +1072,12 @@ watch(
 )
 
 // 监听props中展开状态的变化
+// 注意:只在初始化时使用props的展开状态,后续用户手动展开/收起后不再被props覆盖
 watch(
   () => props.expandedCommonKeys,
   (newVal) => {
-    if (newVal) {
+    // 只在初始化时(当前展开keys为空)才使用props的值
+    if (newVal && expandedCommonKeys.value.length === 0) {
       expandedCommonKeys.value = [...newVal]
     }
   },
@@ -1087,7 +1087,8 @@ watch(
 watch(
   () => props.expandedPersonalKeys,
   (newVal) => {
-    if (newVal) {
+    // 只在初始化时(当前展开keys为空)才使用props的值
+    if (newVal && expandedPersonalKeys.value.length === 0) {
       expandedPersonalKeys.value = [...newVal]
     }
   },
