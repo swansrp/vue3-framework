@@ -136,6 +136,12 @@ const props = withDefaults(defineProps<Props>(), {
   globalConditions: () => ({ conditionList: [], andOr: '0' })
 })
 
+// Emits
+const emit = defineEmits<{
+  (e: 'table-change', tableId: string | null): void
+  (e: 'node-click', data: { tableId: string; nodeKey: string; nodeTitle: string }): void
+}>()
+
 // 手风琴当前激活的key
 const activeKeys = ref<string[]>([])
 
@@ -201,6 +207,10 @@ const loadTableData = async (tableId: string) => {
 // 手风琴变化时加载对应的数据并清空图表显示
 const handleCollapseChange = (keys: any) => {
   const keysArray = Array.isArray(keys) ? keys : [keys]
+  
+  // 发出表格变更事件
+  const activeTableId = keysArray.length > 0 ? keysArray[0] : null
+  emit('table-change', activeTableId)
 
   // 清空当前选中的节点，切换面板时不显示图表
   selectedNodeKey.value = null
@@ -416,6 +426,13 @@ const handleNodeClick = (nodeKey: string) => {
   if (!clickedNode) {
     return
   }
+
+  // 发出节点点击事件
+  emit('node-click', {
+    tableId: currentTableId,
+    nodeKey,
+    nodeTitle: clickedNode.title || ''
+  })
 
   // 判断是否为叶子节点
   const hasChildren = clickedNode.children && clickedNode.children.length > 0
