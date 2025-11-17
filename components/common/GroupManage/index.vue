@@ -57,9 +57,42 @@
       >
         <a-tabs
           v-model:active-key="activeTabKey"
-          style="margin-left: 10px"
+          style="margin-left: 10px; height: 100%; display: flex; flex-direction: column;"
           @change="changeTab"
         >
+          <template #rightExtra>
+            <div v-if="currentBindTab && isNotEmpty(currentBindTab.data)" class="batch-action-buttons">
+              <template v-if="currentBindTab.treeMode">
+                <a-button 
+                  type="primary" 
+                  size="small" 
+                  :disabled="isAllSelectedTree(currentBindTab)"
+                  @click="selectAllTree(currentBindTab)"
+                >全选</a-button>
+                <a-button 
+                  size="small" 
+                  style="margin-right: 5px" 
+                  :disabled="isNoneSelected(currentBindTab)"
+                  @click="clearAllTree(currentBindTab)"
+                >清空</a-button>
+              </template>
+              <template v-else>
+                <a-button 
+                  type="primary" 
+                  size="small" 
+                  :disabled="isAllSelected(currentBindTab)"
+                  @click="selectAll(currentBindTab)"
+                >全选</a-button>
+                <a-button size="small" @click="invertSelect(currentBindTab)">反选</a-button>
+                <a-button 
+                  size="small" 
+                  style="margin-right: 5px" 
+                  :disabled="isNoneSelected(currentBindTab)"
+                  @click="clearAll(currentBindTab)"
+                >清空</a-button>
+              </template>
+            </div>
+          </template>
           <a-tab-pane
             :key="USER"
             tab="用户组管理"
@@ -156,22 +189,24 @@
                   </div>
                 </template>
                 <template v-else>
-                  <a-checkbox-group
-                    v-if="isNotEmpty(bindTab.data)"
-                    v-model:value="bindTab.checked"
-                    style="display: grid;"
-                    @change="handleChecked($event, bindTab)"
-                  >
-                    <a-checkbox
-                      v-for="(item, index) in bindTab.data"
-                      :key="index"
-                      :value="item.value"
-                      style="margin: 5px 0"
+                  <div class="tab-pane-content">
+                    <a-checkbox-group
+                      v-if="isNotEmpty(bindTab.data)"
+                      v-model:value="bindTab.checked"
+                      style="display: grid;"
+                      @change="handleChecked($event, bindTab)"
                     >
-                      <span class="normal">{{ item.label }}</span>
-                    </a-checkbox>
-                  </a-checkbox-group>
-                  <a-empty v-else />
+                      <a-checkbox
+                        v-for="(item, index) in bindTab.data"
+                        :key="index"
+                        :value="item.value"
+                        style="margin: 5px 0"
+                      >
+                        <span class="normal">{{ item.label }}</span>
+                      </a-checkbox>
+                    </a-checkbox-group>
+                    <a-empty v-else />
+                  </div>
                 </template>
               </a-tab-pane>
             </template>
@@ -239,6 +274,17 @@ const selectUserGroup = (_: Key[], info: any) => {
 const changeTab = () => {
 
 }
+const currentBindTab = computed(() => {
+  if (!activeTabKey.value || activeTabKey.value === USER) {
+    return null
+  }
+  for (let bindTab of bindTabs) {
+    if (activeTabKey.value === bindTab.tabKey + '_bind') {
+      return bindTab
+    }
+  }
+  return null
+})
 const handleChecked = (checkedValue: any, tab: any) => {
   bindReplaceBatchAttachByUrl(tab.baseUrl, currentUserGroupInfo.value.id, checkedValue || [])
       .then(() => {
@@ -247,6 +293,75 @@ const handleChecked = (checkedValue: any, tab: any) => {
           tab.key = !tab.key
         })
       })
+}
+const selectAll = (tab: any) => {
+  tab.checked = tab.data.map((item: any) => item.value)
+  handleChecked(tab.checked, tab)
+}
+const invertSelect = (tab: any) => {
+  const allValues = tab.data.map((item: any) => item.value)
+  tab.checked = allValues.filter((val: any) => !tab.checked.includes(val))
+  handleChecked(tab.checked, tab)
+}
+const clearAll = (tab: any) => {
+  tab.checked = []
+  handleChecked(tab.checked, tab)
+}
+const selectAllTree = (tab: any) => {
+  const getAllKeys = (nodes: any[]): any[] => {
+    let keys: any[] = []
+    nodes.forEach(node => {
+      keys.push(node.key)
+      if (node.children && node.children.length > 0) {
+        keys = keys.concat(getAllKeys(node.children))
+      }
+    })
+    return keys
+  }
+  tab.checked = getAllKeys(tab.data)
+  handleChecked(tab.checked, tab)
+}
+const invertSelectTree = (tab: any) => {
+  const getAllKeys = (nodes: any[]): any[] => {
+    let keys: any[] = []
+    nodes.forEach(node => {
+      keys.push(node.key)
+      if (node.children && node.children.length > 0) {
+        keys = keys.concat(getAllKeys(node.children))
+      }
+    })
+    return keys
+  }
+  const allKeys = getAllKeys(tab.data)
+  tab.checked = allKeys.filter((key: any) => !tab.checked.includes(key))
+  handleChecked(tab.checked, tab)
+}
+const clearAllTree = (tab: any) => {
+  tab.checked = []
+  handleChecked(tab.checked, tab)
+}
+const isNoneSelected = (tab: any) => {
+  return !tab.checked || tab.checked.length === 0
+}
+const isAllSelected = (tab: any) => {
+  if (!tab.data || !tab.checked) return false
+  const allValues = tab.data.map((item: any) => item.value)
+  return allValues.length > 0 && allValues.every((val: any) => tab.checked.includes(val))
+}
+const isAllSelectedTree = (tab: any) => {
+  if (!tab.data || !tab.checked) return false
+  const getAllKeys = (nodes: any[]): any[] => {
+    let keys: any[] = []
+    nodes.forEach(node => {
+      keys.push(node.key)
+      if (node.children && node.children.length > 0) {
+        keys = keys.concat(getAllKeys(node.children))
+      }
+    })
+    return keys
+  }
+  const allKeys = getAllKeys(tab.data)
+  return allKeys.length > 0 && allKeys.every((key: any) => tab.checked.includes(key))
 }
 let activeTabKey: Ref<string> = ref(USER)
 
@@ -283,9 +398,36 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
 </script>
 
 <style lang="less" scoped>
+.wrapper {
+  height: 100%;
+  overflow: hidden;
+}
+
+.user-group-category-list-wrapper {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.user-group-list-wrapper {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.user-name-wrapper {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .tab-pane-content {
-  max-height: calc(100vh - 230px);
+  flex: 1;
   padding-left: 10px;
   overflow: auto;
+}
+
+.batch-action-buttons {
+  display: flex;
+  gap: 8px;
 }
 </style>
