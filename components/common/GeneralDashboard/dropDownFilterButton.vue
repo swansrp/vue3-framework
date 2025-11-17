@@ -36,7 +36,7 @@ const props = defineProps<{
   width?: string | number // 组件宽度，可以是 '200px' 或 200
 }>()
 
-const { options } = toRefs(props)
+const { options, value } = toRefs(props)
 const emit = defineEmits<{
   (e: 'update:value', value: Value): void
 }>()
@@ -47,7 +47,41 @@ const computedWidth = computed(() => {
   return typeof props.width === 'number' ? `${props.width}px` : props.width
 })
 
-let selectedItem = ref(options.value[0])
+// 根据传入的 value 查找对应的选项，如果没找到则使用第一个选项
+const getInitialItem = () => {
+  const found = options.value.find(item => item.value === value.value)
+  return found || options.value[0]
+}
+
+let selectedItem = ref(getInitialItem())
+
+// 监听外部 value 变化，同步更新 selectedItem
+watch(value, (newValue) => {
+  const found = options.value.find(item => item.value === newValue)
+  if (found) {
+    selectedItem.value = found
+  }
+})
+
+// 监听 options 变化，实时响应动态数据更新
+watch(options, (newOptions) => {
+  if (newOptions && newOptions.length > 0) {
+    // 如果当前选中的值在新 options 中不存在，重新查找或使用第一个
+    const found = newOptions.find(item => item.value === selectedItem.value.value)
+    if (!found) {
+      // 尝试根据当前 value 查找，否则使用第一个选项
+      const valueFound = newOptions.find(item => item.value === value.value)
+      selectedItem.value = valueFound || newOptions[0]
+      // 同步更新外部 value
+      if (selectedItem.value.value !== value.value) {
+        emit('update:value', selectedItem.value.value)
+      }
+    } else {
+      // 更新为新 options 中对应的对象（label 可能变化）
+      selectedItem.value = found
+    }
+  }
+}, { deep: true })
 const showDropdown = ref(false)
 let leaveTimer: any = null
 
@@ -72,8 +106,13 @@ const handleSelect = (item: ValueLabel) => {
     leaveTimer = null
   }
   showDropdown.value = false
-  selectedItem.value = item
-  emit('update:value', item.value)
+  // 只在值真正变化时才触发更新
+  if (selectedItem.value.value !== item.value) {
+    selectedItem.value = item
+    emit('update:value', item.value)
+  } else {
+    selectedItem.value = item
+  }
 }
 </script>
 
