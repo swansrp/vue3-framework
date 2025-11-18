@@ -555,7 +555,7 @@ const onBarClick = (params: any) => {
     statisticData = [firstDim]
   }
 
-  // 设置选中的柱状图信息
+  // 设置选中的柱状图信息（合并全局筛选条件）
   selectedBarInfo.value = {
     firstDimension: firstDim,
     secondDimension: secondDim || null,
@@ -563,7 +563,7 @@ const onBarClick = (params: any) => {
     secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
     statisticType: statType,
     statisticData: statisticData,
-    combinedConditions: combinedConditions,
+    combinedConditions: mergeWithGlobalFilter(combinedConditions),
     title: hasSecondDimension.value
       ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
       : `${firstDimensionName.value}: ${firstDim} (${statType})`,
@@ -622,7 +622,7 @@ const onPieClick = (params: any) => {
     statisticData = [firstDim]
   }
 
-  // 设置选中的饼图信息
+  // 设置选中的饼图信息（合并全局筛选条件）
   selectedBarInfo.value = {
     firstDimension: firstDim,
     secondDimension: secondDim || null,
@@ -630,7 +630,7 @@ const onPieClick = (params: any) => {
     secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
     statisticType: statType,
     statisticData: statisticData,
-    combinedConditions: combinedConditions,
+    combinedConditions: mergeWithGlobalFilter(combinedConditions),
     title: hasSecondDimension.value && secondDim
       ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
       : `${firstDimensionName.value}: ${firstDim} (${statType})`,
@@ -716,6 +716,22 @@ const buildCombinedConditions = (firstDim: string, secondDim: string) => {
     firstDimensionId: `${indicatorConfig.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
     secondDimensionId: secondDimItem ? `${indicatorConfig.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}` : null
   }
+}
+
+// 将维度组合条件与全局筛选条件进行 AND 合并（返回组节点）
+const mergeWithGlobalFilter = (base: any) => {
+  const globalFilter = indicatorConfig.value?.filterConditions
+  const baseGroup = {
+    andOr: base?.andOr ?? '0',
+    conditionList: Array.isArray(base?.conditionList) ? base.conditionList : []
+  }
+  if (globalFilter && Array.isArray(globalFilter.conditionList) && globalFilter.conditionList.length > 0) {
+    return {
+      andOr: '0',
+      conditionList: [baseGroup, globalFilter]
+    }
+  }
+  return baseGroup
 }
 
 // 关闭详情弹窗
