@@ -69,7 +69,7 @@
                   <span
                     class="node-title"
                     :class="{ 'node-title-clickable': isLeaf && !dataRef.children }"
-                    @click.stop="isLeaf && !dataRef.children && handleNodeTitleClick(dataRef)"
+                    @click.stop="isLeaf && !dataRef.children && (commonIndicatorPermissions?.edit ? editIndicator(dataRef) : handleNodeTitleClick(dataRef))"
                   >{{ title }}</span>
                   <div
                     v-if="isLeaf && !dataRef.children && (commonIndicatorPermissions?.edit || commonIndicatorPermissions?.delete)"
@@ -129,7 +129,7 @@
                   <span
                     class="node-title"
                     :class="{ 'node-title-clickable': isLeaf }"
-                    @click.stop="isLeaf && handleNodeTitleClick(dataRef)"
+                    @click.stop="isLeaf && (personalIndicatorPermissions?.edit ? editIndicator(dataRef) : handleNodeTitleClick(dataRef))"
                   >{{ title }}</span>
                   <div
                     v-if="isLeaf && (personalIndicatorPermissions?.edit || personalIndicatorPermissions?.delete)"
