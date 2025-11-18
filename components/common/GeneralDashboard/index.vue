@@ -108,10 +108,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import SimpleIndicatorTree from './SimpleIndicatorTree.vue'
 
-import {
-  getCommonDashboard,
-  getCommonStatistic
-} from '@/framework/components/common/chartConfig/api'
+import { getCommonStatistic } from '@/framework/components/common/chartConfig/api'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import type { DashboardItem, IndicatorNode } from '@/framework/components/common/chartConfig/types'
 import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
@@ -155,7 +152,6 @@ const loading = ref(false)
 // 按表存储数据
 const tableDataMap = ref<Record<string, {
   indicators: IndicatorNode[]
-  dashboardItems: DashboardItem[]
 }>>({})
 
 // 统一的网格列数配置
@@ -175,27 +171,16 @@ const loadTableData = async (tableId: string) => {
     loading.value = true
 
     const indicators: IndicatorNode[] = []
-    const dashboardItems: DashboardItem[] = []
 
-    // 加载该表的指标
+    // 只加载该表的指标树
     const indicatorResp = await getCommonStatistic(tableId)
     if (indicatorResp?.payload) {
       indicators.push(...indicatorResp.payload)
     }
 
-    // 加载该表的仪表盘配置
-    const dashboardResp = await getCommonDashboard(tableId)
-    if (dashboardResp?.payload) {
-      dashboardItems.push(...dashboardResp.payload.map((item: any) => ({ ...item,
-        indicatorId: item.statisticId != null ? String(item.statisticId) : undefined,
-        config: { ...(item.config || {}), tableId, indicator: item.indicator }
-      })))
-    }
-
     // 存储该表的数据
     tableDataMap.value[tableId] = {
-      indicators,
-      dashboardItems
+      indicators
     }
   } catch (error) {
     console.error(`加载表 ${tableId} 数据失败:`, error)
@@ -292,58 +277,42 @@ const displayedDashboardItems = computed((): DashboardItem[] => {
   const selectedNode = findNodeInTree(data.indicators, selectedNodeKey.value)
   if (!selectedNode) return []
 
+  // 提取所有叶子节点
   const leaves = extractLeafIndicatorsFromNode(selectedNode)
-  const existing: DashboardItem[] = []
-  const newItems: DashboardItem[] = []
+  
+  // 按照指标树的顺序，自动计算每个卡片的位置
+  const dashboardItems: DashboardItem[] = []
+  let curX = 1
+  let curY = 1
 
-  leaves.forEach(ind => {
-    const ex = data.dashboardItems.find(d => String(d.indicatorId) === String(ind.id))
-    if (ex) {
-      existing.push(ex)
-    } else {
-      newItems.push({
-        id: `temp-${ind.id}`,
-        title: ind.title || '未命名指标',
-        displayOrder: 999,
-        commonStatistic: ind.id,
-        xGrid: ind.defaultXGrid || 4,
-        yGrid: ind.defaultYGrid || 3,
-        xPosition: 1,
-        yPosition: 1,
-        show: true,
-        config: { tableId: selectedTableId.value, indicator: ind.indicator },
-        indicatorId: ind.id
-      } as DashboardItem)
+  leaves.forEach((ind, index) => {
+    const xGrid = ind.defaultXGrid || 4
+    const yGrid = ind.defaultYGrid || 3
+
+    // 如果当前行放不下，换到下一行
+    if (curX + xGrid - 1 > GRID_COLUMNS.value) {
+      curX = 1
+      curY += yGrid
     }
+
+    dashboardItems.push({
+      id: `auto-${ind.id}`,
+      title: ind.title || '未命名指标',
+      displayOrder: index,
+      commonStatistic: ind.id,
+      xGrid,
+      yGrid,
+      xPosition: curX,
+      yPosition: curY,
+      show: true,
+      config: { tableId: selectedTableId.value, indicator: ind.indicator },
+      indicatorId: ind.id
+    } as DashboardItem)
+
+    curX += xGrid
   })
 
-  existing.sort((a, b) => a.displayOrder - b.displayOrder)
-
-  if (newItems.length) {
-    let maxY = 1
-    existing.forEach(item => {
-      const bottom = item.yPosition + (item.yGrid || 1)
-      if (bottom > maxY) maxY = bottom
-    })
-
-    let curX = 1
-    let curY = maxY
-
-    newItems.forEach(item => {
-      const w = item.xGrid || 4
-      if (curX + w - 1 > GRID_COLUMNS.value) {
-        curX = 1
-        curY += item.yGrid || 3
-      }
-      item.xPosition = curX
-      item.yPosition = curY
-      curX += w
-    })
-
-    existing.push(...newItems)
-  }
-
-  return existing
+  return dashboardItems
 })
 
 // ================== 全局筛选条件合并 ==================
@@ -384,9 +353,6 @@ const filteredDashboardItems = computed((): DashboardItem[] => {
       } else {
         // 原有条件和全局条件通过 AND 连接
         cfg.filterConditions = {
-          property: null,
-          value: null,
-          relation: null,
           conditionList: [
             cfg.filterConditions, // 原有条件作为一个整体
             props.globalConditions // 全局条件作为一个整体
