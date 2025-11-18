@@ -101,6 +101,10 @@ const handleExpand = (keys: Key[], info: any) => {
     
     // 只保留父节点路径 + 当前节点，关闭同级其他节点
     expandedKeys.value = [...parentKeys, currentKey]
+    
+    // 展开节点时自动触发节点点击事件，显示该节点下的所有图表
+    const nodeData = node.dataRef || node
+    emit('node-click', currentKey, nodeData)
   } else {
     // 折叠操作
     expandedKeys.value = keys
