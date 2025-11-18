@@ -66,6 +66,7 @@
           :can-delete-personal-indicators="personalIndicatorPermissions?.delete ?? true"
           :can-resize-common-indicators="canResizeCommonIndicators"
           :can-resize-personal-indicators="canResizePersonalIndicators"
+          :portal-config="portalConfig"
           @add-indicator="(ids: string[]) => addDashboard(ids, false)"
           @edit-indicator="editIndicatorFromChart"
           @delete-indicator="deleteDashboard"
@@ -108,6 +109,8 @@ import {
   updatePersonalStatistic
 } from './api'
 import type { DashboardItem, IndicatorNode } from './types'
+
+import { getPortalConfig } from '@/framework/apis/portal/config'
 
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
@@ -166,6 +169,9 @@ const GRID_COLUMNS = 7
 const loading = ref(false)
 const sidebarCollapsed = ref(false)
 const isInitialLoad = ref(true) // 页面初始化标志，用于防止初次加载时显示成功提示
+
+// Portal配置缓存
+const portalConfig = ref<any>(null)
 
 // 组件引用
 const chartGridRef = ref()
@@ -268,12 +274,22 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
   try {
     loading.value = true
 
-    // 并行加载通用/个人指标树与个人 dashboard 配置
-    const [commonResp, personalResp, dashboardResp] = await Promise.all([
+    // 并行加载通用/个人指标树、个人 dashboard 配置和 Portal 配置
+    const [commonResp, personalResp, dashboardResp, configResp] = await Promise.all([
       getCommonStatistic(tableId),
       getPersonalStatistic(tableId),
-      props.useCommonDashboard ? getCommonDashboard(tableId) : getPersonalDashboard(tableId)
+      props.useCommonDashboard ? getCommonDashboard(tableId) : getPersonalDashboard(tableId),
+      getPortalConfig(tableId).catch(err => {
+        console.error(`加载 Portal 配置失败:`, err)
+        return null
+      })
     ])
+
+    // 保存 Portal 配置
+    if (configResp?.payload) {
+      portalConfig.value = configResp.payload
+      portalConfig.value.tableId = tableId
+    }
 
     // 映射字段名：数据库使用 snake_case，前端使用 camelCase
     const mapIndicatorFields = (indicators: any[]): IndicatorNode[] => {

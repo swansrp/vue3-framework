@@ -50,6 +50,7 @@
           :can-edit="getIndicatorEditPermission(indicator)"
           :can-delete="getIndicatorDeletePermission(indicator)"
           :can-resize="getIndicatorResizePermission(indicator)"
+          :portal-config="props.portalConfig"
           @edit="$emit('edit-indicator', indicator)"
           @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])"
           @resize="handleResize"
@@ -92,6 +93,7 @@ interface Props {
   canResizeCommonIndicators?: boolean; // 是否可以调整通用指标大小
   canResizePersonalIndicators?: boolean; // 是否可以调整个人指标大小
   canDrag?: boolean; // 是否可以拖动卡片
+  portalConfig?: any; // 外部传入的 Portal 配置，避免重复请求
 }
 
 interface Emits {
@@ -116,7 +118,8 @@ const props = withDefaults(defineProps<Props>(), {
   canDeletePersonalIndicators: true,
   canResizeCommonIndicators: true,
   canResizePersonalIndicators: true,
-  canDrag: true
+  canDrag: true,
+  portalConfig: undefined
 })
 
 const emit = defineEmits<Emits>()

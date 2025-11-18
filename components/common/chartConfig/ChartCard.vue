@@ -152,6 +152,7 @@ interface Props {
   canEdit?: boolean; // 是否可以编辑
   canDelete?: boolean; // 是否可以删除
   canResize?: boolean; // 是否可以调整大小
+  portalConfig?: any; // 外部传入的 Portal 配置，避免重复请求
 }
 
 interface Emits {
@@ -176,7 +177,8 @@ const props = withDefaults(defineProps<Props>(), {
   gridColumns: 5,
   canEdit: true,
   canDelete: true,
-  canResize: true
+  canResize: true,
+  portalConfig: undefined
 })
 
 // 组件引用
@@ -291,6 +293,13 @@ const dimensionValueMap = computed(() => {
 
 // 加载Portal配置
 const loadPortalConfig = async () => {
+  // 如果外部已传入 portalConfig，直接使用
+  if (props.portalConfig) {
+    portalConfig.value = props.portalConfig
+    return
+  }
+
+  // 否则自行拉取
   try {
     const tableId = props.indicator.config?.tableId
     if (!tableId) {

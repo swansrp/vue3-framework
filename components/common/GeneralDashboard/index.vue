@@ -78,6 +78,7 @@
             :can-resize-common-indicators="false"
             :can-resize-personal-indicators="false"
             :can-drag="false"
+            :portal-config="currentPortalConfig"
           />
 
           <!-- 没有图表时显示提示 -->
@@ -109,6 +110,7 @@ import { computed, onMounted, ref } from 'vue'
 import SimpleIndicatorTree from './SimpleIndicatorTree.vue'
 
 import { getCommonStatistic } from '@/framework/components/common/chartConfig/api'
+import { getPortalConfig } from '@/framework/apis/portal/config'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import type { DashboardItem, IndicatorNode } from '@/framework/components/common/chartConfig/types'
 import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
@@ -149,9 +151,10 @@ const selectedTableId = ref<string | null>(null)
 // 页面状态
 const loading = ref(false)
 
-// 按表存储数据
+// 按表存储数据（包含指标和portal配置）
 const tableDataMap = ref<Record<string, {
   indicators: IndicatorNode[]
+  portalConfig: any | null
 }>>({})
 
 // 统一的网格列数配置
@@ -162,6 +165,12 @@ const GRID_COLUMNS = computed(() => props.gridColumns)
 
 // ================== 数据加载 ==================
 const loadTableData = async (tableId: string) => {
+  // 验证 tableId 有效性
+  if (!tableId || typeof tableId !== 'string') {
+    console.warn('tableId 无效，跳过加载:', tableId)
+    return
+  }
+
   // 如果已经加载过，不重复加载
   if (tableDataMap.value[tableId]) {
     return
@@ -171,16 +180,30 @@ const loadTableData = async (tableId: string) => {
     loading.value = true
 
     const indicators: IndicatorNode[] = []
+    let portalConfig: any = null
 
-    // 只加载该表的指标树
-    const indicatorResp = await getCommonStatistic(tableId)
+    // 并行加载指标树和 Portal 配置
+    const [indicatorResp, configResp] = await Promise.all([
+      getCommonStatistic(tableId),
+      getPortalConfig(tableId).catch(err => {
+        console.error(`加载表 ${tableId} Portal配置失败:`, err)
+        return null
+      })
+    ])
+
     if (indicatorResp?.payload) {
       indicators.push(...indicatorResp.payload)
     }
 
-    // 存储该表的数据
+    if (configResp?.payload) {
+      portalConfig = configResp.payload
+      portalConfig.tableId = tableId
+    }
+
+    // 存储该表的数据和配置
     tableDataMap.value[tableId] = {
-      indicators
+      indicators,
+      portalConfig
     }
   } catch (error) {
     console.error(`加载表 ${tableId} 数据失败:`, error)
@@ -201,12 +224,14 @@ const handleCollapseChange = (keys: any) => {
   selectedNodeKey.value = null
   selectedTableId.value = null
 
-  // 懒加载：只加载新展开面板的数据
-  keysArray.forEach((tableId: string) => {
-    if (!tableDataMap.value[tableId]) {
-      loadTableData(tableId)
-    }
-  })
+  // 懒加载：只加载新展开面板的数据，过滤掉无效的 tableId
+  keysArray
+    .filter((tableId: string) => tableId && typeof tableId === 'string') // 过滤掉 undefined、null 和非字符串
+    .forEach((tableId: string) => {
+      if (!tableDataMap.value[tableId]) {
+        loadTableData(tableId)
+      }
+    })
 }
 
 // 获取指定表的指标树数据
@@ -258,6 +283,13 @@ const findParentNode = (nodes: IndicatorNode[], targetKey: string, parent: Indic
   }
   return null
 }
+
+// 获取当前选中表的 Portal 配置
+const currentPortalConfig = computed(() => {
+  if (!selectedTableId.value) return null
+  const data = tableDataMap.value[selectedTableId.value]
+  return data?.portalConfig || null
+})
 
 // 根据当前展开的折叠面板和选中的节点显示图表
 const displayedDashboardItems = computed((): DashboardItem[] => {
