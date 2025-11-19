@@ -65,29 +65,12 @@
                 <div
                   :class="{ 'search-highlight': isHighlighted(title) }"
                   class="tree-node-title"
+                  @contextmenu.prevent="(e) => showContextMenu(e, dataRef, 'common')"
                 >
                   <span
-                    class="node-title"
-                    :class="{ 'node-title-clickable': isLeaf && !dataRef.children }"
-                    @click.stop="isLeaf && !dataRef.children && (commonIndicatorPermissions?.edit ? editIndicator(dataRef) : handleNodeTitleClick(dataRef))"
+                    class="node-title node-title-clickable"
+                    @click.stop="editIndicator(dataRef)"
                   >{{ title }}</span>
-                  <div
-                    v-if="isLeaf && !dataRef.children && (commonIndicatorPermissions?.edit || commonIndicatorPermissions?.delete)"
-                    class="node-actions"
-                  >
-                    <a-tooltip
-                      v-if="commonIndicatorPermissions?.edit"
-                      title="编辑"
-                    >
-                      <EditOutlined @click.stop="editIndicator(dataRef)" />
-                    </a-tooltip>
-                    <a-tooltip
-                      v-if="commonIndicatorPermissions?.delete"
-                      title="删除"
-                    >
-                      <DeleteOutlined @click.stop="deleteIndicator(dataRef)" />
-                    </a-tooltip>
-                  </div>
                 </div>
               </template>
               <template #icon="{ dataRef }">
@@ -125,29 +108,12 @@
                 <div
                   :class="{ 'search-highlight': isHighlighted(title) }"
                   class="tree-node-title"
+                  @contextmenu.prevent="(e) => showContextMenu(e, dataRef, 'personal')"
                 >
                   <span
-                    class="node-title"
-                    :class="{ 'node-title-clickable': isLeaf }"
-                    @click.stop="isLeaf && (personalIndicatorPermissions?.edit ? editIndicator(dataRef) : handleNodeTitleClick(dataRef))"
+                    class="node-title node-title-clickable"
+                    @click.stop="editIndicator(dataRef)"
                   >{{ title }}</span>
-                  <div
-                    v-if="isLeaf && (personalIndicatorPermissions?.edit || personalIndicatorPermissions?.delete)"
-                    class="node-actions"
-                  >
-                    <a-tooltip
-                      v-if="personalIndicatorPermissions?.edit"
-                      title="编辑"
-                    >
-                      <EditOutlined @click.stop="editIndicator(dataRef)" />
-                    </a-tooltip>
-                    <a-tooltip
-                      v-if="personalIndicatorPermissions?.delete"
-                      title="删除"
-                    >
-                      <DeleteOutlined @click.stop="editIndicator(dataRef)" />
-                    </a-tooltip>
-                  </div>
                 </div>
               </template>
               <template #icon="{ dataRef }">
@@ -188,6 +154,48 @@
         <PlusOutlined />
       </a-button>
     </div>
+  
+    <!-- 右键菜单 -->
+    <a-dropdown
+      v-model:open="contextMenuVisible"
+      :trigger="['contextmenu']"
+    >
+      <div
+        :style="{
+          position: 'fixed',
+          left: contextMenuPosition.x + 'px',
+          top: contextMenuPosition.y + 'px',
+          width: '1px',
+          height: '1px'
+        }"
+      ></div>
+      <template #overlay>
+        <a-menu @click="handleContextMenuClick">
+          <a-menu-item
+            v-if="currentContextNode && getPermissions('edit')"
+            key="add"
+          >
+            <PlusOutlined />
+            <span>添加子节点</span>
+          </a-menu-item>
+          <a-menu-item
+            v-if="currentContextNode && getPermissions('edit')"
+            key="edit"
+          >
+            <EditOutlined />
+            <span>编辑</span>
+          </a-menu-item>
+          <a-menu-item
+            v-if="currentContextNode && getPermissions('delete')"
+            key="delete"
+            danger
+          >
+            <DeleteOutlined />
+            <span>删除</span>
+          </a-menu-item>
+        </a-menu>
+      </template>
+    </a-dropdown>
   </div>
 </template>
 
@@ -237,7 +245,7 @@ interface Emits {
 
   (e: 'update:selected', value: string[]): void;
 
-  (e: 'add-indicator'): void;
+  (e: 'add-indicator', parentNode?: IndicatorNode): void;
 
   (e: 'edit-indicator', indicator: IndicatorNode): void;
 
@@ -278,6 +286,12 @@ const expandedPersonalKeys = ref<string[]>([...(props.expandedPersonalKeys || []
 
 // 防止循环触发的标志位
 const isUpdatingFromProps = ref(false)
+
+// 右键菜单状态
+const contextMenuVisible = ref(false)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+const currentContextNode = ref<IndicatorNode | null>(null)
+const currentContextType = ref<'common' | 'personal'>('common')
 
 // 响应式数据 - 分别处理通用指标和个人指标的选中状态
 const selectedCommonIndicators = ref<string[]>([
@@ -506,6 +520,44 @@ const onCommonIndicatorCheck = (checkedKeys: any) => {
   // dashboard事件触发已移到watch函数中
 }
 
+// 显示右键菜单
+const showContextMenu = (e: MouseEvent, node: IndicatorNode, type: 'common' | 'personal') => {
+  contextMenuPosition.value = { x: e.clientX, y: e.clientY }
+  currentContextNode.value = node
+  currentContextType.value = type
+  contextMenuVisible.value = true
+}
+
+// 获取当前节点的权限
+const getPermissions = (action: 'edit' | 'delete') => {
+  if (!currentContextNode.value) return false
+  const permissions = currentContextType.value === 'common' 
+    ? props.commonIndicatorPermissions 
+    : props.personalIndicatorPermissions
+  return permissions?.[action] || false
+}
+
+// 处理右键菜单点击
+const handleContextMenuClick = ({ key }: { key: string }) => {
+  if (!currentContextNode.value) return
+
+  switch (key) {
+    case 'add':
+      // 添加子节点，传入父节点
+      emit('add-indicator', currentContextNode.value)
+      break
+    case 'edit':
+      editIndicator(currentContextNode.value)
+      break
+    case 'delete':
+      deleteIndicator(currentContextNode.value)
+      break
+  }
+  
+  contextMenuVisible.value = false
+  currentContextNode.value = null
+}
+
 const addIndicator = () => {
   emit('add-indicator')
 }
@@ -514,17 +566,10 @@ const editIndicator = (indicator: IndicatorNode) => {
   emit('edit-indicator', indicator)
 }
 
-// 处理节点标题点击
-const handleNodeTitleClick = (dataRef: IndicatorNode) => {
-  if (dataRef.id) {
-    emit('node-title-click', dataRef.id)
-  }
-}
-
 const deleteIndicator = (indicator: IndicatorNode) => {
   Modal.confirm({
     title: '确认删除',
-    content: `确定要删除指标"${indicator.title}"吗？`,
+    content: `确定要删除指标“${indicator.title}”吗？`,
     okText: '确定',
     cancelText: '取消',
     onOk() {

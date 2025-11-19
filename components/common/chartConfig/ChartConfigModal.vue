@@ -30,7 +30,7 @@
         <div class="skip-chart-option">
           <a-checkbox
             v-model:checked="skipChartGeneration"
-            :disabled="isEditMode"
+            :disabled="isEditMode || isNonLeafNode"
           >
             跳过图表配置（仅保存指标名称）
           </a-checkbox>
@@ -46,7 +46,7 @@
         <div class="skip-message-content">
           <InfoCircleOutlined class="info-icon" />
           <p>您选择了跳过图表配置，将只保存指标名称作为根目录。</p>
-          <p>后续可以通过编辑功能来添加具体的图表配置。</p>
+          <p v-if="!isNonLeafNode">后续可以通过编辑功能来添加具体的图表配置。</p>
         </div>
       </div>
 
@@ -124,6 +124,13 @@ const indicatorNameError = ref('')
 // 跳过图表生成选项
 const skipChartGeneration = ref(false)
 
+// 判断是否为非叶子节点
+const isNonLeafNode = computed(() => {
+  if (!props.editData) return false
+  // 如果有children且children长度>0，说明是非叶子节点
+  return Array.isArray(props.editData.children) && props.editData.children.length > 0
+})
+
 // 配置重置状态
 const isConfigReset = ref(false)
 
@@ -145,18 +152,23 @@ watch(() => props.visible, async (newVal) => {
     // 重置配置重置状态
     isConfigReset.value = false
 
-    // 重置跳过图表生成选项
-    skipChartGeneration.value = false
-
     // 设置指标名称初始值
     if (props.isEditMode && props.editData) {
       // 编辑模式：使用现有的指标名称，如果没有则使用默认值
       indicatorName.value = props.editData.title
-      // 编辑模式下加载配置数据
-      await loadEditData()
+      
+      // 如果是非叶子节点，自动跳过图表配置
+      if (isNonLeafNode.value) {
+        skipChartGeneration.value = true
+      } else {
+        skipChartGeneration.value = false
+        // 只有叶子节点才加载配置数据
+        await loadEditData()
+      }
     } else {
-      // 新增模式：设置默认名称
+      // 新增模式：设置默认名称，默认不跳过图表配置
       indicatorName.value = ''
+      skipChartGeneration.value = false
     }
 
     // 弹窗打开后，等待DOM完全渲染和弹窗动画完成，再触发dashboard组件的布局重新计算
@@ -549,6 +561,7 @@ const handleCancel = () => {
   .skip-chart-option {
     display: flex;
     align-items: center;
+    gap: 8px;
 
     .ant-checkbox-wrapper {
       font-size: 14px;
@@ -561,6 +574,12 @@ const handleCancel = () => {
       &.ant-checkbox-wrapper-disabled {
         color: #bfbfbf;
       }
+    }
+
+    .non-leaf-tip {
+      font-size: 12px;
+      color: #8c8c8c;
+      font-style: italic;
     }
   }
 }
