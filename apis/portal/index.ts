@@ -22,6 +22,7 @@ import {
   generalStatisticRequest,
   generalSummaryRequest,
   getAllBindListRequest,
+  getBindInfoRequest,
   getByIdRequest,
   getTreeBrothersDataRequest,
   getTreeChildrenDataRequest,
@@ -166,6 +167,9 @@ export const unbindAllAttach = (entity: string, attach: string, entityId: any, b
 export const updateBindInfo = (entity: string, attach: string, entityId: any, attachId: any, data: any, strict = true, baseDomain?: string, showSuccess = true, showLoading = true) =>
   bindInfoRequest('/' + entity + '/' + attach, entityId, attachId, data, strict, baseDomain, showSuccess, showLoading) as Promise<any>
 
+export const getBindInfo = (entity: string, attach: string, entityId: any, attachId: any, baseDomain?: string, showSuccess = false, showLoading = false) =>
+  getBindInfoRequest('/' + entity + '/' + attach, entityId, attachId, baseDomain, showSuccess, showLoading) as Promise<any>
+
 export const updateBindInfoList = (entity: string, attach: string, entityId: any, data: Array<any>, strict = true, baseDomain?: string, showSuccess = true, showLoading = true) =>
   bindInfoListRequest('/' + entity + '/' + attach, entityId, data, strict, baseDomain, showSuccess, showLoading) as Promise<any>
 
@@ -204,5 +208,14 @@ export const bindAllAttachByUrl = (url: string, entityId: any, attachQuery = {} 
 
 export const unbindAllAttachByUrl = (url: string, entityId: any, baseDomain?: string, showSuccess = true, showLoading = true) =>
   unbindAllRequest(url, entityId, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const updateBindInfoByUrl = (url: string, entityId: any, attachId: any, data: any, strict = true, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindInfoRequest(url, entityId, attachId, data, strict, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const getBindInfoByUrl = (url: string, entityId: any, attachId: any, baseDomain?: string, showSuccess = false, showLoading = false) =>
+  getBindInfoRequest(url, entityId, attachId, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const updateBindInfoListByUrl = (url: string, entityId: any, data: Array<any>, strict = true, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  bindInfoListRequest(url, entityId, data, strict, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const getIndicatorConfig = (name: string) => get(buildGetApiByType('portal/indicator/group/indicator/tree'), { tableId: name }) as Promise<any>

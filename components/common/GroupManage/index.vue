@@ -123,7 +123,9 @@
                       :tree-data="bindTab.data"
                     >
                       <template #title="{ dataRef }">
-                        {{ dataRef.label }}
+                        <slot :name="bindTab.tabKey" :data="bindTab.data">
+                          {{ dataRef.label }}
+                        </slot>
                       </template>
                     </a-tree>
                     <a-empty v-else />
@@ -138,7 +140,11 @@
                     size="small"
                   >
                     <template #renderItem="{ item }">
-                      <a-list-item>{{ item[bindTab.bindDataDisplayField] }}</a-list-item>
+                      <a-list-item>
+                        <slot :name="bindTab.tabKey" :data="bindTab.data">
+                          {{ item[bindTab.bindDataDisplayField] }}
+                        </slot>
+                      </a-list-item>
                     </template>
                   </a-list>
                   <a-empty v-else />
@@ -159,7 +165,11 @@
                     size="small"
                   >
                     <template #renderItem="{ item }">
-                      <a-list-item>{{ item[bindTab.bindDataDisplayField] }}</a-list-item>
+                      <a-list-item>
+                        <slot :name="'view_' + bindTab.tabKey" :item="item" :update-bind-info="updateBindInfoData">
+                          {{ item[bindTab.bindDataDisplayField] }}
+                        </slot>
+                      </a-list-item>
                     </template>
                   </a-list>
                   <a-empty v-else />
@@ -225,7 +235,7 @@ import * as _ from 'lodash'
 import { Ref } from 'vue'
 
 import { getUserGroupTree, getUserGroupType } from '@/framework/apis/admin/userGroup'
-import { bindReplaceBatchAttachByUrl, getAllBindListByUrl } from '@/framework/apis/portal'
+import { bindReplaceBatchAttachByUrl, getAllBindListByUrl, getBindInfoByUrl, updateBindInfoByUrl } from '@/framework/apis/portal'
 import { GroupBindProperty } from '@/framework/components/common/GroupManage/types'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
@@ -262,10 +272,47 @@ const selectUserGroup = (_: Key[], info: any) => {
       getAllBindListByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
         bindTab.bindData = resp.payload || []
         bindTab.checked = []
-        bindTab.bindData.forEach((item: any) => {
-          bindTab.checked?.push(item[bindTab.bindDataValueField])
-        })
-        bindTab.key = !bindTab.key
+        
+        // 如果支持绑定信息，获取每个绑定项的详细信息
+        if (bindTab.supportBindInfo && bindTab.bindData.length > 0) {
+          bindTab.bindInfoMap = new Map()
+          
+          // 获取每个已绑定项的绑定信息
+          const promises = bindTab.bindData.map((item: any) => {
+            const attachId = item[bindTab.bindDataValueField]
+            return getBindInfoByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id, attachId)
+              .then((bindInfoResp: any) => {
+                if (bindInfoResp && bindInfoResp.payload) {
+                  bindTab.bindInfoMap.set(attachId, bindInfoResp.payload)
+                  // 合并绑定信息到显示数据中
+                  Object.assign(item, bindInfoResp.payload)
+                } else {
+                  // 如果没有绑定信息，使用父组件配置的默认值
+                  const defaultInfo = bindTab.defaultBindInfo || {}
+                  bindTab.bindInfoMap.set(attachId, defaultInfo)
+                  Object.assign(item, defaultInfo)
+                }
+              })
+              .catch(() => {
+                // 获取失败时使用父组件配置的默认值
+                const defaultInfo = bindTab.defaultBindInfo || {}
+                bindTab.bindInfoMap.set(attachId, defaultInfo)
+                Object.assign(item, defaultInfo)
+              })
+          })
+          
+          Promise.all(promises).then(() => {
+            bindTab.bindData.forEach((item: any) => {
+              bindTab.checked?.push(item[bindTab.bindDataValueField])
+            })
+            bindTab.key = !bindTab.key
+          })
+        } else {
+          bindTab.bindData.forEach((item: any) => {
+            bindTab.checked?.push(item[bindTab.bindDataValueField])
+          })
+          bindTab.key = !bindTab.key
+        }
       })
     }
   }
@@ -376,6 +423,41 @@ const props = withDefaults(
 const dict = dictStore()
 const treeDict = useTreeStore()
 const bindTabs = reactive(props.bindTabList || [])
+
+// 导出当前用户组ID和绑定信息Map，供父组件使用
+provide('currentUserGroupId', currentUserGroupInfo)
+provide('bindTabs', bindTabs)
+
+// 提供更新绑定信息的方法
+const updateBindInfoData = (tabKey: string, attachId: any, data: any) => {
+  const bindTab = bindTabs.find(tab => tab.tabKey === tabKey)
+  if (!bindTab || !bindTab.supportBindInfo) {
+    return Promise.reject('Tab not found or does not support bind info')
+  }
+  
+  return updateBindInfoByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id, attachId, data)
+    .then((resp: any) => {
+      // 更新本地缓存的绑定信息
+      if (bindTab.bindInfoMap) {
+        const currentInfo = bindTab.bindInfoMap.get(attachId) || {}
+        bindTab.bindInfoMap.set(attachId, { ...currentInfo, ...data })
+      }
+      
+      // 更新 bindData 中的数据
+      const item = bindTab.bindData?.find((i: any) => i[bindTab.bindDataValueField] === attachId)
+      if (item) {
+        Object.assign(item, data)
+      }
+      
+      // 刷新视图
+      bindTab.key = !bindTab.key
+      
+      return resp
+    })
+}
+
+provide('updateBindInfo', updateBindInfoData)
+
 onMounted(() => {
   renderUserGroupType()
   if (isNotEmpty(bindTabs)) {

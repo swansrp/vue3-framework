@@ -334,6 +334,12 @@ const bindInfoApi = (
   version = '1.0'
 ) => buildApi(domain, commonUrl.BIND_INFO, requestMethod.POST, version, type)
 
+const getBindInfoApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.BIND_INFO, requestMethod.GET, version, type)
+
 const bindInfoListApi = (
   type: string,
   domain: string = baseDomain,
@@ -755,6 +761,15 @@ export const bindInfoRequest = (
   attachId,
   data
 }, showSuccess, showLoading) as Promise<any>
+
+export const getBindInfoRequest = (
+  type: string,
+  entityId: any,
+  attachId: any,
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(getBindInfoApi(type, domain), { entityId, attachId }, {}, showSuccess, showLoading) as Promise<any>
 
 export const bindInfoListRequest = (
   type: string,

@@ -23,4 +23,10 @@ export interface GroupBindProperty {
     bindDataDisplayField: string
     // 回显绑定的数据列表
     checked?: Array<any>
+    // 支持绑定信息扩展（如 readOnly 等额外属性）
+    supportBindInfo?: boolean
+    // 绑定信息 Map，key 为 attachId，value 为绑定信息对象
+    bindInfoMap?: Map<any, any>
+    // 绑定信息默认值（当获取失败或无数据时使用）
+    defaultBindInfo?: any
 }
