@@ -41,8 +41,8 @@
         @update:collapsed="updateSidebarCollapsed"
         @update:selected-common="updateSelectedCommonIndicators"
         @update:selected-personal="updateSelectedPersonalIndicators"
-        @add-indicator="openIndicatorConfig"
-        @edit-indicator="openIndicatorConfig"
+        @add-indicator="handleAddIndicator"
+        @edit-indicator="handleEditIndicator"
         @delete-indicator="deleteIndicator"
         @add-dashboard="addDashboardFromTree"
         @delete-dashboard="deleteDashboardFromTree"
@@ -81,6 +81,7 @@
       v-model:visible="chartConfigModalVisible"
       :table-id="computedTableId"
       :edit-data="currentEditData"
+      :parent-node="currentParentNode"
       :is-edit-mode="isEditMode"
       :is-common-indicator="!showPersonalIndicators"
       @save="handleChartConfigSave"
@@ -179,6 +180,7 @@ const chartGridRef = ref()
 // 图表配置弹窗状态
 const chartConfigModalVisible = ref(false)
 const currentEditData = ref<IndicatorNode | null>(null)
+const currentParentNode = ref<IndicatorNode | null>(null) // 父节点（用于添加子节点）
 const isEditMode = ref(false)
 
 // 数据状态
@@ -639,17 +641,48 @@ const updateSelectedPersonalIndicators = (selected: string[]) => {
   }
 }
 
+// 处理添加指标事件（可能是添加根节点或添加子节点）
+const handleAddIndicator = (parentNode?: IndicatorNode) => {
+  if (parentNode) {
+    // 有父节点，说明是添加子节点
+    openIndicatorConfig(parentNode, true)
+  } else {
+    // 没有父节点，说明是添加根节点
+    openIndicatorConfig()
+  }
+}
+
+// 处理编辑指标事件
+const handleEditIndicator = (indicator: IndicatorNode) => {
+  openIndicatorConfig(indicator, false)
+}
+
 // 打开指标配置（左下角按钮和编辑按钮使用）
-const openIndicatorConfig = (config?: IndicatorNode) => {
+// parentNode参数：如果传入，表示要为该节点添加子节点
+const openIndicatorConfig = (parentOrConfig?: IndicatorNode, isAddingChild = false) => {
+  // 重置父节点状态
+  currentParentNode.value = null
+
   // 如果是新增指标（左下角按钮），打开图表配置弹窗
-  if (!config) {
+  if (!parentOrConfig) {
     currentEditData.value = null
     isEditMode.value = false
     chartConfigModalVisible.value = true
     return
   }
 
-  // 如果是编辑指标，都打开图表配置弹窗
+  // 如果明确标记为添加子节点
+  if (isAddingChild) {
+    // 这是添加子节点的情况，parentOrConfig是父节点
+    currentParentNode.value = parentOrConfig
+    currentEditData.value = null
+    isEditMode.value = false
+    chartConfigModalVisible.value = true
+    return
+  }
+
+  // 否则是编辑指标的情况
+  const config = parentOrConfig
   // 检查是否有缓存配置来决定是否为编辑模式
   let hasConfig = false
   if (config.indicator) {

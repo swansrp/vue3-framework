@@ -95,6 +95,7 @@ interface Props {
   editData?: IndicatorNode | null
   isEditMode?: boolean
   isCommonIndicator?: boolean // 是否为通用指标模式
+  parentNode?: IndicatorNode | null // 父节点（用于添加子节点时）
 }
 
 interface Emits {
@@ -107,7 +108,8 @@ const props = withDefaults(defineProps<Props>(), {
   tableId: '',
   editData: null,
   isEditMode: false,
-  isCommonIndicator: false
+  isCommonIndicator: false,
+  parentNode: null
 })
 
 const emit = defineEmits<Emits>()
@@ -166,8 +168,9 @@ watch(() => props.visible, async (newVal) => {
         await loadEditData()
       }
     } else {
-      // 新增模式：设置默认名称，默认不跳过图表配置
+      // 新增模式：设置默认名称
       indicatorName.value = ''
+      // 不再默认跳过图表配置，让用户自己选择
       skipChartGeneration.value = false
     }
 
