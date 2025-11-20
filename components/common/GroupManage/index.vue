@@ -368,21 +368,6 @@ const selectAllTree = (tab: any) => {
   tab.checked = getAllKeys(tab.data)
   handleChecked(tab.checked, tab)
 }
-const invertSelectTree = (tab: any) => {
-  const getAllKeys = (nodes: any[]): any[] => {
-    let keys: any[] = []
-    nodes.forEach(node => {
-      keys.push(node.key)
-      if (node.children && node.children.length > 0) {
-        keys = keys.concat(getAllKeys(node.children))
-      }
-    })
-    return keys
-  }
-  const allKeys = getAllKeys(tab.data)
-  tab.checked = allKeys.filter((key: any) => !tab.checked.includes(key))
-  handleChecked(tab.checked, tab)
-}
 const clearAllTree = (tab: any) => {
   tab.checked = []
   handleChecked(tab.checked, tab)
@@ -437,22 +422,27 @@ const updateBindInfoData = (tabKey: string, attachId: any, data: any) => {
   
   return updateBindInfoByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id, attachId, data)
     .then((resp: any) => {
-      // 更新本地缓存的绑定信息
-      if (bindTab.bindInfoMap) {
-        const currentInfo = bindTab.bindInfoMap.get(attachId) || {}
-        bindTab.bindInfoMap.set(attachId, { ...currentInfo, ...data })
-      }
-      
-      // 更新 bindData 中的数据
-      const item = bindTab.bindData?.find((i: any) => i[bindTab.bindDataValueField] === attachId)
-      if (item) {
-        Object.assign(item, data)
-      }
-      
-      // 刷新视图
-      bindTab.key = !bindTab.key
-      
-      return resp
+      // 重新获取绑定信息以确保数据同步
+      return getBindInfoByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id, attachId)
+        .then((bindInfoResp: any) => {
+          const updatedInfo = bindInfoResp?.payload || data
+          
+          // 更新本地缓存的绑定信息
+          if (bindTab.bindInfoMap) {
+            bindTab.bindInfoMap.set(attachId, updatedInfo)
+          }
+          
+          // 更新 bindData 中的数据
+          const item = bindTab.bindData?.find((i: any) => i[bindTab.bindDataValueField] === attachId)
+          if (item) {
+            Object.assign(item, updatedInfo)
+          }
+          
+          // 刷新视图
+          bindTab.key = !bindTab.key
+          
+          return resp
+        })
     })
 }
 
