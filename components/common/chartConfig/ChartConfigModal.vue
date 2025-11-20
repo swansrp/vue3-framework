@@ -360,6 +360,11 @@ const handleSaveConfig = async () => {
     // 如果是编辑模式，添加ID
     if (props.isEditMode && props.editData?.id) {
       indicatorData.id = props.editData.id
+    } else {
+      // 新增模式：如果有父节点，设置pid字段（添加子节点时）
+      if (props.parentNode?.id) {
+        indicatorData.pid = props.parentNode.id
+      }
     }
 
     // 根据模式调用不同的API
