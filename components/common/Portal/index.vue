@@ -26,6 +26,7 @@
               @handle-menu-context-modify="handleMenuContextModify"
               @handle-menu-context-copy="handleMenuContextCopy"
               @handle-menu-context-delete="handleMenuContextDelete"
+              @handle-add-root-node="handleMenuContextAdd(null)"
             >
               <template #end-action>
                 <portal-mode-button

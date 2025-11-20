@@ -1,7 +1,7 @@
 <template>
   <a-tree
-    :key="treeData"
     v-model:checked-keys="selectedTreeData"
+    v-model:expanded-keys="expandedKeys"
     :check-strictly="props.checkStrictly"
     :checkable="props.treeCheckAble"
     :draggable="!config.readOnly && config.treeDragAble"
@@ -38,6 +38,9 @@
     </template>
   </a-tree>
   <div style="margin-top: 20px">
+    <a-button v-if="!config.readOnly" type="primary" @click="handleAddRootNode">
+      新增根节点
+    </a-button>
     <slot name="end-action"></slot>
   </div>
 </template>
@@ -68,8 +71,11 @@ const emit = defineEmits<{
   (e: 'handleMenuContextModify', recordId: any): void
   (e: 'handleMenuContextCopy', recordId: any): void
   (e: 'handleMenuContextDelete', recordId: any): void
+  (e: 'handleAddRootNode'): void
 }>()
 const selectedTreeData = ref(props.selectedTreeData || [])
+const expandedKeys = ref<Array<string | number>>([])
+
 watch(() => props.selectedTreeData, (data: Array<any> | undefined) => {
   if (data !== undefined) {
     selectedTreeData.value = data
@@ -105,6 +111,11 @@ const handleMenuContext = (dataRef: any, menuKey: string) => {
     default:
       break
   }
+}
+
+const handleAddRootNode = () => {
+  // 添加根节点，不传递父节点id
+  emit('handleAddRootNode')
 }
 </script>
 
