@@ -61,20 +61,27 @@
           @change="changeTab"
         >
           <template #rightExtra>
-            <div v-if="currentBindTab && isNotEmpty(currentBindTab.data)" class="batch-action-buttons">
+            <div
+              v-if="currentBindTab && isNotEmpty(currentBindTab.data)"
+              class="batch-action-buttons"
+            >
               <template v-if="currentBindTab.treeMode">
                 <a-button 
                   type="primary" 
                   size="small" 
                   :disabled="isAllSelectedTree(currentBindTab)"
                   @click="selectAllTree(currentBindTab)"
-                >全选</a-button>
+                >
+                  全选
+                </a-button>
                 <a-button 
                   size="small" 
                   style="margin-right: 5px" 
                   :disabled="isNoneSelected(currentBindTab)"
                   @click="clearAllTree(currentBindTab)"
-                >清空</a-button>
+                >
+                  清空
+                </a-button>
               </template>
               <template v-else>
                 <a-button 
@@ -82,14 +89,23 @@
                   size="small" 
                   :disabled="isAllSelected(currentBindTab)"
                   @click="selectAll(currentBindTab)"
-                >全选</a-button>
-                <a-button size="small" @click="invertSelect(currentBindTab)">反选</a-button>
+                >
+                  全选
+                </a-button>
+                <a-button
+                  size="small"
+                  @click="invertSelect(currentBindTab)"
+                >
+                  反选
+                </a-button>
                 <a-button 
                   size="small" 
                   style="margin-right: 5px" 
                   :disabled="isNoneSelected(currentBindTab)"
                   @click="clearAll(currentBindTab)"
-                >清空</a-button>
+                >
+                  清空
+                </a-button>
               </template>
             </div>
           </template>
@@ -123,7 +139,10 @@
                       :tree-data="bindTab.data"
                     >
                       <template #title="{ dataRef }">
-                        <slot :name="bindTab.tabKey" :data="bindTab.data">
+                        <slot
+                          :name="bindTab.tabKey"
+                          :data="bindTab.data"
+                        >
                           {{ dataRef.label }}
                         </slot>
                       </template>
@@ -141,7 +160,10 @@
                   >
                     <template #renderItem="{ item }">
                       <a-list-item>
-                        <slot :name="bindTab.tabKey" :data="bindTab.data">
+                        <slot
+                          :name="bindTab.tabKey"
+                          :data="bindTab.data"
+                        >
                           {{ item[bindTab.bindDataDisplayField] }}
                         </slot>
                       </a-list-item>
@@ -166,7 +188,11 @@
                   >
                     <template #renderItem="{ item }">
                       <a-list-item>
-                        <slot :name="'view_' + bindTab.tabKey" :item="item" :update-bind-info="updateBindInfoData">
+                        <slot
+                          :name="'view_' + bindTab.tabKey"
+                          :item="item"
+                          :update-bind-info="updateBindInfoData"
+                        >
                           {{ item[bindTab.bindDataDisplayField] }}
                         </slot>
                       </a-list-item>

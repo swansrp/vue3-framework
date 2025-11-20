@@ -112,7 +112,6 @@ import {
 import type { DashboardItem, IndicatorNode } from './types'
 
 import { getPortalConfig } from '@/framework/apis/portal/config'
-
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import IndicatorTree from '@/framework/components/common/chartConfig/IndicatorTree.vue'

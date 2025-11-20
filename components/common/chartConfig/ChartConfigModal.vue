@@ -46,7 +46,9 @@
         <div class="skip-message-content">
           <InfoCircleOutlined class="info-icon" />
           <p>您选择了跳过图表配置，将只保存指标名称作为根目录。</p>
-          <p v-if="!isNonLeafNode">后续可以通过编辑功能来添加具体的图表配置。</p>
+          <p v-if="!isNonLeafNode">
+            后续可以通过编辑功能来添加具体的图表配置。
+          </p>
         </div>
       </div>
 

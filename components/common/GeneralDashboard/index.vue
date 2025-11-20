@@ -109,11 +109,11 @@ import { computed, onMounted, ref } from 'vue'
 
 import SimpleIndicatorTree from './SimpleIndicatorTree.vue'
 
-import { getCommonStatistic } from '@/framework/components/common/chartConfig/api'
 import { getPortalConfig } from '@/framework/apis/portal/config'
+import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { getCommonStatistic } from '@/framework/components/common/chartConfig/api'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import type { DashboardItem, IndicatorNode } from '@/framework/components/common/chartConfig/types'
-import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 // 定义表配置接口
 export interface TableConfig {
