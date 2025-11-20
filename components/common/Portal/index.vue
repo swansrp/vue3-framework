@@ -1408,7 +1408,9 @@ const handleMenuContextView = (recordId: any) => {
   })
 }
 const handleMenuContextAdd = (recordId: any) => {
-  config.modal.data[`${ config.parentKey }`] = recordId
+  if (config.parentKey) {
+    config.modal.data[`${ config.parentKey }`] = recordId
+  }
   addRow()
 }
 const handleMenuContextCopy = (recordId: any) => {
@@ -1500,17 +1502,26 @@ const detailRow = (args: any) => {
 const addRow = () => {
   openModal('add')
 
+  // 保存已设置的父节点ID（如果存在）
+  const existingParentId = config.modal.data?.[config.parentKey]
+  
+  // 初始化modal.data
   if (props.bindDefaultValue) {
-    config.modal.data = props.bindDefaultValue
+    config.modal.data = { ...props.bindDefaultValue }
   } else {
     config.modal.data = {}
   }
+  
+  // 恢复父节点ID
+  if (existingParentId !== undefined && existingParentId !== null) {
+    config.modal.data[config.parentKey] = existingParentId
+  }
+  
   for (let column of columnArray.value) {
     if (column.addShow && isNotEmpty(column.defaultValue)) {
       config.modal.data[column.dataIndex] = column.defaultValue
     }
   }
-  console.log('addRow', config.modal.data)
   config.modal.editRowIndex = null
 }
 // 保存添加数据

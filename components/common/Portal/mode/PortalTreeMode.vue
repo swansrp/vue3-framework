@@ -4,7 +4,6 @@
     v-model:checked-keys="selectedTreeData"
     :check-strictly="props.checkStrictly"
     :checkable="props.treeCheckAble"
-    :default-expand-all="true"
     :draggable="!config.readOnly && config.treeDragAble"
     :show-line="true"
     :tree-data="treeData"
@@ -15,13 +14,13 @@
       <a-dropdown :trigger="['contextmenu']">
         <span>{{ dataRef.title }}</span>
         <template #overlay>
-          <a-menu @click="({ key: menuKey }) => handleMenuContext(dataRef.key, menuKey)">
+          <a-menu @click="({ key: menuKey }) => handleMenuContext(dataRef, menuKey)">
             <a-menu-item key="1">
               查看详情
             </a-menu-item>
             <template v-if="!config.readOnly">
               <a-menu-item key="2">
-                新增记录
+                新增子节点
               </a-menu-item>
               <a-menu-item key="3">
                 编辑记录
@@ -82,12 +81,16 @@ watch(
     emit('update:selectedTreeData', data)
   }
 )
-const handleMenuContext = (recordId: any, menuKey: string) => {
+const handleMenuContext = (dataRef: any, menuKey: string) => {
+  // 使用 id 作为节点唯一标识，符合树形结构规范
+  const recordId = dataRef.id || dataRef.key
+  
   switch (menuKey) {
     case '1':
       emit('handleMenuContextView', recordId)
       break
     case '2':
+      // 新增子节点，传递父节点的 id
       emit('handleMenuContextAdd', recordId)
       break
     case '3':
