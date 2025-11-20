@@ -1,5 +1,6 @@
 <template>
   <a-tree
+    v-if="treeData.length > 0"
     v-model:checked-keys="selectedTreeData"
     v-model:expanded-keys="expandedKeys"
     :check-strictly="props.checkStrictly"
@@ -38,7 +39,11 @@
     </template>
   </a-tree>
   <div style="margin-top: 20px">
-    <a-button v-if="!config.readOnly" type="primary" @click="handleAddRootNode">
+    <a-button
+      v-if="!config.readOnly"
+      type="primary"
+      @click="handleAddRootNode"
+    >
       新增根节点
     </a-button>
     <slot name="end-action"></slot>

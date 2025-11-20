@@ -13,7 +13,6 @@
         <div style="margin: 10px">
           <template v-if="isTreeMode">
             <portal-tree-mode
-              v-if="treeData.length"
               v-model:selected-tree-data="selectedTreeData"
               :check-strictly="props.checkStrictly"
               :config="config"
@@ -39,18 +38,6 @@
                 />
               </template>
             </portal-tree-mode>
-            <div
-              v-else
-              style="display: flex; justify-content: flex-end"
-            >
-              <a-button
-                size="small"
-                type="primary"
-                @click="handleMenuContextAdd(null)"
-              >
-                新增根节点
-              </a-button>
-            </div>
           </template>
           <portal-list-mode
             v-else-if="isListMode"
