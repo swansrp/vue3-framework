@@ -46,6 +46,20 @@
     >
       新增根节点
     </a-button>
+    <a-button
+      v-if="treeData.length > 0"
+      style="margin-left: 8px"
+      @click="expandAll"
+    >
+      展开全部
+    </a-button>
+    <a-button
+      v-if="treeData.length > 0"
+      style="margin-left: 8px"
+      @click="collapseAll"
+    >
+      闭合全部
+    </a-button>
     <slot name="end-action"></slot>
   </div>
 </template>
@@ -121,6 +135,31 @@ const handleMenuContext = (dataRef: any, menuKey: string) => {
 const handleAddRootNode = () => {
   // 添加根节点，不传递父节点id
   emit('handleAddRootNode')
+}
+
+// 递归获取所有节点的key
+const getAllKeys = (nodes: Array<DataNode>): Array<string | number> => {
+  const keys: Array<string | number> = []
+  const traverse = (node: DataNode) => {
+    if (node.key !== undefined) {
+      keys.push(node.key)
+    }
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => traverse(child))
+    }
+  }
+  nodes.forEach(node => traverse(node))
+  return keys
+}
+
+// 一键展开所有节点
+const expandAll = () => {
+  expandedKeys.value = getAllKeys(props.treeData)
+}
+
+// 一键关闭所有节点
+const collapseAll = () => {
+  expandedKeys.value = []
 }
 </script>
 
