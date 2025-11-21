@@ -651,6 +651,21 @@ export default defineComponent({
                 return acc
               }, {})
 
+              // 计算各统计类型的总计（所有类别的总和）
+              const grandTotalsMap: Record<string, number> = {}
+              Object.keys(groupedParams).forEach(statType => {
+                const seriesForStat = series.filter((s: any) => s.name && s.name.endsWith(`&&${statType}`))
+                grandTotalsMap[statType] = seriesForStat.reduce((sum: number, s: any) => {
+                  if (Array.isArray(s.data)) {
+                    return sum + s.data.reduce((seriesSum: number, item: any) => {
+                      const v = typeof item === 'object' && item?.value != null ? item.value : item
+                      return seriesSum + (typeof v === 'number' ? v : 0)
+                    }, 0)
+                  }
+                  return sum
+                }, 0)
+              })
+
               Object.keys(groupedParams).forEach(statType => {
                 result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
 
@@ -692,7 +707,26 @@ export default defineComponent({
                   })
                 })()
                 const subtotalUnit = getUnitByStatType(statType)
-                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
+                
+                // 添加总计
+                const grandTotal = grandTotalsMap[statType] || 0
+                const subtotalPercentage = grandTotal > 0 ? ((total / grandTotal) * 100).toFixed(2) : '0.00'
+                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''} (${subtotalPercentage}%)</span><br/>`
+
+                const formattedGrandTotal = (() => {
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(grandTotal).toLocaleString(undefined, {
+                      minimumFractionDigits: fix,
+                      maximumFractionDigits: fix
+                    })
+                  }
+                  return Number(grandTotal).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  })
+                })()
+                result += `<span style="color: #666; font-size: 12px; font-weight: bold;">总计: ${formattedGrandTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
               })
             } else {
               // 单维度：仅保留“分组 + 数量(百分比) + 总计”，去掉同级分布列表
