@@ -191,9 +191,12 @@ export default defineComponent({
       // 按值排序
       pieData.sort((a, b) => b.value - a.value)
 
+      // 饼图配置 - 标题处理分布统计
+      const chartTitle = props.title === '分布统计' ? '' : props.title
+      
       return {
         title: {
-          text: props.title,
+          text: chartTitle,
           left: 'center',
           top: '0%',
           textStyle: {

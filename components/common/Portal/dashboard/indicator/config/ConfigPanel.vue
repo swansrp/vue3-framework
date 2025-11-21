@@ -327,6 +327,7 @@ const resetConfiguration = () => {
   selectedFilterItemsArray.value = [[]]
 
   //默认添加分布统计数据配置
+  //默认的指标名字
   const defaultDataMetric: DataMetricUI = {
     id: `metric_${Date.now()}`,
     dataName: '分布统计',

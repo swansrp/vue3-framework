@@ -356,7 +356,7 @@ export default defineComponent({
         if (leftMetrics.length > 0) {
           yAxes.push({
             type: 'value',
-            name: leftMetrics[0].dataName,
+            name: leftMetrics[0].dataName === '分布统计' ? '' : leftMetrics[0].dataName,
             position: 'left',
             axisLabel: {
               formatter: (value: number) => {
@@ -384,7 +384,7 @@ export default defineComponent({
           rightMetrics.forEach((metric, index) => {
             yAxes.push({
               type: 'value',
-              name: metric.dataName,
+              name: metric.dataName === '分布统计' ? '' : metric.dataName,
               position: 'right',
               alignTicks: true,
               offset: index * 60,
@@ -423,8 +423,13 @@ export default defineComponent({
           show: isNotEmpty(secondDimensionGroups),
           formatter: (name: string) => {
             // 将 "维度&&统计类型" 格式化为 "维度(统计类型)"
+            // 如果统计类型是"分布统计"，则只显示维度名称
             if (name.includes('&&')) {
               const parts = name.split('&&')
+              const statType = parts[1]
+              if (statType === '分布统计') {
+                return parts[0]
+              }
               return `${parts[0]}(${parts[1]})`
             }
             return name
