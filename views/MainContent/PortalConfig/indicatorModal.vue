@@ -107,6 +107,7 @@ import { message } from 'ant-design-vue'
 import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
 import IndicatorForm from './components/IndicatorForm.vue'
 
+import { ConditionVO } from '@/apis/types'
 import { addEntity, updateEntitySelective } from '@/framework/apis/portal'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
@@ -155,7 +156,7 @@ watch(
   () => defaultValue.portalName = config.value.name
 )
 const groupAdvanceCondition = computed(() => {
-  const conditionList = [buildCondition('portalName', FILTER_TYPE.EQUAL, [config.value.name])]
+  const conditionList = [buildCondition('portalName', FILTER_TYPE.EQUAL, [config.value.name])] as ConditionVO[]
   return { conditionList } as ConditionListType
 })
 
