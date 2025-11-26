@@ -2010,6 +2010,8 @@ const initConfig = async () => {
     summaryColumns.length = 0
     const index = _.cloneDeep(indexColumn)
     index.width = props.indexWidth
+    index.minWidth = props.indexWidth
+    index.maxWidth = props.indexWidth
     index.title = props.indexTitle
     columnArray.value.push(index)
     columnRaw.set(index.dataIndex, _.cloneDeep(index))
@@ -2151,13 +2153,19 @@ const initConfig = async () => {
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
       if (isNotEmpty(slots.action)) {
-        actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
+        const actionWidth = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
+        actionColumn.width = actionWidth
+        actionColumn.minWidth = actionWidth
+        actionColumn.maxWidth = actionWidth
         columnArray.value.push(actionColumn)
         columnRaw.set(actionColumn.dataIndex, _.cloneDeep(actionColumn))
       }
     } else {
       if (Number(props.actionWidth) > 0) {
-        actionColumn.width = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
+        const actionWidth = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
+        actionColumn.width = actionWidth
+        actionColumn.minWidth = actionWidth
+        actionColumn.maxWidth = actionWidth
         columnArray.value.push(actionColumn)
         columnRaw.set(actionColumn.dataIndex, _.cloneDeep(actionColumn))
       }
