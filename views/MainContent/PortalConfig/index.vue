@@ -290,6 +290,23 @@
         table-id="SysPortalAssociate"
       />
     </dialog-box>
+    <!-- region 数据预览弹窗 -->
+    <a-modal
+      v-model:open="showDataPreviewDrawer"
+      :title="'预览 - ' + tableConfig.displayName"
+      width="100%"
+      :style="{ top: 0, maxWidth: '100%', paddingBottom: 0 }"
+      :body-style="{ height: 'calc(100vh - 110px)', padding: '16px', overflow: 'auto' }"
+      :footer="null"
+      :z-index="990"
+      wrap-class-name="fullscreen-modal"
+    >
+      <portal
+        v-if="showDataPreviewDrawer && tableConfig.name"
+        :table-id="tableConfig.name"
+      />
+    </a-modal>
+    <!-- endregion -->
     <!-- region 右侧编辑栏 -->
     <div
       v-if="isNotEmpty(tableConfig.name)"
@@ -318,6 +335,13 @@
           </div>
         </template>
         <template #extra>
+          <a-button
+            style="margin-right: 10px"
+            type="primary"
+            @click="showDataPreviewDrawer = true"
+          >
+            预览
+          </a-button>
           <a-button
             style="margin-right: 10px"
             type="primary"
@@ -1711,6 +1735,7 @@ import { nextTick, Ref } from 'vue'
 import ColumnOrderModal from './components/ColumnOrderModal.vue'
 import FolderComponent from './components/FolderComponent.vue'
 import IndicatorModal from './indicatorModal.vue'
+import Portal from '@/framework/components/common/Portal/index.vue'
 import SqlDraw from './sqlDraw.vue'
 
 import { getRoleList } from '@/framework/apis/admin/rolePermission'
@@ -1861,6 +1886,7 @@ let copyConfigModal = reactive({
 const showSql: Ref<boolean> = ref(false)
 const sqlData: Ref<string> = ref('')
 const indicatorModalShow: Ref<boolean> = ref(false)
+const showDataPreviewDrawer: Ref<boolean> = ref(false)
 const publicDashboardModalShow: Ref<boolean> = ref(false)
 const publicDashboardRefreshing: Ref<boolean> = ref(false)
 const publicDashboardRearranging: Ref<boolean> = ref(false)
