@@ -4,9 +4,11 @@ import { download, get, post, upload } from '@/framework/network/request'
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.portal + '/admin', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.portal + '/admin', domain)
 
-export const getPortalList = (name: string, roleId: any) => get(buildGetApi('/list'), {
+export const getPortalList = (name: string, roleId: any, dataMode?: string, referenceId?: any) => get(buildGetApi('/list'), {
   name,
-  roleId
+  roleId,
+  dataMode,
+  referenceId
 }, {}, false, false) as Promise<any>
 
 export const deletePortalConfig = (id: any) => post(buildPostApi('/config/delete'), undefined, { id }) as Promise<any>
@@ -15,9 +17,11 @@ export const refreshPortalConfig = (name: string, roleId?: any) => post(buildPos
   roleId
 }) as Promise<any>
 
-export const getPortalConfig = (name: string, roleId?: any) => get(buildGetApi('/config'), {
+export const getPortalConfig = (name: string, roleId?: any, dataMode?: string, referenceId?: any) => get(buildGetApi('/config'), {
   name,
-  roleId
+  roleId,
+  dataMode,
+  referenceId
 }, {}, false, false) as Promise<any>
 
 export const updatePortalConfig = (portalConfig: any, silent: boolean) => post(buildPostApi('/config'), undefined, portalConfig, !silent, !silent) as Promise<any>

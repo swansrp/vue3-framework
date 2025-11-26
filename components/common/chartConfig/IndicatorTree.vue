@@ -347,32 +347,6 @@ const getDefaultExpandedKeys = (tree: IndicatorNode[]): string[] => {
   collectExpandableNodes(tree)
   return Array.from(keysToExpand)
 }
-// 初始化展开的节点
-const initializeExpandedKeys = () => {
-  // 如果props中已经提供了展开的节点keys，则使用这些keys
-  if (props.expandedCommonKeys && props.expandedCommonKeys.length > 0) {
-    expandedCommonKeys.value = [...props.expandedCommonKeys]
-  } else {
-    // 否则使用默认逻辑
-    const allIndicators = [...props.commonIndicators, ...props.personalIndicators]
-    const expandedKeys = getDefaultExpandedKeys(allIndicators)
-    expandedCommonKeys.value = expandedKeys.filter((key) =>
-      findNodeInTree(props.commonIndicators, key)
-    )
-  }
-
-  // 如果props中已经提供了展开的节点keys，则使用这些keys
-  if (props.expandedPersonalKeys && props.expandedPersonalKeys.length > 0) {
-    expandedPersonalKeys.value = [...props.expandedPersonalKeys]
-  } else {
-    // 否则使用默认逻辑
-    const allIndicators = [...props.commonIndicators, ...props.personalIndicators]
-    const expandedKeys = getDefaultExpandedKeys(allIndicators)
-    expandedPersonalKeys.value = expandedKeys.filter((key) =>
-      findNodeInTree(props.personalIndicators, key)
-    )
-  }
-}
 
 // 监听搜索关键词变化,更新展开状态
 watch(

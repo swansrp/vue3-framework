@@ -152,6 +152,20 @@
 
       <!-- 底部操作按钮 -->
       <div class="folder-footer-controls">
+        <!-- 生成Portal配置按钮（仅Matrix/Dataset模式显示） -->
+        <a-button
+          v-if="props.dataMode && props.referenceId"
+          type="primary"
+          shape="round"
+          style="margin-top: 5px; width: 160px"
+          @click="showGenerateModal = true"
+        >
+          生成Portal配置
+          <template #icon>
+            <PlusOutlined />
+          </template>
+        </a-button>
+
         <!-- 清空配置按钮 -->
         <a-popconfirm
           v-if="selectedRole !== '0' && tableList.length > 0"
@@ -203,8 +217,49 @@
       </div>
     </div>
     <!-- endregion -->
+    <!-- region 生成Portal配置弹窗 -->
+    <a-modal
+      v-model:open="showGenerateModal"
+      title="生成Portal配置"
+      centered
+      @ok="handleGeneratePortal"
+    >
+      <a-form
+        ref="generateFormRef"
+        :model="generateForm"
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 18 }"
+      >
+        <a-form-item
+          label="Portal名称"
+          name="portalName"
+          :rules="[{ required: true, message: '请输入Portal名称' }]"
+        >
+          <a-input
+            v-model:value="generateForm.portalName"
+            placeholder="请输入Portal名称（英文）"
+          >
+            <template #suffix>
+              <span style="color: #999; font-size: 12px;">
+                {{ props.dataMode === 'MATRIX' ? '_matrix' : props.dataMode === 'DATASET' ? '_dataset' : '' }}
+              </span>
+            </template>
+          </a-input>
+        </a-form-item>
+        <a-form-item
+          label="显示名称"
+          name="displayName"
+          :rules="[{ required: true, message: '请输入显示名称' }]"
+        >
+          <a-input
+            v-model:value="generateForm.displayName"
+            placeholder="请输入Portal显示名称（中文）"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+    <!-- endregion -->
     <upload-file
-      ref="uploadTableConfigRef"
       :upload="importTableConfig"
       @after-confirm="getTableConfigByName(tableConfig.name)"
     />
@@ -645,11 +700,11 @@
         <s-table
           :columns="[
             {
-              title: '字段列表(拖动调整顺序)',
+              title: '字段列表',
               align: 'center',
               dataIndex: 'displayName',
               tooltip: { placement: 'left', mouseEnterDelay: 1 },
-              rowDrag: !columnFiltered,
+              rowDrag: false,
               showMenu: true,
             },
           ]"
@@ -682,7 +737,7 @@
             <div v-html="strLF2HtmlLF(value)"></div>
           </template>
           <template #menuIcon="{ filtered }">
-            <filter-outlined :class="filtered && 'filter-active'" />
+            <control-outlined :class="filtered && 'filter-active'" />
           </template>
           <template
             #menuPopup="{
@@ -694,56 +749,100 @@
             <div
               style="
                 background-color: white;
-                height: 80px;
-                width: fit-content;
-                padding: 8px 16px 8px 16px;
+                width: 240px;
+                padding: 8px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
               "
             >
-              <a-select
-                :get-popup-container="(triggerNode) => triggerNode.parentNode"
-                :options="[
-                  { label: '有效', value: 'enable' },
-                  { label: '表格显示', value: 'show' },
-                  { label: '详情显示', value: 'detailShow' },
-                  { label: '新增显示', value: 'addShow' },
-                  { label: '编辑显示', value: 'editShow' },
-                ]"
-                :placeholder="`查看类型`"
-                :show-search="false"
-                :value="selectedKeysRef.value"
-                clearable
-                style="width: 188px; margin-bottom: 8px; display: block"
-                @select="
-                  (e) => {
-                    const selectedKey = e ? e : '';
-                    setSelectedKeys(selectedKey);
+              <!-- 排序操作 -->
+              <div style="margin-bottom: 8px;">
+                <a-button
+                  block
+                  size="middle"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    height: 36px;
+                    border-radius: 6px;
+                  "
+                  @click="
+                    () => {
+                      showColumnOrderModal = true;
+                      hidePopup();
+                    }
+                  "
+                >
+                  <SortAscendingOutlined />
+                  <span>字段排序</span>
+                </a-button>
+              </div>
+              
+              <a-divider style="margin: 8px 0;" />
+              
+              <!-- 筛选条件 -->
+              <div>
+                <div
+                  style="
+                  font-size: 12px;
+                  color: #8c8c8c;
+                  margin-bottom: 8px;
+                  padding-left: 4px;
+                "
+                >
+                  筛选条件
+                </div>
+                <a-select
+                  :get-popup-container="(triggerNode) => triggerNode.parentNode"
+                  :options="[
+                    { label: '全部字段', value: '' },
+                    { label: '有效字段', value: 'enable' },
+                    { label: '表格显示', value: 'show' },
+                    { label: '详情显示', value: 'detailShow' },
+                    { label: '新增显示', value: 'addShow' },
+                    { label: '编辑显示', value: 'editShow' },
+                  ]"
+                  :placeholder="`选择类型`"
+                  :show-search="false"
+                  :value="selectedKeysRef.value || ''"
+                  size="middle"
+                  style="width: 100%; margin-bottom: 8px; border-radius: 6px;"
+                  @change="
+                    (e) => {
+                      const selectedKey = e || '';
+                      setSelectedKeys(selectedKey);
+                      handleColumnFilter(
+                        selectedKey,
+                        confirm,
+                        column.key,
+                        hidePopup,
+                        column,
+                        clearFilters
+                      );
+                    }
+                  "
+                />
+                <a-button
+                  v-if="selectedKeysRef.value"
+                  block
+                  size="middle"
+                  style="border-radius: 6px; height: 32px;"
+                  @click="
                     handleColumnFilter(
-                      selectedKey,
+                      '',
                       confirm,
                       column.key,
                       hidePopup,
                       column,
                       clearFilters
-                    );
-                  }
-                "
-              />
-              <a-button
-                style="width: 100%"
-                type="primary"
-                @click="
-                  handleColumnFilter(
-                    '',
-                    confirm,
-                    column.key,
-                    hidePopup,
-                    column,
-                    clearFilters
-                  )
-                "
-              >
-                显示全部
-              </a-button>
+                    )
+                  "
+                >
+                  清除筛选
+                </a-button>
+              </div>
             </div>
           </template>
           <template #contextmenuPopup="args">
@@ -1512,6 +1611,13 @@
       :advanced-condition="defaultCondition"
       @confirm="saveDefaultCondition"
     />
+    
+    <!-- 字段排序弹框 -->
+    <ColumnOrderModal
+      v-model="showColumnOrderModal"
+      :columns="tableConfig.columns || []"
+      @confirm="handleColumnOrderConfirm"
+    />
     <sql-draw
       v-model:show="showSql"
       :sql="sqlData"
@@ -1582,13 +1688,15 @@ import {
   ArrowDownOutlined,
   ArrowUpOutlined,
   ConsoleSqlOutlined,
+  ControlOutlined,
   CopyOutlined,
   DeleteOutlined,
   FileTextOutlined,
-  FilterOutlined,
   ForkOutlined,
   MinusCircleOutlined,
+  PlusOutlined,
   ReloadOutlined,
+  SortAscendingOutlined,
   UndoOutlined,
   UserOutlined,
   VerticalAlignBottomOutlined,
@@ -1600,6 +1708,7 @@ import dayjs from 'dayjs'
 import * as _ from 'lodash'
 import { nextTick, Ref } from 'vue'
 
+import ColumnOrderModal from './components/ColumnOrderModal.vue'
 import FolderComponent from './components/FolderComponent.vue'
 import IndicatorModal from './indicatorModal.vue'
 import SqlDraw from './sqlDraw.vue'
@@ -1632,6 +1741,26 @@ import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, isNotEmpty, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
 import { AUTO } from '@/framework/utils/constant'
 import { ValueLabel } from '@/framework/utils/type'
+
+// 接收props
+const props = withDefaults(
+  defineProps<{
+    // 数据模式: null=传统表格, MATRIX=矩阵, DATASET=数据集
+    dataMode?: string | null
+    // 关联ID: matrixId 或 datasetId
+    referenceId?: number | null
+    // 自定义刷新接口（可选）
+    customRefreshFn?: (portalName: string, referenceId: number) => Promise<any>
+    // 自定义生成Portal函数（必须）
+    generatePortalFn?: (params: { portalName: string, displayName: string, referenceId: number, dataMode: string }) => Promise<any>
+  }>(),
+  {
+    dataMode: null,
+    referenceId: null,
+    customRefreshFn: undefined,
+    generatePortalFn: undefined
+  }
+)
 
 const dict = dictStore()
 const treeDict = useTreeStore()
@@ -1812,7 +1941,7 @@ const getEntityConfig = (tableId: string) => {
 const tableConfig = ref({} as any)
 const fieldRecords = ref([] as Array<any>)
 const getTableConfigByName = (item: any) => {
-  getPortalConfig(item, selectedRole.value).then(async (res) => {
+  getPortalConfig(item, selectedRole.value, props.dataMode || undefined, props.referenceId || undefined).then(async (res) => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
@@ -1884,14 +2013,19 @@ const deleteConfig = (id: any) => {
   })
 }
 
-const refreshConfig = (id: any) => {
-  refreshPortalConfig(id || tableConfig.value.id, selectedRole.value).then(() => {
-    columnDict.length = 0
-    columnMap.clear()
-    selectedColumnId.value = ''
-    tableConfig.value = {}
-    onSearch()
-  })
+// 刷新Portal配置
+const refreshConfig = (portalName: string) => {
+  // 如果传入了自定义refresh函数，使用自定义函数
+  if (props.customRefreshFn && props.referenceId) {
+    props.customRefreshFn(portalName, props.referenceId).then(() => {
+      getTableConfigByName(portalName)
+    })
+  } else {
+    // 传统Portal配置：使用默认refresh接口
+    refreshPortalConfig(portalName).then(() => {
+      getTableConfigByName(portalName)
+    })
+  }
 }
 
 const saveTableConfig = (silent = true) => {
@@ -1990,7 +2124,12 @@ const associateTableConfig = () => {
 }
 
 const onSearch = () => {
-  getPortalList(inputTableName.value, selectedRole.value).then((res) => {
+  getPortalList(
+    inputTableName.value, 
+    selectedRole.value,
+    props.dataMode || undefined,
+    props.referenceId || undefined
+  ).then((res) => {
     tableList.value = res.payload || []
 
     // 使用nextTick确保 DOM 更新后再处理文件夹展开状态
@@ -2093,6 +2232,25 @@ const handleColumnOrderChanged = () => {
   })
 }
 
+// 字段排序弹框
+const showColumnOrderModal = ref(false)
+const handleColumnOrderConfirm = (orderedColumns: any[]) => {
+  // 更新fieldRecords和tableConfig.columns的顺序
+  fieldRecords.value = orderedColumns
+  tableConfig.value.columns = orderedColumns
+  
+  // 提交排序到后端
+  const columnOrder = orderedColumns.map((column, index) => ({
+    id: column.id,
+    title: column.displayName,
+    showOrder: index + 1
+  }))
+  
+  updatePortalColumnOrder(columnOrder).then(() => {
+    onSearch()
+  })
+}
+
 const handleColumnSelected = (event: MouseEvent, params: CellRenderArgs) => {
   selectedColumnId.value = params.record.id
   if (params.record.fieldType === FIELD_TYPE.ENTITY) {
@@ -2191,6 +2349,43 @@ const cleanPortalConfigByRole = async () => {
   await unbindRole(selectedRole.value)
   await init()
   onSearch()
+}
+
+// 生成Portal配置相关
+const showGenerateModal = ref(false)
+const generateFormRef = ref()
+const generateForm = reactive({
+  portalName: '',
+  displayName: ''
+})
+
+const handleGeneratePortal = async () => {
+  try {
+    await generateFormRef.value?.validate()
+    
+    if (!props.generatePortalFn) {
+      console.error('缺少generatePortalFn属性')
+      return
+    }
+    
+    // 调用父组件传入的生成函数
+    await props.generatePortalFn({
+      portalName: generateForm.portalName,
+      displayName: generateForm.displayName,
+      referenceId: props.referenceId!,
+      dataMode: props.dataMode!
+    })
+    
+    // 关闭弹窗并重置表单
+    showGenerateModal.value = false
+    generateForm.portalName = ''
+    generateForm.displayName = ''
+    
+    // 刷新列表
+    await onSearch()
+  } catch (error) {
+    console.error('生成Portal配置失败:', error)
+  }
 }
 
 // 文件夹相关方法
