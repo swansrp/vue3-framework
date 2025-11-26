@@ -31,14 +31,16 @@
         >
           <a-descriptions-item
             :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
-            :label="strRemoveLF(column.title) + (column.required ? '(*)' : '')"
             :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
             :span="config.modal.type === 'add' ? column.addSize : column.editSize"
           >
+            <template #label>
+              <span v-if="column.required" style="color: #ff4d4f; margin-right: 4px;">*</span>
+              <span>{{ strRemoveLF(column.title) }}</span>
+            </template>
             <a-form-item
-              :label="strRemoveLF(column.title)"
               :name="column.dataIndex"
-              :required="column.required"
+              :rules="column.required ? [{ required: true, message: '请输入' + strRemoveLF(column.title) }] : []"
             >
               <a-input
                 v-if="column.fieldType === FIELD_TYPE.INPUT"
@@ -223,7 +225,7 @@ import { getPortalConfig } from '@/framework/apis/portal/config'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { dictStore } from '@/framework/store/common'
-import { isNotEmpty, strRemoveLF } from '@/framework/utils/common'
+import { isNotEmpty, strRemoveLF, log } from '@/framework/utils/common'
 
 const _ = getInstance()
 const uploadFileModal = ref()

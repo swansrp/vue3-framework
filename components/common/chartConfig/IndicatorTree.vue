@@ -325,28 +325,6 @@ const shouldShowAddButton = computed(() => {
 
   return result
 })
-// 获取默认应该展开的节点（有items且不为空的节点及其祖先）
-const getDefaultExpandedKeys = (tree: IndicatorNode[]): string[] => {
-  const keysToExpand = new Set<string>()
-
-  const collectExpandableNodes = (nodes: IndicatorNode[], ancestors: string[] = []) => {
-    nodes.forEach((node) => {
-      const currentPath = [...ancestors, node.key]
-
-      if (node.items && node.items.length > 0) {
-        // 有指标的节点，展开其所有祖先
-        currentPath.forEach((key) => keysToExpand.add(key))
-      }
-
-      if (node.children && node.children.length > 0) {
-        collectExpandableNodes(node.children, currentPath)
-      }
-    })
-  }
-
-  collectExpandableNodes(tree)
-  return Array.from(keysToExpand)
-}
 
 // 监听搜索关键词变化,更新展开状态
 watch(
