@@ -5,260 +5,43 @@
         <img
           :width="40"
           alt="登录图案"
-          src="../../../assets/image/login/logo.png"
           class="logo-img"
+          src="../../../assets/image/login/logo.png"
         />
         <h1 class="login-title">
           {{ title }}
         </h1>
       </div>
-      <a-form
+
+      <!-- 首次登录设置密码 -->
+      <password-reset-form
         v-if="passwordResetMode"
-        :model="passwordResetForm"
-        :label-col="{ span: 24 }"
-        :wrapper-col="{ span: 24 }"
-        layout="vertical"
-        class="password-reset-form"
-        autocomplete="off"
-        @finish="handleInitPassword"
-      >
-        <div class="login-content-wrapper">
-          <a-form-item
-            :rules="[{ validator: passwordResetValidator, trigger: 'change' }]"
-            has-feedback
-            label="输入密码："
-            name="password"
-          >
-            <a-input-password
-              v-model:value="passwordResetForm.password"
-              autocomplete="new-password"
-              placeholder="至少8位，需含数字和字母"
-              size="large"
-              type="password"
-            />
-          </a-form-item>
-          <a-form-item
-            :rules="[
-              {
-                required: true,
-                message: '两次密码不一致',
-                pattern: new RegExp('^' + passwordResetForm.password + '$'),
-              },
-            ]"
-            has-feedback
-            label="确认密码："
-            name="passwordConfirm"
-          >
-            <a-input-password
-              v-model:value="passwordResetForm.passwordConfirm"
-              autocomplete="new-password"
-              placeholder="请再次输入密码"
-              size="large"
-              type="password"
-            />
-          </a-form-item>
-          <a-form-item
-            :rules="[{ required: true, message: '请输入验证码' }]"
-            label="验证码："
-            name="captcha"
-          >
-            <a-input
-              v-model:value="passwordResetForm.captcha"
-              :maxlength="4"
-              autocomplete="off"
-              placeholder="验证码"
-              size="large"
-            >
-              <template #suffix>
-                <img
-                  :height="40"
-                  :src="captchaUrl"
-                  alt="验证码"
-                  class="absolute right-0 h-full cursor-pointer"
-                  @click="updateCaptchaUrl('INIT_PASSWORD_CAPTCHA')"
-                />
-              </template>
-            </a-input>
-          </a-form-item>
-          <a-form-item>
-            <a-button
-              :loading="loading"
-              block
-              html-type="submit"
-              size="large"
-              type="primary"
-            >
-              设置密码并登录
-            </a-button>
-          </a-form-item>
-        </div>
-      </a-form>
+        :captcha-url="initPasswordCaptchaUrl"
+        :loading="loading"
+        @submit="handleInitPassword"
+        @update-captcha="updateCaptchaUrl"
+      />
+
+      <!-- 注册页面 -->
       <template v-else-if="registerMode">
-        <div class="login-content-wrapper">
-          <!-- 注册页面标题，与登录页面的 tabs 对齐 -->
-          <div class="register-header">
-            <div class="register-title">
-              注册账号
-            </div>
-          </div>
-          <msg-code
-            v-if="registerWithPhoneNumber"
-            v-model:form-data="registerForm"
-            :finish="handleMsgRegister"
-            :phone-number-existed="false"
-            :show-label="false"
-            form-class="register-form"
-            sms-type="REGISTER_MSG_CODE"
-            submit-text="注册并登录"
-          >
-            <a-form-item
-              :rules="[
-                { required: true, message: '请输入用户名!', trigger: 'change' },
-                { validator: userNameValidator, trigger: 'blur' },
-              ]"
-              name="userName"
-            >
-              <a-input
-                v-model:value="registerForm.loginId"
-                autocomplete="off"
-                name="username-register-msg"
-                placeholder="请输入用户名"
-                readonly
-                size="large"
-                @focus="removeReadonly"
-              >
-                <template #prefix>
-                  <user-outlined />
-                </template>
-              </a-input>
-            </a-form-item>
-            <a-form-item
-              :rules="[{ validator: passwordLoginValidator, trigger: 'change' }]"
-              has-feedback
-              name="password"
-            >
-              <a-input-password
-                v-model:value="registerForm.password"
-                autocomplete="new-password"
-                name="password-register-msg"
-                placeholder="至少8位，需含数字和字母"
-                readonly
-                size="large"
-                type="password"
-                @focus="removeReadonly"
-              >
-                <template #prefix>
-                  <SafetyOutlined />
-                </template>
-              </a-input-password>
-            </a-form-item>
-            <template #footer>
-              <div style="display: flex; justify-content: flex-end; margin-top: -5px">
-                <a-button
-                  class="login-mode-btn"
-                  type="text"
-                  @click="changeToLoginMode"
-                >
-                  已有账号
-                </a-button>
-              </div>
-            </template>
-          </msg-code>
-          <a-form
-            v-else
-            :model="registerForm"
-            layout="horizontal"
-            class="register-form"
-            autocomplete="off"
-            @finish="handleRegister"
-          >
-            <a-form-item
-              :rules="[
-                { required: true, message: '请输入用户名!', trigger: 'change' },
-                { validator: userNameValidator, trigger: 'blur' },
-              ]"
-              name="loginId"
-            >
-              <a-input
-                v-model:value="registerForm.loginId"
-                autocomplete="off"
-                name="username-new"
-                placeholder="请输入用户名"
-                readonly
-                size="large"
-                @focus="removeReadonly"
-              >
-                <template #prefix>
-                  <user-outlined />
-                </template>
-              </a-input>
-            </a-form-item>
-            <a-form-item
-              :rules="[{ validator: passwordLoginValidator, trigger: 'change' }]"
-              has-feedback
-              name="password"
-            >
-              <a-input-password
-                v-model:value="registerForm.password"
-                autocomplete="new-password"
-                name="password-new"
-                placeholder="至少8位，需含数字和字母"
-                readonly
-                size="large"
-                type="password"
-                @focus="removeReadonly"
-              >
-                <template #prefix>
-                  <SafetyOutlined />
-                </template>
-              </a-input-password>
-            </a-form-item>
-            <a-form-item
-              :rules="[{ required: true, message: '请输入验证码' }]"
-              name="captcha"
-            >
-              <a-input
-                v-model:value="registerForm.captcha"
-                :maxlength="4"
-                autocomplete="off"
-                placeholder="验证码"
-                size="large"
-              >
-                <template #suffix>
-                  <img
-                    :height="40"
-                    :src="captchaUrl"
-                    alt="验证码"
-                    class="absolute right-0 h-full cursor-pointer"
-                    @click="updateCaptchaUrl('REGISTER_CAPTCHA')"
-                  />
-                </template>
-              </a-input>
-            </a-form-item>
-            <a-form-item>
-              <a-button
-                :loading="loading"
-                block
-                html-type="submit"
-                size="large"
-                class="register-submit-btn"
-                type="primary"
-              >
-                注册并登录
-              </a-button>
-            </a-form-item>
-          </a-form>
-          <div class="login-footer-links">
-            <a-button
-              class="login-mode-btn"
-              type="text"
-              @click="changeToLoginMode"
-            >
-              已有账号
-            </a-button>
-          </div>
-        </div>
+        <!-- 手机号注册 -->
+        <phone-register-form
+          v-if="registerWithPhoneNumber"
+          @submit="handleMsgRegister"
+          @to-login="changeToLoginMode"
+        />
+        <!-- 账号密码注册 -->
+        <account-register-form
+          v-else
+          :captcha-url="registerCaptchaUrl"
+          :loading="loading"
+          @submit="handleRegister"
+          @update-captcha="updateCaptchaUrl"
+          @to-login="changeToLoginMode"
+        />
       </template>
+
+      <!-- 登录页面 -->
       <div
         v-else
         class="login-content-wrapper"
@@ -271,93 +54,21 @@
             key="1"
             tab="账号登录"
           >
-            <a-form
-              :model="formInline"
-              layout="horizontal"
-              autocomplete="off"
-              @finish="handleSubmit"
-            >
-              <a-form-item
-                :rules="[{ required: true, message: '请输入用户名!', trigger: 'change' }]"
-                name="userName"
-              >
-                <a-input
-                  v-model:value="formInline.userName"
-                  autocomplete="off"
-                  name="username-login"
-                  placeholder="用户名"
-                  size="large"
-                >
-                  <template #prefix>
-                    <user-outlined />
-                  </template>
-                </a-input>
-              </a-form-item>
-              <a-form-item
-                :rules="[{ required: true, message: '请输入密码!', trigger: 'change' }]"
-                name="password"
-              >
-                <a-input-password
-                  v-model:value="formInline.password"
-                  autocomplete="new-password"
-                  name="password-login"
-                  placeholder="密码"
-                  size="large"
-                  type="password"
-                >
-                  <template #prefix>
-                    <lock-outlined />
-                  </template>
-                </a-input-password>
-              </a-form-item>
-              <a-form-item
-                :rules="[{ required: true, message: '请输入验证码!', trigger: 'change' }]"
-                name="captcha"
-              >
-                <a-input
-                  v-model:value="formInline.captcha"
-                  :maxlength="4"
-                  autocomplete="off"
-                  placeholder="验证码"
-                  size="large"
-                >
-                  <template #prefix>
-                    <SafetyOutlined />
-                  </template>
-                  <template #suffix>
-                    <img
-                      :height="40"
-                      :src="captchaUrl"
-                      alt="验证码"
-                      class="absolute right-0 h-full cursor-pointer"
-                      @click="updateCaptchaUrl('LOGIN_CAPTCHA')"
-                    />
-                  </template>
-                </a-input>
-              </a-form-item>
-              <a-form-item>
-                <a-button
-                  :loading="loading"
-                  block
-                  html-type="submit"
-                  size="large"
-                  type="primary"
-                >
-                  登录
-                </a-button>
-              </a-form-item>
-            </a-form>
+            <account-login-form
+              :captcha-url="loginCaptchaUrl"
+              :loading="loading"
+              @submit="handleAccountLogin"
+              @update-captcha="updateCaptchaUrl"
+            />
           </a-tab-pane>
           <a-tab-pane
+            v-if="registerWithPhoneNumber"
             key="2"
             tab="手机登录"
           >
-            <msg-code
-              :key="msgCodeKey"
-              v-model:form-data="msgLoginForm"
-              :finish="handleMsgLogin"
-              :phone-number-existed="registerWithPhoneNumber ? undefined : true"
-              sms-type="LOGIN_MSG_CODE"
+            <phone-login-form
+              :msg-code-key="msgCodeKey"
+              @submit="handleMsgLogin"
             />
           </a-tab-pane>
         </a-tabs>
@@ -365,79 +76,96 @@
           <a-button
             class="login-mode-btn"
             type="text"
-            @click="
-              () => {
-                registerMode = true;
-                updateCaptchaUrl('REGISTER_CAPTCHA');
-              }
-            "
+            @click="registerMode = true"
           >
             还没有账号
           </a-button>
         </div>
       </div>
     </div>
+
+    <!-- 密码过期模态框 -->
+    <password-expired-modal
+      v-model="passwordExpiredModalVisible"
+      :captcha-url="passwordChangeCaptchaUrl"
+      :loading="loading"
+      @submit="handlePasswordExpired"
+      @update-captcha="updateCaptchaUrl"
+    />
+
     <copyright-icp />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { Md5 } from 'ts-md5'
-import { reactive, Ref } from 'vue'
+import { onBeforeMount, onMounted, reactive, Ref, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { userAlreadyExisted } from '@/framework/apis/admin/user'
 import {
+  changePasswordAndLogin,
   getToken,
   initPasswordAndLogin,
   login,
   msgCodeLogin,
   msgCodeRegister,
-  passwordRegister,
+  passwordRegister
 } from '@/framework/apis/login/login'
 import CopyrightIcp from '@/framework/components/common/copyrightIcp/index.vue'
-import MsgCode from '@/framework/components/common/msgCode/index.vue'
 import { checkLoginState } from '@/framework/network/login'
 import { baseURL } from '@/framework/network/request'
 import { parameterStore } from '@/framework/store/common'
 import { localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
 
+// 导入新的组件
+import AccountLoginForm from './components/AccountLoginForm.vue'
+import AccountRegisterForm from './components/AccountRegisterForm.vue'
+import PasswordExpiredModal from './components/PasswordExpiredForm.vue'
+import PasswordResetForm from './components/PasswordResetForm.vue'
+import PhoneLoginForm from './components/PhoneLoginForm.vue'
+import PhoneRegisterForm from './components/PhoneRegisterForm.vue'
+
 const activeKey = ref('1')
 
 const title: Ref<string> = ref(document.title)
 const router = useRouter()
-let captchaUrl: Ref<string> = ref('')
-let loading: Ref<boolean> = ref(false)
+const loading: Ref<boolean> = ref(false)
 const formInline = reactive({ userName: '', password: '', captcha: '' })
 const passwordResetMode: Ref<Boolean> = ref(false)
-const passwordResetForm = reactive({ password: '', passwordConfirm: '', captcha: '' })
 const registerMode: Ref<Boolean> = ref(false)
-let registerForm = reactive({
-  phoneNumber: '',
-  msgCode: '',
-  captcha: '',
-  loginId: '',
-  password: '',
-})
 const registerWithPhoneNumber: Ref<boolean> = ref(false)
-let msgLoginForm = reactive({ phoneNumber: '', msgCode: '', captcha: '' })
 const msgCodeKey = ref(0)
-const getCaptchaUrl = (captchaType: string) =>
-  baseURL +
-  '/captcha.jpg?token=' +
-  localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN) +
-  '&captchaType=' +
-  captchaType
-const updateCaptchaUrl = (captchaType: string) =>
-  (captchaUrl.value = getCaptchaUrl(captchaType) + '&r=' + Math.random())
+const passwordExpiredModalVisible = ref(false)
 
-// 移除 readonly 属性以阻止浏览器自动填充
-const removeReadonly = (event: FocusEvent) => {
-  const target = event.target as HTMLInputElement
-  if (target) {
-    target.removeAttribute('readonly')
+// 为不同场景创建独立的验证码URL
+const loginCaptchaUrl: Ref<string> = ref('')
+const registerCaptchaUrl: Ref<string> = ref('')
+const initPasswordCaptchaUrl: Ref<string> = ref('')
+const passwordChangeCaptchaUrl: Ref<string> = ref('')
+
+const getCaptchaUrl = (captchaType: string) =>
+    baseURL +
+    '/captcha.jpg?token=' +
+    localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN) +
+    '&captchaType=' +
+    captchaType
+
+const updateCaptchaUrl = (captchaType: string) => {
+  const url = getCaptchaUrl(captchaType) + '&r=' + Math.random()
+  switch (captchaType) {
+    case 'LOGIN_CAPTCHA':
+      loginCaptchaUrl.value = url
+      break
+    case 'REGISTER_CAPTCHA':
+      registerCaptchaUrl.value = url
+      break
+    case 'INIT_PASSWORD_CAPTCHA':
+      initPasswordCaptchaUrl.value = url
+      break
+    case 'PASSWORD_CHANGE_CAPTCHA':
+      passwordChangeCaptchaUrl.value = url
+      break
   }
 }
 
@@ -447,18 +175,10 @@ const recoveryFun = (captchaType: string) => {
   loading.value = false
 }
 
-const userNameValidator = () => {
-  if (isNotEmpty(registerForm.loginId)) {
-    return userAlreadyExisted(
-      undefined,
-      undefined,
-      registerForm.loginId,
-      undefined,
-      undefined
-    )
-  } else {
-    return Promise.reject('请输入用户名!')
-  }
+// 账号登录处理
+const handleAccountLogin = (data: { userName: string; password: string; captcha: string }) => {
+  Object.assign(formInline, data)
+  handleSubmit()
 }
 
 const handleSubmit = () => {
@@ -466,57 +186,64 @@ const handleSubmit = () => {
   let captchaType = 'LOGIN_CAPTCHA'
   loading.value = true
   login(captcha, userName, Md5.hashStr(password))
-    .then((res) => {
-      afterLogin(res)
-    })
-    .catch((err) => {
-      if (err.message === 'AC_PASSWORD_NOT_EXISTED') {
-        passwordResetMode.value = true
-        title.value = '首次登录-设置密码'
-        captchaType = 'INIT_PASSWORD_CAPTCHA'
-      }
-      recoveryFun(captchaType)
-    })
+      .then((res) => {
+        afterLogin(res)
+      })
+      .catch((err) => {
+        if (err.message === 'AC_PASSWORD_NOT_EXISTED') {
+          passwordResetMode.value = true
+          title.value = '首次登录-设置密码'
+          captchaType = 'INIT_PASSWORD_CAPTCHA'
+        } else if (err.message === 'AC_PASSWORD_EXPIRED') {
+          // 密码已过期，弹出修改密码模态框
+          passwordExpiredModalVisible.value = true
+          updateCaptchaUrl('PASSWORD_CHANGE_CAPTCHA')
+        }
+        recoveryFun(captchaType)
+      })
 }
-const handleRegister = () => {
-  const { loginId, password, captcha } = registerForm
+const handleRegister = (data: { loginId: string; password: string; captcha: string }) => {
+  const { loginId, password, captcha } = data
   loading.value = true
   return passwordRegister(captcha, loginId, Md5.hashStr(password))
-    .then((res) => {
-      afterLogin(res)
-    })
-    .catch(() => {
-      recoveryFun('LOGIN_CAPTCHA')
-    })
+      .then((res) => {
+        afterLogin(res)
+      })
+      .catch(() => {
+        recoveryFun('LOGIN_CAPTCHA')
+      })
 }
+
 const handleMsgRegister = (data: any) => {
   loading.value = true
   return msgCodeRegister(data)
-    .then((res) => {
-      afterLogin(res)
-    })
-    .catch(() => {
-      recoveryFun('LOGIN_CAPTCHA')
-    })
+      .then((res) => {
+        afterLogin(res)
+      })
+      .catch(() => {
+        recoveryFun('LOGIN_CAPTCHA')
+      })
 }
+
 const handleMsgLogin = (data: any) => {
   loading.value = true
   return msgCodeLogin(data.phoneNumber, data.msgCode)
-    .then((res) => {
-      afterLogin(res)
-    })
-    .catch(() => {
-      msgCodeKey.value = msgCodeKey.value + 1
-    })
+      .then((res) => {
+        afterLogin(res)
+      })
+      .catch(() => {
+        msgCodeKey.value = msgCodeKey.value + 1
+        loading.value = false
+      })
 }
 
 const afterLogin = (res: any) => {
   const route = router.currentRoute.value
   const redirect_uri = route.query
-    ? route.query.redirect_uri
-      ? '/' + route.query.redirect_uri
+      ? route.query.redirect_uri
+          ? '/' + route.query.redirect_uri
+          : undefined
       : undefined
-    : undefined
 
   // 创建现代化成功提示
   const successElement = document.createElement('div')
@@ -656,7 +383,7 @@ const afterLogin = (res: any) => {
   setTimeout(() => {
     if (successElement.parentNode) {
       successElement.style.animation =
-        'successSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) reverse'
+          'successSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) reverse'
       setTimeout(() => {
         if (successElement.parentNode) {
           document.body.removeChild(successElement)
@@ -667,106 +394,48 @@ const afterLogin = (res: any) => {
         // 确保提示完全消失后再进行页面跳转
         setTimeout(() => {
           checkLoginState()
-            .then(() => {
-              router.replace(redirect_uri || '/')
-            })
-            .catch(() => {
-              // 如果登录状态检查失败，直接跳转
-              router.replace(redirect_uri || '/')
-            })
+              .then(() => {
+                router.replace(redirect_uri || '/')
+              })
+              .catch(() => {
+                // 如果登录状态检查失败，直接跳转
+                router.replace(redirect_uri || '/')
+              })
         }, 100)
       }, 400)
     } else {
       // 如果元素已经被移除，直接跳转
       setTimeout(() => {
         checkLoginState()
-          .then(() => {
-            router.replace(redirect_uri || '/')
-          })
-          .catch(() => {
-            router.replace(redirect_uri || '/')
-          })
+            .then(() => {
+              router.replace(redirect_uri || '/')
+            })
+            .catch(() => {
+              router.replace(redirect_uri || '/')
+            })
       }, 100)
     }
   }, 2500)
 }
 
-const handleInitPassword = () => {
+const handleInitPassword = (data: { password: string; passwordConfirm: string; captcha: string }) => {
   loading.value = true
-  const { password, passwordConfirm, captcha } = passwordResetForm
+  const { password, passwordConfirm, captcha } = data
   const { userName } = formInline
   initPasswordAndLogin(
-    userName,
-    Md5.hashStr(password),
-    Md5.hashStr(passwordConfirm),
-    captcha
+      userName,
+      Md5.hashStr(password),
+      Md5.hashStr(passwordConfirm),
+      captcha
   )
-    .then((res) => {
-      afterLogin(res)
-    })
-    .catch(() => {
-      passwordResetMode.value = false
-      title.value = document.title
-      recoveryFun('LOGIN_CAPTCHA')
-    })
-}
-
-const passwordResetValidator = () => {
-  return lxStr(passwordResetForm.password)
-}
-
-const passwordLoginValidator = () => {
-  return lxStr(registerForm.password)
-}
-
-// 判断密码强度和安全性
-const lxStr = (password: string) => {
-  console.log('lxStr', password)
-  if (isEmpty(password)) {
-    return Promise.reject('请输入密码')
-  }
-
-  // 密码长度至少8位
-  if (password.length < 8) {
-    return Promise.reject('密码长度至少8位')
-  }
-
-  // 检查是否包含数字
-  const hasNumber = /[0-9]/.test(password)
-  // 检查是否包含字母
-  const hasLetter = /[a-zA-Z]/.test(password)
-
-  // 必须同时包含数字和字母
-  if (!hasNumber || !hasLetter) {
-    return Promise.reject('密码必须包含数字和字母')
-  }
-
-  // 检查是否有3位相同的字符
-  let arr = password.split('')
-  for (let i = 0; i < arr.length - 2; i++) {
-    if (arr[i] === arr[i + 1] && arr[i + 1] === arr[i + 2]) {
-      return Promise.reject('密码不能包含3位相同的字符')
-    }
-  }
-
-  // 检查是否有3位连续的数字或字母
-  for (let i = 0; i < arr.length - 2; i++) {
-    let firstCode = arr[i].charCodeAt(0)
-    let secondCode = arr[i + 1].charCodeAt(0)
-    let thirdCode = arr[i + 2].charCodeAt(0)
-
-    // 检查递增连续（如123, abc）
-    if (secondCode - firstCode === 1 && thirdCode - secondCode === 1) {
-      return Promise.reject('密码不能包含3位连续的字符')
-    }
-
-    // 检查递减连续（如321, cba）
-    if (firstCode - secondCode === 1 && secondCode - thirdCode === 1) {
-      return Promise.reject('密码不能包含3位连续的字符')
-    }
-  }
-
-  return Promise.resolve()
+      .then((res) => {
+        afterLogin(res)
+      })
+      .catch(() => {
+        passwordResetMode.value = false
+        title.value = document.title
+        recoveryFun('LOGIN_CAPTCHA')
+      })
 }
 
 const changeToLoginMode = () => {
@@ -774,19 +443,48 @@ const changeToLoginMode = () => {
   updateCaptchaUrl('LOGIN_CAPTCHA')
 }
 
+// 处理密码过期的函数
+const handlePasswordExpired = (data: { password: string; passwordConfirm: string; captcha: string }) => {
+  loading.value = true
+  const { password, passwordConfirm, captcha } = data
+  const { userName, password: oldPassword } = formInline
+
+  // 调用 changePasswordAndLogin 接口,使用登录时填写的原密码
+  changePasswordAndLogin(
+      userName,
+      Md5.hashStr(oldPassword),
+      Md5.hashStr(password),
+      Md5.hashStr(passwordConfirm),
+      captcha
+  )
+      .then((res) => {
+        // 密码修改成功后直接登录
+        passwordExpiredModalVisible.value = false
+        afterLogin(res)
+      })
+      .catch(() => {
+        loading.value = false
+        updateCaptchaUrl('PASSWORD_CHANGE_CAPTCHA')
+      })
+}
+
 onBeforeMount(() =>
-  getToken().then((res) => {
-    const { token } = res.payload
-    localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
-    updateCaptchaUrl('LOGIN_CAPTCHA')
-  })
+    getToken().then((res) => {
+      const { token } = res.payload
+      localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
+      // 初始化所有场景的验证码
+      updateCaptchaUrl('LOGIN_CAPTCHA')
+      updateCaptchaUrl('REGISTER_CAPTCHA')
+      updateCaptchaUrl('INIT_PASSWORD_CAPTCHA')
+      updateCaptchaUrl('PASSWORD_CHANGE_CAPTCHA')
+    })
 )
 onMounted(() => {
   parameterStore()
-    .getParameter('PHONE_NUMBER_REGISTER')
-    .then((resp) => {
-      registerWithPhoneNumber.value = resp === '1'
-    })
+      .getParameter('PHONE_NUMBER_REGISTER')
+      .then((resp) => {
+        registerWithPhoneNumber.value = resp === '1'
+      })
 })
 </script>
 
@@ -807,14 +505,12 @@ onMounted(() => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-      135deg,
-      rgba(0, 30, 60, 0.15) 0%,
-      rgba(20, 40, 80, 0.12) 25%,
-      rgba(10, 35, 70, 0.18) 50%,
-      rgba(25, 45, 85, 0.1) 75%,
-      rgba(5, 25, 55, 0.2) 100%
-    );
+    background: linear-gradient(135deg,
+    rgba(0, 30, 60, 0.15) 0%,
+    rgba(20, 40, 80, 0.12) 25%,
+    rgba(10, 35, 70, 0.18) 50%,
+    rgba(25, 45, 85, 0.1) 75%,
+    rgba(5, 25, 55, 0.2) 100%);
     animation: subtleGlow 12s ease-in-out infinite alternate;
     z-index: -3; // 确保在最底层
     pointer-events: none; // 禁止鼠标事件
@@ -827,13 +523,11 @@ onMounted(() => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(
-        circle at 30% 30%,
-        rgba(100, 255, 218, 0.03) 0%,
-        transparent 50%
-      ),
-      radial-gradient(circle at 70% 70%, rgba(0, 191, 255, 0.02) 0%, transparent 50%),
-      radial-gradient(circle at 50% 20%, rgba(64, 224, 208, 0.04) 0%, transparent 60%);
+    background: radial-gradient(circle at 30% 30%,
+    rgba(100, 255, 218, 0.03) 0%,
+    transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(0, 191, 255, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 50% 20%, rgba(64, 224, 208, 0.04) 0%, transparent 60%);
     z-index: -2; // 确保在底层
     pointer-events: none; // 禁止鼠标事件
   }
@@ -841,24 +535,20 @@ onMounted(() => {
 
 @keyframes subtleGlow {
   0% {
-    background: linear-gradient(
-      135deg,
-      rgba(0, 30, 60, 0.15) 0%,
-      rgba(20, 40, 80, 0.12) 25%,
-      rgba(10, 35, 70, 0.18) 50%,
-      rgba(25, 45, 85, 0.1) 75%,
-      rgba(5, 25, 55, 0.2) 100%
-    );
+    background: linear-gradient(135deg,
+    rgba(0, 30, 60, 0.15) 0%,
+    rgba(20, 40, 80, 0.12) 25%,
+    rgba(10, 35, 70, 0.18) 50%,
+    rgba(25, 45, 85, 0.1) 75%,
+    rgba(5, 25, 55, 0.2) 100%);
   }
   100% {
-    background: linear-gradient(
-      135deg,
-      rgba(5, 35, 65, 0.18) 0%,
-      rgba(15, 35, 75, 0.15) 25%,
-      rgba(8, 30, 65, 0.2) 50%,
-      rgba(20, 40, 80, 0.12) 75%,
-      rgba(0, 28, 58, 0.22) 100%
-    );
+    background: linear-gradient(135deg,
+    rgba(5, 35, 65, 0.18) 0%,
+    rgba(15, 35, 75, 0.15) 25%,
+    rgba(8, 30, 65, 0.2) 50%,
+    rgba(20, 40, 80, 0.12) 75%,
+    rgba(0, 28, 58, 0.22) 100%);
   }
 }
 
@@ -900,24 +590,19 @@ onMounted(() => {
     min-height: 480px;
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    background: linear-gradient(
-      145deg,
-      rgba(30, 45, 70, 0.85) 0%,
-      rgba(40, 55, 80, 0.8) 50%,
-      rgba(35, 50, 75, 0.82) 100%
-    );
+    background: linear-gradient(145deg,
+    rgba(30, 45, 70, 0.85) 0%,
+    rgba(40, 55, 80, 0.8) 50%,
+    rgba(35, 50, 75, 0.82) 100%);
     border: 2px solid;
-    border-image: linear-gradient(
-        145deg,
-        rgba(255, 180, 120, 0.6) 0%,
-        rgba(255, 200, 140, 0.4) 25%,
-        rgba(255, 220, 160, 0.3) 50%,
-        rgba(255, 200, 140, 0.4) 75%,
-        rgba(255, 180, 120, 0.6) 100%
-      )
-      1;
+    border-image: linear-gradient(145deg,
+    rgba(255, 180, 120, 0.6) 0%,
+    rgba(255, 200, 140, 0.4) 25%,
+    rgba(255, 220, 160, 0.3) 50%,
+    rgba(255, 200, 140, 0.4) 75%,
+    rgba(255, 180, 120, 0.6) 100%) 1;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 180, 120, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(255, 180, 120, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(255, 180, 120, 0.3);
     border-radius: 20px;
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -930,14 +615,12 @@ onMounted(() => {
       left: -2px;
       right: -2px;
       bottom: -2px;
-      background: linear-gradient(
-        45deg,
-        rgba(255, 180, 120, 0.8) 0%,
-        rgba(255, 200, 140, 0.6) 25%,
-        rgba(255, 220, 160, 0.4) 50%,
-        rgba(255, 200, 140, 0.6) 75%,
-        rgba(255, 180, 120, 0.8) 100%
-      );
+      background: linear-gradient(45deg,
+      rgba(255, 180, 120, 0.8) 0%,
+      rgba(255, 200, 140, 0.6) 25%,
+      rgba(255, 220, 160, 0.4) 50%,
+      rgba(255, 200, 140, 0.6) 75%,
+      rgba(255, 180, 120, 0.8) 100%);
       border-radius: 22px;
       z-index: -2;
       animation: borderGlow 3s ease-in-out infinite alternate;
@@ -947,7 +630,7 @@ onMounted(() => {
     &:hover {
       transform: translateY(-5px) scale(1.01);
       box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5), 0 0 50px rgba(255, 180, 120, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 180, 120, 0.5);
+      inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 180, 120, 0.5);
     }
 
     // 确保登录和注册页面容器高度一致
@@ -993,12 +676,10 @@ onMounted(() => {
     margin-bottom: 20px;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(
-      135deg,
-      rgba(20, 35, 60, 0.9) 0%,
-      rgba(30, 45, 70, 0.85) 50%,
-      rgba(25, 40, 65, 0.88) 100%
-    );
+    background: linear-gradient(135deg,
+    rgba(20, 35, 60, 0.9) 0%,
+    rgba(30, 45, 70, 0.85) 50%,
+    rgba(25, 40, 65, 0.88) 100%);
     padding: 1.5rem;
     position: relative;
     backdrop-filter: blur(20px);
@@ -1011,14 +692,12 @@ onMounted(() => {
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 180, 120, 0.15) 25%,
-        rgba(255, 200, 140, 0.2) 50%,
-        rgba(255, 180, 120, 0.15) 75%,
-        transparent 100%
-      );
+      background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 180, 120, 0.15) 25%,
+      rgba(255, 200, 140, 0.2) 50%,
+      rgba(255, 180, 120, 0.15) 75%,
+      transparent 100%);
       animation: scanLine 4s linear infinite;
       z-index: -1; // 确保在底层
       pointer-events: none; // 禁止鼠标事件
@@ -1031,14 +710,12 @@ onMounted(() => {
       left: 20%;
       right: 20%;
       height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 180, 120, 0.9),
-        rgba(255, 200, 140, 1),
-        rgba(255, 180, 120, 0.9),
-        transparent
-      );
+      background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 180, 120, 0.9),
+      rgba(255, 200, 140, 1),
+      rgba(255, 180, 120, 0.9),
+      transparent);
       box-shadow: 0 0 10px rgba(255, 180, 120, 0.6);
       z-index: 1;
       pointer-events: none; // 禁止鼠标事件
@@ -1051,16 +728,14 @@ onMounted(() => {
 
     .logo-img {
       margin-top: 8px;
-      filter: drop-shadow(0 0 15px rgba(0, 191, 255, 0.8))
-        drop-shadow(0 0 25px rgba(0, 255, 255, 0.4));
+      filter: drop-shadow(0 0 15px rgba(0, 191, 255, 0.8)) drop-shadow(0 0 25px rgba(0, 255, 255, 0.4));
       transition: all 0.4s ease;
       position: relative;
       z-index: 2;
 
       &:hover {
         transform: scale(1.1) rotate(5deg);
-        filter: drop-shadow(0 0 20px rgba(0, 191, 255, 1))
-          drop-shadow(0 0 30px rgba(0, 255, 255, 0.6));
+        filter: drop-shadow(0 0 20px rgba(0, 191, 255, 1)) drop-shadow(0 0 30px rgba(0, 255, 255, 0.6));
       }
 
       @media (max-width: 480px) {
@@ -1077,7 +752,7 @@ onMounted(() => {
       font-weight: 700;
       color: #ffffff;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 180, 120, 0.3),
-        0 1px 3px rgba(0, 0, 0, 0.9);
+      0 1px 3px rgba(0, 0, 0, 0.9);
       letter-spacing: 1px;
       position: relative;
       z-index: 2;
@@ -1265,11 +940,9 @@ onMounted(() => {
     height: 48px;
     border-radius: 12px;
     border: 1px solid rgba(255, 180, 120, 0.4);
-    background: linear-gradient(
-      145deg,
-      rgba(25, 40, 65, 0.9) 0%,
-      rgba(30, 45, 70, 0.85) 100%
-    );
+    background: linear-gradient(145deg,
+    rgba(25, 40, 65, 0.9) 0%,
+    rgba(30, 45, 70, 0.85) 100%);
     backdrop-filter: blur(15px);
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -1284,14 +957,12 @@ onMounted(() => {
       bottom: 0;
       border-radius: 12px;
       padding: 1px;
-      background: linear-gradient(
-        45deg,
-        rgba(255, 180, 120, 0.6),
-        rgba(255, 200, 140, 0.4),
-        rgba(255, 220, 160, 0.3),
-        rgba(255, 200, 140, 0.4),
-        rgba(255, 180, 120, 0.6)
-      );
+      background: linear-gradient(45deg,
+      rgba(255, 180, 120, 0.6),
+      rgba(255, 200, 140, 0.4),
+      rgba(255, 220, 160, 0.3),
+      rgba(255, 200, 140, 0.4),
+      rgba(255, 180, 120, 0.6));
       mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       mask-composite: subtract;
       opacity: 0;
@@ -1345,13 +1016,11 @@ onMounted(() => {
 
     &:hover {
       border-color: rgba(255, 180, 120, 0.6);
-      background: linear-gradient(
-        145deg,
-        rgba(30, 45, 75, 0.95) 0%,
-        rgba(35, 50, 80, 0.9) 100%
-      );
+      background: linear-gradient(145deg,
+      rgba(30, 45, 75, 0.95) 0%,
+      rgba(35, 50, 80, 0.9) 100%);
       box-shadow: inset 0 1px 0 rgba(255, 180, 120, 0.25),
-        0 2px 12px rgba(255, 180, 120, 0.12), 0 1px 6px rgba(0, 0, 0, 0.4);
+      0 2px 12px rgba(255, 180, 120, 0.12), 0 1px 6px rgba(0, 0, 0, 0.4);
 
       &::before {
         opacity: 1;
@@ -1365,13 +1034,11 @@ onMounted(() => {
 
     &:focus-within {
       border-color: rgba(255, 180, 120, 0.8);
-      background: linear-gradient(
-        145deg,
-        rgba(35, 50, 85, 0.95) 0%,
-        rgba(40, 55, 90, 0.9) 100%
-      );
+      background: linear-gradient(145deg,
+      rgba(35, 50, 85, 0.95) 0%,
+      rgba(40, 55, 90, 0.9) 100%);
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 20px rgba(255, 180, 120, 0.2),
-        0 2px 12px rgba(0, 0, 0, 0.5);
+      0 2px 12px rgba(0, 0, 0, 0.5);
       transform: translateY(1px);
 
       &::before {
@@ -1388,7 +1055,7 @@ onMounted(() => {
     &.ant-input-affix-wrapper-focused {
       border-color: rgba(100, 255, 218, 0.8) !important;
       box-shadow: inset 0 1px 0 rgba(100, 255, 218, 0.3),
-        0 0 25px rgba(100, 255, 218, 0.2), 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+      0 0 25px rgba(100, 255, 218, 0.2), 0 4px 20px rgba(0, 0, 0, 0.5) !important;
     }
 
     @media (max-width: 480px) {
@@ -1403,11 +1070,9 @@ onMounted(() => {
     height: 48px !important;
     border-radius: 12px !important;
     border: 1px solid rgba(100, 255, 218, 0.3) !important;
-    background: linear-gradient(
-      145deg,
-      rgba(10, 25, 47, 0.95) 0%,
-      rgba(15, 30, 55, 0.9) 100%
-    ) !important;
+    background: linear-gradient(145deg,
+    rgba(10, 25, 47, 0.95) 0%,
+    rgba(15, 30, 55, 0.9) 100%) !important;
     backdrop-filter: blur(15px) !important;
     box-shadow: inset 0 1px 0 rgba(100, 255, 218, 0.1), 0 2px 10px rgba(0, 0, 0, 0.3) !important;
     padding: 0 16px !important;
@@ -1460,24 +1125,20 @@ onMounted(() => {
 
     &:hover {
       border-color: rgba(100, 255, 218, 0.5) !important;
-      background: linear-gradient(
-        145deg,
-        rgba(15, 30, 60, 0.98) 0%,
-        rgba(20, 35, 65, 0.95) 100%
-      ) !important;
+      background: linear-gradient(145deg,
+      rgba(15, 30, 60, 0.98) 0%,
+      rgba(20, 35, 65, 0.95) 100%) !important;
       box-shadow: inset 0 1px 0 rgba(100, 255, 218, 0.2),
-        0 2px 12px rgba(100, 255, 218, 0.08), 0 1px 6px rgba(0, 0, 0, 0.4) !important;
+      0 2px 12px rgba(100, 255, 218, 0.08), 0 1px 6px rgba(0, 0, 0, 0.4) !important;
     }
 
     &:focus-within {
       border-color: rgba(100, 255, 218, 0.8) !important;
-      background: linear-gradient(
-        145deg,
-        rgba(20, 35, 70, 0.98) 0%,
-        rgba(25, 40, 75, 0.95) 100%
-      ) !important;
+      background: linear-gradient(145deg,
+      rgba(20, 35, 70, 0.98) 0%,
+      rgba(25, 40, 75, 0.95) 100%) !important;
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 20px rgba(100, 255, 218, 0.15),
-        0 2px 12px rgba(0, 0, 0, 0.5) !important;
+      0 2px 12px rgba(0, 0, 0, 0.5) !important;
       transform: translateY(1px) !important;
     }
 
@@ -1511,12 +1172,10 @@ onMounted(() => {
     font-size: 16px;
     font-weight: 600;
     border: 1px solid rgba(0, 191, 255, 0.6);
-    background: linear-gradient(
-      145deg,
-      rgba(0, 100, 200, 0.9) 0%,
-      rgba(0, 150, 255, 0.8) 50%,
-      rgba(0, 120, 220, 0.9) 100%
-    );
+    background: linear-gradient(145deg,
+    rgba(0, 100, 200, 0.9) 0%,
+    rgba(0, 150, 255, 0.8) 50%,
+    rgba(0, 120, 220, 0.9) 100%);
     color: #ffffff;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     box-shadow: 0 4px 15px rgba(0, 191, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -1531,25 +1190,21 @@ onMounted(() => {
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-      );
+      background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent);
       transition: left 0.5s ease;
     }
 
     &:hover {
       border-color: rgba(0, 255, 255, 0.8);
-      background: linear-gradient(
-        145deg,
-        rgba(0, 120, 240, 0.95) 0%,
-        rgba(0, 180, 255, 0.9) 50%,
-        rgba(0, 140, 250, 0.95) 100%
-      );
+      background: linear-gradient(145deg,
+      rgba(0, 120, 240, 0.95) 0%,
+      rgba(0, 180, 255, 0.9) 50%,
+      rgba(0, 140, 250, 0.95) 100%);
       box-shadow: 0 6px 20px rgba(0, 191, 255, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 25px rgba(0, 255, 255, 0.25);
+      inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 25px rgba(0, 255, 255, 0.25);
 
       &::before {
         left: 100%;
@@ -1611,18 +1266,16 @@ onMounted(() => {
     }
 
     .ant-tabs-ink-bar {
-      background: linear-gradient(
-        90deg,
-        rgba(0, 255, 255, 0.8),
-        rgba(0, 191, 255, 1),
-        rgba(0, 255, 255, 0.8)
-      );
+      background: linear-gradient(90deg,
+      rgba(0, 255, 255, 0.8),
+      rgba(0, 191, 255, 1),
+      rgba(0, 255, 255, 0.8));
       height: 3px;
       border-radius: 2px;
       box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
       z-index: 11;
     }
-    
+
     // tabs 内部的表单不需要额外 padding，因为 tabs 已经有 padding
     .ant-form {
       padding: 0 0 25px !important;
@@ -1630,7 +1283,7 @@ onMounted(() => {
 
     @media (max-width: 480px) {
       padding: 0 25px;
-      
+
       .ant-form {
         padding: 0 0 25px !important;
       }
@@ -1647,16 +1300,14 @@ onMounted(() => {
       height: auto !important;
       padding: 8px 16px !important;
       color: #ffffff !important;
-      background: linear-gradient(
-        135deg,
-        rgba(255, 180, 120, 0.15) 0%,
-        rgba(255, 200, 140, 0.1) 50%,
-        rgba(255, 220, 160, 0.15) 100%
-      ) !important;
+      background: linear-gradient(135deg,
+      rgba(255, 180, 120, 0.15) 0%,
+      rgba(255, 200, 140, 0.1) 50%,
+      rgba(255, 220, 160, 0.15) 100%) !important;
       border: 1px solid rgba(255, 180, 120, 0.4) !important;
       border-radius: 8px !important;
       box-shadow: 0 2px 8px rgba(255, 180, 120, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
       font-size: 13px !important;
       font-weight: 500 !important;
       transition: all 0.15s ease !important;
@@ -1665,15 +1316,13 @@ onMounted(() => {
 
       &:hover {
         color: #ffffff !important;
-        background: linear-gradient(
-          135deg,
-          rgba(255, 200, 140, 0.25) 0%,
-          rgba(255, 220, 160, 0.2) 50%,
-          rgba(255, 240, 180, 0.25) 100%
-        ) !important;
+        background: linear-gradient(135deg,
+        rgba(255, 200, 140, 0.25) 0%,
+        rgba(255, 220, 160, 0.2) 50%,
+        rgba(255, 240, 180, 0.25) 100%) !important;
         border-color: rgba(255, 200, 140, 0.6) !important;
         box-shadow: 0 3px 10px rgba(255, 180, 120, 0.25),
-          inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 180, 120, 0.4) !important;
       }
 
@@ -1693,13 +1342,13 @@ onMounted(() => {
       }
     }
   }
-  
+
   // 注册页面标题样式，与登录页面的 tabs 对齐
   .register-header {
     padding: 0 25px;
     margin-bottom: 24px;
     position: relative;
-    
+
     &::after {
       content: '';
       position: absolute;
@@ -1709,7 +1358,7 @@ onMounted(() => {
       height: 1px;
       background: rgba(0, 191, 255, 0.3);
     }
-    
+
     .register-title {
       color: #ffffff;
       font-weight: 600;
@@ -1718,7 +1367,7 @@ onMounted(() => {
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 180, 120, 0.4);
       position: relative;
       display: inline-block;
-      
+
       &::after {
         content: '';
         position: absolute;
@@ -1726,12 +1375,10 @@ onMounted(() => {
         left: 16px;
         right: 16px;
         height: 3px;
-        background: linear-gradient(
-          90deg,
-          rgba(0, 255, 255, 0.8),
-          rgba(0, 191, 255, 1),
-          rgba(0, 255, 255, 0.8)
-        );
+        background: linear-gradient(90deg,
+        rgba(0, 255, 255, 0.8),
+        rgba(0, 191, 255, 1),
+        rgba(0, 255, 255, 0.8));
         border-radius: 2px;
         box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
       }

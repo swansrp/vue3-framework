@@ -24,3 +24,4 @@ export const changePassword = (oldPassword: string, password: string, passwordCo
 export const getMsgCode = (msgCodeType: string, phoneNumber: string, graphCode: string) => request(buildGetApi('/sms'), { phoneNumber, msgCodeType, graphCode }, {}, true, false) as Promise<any>
 
 export const initPasswordAndLogin = (loginId: string, password: string, passwordConfirm: string, graphCode: string) => request(buildPostApi('/login/password/init'), { loginId, password, passwordConfirm, graphCode }, {}, true, false) as Promise<any>
+export const changePasswordAndLogin = (loginId: string, oldPassword: string, password: string, passwordConfirm: string, graphCode: string) => request(buildPostApi('/login/password/change'), { loginId, oldPassword, password, passwordConfirm, graphCode }, {}, true, false) as Promise<any>
