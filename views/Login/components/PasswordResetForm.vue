@@ -99,7 +99,7 @@
 
 <script lang="ts" setup>
 import { reactive } from 'vue'
-import { validatePassword } from '../utils/passwordValidator'
+import { validatePassword } from '../../../utils/passwordValidator'
 
 interface Props {
   captchaUrl: string

@@ -120,8 +120,7 @@
         <a-form-item
           :rules="[
             { required: true, message: '请输入密码' },
-            { message: '5位以上数字和字母', pattern: /^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{5,}$/ },
-            { validator: lxStr, trigger: 'change' }]"
+            { validator: (_rule, value) => validatePassword(value), trigger: 'change' }]"
           has-feedback
           label="输入新密码"
           name="password"
@@ -231,6 +230,7 @@ import { useTabStore } from '@/framework/store/nav'
 import { useUserStore } from '@/framework/store/user'
 import { isNotEmpty, localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
+import { validatePassword } from '@/framework/utils/passwordValidator'
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
@@ -255,27 +255,6 @@ const modifyPassword = () => {
   changePassword(Md5.hashStr(modifyPasswordModal.oldPassword), Md5.hashStr(modifyPasswordModal.password), Md5.hashStr(modifyPasswordModal.passwordConfirm)).then(() => {
     modifyPasswordModal.open = false
   })
-}
-
-// 判断密码是否为连续的数字或字母
-const lxStr = () => {
-  const { password } = modifyPasswordModal
-  let arr = password.split('')
-  for (let i = 1; i < arr.length - 1; i++) {
-    let firstIndex = arr[i - 1].charCodeAt(0)
-    let secondIndex = arr[i].charCodeAt(0)
-    let thirdIndex = arr[i + 1].charCodeAt(0)
-    if ((thirdIndex === secondIndex) && (secondIndex === firstIndex)) {
-      return Promise.reject('3位相同的字母或数字')
-    }
-    if ((thirdIndex - secondIndex === 1) && (secondIndex - firstIndex === 1)) {
-      return Promise.reject('3位连续的字母或数字')
-    }
-    if ((firstIndex - secondIndex === 1) && (secondIndex - thirdIndex === 1)) {
-      return Promise.reject('3位连续的字母或数字')
-    }
-  }
-  return Promise.resolve()
 }
 const handleMenuClick = (e: any) => {
   if (e.key === '1') {

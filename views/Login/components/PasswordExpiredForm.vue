@@ -98,7 +98,7 @@
 
 <script lang="ts" setup>
 import { reactive, computed } from 'vue'
-import { validatePassword } from '../utils/passwordValidator'
+import { validatePassword } from '../../../utils/passwordValidator'
 
 interface Props {
   modelValue: boolean
