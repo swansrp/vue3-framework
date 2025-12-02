@@ -695,7 +695,7 @@ import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
-import { createVNode, Ref, useSlots } from 'vue'
+import { createVNode, nextTick, Ref, useSlots } from 'vue'
 
 import { name } from '@/../package.json'
 import {
@@ -949,6 +949,7 @@ const getTableHeight = () => {
 const updateTableWidthAndHeight = () => {
   console.debug('updateTableWidthAndHeight')
   updateTableSize(root, tableWidth, 10 + (config.treeMenuShow ? 230 : 0), tableHeight, 225)
+  adjustColumnWidths()
 }
 const _updateTableSize = _.debounce(updateTableWidthAndHeight, 200)
 const _statisticButton = ref(false)
@@ -1859,6 +1860,13 @@ const initData = (data: Array<any>) => {
     parsedDataSource.value.push(parsedData)
   }
   onSelectChange([])
+  
+  // 在数据初始化完成后调整列宽度
+  nextTick(() => {
+    setTimeout(() => {
+      adjustColumnWidths()
+    }, 150)
+  })
 }
 const queryDataAsync = async (condition: QueryType) => {
   const resolve = (res: any) => {
@@ -2010,8 +2018,6 @@ const initConfig = async () => {
     summaryColumns.length = 0
     const index = _.cloneDeep(indexColumn)
     index.width = props.indexWidth
-    index.minWidth = props.indexWidth
-    index.maxWidth = props.indexWidth
     index.title = props.indexTitle
     columnArray.value.push(index)
     columnRaw.set(index.dataIndex, _.cloneDeep(index))
@@ -2155,8 +2161,6 @@ const initConfig = async () => {
       if (isNotEmpty(slots.action)) {
         const actionWidth = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         actionColumn.width = actionWidth
-        actionColumn.minWidth = actionWidth
-        actionColumn.maxWidth = actionWidth
         columnArray.value.push(actionColumn)
         columnRaw.set(actionColumn.dataIndex, _.cloneDeep(actionColumn))
       }
@@ -2164,8 +2168,6 @@ const initConfig = async () => {
       if (Number(props.actionWidth) > 0) {
         const actionWidth = Number(props.actionWidth) ? Number(props.actionWidth) : actionColumn.width
         actionColumn.width = actionWidth
-        actionColumn.minWidth = actionWidth
-        actionColumn.maxWidth = actionWidth
         columnArray.value.push(actionColumn)
         columnRaw.set(actionColumn.dataIndex, _.cloneDeep(actionColumn))
       }
@@ -2199,6 +2201,62 @@ const initConfig = async () => {
     config.key = config.key + 1
     console.debug(config, columnArray.value, columns.value, bindTabs.value)
     return await Promise.all(promiseList)
+  })
+}
+/**
+ * 列宽度自动调整函数
+ * 当所有列的宽度总和小于表格宽度时，按比例放大每列的宽度
+ */
+const adjustColumnWidths = () => {
+  // 多次等待确保tableWidth已经被正确计算
+  nextTick(() => {
+    setTimeout(() => {
+      // 获取当前表格的宽度
+      const currentTableWidth = getTableWidth()
+      
+      // 如果tableWidth为AUTO或无效值，不进行调整
+      if (currentTableWidth === AUTO || !currentTableWidth || currentTableWidth <= 0) {
+        console.debug('表格宽度未就绪，跳过列宽度调整', currentTableWidth)
+        return
+      }
+      
+      // 计算所有列的宽度总和（包括有width属性的列）
+      let totalWidth = 0
+      const columnsWithWidth: ColumnType[] = []
+      
+      for (const column of columnArray.value) {
+        if (column.width) {
+          totalWidth += column.width
+          columnsWithWidth.push(column)
+        }
+      }
+      
+      // 如果没有设置width的列，不需要调整
+      if (columnsWithWidth.length === 0) {
+        return
+      }
+      
+      console.debug('列宽度调整：', {
+        currentTableWidth,
+        totalWidth,
+        columnsCount: columnsWithWidth.length
+      })
+      
+      // 如果总宽度小于表格宽度，按比例放大
+      if (totalWidth < currentTableWidth) {
+        const scale = currentTableWidth / totalWidth
+        console.debug(`列宽度总和(${totalWidth})小于表格宽度(${currentTableWidth})，按比例 ${scale.toFixed(2)} 放大`)
+        
+        for (const column of columnsWithWidth) {
+          const originalWidth = column.width
+          const newWidth = Math.floor(column.width * scale)
+          column.width = newWidth
+          console.debug(`调整列 ${column.dataIndex}: ${originalWidth} -> ${newWidth}`)
+        }
+      } else {
+        console.debug('列宽度总和大于或等于表格宽度，不需要调整')
+      }
+    }, 100)
   })
 }
 const syncLocalDb = (column: ColumnType, customerColumns: Map<any, any>, order: number) => {

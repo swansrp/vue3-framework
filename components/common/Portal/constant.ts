@@ -13,8 +13,6 @@ export const indexColumn = {
   resizable: false,
   rowDrag: false,
   width: 80,
-  minWidth: 80,
-  maxWidth: 80,
   filterAble: false,
   sorter: false,
   checked: true,
