@@ -1,9 +1,19 @@
 <template>
-  <div v-if="visible" class="password-expired-overlay">
+  <div
+    v-if="visible"
+    class="password-expired-overlay"
+  >
     <div class="password-expired-container">
       <div class="password-expired-header">
-        <h2 class="password-expired-title">密码已过期，请更换密码</h2>
-        <button class="close-btn" @click="handleCancel">×</button>
+        <h2 class="password-expired-title">
+          密码已过期，请更换密码
+        </h2>
+        <button
+          class="close-btn"
+          @click="handleCancel"
+        >
+          ×
+        </button>
       </div>
       <a-form
         :model="formData"
@@ -98,6 +108,7 @@
 
 <script lang="ts" setup>
 import { reactive, computed } from 'vue'
+
 import { validatePassword } from '../../../utils/passwordValidator'
 
 interface Props {

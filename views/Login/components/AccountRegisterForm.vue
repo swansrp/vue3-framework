@@ -103,9 +103,11 @@
 <script lang="ts" setup>
 import { SafetyOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { reactive } from 'vue'
+
+import { validatePassword } from '../../../utils/passwordValidator'
+
 import { userAlreadyExisted } from '@/framework/apis/admin/user'
 import { isNotEmpty } from '@/framework/utils/common'
-import { validatePassword } from '../../../utils/passwordValidator'
 
 interface Props {
   captchaUrl: string

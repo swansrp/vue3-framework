@@ -102,6 +102,13 @@ import { Md5 } from 'ts-md5'
 import { onBeforeMount, onMounted, reactive, Ref, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AccountLoginForm from './components/AccountLoginForm.vue'
+import AccountRegisterForm from './components/AccountRegisterForm.vue'
+import PasswordExpiredModal from './components/PasswordExpiredForm.vue'
+import PasswordResetForm from './components/PasswordResetForm.vue'
+import PhoneLoginForm from './components/PhoneLoginForm.vue'
+import PhoneRegisterForm from './components/PhoneRegisterForm.vue'
+
 import {
   changePasswordAndLogin,
   getToken,
@@ -119,12 +126,6 @@ import { localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
 
 // 导入新的组件
-import AccountLoginForm from './components/AccountLoginForm.vue'
-import AccountRegisterForm from './components/AccountRegisterForm.vue'
-import PasswordExpiredModal from './components/PasswordExpiredForm.vue'
-import PasswordResetForm from './components/PasswordResetForm.vue'
-import PhoneLoginForm from './components/PhoneLoginForm.vue'
-import PhoneRegisterForm from './components/PhoneRegisterForm.vue'
 
 const activeKey = ref('1')
 

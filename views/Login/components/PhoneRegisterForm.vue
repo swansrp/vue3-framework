@@ -73,10 +73,13 @@
 <script lang="ts" setup>
 import { SafetyOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { reactive } from 'vue'
-import MsgCode from '@/framework/components/common/msgCode/index.vue'
-import { userAlreadyExisted } from '@/framework/apis/admin/user'
-import { isNotEmpty } from '@/framework/utils/common'
+
 import { validatePassword } from '../../../utils/passwordValidator'
+
+import { userAlreadyExisted } from '@/framework/apis/admin/user'
+import MsgCode from '@/framework/components/common/msgCode/index.vue'
+import { isNotEmpty } from '@/framework/utils/common'
+
 
 interface Emits {
   (e: 'submit', data: any): void

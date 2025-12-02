@@ -2,7 +2,9 @@
   <div class="password-reset-overlay">
     <div class="password-reset-container">
       <div class="password-reset-header">
-        <h2 class="password-reset-title">首次登录，请设置密码</h2>
+        <h2 class="password-reset-title">
+          首次登录，请设置密码
+        </h2>
       </div>
       <a-form
         :model="formData"
@@ -99,6 +101,7 @@
 
 <script lang="ts" setup>
 import { reactive } from 'vue'
+
 import { validatePassword } from '../../../utils/passwordValidator'
 
 interface Props {
