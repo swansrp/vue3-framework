@@ -164,7 +164,11 @@ async function eslintOptimize(targetFilesOrDir, rootDir, stagedOnly = false) {
         if (r.output) fixedFiles++
         for (const msg of r.messages) {
             if (msg.ruleId === 'unused-imports/no-unused-imports') removedImports++
-            if (msg.ruleId === 'unused-imports/no-unused-vars') removedVars++
+            if (msg.ruleId === 'unused-imports/no-unused-vars')
+            {
+                console.log(`🔸 ${r.filePath}:${msg.line}:${msg.column} - ${msg.message}`)
+                removedVars++
+            }
         }
     }
 

@@ -298,12 +298,13 @@
       :style="{ top: 0, maxWidth: '100%', paddingBottom: 0 }"
       :body-style="{ height: 'calc(100vh - 110px)', padding: '16px', overflow: 'auto' }"
       :footer="null"
-      :z-index="990"
+      :z-index="999"
       wrap-class-name="fullscreen-modal"
     >
       <portal
         v-if="showDataPreviewDrawer && tableConfig.name"
         :table-id="tableConfig.name"
+        :action-width="0"
       />
     </a-modal>
     <!-- endregion -->

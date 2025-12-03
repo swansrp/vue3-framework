@@ -208,7 +208,7 @@ const log = (...a: Array<any>) => {
 }
 
 const stopTimer = (data: TimerType) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (data.timer != null) {
       window.cancelAnimationFrame(data.timer)
       data.timer = null
@@ -218,7 +218,7 @@ const stopTimer = (data: TimerType) => {
 }
 const startTimer = (data: TimerType, render: Function, immediate = true, replace = true) => {
   data.lastTime = 0
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const animLoop = () => {
       const now = Date.now()
       if (data.lastTime === 0 && !immediate) {

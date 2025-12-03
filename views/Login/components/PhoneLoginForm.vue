@@ -21,7 +21,7 @@ interface Emits {
   (e: 'submit', data: { phoneNumber: string; msgCode: string }): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   msgCodeKey: 0
 })
 

@@ -369,7 +369,7 @@ export const deleteListRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(deleteListApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
+) => request(deleteListApi(type, domain), params, data, showSuccess, showLoading) as Promise<any>
 
 export const updateRequest = (
   type: string,

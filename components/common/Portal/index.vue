@@ -764,6 +764,7 @@ import { AUTO } from '@/framework/utils/constant'
 import { excelExport } from '@/framework/utils/excel'
 
 const __ = getInstance()
+let initFinished = false
 /**
  * @param tableId 表格ID
  * @param multiHeader 是否多重表头
@@ -1398,7 +1399,7 @@ const handleMenuContextView = (recordId: any) => {
 }
 const handleMenuContextAdd = (recordId: any) => {
   if (config.parentKey) {
-    config.modal.data[`${ config.parentKey }`] = recordId
+    config.modal.data[`${config.parentKey}`] = recordId
   }
   addRow()
 }
@@ -1493,19 +1494,19 @@ const addRow = () => {
 
   // 保存已设置的父节点ID（如果存在）
   const existingParentId = config.modal.data?.[config.parentKey]
-  
+
   // 初始化modal.data
   if (props.bindDefaultValue) {
     config.modal.data = { ...props.bindDefaultValue }
   } else {
     config.modal.data = {}
   }
-  
+
   // 恢复父节点ID
   if (existingParentId !== undefined && existingParentId !== null) {
     config.modal.data[config.parentKey] = existingParentId
   }
-  
+
   for (let column of columnArray.value) {
     if (column.addShow && isNotEmpty(column.defaultValue)) {
       config.modal.data[column.dataIndex] = column.defaultValue
@@ -1854,19 +1855,13 @@ const initData = (data: Array<any>) => {
     const parsedData = _.cloneDeep(data[index])
     dataSourceMap.value.set(data[index][config.rowKey], data[index])
     columnArray.value.forEach((column: ColumnType) => {
-      initCellData(Number(index), column.dataIndex, data[index][`${ column.dataIndex }`], data[index][`${ config.rowKey }`])
+      initCellData(Number(index), column.dataIndex, data[index][`${column.dataIndex}`], data[index][`${config.rowKey}`])
       parse(parsedData, Number(index), column, config)
     })
     parsedDataSource.value.push(parsedData)
   }
   onSelectChange([])
-  
-  // 在数据初始化完成后调整列宽度
-  nextTick(() => {
-    setTimeout(() => {
-      adjustColumnWidths()
-    }, 150)
-  })
+  adjustColumnWidths()
 }
 const queryDataAsync = async (condition: QueryType) => {
   const resolve = (res: any) => {
@@ -1874,8 +1869,8 @@ const queryDataAsync = async (condition: QueryType) => {
     const data = []
     for (let record of res.payload.records) {
       for (let dictColumn of dictColumnArray) {
-        if (typeof record[`${ dictColumn.dataIndex }`] === 'number') {
-          record[`${ dictColumn.dataIndex }`] = String(record[`${ dictColumn.dataIndex }`])
+        if (typeof record[`${dictColumn.dataIndex}`] === 'number') {
+          record[`${dictColumn.dataIndex}`] = String(record[`${dictColumn.dataIndex}`])
         }
       }
       if (config.rowKey === AUTO_UUID_ROW_KEY) {
@@ -1989,6 +1984,7 @@ const init = async () => {
   updateTableWidthAndHeight()
   initQueryCondition()
   await initConfig()
+  initFinished = true
   watch(props, (value, old) => {
     if (value.readOnly != old.readOnly) {
       config.readOnly = value.readOnly
@@ -2208,57 +2204,48 @@ const initConfig = async () => {
  * 当所有列的宽度总和小于表格宽度时，按比例放大每列的宽度
  */
 const adjustColumnWidths = () => {
-  // 多次等待确保tableWidth已经被正确计算
-  nextTick(() => {
-    setTimeout(() => {
-      // 获取当前表格的宽度
-      const currentTableWidth = getTableWidth()
-      
-      // 如果tableWidth为AUTO或无效值，不进行调整
-      if (currentTableWidth === AUTO || !currentTableWidth || currentTableWidth <= 0) {
-        console.debug('表格宽度未就绪，跳过列宽度调整', currentTableWidth)
-        return
-      }
-      
-      // 计算所有列的宽度总和（包括有width属性的列）
-      let totalWidth = 0
-      const columnsWithWidth: ColumnType[] = []
-      
-      for (const column of columnArray.value) {
-        if (column.width) {
-          totalWidth += column.width
-          columnsWithWidth.push(column)
-        }
-      }
-      
-      // 如果没有设置width的列，不需要调整
-      if (columnsWithWidth.length === 0) {
-        return
-      }
-      
-      console.debug('列宽度调整：', {
-        currentTableWidth,
-        totalWidth,
-        columnsCount: columnsWithWidth.length
-      })
-      
-      // 如果总宽度小于表格宽度，按比例放大
-      if (totalWidth < currentTableWidth) {
-        const scale = currentTableWidth / totalWidth
-        console.debug(`列宽度总和(${totalWidth})小于表格宽度(${currentTableWidth})，按比例 ${scale.toFixed(2)} 放大`)
-        
-        for (const column of columnsWithWidth) {
-          const originalWidth = column.width
-          const newWidth = Math.floor(column.width * scale)
-          column.width = newWidth
-          console.debug(`调整列 ${column.dataIndex}: ${originalWidth} -> ${newWidth}`)
-        }
-      } else {
-        console.debug('列宽度总和大于或等于表格宽度，不需要调整')
-      }
-    }, 100)
-  })
+  if (!initFinished) {
+    return
+  }
+  // 获取当前表格的宽度
+  const currentTableWidth = getTableWidth()
+
+  // 如果tableWidth为AUTO或无效值，不进行调整
+  if (currentTableWidth === AUTO || !currentTableWidth || currentTableWidth <= 0) {
+    console.debug('表格宽度未就绪，跳过列宽度调整', currentTableWidth)
+    return
+  }
+
+  // 计算所有列的宽度总和（包括有width属性的列）
+  let totalWidth = 0
+  const columnsWithWidth: ColumnType[] = []
+
+  for (const column of columnArray.value.filter(column => column.checked)) {
+    if (column.width) {
+      totalWidth += column.width
+      columnsWithWidth.push(column)
+    }
+  }
+
+  // 如果没有设置width的列，不需要调整
+  if (columnsWithWidth.length === 0) {
+    return
+  }
+
+  // 如果总宽度小于表格宽度，按比例放大
+  if (totalWidth < currentTableWidth) {
+    const scale = currentTableWidth / totalWidth
+    console.debug(`列宽度总和(${totalWidth})小于表格宽度(${currentTableWidth})，按比例 ${scale.toFixed(2)} 放大`)
+
+    for (const column of columnsWithWidth) {
+      const newWidth = Math.floor(column.width * scale)
+      column.width = newWidth
+    }
+  } else {
+    console.debug('列宽度总和大于或等于表格宽度，不需要调整')
+  }
 }
+
 const syncLocalDb = (column: ColumnType, customerColumns: Map<any, any>, order: number) => {
   if (customerColumns) {
     const customerColumn = customerColumns.get(db.getPrimaryKey('portalColumn', column))
@@ -2337,7 +2324,16 @@ onUnmounted(() => {
   bus.off(PORTAL_RESIZE)
 })
 
-defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getConfig, getData, handleMenuContextAdd, addRow })
+defineExpose({
+  queryData,
+  queryTreeData,
+  queryCondition,
+  getRowSelection,
+  getConfig,
+  getData,
+  handleMenuContextAdd,
+  addRow
+})
 </script>
 <style lang="less" scoped>
 // 主要容器样式
@@ -2350,7 +2346,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   height: calc(100vh - 200px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.12);
   }
@@ -2366,7 +2362,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.12);
   margin: 10px 15px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), 0 3px 10px rgba(0, 0, 0, 0.15);
@@ -2377,7 +2373,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   height: calc(100% - 70px);
   display: flex;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  
+
   .menu-tree {
     width: 280px;
     background: linear-gradient(145deg, #ffffff, #f8f9fa);
@@ -2388,7 +2384,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
     position: relative;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     &:hover {
       transform: translateY(-1px);
       box-shadow: 0 5px 16px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.12);
@@ -2489,7 +2485,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   letter-spacing: 0.3px;
   text-align: center;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  
+
   // 移除动画效果，保持静态样式
   &:hover {
     background: #f8fafc !important;
@@ -2525,7 +2521,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   overflow-y: auto;
   padding: 6px 0;
   backdrop-filter: blur(8px);
-  
+
   // 微妙的立体感
   &::before {
     content: '';
@@ -2537,20 +2533,20 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
     background: linear-gradient(90deg, transparent, #f1f5f9, transparent);
     opacity: 0.6;
   }
-  
+
   // 滚动条优化
   &::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 3px;
-    
+
     &:hover {
       background: #94a3b8;
     }
@@ -2588,13 +2584,13 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
     margin: 0;
     border-bottom: 1px solid #f1f5f9;
     position: relative;
-    
+
     // 首个项目的特殊样式
     &:first-child {
       border-top-left-radius: 5px;
       border-top-right-radius: 5px;
     }
-    
+
     // 最后一个项目的特殊样式
     &:last-child {
       border-bottom: none;
@@ -2606,7 +2602,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
       background: #f8fafc;
       color: #1e40af;
       transform: none;
-      
+
       // 微妙的左侧标识
       &::before {
         content: '';
@@ -2625,34 +2621,34 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
       color: #9ca3af;
       cursor: not-allowed;
       opacity: 0.5;
-      
+
       &:hover {
         background: transparent;
         color: #9ca3af;
-        
+
         &::before {
           display: none;
         }
       }
     }
-    
+
     // 复选框和按钮的对齐优化
     .ant-checkbox {
       margin-right: 8px;
-      
+
       .ant-checkbox-inner {
         border-color: #d1d5db;
-        
+
         &:hover {
           border-color: #3b82f6;
         }
       }
     }
-    
+
     .ant-btn {
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
       border-color: #d1d5db;
-      
+
       &:hover {
         border-color: #3b82f6;
         color: #3b82f6;
@@ -2666,7 +2662,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   border-radius: 4px;
   border: 1px solid #e5e7eb;
   transition: all 0.2s ease;
-  
+
   &:focus-within {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -2697,7 +2693,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
   background: linear-gradient(135deg, #cbd5e1, #94a3b8);
   border-radius: 4px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: linear-gradient(135deg, #94a3b8, #64748b);
   }
@@ -2718,7 +2714,7 @@ defineExpose({ queryData, queryTreeData, queryCondition, getRowSelection, getCon
 // 空状态样式
 :deep(.ant-empty) {
   padding: 40px 20px;
-  
+
   .ant-empty-description {
     color: #64748b;
     font-size: 14px;

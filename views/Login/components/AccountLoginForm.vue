@@ -91,7 +91,7 @@ interface Emits {
   (e: 'update-captcha', type: string): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   loading: false
 })
 

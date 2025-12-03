@@ -120,7 +120,7 @@ interface Emits {
   (e: 'to-login'): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   loading: false
 })
 
