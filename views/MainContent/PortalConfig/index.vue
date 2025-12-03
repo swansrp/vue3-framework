@@ -2067,7 +2067,7 @@ const saveTableConfig = (silent = true) => {
     tableConfig.value.defaultSort = '[]'
   }
 
-  return updatePortalConfig(tableConfig.value, silent).then(() => onSearch())
+  return updatePortalConfig(tableConfig.value, silent).then(() => onSearch(true))
 }
 
 const saveTableColumn = (silent = true) => {
@@ -2150,7 +2150,10 @@ const associateTableConfig = () => {
   associateDialogBox.show = true
 }
 
-const onSearch = () => {
+const onSearch = (preserveFolderState = false) => {
+  // 保存当前文件夹展开状态
+  const savedFolderState = preserveFolderState ? { ...expandedFolders } : null
+  
   getPortalList(
     inputTableName.value, 
     selectedRole.value,
@@ -2164,6 +2167,11 @@ const onSearch = () => {
       // 如果有搜索词，自动展开包含匹配项的文件夹
       if (inputTableName.value.trim()) {
         autoExpandMatchedFolders()
+      } else if (savedFolderState) {
+        // 恢复之前保存的文件夹展开状态
+        Object.keys(savedFolderState).forEach((key) => {
+          expandedFolders[key] = savedFolderState[key]
+        })
       } else {
         // 如果没有搜索词，初始化所有文件夹为关闭状态
         // 递归初始化所有嵌套文件夹的关闭状态
