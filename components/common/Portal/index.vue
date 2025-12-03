@@ -560,7 +560,7 @@
                       :total="config.total"
                       show-less-items
                       show-quick-jumper
-                      show-size-changer
+                      :show-size-changer="!hideSizeChange"
                       @change="paginationChange"
                     >
                       <template #itemRender="{ type, originalElement }">
@@ -791,6 +791,7 @@ let initFinished = false
  * @param hideDelete 隐藏删除按钮
  * @param hideAssociation 隐藏关联信息
  * @param hidePagination 隐藏分页信息
+ * @param hideSizeChange 是否显示每页显示条数切换
  * @param rowAllowEdit 该行右键是否能够编辑
  * @param rowAllowDelete 该行右键是否能够删除
  * @param rowSelectProps 行选择属性配置函数
@@ -841,6 +842,7 @@ const props = withDefaults(defineProps<{
     hideDelete?: boolean,
     hideAssociation?: boolean,
     hidePagination?: boolean,
+    hideSizeChange?: boolean,
     rowAllowEdit?: (record: any) => boolean,
     rowAllowDelete?: (record: any) => boolean,
     rowSelectProps?: (record: any) => any
@@ -889,6 +891,7 @@ const props = withDefaults(defineProps<{
     hideDelete: false,
     hideAssociation: false,
     hidePagination: false,
+    hideSizeChange: false,
     rowAllowEdit: () => true,
     rowAllowDelete: () => true,
     rowSelectProps: undefined,
@@ -921,7 +924,7 @@ const slots = useSlots()
 const {
   data, columnFilter, downloadFileName, rowSelectProps, hideAssociation,
   columnDisplayCustom, showLoading,
-  hideAdd, hideEdit, hideDelete, hideRefresh
+  hideAdd, hideEdit, hideDelete, hideRefresh, hideSizeChange
 } = toRefs(props)
 const isBindTabExisted = computed(() => {
   return !hideAssociation.value && bindTabs.value && bindTabs.value.length > 0
@@ -2224,6 +2227,9 @@ const adjustColumnWidths = () => {
     if (column.width) {
       totalWidth += column.width
       columnsWithWidth.push(column)
+    } else {
+      //自动填充列
+      return
     }
   }
 
@@ -2234,7 +2240,7 @@ const adjustColumnWidths = () => {
 
   // 如果总宽度小于表格宽度，按比例放大
   if (totalWidth < currentTableWidth) {
-    const scale = currentTableWidth / totalWidth
+    const scale = (currentTableWidth - 50) / totalWidth
     console.debug(`列宽度总和(${totalWidth})小于表格宽度(${currentTableWidth})，按比例 ${scale.toFixed(2)} 放大`)
 
     for (const column of columnsWithWidth) {
