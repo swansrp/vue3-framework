@@ -27,7 +27,11 @@ export const useTabStore = defineStore('tabStore', {
       //标志位，每次更新就加1，这样就可以强制触发topNavPath的更新操作
       updateTopNav: 0,
       //标志位，变为true就表示需要使用动态路由中的第一个路由
-      updateLeftNav: false
+      updateLeftNav: false,
+      // 左侧导航是否收起
+      leftNavCollapsed: false,
+      // 左侧导航宽度
+      leftNavWidth: 250
     }
   },
   actions: {
@@ -62,6 +66,12 @@ export const useTabStore = defineStore('tabStore', {
     },
     setTopNavPath(path: string) {
       this.topNavPath = path
+    },
+    setLeftNavCollapsed(collapsed: boolean) {
+      this.leftNavCollapsed = collapsed
+    },
+    setLeftNavWidth(width: number) {
+      this.leftNavWidth = width
     },
     getRouterTarget(key: Key) {
       if(this._key2HistoryTabMap[key]) {

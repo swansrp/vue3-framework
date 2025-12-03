@@ -2,15 +2,19 @@
   <div id="top">
     <div
       :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'"
+      :style="{
+        width: tabStore.isNeedLeftNav ? (tabStore.leftNavCollapsed ? '50px' : `${tabStore.leftNavWidth}px`) : '250px',
+        padding: tabStore.leftNavCollapsed ? '0' : '0 20px'
+      }"
       class="top_title"
     >
       <img
-        v-if="tabStore.isNeedLeftNav"
+        v-if="tabStore.isNeedLeftNav && !tabStore.leftNavCollapsed"
         alt="公司标志"
         src="../../../../../public/icon.png"
         style="margin-right: 5px"
       />
-      {{ projectName }}
+      <span v-if="!tabStore.leftNavCollapsed">{{ projectName }}</span>
     </div>
     <top-nav class="top_nav" />
     <div class="top_user">
@@ -303,7 +307,6 @@ onMounted(() => {
 }
 
 .top_title {
-  width: 250px;
   height: 100%;
   font-size: 17px;
   padding: 0 20px;
@@ -327,6 +330,7 @@ onMounted(() => {
   box-shadow: 5px 0 5px 0 rgba(0, 0, 0, 0.5);
   /* 添加内阴影增强立体感 */
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
 }
 
 /* LOGO区域内部光影效果 - 增强立体感 */
@@ -344,14 +348,6 @@ onMounted(() => {
   border-radius: 0;
 }
 
-.show-left-nav {
-  background-color: #fff;
-}
-
-.hide-left-nav {
-  background-color: #1890ff;
-  box-shadow: none;
-}
 
 .top_title img {
   height: 20px;

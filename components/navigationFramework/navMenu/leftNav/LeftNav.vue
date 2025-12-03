@@ -138,6 +138,9 @@ const startResize = (e: MouseEvent) => {
     document.removeEventListener('mousemove', handleMouseMove)
     document.removeEventListener('mouseup', handleMouseUp)
     
+    // 保存宽度到 store
+    tabStore.setLeftNavWidth(menuWidth.value)
+    
     // 触发resize事件通知其他组件
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'))
@@ -157,6 +160,7 @@ const handleLeave = () => {
 }
 const toggleCollapsed = () => {
   collapsed.value = !collapsed.value
+  tabStore.setLeftNavCollapsed(collapsed.value)
   let resizeEvent = new Event('resize')
   window.dispatchEvent(resizeEvent)
 }
@@ -439,6 +443,8 @@ mitt.on(CHANGE_TAB, () => {
 
 onMounted(() => {
   initLeftNavList()
+  // 初始化时同步宽度到 store
+  tabStore.setLeftNavWidth(menuWidth.value)
 })
 
 
