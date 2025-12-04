@@ -97,6 +97,8 @@ export type UploadModalType = {
   loaded: Number,
   percent: Number,
   failedReason: Array<String>
+  startTime: Number,
+  estimatedTime: Number
 }
 
 export type ColumnType = {
