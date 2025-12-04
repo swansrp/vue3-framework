@@ -65,7 +65,10 @@
           <div v-if="config.startTime > 0">
             <span style="font-weight: 500;">已持续：</span>
             <span style="color: #fa8c16; font-weight: 600;">{{ formatTime(getElapsedTime()) }}</span>
-            <span v-if="config.estimatedTime > 0" style="margin-left: 24px;">
+            <span
+              v-if="config.estimatedTime > 0"
+              style="margin-left: 24px;"
+            >
               <span style="font-weight: 500;">预计剩余：</span>
               <span style="color: #52c41a; font-weight: 600;">{{ formatTime(config.estimatedTime) }}</span>
             </span>
@@ -225,7 +228,7 @@ const uploadProgressTimer: TimerType = {
   diff: 2000
 }
 // 用于触发已持续时间的实时更新
-const currentTime = ref(Date.now())
+const currentTime = ref(0)
 const elapsedTimeTimer: TimerType = {
   timer: {},
   lastTime: 0,
@@ -253,6 +256,7 @@ const resetUploadProgress = () => {
   config.file = []
   config.startTime = 0
   config.estimatedTime = 0
+  currentTime.value = 0
   progressErrorCount.value = 0
   stopTimer(uploadProgressTimer)
   stopTimer(elapsedTimeTimer)
@@ -262,7 +266,9 @@ const setUploadProgress = (percent: number) => {
   config.step = 0
   config.percent = percent || 0
   if (!config.startTime) {
-    config.startTime = Date.now()
+    const now = Date.now()
+    config.startTime = now
+    currentTime.value = now
     // 启动已持续时间更新定时器
     startTimer(elapsedTimeTimer, () => {
       currentTime.value = Date.now()
@@ -298,6 +304,7 @@ const updateProgress = (resp: any) => {
       config.file = []
       config.startTime = 0
       config.estimatedTime = 0
+      currentTime.value = 0
       progressErrorCount.value = 0
       stopTimer(uploadProgressTimer)
       stopTimer(elapsedTimeTimer)
@@ -305,7 +312,9 @@ const updateProgress = (resp: any) => {
     case 'UPLOAD':
       config.step = 0
       if (!config.startTime) {
-        config.startTime = Date.now()
+        const now = Date.now()
+        config.startTime = now
+        currentTime.value = now
         // 启动已持续时间更新定时器
         startTimer(elapsedTimeTimer, () => {
           currentTime.value = Date.now()
@@ -328,6 +337,7 @@ const updateProgress = (resp: any) => {
       config.file = []
       config.startTime = 0
       config.estimatedTime = 0
+      currentTime.value = 0
       progressErrorCount.value = 0
       stopTimer(uploadProgressTimer)
       stopTimer(elapsedTimeTimer)
@@ -439,9 +449,11 @@ const formatTime = (seconds: number): string => {
 }
 // 获取已持续时间（秒）
 const getElapsedTime = (): number => {
-  if (!config.startTime) return 0
+  if (!config.startTime || config.startTime <= 0) return 0
   // 使用 currentTime.value 确保响应式更新
-  return Math.floor((currentTime.value - config.startTime) / 1000)
+  const elapsed = Math.floor((currentTime.value - config.startTime) / 1000)
+  // 确保不返回负数
+  return elapsed > 0 ? elapsed : 0
 }
 
 defineExpose({ showUploadDialogBox, updateProgress })
