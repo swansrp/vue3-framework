@@ -789,6 +789,8 @@ let initFinished = false
  * @param hideAdd 隐藏添加按钮
  * @param hideEdit 隐藏修改按钮
  * @param hideDelete 隐藏删除按钮
+ * @param hideImport 隐藏导入按钮
+ * @param hideExport 隐藏下载按钮
  * @param hideAssociation 隐藏关联信息
  * @param hidePagination 隐藏分页信息
  * @param hideSizeChange 是否显示每页显示条数切换
@@ -840,6 +842,8 @@ const props = withDefaults(defineProps<{
     hideAdd?: boolean,
     hideEdit?: boolean,
     hideDelete?: boolean,
+    hideImport?: boolean,
+    hideExport?: boolean,
     hideAssociation?: boolean,
     hidePagination?: boolean,
     hideSizeChange?: boolean,
@@ -889,6 +893,8 @@ const props = withDefaults(defineProps<{
     hideAdd: false,
     hideEdit: false,
     hideDelete: false,
+    hideImport: false,
+    hideExport: false,
     hideAssociation: false,
     hidePagination: false,
     hideSizeChange: false,
@@ -923,7 +929,7 @@ const emit = defineEmits<{
 const slots = useSlots()
 const {
   data, columnFilter, downloadFileName, rowSelectProps, hideAssociation,
-  columnDisplayCustom, showLoading,
+  columnDisplayCustom, showLoading, hideImport, hideExport,
   hideAdd, hideEdit, hideDelete, hideRefresh, hideSizeChange
 } = toRefs(props)
 const isBindTabExisted = computed(() => {
@@ -1001,8 +1007,8 @@ const config: TableConfigType = reactive({
   addModalAble: !hideAdd.value,
   editModalAble: !hideEdit.value,
   deleteAble: !hideDelete.value,
-  importAble: false,
-  exportAble: false,
+  importAble: !hideImport.value,
+  exportAble: !hideExport.value,
   defaultCondition: {} as ConditionListType,
   defaultSort: [] as Array<QuerySortType>,
   hideRefresh: hideRefresh.value,
@@ -2046,8 +2052,8 @@ const initConfig = async () => {
     config.detailWidth = tableConfig.detailWidth + '%'
     config.addWidth = tableConfig.addWidth + '%'
     config.editWidth = tableConfig.editWidth + '%'
-    config.importAble = tableConfig.importAble === '1'
-    config.exportAble = tableConfig.exportAble === '1'
+    config.importAble = tableConfig.importAble === '1' && !hideImport.value
+    config.exportAble = tableConfig.exportAble === '1' && !hideExport.value
     if (isEmpty(config.url)) {
       message.error('尚未配置访问地址')
       throw new Error('尚未配置访问地址')
@@ -2305,12 +2311,14 @@ watch(
   }
 )
 watch(
-  () => [hideAdd.value, hideEdit.value, hideDelete.value, hideRefresh.value],
+  () => [hideAdd.value, hideEdit.value, hideDelete.value, hideRefresh.value, hideImport.value, hideExport.value],
   () => {
     config.hideRefresh = hideRefresh.value
     config.addModalAble = !hideAdd.value
     config.deleteAble = !hideDelete.value
     config.editModalAble = !hideEdit.value
+    config.importAble = !hideImport.value
+    config.exportAble = !hideExport.value
   }
 )
 onUnmounted(() => {
