@@ -206,12 +206,13 @@
             <s-table
               :key="config.key"
               :columns="multiHeader ? multiHeadColumns : columns"
+              :custom-row="handleCustomRow"
               :data-source="dataSource"
               :loading="config.loading"
               :pagination="false"
               :range-selection="false"
               :row-expandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
-              :row-selection="hideRowSelection ? null : rowSelection"
+              :row-selection="rowSelection"
               :row-key="config.rowKey"
               :scroll="{x: getTableWidth(), y: getTableHeight()}"
               :size="config.size"
@@ -928,7 +929,7 @@ const emit = defineEmits<{
 }>()
 const slots = useSlots()
 const {
-  data, columnFilter, downloadFileName, rowSelectProps, hideAssociation,
+  data, columnFilter, downloadFileName, rowSelectProps, hideAssociation, hideRowSelection,
   columnDisplayCustom, showLoading, hideImport, hideExport,
   hideAdd, hideEdit, hideDelete, hideRefresh, hideSizeChange
 } = toRefs(props)
@@ -1176,8 +1177,9 @@ const rowSelection = computed(() => {
       Table.SELECTION_NONE
     ],
     allowCancelRadio: true,
+    columnWidth: props.singleSelect ? 0 : undefined,
     type: props.singleSelect ? 'radio' : 'checkbox',
-    getCheckboxProps: rowSelectProps.value
+    getCheckboxProps: rowSelectProps.value,
   }
 })
 const getRowSelection = () => {
@@ -1799,6 +1801,49 @@ const _updateOrder = (data: Array<UpdateOrderType>) => {
 }
 
 const handleExpand = (expanded: boolean, record: any) => emit('expand', expanded, record)
+
+// 处理行点击事件
+const handleCustomRow = (record: any) => {
+  return {
+    onClick: (event: MouseEvent) => {
+      // 如果禁用了行选择，则不处理
+      if (hideRowSelection.value) {
+        console.log('🔴 行选择被禁用，不处理点击事件')
+        return
+      }
+      
+      // 如果点击的是输入框、按钮等交互元素，不处理行选中
+      const target = event.target as HTMLElement
+      const tagName = target?.tagName?.toLowerCase()
+      const isInteractiveElement = ['input', 'button', 'a', 'select', 'textarea'].includes(tagName || '')
+      const hasEditableParent = target?.closest('.surely-table-cell-edit-wrapper')
+      
+      if (isInteractiveElement || hasEditableParent) {
+        console.log('🟡 点击了交互元素或可编辑单元格，跳过行选中', { tagName, hasEditableParent })
+        return
+      }
+      
+      const rowKey = record[config.rowKey]
+      const currentKeys = [...selectedRowKeys.value]
+      
+      if (props.singleSelect) {
+        // 单选模式：直接选中当前行
+        onSelectChange([rowKey])
+      } else {
+        // 多选模式：切换选中状态
+        const index = currentKeys.indexOf(rowKey)
+        if (index > -1) {
+          // 已选中，则取消选中
+          currentKeys.splice(index, 1)
+        } else {
+          // 未选中，则添加到选中列表
+          currentKeys.push(rowKey)
+        }
+        onSelectChange(currentKeys)
+      }
+    }
+  }
+}
 
 const advancedCondition = reactive({
   show: false,
