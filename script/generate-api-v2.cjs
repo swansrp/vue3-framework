@@ -594,7 +594,7 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   // 生成函数名（去除Using后缀）
   let baseFunctionName = cleanFunctionName(operation.operationId, method, path, new Set()); // 先生成基础函数名
   
-  // 为通用接口添加控制器前缀，避免命名冲突
+  // 为通用接口添加控制器前缀,避免命名冲突
   const commonApiPatterns = [
     'advancedCount', 'advancedQuery', 'advancedQueryExport', 'advancedSelect', 
     'advancedStatistic', 'advancedSummary', 'deleteItem', 'deleteList',
@@ -602,7 +602,8 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
     'generalSummary', 'queryById', 'importAdd', 'importAddProgress',
     'importUpdate', 'importUpdateProgress', 'add', 'templateExport', 
     'update', 'bind', 'unbind', 'replace', 'getAttach', 'getBind', 
-    'getUnBind', 'bindAll', 'unbindAll', 'bindInfo', 'bindInfoList', 'getBindList'
+    'getUnBind', 'bindAll', 'unbindAll', 'bindInfo', 'bindInfoList', 'getBindList',
+    'parseExcel', 'parseExcelProgress'
   ];
   
   // 检查是否为通用接口，如果是则添加前缀
