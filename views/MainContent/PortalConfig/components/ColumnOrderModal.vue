@@ -41,23 +41,26 @@
         tag="div"
         class="field-list"
       >
-        <div
+        <a-dropdown
           v-for="(element, index) in localColumns"
           :key="element.id"
-          class="field-item"
-          :class="{
-            'field-highlight': isHighlighted(element),
-            'field-dimmed': !isHighlighted(element) && filterType !== 'all',
-            'dragging': draggedIndex === index,
-            'drag-over': dragOverIndex === index && draggedIndex !== null
-          }"
-          :draggable="true"
-          @dragstart="handleDragStart($event, index)"
-          @dragover="handleDragOver($event, index)"
-          @dragleave="handleDragLeave"
-          @dragend="handleDragEnd"
-          @drop="handleDrop($event, index)"
+          :trigger="['contextmenu']"
         >
+          <div
+            class="field-item"
+            :class="{
+              'field-highlight': isHighlighted(element),
+              'field-dimmed': !isHighlighted(element) && filterType !== 'all',
+              'dragging': draggedIndex === index,
+              'drag-over': dragOverIndex === index && draggedIndex !== null
+            }"
+            :draggable="true"
+            @dragstart="handleDragStart($event, index)"
+            @dragover="handleDragOver($event, index)"
+            @dragleave="handleDragLeave"
+            @dragend="handleDragEnd"
+            @drop="handleDrop($event, index)"
+          >
           <span class="drag-handle">
             <HolderOutlined />
           </span>
@@ -77,7 +80,33 @@
               {{ index + 1 }}
             </div>
           </div>
-        </div>
+          </div>
+          <template #overlay>
+            <a-menu @click="({ key: menuKey }) => handleQuickConfig(element, menuKey)">
+              <a-menu-item key="displayNone">
+                不显示
+              </a-menu-item>
+              <a-menu-item key="displaySearchSort">
+                显示/筛选/排序
+              </a-menu-item>
+              <a-menu-item key="displaySearch">
+                显示/筛选
+              </a-menu-item>
+              <a-menu-item key="displayNoAction">
+                只显示
+              </a-menu-item>
+              <a-menu-item key="displayTableOnly">
+                表格显示
+              </a-menu-item>
+              <a-menu-item key="displayDetailOnly">
+                详情显示
+              </a-menu-item>
+              <a-menu-item key="displayTableAndDetail">
+                不参与编辑
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
       </transition-group>
     </div>
 
@@ -116,6 +145,8 @@ interface ColumnItem {
   addShow: string
   editShow: string
   displayOrder: number
+  filterAble?: string
+  sortAble?: string
   [key: string]: any
 }
 
@@ -127,6 +158,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'confirm': [columns: ColumnItem[]]
+  'quickConfig': [column: ColumnItem, type: string]
 }>()
 
 const visible = ref(false)
@@ -282,6 +314,50 @@ const handleConfirm = () => {
 // 取消
 const handleCancel = () => {
   visible.value = false
+}
+
+// 快速配置
+const handleQuickConfig = (column: ColumnItem, type: string) => {
+  if (type === 'displayNone') {
+    column.show = '0'
+    column.detailShow = '0'
+    column.addShow = '0'
+    column.editShow = '0'
+    column.filterAble = '0'
+    column.sortAble = '0'
+  } else if (type === 'displaySearchSort') {
+    column.show = '1'
+    column.detailShow = '1'
+    column.addShow = '0'
+    column.editShow = '0'
+    column.filterAble = '1'
+    column.sortAble = '1'
+  } else if (type === 'displaySearch') {
+    column.show = '1'
+    column.detailShow = '1'
+    column.addShow = '0'
+    column.editShow = '0'
+    column.filterAble = '1'
+    column.sortAble = '0'
+  } else if (type === 'displayTableOnly') {
+    column.show = '1'
+    column.detailShow = '0'
+    column.addShow = '0'
+    column.editShow = '0'
+  } else if (type === 'displayDetailOnly') {
+    column.show = '0'
+    column.detailShow = '1'
+    column.addShow = '0'
+    column.editShow = '0'
+  } else if (type === 'displayTableAndDetail') {
+    column.show = '1'
+    column.detailShow = '1'
+    column.addShow = '0'
+    column.editShow = '0'
+  }
+  
+  // 触发quickConfig事件，通知父组件保存
+  emit('quickConfig', column, type)
 }
 </script>
 

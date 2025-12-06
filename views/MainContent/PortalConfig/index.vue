@@ -1642,6 +1642,7 @@
       v-model="showColumnOrderModal"
       :columns="tableConfig.columns || []"
       @confirm="handleColumnOrderConfirm"
+      @quick-config="handleQuickConfigInModal"
     />
     <sql-draw
       v-model:show="showSql"
@@ -2282,7 +2283,21 @@ const handleColumnOrderConfirm = (orderedColumns: any[]) => {
   }))
   
   updatePortalColumnOrder(columnOrder).then(() => {
-    onSearch()
+    onSearch(true) // 保持文件夹展开状态
+  })
+}
+
+// 处理弹窗内的快速配置
+const handleQuickConfigInModal = (column: any, type: string) => {
+  // 更新本地数据
+  const localColumn = columnMap.get(column.id)
+  if (localColumn) {
+    Object.assign(localColumn, column)
+  }
+  
+  // 保存到后端
+  updatePortalColumn(column, true).then(() => {
+    // 静默保存，不刷新整个列表
   })
 }
 
