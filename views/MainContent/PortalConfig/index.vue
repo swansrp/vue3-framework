@@ -2288,7 +2288,7 @@ const handleColumnOrderConfirm = (orderedColumns: any[]) => {
 }
 
 // 处理弹窗内的快速配置
-const handleQuickConfigInModal = (column: any, type: string) => {
+const handleQuickConfigInModal = (column: any) => {
   // 更新本地数据
   const localColumn = columnMap.get(column.id)
   if (localColumn) {
