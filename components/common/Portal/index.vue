@@ -212,7 +212,7 @@
               :pagination="false"
               :range-selection="false"
               :row-expandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
-              :row-selection="rowSelection"
+              :row-selection="hideRowSelection ? null : rowSelection"
               :row-key="config.rowKey"
               :scroll="{x: getTableWidth(), y: getTableHeight()}"
               :size="config.size"
@@ -1827,8 +1827,12 @@ const handleCustomRow = (record: any) => {
       const currentKeys = [...selectedRowKeys.value]
       
       if (props.singleSelect) {
-        // 单选模式：直接选中当前行
-        onSelectChange([rowKey])
+        // 单选模式：如果已选中则取消选中，否则选中当前行
+        if (currentKeys.includes(rowKey)) {
+          onSelectChange([])
+        } else {
+          onSelectChange([rowKey])
+        }
       } else {
         // 多选模式：切换选中状态
         const index = currentKeys.indexOf(rowKey)
@@ -2069,8 +2073,10 @@ const initConfig = async () => {
     const index = _.cloneDeep(indexColumn)
     index.width = props.indexWidth
     index.title = props.indexTitle
-    columnArray.value.push(index)
-    columnRaw.set(index.dataIndex, _.cloneDeep(index))
+    if(index.width !== 0) {
+      columnArray.value.push(index)
+      columnRaw.set(index.dataIndex, _.cloneDeep(index))
+    }
     const tableConfig = res.payload
     config.title = tableConfig.displayName
     config.size = tableConfig.size

@@ -61,25 +61,25 @@
             @dragend="handleDragEnd"
             @drop="handleDrop($event, index)"
           >
-          <span class="drag-handle">
-            <HolderOutlined />
-          </span>
-          <div class="field-content">
-            <a-tooltip
-              :title="element.displayName"
-              placement="top"
-            >
-              <div class="field-name">
-                {{ element.displayName }}
+            <span class="drag-handle">
+              <HolderOutlined />
+            </span>
+            <div class="field-content">
+              <a-tooltip
+                :title="element.displayName"
+                placement="top"
+              >
+                <div class="field-name">
+                  {{ element.displayName }}
+                </div>
+              </a-tooltip>
+              <div class="field-property">
+                {{ element.property }}
               </div>
-            </a-tooltip>
-            <div class="field-property">
-              {{ element.property }}
+              <div class="field-order">
+                {{ index + 1 }}
+              </div>
             </div>
-            <div class="field-order">
-              {{ index + 1 }}
-            </div>
-          </div>
           </div>
           <template #overlay>
             <a-menu @click="({ key: menuKey }) => handleQuickConfig(element, menuKey)">
