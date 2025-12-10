@@ -46,6 +46,7 @@ const emit = defineEmits<Emits>()
 const options = ref<any[]>([])
 const loading = ref(false)
 const internalValue = ref<string | number | undefined>(props.modelValue)
+const hasSearched = ref(false) // 标记是否已经搜索过
 
 // 构建 select 的 options 格式
 const selectOptions = computed(() => {
@@ -59,10 +60,11 @@ const selectOptions = computed(() => {
 
 // 搜索函数
 const searchData = debounce(async (keyword: string) => {
-  if (!keyword || keyword.length < 1) {
-    options.value = []
-    return
-  }
+  // 允许空关键字搜索（用于初始化时加载选项）
+  // if (!keyword || keyword.length < 1) {
+  //   options.value = []
+  //   return
+  // }
   
   try {
     loading.value = true
@@ -76,15 +78,18 @@ const searchData = debounce(async (keyword: string) => {
     } else {
       // 标准查询：使用通用查询格式
       const requestData: any = {
-        conditionList: [
-          {
-            property: props.searchProperty,
-            relation: FILTER_TYPE.LIKE,
-            value: [keyword]
-          }
-        ],
+        conditionList: [],
         pageSize: props.pageSize,
         distinct: '1'
+      }
+      
+      // 只有当关键字不为空时，才添加搜索条件
+      if (keyword && keyword.trim()) {
+        requestData.conditionList.push({
+          property: props.searchProperty,
+          relation: FILTER_TYPE.LIKE,
+          value: [keyword]
+        })
       }
       
       // 如果有 selectColumns，添加到请求中
@@ -132,6 +137,12 @@ const handleChange = (value: string | number | undefined) => {
   emit('change', value, option)
 }
 
+// 处理下拉框展开（首次展开时触发搜索）
+const handleDropdownVisibleChange = (open: boolean) => {
+  // 移除自动搜索逻辑，改为依赖外部 setInitialOptions 预填充
+  // 如果需要在展开时搜索，应该由父组件控制
+}
+
 // 监听外部值变化
 watch(() => props.modelValue, (newVal) => {
   internalValue.value = newVal
@@ -142,23 +153,31 @@ defineExpose({
   setInitialOption: (option: any) => {
     if (option) {
       options.value = [option]
+      hasSearched.value = true // 标记已有数据
     }
   },
   setInitialOptions: (opts: any[]) => {
     options.value = opts
+    hasSearched.value = true // 标记已有数据
   },
   // 刷新选项列表：重新执行搜索
   refresh: async (keyword?: string) => {
+    hasSearched.value = false // 重置标记
     if (keyword) {
       await searchData(keyword)
     } else if (internalValue.value) {
-      // 如果没有传入关键字，使用当前值作为关键字
+      // 如果没有传入关键字,使用当前值作为关键字
       await searchData(String(internalValue.value))
     }
   },
   // 清空选项列表
   clearOptions: () => {
     options.value = []
+    hasSearched.value = false // 重置标记
+  },
+  // 获取当前选项列表
+  getOptions: () => {
+    return options.value
   }
 })
 </script>
@@ -175,6 +194,7 @@ defineExpose({
     show-search
     @change="handleChange"
     @search="searchData"
+    @dropdown-visible-change="handleDropdownVisibleChange"
   >
     <!-- 下拉选项的自定义渲染 -->
     <template #option="{ label, value, data }">
