@@ -137,12 +137,6 @@ const handleChange = (value: string | number | undefined) => {
   emit('change', value, option)
 }
 
-// 处理下拉框展开（首次展开时触发搜索）
-const handleDropdownVisibleChange = (open: boolean) => {
-  // 移除自动搜索逻辑，改为依赖外部 setInitialOptions 预填充
-  // 如果需要在展开时搜索，应该由父组件控制
-}
-
 // 监听外部值变化
 watch(() => props.modelValue, (newVal) => {
   internalValue.value = newVal
@@ -194,7 +188,6 @@ defineExpose({
     show-search
     @change="handleChange"
     @search="searchData"
-    @dropdown-visible-change="handleDropdownVisibleChange"
   >
     <!-- 下拉选项的自定义渲染 -->
     <template #option="{ label, value, data }">
