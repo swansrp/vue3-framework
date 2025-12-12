@@ -2,6 +2,7 @@
   <editor
     :id="tinymceId"
     v-model="myValue"
+    api-key="hmop6n54x4a23otrfzloqevvscda12c1tv52r1fuyz4c5o6n"
     :init="init"
     :disabled="disabled"
   />
@@ -25,13 +26,17 @@ import 'tinymce/plugins/image' // 插入上传图片插件
 import 'tinymce/plugins/media' // 插入视频插件
 import 'tinymce/plugins/table' // 插入表格插件
 import 'tinymce/plugins/lists' // 列表插件
+import 'tinymce/plugins/advlist' // 高级列表插件
 import 'tinymce/plugins/wordcount' // 字数统计插件
 import 'tinymce/plugins/code' // 源码
 import 'tinymce/plugins/fullscreen' //全屏
 
 //接下来定义编辑器所需要的插件数据
 import { reactive, ref } from 'vue'
-import axios from 'axios'
+
+3
+import { uploadFile } from '@/framework/apis/common/common'
+import { UPLOAD_FILE_TYPE } from '@/framework/components/common/Portal/type'
 const emits = defineEmits(['getContent'])
 //这里我选择将数据定义在props里面，方便在不同的页面也可以配置出不同的编辑器，当然也可以直接在组件中直接定义
 const props = defineProps({
@@ -51,12 +56,12 @@ const props = defineProps({
   },
   plugins: {
     type: [String, Array],
-    default: 'lists  table',
+    default: 'lists advlist table image',
   },//必填
   toolbar: {
     type: [String, Array],
     default:
-      'codesample bold italic underline alignleft aligncenter alignright alignjustify | undo redo | formatselect | fontselect | fontsizeselect | forecolor backcolor | bullist numlist outdent indent | lists link table code | removeformat ',
+      'bold italic underline | formatselect | fontselect | fontsizeselect | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table code | undo redo | removeformat',
   },
 })
 //用于接收外部传递进来的富文本
@@ -68,11 +73,13 @@ const getAssetsFile = (url: string) => new URL(`./${url}`, import.meta.url).href
 const init = reactive({
   selector: '#' + tinymceId.value, //富文本编辑器的id,
   relative_urls : true,
+  license_key: 'gpl',
   language_url: getAssetsFile('langs/zh_CN.js'), // 语言包的路径，具体路径看自己的项目，文档后面附上中文js文件
   language: 'zh_CN', //语言
   skin_url: new URL(`./skins/ui/oxide`, import.meta.url).href,
-  height: 400, //编辑器高度
-  branding: false, //是否禁用“Powered by TinyMCE”
+  width: '100%', //编辑器宽度：100%自适应
+  height: 600, //编辑器高度
+  branding: false, //是否禁用"Powered by TinyMCE"
   menubar: true, //顶部菜单栏显示
   image_dimensions: false, //去除宽高属性
   plugins: props.plugins,  //这里的数据是在props里面就定义好了的
@@ -87,52 +94,89 @@ const init = reactive({
   file_picker_types: 'file',
   content_css: new URL(`./skins/content/default/content.css`, import.meta.url).href,
   //图片上传
-  images_upload_handler: (blobInfo: any, _progress: any) => new Promise((resolve, reject) => {
-
-    if (blobInfo.blob().size / 1024 / 1024 > 2) {
-      reject({ message: '上传失败，图片大小请控制在 2M 以内', remove: true })
+  images_upload_handler: (blobInfo: any, progress: any) => new Promise((resolve, reject) => {
+    const file = blobInfo.blob()
+    
+    // 限制图片大小：5MB
+    if (file.size / 1024 / 1024 > 5) {
+      reject({ message: '上传失败，图片大小请控制在 5M 以内', remove: true })
       return
-    } else {
-      const ph = import.meta.env.VITE_BASE_PATH + ':' + import.meta.env.VITE_SERVER_PORT + '/'
-      let params = new FormData()
-      params.append('file', blobInfo.blob())
-
-      let config = {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-
-        }
-      }
-
-      axios.post('xxxx', params, config).then(res => {
-        if (res.data.code == 200) {
-          resolve(ph + res.data.msg)  //上传成功，在成功函数里填入图片路径
-        } else {
-          reject('HTTP Error: 上传失败' + res.data.code)
-          return
-        }
-      }).catch(() => {
-        reject('上传出错，服务器开小差了呢')
-        return
-      })
     }
+
+    // 构造FormData
+    const formData = new FormData()
+    formData.append('file', file, blobInfo.filename())
+
+    // 使用项目统一的uploadFile函数上传
+    uploadFile(
+      formData,
+      (progressEvent: any) => {
+        // 计算上传进度
+        if (progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          progress(percent)
+        }
+      },
+      UPLOAD_FILE_TYPE.IMG, // 文件类型：图片
+      'wiki/images'  // 存储文件夹
+    )
+      .then((res: any) => {
+        if (res.payload && res.payload.url) {
+          // 返回图片URL给编辑器
+          resolve(res.payload.url)
+        } else {
+          reject('上传失败，未返回图片地址')
+        }
+      })
+      .catch((error: any) => {
+        console.error('图片上传失败:', error)
+        reject('图片上传失败，请稍后重试')
+      })
   }),
 
-  // 文件上传
-  file_picker_callback: (callback: Function, value: any, meta: any) => {
-    // Provide file and text for the link dialog
-    if (meta.filetype == 'file') {
-      callback('mypage.html', { text: 'My text' })
-    }
+  // 文件选择器（用于插入图片对话框的“浏览”按钮）
+  file_picker_callback: (callback: Function, _value: any, meta: any) => {
+    // 仅处理图片类型
+    if (meta.filetype === 'image') {
+      // 创建一个隐藏的文件输入框
+      const input = document.createElement('input')
+      input.setAttribute('type', 'file')
+      input.setAttribute('accept', 'image/*')
 
-    // Provide image and alt text for the image dialog
-    if (meta.filetype == 'image') {
-      callback('myimage.jpg', { alt: 'My alt text' })
-    }
+      input.onchange = function() {
+        const file = (input as any).files[0]
+        if (!file) return
 
-    // Provide alternative source and posted for the media dialog
-    if (meta.filetype == 'media') {
-      callback('movie.mp4', { source2: 'alt.ogg', poster: 'image.jpg' })
+        // 限制图片大小
+        if (file.size / 1024 / 1024 > 5) {
+          alert('图片大小请控制在 5M 以内')
+          return
+        }
+
+        const formData = new FormData()
+        formData.append('file', file)
+
+        // 上传图片
+        uploadFile(
+          formData,
+          () => {}, // 进度回调
+          UPLOAD_FILE_TYPE.IMG,
+          'wiki/images'
+        )
+          .then((res: any) => {
+            if (res.payload && res.payload.url) {
+              // 调用callback返回图片URL
+              callback(res.payload.url, { alt: file.name })
+            }
+          })
+          .catch((error: any) => {
+            console.error('图片上传失败:', error)
+            alert('图片上传失败，请稍后重试')
+          })
+      }
+
+      // 触发文件选择
+      input.click()
     }
   }
 })
