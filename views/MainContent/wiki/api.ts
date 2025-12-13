@@ -1,80 +1,51 @@
 /**
  * Wiki模块API接口定义
- * 
- * 后端需要实现以下接口：
  */
 
-import type { WikiFormData, WikiPage, WikiQueryParams, WikiSortParams, WikiTreeNode } from './types'
+import type { 
+  CollaboratorApproveParams, 
+  CollaboratorRequestParams, 
+  WikiCollaborator, 
+  WikiFormData, 
+  WikiPage, 
+  WikiQueryParams, 
+  WikiSortParams, 
+  WikiTreeNode 
+} from './types'
 
-import { get, post } from '@/framework/network/request'
+import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
+import { request } from '@/framework/network/request'
 
-/** API基础路径 */
-const BASE_URL = '/wiki'
-
-/**
- * ========================================
- * 后端API接口清单
- * ========================================
- * 
- * 1. GET /wiki/tree
- *    描述: 获取Wiki页面树形结构
- *    请求参数: WikiQueryParams (keyword?: string)
- *    响应: WikiTreeNode[]
- * 
- * 2. GET /wiki/page/{id}
- *    描述: 获取单个Wiki页面详情
- *    路径参数: id - 页面ID
- *    响应: WikiPage
- * 
- * 3. POST /wiki/page
- *    描述: 新增Wiki页面
- *    请求体: WikiFormData
- *    响应: WikiPage
- * 
- * 4. PUT /wiki/page/{id}
- *    描述: 更新Wiki页面
- *    路径参数: id - 页面ID
- *    请求体: WikiFormData
- *    响应: WikiPage
- * 
- * 5. DELETE /wiki/page/{id}
- *    描述: 删除Wiki页面（同时删除子页面）
- *    路径参数: id - 页面ID
- *    响应: boolean
- * 
- * 6. PUT /wiki/page/sort
- *    描述: 更新页面排序/移动页面
- *    请求体: WikiSortParams
- *    响应: boolean
- * 
- * 7. GET /wiki/search
- *    描述: 搜索Wiki页面
- *    请求参数: keyword - 搜索关键词
- *    响应: WikiPage[]
- */
+// ========== 页面相关接口 ==========
 
 /**
  * 获取Wiki页面树形结构
  * @param params 查询参数
  */
-export const getWikiTree = (params?: WikiQueryParams): Promise<WikiTreeNode[]> => {
-  return get(`${BASE_URL}/tree`, params)
+export const getWikiTree = async (params?: WikiQueryParams): Promise<WikiTreeNode[]> => {
+  const api = buildGetApiByType('/wiki/tree', '')
+  const res = await request(api, params || {}, {}, false, false, true)
+  return (res.payload || []) as WikiTreeNode[]
 }
 
 /**
  * 获取单个Wiki页面详情
  * @param id 页面ID
  */
-export const getWikiPage = (id: string): Promise<WikiPage> => {
-  return get(`${BASE_URL}/page/${id}`)
+export const getWikiPage = async (id: string): Promise<WikiPage> => {
+  const api = buildGetApiByType('/wiki/page/' + id, '')
+  const res = await request(api, {}, {}, false, false, true)
+  return res.payload as WikiPage
 }
 
 /**
  * 新增Wiki页面
  * @param data 页面数据
  */
-export const addWikiPage = (data: WikiFormData): Promise<WikiPage> => {
-  return post(`${BASE_URL}/page`, data)
+export const addWikiPage = async (data: WikiFormData): Promise<WikiPage> => {
+  const api = buildPostApiByType('/wiki/page', '')
+  const res = await request(api, {}, data, true, false, true)
+  return res.payload as WikiPage
 }
 
 /**
@@ -82,30 +53,135 @@ export const addWikiPage = (data: WikiFormData): Promise<WikiPage> => {
  * @param id 页面ID
  * @param data 页面数据
  */
-export const updateWikiPage = (id: string, data: WikiFormData): Promise<WikiPage> => {
-  return post(`${BASE_URL}/page/${id}`, data, { method: 'PUT' })
+export const updateWikiPage = async (id: string, data: WikiFormData): Promise<WikiPage> => {
+  const api = buildPostApiByType('/wiki/page/' + id, '')
+  const res = await request(api, {}, data, true, false, true)
+  return res.payload as WikiPage
 }
 
 /**
  * 删除Wiki页面
  * @param id 页面ID
  */
-export const deleteWikiPage = (id: string): Promise<boolean> => {
-  return post(`${BASE_URL}/page/${id}`, {}, { method: 'DELETE' })
+export const deleteWikiPage = async (id: string): Promise<boolean> => {
+  const api = buildPostApiByType('/wiki/delete/page/' + id, '')
+  const res = await request(api, {}, {}, true, false, true)
+  return res.status.code === 0
 }
 
 /**
  * 更新页面排序/移动页面
  * @param params 排序参数
  */
-export const sortWikiPage = (params: WikiSortParams): Promise<boolean> => {
-  return post(`${BASE_URL}/page/sort`, params, { method: 'PUT' })
+export const sortWikiPage = async (params: WikiSortParams[]): Promise<void> => {
+  const api = buildPostApiByType('/wiki/page/sort', '')
+  await request(api, {}, params, true, false, true)
+}
+
+/**
+ * 更新页面排序/移动页面
+ * @param id id
+ * @param pid 新的父级ID
+ */
+export const pidWikiPage = async (id: string, pid: string): Promise<void> => {
+  const api = buildPostApiByType('/wiki/page/pid', '')
+  await request(api, { id, pid }, {}, true, false, true)
 }
 
 /**
  * 搜索Wiki页面
  * @param keyword 搜索关键词
  */
-export const searchWikiPages = (keyword: string): Promise<WikiPage[]> => {
-  return get(`${BASE_URL}/search`, { keyword })
+export const searchWikiPages = async (keyword: string): Promise<WikiPage[]> => {
+  const api = buildGetApiByType('/wiki/search', '')
+  const res = await request(api, { keyword }, {}, false, false, true)
+  return (res.payload || []) as WikiPage[]
+}
+
+/**
+ * 获取公开页面（无需登录）
+ * @param id 页面ID
+ */
+export const getPublicWikiPage = async (id: string): Promise<WikiPage> => {
+  const api = buildGetApiByType('/wiki/public/' + id, '')
+  const res = await request(api, {}, {}, false, false, true)
+  return res.payload as WikiPage
+}
+
+// ========== 协作者相关接口 ==========
+
+/**
+ * 申请编辑权限
+ * @param params 申请参数
+ */
+export const requestCollaboratorAccess = async (params: CollaboratorRequestParams): Promise<boolean> => {
+  const api = buildPostApiByType('/wiki/collaborator/request', '')
+  const res = await request(api, {}, params, true, false, true)
+  return res.status.code === 0
+}
+
+/**
+ * 获取页面协作者列表
+ * @param pageId 页面ID
+ */
+export const getCollaborators = async (pageId: string): Promise<WikiCollaborator[]> => {
+  const api = buildGetApiByType('/wiki/collaborator/list/' + pageId, '')
+  const res = await request(api, {}, {}, false, false, true)
+  return (res.payload || []) as WikiCollaborator[]
+}
+
+/**
+ * 获取待审批的申请
+ * @param pageId 页面ID
+ */
+export const getPendingRequests = async (pageId: string): Promise<WikiCollaborator[]> => {
+  const api = buildGetApiByType('/wiki/collaborator/pending/' + pageId, '')
+  const res = await request(api, {}, {}, false, false, true)
+  return (res.payload || []) as WikiCollaborator[]
+}
+
+/**
+ * 审批协作申请
+ * @param params 审批参数
+ */
+export const approveCollaborator = async (params: CollaboratorApproveParams): Promise<boolean> => {
+  const api = buildPostApiByType('/wiki/collaborator/approve', '')
+  const res = await request(api, {}, params, true, false, true)
+  return res.status.code === 0
+}
+
+/**
+ * 移除协作者
+ * @param pageId 页面ID
+ * @param userId 用户ID
+ */
+export const removeCollaborator = async (pageId: string, userId: string): Promise<boolean> => {
+  const api = buildPostApiByType('/wiki/collaborator/delete/' + pageId + '/' + userId, '')
+  const res = await request(api, {}, {}, true, false, true)
+  return res.status.code === 0
+}
+
+/**
+ * 更新协作者权限
+ * @param pageId 页面ID
+ * @param userId 用户ID
+ * @param permission 新权限
+ */
+export const updateCollaboratorPermission = async (
+  pageId: string, 
+  userId: string, 
+  permission: string
+): Promise<boolean> => {
+  const api = buildPostApiByType('/wiki/collaborator/permission', '')
+  const res = await request(api, {}, { pageId, userId, permission }, true, false, true)
+  return res.status.code === 0
+}
+
+/**
+ * 获取我的协作页面
+ */
+export const getMyCollaborations = async (): Promise<WikiCollaborator[]> => {
+  const api = buildGetApiByType('/wiki/collaborator/my', '')
+  const res = await request(api, {}, {}, false, false, true)
+  return (res.payload || []) as WikiCollaborator[]
 }

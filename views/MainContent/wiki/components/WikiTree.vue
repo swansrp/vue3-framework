@@ -42,7 +42,7 @@ const emit = defineEmits<{
   /** 删除页面 */
   (e: 'delete', key: string, title: string): void
   /** 拖拽排序 */
-  (e: 'drop', params: { id: string; parentId: string | null; sortOrder: number }): void
+  (e: 'drop', info: AntTreeNodeDropEvent): void
   /** 搜索 */
   (e: 'search', keyword: string): void
 }>()
@@ -81,6 +81,11 @@ const handleSearch = (e: Event) => {
   searchTimer = setTimeout(() => {
     emit('search', value)
   }, 300)
+}
+
+/** 点击搜索按钮 */
+const handleSearchClick = () => {
+  emit('search', searchKeyword.value)
 }
 
 /** 右键菜单 */
@@ -144,29 +149,7 @@ const handleDelete = () => {
 
 /** 拖拽放置 */
 const handleDrop = (info: AntTreeNodeDropEvent) => {
-  const dragNode = info.dragNode
-  const dropNode = info.node
-  const dropPosition = info.dropPosition
-  const dropToGap = info.dropToGap
-
-  let newParentId: string | null
-  let newSortOrder: number
-
-  if (dropToGap) {
-    // 放置在节点之间
-    newParentId = (dropNode as any).parentId || null
-    newSortOrder = dropPosition
-  } else {
-    // 放置在节点上（成为子节点）
-    newParentId = (dropNode as any).key
-    newSortOrder = 0
-  }
-
-  emit('drop', {
-    id: (dragNode as any).key,
-    parentId: newParentId,
-    sortOrder: newSortOrder
-  })
+  emit('drop', info)
 }
 
 /** 新增顶级页面 */
@@ -214,6 +197,7 @@ watch(
         placeholder="搜索Wiki页面"
         allow-clear
         @input="handleSearch"
+        @search="handleSearchClick"
       />
       <a-button
         type="primary"

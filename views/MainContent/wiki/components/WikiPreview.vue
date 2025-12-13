@@ -80,36 +80,38 @@ const handleClose = () => {
       </a-button>
     </div>
     <div class="search-results-content">
-      <a-spin :spinning="loading">
-        <div
-          v-if="searchResults.length > 0"
-          class="result-list"
-        >
+      <div class="spin-wrapper">
+        <a-spin :spinning="loading">
           <div
-            v-for="page in searchResults"
-            :key="page.id"
-            class="result-item"
-            @click="handleSelect(page)"
+            v-if="searchResults.length > 0"
+            class="result-list"
           >
-            <div class="result-title">
-              <file-text-outlined />
-              <span v-html="highlightKeyword(page.title)"></span>
-            </div>
             <div
-              class="result-summary"
-              v-html="highlightKeyword(getContentSummary(page.content))"
-            ></div>
-            <div class="result-meta">
-              <span>更新于 {{ page.updateTime }}</span>
-              <span>{{ page.updateBy }}</span>
+              v-for="page in searchResults"
+              :key="page.id"
+              class="result-item"
+              @click="handleSelect(page)"
+            >
+              <div class="result-title">
+                <file-text-outlined />
+                <span v-html="highlightKeyword(page.title)"></span>
+              </div>
+              <div
+                class="result-summary"
+                v-html="highlightKeyword(getContentSummary(page.content))"
+              ></div>
+              <div class="result-meta">
+                <span>更新于 {{ page.modifyAt }}</span>
+                <span>{{ page.authorName }}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <a-empty
-          v-else
-          description="未找到匹配的页面"
-        />
-      </a-spin>
+          <a-empty
+            v-else
+            description="未找到匹配的页面"
+          />
+        </a-spin>
+      </div>
     </div>
   </div>
 </template>
@@ -117,7 +119,7 @@ const handleClose = () => {
 <style scoped lang="less">
 .wiki-search-results {
   position: absolute;
-  top: 56px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
@@ -125,6 +127,7 @@ const handleClose = () => {
   background: #fff;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   .search-results-header {
     display: flex;
@@ -133,6 +136,7 @@ const handleClose = () => {
     padding: 12px 16px;
     border-bottom: 1px solid #f0f0f0;
     background: #fafafa;
+    flex-shrink: 0;
 
     .search-title {
       font-weight: 500;
@@ -144,8 +148,13 @@ const handleClose = () => {
 
   .search-results-content {
     flex: 1;
-    overflow: auto;
-    padding: 8px;
+    overflow-y: auto;
+    padding: 16px;
+    position: relative;
+
+    .spin-wrapper {
+      width: 100%;
+    }
   }
 
   .result-list {

@@ -1,14 +1,17 @@
 <script setup lang="ts">
 /**
  * Wiki编辑器组件
- * 功能：使用TinyMCE编辑Wiki页面内容
+ * 功能：使用Tiptap编辑Wiki页面内容
  */
-import { EditOutlined, SaveOutlined } from '@ant-design/icons-vue'
+import { EditOutlined, SaveOutlined, ShareAltOutlined, TeamOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import type { WikiFormData, WikiMode, WikiPage } from '../types'
 
-import TinyMceEditor from '@/framework/components/common/tiny-mce/index.vue'
+
+import TiptapEditor from '@/framework/components/common/tiptap-editor/index.vue'
+import TiptapViewer from '@/framework/components/common/tiptap-editor/TiptapViewer.vue'
+import type { EditorContent } from '@/framework/components/common/tiptap-editor/types'
 
 const props = withDefaults(
   defineProps<{
@@ -35,6 +38,10 @@ const emit = defineEmits<{
   (e: 'cancel'): void
   /** 切换到编辑模式 */
   (e: 'edit'): void
+  /** 管理协作者 */
+  (e: 'manageCollaborators'): void
+  /** 申请编辑权限 */
+  (e: 'requestAccess'): void
 }>()
 
 const { pageData, mode, parentId, saving } = toRefs(props)
@@ -44,18 +51,23 @@ const formData = reactive<WikiFormData>({
   id: undefined,
   title: '',
   content: '',
-  parentId: null
+  contentHtml: '',
+  parentId: null,
+  isPublic: '1'
 })
 
 // 表单引用
 const formRef = ref()
+// 编辑器引用
+const editorRef = ref<InstanceType<typeof TiptapEditor> | null>(null)
 
 // 内容变更标记
 const isContentChanged = ref(false)
 
-/** 获取富文本内容 */
-const handleGetContent = (html: string) => {
-  formData.content = html
+/** 处理编辑器内容更新 */
+const handleEditorUpdate = (content: EditorContent) => {
+  formData.content = JSON.stringify(content.json)
+  formData.contentHtml = content.html
   isContentChanged.value = true
 }
 
@@ -63,7 +75,8 @@ const handleGetContent = (html: string) => {
 const handleSave = async () => {
   try {
     await formRef.value?.validate()
-    if (!formData.content || formData.content.trim() === '' || formData.content === '<p></p>') {
+    const isEmpty = editorRef.value?.isEmpty()
+    if (isEmpty) {
       message.warning('请输入页面内容')
       return
     }
@@ -86,18 +99,43 @@ const handleEdit = () => {
   emit('edit')
 }
 
+/** 打开协作者管理 */
+const handleManageCollaborators = () => {
+  emit('manageCollaborators')
+}
+
+/** 申请编辑权限 */
+const handleRequestAccess = () => {
+  emit('requestAccess')
+}
+
+/** 复制分享链接 */
+const handleCopyShareLink = () => {
+  if (!pageData.value) return
+  const shareUrl = `${window.location.origin}/#/wiki/view?id=${pageData.value.id}`
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    message.success('分享链接已复制到剪贴板')
+  }).catch(() => {
+    message.error('复制失败')
+  })
+}
+
 /** 初始化表单数据 */
 const initFormData = () => {
   if (mode.value === 'add') {
     formData.id = undefined
     formData.title = ''
     formData.content = ''
+    formData.contentHtml = ''
     formData.parentId = parentId.value
+    formData.isPublic = '1'
   } else if (pageData.value) {
     formData.id = pageData.value.id
     formData.title = pageData.value.title
     formData.content = pageData.value.content
+    formData.contentHtml = pageData.value.contentHtml
     formData.parentId = pageData.value.parentId
+    formData.isPublic = pageData.value.isPublic
   }
   isContentChanged.value = false
 }
@@ -121,6 +159,7 @@ watch(() => parentId.value, (newVal) => {
     <div class="wiki-editor-toolbar">
       <template v-if="mode === 'view'">
         <a-button
+          v-if="pageData?.canEdit"
           type="primary"
           @click="handleEdit"
         >
@@ -128,6 +167,33 @@ watch(() => parentId.value, (newVal) => {
             <edit-outlined />
           </template>
           编辑
+        </a-button>
+        <a-button
+          v-else-if="pageData && !pageData.isAuthor"
+          @click="handleRequestAccess"
+        >
+          <template #icon>
+            <team-outlined />
+          </template>
+          申请编辑权限
+        </a-button>
+        <a-button
+          v-if="pageData"
+          @click="handleCopyShareLink"
+        >
+          <template #icon>
+            <share-alt-outlined />
+          </template>
+          分享
+        </a-button>
+        <a-button
+          v-if="pageData?.isAuthor"
+          @click="handleManageCollaborators"
+        >
+          <template #icon>
+            <team-outlined />
+          </template>
+          协作者
         </a-button>
       </template>
       <template v-else>
@@ -144,6 +210,16 @@ watch(() => parentId.value, (newVal) => {
         <a-button @click="handleCancel">
           取消
         </a-button>
+        <a-form-item
+          label="公开"
+          style="margin-bottom: 0; margin-left: 16px;"
+        >
+          <a-switch
+            v-model:checked="formData.isPublic"
+            checked-value="1"
+            un-checked-value="0"
+          />
+        </a-form-item>
       </template>
     </div>
 
@@ -159,15 +235,30 @@ watch(() => parentId.value, (newVal) => {
             {{ pageData.title }}
           </h1>
           <div class="wiki-meta">
-            <span>创建时间：{{ pageData.createTime }}</span>
-            <span>更新时间：{{ pageData.updateTime }}</span>
-            <span>作者：{{ pageData.createBy }}</span>
+            <span>浏览：{{ pageData.viewCount }} 次</span>
+            <span>版本：v{{ pageData.version }}</span>
+            <span>更新时间：{{ pageData.modifyAt }}</span>
+            <span>作者：{{ pageData.authorName }}</span>
+            <span>
+              <a-tag
+                v-if="pageData.isPublic === '1'"
+                color="green"
+              >
+                公开
+              </a-tag>
+              <a-tag
+                v-else
+                color="orange"
+              >
+                私有
+              </a-tag>
+            </span>
           </div>
           <a-divider />
-          <div
-            class="wiki-body"
-            v-html="pageData.content"
-          ></div>
+          <tiptap-viewer
+            :content="pageData.content"
+            :content-html="pageData.contentHtml"
+          />
         </div>
         <a-empty
           v-else
@@ -190,7 +281,7 @@ watch(() => parentId.value, (newVal) => {
             <a-input
               v-model:value="formData.title"
               placeholder="请输入页面标题"
-              :maxlength="100"
+              :maxlength="200"
               show-count
             />
           </a-form-item>
@@ -198,11 +289,13 @@ watch(() => parentId.value, (newVal) => {
             label="页面内容"
             name="content"
           >
-            <tiny-mce-editor
-              :value="formData.content"
-              :plugins="'lists advlist table image'"
-              :toolbar="'bold italic underline | formatselect | fontselect | fontsizeselect | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table code | undo redo | removeformat'"
-              @get-content="handleGetContent"
+            <tiptap-editor
+              ref="editorRef"
+              :content="formData.content"
+              :content-html="formData.contentHtml"
+              :placeholder="'开始编写Wiki内容...'"
+              min-height="400px"
+              @update="handleEditorUpdate"
             />
           </a-form-item>
         </a-form>
@@ -248,6 +341,7 @@ watch(() => parentId.value, (newVal) => {
 
   .wiki-meta {
     display: flex;
+    align-items: center;
     gap: 16px;
     color: #8c8c8c;
     font-size: 12px;

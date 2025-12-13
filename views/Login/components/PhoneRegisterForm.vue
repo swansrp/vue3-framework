@@ -88,7 +88,7 @@ interface Emits {
 
 const emit = defineEmits<Emits>()
 
-const formData = reactive({
+let formData = reactive({
   phoneNumber: '',
   msgCode: '',
   captcha: '',
