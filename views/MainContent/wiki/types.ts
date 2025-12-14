@@ -12,6 +12,10 @@ export interface WikiPage {
   content: string
   /** 页面内容(HTML格式) */
   contentHtml: string
+  /** Markdown源码内容(可选) */
+  contentMarkdown?: string
+  /** 编辑模式:'0'-富文本,'1'-Markdown */
+  mode?: string
   /** 父级页面ID，顶级为null */
   parentId: string | null
   /** 排序号 */
@@ -63,9 +67,15 @@ export interface WikiFormData {
   title: string
   content: string
   contentHtml: string
+  contentMarkdown?: string
+  /** 编辑模式:'0'-富文本,'1'-Markdown */
+  mode?: string
   parentId: string | null
   isPublic?: string
 }
+
+/** 编辑器模式 */
+export type EditorMode = 'rich' | 'markdown'
 
 /** 查询参数 */
 export interface WikiQueryParams {

@@ -170,10 +170,7 @@ onBeforeUnmount(() => {
     />
 
     <!-- 编辑器内容 -->
-    <div
-      class="tiptap-editor-content"
-      :style="{ minHeight }"
-    >
+    <div class="tiptap-editor-content">
       <editor-content :editor="editor" />
     </div>
   </div>
@@ -185,6 +182,10 @@ onBeforeUnmount(() => {
   border-radius: 4px;
   overflow: hidden;
   background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 
   &:focus-within {
     border-color: #40a9ff;
@@ -193,12 +194,16 @@ onBeforeUnmount(() => {
 }
 
 .tiptap-editor-content {
+  flex: 1;
   padding: 16px;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  max-height: 100%;
 
   :deep(.ProseMirror) {
     outline: none;
-    min-height: 100%;
+    min-height: auto;
 
     &.is-editor-empty::before {
       content: attr(data-placeholder);
@@ -309,17 +314,24 @@ onBeforeUnmount(() => {
           flex-shrink: 0;
           display: flex;
           align-items: center;
-          height: 1.75em;
+          margin-top: 4px;
 
           input[type='checkbox'] {
             margin: 0;
             cursor: pointer;
+            width: 16px;
+            height: 16px;
           }
         }
 
         > div {
           flex: 1;
           min-width: 0;
+          line-height: 1.75;
+
+          p {
+            margin: 0;
+          }
         }
       }
     }

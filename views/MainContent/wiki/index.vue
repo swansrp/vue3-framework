@@ -3,7 +3,7 @@
  * Wiki看板主页面
  * 功能：左侧目录树 + 右侧编辑/预览区域 + 协作者管理
  */
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import type { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 
 
@@ -48,8 +48,10 @@ const pageLoading = ref(false)
 const mode = ref<WikiMode>('view')
 /** 新增时的父级ID */
 const addParentId = ref<string | null>(null)
-/** 保存中状态 */
+// 保存中状态
 const saving = ref(false)
+// 内容是否已修改（用于判断是否需要提示）
+const isContentChanged = ref(false)
 
 // ========== 搜索相关 ==========
 
@@ -171,29 +173,94 @@ const loadPageDetail = async (id: string) => {
 
 /** 选中节点 */
 const handleSelect = (key: string, _node: WikiTreeNode) => {
-  selectedKey.value = key
-  loadPageDetail(key)
+  const stringKey = String(key) // 确保转换为字符串
+  
+  // 如果当前正在编辑且内容已修改，提示用户确认
+  if ((mode.value === 'edit' || mode.value === 'add') && isContentChanged.value) {
+    Modal.confirm({
+      title: '提示',
+      content: '当前页面有未保存的修改，是否放弃修改并查看其他页面？',
+      okText: '放弃修改',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: () => {
+        performSelect(stringKey)
+      }
+    })
+  } else {
+    performSelect(stringKey)
+  }
+}
+
+/** 执行选中操作 */
+const performSelect = (stringKey: string) => {
+  selectedKey.value = stringKey
+  loadPageDetail(stringKey)
   showSearchResults.value = false
+  isContentChanged.value = false
 }
 
 /** 新增页面 */
 const handleAdd = (parentId: string | null) => {
+  // 如果当前正在编辑且内容已修改，提示用户确认
+  if ((mode.value === 'edit' || mode.value === 'add') && isContentChanged.value) {
+    Modal.confirm({
+      title: '提示',
+      content: '当前页面有未保存的修改，是否放弃修改并进入新增模式？',
+      okText: '放弃修改',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: () => {
+        performAdd(parentId)
+      }
+    })
+  } else {
+    performAdd(parentId)
+  }
+}
+
+/** 执行新增操作 */
+const performAdd = (parentId: string | null) => {
   selectedKey.value = ''
   currentPage.value = null
   addParentId.value = parentId
   mode.value = 'add'
   showSearchResults.value = false
+  isContentChanged.value = false
 }
 
 /** 编辑页面 */
 const handleEdit = (key: string) => {
-  if (selectedKey.value !== key) {
-    selectedKey.value = key
-    loadPageDetail(key).then(() => {
+  const stringKey = String(key) // 确保转换为字符串
+  
+  // 如果当前正在编辑且内容已修改，提示用户确认
+  if ((mode.value === 'edit' || mode.value === 'add') && isContentChanged.value) {
+    Modal.confirm({
+      title: '提示',
+      content: '当前页面有未保存的修改，是否放弃修改并编辑其他页面？',
+      okText: '放弃修改',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: () => {
+        performEdit(stringKey)
+      }
+    })
+  } else {
+    performEdit(stringKey)
+  }
+}
+
+/** 执行编辑操作 */
+const performEdit = (stringKey: string) => {
+  if (selectedKey.value !== stringKey) {
+    selectedKey.value = stringKey
+    loadPageDetail(stringKey).then(() => {
       mode.value = 'edit'
+      isContentChanged.value = false
     })
   } else {
     mode.value = 'edit'
+    isContentChanged.value = false
   }
   showSearchResults.value = false
 }
@@ -201,6 +268,12 @@ const handleEdit = (key: string) => {
 /** 切换到编辑模式 */
 const handleSwitchToEdit = () => {
   mode.value = 'edit'
+  isContentChanged.value = false
+}
+
+/** 监听内容变化 */
+const handleContentChange = (changed: boolean) => {
+  isContentChanged.value = changed
 }
 
 /** 删除页面 */
@@ -312,6 +385,8 @@ const handleSave = async (data: WikiFormData) => {
       currentPage.value = updatedPage
       mode.value = 'view'
     }
+    // 保存成功后重置修改标记
+    isContentChanged.value = false
     // 重新加载树
     await loadTreeData()
   } catch (error) {
@@ -329,6 +404,7 @@ const handleCancel = () => {
     selectedKey.value = ''
   }
   mode.value = 'view'
+  isContentChanged.value = false
 }
 
 // ========== 协作者管理方法 ==========
@@ -484,6 +560,7 @@ onMounted(() => {
           @edit="handleSwitchToEdit"
           @manage-collaborators="handleManageCollaborators"
           @request-access="handleRequestAccess"
+          @content-change="handleContentChange"
         />
       </a-spin>
     </div>
@@ -554,6 +631,18 @@ onMounted(() => {
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     background: #fff;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+
+    // 确保 a-spin 和 wiki-editor 也参与 flex 布局
+    :deep(.ant-spin-nested-loading),
+    :deep(.ant-spin-container) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
   }
 }
 </style>

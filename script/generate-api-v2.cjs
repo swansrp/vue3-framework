@@ -440,6 +440,32 @@ function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas
         interfaceCode += `  /** ${prop.description} */\n`;
       }
       
+      // 为relation字段添加详细说明
+      if (propName === 'relation' && cleanedSchemaName.includes('AdvancedQuery')) {
+        interfaceCode += `  /**\n`;
+        interfaceCode += `   * 查询关系类型\n`;
+        interfaceCode += `   * @description 定义查询条件的关系类型，对应FILTER_TYPE枚举\n`;
+        interfaceCode += `   * - 1: EQUAL (等于)\n`;
+        interfaceCode += `   * - 2: NOT_EQUAL (不等于)\n`;
+        interfaceCode += `   * - 3: GREATER (大于)\n`;
+        interfaceCode += `   * - 4: GREATER_EQUAL (大于等于)\n`;
+        interfaceCode += `   * - 5: LESS (小于)\n`;
+        interfaceCode += `   * - 6: LESS_EQUAL (小于等于)\n`;
+        interfaceCode += `   * - 7: NULL (为空)\n`;
+        interfaceCode += `   * - 8: NOT_NULL (不为空)\n`;
+        interfaceCode += `   * - 9: LIKE (模糊匹配)\n`;
+        interfaceCode += `   * - 10: NOT_LIKE (不匹配)\n`;
+        interfaceCode += `   * - 11: IN (包含于)\n`;
+        interfaceCode += `   * - 12: NOT_IN (不包含于)\n`;
+        interfaceCode += `   * - 13: BETWEEN (区间)\n`;
+        interfaceCode += `   * - 14: NOT_BETWEEN (不在区间)\n`;
+        interfaceCode += `   * - 15: CONTAIN (包含)\n`;
+        interfaceCode += `   * - 16: CONTAIN_IN_OR (包含其中之一)\n`;
+        interfaceCode += `   * - 17: CONTAIN_IN_AND (包含全部)\n`;
+        interfaceCode += `   * - 99: SELECT_APPLY (特殊应用查询)\n`;
+        interfaceCode += `   */\n`;
+      }
+      
       let propType = 'any';
       
       if (prop.$ref) {
@@ -865,6 +891,126 @@ function generateApiByController(swaggerData, envConfig) {
   return { controllerGroups, ignoredCount, allSchemas };
 }
 
+// 生成公共类型文件
+function generateCommonTypesFile(allSchemas, controllerGroups, envConfig) {
+  let content = `// ==================== 公共类型定义 ====================\n`;
+  content += `// 项目: ${envConfig.projectName}\n`;
+  content += `// 文件: common.ts\n`;
+  content += `// 说明: 多个控制器共享的类型定义\n`;
+  content += `// ============================================================\n\n`;
+  
+  content += `/**\n`;
+  content += ` * 全局响应数据类型说明\n`;
+  content += ` * @interface ResponseDataType\n`;
+  content += ` * @description 所有API接口的统一响应格式\n`;
+  content += ` * \n`;
+  content += ` * @property {Object} status - 响应状态信息\n`;
+  content += ` * @property {number} status.code - 状态码，0表示成功，非0表示失败\n`;
+  content += ` * @property {string} status.msg - 状态消息\n`;
+  content += ` * @property {string} status.detailMsg - 详细错误信息\n`;
+  content += ` * @property {any} payload - 响应数据载体，成功时包含实际返回的数据\n`;
+  content += ` * \n`;
+  content += ` * @example\n`;
+  content += ` * // 成功响应示例\n`;
+  content += ` * {\n`;
+  content += ` *   status: { code: 0, msg: 'success', detailMsg: '' },\n`;
+  content += ` *   payload: { id: 1, name: 'example' }\n`;
+  content += ` * }\n`;
+  content += ` * \n`;
+  content += ` * // 失败响应示例\n`;
+  content += ` * {\n`;
+  content += ` *   status: { code: 1001, msg: 'error', detailMsg: '详细错误信息' },\n`;
+  content += ` *   payload: null\n`;
+  content += ` * }\n`;
+  content += ` */\n`;
+  content += `// ResponseDataType 是全局类型，已在框架中定义\n\n`;
+  
+  // 统计每个 schema 被使用的次数
+  const schemaUsageCount = new Map();
+  Object.values(controllerGroups).forEach(group => {
+    group.usedSchemas.forEach(schema => {
+      const count = schemaUsageCount.get(schema) || 0;
+      schemaUsageCount.set(schema, count + 1);
+    });
+  });
+  
+  // 找出被多个控制器使用的类型 (使用次数 >= 2)
+  const commonSchemas = new Set();
+  schemaUsageCount.forEach((count, schema) => {
+    if (count >= 2) {
+      commonSchemas.add(schema);
+    }
+  });
+  
+  if (commonSchemas.size === 0) {
+    content += `// 当前没有多个控制器共享的类型\n`;
+    return { content, commonSchemas };
+  }
+  
+  content += `// ==================== 共享类型定义 ====================\n`;
+  content += `// 以下类型被多个控制器使用，提取到公共文件以避免重复定义\n\n`;
+  
+  // 生成共享类型的接口定义
+  const processedSchemas = new Set();
+  const schemasToProcess = Array.from(commonSchemas);
+  
+  // 处理依赖关系
+  function addDependentSchemas(schemaName) {
+    const schemaInfo = processSchemaName(schemaName);
+    const cleanedSchemaName = schemaInfo.name;
+    if (processedSchemas.has(cleanedSchemaName) || !allSchemas[schemaName]) {
+      return;
+    }
+    
+    processedSchemas.add(cleanedSchemaName);
+    const schema = allSchemas[schemaName];
+    
+    if (schemaInfo.isGeneric && schemaInfo.itemType) {
+      const itemTypeSchema = allSchemas[schemaInfo.itemType];
+      if (itemTypeSchema && !processedSchemas.has(cleanSchemaName(schemaInfo.itemType))) {
+        // 无论是否在公共类型中，都需要包含依赖类型
+        schemasToProcess.push(schemaInfo.itemType);
+      }
+    }
+    
+    if (schema.properties) {
+      Object.values(schema.properties).forEach(prop => {
+        if (prop.$ref) {
+          const refType = prop.$ref.split('/').pop();
+          const refSchemaInfo = processSchemaName(refType);
+          if (!processedSchemas.has(refSchemaInfo.name)) {
+            // 无论是否在公共类型中，都需要包含依赖类型
+            schemasToProcess.push(refType);
+          }
+        } else if (prop.type === 'array' && prop.items && prop.items.$ref) {
+          const refType = prop.items.$ref.split('/').pop();
+          const refSchemaInfo = processSchemaName(refType);
+          if (!processedSchemas.has(refSchemaInfo.name)) {
+            // 无论是否在公共类型中，都需要包含依赖类型
+            schemasToProcess.push(refType);
+          }
+        }
+      });
+    }
+  }
+  
+  // 生成所有公共类型
+  while (schemasToProcess.length > 0) {
+    const schemaName = schemasToProcess.shift();
+    const schemaInfo = processSchemaName(schemaName);
+    const cleanedSchemaName = schemaInfo.name;
+    
+    if (allSchemas[schemaName] && !processedSchemas.has(cleanedSchemaName)) {
+      addDependentSchemas(schemaName);
+      const tempProcessedSchemas = new Set();
+      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, tempProcessedSchemas);
+      content += interfaceCode;
+    }
+  }
+  
+  return { content, commonSchemas };
+}
+
 // 生成单个文件内容（按tag description分组）
 function generateControllerFile(controllerName, controllerData, envConfig) {
   let content = `// ==================== ${controllerData.tagDescription || controllerData.tag} API ====================\n`;
@@ -895,7 +1041,7 @@ function generateControllerFile(controllerName, controllerData, envConfig) {
 }
 
 // 生成Types文件内容
-function generateTypesFile(controllerName, controllerData, usedSchemas, allSchemas, envConfig) {
+function generateTypesFile(controllerName, controllerData, usedSchemas, allSchemas, envConfig, commonSchemas = new Set()) {
   let content = `// ==================== ${controllerData.tagDescription || controllerData.tag} Types ====================\n`;
   content += `// 项目: ${envConfig.projectName}\n`;
   content += `// 文件: ${controllerName}Types.ts\n`;
@@ -905,11 +1051,49 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
   }
   content += `// ============================================================\n\n`;
   
+  // 如果使用了公共类型，添加导入语句
+  const usedCommonTypes = new Set();
+  Array.from(usedSchemas).forEach(schema => {
+    if (commonSchemas.has(schema)) {
+      const schemaInfo = processSchemaName(schema);
+      usedCommonTypes.add(schemaInfo.name);
+    }
+  });
+  
+  if (usedCommonTypes.size > 0) {
+    content += `// 导入公共类型\n`;
+    content += `import type { ${Array.from(usedCommonTypes).sort().join(', ')} } from './common'\n\n`;
+  }
+  
+  content += `/**\n`;
+  content += ` * 全局响应数据类型说明\n`;
+  content += ` * @interface ResponseDataType\n`;
+  content += ` * @description 所有API接口的统一响应格式\n`;
+  content += ` * \n`;
+  content += ` * @property {Object} status - 响应状态信息\n`;
+  content += ` * @property {number} status.code - 状态码，0表示成功，非0表示失败\n`;
+  content += ` * @property {string} status.msg - 状态消息\n`;
+  content += ` * @property {string} status.detailMsg - 详细错误信息\n`;
+  content += ` * @property {any} payload - 响应数据载体，成功时包含实际返回的数据\n`;
+  content += ` * \n`;
+  content += ` * @example\n`;
+  content += ` * // 成功响应示例\n`;
+  content += ` * {\n`;
+  content += ` *   status: { code: 0, msg: 'success', detailMsg: '' },\n`;
+  content += ` *   payload: { id: 1, name: 'example' }\n`;
+  content += ` * }\n`;
+  content += ` * \n`;
+  content += ` * // 失败响应示例\n`;
+  content += ` * {\n`;
+  content += ` *   status: { code: 1001, msg: 'error', detailMsg: '详细错误信息' },\n`;
+  content += ` *   payload: null\n`;
+  content += ` * }\n`;
+  content += ` */\n`;
   content += `// ResponseDataType 是全局类型，不需要导入\n\n`;
   
-  // 生成用到的类型定义
+  // 生成用到的类型定义（跳过公共类型）
   const processedSchemas = new Set();
-  const schemasToProcess = Array.from(usedSchemas); // 使用原始schema名称
+  const schemasToProcess = Array.from(usedSchemas).filter(schema => !commonSchemas.has(schema)); // 过滤掉公共类型
   
   // 处理依赖关系，确保被引用的类型也被包含
   function addDependentSchemas(schemaName) {
@@ -966,33 +1150,44 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
     }
   }
   
-  // 生成响应类型
-  const responseTypes = new Set();
+  // 生成响应类型 - 使用 Map 来跟踪已生成的类型名称，避免重复
+  const generatedResponseTypes = new Map(); // key: typeName, value: typeDefinition
+  
   Array.from(usedSchemas).forEach(originalSchemaName => {
     const schemaInfo = processSchemaName(originalSchemaName);
     const cleanedSchemaName = schemaInfo.name;
     if (allSchemas[originalSchemaName]) {
       // 生成基本响应类型
-      responseTypes.add(`export type ${cleanedSchemaName}Response = ResponseDataType & {
+      const responseTypeName = `${cleanedSchemaName}Response`;
+      if (!generatedResponseTypes.has(responseTypeName)) {
+        generatedResponseTypes.set(responseTypeName, `export type ${responseTypeName} = ResponseDataType & {
   payload: ${cleanedSchemaName}
 }
 
 `);
-      responseTypes.add(`export type ${cleanedSchemaName}ListResponse = ResponseDataType & {
+      }
+      
+      // 生成列表响应类型
+      const listResponseTypeName = `${cleanedSchemaName}ListResponse`;
+      if (!generatedResponseTypes.has(listResponseTypeName)) {
+        generatedResponseTypes.set(listResponseTypeName, `export type ${listResponseTypeName} = ResponseDataType & {
   payload: ${cleanedSchemaName}[]
 }
 
 `);
+      }
       
       // 对于分页类型，生成更精确的响应类型
-      if (schemaInfo.isGeneric && schemaInfo.containerType === 'Page') {
-        responseTypes.add(`export type ${cleanedSchemaName}PageResponse = ResponseDataType & {
+      const pageResponseTypeName = `${cleanedSchemaName}PageResponse`;
+      if (!generatedResponseTypes.has(pageResponseTypeName)) {
+        if (schemaInfo.isGeneric && schemaInfo.containerType === 'Page') {
+          generatedResponseTypes.set(pageResponseTypeName, `export type ${pageResponseTypeName} = ResponseDataType & {
   payload: ${cleanedSchemaName}
 }
 
 `);
-      } else {
-        responseTypes.add(`export type ${cleanedSchemaName}PageResponse = ResponseDataType & {
+        } else {
+          generatedResponseTypes.set(pageResponseTypeName, `export type ${pageResponseTypeName} = ResponseDataType & {
   payload: {
     records: ${cleanedSchemaName}[]
     total: number
@@ -1002,13 +1197,14 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
 }
 
 `);
+        }
       }
     }
   });
   
   // 添加响应类型
-  Array.from(responseTypes).forEach(responseType => {
-    content += responseType;
+  generatedResponseTypes.forEach(typeDefinition => {
+    content += typeDefinition;
   });
   
   return content;
@@ -1105,6 +1301,16 @@ async function main() {
       });
     }
     
+    // 生成公共类型文件
+    console.log('\n🔍 分析共享类型...');
+    const { content: commonTypesContent, commonSchemas } = generateCommonTypesFile(allSchemas, controllerGroups, envConfig);
+    const commonTypesFile = path.join(typesDir, 'common.ts');
+    fs.writeFileSync(commonTypesFile, commonTypesContent, 'utf-8');
+    console.log(`✓ 生成 common.ts (包含 ${commonSchemas.size} 个共享类型)`);
+    if (commonSchemas.size > 0) {
+      console.log(`  共享类型: ${Array.from(commonSchemas).map(s => processSchemaName(s).name).join(', ')}`);
+    }
+    
     // 生成每个文件（按tag description分组）
     let totalFunctions = 0;
     Object.keys(controllerGroups).forEach(controllerName => {
@@ -1115,9 +1321,9 @@ async function main() {
       const outputFile = path.join(outputDir, `${controllerName}.ts`);
       fs.writeFileSync(outputFile, fileContent, 'utf-8');
       
-      // 生成Types文件 - 只要有任何schema就生成，即使只有一个
+      // 生成Types文件 - 使用公共类型
       if (controllerData.usedSchemas.size > 0) {
-        const typesContent = generateTypesFile(controllerName, controllerData, controllerData.usedSchemas, allSchemas, envConfig);
+        const typesContent = generateTypesFile(controllerName, controllerData, controllerData.usedSchemas, allSchemas, envConfig, commonSchemas);
         const typesOutputFile = path.join(typesDir, `${controllerName}Types.ts`);
         fs.writeFileSync(typesOutputFile, typesContent, 'utf-8');
       } else {
@@ -1145,11 +1351,52 @@ async function main() {
     fs.writeFileSync(indexFile, indexContent, 'utf-8');
     console.log(`✓ 生成 index.ts`);
     
-    // 生成types的索引文件
+    // 生成types的索引文件 - 使用显式导出避免重复
+    console.log('\n🔍 收集所有导出类型...');
+    const allExportedTypes = new Set();
+    const typeFileMap = new Map(); // key: typeName, value: fileName
+    
+    // 预先收集所有类型，检测冲突
+    Object.keys(controllerGroups).forEach(controllerName => {
+      const typesFile = path.join(typesDir, `${controllerName}Types.ts`);
+      if (fs.existsSync(typesFile)) {
+        const content = fs.readFileSync(typesFile, 'utf-8');
+        // 提取所有 export 的类型和接口
+        const exportMatches = content.matchAll(/export\s+(?:type|interface)\s+([A-Za-z0-9_]+)/g);
+        for (const match of exportMatches) {
+          const typeName = match[1];
+          if (typeFileMap.has(typeName)) {
+            // 检测到重复，记录但不阻止
+            console.log(`  ⚠️  重复类型: ${typeName} (在 ${typeFileMap.get(typeName)} 和 ${controllerName}Types 中)`);
+          } else {
+            typeFileMap.set(typeName, controllerName + 'Types');
+            allExportedTypes.add(typeName);
+          }
+        }
+      }
+    });
+    
+    // 生成 types/index.ts ，使用注释说明重复的类型
     let typesIndexContent = `// ==================== 自动生成的Types导出 ====================\n`;
     typesIndexContent += `// 位置: src/apis/types/\n`;
     typesIndexContent += `// 说明: 每个API控制器的类型定义\n`;
+    typesIndexContent += `// 注意: 如果多个文件中有相同的类型名称，请直接从对应的文件导入\n`;
     typesIndexContent += `// ============================================================\n\n`;
+    
+    // 导出公共类型
+    typesIndexContent += `// 公共类型 (多个控制器共享)\n`;
+    typesIndexContent += `export * from './common';\n\n`;
+    
+    // 使用 export * ，但添加说明
+    typesIndexContent += `/**\n`;
+    typesIndexContent += ` * 注意：由于Swagger生成的API可能在不同控制器中使用相同的类型名称，\n`;
+    typesIndexContent += ` * 如果出现类型名冲突，建议直接从具体的类型文件导入：\n`;
+    typesIndexContent += ` * \n`;
+    typesIndexContent += ` * import type { YourType } from '@/apis/types/specificControllerTypes'\n`;
+    typesIndexContent += ` * \n`;
+    typesIndexContent += ` * 而不是使用：\n`;
+    typesIndexContent += ` * import type { YourType } from '@/apis/types'\n`;
+    typesIndexContent += ` */\n\n`;
     
     Object.keys(controllerGroups).forEach(controllerName => {
       const controllerData = controllerGroups[controllerName];
@@ -1162,12 +1409,18 @@ async function main() {
     fs.writeFileSync(typesIndexFile, typesIndexContent, 'utf-8');
     console.log(`✓ 生成 types/index.ts`);
     
+    if (typeFileMap.size !== allExportedTypes.size) {
+      console.log(`\n⚠️  检测到 ${typeFileMap.size - allExportedTypes.size} 个重复的类型名称`);
+      console.log(`   建议直接从具体的 types 文件导入以避免歧义\n`);
+    }
+    
     // 输出统计信息
     const totalTypes = Object.values(controllerGroups).reduce((sum, group) => sum + group.usedSchemas.size, 0);
     console.log('\n📊 生成统计:');
     console.log(`  - 按Tag Description分文件: ${controllerCount} 个`);
     console.log(`  - API函数总数: ${totalFunctions} 个`);
     console.log(`  - 生成类型总数: ${totalTypes} 个`);
+    console.log(`  - 公共类型数量: ${commonSchemas.size} 个 (提取到 common.ts)`);
     console.log(`  - 忽略的API: ${ignoredCount} 个 (以'系统'开头)`);
     console.log(`  - 平均每个文件: ${Math.round(totalFunctions / controllerCount)} 个API`);
     
@@ -1176,6 +1429,7 @@ async function main() {
     console.log('\n📖 使用方式:');
     console.log('  import { functionName } from "@/apis";');
     console.log('  import { TypeName } from "@/apis/types";');
+    console.log('  import type { CommonType } from "@/apis/types/common"; // 导入共享类型');
     
   } catch (error) {
     console.error('\n❌ 生成失败:', error.message);

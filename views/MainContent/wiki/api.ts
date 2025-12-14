@@ -108,6 +108,26 @@ export const getPublicWikiPage = async (id: string): Promise<WikiPage> => {
   return res.payload as WikiPage
 }
 
+/**
+ * 获取公开Wiki页面树形结构（无需登录）
+ * @param params 查询参数
+ */
+export const getPublicWikiTree = async (params?: WikiQueryParams): Promise<WikiTreeNode[]> => {
+  const api = buildGetApiByType('/wiki/public/tree', '')
+  const res = await request(api, params || {}, {}, false, false, true)
+  return (res.payload || []) as WikiTreeNode[]
+}
+
+/**
+ * 搜索公开Wiki页面
+ * @param keyword 搜索关键词（无需登录）
+ */
+export const searchPublicWikiPages = async (keyword: string): Promise<WikiPage[]> => {
+  const api = buildGetApiByType('/wiki/public/search', '')
+  const res = await request(api, { keyword }, {}, false, false, true)
+  return (res.payload || []) as WikiPage[]
+}
+
 // ========== 协作者相关接口 ==========
 
 /**

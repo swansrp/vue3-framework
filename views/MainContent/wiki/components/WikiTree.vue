@@ -25,10 +25,13 @@ const props = withDefaults(
     selectedKey?: string
     /** 加载状态 */
     loading?: boolean
+    /** 只读模式（隐藏编辑功能） */
+    readonly?: boolean
   }>(),
   {
     loading: false,
-    selectedKey: ''
+    selectedKey: '',
+    readonly: false
   }
 )
 
@@ -47,7 +50,7 @@ const emit = defineEmits<{
   (e: 'search', keyword: string): void
 }>()
 
-const { treeData, selectedKey, loading } = toRefs(props)
+const { treeData, selectedKey, loading, readonly } = toRefs(props)
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -90,6 +93,9 @@ const handleSearchClick = () => {
 
 /** 右键菜单 */
 const handleRightClick = ({ event, node }: { event: MouseEvent; node: any }) => {
+  // 只读模式不显示右键菜单
+  if (readonly.value) return
+  
   event.preventDefault()
   contextMenuNode.value = node as WikiTreeNode
   contextMenuStyle.value = {
@@ -200,8 +206,8 @@ watch(
         @search="handleSearchClick"
       />
       <a-button
+        v-if="!readonly"
         type="primary"
-        size="small"
         class="add-root-btn"
         @click="handleAddRoot"
       >
@@ -222,7 +228,7 @@ watch(
           :selected-keys="selectedKey ? [selectedKey] : []"
           :auto-expand-parent="autoExpandParent"
           :field-names="{ key: 'key', title: 'title', children: 'children' }"
-          draggable
+          :draggable="!readonly"
           block-node
           show-icon
           @select="handleSelect"
@@ -239,6 +245,7 @@ watch(
           description="暂无Wiki页面"
         >
           <a-button
+            v-if="!readonly"
             type="primary"
             @click="handleAddRoot"
           >

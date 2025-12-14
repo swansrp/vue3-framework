@@ -28,6 +28,7 @@ import {
 import type { Editor } from '@tiptap/vue-3'
 
 import { CODE_LANGUAGES } from './types'
+
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
 const props = defineProps<{
@@ -621,6 +622,7 @@ const insertColumns = () => {
 
 <style scoped lang="less">
 .tiptap-toolbar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
