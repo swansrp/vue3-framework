@@ -27,6 +27,16 @@ const staticRoutes: Array<RouteRecordRaw> = [
     meta: { public: true }
   },
   {
+    path: '/wiki',
+    component: () => import('@/framework/views/MainContent/wiki/index.vue'),
+    meta: { public: true }
+  },
+  {
+    path: '/wiki/view',
+    component: () => import('@/framework/views/MainContent/wiki/view.vue'),
+    meta: { public: true }
+  },
+  {
     path: '/',
     name: 'Root',
     component: MainContent
