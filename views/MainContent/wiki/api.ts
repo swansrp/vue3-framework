@@ -5,6 +5,9 @@
 import type { 
   CollaboratorApproveParams, 
   CollaboratorRequestParams, 
+  ShareCodeGenerateParams,
+  ShareCodeResponse,
+  ShareCodeUseParams,
   WikiCollaborator, 
   WikiFormData, 
   WikiPage, 
@@ -204,4 +207,31 @@ export const getMyCollaborations = async (): Promise<WikiCollaborator[]> => {
   const api = buildGetApiByType('/wiki/collaborator/my', '')
   const res = await request(api, {}, {}, false, false, true)
   return (res.payload || []) as WikiCollaborator[]
+}
+
+/**
+ * 生成分享码
+ * @param params 分享参数
+ */
+export const generateShareCode = async (params: ShareCodeGenerateParams): Promise<ShareCodeResponse> => {
+  const api = buildGetApiByType('/wiki/collaborator/share', '')
+  const res = await request(api, {
+    pageId: params.pageId,
+    permission: params.permission,
+    expiredSeconds: params.expiredSeconds,
+    password: params.password
+  }, {}, false, false, true)
+  return res.payload as ShareCodeResponse
+}
+
+/**
+ * 使用分享码获取权限
+ * @param params 分享码参数
+ */
+export const useShareCode = async (params: ShareCodeUseParams): Promise<void> => {
+  const api = buildPostApiByType('/wiki/collaborator/share', '')
+  await request(api, {
+    shareCode: params.shareCode,
+    password: params.password
+  }, {}, true, false, true)
 }

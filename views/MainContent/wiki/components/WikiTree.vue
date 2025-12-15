@@ -9,6 +9,7 @@ import {
   FileAddOutlined,
   FileTextOutlined,
   FolderAddOutlined,
+  KeyOutlined,
   PlusOutlined
 } from '@ant-design/icons-vue'
 import { Modal } from 'ant-design-vue'
@@ -48,6 +49,8 @@ const emit = defineEmits<{
   (e: 'drop', info: AntTreeNodeDropEvent): void
   /** 搜索 */
   (e: 'search', keyword: string): void
+  /** 使用分享码 */
+  (e: 'use-share-code'): void
 }>()
 
 const { treeData, selectedKey, loading, readonly } = toRefs(props)
@@ -205,17 +208,27 @@ watch(
         @input="handleSearch"
         @search="handleSearchClick"
       />
-      <a-button
-        v-if="!readonly"
-        type="primary"
-        class="add-root-btn"
-        @click="handleAddRoot"
-      >
-        <template #icon>
-          <plus-outlined />
-        </template>
-        新增
-      </a-button>
+      <div class="tree-actions">
+        <a-tooltip title="使用分享码">
+          <a-button
+            @click="emit('use-share-code')"
+          >
+            <template #icon>
+              <key-outlined />
+            </template>
+          </a-button>
+        </a-tooltip>
+        <a-button
+          v-if="!readonly"
+          type="primary"
+          @click="handleAddRoot"
+        >
+          <template #icon>
+            <plus-outlined />
+          </template>
+          新增
+        </a-button>
+      </div>
     </div>
 
     <!-- 树形结构 -->
@@ -309,7 +322,9 @@ watch(
     padding: 12px;
     border-bottom: 1px solid #f0f0f0;
 
-    .add-root-btn {
+    .tree-actions {
+      display: flex;
+      gap: 8px;
       flex-shrink: 0;
     }
   }

@@ -3,7 +3,7 @@
  * Wiki编辑器组件
  * 功能：使用Tiptap编辑Wiki页面内容
  */
-import { EditOutlined, SaveOutlined, ShareAltOutlined, TeamOutlined } from '@ant-design/icons-vue'
+import { EditOutlined, KeyOutlined, SaveOutlined, ShareAltOutlined, TeamOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import TurndownService from 'turndown'
 
@@ -45,6 +45,8 @@ const emit = defineEmits<{
   (e: 'requestAccess'): void
   /** 内容变化 */
   (e: 'contentChange', changed: boolean): void
+  /** 生成分享码 */
+  (e: 'generateShareCode'): void
 }>()
 
 const { pageData, mode, parentId, saving } = toRefs(props)
@@ -343,6 +345,15 @@ watch(() => parentId.value, (newVal) => {
             <team-outlined />
           </template>
           协作者
+        </a-button>
+        <a-button
+          v-if="pageData?.isAuthor && pageData?.isPublic === '0'"
+          @click="emit('generateShareCode')"
+        >
+          <template #icon>
+            <key-outlined />
+          </template>
+          生成分享码
         </a-button>
       </template>
       <template v-else>

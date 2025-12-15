@@ -127,3 +127,31 @@ export interface CollaboratorApproveParams {
   userId: string
   approved: boolean
 }
+
+/** 生成分享码参数 */
+export interface ShareCodeGenerateParams {
+  /** 页面ID */
+  pageId: string
+  /** 权限类型: 1-只读, 2-编辑 */
+  permission: string
+  /** 过期时间(秒) */
+  expiredSeconds: number
+  /** 密码(4位) */
+  password: string
+}
+
+/** 分享码响应 */
+export interface ShareCodeResponse {
+  /** 分享码 */
+  shareCode: string
+  /** 过期时间 */
+  expireAt: string
+}
+
+/** 使用分享码参数 */
+export interface ShareCodeUseParams {
+  /** 分享码 */
+  shareCode: string
+  /** 密码 */
+  password: string
+}

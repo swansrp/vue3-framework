@@ -24,6 +24,8 @@ import {
   requestCollaboratorAccess
 } from './api'
 import CollaboratorManager from './components/CollaboratorManager.vue'
+import ShareCodeGenerator from './components/ShareCodeGenerator.vue'
+import ShareCodeUser from './components/ShareCodeUser.vue'
 import WikiEditor from './components/WikiEditor.vue'
 import WikiPreview from './components/WikiPreview.vue'
 import WikiTree from './components/WikiTree.vue'
@@ -52,6 +54,13 @@ const addParentId = ref<string | null>(null)
 const saving = ref(false)
 // 内容是否已修改（用于判断是否需要提示）
 const isContentChanged = ref(false)
+
+// ========== 分享功能相关 ==========
+
+/** 生成分享码弹窗可见性 */
+const shareCodeGeneratorVisible = ref(false)
+/** 使用分享码弹窗可见性 */
+const shareCodeUserVisible = ref(false)
 
 // ========== 搜索相关 ==========
 
@@ -508,6 +517,24 @@ const handleSubmitRequest = async () => {
   }
 }
 
+/** 打开生成分享码弹窗 */
+const handleGenerateShareCode = () => {
+  if (!currentPage.value) return
+  shareCodeGeneratorVisible.value = true
+}
+
+/** 打开使用分享码弹窗 */
+const handleUseShareCode = () => {
+  shareCodeUserVisible.value = true
+}
+
+/** 使用分享码成功后 */
+const handleShareCodeSuccess = async () => {
+  // 重新加载树形数据，以显示新获取权限的页面
+  await loadTreeData()
+  message.success('成功获取页面权限，左侧树已更新')
+}
+
 // ========== 生命周期 ==========
 
 onMounted(() => {
@@ -529,6 +556,7 @@ onMounted(() => {
         @delete="handleDelete"
         @drop="handleDrop"
         @search="handleSearch"
+        @use-share-code="handleUseShareCode"
       />
     </div>
 
@@ -561,6 +589,7 @@ onMounted(() => {
           @manage-collaborators="handleManageCollaborators"
           @request-access="handleRequestAccess"
           @content-change="handleContentChange"
+          @generate-share-code="handleGenerateShareCode"
         />
       </a-spin>
     </div>
@@ -574,6 +603,19 @@ onMounted(() => {
       @approve="handleApproveRequest"
       @remove="handleRemoveCollaborator"
       @update-permission="handleUpdatePermission"
+    />
+
+    <!-- 生成分享码弹窗 -->
+    <share-code-generator
+      v-if="currentPage"
+      v-model:visible="shareCodeGeneratorVisible"
+      :page-id="currentPage.id"
+    />
+
+    <!-- 使用分享码弹窗 -->
+    <share-code-user
+      v-model:visible="shareCodeUserVisible"
+      @success="handleShareCodeSuccess"
     />
 
     <!-- 申请权限弹窗 -->
