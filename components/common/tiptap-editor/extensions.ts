@@ -159,7 +159,13 @@ export const getViewerExtensions = () => [
   Link.configure({
     openOnClick: true,
   }),
-  Image,
+  Image.configure({
+    inline: false,
+    allowBase64: true,
+    HTMLAttributes: {
+      class: 'tiptap-image',
+    },
+  }),
   Table.configure({
     resizable: false,
   }),
