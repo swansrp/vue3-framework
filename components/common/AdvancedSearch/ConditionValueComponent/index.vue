@@ -67,7 +67,7 @@
     <template v-else-if="type === FIELD_TYPE.DATE">
       <a-range-picker
         v-if="+relation === FILTER_TYPE.BETWEEN || +relation === FILTER_TYPE.NOT_BETWEEN"
-        v-model:value="value"
+        v-model:value="valueArray"
         :locale="locale"
         class="full-width"
         value-format="YYYY-MM-DD HH:mm:ss"
