@@ -53,8 +53,8 @@ const router = createRouter({
   routes: staticRoutes
 })
 
-export const createStaticRoutes = (path: string, component: string) => {
-  router.addRoute({ path: path, name: path, component: getComponent(component), meta: { public: true } })
+export const createStaticRoutes = (path: string, component: string, metaPublic = true) => {
+  router.addRoute({ path: path, name: path, component: getComponent(component), meta: { public: metaPublic } })
 }
 
 export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
