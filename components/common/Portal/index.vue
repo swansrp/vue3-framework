@@ -2298,14 +2298,11 @@ const adjustColumnWidths = () => {
   // 如果总宽度小于表格宽度，按比例放大
   if (totalWidth < currentTableWidth) {
     const scale = (currentTableWidth - 50) / totalWidth
-    console.debug(`列宽度总和(${totalWidth})小于表格宽度(${currentTableWidth})，按比例 ${scale.toFixed(2)} 放大`)
 
     for (const column of columnsWithWidth) {
       const newWidth = Math.floor(column.width * scale)
       column.width = newWidth
     }
-  } else {
-    console.debug('列宽度总和大于或等于表格宽度，不需要调整')
   }
 }
 
