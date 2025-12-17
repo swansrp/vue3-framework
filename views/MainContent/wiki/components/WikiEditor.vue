@@ -6,6 +6,7 @@
 import { EditOutlined, KeyOutlined, SaveOutlined, ShareAltOutlined, TeamOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import TurndownService from 'turndown'
+import { gfm } from 'turndown-plugin-gfm'
 
 import type { WikiFormData, WikiMode, WikiPage, EditorMode } from '../types'
 import WikiMarkdownEditor from './WikiMarkdownEditor.vue'
@@ -88,6 +89,44 @@ const turndownService = new TurndownService({
   strongDelimiter: '**',      // **粗体**
   hr: '---',                  // 分割线
 })
+// 使用 GFM 插件，支持表格、删除线、任务列表等
+turndownService.use(gfm)
+
+/**
+ * 清理 Tiptap 生成的 HTML，移除不必要的属性
+ */
+const cleanTiptapHtml = (html: string): string => {
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = html
+  
+  // 清理表格相关属性
+  tempDiv.querySelectorAll('table').forEach(table => {
+    table.removeAttribute('class')
+    table.removeAttribute('style')
+  })
+  
+  tempDiv.querySelectorAll('colgroup, col').forEach(el => {
+    el.remove() // 移除 colgroup 和 col 元素
+  })
+  
+  tempDiv.querySelectorAll('td, th').forEach(cell => {
+    cell.removeAttribute('style')
+    // 移除默认值的 colspan 和 rowspan
+    if (cell.getAttribute('colspan') === '1') cell.removeAttribute('colspan')
+    if (cell.getAttribute('rowspan') === '1') cell.removeAttribute('rowspan')
+    
+    // 关键：移除单元格内的 <p> 标签，只保留文本内容
+    // Tiptap 会在每个单元格中添加 <p> 标签，导致转换时产生多余换行
+    const paragraphs = cell.querySelectorAll('p')
+    paragraphs.forEach(p => {
+      // 将 <p> 的内容直接替换为文本节点
+      const textNode = document.createTextNode(p.textContent || '')
+      p.replaceWith(textNode)
+    })
+  })
+  
+  return tempDiv.innerHTML
+}
 
 /** 处理富文本编辑器内容更新 */
 const handleEditorUpdate = (content: EditorContent) => {
@@ -138,7 +177,9 @@ const handleModeChange = (mode: EditorMode) => {
     // 将富文本内容转换为 Markdown
     if (formData.contentHtml) {
       try {
-        markdownContent.value = turndownService.turndown(formData.contentHtml)
+        // 清理 Tiptap 生成的 HTML
+        const cleanedHtml = cleanTiptapHtml(formData.contentHtml)
+        markdownContent.value = turndownService.turndown(cleanedHtml)
       } catch (error) {
         console.error('HTML 转 Markdown 失败:', error)
         // 备用方案:提取纯文本,保留换行
@@ -273,17 +314,42 @@ const initFormData = () => {
     // 编辑时禁止切换模式
     canSwitchMode.value = false
     
-    // 根据保存的 mode 字段决定编辑模式
+    // 编辑时强制使用 Markdown 双栏模式
+    editorMode.value = 'markdown'
+    
+    // 根据保存的 mode 字段决定初始内容
     if (pageData.value.mode === '1') {
-      // Markdown 模式
+      // Markdown 模式：加载原始 Markdown 内容
       if (pageData.value.contentMarkdown) {
         markdownContent.value = pageData.value.contentMarkdown
       }
-      editorMode.value = 'markdown'
     } else {
-      // 富文本模式（mode === '0' 或 undefined）
-      markdownContent.value = ''
-      editorMode.value = 'rich'
+      // 富文本模式（mode === '0' 或 undefined）：将HTML转换为Markdown
+      if (pageData.value.contentHtml) {
+        try {
+          console.log('原始 HTML:', pageData.value.contentHtml)
+          // 清理 Tiptap 生成的 HTML
+          const cleanedHtml = cleanTiptapHtml(pageData.value.contentHtml)
+          console.log('清理后的 HTML:', cleanedHtml)
+          const convertedMarkdown = turndownService.turndown(cleanedHtml)
+          console.log('转换后的 Markdown:', convertedMarkdown)
+          markdownContent.value = convertedMarkdown
+        } catch (error) {
+          console.error('HTML 转 Markdown 失败:', error)
+          // 备用方案:提取纯文本,保留换行
+          const tempDiv = document.createElement('div')
+          tempDiv.innerHTML = pageData.value.contentHtml
+          tempDiv.querySelectorAll('br').forEach(br => {
+            br.replaceWith(document.createTextNode('\n'))
+          })
+          tempDiv.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li').forEach(el => {
+            el.appendChild(document.createTextNode('\n'))
+          })
+          markdownContent.value = tempDiv.innerText || tempDiv.textContent || ''
+        }
+      } else {
+        markdownContent.value = ''
+      }
     }
   }
   
@@ -450,6 +516,13 @@ watch(() => parentId.value, (newVal) => {
               <template #label>
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <span>页面内容</span>
+                  <!-- 编辑模式固定为Markdown双栏，隐藏切换控件 -->
+                  <a-tag
+                    v-if="!canSwitchMode"
+                    color="blue"
+                  >
+                    📝 Markdown 双栏
+                  </a-tag>
                   <!-- 只在新增模式下显示切换控件 -->
                   <a-segmented
                     v-if="canSwitchMode"

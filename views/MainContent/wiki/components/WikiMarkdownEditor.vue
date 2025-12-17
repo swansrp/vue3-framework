@@ -111,7 +111,9 @@ const handleMarkdownInput = () => {
  * 初始化内容
  */
 const initContent = () => {
+  console.log('[WikiMarkdownEditor] 初始化，markdown prop:', markdown.value)
   markdownContent.value = markdown.value || ''
+  console.log('[WikiMarkdownEditor] markdownContent 设置为:', markdownContent.value)
   updatePreview()
 }
 
