@@ -615,6 +615,38 @@ function addTypeToCategory(typeInfo, typeName, category) {
   }
 }
 
+// 检查是否为文件上传接口
+function isFileUploadApi(operation, path) {
+  // 1. 检查路径是否包含 upload, import, avatar 等关键词
+  const uploadKeywords = ['/upload', '/import'];
+  const hasUploadPath = uploadKeywords.some(keyword => path.toLowerCase().includes(keyword));
+  
+  // 2. 检查 requestBody 的 content-type 是否为 multipart/form-data
+  if (operation.requestBody && operation.requestBody.content) {
+    const contentTypes = Object.keys(operation.requestBody.content);
+    const hasMultipart = contentTypes.some(ct => ct.includes('multipart/form-data'));
+    if (hasMultipart) return true;
+  }
+  
+  // 3. 检查参数中是否有 file 或 files 类型
+  if (operation.parameters) {
+    const hasFileParam = operation.parameters.some(param => 
+      param.name && (param.name.toLowerCase().includes('file') || param.name.toLowerCase().includes('files'))
+    );
+    if (hasFileParam && hasUploadPath) return true;
+  }
+  
+  // 4. 检查 summary 或 description 是否包含上传相关关键词
+  const summary = (operation.summary || '').toLowerCase();
+  const description = (operation.description || '').toLowerCase();
+  const uploadDescKeywords = ['上传', '导入', 'upload', 'import'];
+  const hasUploadDesc = uploadDescKeywords.some(keyword => 
+    summary.includes(keyword) || description.includes(keyword)
+  );
+  
+  return hasUploadPath && hasUploadDesc;
+}
+
 // 生成API函数
 function generateApiFunction(path, method, operation, envConfig, usedNames, controllerPrefix = '', controllerName = '', allSchemas = {}) {
   // 生成函数名（去除Using后缀）
@@ -631,6 +663,9 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
     'getUnBind', 'bindAll', 'unbindAll', 'bindInfo', 'bindInfoList', 'getBindList',
     'parseExcel', 'parseExcelProgress'
   ];
+  
+  // 检查是否为文件上传接口
+  const isUploadApi = isFileUploadApi(operation, path);
   
   // 检查是否为通用接口，如果是则添加前缀
   let functionName = baseFunctionName;
@@ -752,8 +787,14 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
     params.push(`data?: ${dataType}`);
   }
   
-  // 默认参数
-  params.push('showSuccess = true', 'showLoading = false', 'showErr = true');
+  // 根据是否为上传接口添加不同的参数
+  if (isUploadApi) {
+    // 上传接口使用 onUploadProgress 回调
+    params.push('onUploadProgress?: Function');
+  } else {
+    // 普通接口使用三个布尔参数
+    params.push('showSuccess = true', 'showLoading = false', 'showErr = true');
+  }
   
   // 构建路径
   let apiPath = cleanPath;
@@ -790,25 +831,45 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   const typesFileName = `${controllerName}Types`;
   code += ` * @see {@link @/apis/types/${typesFileName}} - 相关类型定义\n`;
   
+  // 如果是上传接口，添加特殊标记
+  if (isUploadApi) {
+    code += ` * @upload true - 此接口使用 multipart/form-data 上传文件\n`;
+  }
+  
   code += ` */\n`;
   code += `export const ${finalName} = (${params.join(', ')}) => {\n`;
   
   const builderFunc = httpMethod === 'GET' ? 'buildGetApiByType' : 'buildPostApiByType';
   code += `  const api = ${builderFunc}('${apiPath}', '');\n`;
   
-  if (queryParams.length > 0 && hasRequestBody) {
-    code += `  return request(api, params || {}, data || {}, showSuccess, showLoading, showErr);\n`;
-  } else if (queryParams.length > 0) {
-    code += `  return request(api, params || {}, {}, showSuccess, showLoading, showErr);\n`;
-  } else if (hasRequestBody) {
-    code += `  return request(api, {}, data || {}, showSuccess, showLoading, showErr);\n`;
+  // 根据是否为上传接口生成不同的调用代码
+  if (isUploadApi) {
+    // 文件上传接口使用 upload 方法
+    if (queryParams.length > 0 && hasRequestBody) {
+      code += `  return upload(api, params || {}, data || {}, onUploadProgress || (() => {}));\n`;
+    } else if (queryParams.length > 0) {
+      code += `  return upload(api, params || {}, {}, onUploadProgress || (() => {}));\n`;
+    } else if (hasRequestBody) {
+      code += `  return upload(api, {}, data || {}, onUploadProgress || (() => {}));\n`;
+    } else {
+      code += `  return upload(api, {}, {}, onUploadProgress || (() => {}));\n`;
+    }
   } else {
-    code += `  return request(api, {}, {}, showSuccess, showLoading, showErr);\n`;
+    // 普通接口使用 request 方法
+    if (queryParams.length > 0 && hasRequestBody) {
+      code += `  return request(api, params || {}, data || {}, showSuccess, showLoading, showErr);\n`;
+    } else if (queryParams.length > 0) {
+      code += `  return request(api, params || {}, {}, showSuccess, showLoading, showErr);\n`;
+    } else if (hasRequestBody) {
+      code += `  return request(api, {}, data || {}, showSuccess, showLoading, showErr);\n`;
+    } else {
+      code += `  return request(api, {}, {}, showSuccess, showLoading, showErr);\n`;
+    }
   }
   
   code += '};\n\n';
   
-  return { code, usedSchemas: typeInfo.usedSchemas, paramsTypeName, dataTypeName };
+  return { code, usedSchemas: typeInfo.usedSchemas, paramsTypeName, dataTypeName, isUploadApi };
 }
 
 // 生成按operation的tag description分组的API文件
@@ -867,6 +928,11 @@ function generateApiByController(swaggerData, envConfig) {
       
       const apiResult = generateApiFunction(pathKey, method, operation, envConfig, controllerGroups[controllerName].usedNames, controllerGroups[controllerName].controllerPrefix, controllerName, allSchemas);
       controllerGroups[controllerName].functions.push(apiResult.code);
+      
+      // 记录是否包含上传接口
+      if (apiResult.isUploadApi) {
+        controllerGroups[controllerName].hasUploadApi = true;
+      }
       
       // 收集使用的schemas
       if (apiResult.usedSchemas) {
@@ -1022,9 +1088,18 @@ function generateControllerFile(controllerName, controllerData, envConfig) {
   }
   content += `// ============================================================\n\n`;
   
+  // 检查是否有上传接口
+  const hasUploadApi = controllerData.hasUploadApi || false;
+  
   // 导入语句
   content += `import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'\n`;
-  content += `import { request } from '@/framework/network/request'\n`;
+  if (hasUploadApi) {
+    // 如果包含上传接口，同时导入 request 和 upload
+    content += `import { request, upload } from '@/framework/network/request'\n`;
+  } else {
+    // 否则只导入 request
+    content += `import { request } from '@/framework/network/request'\n`;
+  }
   
   // 如果有使用到的类型，导入类型
   if (controllerData.usedTypeNames && controllerData.usedTypeNames.size > 0) {
@@ -1062,7 +1137,7 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
   
   if (usedCommonTypes.size > 0) {
     content += `// 导入公共类型\n`;
-    content += `import type { ${Array.from(usedCommonTypes).sort().join(', ')} } from './common'\n\n`;
+    content += `export type { ${Array.from(usedCommonTypes).sort().join(', ')} } from './common'\n\n`;
   }
   
   content += `/**\n`;
@@ -1367,8 +1442,9 @@ async function main() {
           const typeName = match[1];
           if (typeFileMap.has(typeName)) {
             // 检测到重复，记录但不阻止
-            console.log(`  ⚠️  重复类型: ${typeName} (在 ${typeFileMap.get(typeName)} 和 ${controllerName}Types 中)`);
+            // console.log(`  ⚠️  重复类型: ${typeName} (在 ${typeFileMap.get(typeName)} 和 ${controllerName}Types 中)`);
           } else {
+            console.log(`  [32m✓[0m 生成类型: ${typeName} (在 ${controllerName}Types 中)`);
             typeFileMap.set(typeName, controllerName + 'Types');
             allExportedTypes.add(typeName);
           }
