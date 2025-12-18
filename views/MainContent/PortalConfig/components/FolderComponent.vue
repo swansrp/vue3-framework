@@ -194,6 +194,8 @@ const handleContextMenu = (e: MouseEvent, item: any) => {
     return
   }
   e.preventDefault()
+  // 右键时同时执行选中操作,加载配置详情
+  props.getTableConfigByName(item.value)
   contextMenuItem.value = item
   contextMenuPosition.value = { x: e.clientX, y: e.clientY }
   contextMenuVisible.value = true

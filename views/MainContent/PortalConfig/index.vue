@@ -45,12 +45,13 @@
               :class="{ 'activate-item': tableConfig.name === item.value }"
               class="table-item"
               @click="getTableConfigByName(item.value)"
+              @contextmenu="getTableConfigByName(item.value)"
             >
               <div
                 class="item-content"
                 style="padding-left: 25px;"
               >
-                <!-- 与第一层级项目保持一致：25px -->
+                <!-- 与第一层级项目保持一致:25px -->
                 <FileTextOutlined class="file-icon" />
                 <a-dropdown
                   v-if="tableList.length !== 0"
