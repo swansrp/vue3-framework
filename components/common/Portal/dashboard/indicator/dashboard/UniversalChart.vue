@@ -104,7 +104,7 @@ export default defineComponent({
       default: () => []
     },
     chartType: {
-      type: String as () => 'bar' | 'line' | 'pie',
+      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie',
       default: 'bar'
     },
     // 维度名称到编码的映射，用于颜色等与配置对齐
@@ -118,6 +118,8 @@ export default defineComponent({
     // 响应式数据
     const chartComponentRef = ref<any>()
 
+    const normalizeChartType = (type?: string) => (type === 'ptLine' ? 'line' : type)
+
     // 直接按照传入的chartType参数选择图表类型
     const finalChartType = computed(() => {
       // 检查dataMetrics中是否有数据，如果有且只有一个指标且chartType为pie，则使用饼图
@@ -127,14 +129,13 @@ export default defineComponent({
 
       // 检查是否有混合图表类型（柱状图 + 折线图）
       const hasBar = props.dataMetrics.some(m => m.chartType === 'bar')
-      const hasLine = props.dataMetrics.some(m => m.chartType === 'line')
+      const hasLineLike = props.dataMetrics.some(m => m.chartType === 'line' || m.chartType === 'ptLine')
 
-      if (hasBar && hasLine) {
-        return 'mixed' // 混合图表类型
+      if (hasBar && hasLineLike) {
+        return 'mixed'
       }
 
-      // 否则使用传入的chartType
-      return props.chartType || 'bar'
+      return normalizeChartType(props.chartType) || 'bar'
     })
 
     // 处理图表点击事件

@@ -134,7 +134,7 @@
                 />
                 <a-tooltip
                   v-if="isMetricUnitDisabled(metric)"
-                  title="金额数据单位由系统自动生成，无法修改"
+                  :title="getUnitTooltip(metric)"
                 >
                   <InfoCircleOutlined style="margin-left: 4px; color: #666;" />
                 </a-tooltip>
@@ -357,7 +357,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'pie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -402,6 +402,7 @@ const collapsed = ref(false)
 const chartTypeOptions = ref<ChartTypeOption[]>([
   { label: '柱状图', value: 'bar' },
   { label: '折线图', value: 'line' },
+  { label: '占比折线图', value: 'ptLine' },
   { label: '饼图', value: 'pie' }
 ])
 
@@ -497,6 +498,8 @@ const presetColors = [
 
 // 单位配置解析逻辑已移至 dashboard.vue 中的 convertUnit 函数
 
+const isPercentLineMetric = (metric?: DataMetricUI | null): boolean => metric?.chartType === 'ptLine'
+
 // 检查当前编辑的数据是否有unitConfig
 const hasUnitConfig = (): boolean => {
   if (!editingDataMetric.value) return false
@@ -506,6 +509,9 @@ const hasUnitConfig = (): boolean => {
 
 // 获取单位输入框的占位符
 const getUnitPlaceholder = (): string => {
+  if (isPercentLineMetric(editingDataMetric.value)) {
+    return '建议填写%，可自定义'
+  }
   if (hasUnitConfig()) {
     const dataType = props.availableDataTypes.find(dt => dt.dataField === editingDataMetric.value?.dataField)
     if (dataType?.unitConfig && props.convertUnit) {
@@ -524,6 +530,9 @@ const isMetricUnitDisabled = (metric: DataMetricUI): boolean => {
 
 // 获取数据指标单位输入框的占位符
 const getMetricUnitPlaceholder = (metric: DataMetricUI): string => {
+  if (isPercentLineMetric(metric)) {
+    return metric.unit ? '可自定义单位' : '默认%（可自定义）'
+  }
   const dataType = props.availableDataTypes.find(dt => dt.dataField === metric.dataField)
   if (dataType?.unitConfig && props.convertUnit) {
     const displayUnit = props.convertUnit(dataType.unitConfig)
@@ -589,7 +598,13 @@ const onChartTypeChange = (value: any) => {
     }
   }
 
-  editingDataMetric.value.chartType = chartType as 'bar' | 'line' | 'pie'
+  editingDataMetric.value.chartType = chartType as 'bar' | 'line' | 'ptLine' | 'pie'
+
+  if (chartType === 'ptLine') {
+    editingDataMetric.value.stackGroup = 'noStack'
+  } else if (chartType === 'line') {
+    editingDataMetric.value.stackGroup = 'noStack'
+  }
 }
 
 const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
@@ -668,6 +683,10 @@ const isDataTypeUsed = (dataField: string): boolean => {
 
 const confirmDataConfig = () => {
   if (!editingDataMetric.value) return
+
+  if (isPercentLineMetric(editingDataMetric.value)) {
+    editingDataMetric.value.stackGroup = 'noStack'
+  }
 
   // 检查是否重复选择
   if (isDataTypeUsed(editingDataMetric.value.dataField)) {
@@ -974,6 +993,12 @@ const updateDataMetricsWithDimensionColors = (dimensionItems: IndicatorItem[]) =
 // 折叠切换
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value
+}
+
+// 工具函数
+const getUnitTooltip = (metric: DataMetricUI): string => {
+  const dataType = props.availableDataTypes.find(dt => dt.dataField === metric.dataField)
+  return dataType?.unitConfig ? '金额数据单位由系统自动生成，无法修改' : ''
 }
 </script>
 

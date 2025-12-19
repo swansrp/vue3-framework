@@ -66,6 +66,8 @@ export default defineComponent({
     const chartRef = ref<HTMLElement>()
     let chartInstance: echarts.ECharts | null = null
 
+    const DEFAULT_PERCENT_UNIT = '%'
+
     // 解析单位配置函数
     const parseUnitConfig = (unitConfig?: string): { fix: number; unit: number } => {
       if (!unitConfig) {
@@ -80,18 +82,78 @@ export default defineComponent({
       return { fix: isNaN(fix) ? 0 : fix, unit: isNaN(unit) ? 1 : unit }
     }
 
+    const isPercentLineMetric = (metric?: DataMetric) => metric?.chartType === 'ptLine'
+    const clampPercentValue = (value: number) => Math.max(0, Math.min(100, Number.isNaN(value) ? 0 : value))
+    const getPercentUnitLabel = (metric?: DataMetric) => {
+      const unit = metric?.unit?.trim()
+      return unit && unit.length > 0 ? unit : DEFAULT_PERCENT_UNIT
+    }
+
+    const formatSharePercent = (value: number) => `${value}${DEFAULT_PERCENT_UNIT}`
+
+    const convertValueForMetric = (metric: DataMetric | undefined, rawValue: number) => {
+      if (!metric) return rawValue
+      if (metric.unitConfig) {
+        const { unit: unitDivisor } = parseUnitConfig(metric.unitConfig)
+        return rawValue / unitDivisor
+      }
+      return Math.round(rawValue)
+    }
+
+    const formatValueForMetric = (metric: DataMetric | undefined, value: number) => {
+      if (!metric) return value.toString()
+      if (isPercentLineMetric(metric)) {
+        const percentUnit = getPercentUnitLabel(metric)
+        return percentUnit ? `${value.toFixed(2)}${percentUnit}` : value.toFixed(2)
+      }
+      if (metric.unitConfig) {
+        const { fix } = parseUnitConfig(metric.unitConfig)
+        return Number(value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
+      }
+      return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    }
+
+    const formatOriginalValue = (metric: DataMetric | undefined, value: number) => {
+      const formatWithDigits = (digits = 0) => Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      })
+
+      if (!metric) return formatWithDigits()
+
+      if (metric.unitConfig) {
+        const { fix } = parseUnitConfig(metric.unitConfig)
+        return `${formatWithDigits(fix)}${metric.unit || ''}`
+      }
+
+      return `${formatWithDigits()}${metric.unit || ''}`
+    }
+
+    const getTooltipRawValue = (param: any): number => {
+      if (param?.data && typeof param.data.rawValue === 'number') {
+        return param.data.rawValue
+      }
+      if (typeof param?.value === 'number') {
+        return param.value
+      }
+      return 0
+    }
+
+    const getRawValueFromDatum = (datum: any): number => {
+      if (datum && typeof datum === 'object') {
+        if (typeof datum.statistic === 'number') return datum.statistic
+        if (typeof datum.value === 'number') return datum.value
+        if (typeof datum.rawValue === 'number') return datum.rawValue
+      }
+      return typeof datum === 'number' ? datum : 0
+    }
+
     // Y轴格式化函数：显示整数，不保留小数位
     const formatYAxisValue = (value: number): string => {
       return Number(value).toLocaleString(undefined, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       })
-    }
-
-    // 根据统计类型获取单位的通用函数
-    const getUnitByStatType = (statType: string): string => {
-      const metric = props.dataMetrics.find(m => m.dataName === statType)
-      return metric?.unit || ''
     }
 
     // 处理数据为 ECharts 格式
@@ -160,12 +222,48 @@ export default defineComponent({
       }
     }
 
+    type ProcessedLineChartData = ReturnType<typeof processChartData>
+
     // 生成折线图配置
-    const generateLineChartOption = (processedData: any): echarts.EChartsOption => {
+    const generateLineChartOption = (processedData: ProcessedLineChartData): echarts.EChartsOption => {
       const { firstDimensionGroups, secondDimensionGroups, statisticTypes, flattenedData } = processedData
 
       // 使用props.categories或默认的firstDimensionGroups
       const categories = props.categories || firstDimensionGroups
+
+      const globalRawTotalsByStatType: Record<string, number> = {}
+      flattenedData.forEach(item => {
+        const rawValue = getRawValueFromDatum(item.statistic)
+        globalRawTotalsByStatType[item.statisticType] = (globalRawTotalsByStatType[item.statisticType] || 0) + rawValue
+      })
+
+      // 预计算：无二级维度时每个统计类型的总和；有二级维度时每个(类目,统计类型)的小计
+      const totalByStatType: Record<string, number> = {}
+      const totalByCategoryStat: Record<string, Record<string, number>> = {}
+
+      if (!isNotEmpty(secondDimensionGroups)) {
+        statisticTypes.forEach((statType: string) => {
+          const metric = props.dataMetrics.find(m => m.dataName === statType)
+          totalByStatType[statType] = categories.reduce((sum: number, category: string) => {
+            const item = flattenedData.find((d: any) => d.firstDimension === category && d.statisticType === statType)
+            const rawValue = item ? getRawValueFromDatum(item.statistic) : 0
+            return sum + convertValueForMetric(metric, rawValue)
+          }, 0)
+        })
+      } else {
+        categories.forEach((category: string) => {
+          totalByCategoryStat[category] = {}
+          statisticTypes.forEach((statType: string) => {
+            const metric = props.dataMetrics.find(m => m.dataName === statType)
+            const subtotal = secondDimensionGroups.reduce((sum: number, secondDim: string) => {
+              const item = flattenedData.find((d: any) => d.firstDimension === category && d.secondDimension === secondDim && d.statisticType === statType)
+              const rawValue = item ? getRawValueFromDatum(item.statistic) : 0
+              return sum + convertValueForMetric(metric, rawValue)
+            }, 0)
+            totalByCategoryStat[category][statType] = subtotal
+          })
+        })
+      }
 
       const series: any[] = []
 
@@ -181,6 +279,10 @@ export default defineComponent({
               d.firstDimension === category &&
               d.statisticType === statType
             )
+            const rawValue = item ? getRawValueFromDatum(item.statistic) : 0
+            const baseValue = convertValueForMetric(metric, rawValue)
+            const percentValue = totalByStatType[statType] > 0 ? clampPercentValue((baseValue / totalByStatType[statType]) * 100) : 0
+            const value = isPercentLineMetric(metric) ? percentValue : baseValue
 
             const itemColor = (props.dimensionValueMap
               && metric.itemColors
@@ -189,14 +291,9 @@ export default defineComponent({
               || metric.color
               || `hsl(${((statIndex * categories.length + categoryIndex) * 30) % 360}, 70%, 50%)`
 
-            // 对数据值进行单位转换
-            const originalValue = item ? item.statistic : 0
-            const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
-            // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
-            const convertedValue = metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
-
             return {
-              value: convertedValue,
+              value,
+              rawValue,
               itemStyle: {
                 color: itemColor
               }
@@ -220,18 +317,7 @@ export default defineComponent({
               show: true,
               formatter: (params: any) => {
                 const metric = props.dataMetrics.find(m => m.dataName === params.seriesName || m.dataName === params.seriesName.split('&&')[1])
-                if (metric?.unitConfig) {
-                  const { fix } = parseUnitConfig(metric.unitConfig)
-                  return Number(params.value).toLocaleString(undefined, {
-                    minimumFractionDigits: fix,
-                    maximumFractionDigits: fix
-                  })
-                }
-                // 非金额指标显示为整数
-                return Number(params.value).toLocaleString(undefined, {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                })
+                return formatValueForMetric(metric, params.value)
               },
               fontSize: 10,
               color: metric.color || `hsl(${(statIndex * 60) % 360}, 70%, 50%)`
@@ -269,11 +355,15 @@ export default defineComponent({
                 d.secondDimension === secondDim &&
                 d.statisticType === statType
               )
-              // 对数据值进行单位转换
-              const originalValue = item ? item.statistic : 0
-              const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
-              // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
-              return metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
+              const rawValue = item ? getRawValueFromDatum(item.statistic) : 0
+              const baseValue = convertValueForMetric(metric, rawValue)
+              const subtotal = totalByCategoryStat[category]?.[statType] || 0
+              const percentValue = subtotal > 0 ? clampPercentValue((baseValue / subtotal) * 100) : 0
+              const value = isPercentLineMetric(metric) ? percentValue : baseValue
+              return {
+                value,
+                rawValue
+              }
             })
 
             const yAxisIndex = metric.yAxisPosition === 'right' ? 1 : 0
@@ -306,20 +396,8 @@ export default defineComponent({
               label: {
                 show: true,
                 formatter: (params: any) => {
-                  // 有二级维度的折线图标签格式化
                   const metric = props.dataMetrics.find(m => m.dataName === params.seriesName.split('&&')[1])
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(params.value).toLocaleString(undefined, {
-                      minimumFractionDigits: fix,
-                      maximumFractionDigits: fix
-                    })
-                  }
-                  // 非金额指标显示为整数
-                  return Number(params.value).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })
+                  return formatValueForMetric(metric, params.value)
                 },
                 fontSize: 10,
                 color: itemColor
@@ -351,24 +429,42 @@ export default defineComponent({
       const generateYAxes = () => {
         const yAxes: any[] = []
 
-        // 左y轴配置
-        const leftMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'left')
-        if (leftMetrics.length > 0) {
+        const leftPercentMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'left' && isPercentLineMetric(m))
+        const leftNormalMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'left' && !isPercentLineMetric(m))
+        const rightPercentMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'right' && isPercentLineMetric(m))
+        const rightNormalMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'right' && !isPercentLineMetric(m))
+
+        const addPercentAxis = (position: 'left' | 'right', offset = 0, unitLabel = '') => ({
+          type: 'value',
+          name: unitLabel ? `占比(${unitLabel})` : '占比',
+          position,
+          offset,
+          min: 0,
+          max: 100,
+          axisLabel: {
+            formatter: (value: number) => unitLabel ? `${value}${unitLabel}` : value,
+            fontSize: 12
+          },
+          splitLine: {
+            show: position === 'left'
+          }
+        })
+
+        if (leftPercentMetrics.length > 0) {
+          yAxes.push(addPercentAxis('left', 0, getPercentUnitLabel(leftPercentMetrics[0])))
+        }
+
+        if (leftNormalMetrics.length > 0) {
           yAxes.push({
             type: 'value',
-            name: leftMetrics[0].dataName === '分布统计' ? '' : leftMetrics[0].dataName,
+            name: leftNormalMetrics[0].dataName === '分布统计' ? '' : leftNormalMetrics[0].dataName,
             position: 'left',
+            offset: leftPercentMetrics.length > 0 ? 60 : 0,
             axisLabel: {
               formatter: (value: number) => {
-                const formatted = (() => {
-                  const metric = leftMetrics[0]
-                  if (metric?.unitConfig) {
-                    // Y轴显示整数，不保留小数位
-                    return formatYAxisValue(value)
-                  }
-                  return value.toString()
-                })()
-                return leftMetrics[0].unit ? `${formatted}${leftMetrics[0].unit}` : formatted
+                const metric = leftNormalMetrics[0]
+                const formatted = metric.unitConfig ? formatYAxisValue(value) : value.toString()
+                return metric.unit ? `${formatted}${metric.unit}` : formatted
               },
               fontSize: 12
             },
@@ -378,25 +474,31 @@ export default defineComponent({
           })
         }
 
-        // 右y轴配置
-        const rightMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'right')
-        if (rightMetrics.length > 0) {
-          rightMetrics.forEach((metric, index) => {
-            yAxes.push({
-              type: 'value',
-              name: metric.dataName === '分布统计' ? '' : metric.dataName,
-              position: 'right',
-              alignTicks: true,
-              offset: index * 60,
-              axisLabel: {
-                formatter: metric.unit ? `{value}${metric.unit}` : '{value}',
-                fontSize: 12
-              },
-              splitLine: {
-                show: false
-              }
-            })
+        let rightOffset = 0
+        if (rightPercentMetrics.length > 0) {
+          yAxes.push(addPercentAxis('right', 0, getPercentUnitLabel(rightPercentMetrics[0])))
+          rightOffset += 60
+        }
+
+        rightNormalMetrics.forEach((metric) => {
+          yAxes.push({
+            type: 'value',
+            name: metric.dataName === '分布统计' ? '' : metric.dataName,
+            position: 'right',
+            offset: rightOffset,
+            axisLabel: {
+              formatter: (value: number) => formatYAxisValue(value) + (metric.unit || ''),
+              fontSize: 12
+            },
+            splitLine: {
+              show: false
+            }
           })
+          rightOffset += 60
+        })
+
+        if (yAxes.length === 0) {
+          yAxes.push({ type: 'value' })
         }
 
         return yAxes
@@ -437,27 +539,21 @@ export default defineComponent({
         },
         tooltip: {
           trigger: 'axis',
-          enterable: true,  // 允许鼠标进入tooltip
-          triggerOn: 'mousemove|click',  // 鼠标移动或点击时触发
-          confine: false,    // 不限制在图表容器内
-          appendToBody: true, // 添加到body，扩大触发范围
+          enterable: true,
+          triggerOn: 'mousemove|click',
+          confine: false,
+          appendToBody: true,
           position: function (point: any, params: any, dom: any, rect: any, size: any) {
-            // 动态调整tooltip位置，确保不超出屏幕边界
             let x = point[0]
             let y = point[1]
             const boxWidth = size.contentSize[0]
             const boxHeight = size.contentSize[1]
-
-            // 水平方向调整
             if (x + boxWidth > size.viewSize[0]) {
               x = point[0] - boxWidth
             }
-
-            // 垂直方向调整
             if (y + boxHeight > size.viewSize[1]) {
               y = point[1] - boxHeight
             }
-
             return [x, y]
           },
           backgroundColor: 'rgba(255, 255, 255, 0.98)',
@@ -470,181 +566,68 @@ export default defineComponent({
           extraCssText: 'max-height: 600px; max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
             let result = `<strong>${params[0].axisValue}</strong><br/>`
-
-            // 判断是否有第二维度
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
-
             if (hasSecondDimension) {
-              // 有第二维度时，按统计类型分组
               const groupedParams = params.reduce((acc: any, param: any) => {
                 const parts = param.seriesName.split('&&')
                 const secondDimension = parts[0]
                 const statType = parts[1]
-
+                const rawValue = getTooltipRawValue(param)
                 if (!acc[statType]) {
-                  acc[statType] = []
+                  acc[statType] = { params: [], totalRaw: 0 }
                 }
-                acc[statType].push({ ...param, secondDimension })
+                acc[statType].params.push({ ...param, secondDimension, rawValue })
+                acc[statType].totalRaw += rawValue
                 return acc
               }, {})
-
-              // 计算各统计类型的总计（所有类别的总和）
-              const grandTotalsMap: Record<string, number> = {}
               Object.keys(groupedParams).forEach(statType => {
-                const seriesForStat = series.filter((s: any) => s.name && s.name.endsWith(`&&${statType}`))
-                grandTotalsMap[statType] = seriesForStat.reduce((sum: number, s: any) => {
-                  if (Array.isArray(s.data)) {
-                    return sum + s.data.reduce((seriesSum: number, item: any) => {
-                      const v = typeof item === 'object' && item?.value != null ? item.value : item
-                      return seriesSum + (typeof v === 'number' ? v : 0)
-                    }, 0)
-                  }
-                  return sum
-                }, 0)
-              })
-
-              // 为每个统计类型显示数据
-              Object.keys(groupedParams).forEach(statType => {
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
-
-                const typeParams = groupedParams[statType]
-                const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
-
-                typeParams.forEach((param: any) => {
-                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
-                  const unit = getUnitByStatType(statType)
-                  const formattedValue = (() => {
-                    const metric = props.dataMetrics.find(m => m.dataName === statType)
-                    if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig)
-                      return Number(param.value).toLocaleString(undefined, {
-                        minimumFractionDigits: fix,
-                        maximumFractionDigits: fix
-                      })
-                    }
-                    // 非金额指标显示为整数
-                    return Number(param.value).toLocaleString(undefined, {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0
-                    })
-                  })()
-                  result += `${param.marker}${param.secondDimension}: ${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
-                })
-
                 const metric = props.dataMetrics.find(m => m.dataName === statType)
-                const formattedTotal = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(total).toLocaleString(undefined, {
-                      minimumFractionDigits: fix,
-                      maximumFractionDigits: fix
-                    })
-                  }
-                  // 非金额指标显示为整数
-                  return Number(total).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })
-                })()
-                const subtotalUnit = getUnitByStatType(statType)
-                
-                // 添加总计
-                const grandTotal = grandTotalsMap[statType] || 0
-                const subtotalPercentage = grandTotal > 0 ? ((total / grandTotal) * 100).toFixed(2) : '0.00'
-                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''} (${subtotalPercentage}%)</span><br/>`
-
-                const formattedGrandTotal = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(grandTotal).toLocaleString(undefined, {
-                      minimumFractionDigits: fix,
-                      maximumFractionDigits: fix
-                    })
-                  }
-                  return Number(grandTotal).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })
-                })()
-                result += `<span style="color: #666; font-size: 12px; font-weight: bold;">总计: ${formattedGrandTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
+                const entries = groupedParams[statType]
+                const totalRaw = entries.totalRaw
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
+                entries.params.forEach((param: any) => {
+                  const percentage = totalRaw > 0 ? ((param.rawValue / totalRaw) * 100).toFixed(1) : '0.0'
+                  const formattedRaw = formatOriginalValue(metric, param.rawValue)
+                  result += `${param.marker}${param.secondDimension}: ${formattedRaw} (${formatSharePercent(percentage)})<br/>`
+                })
+                const formattedTotal = formatOriginalValue(metric, totalRaw)
+                const grandTotal = globalRawTotalsByStatType[statType] || 0
+                const subtotalPercentage = grandTotal > 0 ? ((totalRaw / grandTotal) * 100).toFixed(2) : '0.00'
+                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal} (${formatSharePercent(subtotalPercentage)})</span><br/>`
+                const formattedGrandTotal = formatOriginalValue(metric, grandTotal)
+                result += `<span style="color: #666; font-size: 12px; font-weight: bold;\">总计: ${formattedGrandTotal}</span></div>`
               })
             } else {
-              // 单维度：只展示“分组 + 数量(百分比) + 总计”，去掉同级分布列表
               const categoryName = params[0].axisValue
-
-              // 预先计算各系列在所有类目下的总和（使用已转换后的值）
-              const totalsMap: Record<string, number> = {}
-              series.forEach((s: any) => {
-                if (s && s.name && Array.isArray(s.data)) {
-                  totalsMap[s.name] = s.data.reduce((sum: number, item: any) => {
-                    const v = typeof item === 'object' && item?.value != null ? item.value : item
-                    return sum + (typeof v === 'number' ? v : 0)
-                  }, 0)
-                }
-              })
-
+              const globalTotalsMap = statisticTypes.reduce((acc: Record<string, number>, statType: string) => {
+                acc[statType] = globalRawTotalsByStatType[statType] || 0
+                return acc
+              }, {})
               const onlyOneStatType = statisticTypes.length === 1
-
               if (onlyOneStatType) {
                 const statType = statisticTypes[0]
-                const param = params.find((p: any) => p.seriesName === statType) || params[0]
-                const unit = getUnitByStatType(statType)
                 const metric = props.dataMetrics.find(m => m.dataName === statType)
-
-                const formattedValue = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                  }
-                  return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                })()
-
-                const total = totalsMap[statType] || 0
-                const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
-
-                // 区块：显示指标名 -> 蓝色块内显示带圆点的“分类名：值（%）” -> 总计
-                result += `<div style=\"margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;\"><strong>${metric?.dataName || statType}</strong><br/>`
-                result += `${param.marker}${categoryName}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
-
-                const formattedTotal = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(total).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                  }
-                  return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                })()
-                result += `<span style=\"color: #666; font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+                const param = params.find((p: any) => p.seriesName === statType) || params[0]
+                const rawValue = getTooltipRawValue(param)
+                const totalRaw = globalTotalsMap[statType] || 0
+                const percentage = totalRaw > 0 ? ((rawValue / totalRaw) * 100).toFixed(2) : '0.00'
+                const formattedValue = formatOriginalValue(metric, rawValue)
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${metric?.dataName || statType}</strong><br/>`
+                result += `${param.marker}${categoryName}：${formattedValue} (${formatSharePercent(percentage)})<br/>`
+                const formattedTotal = formatOriginalValue(metric, totalRaw)
+                result += `<span style="color: #666; font-size: 12px;">总计：${formattedTotal}</span></div>`
               } else {
-                // 多指标：每个指标单独成块，块内先显示指标名，再蓝色块显示（圆点 + 指标名：值（%））和总计
                 params.forEach((param: any) => {
                   const statType = param.seriesName
                   const metric = props.dataMetrics.find(m => m.dataName === statType)
-                  const unit = metric?.unit || ''
-
-                  const formattedValue = (() => {
-                    if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig)
-                      return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                    }
-                    return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                  })()
-
-                  const total = totalsMap[statType] || 0
-                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
-
-                  result += `<div style=\"margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;\"><strong>${metric?.dataName || statType}</strong><br/>`
-                  // 多指标场景，值行使用指标名作为标签
-                  result += `${param.marker}${metric?.dataName || statType}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
-
-                  const formattedTotal = (() => {
-                    if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig)
-                      return Number(total).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                    }
-                    return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                  })()
-
-                  result += `<span style=\"color: #666; font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+                  const rawValue = getTooltipRawValue(param)
+                  const totalRaw = globalTotalsMap[statType] || 0
+                  const percentage = totalRaw > 0 ? ((rawValue / totalRaw) * 100).toFixed(2) : '0.00'
+                  const formattedValue = formatOriginalValue(metric, rawValue)
+                  result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${metric?.dataName || statType}</strong><br/>`
+                  result += `${param.marker}${metric?.dataName || statType}：${formattedValue} (${formatSharePercent(percentage)})<br/>`
+                  const formattedTotal = formatOriginalValue(metric, totalRaw)
+                  result += `<span style="color: #666; font-size: 12px;">总计：${formattedTotal}</span></div>`
                 })
               }
             }

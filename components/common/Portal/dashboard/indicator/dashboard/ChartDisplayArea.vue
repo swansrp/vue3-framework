@@ -527,7 +527,7 @@ const closeDetailModal = () => {
 // 图表点击事件处理
 const handleChartClick = (params: any) => {
   // 根据图表类型处理点击事件
-  if (autoChartType.value === 'bar' || autoChartType.value === 'line') {
+  if (autoChartType.value === 'bar' || autoChartType.value === 'line' || autoChartType.value === 'ptLine') {
     onBarClick(params)
   } else if (autoChartType.value === 'pie') {
     onPieClick(params)

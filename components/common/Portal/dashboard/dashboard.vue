@@ -87,7 +87,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'pie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -263,10 +263,10 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
     chartType: metric.chartType,
     color: metric.color,
     yAxisPosition: metric.yAxisPosition,
-    stackGroup: metric.stackGroup,
-    unit: metric.unit,
-    unitConfig: unitConfig, // 使用处理后的unitConfig（金额字段有值，其他字段为undefined）
-    formatConfig: { fix, unitDivisor }, // 添加格式化配置
+    stackGroup: metric.chartType === 'ptLine' ? 'noStack' : metric.stackGroup,
+    unit: metric.chartType === 'ptLine' ? (metric.unit || '%') : metric.unit,
+    unitConfig: metric.chartType === 'ptLine' ? undefined : unitConfig,
+    formatConfig: metric.chartType === 'ptLine' ? undefined : { fix, unitDivisor },
     itemColors: metric.itemColors || {} as Record<string, string>
   }
 }
