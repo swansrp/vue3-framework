@@ -23,7 +23,7 @@ export interface IndicatorGroup {
 export interface DataMetric {
     dataName: string        // 数据名称
     dataField: string       // 英文字段名
-    chartType: 'bar' | 'line' | 'pie'  // 图表类型
+    chartType: 'bar' | 'line' | 'ptLine' | 'pie'  // 图表类型
     color: string           // 数据项整体颜色（用于饼图等）
     yAxisPosition: 'left' | 'right'    // 坐标轴位置（饼图不需要）
     stackGroup?: string     // 堆叠位置标识，相同值的会堆叠在一起

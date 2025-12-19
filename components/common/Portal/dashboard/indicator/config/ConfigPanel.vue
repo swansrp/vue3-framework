@@ -91,7 +91,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'pie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -256,14 +256,16 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
   if (metric) {
     (metric as any)[field] = value
 
-    // 如果修改了图表类型为饼图，则重置坐标轴和堆叠设置
-    if (field === 'chartType' && value === 'pie') {
-      metric.yAxisPosition = 'left'
-      metric.stackGroup = 'noStack'
-    }
-    // 如果修改了图表类型为折线图，则重置堆叠设置
-    else if (field === 'chartType' && value === 'line') {
-      metric.stackGroup = 'noStack'
+    if (field === 'chartType') {
+      if (value === 'pie') {
+        metric.yAxisPosition = 'left'
+        metric.stackGroup = 'noStack'
+      } else if (value === 'line') {
+        metric.stackGroup = 'noStack'
+      } else if (value === 'ptLine') {
+        metric.stackGroup = 'noStack'
+        metric.unit = '%'
+      }
     }
 
     emit('update:dataMetrics', dataMetrics.value)

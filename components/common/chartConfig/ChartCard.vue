@@ -516,7 +516,7 @@ const hasSecondDimension = computed(() => {
 // 图表点击事件处理
 const handleChartClick = (params: any) => {
   // 根据图表类型处理点击事件
-  if (chartType.value === 'bar' || chartType.value === 'line') {
+  if (chartType.value === 'bar' || chartType.value === 'line' || chartType.value === 'ptLine') {
     onBarClick(params)
   } else if (chartType.value === 'pie') {
     onPieClick(params)
