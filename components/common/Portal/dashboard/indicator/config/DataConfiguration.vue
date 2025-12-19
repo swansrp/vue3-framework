@@ -510,7 +510,7 @@ const hasUnitConfig = (): boolean => {
 // 获取单位输入框的占位符
 const getUnitPlaceholder = (): string => {
   if (isPercentLineMetric(editingDataMetric.value)) {
-    return '建议填写%，可自定义'
+    return '请输入单位'
   }
   if (hasUnitConfig()) {
     const dataType = props.availableDataTypes.find(dt => dt.dataField === editingDataMetric.value?.dataField)
@@ -519,7 +519,7 @@ const getUnitPlaceholder = (): string => {
       return `自动生成：${displayUnit}`
     }
   }
-  return '请输入单位，如：个、台、件等'
+  return '请输入单位'
 }
 
 // 检查指定数据指标是否有unitConfig
@@ -531,7 +531,7 @@ const isMetricUnitDisabled = (metric: DataMetricUI): boolean => {
 // 获取数据指标单位输入框的占位符
 const getMetricUnitPlaceholder = (metric: DataMetricUI): string => {
   if (isPercentLineMetric(metric)) {
-    return metric.unit ? '可自定义单位' : '默认%（可自定义）'
+    return '请输入单位'
   }
   const dataType = props.availableDataTypes.find(dt => dt.dataField === metric.dataField)
   if (dataType?.unitConfig && props.convertUnit) {

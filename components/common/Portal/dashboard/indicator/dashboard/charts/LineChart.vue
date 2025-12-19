@@ -84,10 +84,6 @@ export default defineComponent({
 
     const isPercentLineMetric = (metric?: DataMetric) => metric?.chartType === 'ptLine'
     const clampPercentValue = (value: number) => Math.max(0, Math.min(100, Number.isNaN(value) ? 0 : value))
-    const getPercentUnitLabel = (metric?: DataMetric) => {
-      const unit = metric?.unit?.trim()
-      return unit && unit.length > 0 ? unit : DEFAULT_PERCENT_UNIT
-    }
 
     const formatSharePercent = (value: number) => `${value}${DEFAULT_PERCENT_UNIT}`
 
@@ -103,8 +99,7 @@ export default defineComponent({
     const formatValueForMetric = (metric: DataMetric | undefined, value: number) => {
       if (!metric) return value.toString()
       if (isPercentLineMetric(metric)) {
-        const percentUnit = getPercentUnitLabel(metric)
-        return percentUnit ? `${value.toFixed(2)}${percentUnit}` : value.toFixed(2)
+        return `${value.toFixed(2)}${DEFAULT_PERCENT_UNIT}`
       }
       if (metric.unitConfig) {
         const { fix } = parseUnitConfig(metric.unitConfig)
@@ -434,15 +429,15 @@ export default defineComponent({
         const rightPercentMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'right' && isPercentLineMetric(m))
         const rightNormalMetrics = props.dataMetrics.filter(m => m.yAxisPosition === 'right' && !isPercentLineMetric(m))
 
-        const addPercentAxis = (position: 'left' | 'right', offset = 0, unitLabel = '') => ({
+        const addPercentAxis = (position: 'left' | 'right', offset = 0) => ({
           type: 'value',
-          name: unitLabel ? `占比(${unitLabel})` : '占比',
+          name: `占比(${DEFAULT_PERCENT_UNIT})`,
           position,
           offset,
           min: 0,
           max: 100,
           axisLabel: {
-            formatter: (value: number) => unitLabel ? `${value}${unitLabel}` : value,
+            formatter: (value: number) => `${value}${DEFAULT_PERCENT_UNIT}`,
             fontSize: 12
           },
           splitLine: {
@@ -451,7 +446,7 @@ export default defineComponent({
         })
 
         if (leftPercentMetrics.length > 0) {
-          yAxes.push(addPercentAxis('left', 0, getPercentUnitLabel(leftPercentMetrics[0])))
+          yAxes.push(addPercentAxis('left', 0))
         }
 
         if (leftNormalMetrics.length > 0) {
@@ -476,7 +471,7 @@ export default defineComponent({
 
         let rightOffset = 0
         if (rightPercentMetrics.length > 0) {
-          yAxes.push(addPercentAxis('right', 0, getPercentUnitLabel(rightPercentMetrics[0])))
+          yAxes.push(addPercentAxis('right', 0))
           rightOffset += 60
         }
 

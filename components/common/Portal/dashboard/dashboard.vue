@@ -264,7 +264,7 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
     color: metric.color,
     yAxisPosition: metric.yAxisPosition,
     stackGroup: metric.chartType === 'ptLine' ? 'noStack' : metric.stackGroup,
-    unit: metric.chartType === 'ptLine' ? (metric.unit || '%') : metric.unit,
+    unit: metric.unit,
     unitConfig: metric.chartType === 'ptLine' ? undefined : unitConfig,
     formatConfig: metric.chartType === 'ptLine' ? undefined : { fix, unitDivisor },
     itemColors: metric.itemColors || {} as Record<string, string>

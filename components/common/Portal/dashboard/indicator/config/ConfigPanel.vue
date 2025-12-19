@@ -264,7 +264,7 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
         metric.stackGroup = 'noStack'
       } else if (value === 'ptLine') {
         metric.stackGroup = 'noStack'
-        metric.unit = '%'
+        metric.unit = ''
       }
     }
 
