@@ -1000,10 +1000,25 @@ function generateCommonTypesFile(allSchemas, controllerGroups, envConfig) {
     });
   });
   
-  // 找出被多个控制器使用的类型 (使用次数 >= 2)
+  // 定义业务实体类型的模式（这些类型不应该被提取为公共类型）
+  const businessEntityPatterns = [
+    /VO$/,           // 以VO结尾的视图对象
+    /DTO$/,          // 以DTO结尾的数据传输对象
+    /Entity$/,       // 以Entity结尾的实体
+    /Model$/,        // 以Model结尾的模型
+    /Info$/,         // 以Info结尾的信息对象
+    /Detail$/,       // 以Detail结尾的详情对象
+  ];
+  
+  // 判断是否为业务实体类型
+  function isBusinessEntity(schemaName) {
+    return businessEntityPatterns.some(pattern => pattern.test(schemaName));
+  }
+  
+  // 找出被多个控制器使用的类型 (使用次数 >= 2)，但排除业务实体类型
   const commonSchemas = new Set();
   schemaUsageCount.forEach((count, schema) => {
-    if (count >= 2) {
+    if (count >= 2 && !isBusinessEntity(schema)) {
       commonSchemas.add(schema);
     }
   });
@@ -1104,7 +1119,7 @@ function generateControllerFile(controllerName, controllerData, envConfig) {
   // 如果有使用到的类型，导入类型
   if (controllerData.usedTypeNames && controllerData.usedTypeNames.size > 0) {
     const typeNames = Array.from(controllerData.usedTypeNames).sort();
-    content += `import type { ${typeNames.join(', ')} } from './types/${controllerName}Types'\n`;
+    content += `import type { ${typeNames.join(', ')} } from '@/apis/types'\n`;
   }
   
   content += '\n';
@@ -1137,7 +1152,7 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
   
   if (usedCommonTypes.size > 0) {
     content += `// 导入公共类型\n`;
-    content += `export type { ${Array.from(usedCommonTypes).sort().join(', ')} } from './common'\n\n`;
+    content += `import type { ${Array.from(usedCommonTypes).sort().join(', ')} } from './common'\n`;
   }
   
   content += `/**\n`;
