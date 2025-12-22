@@ -43,6 +43,7 @@
         @update:selected-personal="updateSelectedPersonalIndicators"
         @add-indicator="handleAddIndicator"
         @edit-indicator="handleEditIndicator"
+        @copy-indicator="handleCopyIndicator"
         @delete-indicator="deleteIndicator"
         @add-dashboard="addDashboardFromTree"
         @delete-dashboard="deleteDashboardFromTree"
@@ -649,6 +650,15 @@ const handleAddIndicator = (parentNode?: IndicatorNode) => {
     // 没有父节点，说明是添加根节点
     openIndicatorConfig()
   }
+}
+
+// 处理复制指标事件
+const handleCopyIndicator = (indicator: IndicatorNode) => {
+  // 使用编辑模式打开配置弹窗，但是设置为新增模式
+  currentEditData.value = indicator
+  currentParentNode.value = null
+  isEditMode.value = false // 设置为新增模式，这样保存时会创建新的图表
+  chartConfigModalVisible.value = true
 }
 
 // 处理编辑指标事件

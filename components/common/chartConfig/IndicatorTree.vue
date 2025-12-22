@@ -186,6 +186,13 @@
             <span>编辑</span>
           </a-menu-item>
           <a-menu-item
+            v-if="currentContextNode && getPermissions('edit')"
+            key="copy"
+          >
+            <CopyOutlined />
+            <span>复制</span>
+          </a-menu-item>
+          <a-menu-item
             v-if="currentContextNode && getPermissions('delete')"
             key="delete"
             danger
@@ -202,6 +209,7 @@
 <script lang="ts" setup>
 import {
   BarChartOutlined,
+  CopyOutlined,
   DeleteOutlined,
   EditOutlined,
   FolderOutlined,
@@ -248,6 +256,8 @@ interface Emits {
   (e: 'add-indicator', parentNode?: IndicatorNode): void;
 
   (e: 'edit-indicator', indicator: IndicatorNode): void;
+
+  (e: 'copy-indicator', indicator: IndicatorNode): void;
 
   (e: 'delete-indicator', indicatorId: string): void;
 
@@ -500,6 +510,10 @@ const handleContextMenuClick = ({ key }: { key: string }) => {
       break
     case 'edit':
       editIndicator(currentContextNode.value)
+      break
+    case 'copy':
+      // 复制图表
+      emit('copy-indicator', currentContextNode.value)
       break
     case 'delete':
       deleteIndicator(currentContextNode.value)

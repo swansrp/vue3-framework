@@ -169,6 +169,13 @@ watch(() => props.visible, async (newVal) => {
         // 只有叶子节点才加载配置数据
         await loadEditData()
       }
+    } else if (!props.isEditMode && props.editData) {
+      // 新增模式但有editData：这是复制模式
+      // 使用原标题加上"副本"后缀
+      indicatorName.value = props.editData.title + ' - 副本'
+      skipChartGeneration.value = false
+      // 加载原配置数据
+      await loadEditData()
     } else {
       // 新增模式：设置默认名称
       indicatorName.value = ''
@@ -363,9 +370,13 @@ const handleSaveConfig = async () => {
     if (props.isEditMode && props.editData?.id) {
       indicatorData.id = props.editData.id
     } else {
-      // 新增模式：如果有父节点，设置pid字段（添加子节点时）
+      // 新增模式：如果有父节点，设置pid字段
       if (props.parentNode?.id) {
+        // 添加子节点时，使用parentNode作为父节点
         indicatorData.pid = props.parentNode.id
+      } else if (!props.isEditMode && props.editData?.pid) {
+        // 复制模式：使用原节点的pid，保持相同的父节点关系
+        indicatorData.pid = props.editData.pid
       }
     }
 
