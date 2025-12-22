@@ -38,6 +38,7 @@ defineOptions({
 interface Props {
   indicators: IndicatorNode[]
   selectedNodeKey?: string | null | number
+  autoExpandKey?: string | null | number // 自动展开的节点key
 }
 
 const props = defineProps<Props>()
@@ -60,15 +61,30 @@ const treeData = computed(() => {
   return props.indicators || []
 })
 
-// 自动展开功能已禁用，保持所有节点初始折叠状态
+// 自动展开功能：如果传入了 autoExpandKey，则展开该节点
 watch(
   () => props.indicators,
   (newIndicators) => {
     if (newIndicators && newIndicators.length > 0) {
-      expandedKeys.value = []
+      // 如果有 autoExpandKey，则展开该节点
+      if (props.autoExpandKey) {
+        expandedKeys.value = [props.autoExpandKey]
+      } else {
+        expandedKeys.value = []
+      }
     }
   },
   { immediate: true }
+)
+
+// 监听 autoExpandKey 变化
+watch(
+  () => props.autoExpandKey,
+  (newKey) => {
+    if (newKey && !expandedKeys.value.includes(newKey)) {
+      expandedKeys.value = [newKey]
+    }
+  }
 )
 
 // 手风琴模式：展开一个节点时关闭同级其他节点

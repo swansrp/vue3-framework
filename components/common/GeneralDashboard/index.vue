@@ -39,6 +39,7 @@
               <simple-indicator-tree
                 :indicators="getIndicatorsForTable(config.tableId)"
                 :selected-node-key="selectedNodeKey"
+                :auto-expand-key="selectedNodeKey"
                 @node-click="handleNodeClick"
               />
             </div>
@@ -127,12 +128,14 @@ interface Props {
   tableConfigs: TableConfig[]
   gridColumns?: number
   globalConditions?: ConditionListType // 外部传入的全局筛选条件
+  defaultExpandFirst?: boolean // 是否默认展开第一个面板
 }
 
 const props = withDefaults(defineProps<Props>(), {
   pageTitle: '通用仪表盘',
   gridColumns: 7,
-  globalConditions: () => ({ conditionList: [], andOr: '0' })
+  globalConditions: () => ({ conditionList: [], andOr: '0' }),
+  defaultExpandFirst: false
 })
 
 // Emits
@@ -456,9 +459,9 @@ const handleNodeClick = (nodeKey: string) => {
       selectedNodeKey.value = parentNode.key || parentNode.id
       selectedTableId.value = currentTableId
     } else {
-      // 顶层叶子节点：显示所有图表
-      selectedNodeKey.value = null
-      selectedTableId.value = null
+      // 顶层叶子节点：直接显示该节点
+      selectedNodeKey.value = nodeKey
+      selectedTableId.value = currentTableId
     }
     
     // 等待视图更新后滚动到对应图表
@@ -511,8 +514,34 @@ const currentNodeTitle = computed(() => {
 })
 
 // 页面初始化
-onMounted(() => {
-  // 不自动展开任何面板，等待用户手动操作
+onMounted(async () => {
+  // 如果设置了默认展开第一个面板，且有配置
+  if (props.defaultExpandFirst && props.tableConfigs.length > 0) {
+    const firstTableId = props.tableConfigs[0].tableId
+    activeKeys.value = [firstTableId]
+    emit('table-change', firstTableId)
+    
+    // 加载第一个表的数据
+    await loadTableData(firstTableId)
+    
+    // 数据加载完成后，自动点击第一个节点
+    const data = tableDataMap.value[firstTableId]
+    if (data && data.indicators && data.indicators.length > 0) {
+      const firstNode = data.indicators[0]
+      const firstNodeKey = firstNode.key || firstNode.id
+      
+      // 自动选中第一个节点
+      selectedNodeKey.value = firstNodeKey
+      selectedTableId.value = firstTableId
+      
+      // 发出节点点击事件
+      emit('node-click', {
+        tableId: firstTableId,
+        nodeKey: firstNodeKey,
+        nodeTitle: firstNode.title || ''
+      })
+    }
+  }
 })
 </script>
 
