@@ -32,8 +32,8 @@ import { ref } from 'vue'
 
 import DatasetManage from './components/DatasetManage.vue'
 import type { DatasetInfo } from './types'
-
 import { refreshPortalForDataset, generatePortalForDataset } from '../apis/portalGenerateController'
+
 import PortalConfig from '@/framework/views/MainContent/PortalConfig/index.vue'
 
 const activeTab = ref('dataset')

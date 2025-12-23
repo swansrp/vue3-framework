@@ -207,6 +207,8 @@ import { FIELD_TYPES } from '../types'
 import FormLayoutDesigner from './FormLayoutDesigner.vue'
 import LinkageConfig from './LinkageConfig.vue'
 
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 import {
   sysFormConfigGeneralSelect,
   sysFormConfigAdd,
@@ -215,8 +217,6 @@ import {
 } from '@/framework/views/MainContent/dynamic/apis/sysFormConfigPortalController'
 import { sysMatrixColumnGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysMatrixColumnPortalController'
 import { ConditionVO } from '@/framework/views/MainContent/dynamic/apis/types'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { buildCondition } from '@/framework/components/common/Portal/utils'
 
 interface Props {
   matrix: MatrixInfo

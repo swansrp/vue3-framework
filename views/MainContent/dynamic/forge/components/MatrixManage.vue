@@ -202,6 +202,8 @@ import ChangeHistory from './ChangeHistory.vue'
 import ColumnConfig from './ColumnConfig.vue'
 import MatrixEditModal from './MatrixEditModal.vue'
 
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { sysMatrixColumnGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysMatrixColumnPortalController'
 import {
   createPhysicalTable,
@@ -213,8 +215,6 @@ import {
   truncateTable,
 } from '@/framework/views/MainContent/dynamic/apis/sysMatrixPortalController'
 import { ConditionVO } from '@/framework/views/MainContent/dynamic/apis/types'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { buildCondition } from '@/framework/components/common/Portal/utils'
 
 const emit = defineEmits<{
   (e: 'select', matrix: MatrixInfo | null): void

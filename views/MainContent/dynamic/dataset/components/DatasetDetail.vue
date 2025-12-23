@@ -85,7 +85,7 @@
 
 import type { DatasetInfo } from '../types'
 
-const props = defineProps<{
+defineProps<{
   dataset: DatasetInfo
 }>()
 

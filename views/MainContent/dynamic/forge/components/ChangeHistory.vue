@@ -114,13 +114,13 @@ import { ref, computed, onMounted } from 'vue'
 import type { MatrixInfo, MatrixChangeLog } from '../types'
 import { CHANGE_TYPES, EXECUTE_STATUS } from '../types'
 
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { 
   sysMatrixChangeLogGeneralSelect,
   exportChangeLog,
   importChangeLog
 } from '@/framework/views/MainContent/dynamic/apis/sysMatrixChangeLogPortalController'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { buildCondition } from '@/framework/components/common/Portal/utils'
 
 interface Props {
   matrix: MatrixInfo

@@ -408,6 +408,8 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import type { ColumnInfo, MatrixInfo } from '../types'
 import { COLUMN_TYPES, FIELD_TYPES } from '../types'
 
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 import {
   sysMatrixColumnGeneralSelect,
   sysMatrixColumnAdd,
@@ -417,8 +419,6 @@ import {
 } from '@/framework/views/MainContent/dynamic/apis'
 import { sysMatrixGeneralSelect } from '@/framework/views/MainContent/dynamic/apis'
 import { ConditionVO } from '@/framework/views/MainContent/dynamic/apis/types'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { buildCondition } from '@/framework/components/common/Portal/utils'
 
 interface Props {
   matrix: MatrixInfo
