@@ -131,10 +131,10 @@ import ColumnConfig from './ColumnConfig.vue'
 import DatasetDetail from './DatasetDetail.vue'
 import DatasetSqlModal from './DatasetSqlModal.vue'
 
-import { getConfig } from '@/apis/datasetConfigController'
-import { sysDatasetColumnGeneralSelect } from '@/apis/sysDatasetColumnPortalController'
-import { sysDatasetGeneralSelect, sysDatasetDeleteItem } from '@/apis/sysDatasetPortalController'
-import { sysDatasetTableGeneralSelect } from '@/apis/sysDatasetTablePortalController'
+import { getConfig } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
+import { sysDatasetColumnGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysDatasetColumnPortalController'
+import { sysDatasetGeneralSelect, sysDatasetDeleteItem } from '@/framework/views/MainContent/dynamic/apis/sysDatasetPortalController'
+import { sysDatasetTableGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysDatasetTablePortalController'
 
 const emit = defineEmits<{
   (e: 'select', dataset: DatasetInfo | null): void

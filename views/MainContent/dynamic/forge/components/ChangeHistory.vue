@@ -118,7 +118,7 @@ import {
   sysMatrixChangeLogGeneralSelect,
   exportChangeLog,
   importChangeLog
-} from '@/apis/sysMatrixChangeLogPortalController'
+} from '@/framework/views/MainContent/dynamic/apis/sysMatrixChangeLogPortalController'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 

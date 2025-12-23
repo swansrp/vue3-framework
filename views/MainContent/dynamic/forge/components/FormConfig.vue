@@ -212,9 +212,9 @@ import {
   sysFormConfigAdd,
   sysFormConfigUpdate,
   sysFormConfigDeleteItem,
-} from '@/apis/sysFormConfigPortalController'
-import { sysMatrixColumnGeneralSelect } from '@/apis/sysMatrixColumnPortalController'
-import { ConditionVO } from '@/apis/types'
+} from '@/framework/views/MainContent/dynamic/apis/sysFormConfigPortalController'
+import { sysMatrixColumnGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysMatrixColumnPortalController'
+import { ConditionVO } from '@/framework/views/MainContent/dynamic/apis/types'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 

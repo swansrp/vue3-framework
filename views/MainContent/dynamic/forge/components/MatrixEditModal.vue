@@ -199,7 +199,7 @@ import { format } from 'sql-formatter'
 
 import type { MatrixInfo } from '../types'
 
-import { exportDDL, importDDL } from '@/apis/sysMatrixPortalController'
+import { exportDDL, importDDL } from '@/framework/views/MainContent/dynamic/apis/sysMatrixPortalController'
 
 interface Props {
   open: boolean

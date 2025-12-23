@@ -244,7 +244,7 @@ import {
   sysFormLinkageUpdate,
   sysFormLinkageDeleteItem,
   executeLinkage,
-} from '@/apis/sysFormLinkagePortalController'
+} from '@/framework/views/MainContent/dynamic/apis/sysFormLinkagePortalController'
 
 interface Props {
   matrix: MatrixInfo

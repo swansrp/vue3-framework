@@ -116,7 +116,7 @@ import {
   datasetConfigUpdateColumn, 
   deleteColumn,
   datasetConfigUpdateColumnsOrder
-} from '@/apis/datasetConfigController'
+} from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
 
 const props = defineProps<{
   dataset: DatasetInfo

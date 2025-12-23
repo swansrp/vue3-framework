@@ -44,7 +44,7 @@ import FormConfig from './components/FormConfig.vue'
 import MatrixManage from './components/MatrixManage.vue'
 import type { MatrixInfo } from './types'
 
-import { refreshPortalForMatrix, generatePortalForMatrix } from '@/apis/portalGenerateController'
+import { refreshPortalForMatrix, generatePortalForMatrix } from '../apis/portalGenerateController'
 import PortalConfig from '@/framework/views/MainContent/PortalConfig/index.vue'
 
 const activeTab = ref('matrix')

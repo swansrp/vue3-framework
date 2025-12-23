@@ -414,9 +414,9 @@ import {
   sysMatrixColumnUpdate,
   sysMatrixColumnDeleteItem,
   sysMatrixColumnUpdateOrder,
-} from '@/apis/sysMatrixColumnPortalController'
-import { sysMatrixGeneralSelect } from '@/apis/sysMatrixPortalController'
-import { ConditionVO } from '@/apis/types'
+} from '@/framework/views/MainContent/dynamic/apis'
+import { sysMatrixGeneralSelect } from '@/framework/views/MainContent/dynamic/apis'
+import { ConditionVO } from '@/framework/views/MainContent/dynamic/apis/types'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 

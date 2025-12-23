@@ -332,7 +332,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import type { DatasetInfo } from '../types'
 
-import { parseSql, parseSqlAndSave } from '@/apis/datasetConfigController'
+import { parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
 
 const props = defineProps<{
   open: boolean

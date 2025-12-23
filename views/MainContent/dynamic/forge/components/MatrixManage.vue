@@ -202,7 +202,7 @@ import ChangeHistory from './ChangeHistory.vue'
 import ColumnConfig from './ColumnConfig.vue'
 import MatrixEditModal from './MatrixEditModal.vue'
 
-import { sysMatrixColumnGeneralSelect } from '@/apis/sysMatrixColumnPortalController'
+import { sysMatrixColumnGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysMatrixColumnPortalController'
 import {
   createPhysicalTable,
   syncTableStructure,
@@ -211,8 +211,8 @@ import {
   sysMatrixGeneralQuery,
   sysMatrixUpdate,
   truncateTable,
-} from '@/apis/sysMatrixPortalController'
-import { ConditionVO } from '@/apis/types'
+} from '@/framework/views/MainContent/dynamic/apis/sysMatrixPortalController'
+import { ConditionVO } from '@/framework/views/MainContent/dynamic/apis/types'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 
