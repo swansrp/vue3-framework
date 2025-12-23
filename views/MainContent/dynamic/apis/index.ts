@@ -9,9 +9,6 @@ export * from './datasetConfigController'
 // Dynamic Portal Controller
 export * from './dynamicPortalController'
 
-// Matrix Data Controller
-export * from './matrixDataController'
-
 // Portal Generate Controller
 export * from './portalGenerateController'
 

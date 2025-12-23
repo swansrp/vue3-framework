@@ -5,7 +5,7 @@
 // Tag Description: Dynamic Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, GeneralStatisticReq, GeneralSummaryReq, IdPidReqVO, IdReqVO, QueryConditionReq } from './types/dynamicPortalControllerTypes'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdPidReqVO, IdReqVO, QueryConditionReq } from './types/dynamicPortalControllerTypes'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'
@@ -50,12 +50,12 @@ export const dynamicAdvancedSelect = (portalName: string | number, data?: Advanc
 /**
  * 指标统计
  * @api POST /dynamic/portal/{portalName}/advanced/statistic
- * @dataType GeneralStatisticReq
- * @requestTypes GeneralStatisticReq
+ * @dataType AdvancedStatisticReq
+ * @requestTypes AdvancedStatisticReq
  * @responseTypes StatisticRes[]
  * @see {@link @/apis/types/dynamicPortalControllerTypes} - 相关类型定义
  */
-export const dynamicAdvancedStatistic = (portalName: string | number, data?: GeneralStatisticReq, showSuccess = true, showLoading = false, showErr = true) => {
+export const dynamicAdvancedStatistic = (portalName: string | number, data?: AdvancedStatisticReq, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildPostApiByType('/dynamic/portal/${portalName}/advanced/statistic', '')
   return request(api, {}, data || {}, showSuccess, showLoading, showErr)
 }
@@ -63,11 +63,11 @@ export const dynamicAdvancedStatistic = (portalName: string | number, data?: Gen
 /**
  * 汇总
  * @api POST /dynamic/portal/{portalName}/advanced/summary
- * @dataType GeneralSummaryReq
- * @requestTypes GeneralSummaryReq
+ * @dataType AdvancedSummaryReq
+ * @requestTypes AdvancedSummaryReq
  * @see {@link @/apis/types/dynamicPortalControllerTypes} - 相关类型定义
  */
-export const dynamicAdvancedSummary = (portalName: string | number, data?: GeneralSummaryReq, showSuccess = true, showLoading = false, showErr = true) => {
+export const dynamicAdvancedSummary = (portalName: string | number, data?: AdvancedSummaryReq, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildPostApiByType('/dynamic/portal/${portalName}/advanced/summary', '')
   return request(api, {}, data || {}, showSuccess, showLoading, showErr)
 }

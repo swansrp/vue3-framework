@@ -12,10 +12,14 @@ export interface AdvancedQueryReq {
   condition?: AdvancedQuery
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   /** 每页大小 */
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
   /** 排序 */
   sortList?: SortVO[]
 }
@@ -33,10 +37,13 @@ export interface PageMapstringobject {
   total?: number
 }
 
-export interface GeneralStatisticReq {
-  conditionList?: ConditionVO[]
+export interface AdvancedStatisticReq {
+  /** 查询条件 */
+  condition?: AdvancedQuery
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   majorCondition?: string
   metricColumn?: Metric[]
   metricCondition?: MetricCondition[]
@@ -44,7 +51,10 @@ export interface GeneralStatisticReq {
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
   sort?: number
+  /** 排序 */
   sortList?: SortVO[]
   statisticColumn?: KeyValueResVO[]
 }
@@ -57,15 +67,21 @@ export interface StatisticRes {
   statistic?: number
 }
 
-export interface GeneralSummaryReq {
+export interface AdvancedSummaryReq {
   columns?: string[]
-  conditionList?: ConditionVO[]
+  /** 查询条件 */
+  condition?: AdvancedQuery
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   /** 每页大小 */
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
+  /** 排序 */
   sortList?: SortVO[]
 }
 
@@ -82,13 +98,59 @@ export interface IdReqVO {
 }
 
 export interface QueryConditionReq {
+  /** 查询条件 */
   conditionList?: ConditionVO[]
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   /** 每页大小 */
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
+  /** 排序 */
+  sortList?: SortVO[]
+}
+
+export interface GeneralStatisticReq {
+  /** 查询条件 */
+  conditionList?: ConditionVO[]
+  /** 当前页 */
+  currentPage?: number
+  /** 去重 */
+  distinct?: string
+  majorCondition?: string
+  metricColumn?: Metric[]
+  metricCondition?: MetricCondition[]
+  /** 每页大小 */
+  pageSize?: number
+  /** 动态字段逻辑 */
+  selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
+  sort?: number
+  /** 排序 */
+  sortList?: SortVO[]
+  statisticColumn?: KeyValueResVO[]
+}
+
+export interface GeneralSummaryReq {
+  columns?: string[]
+  /** 查询条件 */
+  conditionList?: ConditionVO[]
+  /** 当前页 */
+  currentPage?: number
+  /** 去重 */
+  distinct?: string
+  /** 每页大小 */
+  pageSize?: number
+  /** 动态字段逻辑 */
+  selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
+  /** 排序 */
   sortList?: SortVO[]
 }
 
@@ -137,17 +199,6 @@ export interface OrderItem {
   column?: string
 }
 
-export interface ConditionVO {
-  /** 日期格式 */
-  dateFormat?: string
-  /** 字段名 */
-  property?: string
-  /** 查询关系 */
-  relation?: number
-  /** 查询值 */
-  value?: object[]
-}
-
 export interface Metric {
   column?: string
   dictMap?: object
@@ -162,6 +213,17 @@ export interface MetricCondition {
 export interface KeyValueResVO {
   label?: string
   value?: string
+}
+
+export interface ConditionVO {
+  /** 日期格式 */
+  dateFormat?: string
+  /** 字段名 */
+  property?: string
+  /** 查询关系 */
+  relation?: number
+  /** 查询值 */
+  value?: object[]
 }
 
 export type AdvancedQueryReqResponse = ResponseDataType & {
@@ -198,17 +260,17 @@ export type PageMapstringobjectPageResponse = ResponseDataType & {
   }
 }
 
-export type GeneralStatisticReqResponse = ResponseDataType & {
-  payload: GeneralStatisticReq
+export type AdvancedStatisticReqResponse = ResponseDataType & {
+  payload: AdvancedStatisticReq
 }
 
-export type GeneralStatisticReqListResponse = ResponseDataType & {
-  payload: GeneralStatisticReq[]
+export type AdvancedStatisticReqListResponse = ResponseDataType & {
+  payload: AdvancedStatisticReq[]
 }
 
-export type GeneralStatisticReqPageResponse = ResponseDataType & {
+export type AdvancedStatisticReqPageResponse = ResponseDataType & {
   payload: {
-    records: GeneralStatisticReq[]
+    records: AdvancedStatisticReq[]
     total: number
     currentPage: number
     pageSize: number
@@ -232,17 +294,17 @@ export type StatisticResPageResponse = ResponseDataType & {
   }
 }
 
-export type GeneralSummaryReqResponse = ResponseDataType & {
-  payload: GeneralSummaryReq
+export type AdvancedSummaryReqResponse = ResponseDataType & {
+  payload: AdvancedSummaryReq
 }
 
-export type GeneralSummaryReqListResponse = ResponseDataType & {
-  payload: GeneralSummaryReq[]
+export type AdvancedSummaryReqListResponse = ResponseDataType & {
+  payload: AdvancedSummaryReq[]
 }
 
-export type GeneralSummaryReqPageResponse = ResponseDataType & {
+export type AdvancedSummaryReqPageResponse = ResponseDataType & {
   payload: {
-    records: GeneralSummaryReq[]
+    records: AdvancedSummaryReq[]
     total: number
     currentPage: number
     pageSize: number
@@ -294,6 +356,40 @@ export type QueryConditionReqListResponse = ResponseDataType & {
 export type QueryConditionReqPageResponse = ResponseDataType & {
   payload: {
     records: QueryConditionReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type GeneralStatisticReqResponse = ResponseDataType & {
+  payload: GeneralStatisticReq
+}
+
+export type GeneralStatisticReqListResponse = ResponseDataType & {
+  payload: GeneralStatisticReq[]
+}
+
+export type GeneralStatisticReqPageResponse = ResponseDataType & {
+  payload: {
+    records: GeneralStatisticReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type GeneralSummaryReqResponse = ResponseDataType & {
+  payload: GeneralSummaryReq
+}
+
+export type GeneralSummaryReqListResponse = ResponseDataType & {
+  payload: GeneralSummaryReq[]
+}
+
+export type GeneralSummaryReqPageResponse = ResponseDataType & {
+  payload: {
+    records: GeneralSummaryReq[]
     total: number
     currentPage: number
     pageSize: number

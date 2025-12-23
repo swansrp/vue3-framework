@@ -12,10 +12,14 @@ export interface AdvancedQueryReq {
   condition?: AdvancedQuery
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   /** 每页大小 */
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
   /** 排序 */
   sortList?: SortVO[]
 }
@@ -83,6 +87,8 @@ export interface AdvancedStatisticReq {
   condition?: AdvancedQuery
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   majorCondition?: string
   metricColumn?: Metric[]
   metricCondition?: MetricCondition[]
@@ -90,6 +96,8 @@ export interface AdvancedStatisticReq {
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
   sort?: number
   /** 排序 */
   sortList?: SortVO[]
@@ -110,10 +118,14 @@ export interface AdvancedSummaryReq {
   condition?: AdvancedQuery
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   /** 每页大小 */
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
   /** 排序 */
   sortList?: SortVO[]
 }
@@ -124,20 +136,29 @@ export interface IdReqVO {
 }
 
 export interface QueryConditionReq {
+  /** 查询条件 */
   conditionList?: ConditionVO[]
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   /** 每页大小 */
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
+  /** 排序 */
   sortList?: SortVO[]
 }
 
 export interface GeneralStatisticReq {
+  /** 查询条件 */
   conditionList?: ConditionVO[]
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   majorCondition?: string
   metricColumn?: Metric[]
   metricCondition?: MetricCondition[]
@@ -145,20 +166,29 @@ export interface GeneralStatisticReq {
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
   sort?: number
+  /** 排序 */
   sortList?: SortVO[]
   statisticColumn?: KeyValueResVO[]
 }
 
 export interface GeneralSummaryReq {
   columns?: string[]
+  /** 查询条件 */
   conditionList?: ConditionVO[]
   /** 当前页 */
   currentPage?: number
+  /** 去重 */
+  distinct?: string
   /** 每页大小 */
   pageSize?: number
   /** 动态字段逻辑 */
   selectColumnCondition?: object
+  /** 返回字段列表 */
+  selectColumnList?: string[]
+  /** 排序 */
   sortList?: SortVO[]
 }
 
