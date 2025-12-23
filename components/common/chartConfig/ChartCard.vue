@@ -8,6 +8,10 @@
     <div class="chart-card-header">
       <div class="header-title">
         <h3>{{ indicator.title || '未命名指标' }}</h3>
+        <span
+          v-if="indicator.subTitle"
+          class="subtitle"
+        >{{ indicator.subTitle }}</span>
       </div>
       <div
         v-if="canEdit"
@@ -84,6 +88,28 @@
         <p>{{ hasValidConfig ? '暂无数据' : '未配置图表' }}</p>
       </div>
 
+      <!-- 描述信息 -->
+      <div
+        v-if="indicator.description"
+        ref="descriptionRef"
+        class="chart-description"
+      >
+        <InfoCircleOutlined class="description-icon" />
+        <Marquee
+          v-if="descriptionWidth > 0"
+          :content="indicator.description"
+          :width="descriptionWidth"
+          :duration="15"
+          :delay="2"
+          :font-size="1.2"
+          class="description-text"
+        />
+        <span
+          v-else
+          class="description-text-static"
+        >{{ indicator.description }}</span>
+      </div>
+
       <!-- 蓝色虚线框 - 拖拽放置区域 -->
       <div
         :class="{ visible: showDropZone }"
@@ -130,6 +156,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, defineAsyncComponent 
 
 import type { DashboardItem } from './types'
 
+import Marquee from '@/framework/components/common/marquee/index.vue'
 import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
@@ -138,7 +165,7 @@ const DashboardDetail = defineAsyncComponent(() =>
   import('@/framework/components/common/Portal/dashboard/indicator/dashboard/DashboardDetail.vue')
 )
 import { message } from 'ant-design-vue'
-import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 
 import { advancedStatisticRequest } from '@/framework/apis'
 import { getPortalConfig } from '@/framework/apis/portal/config'
@@ -183,6 +210,18 @@ const props = withDefaults(defineProps<Props>(), {
 
 // 组件引用
 const chartRef = ref()
+const descriptionRef = ref<HTMLElement>()
+
+// 描述区域实际宽度（响应式）
+const descriptionContainerWidth = ref(0)
+
+// 计算描述文本可用宽度（减去图标和间距）
+const descriptionWidth = computed(() => {
+  if (descriptionContainerWidth.value === 0) return 0
+  const iconWidth = 20 // 图标宽度(14px) + gap(6px)
+  const padding = 32 // 左右 padding 各 16px
+  return descriptionContainerWidth.value - iconWidth - padding
+})
 
 // 组件状态管理
 const isDestroyed = ref(false)
@@ -859,6 +898,19 @@ onMounted(async () => {
     await loadPortalConfig()
     isInitialized = true
     await loadChartData()
+    
+    // 设置 ResizeObserver 监听描述区域宽度变化
+    if (descriptionRef.value) {
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          descriptionContainerWidth.value = entry.contentRect.width
+        }
+      })
+      resizeObserver.observe(descriptionRef.value)
+      
+      // 保存 observer 以便清理
+      ;(descriptionRef.value as any)._resizeObserver = resizeObserver
+    }
   } catch (error) {
     console.error('ChartCard初始化失败:', error)
   }
@@ -871,6 +923,12 @@ onBeforeUnmount(() => {
   portalConfig.value = null
   // 清理防抖定时器
   debouncedLoadChartData.cancel()
+  
+  // 清理 ResizeObserver
+  if (descriptionRef.value && (descriptionRef.value as any)._resizeObserver) {
+    (descriptionRef.value as any)._resizeObserver.disconnect()
+    delete (descriptionRef.value as any)._resizeObserver
+  }
 })
 
 // 暴露方法给父组件使用
@@ -903,18 +961,44 @@ defineExpose({
   .chart-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 12px 16px;
     border-bottom: 1px solid #f0f0f0;
     background: #fafafa;
     cursor: move; // 只在标题区域显示移动光标
+    min-height: 50px;
+    
+    // 当有副标题时,设置header高度为65px
+    &:has(.subtitle) {
+      min-height: 65px;
+      ~ .chart-card-content {
+        --header-height: 65px;
+      }
+    }
 
     .header-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+      
       h3 {
         margin: 0;
         font-size: 16px;
         font-weight: 500;
         color: #262626;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+      
+      .subtitle {
+        font-size: 12px;
+        color: #8c8c8c;
+        font-style: italic;
+        line-height: 1.5;
+        word-break: break-word;
+        display: block;
       }
     }
 
@@ -940,18 +1024,71 @@ defineExpose({
 
   .chart-card-content {
     padding: 0;
-    height: calc(100% - 50px);
+    height: calc(100% - var(--header-height, 50px));
     position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .chart-description {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #f6f8fa;
+      border-bottom: 1px solid #e8e8e8;
+      flex-shrink: 0;
+      height: 28px;
+      overflow: hidden;
+
+      .description-icon {
+        font-size: 14px;
+        color: #1890ff;
+        flex-shrink: 0;
+        line-height: 1;
+      }
+
+      .description-text,
+      .description-text-static {
+        flex: 1;
+        font-size: 12px;
+        color: #595959;
+        line-height: 16px;
+        min-width: 0;
+        height: 16px;
+        
+        :deep(.marquee-text),
+        :deep(.marquee),
+        :deep(.marquee-content) {
+          font-size: 12px;
+          color: #595959;
+          line-height: 16px;
+          height: 16px;
+        }
+        
+        :deep(.marquee) {
+          height: 16px;
+          line-height: 16px;
+          width: 100%;
+        }
+      }
+      
+      .description-text-static {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
 
     .chart-loading {
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100%;
+      flex: 1;
     }
 
     .chart-container {
-      height: 100%;
+      flex: 1;
       min-height: 0;
       display: flex;
       flex-direction: column;

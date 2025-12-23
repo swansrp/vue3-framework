@@ -11,29 +11,49 @@
     <!-- 自定义表头区域 -->
     <template #title>
       <div class="modal-header">
-        <span class="modal-title">{{ modalTitle }}</span>
-        <div class="indicator-name-input">
-          <span class="input-label"><span class="required-star">* </span>指标名称：</span>
-          <a-input
-            v-model:value="indicatorName"
-            placeholder="请输入指标名称（必填）"
-            :maxlength="50"
-            :status="indicatorNameError ? 'error' : ''"
-            style="width: 200px;"
-            @blur="validateIndicatorName"
-          />
-          <span
-            v-if="indicatorNameError"
-            class="error-message"
-          >{{ indicatorNameError }}</span>
-        </div>
-        <div class="skip-chart-option">
-          <a-checkbox
-            v-model:checked="skipChartGeneration"
-            :disabled="isEditMode || isNonLeafNode"
-          >
-            跳过图表配置（仅保存指标名称）
-          </a-checkbox>
+        <div class="header-row">
+          <span class="modal-title">{{ modalTitle }}</span>
+          <div class="skip-chart-option">
+            <a-checkbox
+              v-model:checked="skipChartGeneration"
+              :disabled="isEditMode || isNonLeafNode"
+            >
+              跳过图表配置（仅保存指标名称）
+            </a-checkbox>
+          </div>
+          <div class="indicator-name-input">
+            <span class="input-label"><span class="required-star">* </span>指标名称：</span>
+            <a-input
+              v-model:value="indicatorName"
+              placeholder="请输入指标名称（必填）"
+              :maxlength="50"
+              :status="indicatorNameError ? 'error' : ''"
+              style="width: 200px;"
+              @blur="validateIndicatorName"
+            />
+            <span
+              v-if="indicatorNameError"
+              class="error-message"
+            >{{ indicatorNameError }}</span>
+          </div>
+          <div class="indicator-subtitle-input">
+            <span class="input-label">副标题：</span>
+            <a-input
+              v-model:value="indicatorSubTitle"
+              placeholder="请输入副标题（选填，20字以内）"
+              :maxlength="20"
+              style="width: 180px;"
+            />
+          </div>
+          <div class="indicator-description-input">
+            <span class="input-label">描述：</span>
+            <a-input
+              v-model:value="indicatorDescription"
+              placeholder="请输入图表描述（选填，50字以内）"
+              :maxlength="50"
+              class="description-input"
+            />
+          </div>
         </div>
       </div>
     </template>
@@ -125,6 +145,12 @@ const dashboardRef = ref()
 const indicatorName = ref('')
 const indicatorNameError = ref('')
 
+// 指标副标题
+const indicatorSubTitle = ref('')
+
+// 指标描述
+const indicatorDescription = ref('')
+
 // 跳过图表生成选项
 const skipChartGeneration = ref(false)
 
@@ -160,6 +186,8 @@ watch(() => props.visible, async (newVal) => {
     if (props.isEditMode && props.editData) {
       // 编辑模式：使用现有的指标名称，如果没有则使用默认值
       indicatorName.value = props.editData.title
+      indicatorSubTitle.value = props.editData.subTitle || ''
+      indicatorDescription.value = props.editData.description || ''
       
       // 如果是非叶子节点，自动跳过图表配置
       if (isNonLeafNode.value) {
@@ -173,12 +201,16 @@ watch(() => props.visible, async (newVal) => {
       // 新增模式但有editData：这是复制模式
       // 使用原标题加上"副本"后缀
       indicatorName.value = props.editData.title + ' - 副本'
+      indicatorSubTitle.value = props.editData.subTitle || ''
+      indicatorDescription.value = props.editData.description || ''
       skipChartGeneration.value = false
       // 加载原配置数据
       await loadEditData()
     } else {
       // 新增模式：设置默认名称
       indicatorName.value = ''
+      indicatorSubTitle.value = ''
+      indicatorDescription.value = ''
       // 不再默认跳过图表配置，让用户自己选择
       skipChartGeneration.value = false
     }
@@ -359,6 +391,8 @@ const handleSaveConfig = async () => {
     // 构建指标节点数据
     const indicatorData: Partial<IndicatorNode> = {
       title: indicatorName.value.trim(), // 使用用户输入的指标名称
+      subTitle: indicatorSubTitle.value.trim(), // 副标题
+      description: indicatorDescription.value.trim(), // 描述
       tableId: props.tableId,
       order: props.editData?.order || 0,
       show: true,
@@ -430,6 +464,10 @@ const handleResetConfig = () => {
   // 清空指标名称
   indicatorName.value = ''
   indicatorNameError.value = ''
+  
+  // 清空副标题和描述
+  indicatorSubTitle.value = ''
+  indicatorDescription.value = ''
 
   // 重置跳过图表生成选项
   skipChartGeneration.value = false
@@ -449,6 +487,11 @@ const handleCancel = () => {
   // 重置指标名称和错误信息
   indicatorName.value = ''
   indicatorNameError.value = ''
+  
+  // 重置副标题和描述
+  indicatorSubTitle.value = ''
+  indicatorDescription.value = ''
+  
   // 重置跳过图表生成选项
   skipChartGeneration.value = false
   visible.value = false
@@ -544,24 +587,33 @@ const handleCancel = () => {
 
 .modal-header {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
 
   .modal-title {
     font-size: 16px;
     font-weight: 600;
     color: #262626;
+    white-space: nowrap;
   }
 
-  .indicator-name-input {
+  .indicator-name-input,
+  .indicator-subtitle-input,
+  .indicator-description-input {
     display: flex;
     align-items: center;
     gap: 8px;
 
     .input-label {
-      font-size: 15px;
-      font-weight: 900;
+      font-size: 14px;
+      font-weight: 500;
       color: #262626;
       white-space: nowrap;
 
@@ -576,6 +628,16 @@ const handleCancel = () => {
       color: #ff4d4f;
       white-space: nowrap;
       margin-left: 4px;
+    }
+  }
+
+  .indicator-description-input {
+    flex: 1;
+    min-width: 200px;
+    padding-right: 60px;
+
+    .description-input {
+      width: 100%;
     }
   }
 

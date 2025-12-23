@@ -332,6 +332,8 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
         return {
           id: d.id,
           title: d.title ?? '',
+          subTitle: d.subTitle ?? '',
+          description: d.description ?? '',
           displayOrder,
           xGrid: Number(d.xGrid ?? d.xgrid ?? 2),
           yGrid: Number(d.yGrid ?? d.ygrid ?? 2),

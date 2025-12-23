@@ -8,6 +8,8 @@ export interface IndicatorNode {
   tableId: string
   order: number
   title: string
+  subTitle: string
+  description: string
   show: boolean
   indicator: any
   children?: IndicatorNode[]
@@ -21,6 +23,8 @@ export interface IndicatorNode {
 export interface DashboardItem {
   id: string
   title: string
+  subTitle: string
+  description: string
   displayOrder: number
   commonStatistic: string
   xGrid: number
