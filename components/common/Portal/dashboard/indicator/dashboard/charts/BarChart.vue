@@ -504,7 +504,7 @@ export default defineComponent({
           orient: 'horizontal',
           top: '5%',
           left: 'center',
-          width: '80%',
+          width: '70%',
           itemGap: 15,
           itemHeight: 14,
           show: isNotEmpty(secondDimensionGroups),
