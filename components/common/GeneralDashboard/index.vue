@@ -333,6 +333,8 @@ const displayedDashboardItems = computed((): DashboardItem[] => {
     dashboardItems.push({
       id: `auto-${ind.id}`,
       title: ind.title || '未命名指标',
+      subTitle: ind.subTitle || '',
+      description: ind.description || '',
       displayOrder: index,
       commonStatistic: ind.id,
       xGrid,
