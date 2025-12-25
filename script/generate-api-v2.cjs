@@ -793,6 +793,11 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
     params.push('onUploadProgress?: Function');
   } else {
     // 普通接口使用三个布尔参数
+    // 说明:
+    // - POST类型的API调用时，showSuccess和showErr一般要设置成true
+    // - POST类型的方法一般不会返回数据，如果需要更新数据，再次调用获取函数完成数据更新
+    // - 操作正常完成会依赖showSuccess在request框架中弹出相应的成功文案
+    // - 操作失败会根据showErr在request框架中弹出相应的失败文案
     params.push('showSuccess = true', 'showLoading = false', 'showErr = true');
   }
   
@@ -834,6 +839,20 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   // 如果是上传接口，添加特殊标记
   if (isUploadApi) {
     code += ` * @upload true - 此接口使用 multipart/form-data 上传文件\n`;
+  }
+  
+  // 如果是POST接口，添加使用说明
+  if (httpMethod === 'POST' && !isUploadApi) {
+    code += ` * \n`;
+    code += ` * **POST接口使用规范（重要）:**\n`;
+    code += ` * @param {boolean} showSuccess - 默认true，成功时自动显示提示消息，通常保持默认值\n`;
+    code += ` * @param {boolean} showErr - 默认true，失败时自动显示错误消息，通常保持默认值\n`;
+    code += ` * \n`;
+    code += ` * **调用建议:**\n`;
+    code += ` * 1. 调用此接口时使用默认参数即可（showSuccess=true, showErr=true）\n`;
+    code += ` * 2. 此接口不返回业务数据，仅返回操作状态\n`;
+    code += ` * 3. 数据更新流程：调用此POST接口 -> 等待成功 -> 调用对应的GET接口获取最新数据\n`;
+    code += ` * 4. request框架会根据showSuccess和showErr自动弹出操作结果提示\n`;
   }
   
   code += ` */\n`;
