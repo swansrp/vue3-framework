@@ -45,6 +45,7 @@
             :data-source="listData"
             :pagination-change="paginationChange"
             :row-selection="hideRowSelection ? null : rowSelection"
+            :single-select="singleSelect"
             :title-column="titleColumn"
             class="list-mode-table"
             @search="onListDataSearch"

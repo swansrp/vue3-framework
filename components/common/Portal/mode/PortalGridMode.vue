@@ -256,7 +256,9 @@ const handleItemClick = (record: any) => {
   if (rowSelection.value) {
     if (rowSelection.value.type === 'radio') {
       // 单选模式
-      selectedItems.value = [record.value]
+      const newSelection = selectedItems.value.includes(record.value) ? [] : [record.value]
+      selectedItems.value = newSelection
+      rowSelection.value.onChange(newSelection)
     } else {
       // 多选模式
       const index = selectedItems.value.indexOf(record.value)
@@ -265,6 +267,7 @@ const handleItemClick = (record: any) => {
       } else {
         selectedItems.value.push(record.value)
       }
+      rowSelection.value.onChange([...selectedItems.value])
     }
   }
 }
@@ -282,6 +285,8 @@ const handleCheckboxChange = (e: any, record: any) => {
       selectedItems.value.splice(index, 1)
     }
   }
+  // 通知父组件选择状态变化
+  rowSelection.value.onChange([...selectedItems.value])
 }
 
 const handleContextMenu = (event: MouseEvent, record: any) => {

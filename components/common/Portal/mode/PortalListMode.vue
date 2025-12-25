@@ -3,8 +3,7 @@
     :columns="[{
       rowDrag: config.orderMode && !config.readOnly,
       align: 'center',
-      dataIndex: 'label',
-      tooltip: {placement: 'rightBottom', mouseEnterDelay: 0.5}
+      dataIndex: 'label'
     }]"
     :show-header="isNotEmpty(rowSelection)"
     :data-source="dataSource"
@@ -12,16 +11,17 @@
     bordered
     :row-selection="rowSelection"
     :range-selection="isEmpty(rowSelection) ? 'single' : false"
+    :custom-row="handleCustomRow"
     row-key="value"
     size="small"
     @row-drag-end="handleRowDragEnd"
   >
     <template #bodyCell="{ column, record}">
-      <a-dropdown :trigger="['contextmenu']">
-        <slot
-          name="display"
-          :record="record"
-        >
+      <slot
+        name="display"
+        :record="record"
+      >
+        <a-dropdown :trigger="['contextmenu']">
           <div
             :style="{textAlign: column.contentAlign || 'left',
                      textOverflow: 'ellipsis',
@@ -31,29 +31,29 @@
           >
             {{ record[`${column.dataIndex}`] }}
           </div>
-        </slot>
-        <template #overlay>
-          <a-menu @click="({ key: menuKey }) => handleMenuContext(record.value, menuKey)">
-            <a-menu-item key="1">
-              查看详情
-            </a-menu-item>
-            <template v-if="!config.readOnly">
-              <a-menu-item key="2">
-                新增记录
+          <template #overlay>
+            <a-menu @click="({ key: menuKey }) => handleMenuContext(record.value, menuKey)">
+              <a-menu-item key="1">
+                查看详情
               </a-menu-item>
-              <a-menu-item key="3">
-                编辑记录
-              </a-menu-item>
-              <a-menu-item key="4">
-                复制记录
-              </a-menu-item>
-              <a-menu-item key="5">
-                删除记录
-              </a-menu-item>
-            </template>
-          </a-menu>
-        </template>
-      </a-dropdown>
+              <template v-if="!config.readOnly">
+                <a-menu-item key="2">
+                  新增记录
+                </a-menu-item>
+                <a-menu-item key="3">
+                  编辑记录
+                </a-menu-item>
+                <a-menu-item key="4">
+                  复制记录
+                </a-menu-item>
+                <a-menu-item key="5">
+                  删除记录
+                </a-menu-item>
+              </template>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </slot>
     </template>
     <template #tooltipTitle="{ value }">
       {{ value }}
@@ -122,10 +122,11 @@ const prop = defineProps<{
   titleColumn: ColumnType,
   dataSource: Array<any>,
   paginationChange: Function,
-  rowSelection: any
+  rowSelection: any,
+  singleSelect?: boolean
 }>()
 
-const { dataSource, config, rowSelection } = toRefs(prop)
+const { dataSource, config, rowSelection, singleSelect } = toRefs(prop)
 const emit = defineEmits<{
   /**
    * 根据名称查找数据
@@ -178,6 +179,51 @@ const handleRowDragEnd = () => {
     })
     emit('rowDragEnd', updateOrderData)
   })
+}
+
+// 处理行点击事件
+const handleCustomRow = (record: any) => {
+  return {
+    onClick: (event: MouseEvent) => {
+      // 如果没有 rowSelection，说明禁用了行选择
+      if (!rowSelection.value) {
+        return
+      }
+      
+      // 如果点击的是输入框、按钮等交互元素，不处理行选中
+      const target = event.target as HTMLElement
+      const tagName = target?.tagName?.toLowerCase()
+      const isInteractiveElement = ['input', 'button', 'a', 'select', 'textarea'].includes(tagName || '')
+      const hasEditableParent = target?.closest('.surely-table-cell-edit-wrapper')
+      
+      if (isInteractiveElement || hasEditableParent) {
+        return
+      }
+      
+      const rowKey = record.value
+      const currentKeys = [...(rowSelection.value.selectedRowKeys || [])]
+      
+      if (singleSelect?.value) {
+        // 单选模式：如果已选中则取消选中，否则选中当前行
+        if (currentKeys.includes(rowKey)) {
+          rowSelection.value.onChange([])
+        } else {
+          rowSelection.value.onChange([rowKey])
+        }
+      } else {
+        // 多选模式：切换选中状态
+        const index = currentKeys.indexOf(rowKey)
+        if (index > -1) {
+          // 已选中，则取消选中
+          currentKeys.splice(index, 1)
+        } else {
+          // 未选中，则添加到选中列表
+          currentKeys.push(rowKey)
+        }
+        rowSelection.value.onChange(currentKeys)
+      }
+    }
+  }
 }
 </script>
 
