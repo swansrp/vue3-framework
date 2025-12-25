@@ -813,6 +813,39 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
   // 添加API路径信息
   code += ` * @api ${httpMethod} ${cleanPath}\n`;
   
+  // 添加参数注释
+  // 路径参数
+  pathParams.forEach(param => {
+    code += ` * @param ${param} - 路径参数\n`;
+  });
+  
+  // 查询参数
+  if (queryParams.length > 0) {
+    code += ` * @param params - 查询参数`;
+    if (paramsTypeName) {
+      code += `（类型: ${paramsTypeName}）`;
+    }
+    code += `\n`;
+  }
+  
+  // 请求体参数
+  if (hasRequestBody) {
+    code += ` * @param data - 请求体数据`;
+    if (dataTypeName) {
+      code += `（类型: ${dataTypeName}）`;
+    }
+    code += `\n`;
+  }
+  
+  // 上传或通用参数
+  if (isUploadApi) {
+    code += ` * @param onUploadProgress - 上传进度回调\n`;
+  } else {
+    code += ` * @param showSuccess - 是否显示成功提示（默认: true）\n`;
+    code += ` * @param showLoading - 是否显示加载中（默认: false）\n`;
+    code += ` * @param showErr - 是否显示错误提示（默认: true）\n`;
+  }
+  
   // 添加参数类型信息
   if (paramsTypeName) {
     code += ` * @paramsType ${paramsTypeName}\n`;
@@ -841,17 +874,37 @@ function generateApiFunction(path, method, operation, envConfig, usedNames, cont
     code += ` * @upload true - 此接口使用 multipart/form-data 上传文件\n`;
   }
   
-  // 如果是POST接口，添加使用说明
-  if (httpMethod === 'POST' && !isUploadApi) {
+  // 定义使用POST方法但实际是查询数据的接口路径模式
+  const queryApiPatterns = [
+    '/advanced/count',
+    '/advanced/query',
+    '/advanced/select',
+    '/advanced/statistic',
+    '/advanced/summary',
+    '/advanced/query/export',
+    '/general/count',
+    '/general/query',
+    '/general/select',
+    '/general/statistic',
+    '/general/summary'
+  ];
+  
+  // 检查当前路径是否为查询类接口
+  const isQueryApi = queryApiPatterns.some(pattern => cleanPath.endsWith(pattern));
+  
+  // 如果是POST接口，且不是上传接口，且不是查询类接口，添加使用说明
+  if (httpMethod === 'POST' && !isUploadApi && !isQueryApi) {
     code += ` * \n`;
+    code += ` * @remarks\n`;
     code += ` * **POST接口使用规范（重要）:**\n`;
-    code += ` * @param {boolean} showSuccess - 默认true，成功时自动显示提示消息，通常保持默认值\n`;
-    code += ` * @param {boolean} showErr - 默认true，失败时自动显示错误消息，通常保持默认值\n`;
+    code += ` * showSuccess - 默认true，成功时自动显示提示消息，通常保持默认值\n`;
+    code += ` * showErr - 默认true，失败时自动显示错误消息，通常保持默认值\n`;
+    code += ` * showLoading - 默认false，长时间处理的接口方法需要设置成true以显示loading图标，通常保持默认值\n`;
     code += ` * \n`;
     code += ` * **调用建议:**\n`;
     code += ` * 1. 调用此接口时使用默认参数即可（showSuccess=true, showErr=true）\n`;
     code += ` * 2. 此接口不返回业务数据，仅返回操作状态\n`;
-    code += ` * 3. 数据更新流程：调用此POST接口 -> 等待成功 -> 调用对应的GET接口获取最新数据\n`;
+    code += ` * 3. 数据更新流程：调用此POST接口 -> 等待成功 -> 调用相应的获取数据接口获取最新数据\n`;
     code += ` * 4. request框架会根据showSuccess和showErr自动弹出操作结果提示\n`;
   }
   
