@@ -2,7 +2,7 @@
   <div id="my-loading">
     <div class="load-box">
       <a-spin size="large" />
-      <span style="margin-top: 20px">加载中，请稍后</span>
+      <span style="margin-top: 20px">正在加载，请稍候…</span>
     </div>
   </div>
 </template>
