@@ -81,15 +81,17 @@
                   />
                 </template>
               </a-button>
+              <!-- 收起状态（expand=true）或 无法展开（expand=null）：显示原始内容 -->
               <span
-                v-if="expand"
+                v-if="expand !== false"
                 :class="['contentCss', getLogLevelClass(log.logLevel)]"
-                v-html="log.content.substring(0, expandWidth)"
+                v-html="strLF2HtmlLF(log.content)"
               ></span>
+              <!-- 展开状态（expand=false）：将 Markdown 转换为 HTML 并显示 -->
               <span
                 v-else
-                :class="['contentCss', getLogLevelClass(log.logLevel)]"
-                v-html="log.content"
+                :class="['contentCss', getLogLevelClass(log.logLevel), 'markdown-content']"
+                v-html="marked.parse(log.content)"
               ></span>
             </div>
           </a-dropdown>
@@ -111,16 +113,25 @@
 <script lang="ts" setup>
 import { ColumnHeightOutlined, MinusOutlined, PlusOutlined, VerticalAlignMiddleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { marked } from 'marked'
 import { ref } from 'vue'
 
 import LogJsonDraw from './logJson.vue'
 import LogSqlDraw from './logSql.vue'
 import { expandLog, formatDate, getLogLevelClass, isJson, isSQL } from './logUtil'
 
-import { isNotEmpty, scrollToBottom } from '@/framework/utils/common'
+import { isNotEmpty, scrollToBottom, strLF2HtmlLF } from '@/framework/utils/common'
 
 const [messageApi, contextHolder] = message.useMessage()
 const logContainer = ref()
+
+// 配置 marked 支持 GFM 表格
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  tables: true
+})
+
 const props = withDefaults(
   defineProps<{
     show: boolean

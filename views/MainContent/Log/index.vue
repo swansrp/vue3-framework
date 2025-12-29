@@ -119,6 +119,15 @@
               <VerticalAlignMiddleOutlined v-if="expandAll" />
             </template>
           </a-button>
+          <a-button
+            style="margin-left: 10px;"
+            type="primary"
+            @click="showDownloadModal = true"
+          >
+            <template #icon>
+              <DownloadOutlined />
+            </template>
+          </a-button>
           <!-- 实时刷新按钮 -->
           <a-dropdown>
             <template #overlay>
@@ -211,15 +220,17 @@
                       />
                     </template>
                   </a-button>
+                  <!-- 收起状态（expand=true）或 无法展开（expand=null）：显示原始内容 -->
                   <span
-                    v-if="expand"
+                    v-if="expand !== false"
                     :class="['contentCss', getLogLevelClass(log.logLevel)]"
-                    v-html="log.content.substring(0, EXPAND_WIDTH)"
+                    v-html="strLF2HtmlLF(log.content)"
                   ></span>
+                  <!-- 展开状态（expand=false）：将 Markdown 转换为 HTML 并显示 -->
                   <span
                     v-else
-                    :class="['contentCss', getLogLevelClass(log.logLevel)]"
-                    v-html="log.content"
+                    :class="['contentCss', getLogLevelClass(log.logLevel), 'markdown-content']"
+                    v-html="marked.parse(log.content)"
                   ></span>
                 </div>
               </a-dropdown>
@@ -243,11 +254,48 @@
     v-model:show="showSql"
     :sql="sqlData"
   />
+  <a-modal
+    v-model:open="showDownloadModal"
+    :confirm-loading="downloadLoading"
+    title="下载日志"
+    @ok="handleDownloadConfirm"
+  >
+    <a-form
+      :label-col="{ span: 6 }"
+      :wrapper-col="{ span: 18 }"
+      layout="horizontal"
+    >
+      <a-form-item label="时间范围">
+        <a-range-picker
+          v-model:value="downloadTimeRange"
+          :locale="locale"
+          :presets="[
+            {label: '5分钟', value:[dayjs().subtract(5, 'minute'), dayjs()]},
+            {label: '10分钟', value:[dayjs().subtract(10, 'minute'), dayjs()]},
+            {label: '30分钟', value:[dayjs().subtract(30, 'minute'), dayjs()]},
+            {label: '1小时', value:[dayjs().subtract(1, 'hour'), dayjs()]},
+            {label: '2小时', value:[dayjs().subtract(2, 'hour'), dayjs()]},
+            {label: '6小时', value:[dayjs().subtract(6, 'hour'), dayjs()]},
+            {label: '12小时', value:[dayjs().subtract(12, 'hour'), dayjs()]},
+            {label: '1天', value:[dayjs().subtract(1, 'day'), dayjs()]},
+            {label: '2天', value:[dayjs().subtract(2, 'day'), dayjs()]},
+            {label: '3天', value:[dayjs().subtract(3, 'day'), dayjs()]},
+            {label: '5天', value:[dayjs().subtract(5, 'day'), dayjs()]},
+            {label: '7天', value:[dayjs().subtract(7, 'day'), dayjs()]},
+          ]"
+          format="YYYY-MM-DD HH:mm:ss"
+          show-time
+          style="width: 100%;"
+        />
+      </a-form-item>
+    </a-form>
+  </a-modal>
 </template>
 
 <script lang="ts" setup>
 import {
   ColumnHeightOutlined,
+  DownloadOutlined,
   DownOutlined,
   LoadingOutlined,
   MinusOutlined,
@@ -258,6 +306,7 @@ import {
 import { message } from 'ant-design-vue'
 import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
 import dayjs from 'dayjs'
+import { marked } from 'marked'
 import { ref } from 'vue'
 
 import LogContextDraw from './logContext.vue'
@@ -312,6 +361,19 @@ const loading = ref(false)
 const data = ref<Map<number, { expand: boolean | null, log: LogInfo }>>(new Map())
 const EXPAND_WIDTH = 200
 const expandAll = ref(false)
+
+// 下载弹框相关状态
+const showDownloadModal = ref(false)
+const downloadTimeRange = ref<[Dayjs | null, Dayjs | null]>([null, null])
+const downloadLoading = ref(false)
+
+// 配置 marked 支持 GFM 表格
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  tables: true
+})
+
 const expandAllLog = () => {
   data.value.forEach((value: any) => {
     if (value.expand !== null) {
@@ -322,6 +384,74 @@ const expandAllLog = () => {
   nextTick(() => {
     scrollToBottom(logContainer, true)
   })
+}
+
+const downloadLog = async () => {
+  try {
+    downloadLoading.value = true
+    let req: LogBoardReq = {
+      ...logStore.getAllParams,
+      content: searchText.value,
+      logLevel: undefined,
+      startAt: downloadTimeRange.value[0]?.format('YYYY-MM-DD HH:mm:ss.SSS'),
+      endAt: downloadTimeRange.value[1]?.format('YYYY-MM-DD HH:mm:ss.SSS')
+    }
+
+    const resp = await props.fetch(req)
+    if (resp?.payload && resp.payload.length > 0) {
+      // 生成日志内容
+      let logContent = ''
+      for (let index = resp.payload.length - 1; index >= 0; index--) {
+        const log = resp.payload[index]
+        // 按照logback格式: %d %-5level[%thread][%X{IP}][%X{REQUEST_ID}][%X{logToken}]%logger{15}|(%file:%line)%m%n
+        const logLevel = (log.logLevel || '').padEnd(5, ' ')
+        const threadName = log.threadName || ''
+        const requestIp = log.requestIp || ''
+        const requestId = log.requestId || ''
+        const traceId = log.traceId || ''
+        const methodName = log.methodName || ''
+        const content = log.content || ''
+        
+        logContent += `${formatDate(log.createTime)} ${logLevel}[${threadName}][${requestIp}][${requestId}][${traceId}]|(${methodName})${content}\n`
+      }
+
+      // 生成文件名
+      const moduleIds = logStore.moduleId.join('_') || 'all'
+      const startTime = downloadTimeRange.value[0]!.format('YYYYMMDDHHmmss')
+      const endTime = downloadTimeRange.value[1]!.format('YYYYMMDDHHmmss')
+      const fileName = `log_${logStore.envType}_${moduleIds}_${startTime}_${endTime}.txt`
+
+      // 创建下载
+      const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      messageApi.success(`日志已下载: ${fileName}`)
+      showDownloadModal.value = false
+    } else {
+      messageApi.warning('没有找到日志数据')
+    }
+  } catch (error) {
+    console.error('下载日志失败:', error)
+    messageApi.error('下载日志失败')
+  } finally {
+    downloadLoading.value = false
+  }
+}
+
+const handleDownloadConfirm = () => {
+  // 检查是否选择了时间范围
+  if (!downloadTimeRange.value[0] || !downloadTimeRange.value[1]) {
+    messageApi.warning('请选择时间范围')
+    return
+  }
+  downloadLog()
 }
 // 日志上下文
 const contextData = ref<Map<number, { expand: boolean | null, log: LogInfo }>>(new Map())
@@ -347,7 +477,6 @@ const queryByRequestId = (log: any) => {
     props.fetch(req).then((resp: any) => {
       for (let index = resp.payload.length - 1; index >= 0; index--) {
         const log = resp.payload[index]
-        log.content = strLF2HtmlLF(log.content)
         contextData.value.set(log.logId, { expand: log.content.length > EXPAND_WIDTH ? true : null, log })
       }
       showContextLog.value = true
@@ -366,7 +495,6 @@ const handleLogData = (resp: any, refresh = false) => {
   const filterLog = JSON.parse(localStorageMethods.getLocalStorage(FILTER_LOG, JSON.stringify([])))
   for (let index = resp.payload.length - 1; index >= 0; index--) {
     const log = resp.payload[index]
-    log.content = strLF2HtmlLF(log.content)
     if (!data.value.has(log.logId)) {
       const block = blockLog.filter((tag: any) => log.content.indexOf(tag) !== -1)
       if (block.length === 0) {
