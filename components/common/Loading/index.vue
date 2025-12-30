@@ -23,7 +23,7 @@
   background-color: rgba(255, 255, 255, 0.8);
 }
 .load-box {
-  width: 120px;
+  width: 160px;
   height: 120px;
   color: #409eff;
   display: flex;
