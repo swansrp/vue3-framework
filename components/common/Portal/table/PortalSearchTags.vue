@@ -16,11 +16,23 @@
         closable
         @close="handleRemoveTag(tag)"
       >
-        <filter-outlined v-if="tag.type === 'filter'" style="margin-right: 4px" />
-        <sort-ascending-outlined v-else-if="tag.sortType === 0" style="margin-right: 4px" />
-        <sort-descending-outlined v-else style="margin-right: 4px" />
+        <filter-outlined
+          v-if="tag.type === 'filter'"
+          style="margin-right: 4px"
+        />
+        <sort-ascending-outlined
+          v-else-if="tag.sortType === 0"
+          style="margin-right: 4px"
+        />
+        <sort-descending-outlined
+          v-else
+          style="margin-right: 4px"
+        />
         <span class="tag-title">{{ tag.title }}</span>
-        <span v-if="tag.type === 'filter'" class="tag-relation">{{ tag.relationText }}</span>
+        <span
+          v-if="tag.type === 'filter'"
+          class="tag-relation"
+        >{{ tag.relationText }}</span>
         <span class="tag-value">{{ tag.displayValue }}</span>
       </a-tag>
       <a-button
@@ -43,7 +55,7 @@
 import { ClearOutlined, FilterOutlined, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons-vue'
 
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { ColumnType, FIELD_TYPE, FILTER_TYPE, QuerySortType } from '@/framework/components/common/Portal/type'
+import { ColumnType, FILTER_TYPE, QuerySortType } from '@/framework/components/common/Portal/type'
 
 interface SearchTag {
   key: string
@@ -170,8 +182,7 @@ const searchTags = computed((): SearchTag[] => {
         if (condition1) {
           processedKeys.add(baseKey + '0')
           processedKeys.add(baseKey + '1')
-
-          const column = getColumn(baseKey)
+          
           const leftVal = condition0.value?.[0]
           const rightVal = condition1.value?.[0]
 
