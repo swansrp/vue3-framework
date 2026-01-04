@@ -150,7 +150,8 @@ const prop = defineProps<{
   setSelectedKeys: any,
   selectedKeysRef: any,
   confirm: any,
-  clearFilters: any
+  clearFilters: any,
+  clearFilterColumns?: Set<string>
 }>()
 const emit = defineEmits<{
   (e: 'handleSearchConditionChanged', selectedKeys: any, dataIndex: any, relation: any, filterStrict: boolean): void
@@ -165,6 +166,22 @@ const _selectedKeysRef = ref(selectedKeysRef.value)
 watch(
   () => selectedKeysRef.value,
   () => _selectedKeysRef.value = selectedKeysRef.value
+)
+
+// 监听外部清空信号
+watch(
+  () => prop.clearFilterColumns,
+  (clearSet) => {
+    if (clearSet && clearSet.has(column.value.dataIndex)) {
+      // 清空本列的筛选值
+      _selectedKeysRef.value = []
+      setSelectedKeys.value([])
+      clearFilters.value()
+      // 从清空列表中移除
+      clearSet.delete(column.value.dataIndex)
+    }
+  },
+  { deep: true }
 )
 const handleSearchConditionChanged = (value: any, column: any) => {
   setSelectedKeys.value(value)

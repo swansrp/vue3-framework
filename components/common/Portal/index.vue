@@ -197,6 +197,17 @@
           </template>
         </portal-button-action>
         <!-- endregion -->
+        <!-- region 搜索条件标签 -->
+        <portal-search-tags
+          v-if="props.showSearchTags"
+          :columns="columns"
+          :query-condition-map="queryConditionMap"
+          :query-sort-map="querySortMap"
+          @remove="handleRemoveSearchTag"
+          @remove-sort="handleRemoveSortTag"
+          @clear-all="handleClearAllSearchTags"
+        />
+        <!-- endregion -->
         <!-- region 表格区 -->
         <div
           ref="portalConfigSpace"
@@ -473,6 +484,7 @@
                   <portal-column-condition
                     ref="filterDropdownRef"
                     :clear-filters="clearFilters"
+                    :clear-filter-columns="clearFilterColumns"
                     :column="column"
                     :confirm="confirm"
                     :selected-keys-ref="selectedKeys"
@@ -736,6 +748,7 @@ import DashboardModal from '@/framework/components/common/Portal/dashboard/dashb
 import { db } from '@/framework/components/common/Portal/db'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 import PortalGridMode from '@/framework/components/common/Portal/mode/PortalGridMode.vue'
+import PortalSearchTags from '@/framework/components/common/Portal/table/PortalSearchTags.vue'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import {
   ColumnType,
@@ -818,6 +831,7 @@ let initFinished = false
  * @param downloadFileName 下载文件命名方法
  * @param showLoading 查询时是否显示加载中
  * @param gridCardWidth grid模式卡片宽度
+ * @param showSearchTags 是否显示搜索条件标签
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -871,6 +885,7 @@ const props = withDefaults(defineProps<{
     downloadFileName?: (config: TableConfigType) => string
     showLoading?: boolean
     gridCardWidth?: number
+    showSearchTags?: boolean
   }>(),
   {
     baseDomain: '/' + name,
@@ -921,7 +936,8 @@ const props = withDefaults(defineProps<{
     columnDisplayCustom: new Map<string, string>(),
     downloadFileName: (config: TableConfigType) => config.title,
     showLoading: false,
-    gridCardWidth: 350
+    gridCardWidth: 350,
+    showSearchTags: false
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -1676,6 +1692,8 @@ const getGeneralCondition = () => {
 }
 const queryConditionMap = reactive(new Map<String, ConditionListType>())
 const querySortMap = reactive(new Map<String, QuerySortType>())
+// 用于通知列筛选器清空的信号
+const clearFilterColumns = reactive(new Set<string>())
 const initQueryCondition = () => {
   config.currentPage = 1
   config.pageSize = props.pageSize
@@ -1714,6 +1732,44 @@ const handleSearchConditionChanged = (selectedKeys: any, dataIndex: any, relatio
     queryConditionMap.delete(dataIndex + '0' as string)
     queryConditionMap.delete(dataIndex + '1' as string)
   }
+}
+
+// 处理删除单个搜索条件标签
+const handleRemoveSearchTag = (dataIndex: string) => {
+  queryConditionMap.delete(dataIndex)
+  queryConditionMap.delete(dataIndex + '0')
+  queryConditionMap.delete(dataIndex + '1')
+  // 通知对应列筛选器清空
+  clearFilterColumns.add(dataIndex)
+  config.currentPage = 1
+  queryData()
+}
+
+// 处理删除排序标签
+const handleRemoveSortTag = (dataIndex: string) => {
+  querySortMap.delete(dataIndex)
+  // 递增 key 强制刷新表格，清除表头排序状态
+  config.key++
+  config.currentPage = 1
+  queryData()
+}
+
+// 处理清空所有搜索条件标签
+const handleClearAllSearchTags = () => {
+  // 收集所有需要清空的列
+  for (const [key] of queryConditionMap) {
+    // 移除后缀获取原始 dataIndex
+    const dataIndex = String(key).replace(/[01]$/, '')
+    clearFilterColumns.add(dataIndex)
+  }
+  queryConditionMap.clear()
+  // 如果有排序条件，需要刷新表格
+  if (querySortMap.size > 0) {
+    config.key++
+  }
+  querySortMap.clear()
+  config.currentPage = 1
+  queryData()
 }
 
 const onFilterDropdownOpenChange = (visible: boolean) => {
