@@ -49,12 +49,12 @@
         </template>
         <template v-else-if="column.key === 'columnCount'">
           <a-tag color="blue">
-            {{ record.columns?.length || 0 }} 列
+            {{ getColumnCount(record) }} 列
           </a-tag>
         </template>
         <template v-else-if="column.key === 'tableCount'">
           <a-tag color="green">
-            {{ record.datasets?.length || 0 }} 表
+            {{ getTableCount(record) }} 表
           </a-tag>
         </template>
         <template v-else-if="column.key === 'action'">
@@ -369,6 +369,18 @@ const handleRowClick = (record: DatasetInfo, event: MouseEvent) => {
     selectedRowKeys.value = [record.tableId]
     emit('select', record)
   }
+}
+
+const getColumnCount = (record: any) => {
+  const id = record?.id
+  if (!id) return (record?.columns || []).length || 0
+  return (record?.columns || []).filter((c: any) => String(c.datasetId) === String(id)).length
+}
+
+const getTableCount = (record: any) => {
+  const id = record?.id
+  if (!id) return (record?.datasets || []).length || 0
+  return (record?.datasets || []).filter((t: any) => String(t.datasetId) === String(id)).length
 }
 
 onMounted(() => {

@@ -216,3 +216,13 @@ export type DatasetConfigReqPageResponse = ResponseDataType & {
   }
 }
 
+export interface DatasetSqlRes {
+  /** 数据集ID */
+  datasetId?: number
+  /** 拼装后的SQL（可选包含字段备注注释） */
+  sql?: string
+}
+
+export type DatasetSqlResResponse = ResponseDataType & {
+  payload: DatasetSqlRes
+}

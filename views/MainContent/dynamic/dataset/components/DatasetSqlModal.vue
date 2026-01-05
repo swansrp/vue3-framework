@@ -75,6 +75,7 @@
               </a-button>
             </div>
             <b-ace-editor
+              :key="editorKey"
               v-model="formState.sql"
               height="300px"
               lang="sql"
@@ -319,10 +320,9 @@
 </template>
 
 <script setup lang="ts">
-import { message } from 'ant-design-vue'
 import type { FormInstance } from 'ant-design-vue'
+import { message }from 'ant-design-vue'
 import BAceEditor from 'bin-editor-next'
-import 'brace/ext/emmet'
 import 'brace/ext/language_tools'
 import 'brace/mode/sql'
 import 'brace/snippets/sql'
@@ -332,8 +332,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import type { DatasetInfo } from '../types'
 
-import { parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
-
+import { getSql, parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
 const props = defineProps<{
   open: boolean
   datasetInfo?: DatasetInfo | null
@@ -352,6 +351,12 @@ const exampleModalVisible = ref(false)
 const previewResult = ref<DatasetInfo | null>(null)
 
 // JOIN类型映射
+// b-ace-editor 有时不会响应外部异步赋值，这里用 key 强制重新渲染
+const editorKey = ref(0)
+
+// 用于避免弹窗频繁开关/切换dataset时，旧请求回写覆盖新内容
+const sqlLoadSeq = ref(0)
+
 const joinTypeMap: Record<string, string> = {
   '0': '内联 (INNER)',
   '1': '左联 (LEFT)',
@@ -387,34 +392,34 @@ const formState = reactive({
 })
 
 const sqlExamples = {
-  simple: `-- 简单查询示例
+  simple: `-- 简单查询示例（--**为手动设置字段中文备注）
 SELECT 
-  id,
-  order_no AS orderNo,
-  amount,
-  status
+  id, -- 主键ID
+  order_no AS orderNo, -- 订单编号
+  amount, -- 订单金额
+  status -- 状态
 FROM t_order
 WHERE status = 1`,
 
-  join: `-- 多表JOIN示例
+  join: `-- 多表JOIN示例（--**为手动设置字段中文备注）
 SELECT 
-  o.id,
-  o.order_no AS orderNo,
-  o.amount,
-  c.name AS customerName,
-  c.phone AS customerPhone
+  o.id, -- 主键ID
+  o.order_no AS orderNo, -- 订单编号
+  o.amount, --订单金额
+  c.name AS customerName, -- 客户名称
+  c.phone AS customerPhone -- 客户电话
 FROM t_order o
 LEFT JOIN t_customer c ON o.customer_id = c.id
 WHERE o.status = 1`,
 
-  aggregate: `-- 聚合函数示例
+  aggregate: `-- 聚合函数示例（--**为手动设置字段中文备注）
 SELECT 
-  o.customer_id AS customerId,
-  c.name AS customerName,
-  COUNT(o.id) AS orderCount,
-  SUM(o.amount) AS totalAmount,
-  AVG(o.amount) AS avgAmount,
-  MAX(o.created_at) AS lastOrderTime
+  o.customer_id AS customerId, -- 客户ID
+  c.name AS customerName, -- 客户名称
+  COUNT(o.id) AS orderCount, -- 订单数量
+  SUM(o.amount) AS totalAmount, -- 订单总金额
+  AVG(o.amount) AS avgAmount, -- 平均订单金额
+  MAX(o.created_at) AS lastOrderTime -- 最后下单时间
 FROM t_order o
 LEFT JOIN t_customer c ON o.customer_id = c.id
 WHERE o.status = 1
@@ -491,12 +496,37 @@ watch(() => props.open, (val) => {
           : fullName
         formState.remark = props.datasetInfo.remark || ''
         formState.dataSource = props.datasetInfo.dataSource || 'master'
-        // 使用formattedSql而不是buildSqlFromDataset
+        // 回显SQL：优先从后端拉取“带备注注释”的SQL；失败则回退本地拼装
         formState.sql = buildFormattedSql(props.datasetInfo)
+        // 强制重建编辑器以保证初始内容渲染
+        editorKey.value++
+
+        const datasetId = (props.datasetInfo as any)?.id
+        if (datasetId) {
+          const curSeq = ++sqlLoadSeq.value
+          getSql({ datasetId, includeRemarks: true }, false, false, false)
+            .then(async (res: any) => {
+              // 只处理最新一次打开/切换触发的请求
+              if (curSeq !== sqlLoadSeq.value) return
+              const sql = res?.payload?.sql
+              if (res?.status?.code === 0 && typeof sql === 'string' && sql.trim()) {
+                // 等编辑器渲染完成后再赋值，避免不刷新
+                await nextTick()
+                if (curSeq !== sqlLoadSeq.value) return
+                formState.sql = sql
+                // 重新创建编辑器实例以确保第三方组件把值显示出来
+                editorKey.value++
+              }
+            })
+            .catch(() => {
+              // 静默回退：不影响用户继续编辑/保存
+            })
+        }
         activeTab.value = 'edit' // 直接显示编辑tab
       } else {
         // 新建模式
         resetForm()
+        editorKey.value++
         activeTab.value = 'edit'
       }
       previewResult.value = null
@@ -510,6 +540,7 @@ const resetForm = () => {
   formState.dataSource = 'master'
   formState.sql = ''
   formRef.value?.clearValidate()
+  editorKey.value++
 }
 
 // 构建格式化的SQL（用于渲染到编辑器）
@@ -616,7 +647,7 @@ const handleFormatSql = () => {
       .replace(/\bHAVING\b/gi, '\nHAVING ')
       .replace(/\bON\b/gi, 'ON ')
       .trim()
-    
+
     formState.sql = formatted
     message.success('SQL格式化成功')
   } catch (error) {
@@ -669,6 +700,8 @@ const copyCompactSql = () => {
 const handleCancel = () => {
   emit('update:open', false)
   resetForm()
+  // 关闭时推进序号，废弃未完成的SQL拉取请求
+  sqlLoadSeq.value++
   previewResult.value = null
 }
 </script>
