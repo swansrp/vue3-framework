@@ -1733,7 +1733,7 @@ import { CellRenderArgs } from '@surely-vue/table'
 import { MenuProps } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import * as _ from 'lodash'
-import { nextTick, Ref } from 'vue'
+import { nextTick, Ref, watch } from 'vue'
 
 import ColumnOrderModal from './components/ColumnOrderModal.vue'
 import FolderComponent from './components/FolderComponent.vue'
@@ -2571,6 +2571,29 @@ onMounted(() => {
     onSearch()
   })
 })
+
+// 当外部传入的 dataMode/referenceId 变化（forge/dataset 选择了不同的表）时，
+// 需要重新拉取列表并清理当前选中配置，否则会显示上一次的 tableConfig。
+watch(
+  () => [props.dataMode, props.referenceId] as const,
+  async ([newMode, newRef], [oldMode, oldRef]) => {
+    // 初次 mounted 会走 onMounted，这里只处理后续变更
+    if (newMode === oldMode && newRef === oldRef) return
+
+    // 清理当前选中表配置，避免短暂显示旧数据
+    columnDict.length = 0
+    columnMap.clear()
+    selectedColumnId.value = ''
+    tableConfig.value = {}
+    fieldRecords.value = []
+
+    // 切换数据源后，角色下拉可能也会影响列表；这里保持当前 selectedRole 不变，仅重拉数据
+    await init()
+    onSearch()
+  },
+  { flush: 'post' }
+)
+
 // region 调整表格大小
 const root: Ref = ref()
 let tableWidth: Ref<number> = ref(0)

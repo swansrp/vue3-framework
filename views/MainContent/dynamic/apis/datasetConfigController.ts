@@ -127,3 +127,18 @@ export const parseSqlAndSave = (data?: DatasetConfigReq, showSuccess = true, sho
   return request(api, {}, data || {}, showSuccess, showLoading, showErr)
 }
 
+/**
+ * 获取指定datasetId的SQL（基于已保存的表/列配置拼装，可选择包含列备注注释）
+ * @api GET /dataset/config/sql
+ * @responseTypes DatasetSqlRes
+ * @see {@link @/apis/types/datasetConfigControllerTypes} - 相关类型定义
+ */
+export const getSql = (params?: {
+  /** datasetId */
+  datasetId: number
+  /** 是否包含列备注注释（默认false） */
+  includeRemarks?: boolean
+}, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildGetApiByType('/dataset/config/sql', '')
+  return request(api, params || ({} as any), {}, showSuccess, showLoading, showErr)
+}
