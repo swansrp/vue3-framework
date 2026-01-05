@@ -69,10 +69,10 @@ const handleRefreshPortal = (portalName: string, matrixId: number) => {
 
 // Matrix专用生成Portal函数
 const handleGeneratePortal = (params: { portalName: string, displayName: string, referenceId: number, dataMode: string }) => {
-  // 自动添加_matrix后缀
+  // 自动添加Matrix后缀
   let finalPortalName = params.portalName
-  if (!finalPortalName.endsWith('_matrix')) {
-    finalPortalName = finalPortalName + '_matrix'
+  if (!finalPortalName.endsWith('Matrix')) {
+    finalPortalName = finalPortalName + 'Matrix'
   }
   
   return generatePortalForMatrix({
