@@ -58,10 +58,10 @@ const handleRefreshPortal = (portalName: string, datasetId: number) => {
 
 // Dataset专用生成Portal函数
 const handleGeneratePortal = (params: { portalName: string, displayName: string, referenceId: number, dataMode: string }) => {
-  // 自动添加_dataset后缀
+  // 自动添加Dataset后缀
   let finalPortalName = params.portalName
-  if (!finalPortalName.endsWith('_dataset')) {
-    finalPortalName = finalPortalName + '_dataset'
+  if (!finalPortalName.endsWith('Dataset')) {
+    finalPortalName = finalPortalName + 'Dataset'
   }
   
   return generatePortalForDataset({

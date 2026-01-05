@@ -242,7 +242,7 @@
           >
             <template #suffix>
               <span style="color: #999; font-size: 12px;">
-                {{ props.dataMode === 'MATRIX' ? '_matrix' : props.dataMode === 'DATASET' ? '_dataset' : '' }}
+                {{ props.dataMode === 'MATRIX' ? 'Matrix' : props.dataMode === 'DATASET' ? 'DATASET' : '' }}
               </span>
             </template>
           </a-input>
