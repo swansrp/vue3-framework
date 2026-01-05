@@ -261,6 +261,7 @@
     </a-modal>
     <!-- endregion -->
     <upload-file
+      ref="uploadTableConfigRef"
       :upload="importTableConfig"
       @after-confirm="getTableConfigByName(tableConfig.name)"
     />
@@ -2134,6 +2135,10 @@ const exportTableConfig = () => {
 
 const uploadTableConfigRef = ref()
 const uploadTableConfig = () => {
+  if (!uploadTableConfigRef.value || typeof uploadTableConfigRef.value.showUploadDialogBox !== 'function') {
+    console.warn('uploadTableConfigRef not ready or missing showUploadDialogBox')
+    return
+  }
   uploadTableConfigRef.value.showUploadDialogBox('.dat')
 }
 const importTableConfig = (file: any, onUploadProgress: any) => {
