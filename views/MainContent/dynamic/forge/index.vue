@@ -93,16 +93,27 @@ const handleGeneratePortal = (params: { portalName: string, displayName: string,
   :deep(.ant-tabs) {
     height: 100%;
     background: #fff;
-    padding: 16px;
+    padding: 0;
     border-radius: 4px;
   }
 
   :deep(.ant-tabs-content) {
     height: 100%;
+    padding: 0;
   }
 
   :deep(.ant-tabs-tabpane) {
     height: 100%;
+    padding: 0;
+  }
+
+  // PortalConfig组件样式覆盖 - 移除左侧间距让组件紧贴左侧
+  :deep(.root) {
+    height: 100%;
+  }
+
+  :deep(.table-list) {
+    margin-left: 0;
   }
 }
 </style>
