@@ -141,11 +141,11 @@ const emit = defineEmits<{
 }>()
 
 const columns = [
-  { title: 'Dataset 名称', dataIndex: 'datasetName', key: 'datasetName', width: 250 },
-  { title: '备注', dataIndex: 'remark', key: 'remark', width: 200, ellipsis: true },
-  { title: '数据源', dataIndex: 'dataSource', key: 'dataSource', width: 120 },
+  { title: 'Dataset 名称', dataIndex: 'datasetName', key: 'datasetName', align: 'center' },
+  { title: '数据源', dataIndex: 'dataSource', key: 'dataSource', width: 120, align: 'center' },
   { title: '表数量', key: 'tableCount', width: 100, align: 'center' },
   { title: '列数量', key: 'columnCount', width: 100, align: 'center' },
+  { title: '备注', dataIndex: 'remark', key: 'remark', align: 'center' },
   { title: '操作', key: 'action', width: 200, fixed: 'right', align: 'center' },
 ]
 
