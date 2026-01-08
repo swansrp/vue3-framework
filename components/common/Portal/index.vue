@@ -2443,6 +2443,27 @@ onUnmounted(() => {
   bus.off(PORTAL_RESIZE)
 })
 
+// 清空所有列筛选并重置分页到第一页
+const clearAllFilters = () => {
+  // 收集所有列的 dataIndex
+  columns.value.forEach((column: ColumnType) => {
+    if (column.dataIndex) {
+      clearFilterColumns.add(column.dataIndex as string)
+    }
+  })
+  // 清空查询条件
+  queryConditionMap.clear()
+  // 重置分页到第一页
+  config.currentPage = 1
+  // 重新查询数据
+  queryData()
+}
+
+// 获取用户设置的筛选条件
+const getUserFilterConditions = () => {
+  return queryConditionMap
+}
+
 defineExpose({
   queryData,
   queryTreeData,
@@ -2451,7 +2472,9 @@ defineExpose({
   getConfig,
   getData,
   handleMenuContextAdd,
-  addRow
+  addRow,
+  clearAllFilters,
+  getUserFilterConditions
 })
 </script>
 <style lang="less" scoped>
