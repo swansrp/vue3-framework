@@ -73,15 +73,20 @@ onMounted(() => {
   flex: 0 0 auto;
 }
 .content {
+  display: flex;
   flex: 1 0 auto;
-  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 .left-nav {
   flex: 0 0 auto;
 }
 
 .content-body {
-  flex: 1 0 auto;
+  flex: 1;
+  min-width: 0;
   height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 </style>
