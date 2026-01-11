@@ -2,6 +2,13 @@
   <!--  添加antd vue 对中文的支持，如表单等-->
   <a-config-provider :locale="zhCN">
     <navigation-framework>
+      <!-- header-extra 插槽供业务层注入自定义内容 -->
+      <template
+        v-if="$slots['header-extra']"
+        #header-extra
+      >
+        <slot name="header-extra"></slot>
+      </template>
       <template #router-view>
         <router-view v-slot="{ Component }">
           <keep-alive :include="routeStore.getKeepAliveList()">

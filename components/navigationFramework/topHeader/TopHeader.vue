@@ -17,6 +17,13 @@
       <span v-if="!tabStore.leftNavCollapsed">{{ projectName }}</span>
     </div>
     <top-nav class="top_nav" />
+    <!-- 业务扩展区域插槽 - 用于业务层注入自定义内容（如企业选择器） -->
+    <div
+      v-if="$slots['header-extra']"
+      class="top_extra"
+    >
+      <slot name="header-extra"></slot>
+    </div>
     <div class="top_user">
       <div class="user-avatar-wrapper">
         <a-avatar
@@ -361,6 +368,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   height: 100%;
+}
+
+/* 业务扩展区域样式 */
+.top_extra {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .top_user {

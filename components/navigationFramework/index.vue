@@ -2,7 +2,15 @@
   <top-header
     v-if="isNeedNav"
     class="top"
-  />
+  >
+    <!-- 透传 header-extra 插槽，让业务层可以注入自定义内容 -->
+    <template
+      v-if="$slots['header-extra']"
+      #header-extra
+    >
+      <slot name="header-extra"></slot>
+    </template>
+  </top-header>
   <div
     v-if="needLeftNav"
     class="content"

@@ -16,7 +16,8 @@ import { getComponent, useRouteStore } from '@/framework/store/route'
 
 const tabStore = useTabStore(pinia)
 const NotFound = () => import('@/framework/views/NotFound/index.vue')
-const MainContent = () => import('@/framework/views/MainContent/index.vue')
+// 默认使用 framework 层的 MainContent，可以通过 setMainContentComponent 方法替换
+let MainContent = () => import('@/framework/views/MainContent/index.vue')
 let enableEnterFirstDynamicRoute = true
 
 const staticRoutes: Array<RouteRecordRaw> = [
@@ -55,6 +56,24 @@ const router = createRouter({
 
 export const createStaticRoutes = (path: string, component: string, metaPublic = true) => {
   router.addRoute({ path: path, name: path, component: getComponent(component), meta: { public: metaPublic } })
+}
+
+/**
+ * 设置自定义的 MainContent 组件（用于业务层注入）
+ * @param component - 组件的动态导入函数
+ */
+export const setMainContentComponent = (component: () => Promise<any>) => {
+  MainContent = component
+  // 更新根路由的组件
+  const rootRoute = router.getRoutes().find(route => route.path === '/')
+  if (rootRoute) {
+    router.removeRoute('Root')
+    router.addRoute({
+      path: '/',
+      name: 'Root',
+      component: MainContent
+    })
+  }
 }
 
 export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
