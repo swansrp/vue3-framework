@@ -70,7 +70,12 @@ const formModel = ref<Record<string, any>>({})
 const initFormData = () => {
   const data: Record<string, any> = {}
   props.items.forEach(field => {
-    data[field.name] = field.data || field.defaultValue || undefined
+    // Switch 类型默认值为 '0'（未选中）
+    if (field.fieldType === FIELD_TYPE.SWITCH) {
+      data[field.name] = field.data || field.defaultValue || '0'
+    } else {
+      data[field.name] = field.data || field.defaultValue || undefined
+    }
   })
   formModel.value = data
 }
@@ -86,11 +91,27 @@ const getFieldRules = (field: T) => {
 
   // 必填验证
   if (field.isRequired === '1') {
-    rules.push({
-      required: true,
-      message: `请输入${field.label}`,
-      trigger: ['blur', 'change']
-    })
+    // Switch 类型的必填校验：'0' 和 '1' 都是有效值
+    if (field.fieldType === FIELD_TYPE.SWITCH) {
+      rules.push({
+        required: true,
+        message: `请选择${field.label}`,
+        trigger: ['blur', 'change'],
+        validator: (_rule: any, value: any) => {
+          // Switch 的值为 '0' 或 '1' 都算有效
+          if (value === '0' || value === '1') {
+            return Promise.resolve()
+          }
+          return Promise.reject(`请选择${field.label}`)
+        }
+      })
+    } else {
+      rules.push({
+        required: true,
+        message: `请输入${field.label}`,
+        trigger: ['blur', 'change']
+      })
+    }
   }
 
   // 数值范围验证

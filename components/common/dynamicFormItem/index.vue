@@ -45,15 +45,17 @@ const currentValue = computed({
   },
 })
 
-// 开关类型的值计算
+// 开关类型的值计算（与 currentValue 同步）
 const switchChecked = computed({
   get() {
-    const val =
-      props.modelValue !== undefined ? props.modelValue : props.attribute.defaultValue
-    return val === '1'
+    // Switch 类型默认值为 '0'（未选中）
+    const value = props.modelValue !== undefined
+      ? props.modelValue
+      : (props.attribute.defaultValue || '0')
+    return value
   },
   set(value) {
-    emit('update:modelValue', value ? '1' : '0')
+    emit('update:modelValue', value)
   },
 })
 
@@ -159,6 +161,7 @@ const isDivider = (fieldType: string) => {
             style="width: 40px"
             checked-value="1"
             un-checked-value="0"
+            @change="(val) => emit('update:modelValue', val)"
           />
         </div>
 
