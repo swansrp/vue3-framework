@@ -2,7 +2,6 @@
 import { message } from 'ant-design-vue'
 import { ref } from 'vue'
 
-import type { SchemaAttribute } from '@/apis/types/schemaAttributePortalControllerTypes'
 import { GridDraggableForm, type FormFieldItem } from '@/framework/components/common/DragGrid'
 
 interface Props {

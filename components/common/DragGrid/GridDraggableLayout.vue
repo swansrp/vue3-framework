@@ -6,9 +6,9 @@ import { ref } from 'vue'
  */
 export interface GridItem {
   id: string | number    // 唯一标识
-  width?: number         // 网格宽度（格数）
+  width?: number         // 宽度百分比 (0-100)
   height?: number        // 网格高度（格数）
-  positionX?: number     // X坐标（列）
+  positionX?: number     // X坐标百分比 (0-100)
   positionY?: number     // Y坐标（行）
   [key: string]: any     // 允许其他扩展字段
 }
@@ -20,7 +20,7 @@ interface Props<T extends GridItem> {
   showGrid?: boolean            // 是否显示网格背景，默认true
   readonly?: boolean            // 只读模式，禁用拖拽，默认false
   minHeight?: number            // 最小高度，默认600
-  defaultItemWidth?: number     // 默认项宽度（格数），默认2
+  defaultItemWidth?: number     // 默认项宽度百分比，默认10
   defaultItemHeight?: number    // 默认项高度（格数），默认1
 }
 
@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<Props<T>>(), {
   showGrid: true,
   readonly: false,
   minHeight: 600,
-  defaultItemWidth: 2,
+  defaultItemWidth: 10,
   defaultItemHeight: 1
 })
 
@@ -94,13 +94,19 @@ const startDrag = (item: T, e: MouseEvent) => {
 const handleDrag = (e: MouseEvent) => {
   if (!draggingItem.value) return
   
+  const container = (e.target as HTMLElement).closest('.grid-draggable-layout') as HTMLElement
+  if (!container) return
+  
+  const containerWidth = container.clientWidth
   const deltaX = e.clientX - dragStartX.value
+  
   const deltaY = e.clientY - dragStartY.value
   
-  const gridDeltaX = Math.round(deltaX / props.gridSize)
+  // X轴使用百分比计算，并四舍五入为整数
+  const percentDeltaX = Math.round((deltaX / containerWidth) * 100)
   const gridDeltaY = Math.round(deltaY / props.gridSize)
   
-  previewPosX.value = Math.max(0, dragStartPosX.value + gridDeltaX)
+  previewPosX.value = Math.max(0, Math.min(100, dragStartPosX.value + percentDeltaX))
   previewPosY.value = Math.max(0, dragStartPosY.value + gridDeltaY)
 }
 
@@ -148,6 +154,10 @@ const startResize = (item: T, direction: 'e' | 's' | 'se', e: MouseEvent) => {
 const handleResize = (e: MouseEvent) => {
   if (!resizingItem.value || !resizeDirection.value) return
   
+  const container = (e.target as HTMLElement).closest('.grid-draggable-layout') as HTMLElement
+  if (!container) return
+  
+  const containerWidth = container.clientWidth
   const deltaX = e.clientX - resizeStartX.value
   const deltaY = e.clientY - resizeStartY.value
   
@@ -155,8 +165,9 @@ const handleResize = (e: MouseEvent) => {
   let newHeight = resizeStartHeight.value
   
   if (resizeDirection.value === 'e' || resizeDirection.value === 'se') {
-    const gridDeltaX = Math.round(deltaX / props.gridSize)
-    newWidth = Math.max(1, resizeStartWidth.value + gridDeltaX)
+    // 宽度使用百分比计算，并四舍五入为整数
+    const percentDeltaX = Math.round((deltaX / containerWidth) * 100)
+    newWidth = Math.max(5, Math.min(100, resizeStartWidth.value + percentDeltaX))
   }
   
   if (resizeDirection.value === 's' || resizeDirection.value === 'se') {
@@ -215,10 +226,11 @@ const getItemStyle = (item: T) => {
   const width = isResizing ? previewWidth.value : (item.width || props.defaultItemWidth)
   const height = isResizing ? previewHeight.value : (item.height || props.defaultItemHeight)
   
+  // 直接使用百分比，确保为整数
   return {
-    left: `${posX * gridBgSize}px`,
+    left: `${Math.round(posX)}%`,
     top: `${posY * gridBgSize}px`,
-    width: `${width * props.gridSize + Math.max(0, width - 1) * props.gap}px`,
+    width: `${Math.round(width)}%`,
     height: `${height * props.gridSize + Math.max(0, height - 1) * props.gap + 5}px`
   }
 }
@@ -386,12 +398,13 @@ const getItemStyle = (item: T) => {
       position: relative;
       height: 100%;
       background: #fff;
-      border: 2px solid #d9d9d9;
-      border-radius: 4px;
-      padding: 8px;
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      padding: 6px 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
       // 水平布局：标签和控件在同一行
       .field-row {
@@ -427,8 +440,8 @@ const getItemStyle = (item: T) => {
 
         .field-label-inline {
           flex-shrink: 0;
-          min-width: 80px;
-          max-width: 150px;
+          min-width: 70px;
+          max-width: 120px;
           font-size: 13px;
           line-height: 1.4;
           text-align: right;
@@ -463,14 +476,17 @@ const getItemStyle = (item: T) => {
         font-size: 12px;
         color: #8c8c8c;
         line-height: 1.3;
-        padding-left: 88px;
+        padding-left: 78px;
+        margin-top: 2px;
       }
     }
 
-    // 分割线卡片样式：无边框、透明背景
+    // 分割线卡片样式：无边框、透明背景，添加渐变效果
     :deep(.form-divider-card) {
-      background: transparent;
+      background: linear-gradient(to right, rgba(24, 144, 255, 0.05), rgba(24, 144, 255, 0.02));
       border: none;
+      border-radius: 4px;
+      padding: 0 12px;
     }
 
     // 调整大小手柄
