@@ -95,6 +95,21 @@ const isTextAreaType = (fieldType: string) => {
 const isDivider = (fieldType: string) => {
   return fieldType === FIELD_TYPE.DIVIDER
 }
+
+// 格式化显示值
+const formatDisplayValue = (value: any, fieldType: string) => {
+  if (value === undefined || value === null || value === '') {
+    return '-'
+  }
+  
+  // 开关类型
+  if (fieldType === FIELD_TYPE.SWITCH) {
+    return value === '1' ? '是' : '否'
+  }
+  
+  // 其他类型直接返回
+  return value
+}
 </script>
 
 <template>
@@ -142,124 +157,139 @@ const isDivider = (fieldType: string) => {
       </div>
 
       <div class="field-control-inline">
-        <!-- 文本输入 -->
-        <a-input
-          v-if="attribute.fieldType === FIELD_TYPE.INPUT"
-          v-model:value="currentValue"
-          :placeholder="`请输入${attribute.label}`"
-          :disabled="readonly"
-        />
-
-        <!-- 开关 -->
-        <div
-          v-else-if="attribute.fieldType === FIELD_TYPE.SWITCH"
-          style="height: 32px; display: flex; align-items: center"
+        <!-- readonly 模式：使用 span 显示值 -->
+        <span
+          v-if="readonly"
+          class="readonly-value"
         >
-          <a-switch
-            v-model:checked="switchChecked"
+          {{ formatDisplayValue(currentValue, attribute.fieldType) }}
+        </span>
+
+        <!-- 编辑模式：显示表单组件 -->
+        <template v-else>
+          <!-- 文本输入 -->
+          <a-input
+            v-if="attribute.fieldType === FIELD_TYPE.INPUT"
+            v-model:value="currentValue"
+            :placeholder="`请输入${attribute.label}`"
             :disabled="readonly"
-            style="width: 40px"
-            checked-value="1"
-            un-checked-value="0"
-            @change="(val) => emit('update:modelValue', val)"
           />
-        </div>
 
-        <!-- 数值输入 -->
-        <a-input-number
-          v-else-if="attribute.fieldType === FIELD_TYPE.NUMBER"
-          v-model:value="currentValue"
-          :placeholder="`请输入${attribute.label}`"
-          :max="attribute.maxValue ? Number(attribute.maxValue) : undefined"
-          :min="attribute.minValue ? Number(attribute.minValue) : undefined"
-          :disabled="readonly"
-          string-mode
-          style="width: 100%"
-        />
-
-        <!-- 下拉选择 -->
-        <a-select
-          v-else-if="
-            attribute.fieldType === FIELD_TYPE.SELECT ||
-              attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE
-          "
-          v-model:value="currentValue"
-          :placeholder="`请选择${attribute.label}`"
-          :disabled="readonly"
-          style="width: 100%"
-        />
-
-        <!-- 树形选择 -->
-        <a-tree-select
-          v-else-if="
-            attribute.fieldType === FIELD_TYPE.TREE ||
-              attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE
-          "
-          v-model:value="currentValue"
-          :placeholder="`请选择${attribute.label}`"
-          :disabled="readonly"
-          allow-clear
-          tree-default-expand-all
-          tree-node-filter-prop="label"
-          style="width: 100%"
-        />
-
-        <!-- 日期 -->
-        <a-date-picker
-          v-else-if="attribute.fieldType === FIELD_TYPE.DATE"
-          v-model:value="currentValue"
-          :placeholder="`请选择${attribute.label}`"
-          :disabled="readonly"
-          allow-clear
-          style="width: 100%"
-        />
-
-        <!-- 日期时间 -->
-        <a-date-picker
-          v-else-if="attribute.fieldType === FIELD_TYPE.DATETIME"
-          v-model:value="currentValue"
-          :placeholder="`请选择${attribute.label}`"
-          :disabled="readonly"
-          allow-clear
-          show-time
-          style="width: 100%"
-        />
-
-        <!-- 文本域（超链接、HTML、文本域） -->
-        <a-textarea
-          v-else-if="isTextAreaType(attribute.fieldType)"
-          v-model:value="currentValue"
-          :placeholder="`请输入${attribute.label}`"
-          :auto-size="{ minRows: 3 }"
-          :disabled="readonly"
-          style="width: 100%"
-        />
-
-        <!-- 多媒体类型（图片、音频、视频、文件） -->
-        <div
-          v-else-if="
-            attribute.fieldType === FIELD_TYPE.IMAGE ||
-              attribute.fieldType === FIELD_TYPE.AUDIO ||
-              attribute.fieldType === FIELD_TYPE.VIDEO ||
-              attribute.fieldType === FIELD_TYPE.FILE
-          "
-          style="display: flex; justify-content: center; width: 100%"
-        >
-          <a-button
-            type="dashed"
-            :disabled="readonly"
+          <!-- 开关 -->
+          <div
+            v-else-if="attribute.fieldType === FIELD_TYPE.SWITCH"
+            style="height: 32px; display: flex; align-items: center"
           >
-            {{ "点击上传" + getFieldTypeName(attribute.fieldType) }}
-          </a-button>
-        </div>
+            <a-switch
+              v-model:checked="switchChecked"
+              :disabled="readonly"
+              style="width: 40px"
+              checked-value="1"
+              un-checked-value="0"
+              @change="(val) => emit('update:modelValue', val)"
+            />
+          </div>
 
-        <!-- 默认：文本输入 -->
-        <a-input
-          v-else
-          v-model:value="currentValue"
-          :placeholder="`请输入${attribute.label}`"
-          :disabled="readonly"
-        />
+          <!-- 数值输入 -->
+          <a-input-number
+            v-else-if="attribute.fieldType === FIELD_TYPE.NUMBER"
+            v-model:value="currentValue"
+            :placeholder="`请输入${attribute.label}`"
+            :max="attribute.maxValue ? Number(attribute.maxValue) : undefined"
+            :min="attribute.minValue ? Number(attribute.minValue) : undefined"
+            :disabled="readonly"
+            string-mode
+            style="width: 100%"
+          />
+
+          <!-- 下拉选择 -->
+          <a-select
+            v-else-if="
+              attribute.fieldType === FIELD_TYPE.SELECT ||
+                attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE
+            "
+            v-model:value="currentValue"
+            :placeholder="`请选择${attribute.label}`"
+            :disabled="readonly"
+            style="width: 100%"
+          />
+
+          <!-- 树形选择 -->
+          <a-tree-select
+            v-else-if="
+              attribute.fieldType === FIELD_TYPE.TREE ||
+                attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE
+            "
+            v-model:value="currentValue"
+            :placeholder="`请选择${attribute.label}`"
+            :disabled="readonly"
+            allow-clear
+            tree-default-expand-all
+            tree-node-filter-prop="label"
+            style="width: 100%"
+          />
+
+          <!-- 日期 -->
+          <a-date-picker
+            v-else-if="attribute.fieldType === FIELD_TYPE.DATE"
+            v-model:value="currentValue"
+            :placeholder="`请选择${attribute.label}`"
+            :disabled="readonly"
+            allow-clear
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+
+          <!-- 日期时间 -->
+          <a-date-picker
+            v-else-if="attribute.fieldType === FIELD_TYPE.DATETIME"
+            v-model:value="currentValue"
+            :placeholder="`请选择${attribute.label}`"
+            :disabled="readonly"
+            allow-clear
+            show-time
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+          />
+
+          <!-- 文本域（超链接、HTML、文本域） -->
+          <a-textarea
+            v-else-if="isTextAreaType(attribute.fieldType)"
+            v-model:value="currentValue"
+            :placeholder="`请输入${attribute.label}`"
+            :auto-size="{ minRows: 3 }"
+            :disabled="readonly"
+            style="width: 100%"
+          />
+
+          <!-- 多媒体类型（图片、音频、视频、文件） -->
+          <div
+            v-else-if="
+              attribute.fieldType === FIELD_TYPE.IMAGE ||
+                attribute.fieldType === FIELD_TYPE.AUDIO ||
+                attribute.fieldType === FIELD_TYPE.VIDEO ||
+                attribute.fieldType === FIELD_TYPE.FILE
+            "
+            style="display: flex; justify-content: center; width: 100%"
+          >
+            <a-button
+              type="dashed"
+              :disabled="readonly"
+            >
+              {{ "点击上传" + getFieldTypeName(attribute.fieldType) }}
+            </a-button>
+          </div>
+
+          <!-- 默认：文本输入 -->
+          <a-input
+            v-else
+            v-model:value="currentValue"
+            :placeholder="`请输入${attribute.label}`"
+            :disabled="readonly"
+          />
+        </template>
       </div>
 
       <!-- 尾部操作插槽 -->
@@ -271,7 +301,7 @@ const isDivider = (fieldType: string) => {
 
     <!-- 描述信息 -->
     <div
-      v-if="attribute.description"
+      v-if="attribute.description && !readonly"
       class="field-description"
     >
       {{ attribute.description }}
@@ -282,6 +312,16 @@ const isDivider = (fieldType: string) => {
 <style scoped lang="less">
 // 样式已在 GridDraggableLayout 中统一定义
 // 这里不需要重复定义，通过 .form-item-card 类名自动应用样式
+
+.readonly-value {
+  display: inline-block;
+  min-height: 32px;
+  line-height: 32px;
+  color: #262626;
+  font-size: 14px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
 
 .form-divider-card {
   position: relative;
