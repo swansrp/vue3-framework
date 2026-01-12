@@ -33,8 +33,6 @@ export const actionColumn = {
   resizable: false,
   rowDrag: false,
   width: 150,
-  minWidth: 150,
-  maxWidth: 150,
   filterAble: false,
   sorter: false,
   checked: true,
