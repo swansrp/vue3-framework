@@ -203,31 +203,47 @@ const formatDisplayValue = (value: any, fieldType: string) => {
           />
 
           <!-- 下拉选择 -->
-          <a-select
-            v-else-if="
+          <slot
+            v-if="
               attribute.fieldType === FIELD_TYPE.SELECT ||
                 attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE
             "
-            v-model:value="currentValue"
-            :placeholder="`请选择${attribute.label}`"
-            :disabled="readonly"
-            style="width: 100%"
-          />
+            name="select"
+            :attribute="attribute"
+            :value="currentValue"
+            :readonly="readonly"
+            :update-value="(val: any) => emit('update:modelValue', val)"
+          >
+            <a-select
+              v-model:value="currentValue"
+              :placeholder="`请选择${attribute.label}`"
+              :disabled="readonly"
+              style="width: 100%"
+            />
+          </slot>
 
           <!-- 树形选择 -->
-          <a-tree-select
+          <slot
             v-else-if="
               attribute.fieldType === FIELD_TYPE.TREE ||
                 attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE
             "
-            v-model:value="currentValue"
-            :placeholder="`请选择${attribute.label}`"
-            :disabled="readonly"
-            allow-clear
-            tree-default-expand-all
-            tree-node-filter-prop="label"
-            style="width: 100%"
-          />
+            name="tree"
+            :attribute="attribute"
+            :value="currentValue"
+            :readonly="readonly"
+            :update-value="(val: any) => emit('update:modelValue', val)"
+          >
+            <a-tree-select
+              v-model:value="currentValue"
+              :placeholder="`请选择${attribute.label}`"
+              :disabled="readonly"
+              allow-clear
+              tree-default-expand-all
+              tree-node-filter-prop="label"
+              style="width: 100%"
+            />
+          </slot>
 
           <!-- 日期 -->
           <a-date-picker

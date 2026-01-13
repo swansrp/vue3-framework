@@ -264,7 +264,29 @@ defineExpose({
             }"
             :readonly="readonly"
             :show-label="true"
-          />
+          >
+            <!-- 传递 select 插槽 -->
+            <template
+              v-if="$slots['select']"
+              #select="slotProps"
+            >
+              <slot
+                name="select"
+                v-bind="slotProps"
+              ></slot>
+            </template>
+
+            <!-- 传递 tree 插槽 -->
+            <template
+              v-if="$slots['tree']"
+              #tree="slotProps"
+            >
+              <slot
+                name="tree"
+                v-bind="slotProps"
+              ></slot>
+            </template>
+          </DynamicFormItem>
         </a-form-item>
       </template>
 
