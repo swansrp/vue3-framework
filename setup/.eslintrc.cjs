@@ -19,7 +19,7 @@ module.exports = {
         'dist/',
         'node_modules/',
         'src/assets',
-        'src/dashboard-framework/assets'
+        'src/framework/setup/'
     ],
     extends: [
         'plugin:vue/vue3-recommended',

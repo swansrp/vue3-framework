@@ -102,7 +102,8 @@ async function eslintOptimize(targetFilesOrDir, rootDir, stagedOnly = false) {
                 ],
                 'no-console': 'warn',
                 'no-debugger': 'warn'
-            }
+            },
+            ignorePatterns: ['src/framework/setup/**/*']
         },
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.vue']
     })

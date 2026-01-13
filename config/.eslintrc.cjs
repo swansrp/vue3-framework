@@ -18,7 +18,8 @@ module.exports = {
     ignorePatterns: [
         'dist/',
         'node_modules/',
-        'src/assets'
+        'src/assets',
+        'src/framework/setup/'
     ],
     extends: [
         'plugin:vue/vue3-recommended',

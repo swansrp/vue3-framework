@@ -117,13 +117,6 @@ function createPackageJson(projectCode, projectName) {
 }
 
 /**
- * 检查文件是否存在
- */
-function checkFileExists(filePath) {
-  return fs.existsSync(filePath)
-}
-
-/**
  * 主函数
  */
 async function main() {
