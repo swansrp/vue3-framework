@@ -171,8 +171,9 @@ const handleSubmit = () => {
 .register-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1a1f36;
+  color: #ffffff;
   text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 180, 120, 0.4);
 }
 
 .login-content-wrapper {
@@ -186,10 +187,55 @@ const handleSubmit = () => {
 .login-footer-links {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10px;
+  margin-top: 5px;
+  padding: 0 25px 15px;
 }
 
 .login-mode-btn {
-  padding: 0;
+  height: auto !important;
+  padding: 8px 16px !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg,
+  rgba(255, 180, 120, 0.15) 0%,
+  rgba(255, 200, 140, 0.1) 50%,
+  rgba(255, 220, 160, 0.15) 100%) !important;
+  border: 1px solid rgba(255, 180, 120, 0.4) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(255, 180, 120, 0.2),
+  inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(8px) !important;
+
+  &:hover {
+    color: #ffffff !important;
+    background: linear-gradient(135deg,
+    rgba(255, 200, 140, 0.25) 0%,
+    rgba(255, 220, 160, 0.2) 50%,
+    rgba(255, 240, 180, 0.25) 100%) !important;
+    border-color: rgba(255, 200, 140, 0.6) !important;
+    box-shadow: 0 3px 10px rgba(255, 180, 120, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 180, 120, 0.4) !important;
+  }
+
+  &:active {
+    transform: translateY(1px) !important;
+    box-shadow: 0 1px 4px rgba(255, 180, 120, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-footer-links {
+    padding: 0 25px 15px;
+    margin-top: 0;
+  }
+
+  .login-mode-btn {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+  }
 }
 </style>
