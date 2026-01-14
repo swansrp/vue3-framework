@@ -22,7 +22,11 @@ export default defineConfig({
             return id.toString().split('node_modules/')[1].split('/')[0].toString()
           }
         }
-      }
+      },
+      external: [
+        // 排除 setup 目录下的所有文件
+        /\/src\/framework\/setup\//
+      ]
     }
   },
   plugins: [
