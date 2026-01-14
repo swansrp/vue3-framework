@@ -91,9 +91,9 @@ const isTextAreaType = (fieldType: string) => {
   )
 }
 
-// 判断是否为分割线
+// 判断是否为分割线（兼容数字和字符串类型）
 const isDivider = (fieldType: string) => {
-  return fieldType === FIELD_TYPE.DIVIDER
+  return String(fieldType) === String(FIELD_TYPE.DIVIDER)
 }
 
 // 格式化显示值
@@ -204,7 +204,7 @@ const formatDisplayValue = (value: any, fieldType: string) => {
 
           <!-- 下拉选择 -->
           <slot
-            v-if="
+            v-else-if="
               attribute.fieldType === FIELD_TYPE.SELECT ||
                 attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE
             "
