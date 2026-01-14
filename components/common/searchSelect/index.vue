@@ -50,13 +50,71 @@ const hasSearched = ref(false) // 标记是否已经搜索过
 
 // 构建 select 的 options 格式
 const selectOptions = computed(() => {
-  return options.value.map((item, index) => ({
-    value: item[props.valueField],
-    label: item[props.labelField],
-    key: `${item[props.valueField]}_${index}`,
-    data: item // 保留原始数据供插槽使用
-  }))
+  return options.value.map((item, index) => {
+    const value = item[props.valueField]
+    const label = item[props.labelField]
+    
+    return {
+      value,
+      label,
+      key: `${value}_${index}`,
+      data: item // 保留原始数据供插槽使用
+    }
+  })
 })
+
+// 根据值加载对应的选项（用于显示翻译）
+const loadOptionByValue = async (value: string | number) => {
+  if (!value) return
+  
+  // 如果已经有这个选项了，就不用再查了
+  if (options.value.some(opt => opt[props.valueField] === value)) {
+    return
+  }
+  
+  try {
+    loading.value = true
+    
+    let res: any
+    
+    // 使用 customRequestBuilder 或标准查询
+    if (props.customRequestBuilder) {
+      const requestData = props.customRequestBuilder(String(value))
+      res = await props.apiFn(requestData, false, false, false)
+    } else {
+      // 标准查询：使用 valueField 精确查询
+      const requestData: any = {
+        conditionList: [
+          {
+            property: props.valueField,
+            relation: FILTER_TYPE.EQUAL,
+            value: [value]
+          }
+        ],
+        pageSize: 10,
+        distinct: '1'
+      }
+      
+      if (props.selectColumns && props.selectColumns.length > 0) {
+        requestData.selectColumnList = [...props.selectColumns]
+      }
+      
+      res = await props.apiFn(requestData, false, false, false)
+    }
+    
+    // 处理响应数据
+    const records = res?.payload?.records || res?.payload || []
+    
+    // 如果找到结果，添加到options
+    if (records && records.length > 0) {
+      options.value = [...records, ...options.value]
+    }
+  } catch (error) {
+    console.error('[SearchSelect] 查询失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 // 搜索函数
 const searchData = debounce(async (keyword: string) => {
@@ -138,9 +196,14 @@ const handleChange = (value: string | number | undefined) => {
 }
 
 // 监听外部值变化
-watch(() => props.modelValue, (newVal) => {
+watch(() => props.modelValue, async (newVal) => {
   internalValue.value = newVal
-})
+  
+  // 根据值加载对应的选项
+  if (newVal) {
+    await loadOptionByValue(newVal)
+  }
+}, { immediate: true })
 
 // 暴露方法：用于编辑时设置初始选项
 defineExpose({

@@ -1,4 +1,4 @@
-# SearchSelect 搜索下拉选择组件
+到的# SearchSelect 搜索下拉选择组件
 
 通用的支持远程搜索的下拉选择组件，适用于需要从后端 API 动态加载选项的场景。
 
@@ -14,6 +14,73 @@
 - ✅ 支持自定义请求构造（customRequestBuilder）
 - ✅ 自动去重处理（根据 valueField）
 - ✅ 支持组件联动（setInitialOptions / clearOptions）
+- ✅ **自动加载选项（有值时自动查询对应选项）** 🆕
+- ✅ 支持空关键字搜索（初始化加载）
+
+## 自动加载选项功能 🆕
+
+组件会**自动根据当前值查询对应的选项**，确保选中值能正确显示label。
+
+### 工作原理
+
+- 当 `modelValue` 变化时，组件自动查询该值对应的选项
+- 如果选项已存在于 `options` 中，则跳过查询
+- 如果选项不存在，自动发起查询并添加到 `options`
+
+### 适用场景
+
+非常适合编辑模式或回显场景！例如：
+- 编辑表单时，显示已选中的字典编码名称
+- 从URL参数加载初始值并自动显示对应的label
+- 任何需要根据ID自动显示名称的场景
+
+### 使用示例
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { getDictList } from '@/apis/systemBizDictController'
+import SearchSelect from '@/framework/components/common/searchSelect/index.vue'
+
+const dictCode = ref('MATERIAL_TYPE')
+
+// 自定义请求构造函数
+const buildDictRequest = (keyword: string) => {
+  return { dictCode: keyword }
+}
+</script>
+
+<template>
+  <SearchSelect
+    v-model="dictCode"
+    :api-fn="getDictList"
+    :custom-request-builder="buildDictRequest"
+    value-field="value"
+    label-field="label"
+    placeholder="请搜索或添加字典"
+  />
+</template>
+```
+
+**就这么简单！**组件会自动：
+1. 初始化时根据 `dictCode` 值查询对应的选项数据
+2. 值变化时自动加载对应的选项
+3. 确保选中值能正确显示对应的label
+
+### 工作原理
+
+组件会复用 `customRequestBuilder` 或使用标准的 `valueField` 精确查询来获取选项：
+- 如果有 `customRequestBuilder`，将当前值作为关键字传入
+- 如果没有，使用 `valueField` 进行精确匹配查询（`FILTER_TYPE.EQUAL`）
+
+### 注意事项
+
+1. 查询请求会在值变化时自动触发（如果选项不存在）
+2. 已存在的选项不会重复查询，避免不必要的请求
+3. 查询失败不会影响组件正常使用
+4. **无需额外配置**，组件自动处理选项加载逻辑
+
+---
 
 ## 基础用法
 
@@ -78,6 +145,7 @@ const handleChange = (value, option) => {
 | setInitialOptions | 设置多个初始选项 | `(options: any[])` |
 | refresh | 刷新选项列表，重新执行搜索 | `(keyword?: string)` |
 | clearOptions | 清空选项列表 | - |
+| getOptions | 获取当前选项列表 | - |
 
 ## 插槽
 
@@ -560,16 +628,17 @@ const buildRequest = (keyword: string) => {
 ## 注意事项
 
 1. **防抖处理**: 默认 300ms 防抖，可通过 `debounceTime` 自定义
-2. **最小输入**: 需要至少输入 1 个字符才会触发搜索
-3. **空值处理**: 清空输入时会自动清空选项列表
+2. **空关键字搜索**: 支持空关键字搜索，可用于初始化时加载全量选项
+3. **自动加载选项**: 值变化时自动加载对应选项，无需手动设置
 4. **错误处理**: 请求失败时会在控制台输出错误，不会显示错误提示
-5. **编辑模式**: 使用 `setInitialOption` 方法设置初始值，需确保 ref 已挂载
+5. **编辑模式**: 使用 `setInitialOption` 方法设置初始值，需确保 ref 已挂载（也可不设置，组件会自动加载）
 6. **自定义构造**: `customRequestBuilder` 优先级最高，适用于特殊 API 格式
-7. **标准模式**: 不使用 `customRequestBuilder` 时，使用标准的 `conditionList` 格式
+7. **标准模式**: 不使用 `customRequestBuilder` 时，使用标准的 `conditionList` 格式，支持 `distinct: '1'` 去重
 8. **API 函数**: 直接传入从 apis 文件导入的函数，类型安全且通用
 9. **去重处理**: 搜索结果会根据 `valueField` 自动去重，避免重复选项
 10. **联动刷新**: 使用 `setInitialOptions` 可以预填充选项列表，使用 `clearOptions` 清空选项列表
 11. **方法调用**: 调用组件方法时需确保 ref 已正确挂载，建议在 `onMounted` 或异步操作中调用
+12. **选项获取**: 使用 `getOptions` 方法可以获取当前的选项列表
 
 ## 常见问题
 
