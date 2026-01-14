@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
@@ -22,6 +22,7 @@ interface Props {
   modelValue?: any; // v-model 绑定值
   readonly?: boolean;
   showLabel?: boolean; // 是否显示标签
+  dictTranslateFn?: (dictName: string, value: string) => Promise<string>; // 字典翻译函数
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -110,6 +111,38 @@ const formatDisplayValue = (value: any, fieldType: string) => {
   // 其他类型直接返回
   return value
 }
+
+// 翻译后的显示值（用于 readonly 模式）
+const translatedDisplayValue = ref<string>('')
+
+// 当 readonly 模式下，且是 SELECT 类型且有 dictTranslateFn 时，进行翻译
+watch(
+  () => [props.readonly, currentValue.value, props.attribute.dict, props.dictTranslateFn],
+  async () => {
+    // 检查 dict 是否有效（不为空字符串）
+    const hasValidDict = props.attribute.dict && props.attribute.dict.trim() !== ''
+    
+    if (
+      props.readonly &&
+      (props.attribute.fieldType === FIELD_TYPE.SELECT || 
+       props.attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) &&
+      hasValidDict &&
+      currentValue.value &&
+      props.dictTranslateFn
+    ) {
+      try {
+        const label = await props.dictTranslateFn(props.attribute.dict, String(currentValue.value))
+        translatedDisplayValue.value = label
+      } catch (error) {
+        console.error('翻译失败:', error)
+        translatedDisplayValue.value = formatDisplayValue(currentValue.value, props.attribute.fieldType)
+      }
+    } else {
+      translatedDisplayValue.value = formatDisplayValue(currentValue.value, props.attribute.fieldType)
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -162,7 +195,7 @@ const formatDisplayValue = (value: any, fieldType: string) => {
           v-if="readonly"
           class="readonly-value"
         >
-          {{ formatDisplayValue(currentValue, attribute.fieldType) }}
+          {{ translatedDisplayValue }}
         </span>
 
         <!-- 编辑模式：显示表单组件 -->

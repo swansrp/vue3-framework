@@ -42,6 +42,7 @@ interface Props<T extends FormFieldItem> {
   labelCol?: object             // 标签布局
   wrapperCol?: object           // 控件布局
   readonly?: boolean            // 只读模式
+  dictTranslateFn?: (dictName: string, value: string) => Promise<string>  // 字典翻译函数
 }
 
 const props = withDefaults(defineProps<Props<T>>(), {
@@ -264,6 +265,7 @@ defineExpose({
             }"
             :readonly="readonly"
             :show-label="true"
+            :dict-translate-fn="dictTranslateFn"
           >
             <!-- 传递 select 插槽 -->
             <template
