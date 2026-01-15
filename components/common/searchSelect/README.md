@@ -39,7 +39,7 @@
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { getDictList } from '@/apis/systemBizDictController'
+import { getDictList } from '@/framework/apis/dict/bizDictController'
 import SearchSelect from '@/framework/components/common/searchSelect/index.vue'
 
 const dictCode = ref('MATERIAL_TYPE')

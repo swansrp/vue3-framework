@@ -6,7 +6,7 @@ import { ref, watch } from 'vue'
 import type { FormConfigInfo, MatrixInfo, ColumnInfo } from '../types'
 
 import GridDraggableLayout, { type GridItem } from '@/framework/components/common/DragGrid/GridDraggableLayout.vue'
-import AttributeFieldItem from '@/framework/components/common/dynamicFormItem/index.vue'
+import AttributeFieldItem from '@/framework/components/common/DragGrid/DynamicFormItem.vue'
 import { sysFormConfigUpdate } from '@/framework/views/MainContent/dynamic/apis/sysFormConfigPortalController'
 
 interface Props {

@@ -80,6 +80,11 @@ const loadOptionByValue = async (value: string | number) => {
     // 使用 customRequestBuilder 或标准查询
     if (props.customRequestBuilder) {
       const requestData = props.customRequestBuilder(String(value))
+      // 如果自定义函数返回 null，则跳过查询
+      if (requestData === null) {
+        loading.value = false
+        return
+      }
       res = await props.apiFn(requestData, false, false, false)
     } else {
       // 标准查询：使用 valueField 精确查询
@@ -132,6 +137,12 @@ const searchData = debounce(async (keyword: string) => {
     // 如果有自定义请求构造函数，使用自定义函数
     if (props.customRequestBuilder) {
       const requestData = props.customRequestBuilder(keyword)
+      // 如果自定义函数返回 null，则跳过搜索
+      if (requestData === null) {
+        options.value = []
+        loading.value = false
+        return
+      }
       res = await props.apiFn(requestData, false, false, false)
     } else {
       // 标准查询：使用通用查询格式

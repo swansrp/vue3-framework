@@ -4,7 +4,7 @@ import { ref, computed, watch } from 'vue'
 
 import GridDraggableLayout, { type GridItem } from './GridDraggableLayout.vue'
 
-import DynamicFormItem from '@/framework/components/common/dynamicFormItem/index.vue'
+import DynamicFormItem from '@/framework/components/common/DragGrid/DynamicFormItem.vue'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
 /**
@@ -37,7 +37,7 @@ interface Props<T extends FormFieldItem> {
   gridSize?: number             // 每格像素大小，默认60
   gap?: number                  // 格子间距，默认12
   minHeight?: number            // 最小高度，默认600
-  defaultItemWidth?: number     // 默认项宽度（格数），默认2
+  defaultItemWidth?: number     // 默认项宽度百分比，默认30
   defaultItemHeight?: number    // 默认项高度（格数），默认1
   labelCol?: object             // 标签布局
   wrapperCol?: object           // 控件布局
@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<Props<T>>(), {
   gridSize: 60,
   gap: 12,
   minHeight: 600,
-  defaultItemWidth: 2,
+  defaultItemWidth: 30,
   defaultItemHeight: 1,
   labelCol: () => ({ style: { width: '100px' } }),
   wrapperCol: () => ({ flex: 1 }),
