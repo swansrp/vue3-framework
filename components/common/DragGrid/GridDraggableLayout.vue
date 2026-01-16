@@ -216,6 +216,25 @@ const handleItemClick = (item: T) => {
   emit('itemClick', item)
 }
 
+// 计算容器实际需要的高度（自适应内容）
+const calculateContainerHeight = () => {
+  if (props.items.length === 0) return props.minHeight
+  
+  // 找到最大的 Y 位置 + 高度
+  let maxBottom = 0
+  props.items.forEach(item => {
+    const posY = item.positionY || 0
+    const height = item.height || props.defaultItemHeight
+    const bottom = (posY + height) * gridBgSize
+    if (bottom > maxBottom) {
+      maxBottom = bottom
+    }
+  })
+  
+  // 至少保持 minHeight，否则使用计算出的高度 + 一些底部padding
+  return Math.max(props.minHeight, maxBottom + 50)
+}
+
 // 计算项的样式
 const getItemStyle = (item: T) => {
   const isDragging = draggingItem.value?.id === item.id
@@ -242,7 +261,7 @@ const getItemStyle = (item: T) => {
     :class="{ 'show-grid': showGrid, 'readonly': readonly }"
     :style="{
       backgroundSize: showGrid ? `${gridBgSize}px ${gridBgSize}px` : 'none',
-      minHeight: `${minHeight}px`,
+      height: `${calculateContainerHeight()}px`,
       gap: `${gap}px`
     }"
   >

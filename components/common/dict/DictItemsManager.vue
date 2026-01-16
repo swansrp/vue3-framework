@@ -6,8 +6,8 @@
  */
 import { PlusOutlined, AppstoreAddOutlined } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
-import { ref, watch } from 'vue'
 import pinyin from 'pinyin'
+import { ref, watch } from 'vue'
 
 import DictItemEditModal from './DictItemEditModal.vue'
 import DictItemsList from './DictItemsList.vue'
@@ -567,7 +567,7 @@ defineExpose({
               placeholder="请输入字典名称"
               style="width: 200px;"
               size="small"
-              @pressEnter="saveDictName"
+              @press-enter="saveDictName"
             />
             <a-button
               v-if="!isEditingDictName"

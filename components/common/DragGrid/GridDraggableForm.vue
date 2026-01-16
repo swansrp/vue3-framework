@@ -263,7 +263,7 @@ defineExpose({
               id: String(field.id),
               isRequired: field.isRequired || '0'
             }"
-            :readonly="readonly"
+            :readonly="readonly || field.readonly === '1'"
             :show-label="true"
             :dict-translate-fn="dictTranslateFn"
           >
