@@ -479,9 +479,14 @@ function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas
           propType = `${cleanedItemType}[]`;
         } else if (prop.items && prop.items.type) {
           const itemType = swaggerTypeToTSType(prop.items.type, prop.items.format);
-          propType = `${itemType}[]`;
+          // 当数组元素是 object 类型时，使用 Array<any> 避免 TS 错误
+          if (itemType === 'object') {
+            propType = 'Array<any>';
+          } else {
+            propType = `${itemType}[]`;
+          }
         } else {
-          propType = 'any[]';
+          propType = 'Array<any>';
         }
       } else if (prop.type) {
         propType = swaggerTypeToTSType(prop.type, prop.format);
