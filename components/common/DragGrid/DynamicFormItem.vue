@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import { strRemoveLF } from '@/framework/utils/common'
 
 interface Attribute {
   id: string;
@@ -175,18 +176,29 @@ watch(
         v-if="showLabel"
         class="field-label-inline"
       >
+        <!-- 必填星号 -->
         <span
+          v-if="attribute.isRequired === '1'"
+          class="required-star"
+        >*</span>
+        <!-- Label文本 -->
+        <div
+          class="label-text"
           :style="{
             color: attribute.isRequired === '1' ? '#1890ff' : '#262626',
             fontWeight: attribute.isRequired === '1' ? 700 : 600,
           }"
         >
-          {{ attribute.isRequired === "1" ? "* " : "" }}{{ attribute.label }}
+          <template v-if="attribute.label">
+            <div v-for="(line, index) in attribute.label.split('\\n')" :key="index">
+              {{ line }}
+            </div>
+          </template>
           <span
             v-if="attribute.unit"
             class="field-unit"
           >（{{ attribute.unit }}）</span>
-        </span>
+        </div>
       </div>
 
       <div class="field-control-inline">
@@ -204,7 +216,7 @@ watch(
           <a-input
             v-if="attribute.fieldType === FIELD_TYPE.INPUT"
             v-model:value="currentValue"
-            :placeholder="`请输入${attribute.label}`"
+            :placeholder="`请输入${strRemoveLF(attribute.label)}`"
             :disabled="readonly"
           />
 
@@ -227,7 +239,7 @@ watch(
           <a-input-number
             v-else-if="attribute.fieldType === FIELD_TYPE.NUMBER"
             v-model:value="currentValue"
-            :placeholder="`请输入${attribute.label}`"
+            :placeholder="`请输入${strRemoveLF(attribute.label)}`"
             :max="attribute.maxValue ? Number(attribute.maxValue) : undefined"
             :min="attribute.minValue ? Number(attribute.minValue) : undefined"
             :disabled="readonly"
@@ -249,7 +261,7 @@ watch(
           >
             <a-select
               v-model:value="currentValue"
-              :placeholder="`请选择${attribute.label}`"
+              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
               :disabled="readonly"
               style="width: 100%"
             />
@@ -269,7 +281,7 @@ watch(
           >
             <a-tree-select
               v-model:value="currentValue"
-              :placeholder="`请选择${attribute.label}`"
+              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
               :disabled="readonly"
               allow-clear
               tree-default-expand-all
@@ -360,7 +372,47 @@ watch(
 
 <style scoped lang="less">
 // 样式已在 GridDraggableLayout 中统一定义
-// 这里不需要重复定义，通过 .form-item-card 类名自动应用样式
+// 这里不需要重复定义,通过 .form-item-card 类名自动应用样式
+
+// 覆盖父组件的 field-label-inline 样式,确保标签宽度一致
+.form-item-card {
+  .field-row {
+    .field-label-inline {
+      min-width: 120px !important;
+      max-width: 120px !important;
+      width: 120px !important;
+      flex-shrink: 0 !important;
+      padding-right: 0 !important;
+      text-align: left !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+
+      .required-star {
+        color: #ff4d4f;
+        font-size: 14px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+
+      .label-text {
+        flex: 1;
+        line-height: 22px;
+        word-break: break-word;
+      }
+    }
+
+    .field-control-inline {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+  }
+
+  .field-unit {
+    color: #8c8c8c;
+    font-weight: 400;
+  }
+}
 
 .readonly-value {
   display: inline-block;
