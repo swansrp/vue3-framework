@@ -1,6 +1,11 @@
 import Mock from 'mockjs'
 
 export async function setupProdMock() {
+  // 在 setupProdMock 之前
+  // 告诉 TS：我知道你不知道，但我知道它有
+  (Mock as any).XHR.prototype.upload = {
+    addEventListener: () => {}
+  }
   console.log('[Mock] setupProdMock start')
 
   const modules = import.meta.glob('/src/mock/*.{ts,js}', { eager: true })
