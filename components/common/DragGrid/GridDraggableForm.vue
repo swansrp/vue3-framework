@@ -88,6 +88,16 @@ watch(() => props.items, () => {
   initFormData()
 }, { immediate: true, deep: true })
 
+// 判断是否为文件类型
+const isFileType = (fieldType: string) => {
+  return [
+    FIELD_TYPE.IMAGE,
+    FIELD_TYPE.AUDIO,
+    FIELD_TYPE.VIDEO,
+    FIELD_TYPE.FILE
+  ].includes(fieldType as any)
+}
+
 // 生成表单验证规则
 const getFieldRules = (field: T) => {
   const rules: any[] = []
@@ -108,6 +118,20 @@ const getFieldRules = (field: T) => {
           return Promise.reject(`请选择${field.label}`)
         }
       })
+    } else if (isFileType(field.fieldType)) {
+      // 文件类型的必填校验：必须有实际的 URL 值
+      rules.push({
+        required: true,
+        message: `请上传${field.label}`,
+        trigger: ['blur', 'change'],
+        validator: (_rule: any, value: any) => {
+          // 有值且不是空字符串即为有效
+          if (value && value.trim() !== '') {
+            return Promise.resolve()
+          }
+          return Promise.reject(`请上传${field.label}`)
+        }
+      })
     } else {
       rules.push({
         required: true,
@@ -115,6 +139,9 @@ const getFieldRules = (field: T) => {
         trigger: ['blur', 'change']
       })
     }
+  } else if (isFileType(field.fieldType)) {
+    // 非必填文件类型：NO_FILE 也算有效值，不需要额外校验
+    // 此处不添加规则，表示可以为空
   }
 
   // 数值范围验证
@@ -208,6 +235,21 @@ const setFieldsValue = (values: Record<string, any>) => {
   formModel.value = { ...formModel.value, ...values }
 }
 
+// 处理文件上传确认完成
+const handleUploadConfirmed = (fieldName: string) => {
+  // 清除该字段的验证错误
+  nextTick(() => {
+    if (formRef.value) {
+      formRef.value.clearValidate(fieldName)
+      
+      // 立即重新验证该字段，确保UI显示正确
+      formRef.value.validateFields(fieldName).catch(() => {
+        // 忽略验证错误
+      })
+    }
+  })
+}
+
 // 暴露方法给父组件
 defineExpose({
   submit: handleSubmit,
@@ -268,6 +310,7 @@ defineExpose({
             :readonly="readonly || field.readonly === '1'"
             :show-label="true"
             :dict-translate-fn="dictTranslateFn"
+            @upload-confirmed="handleUploadConfirmed"
           >
             <!-- 传递 select 插槽 -->
             <template
@@ -320,6 +363,17 @@ defineExpose({
 
     :deep(.ant-form-item-control) {
       height: 100%;
+    }
+
+    // 确保验证错误信息完整显示
+    :deep(.ant-form-item-explain) {
+      font-size: 12px;
+      line-height: 1;
+
+      .ant-form-item-explain-error {
+        white-space: nowrap;
+        overflow: visible;
+      }
     }
   }
 }

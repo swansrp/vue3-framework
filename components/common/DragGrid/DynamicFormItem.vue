@@ -36,6 +36,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void;
+  (e: 'uploadConfirmed', fieldName: string): void; // 新增：通知上传确认完成
 }>()
 
 // 计算当前值：优先使用 modelValue，如果为 undefined 则使用 defaultValue
@@ -213,12 +214,41 @@ const handleFileExistenceChange = (choice: 'yes' | 'no') => {
 watch(() => uploadUrl.value, (newUrl) => {
   if (newUrl) {
     currentValue.value = newUrl
+    // 上传成功后，确保 fileExistenceChoice 状态正确
+    if (fileExistenceChoice.value !== 'yes') {
+      fileExistenceChoice.value = 'yes'
+    }
   }
 })
 
 // 处理文件上传 - 打开上传模态框
 const handleFileUpload = () => {
   uploadFileModalRef.value?.showUploadDialogBox(props.attribute.fieldType)
+}
+
+// 处理上传确认后的操作
+const handleUploadConfirm = () => {
+  // 关键修复：在 watch 触发之前，直接设置 currentValue
+  if (uploadUrl.value) {
+    currentValue.value = uploadUrl.value
+    
+    // 确保 fileExistenceChoice 状态正确
+    if (fileExistenceChoice.value !== 'yes') {
+      fileExistenceChoice.value = 'yes'
+    }
+  }
+  
+  // 确认后触发表单验证（如果在表单中）
+  // 这样可以清除"请上传xxx"的错误提示
+  nextTick(() => {
+    // 强制触发一次 emit，确保表单知道值已更新
+    if (currentValue.value) {
+      emit('update:modelValue', currentValue.value)
+      
+      // 通知父组件清除验证错误
+      emit('uploadConfirmed', props.attribute.name)
+    }
+  })
 }
 </script>
 
@@ -555,6 +585,7 @@ const handleFileUpload = () => {
   <upload-file
     ref="uploadFileModalRef"
     v-model:url="uploadUrl"
+    @after-confirm="handleUploadConfirm"
   />
 </template>
 
@@ -726,8 +757,8 @@ const handleFileUpload = () => {
 // 文件选择 radio 样式
 .file-choice-radio {
   display: flex;
-  justify-content: center;
-  gap: 24px;
+  justify-content: flex-start;
+  gap: 5px;
   padding: 8px 0;
 }
 </style>
