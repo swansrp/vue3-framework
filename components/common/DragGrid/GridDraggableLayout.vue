@@ -328,9 +328,7 @@ const getItemStyle = (item: T) => {
       v-if="!items.length"
       name="empty"
     >
-      <div class="empty-placeholder">
-        暂无数据
-      </div>
+      <!-- 默认空状态，可以被父组件覆盖 -->
     </slot>
   </div>
 </template>
@@ -505,6 +503,14 @@ const getItemStyle = (item: T) => {
       background: linear-gradient(to right, rgba(24, 144, 255, 0.05), rgba(24, 144, 255, 0.02));
       border: none;
       border-radius: 4px;
+      padding: 0 12px;
+    }
+
+    // 区域标题卡片样式：无边框、透明背景
+    :deep(.form-section-title-card) {
+      background: transparent;
+      border: none;
+      border-radius: 0;
       padding: 0 12px;
     }
 

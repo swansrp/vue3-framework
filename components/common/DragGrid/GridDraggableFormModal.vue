@@ -2,6 +2,7 @@
 import { message } from 'ant-design-vue'
 import { ref } from 'vue'
 
+import { SchemaAttribute } from '@/apis/types'
 import { GridDraggableForm, type FormFieldItem } from '@/framework/components/common/DragGrid'
 
 interface Props {
@@ -31,7 +32,7 @@ const convertAttributesToFields = (attributes: SchemaAttribute[]) => {
     name: attr.name!,
     label: attr.label!,
     fieldType: attr.fieldType!,
-    isRequired: attr.isRequired || '0',
+    isRequired: attr.isRequired || '1',
     width: attr.width || 2,
     height: attr.height || 1,
     positionX: attr.positionX || 0,

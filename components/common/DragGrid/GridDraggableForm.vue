@@ -43,6 +43,7 @@ interface Props<T extends FormFieldItem> {
   wrapperCol?: object           // 控件布局
   readonly?: boolean            // 只读模式
   dictTranslateFn?: (dictName: string, value: string) => Promise<string>  // 字典翻译函数
+  hasChildGroups?: boolean      // 是否有子分组（如果有子分组，则不显示空状态）
 }
 
 const props = withDefaults(defineProps<Props<T>>(), {
@@ -53,7 +54,8 @@ const props = withDefaults(defineProps<Props<T>>(), {
   defaultItemHeight: 1,
   labelCol: () => ({ style: { width: '100px' } }),
   wrapperCol: () => ({ flex: 1 }),
-  readonly: false
+  readonly: false,
+  hasChildGroups: false
 })
 
 const emit = defineEmits<{
@@ -243,7 +245,7 @@ defineExpose({
             :attribute="{
               ...field,
               id: String(field.id),
-              isRequired: field.isRequired || '0'
+              isRequired: field.isRequired || '1'
             }"
             :readonly="readonly"
             :show-label="false"
@@ -261,7 +263,7 @@ defineExpose({
             :attribute="{
               ...field,
               id: String(field.id),
-              isRequired: field.isRequired || '0'
+              isRequired: field.isRequired || '1'
             }"
             :readonly="readonly || field.readonly === '1'"
             :show-label="true"
@@ -297,9 +299,12 @@ defineExpose({
         <span></span>
       </template>
 
-      <!-- 空状态 -->
+      <!-- 空状态（仅在没有字段且没有子分组时显示） -->
       <template #empty>
-        <a-empty description="暂无表单字段" />
+        <a-empty
+          v-if="!hasChildGroups"
+          description="暂无表单字段"
+        />
       </template>
     </GridDraggableLayout>
   </a-form>
