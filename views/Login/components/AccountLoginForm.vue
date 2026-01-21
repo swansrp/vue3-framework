@@ -2,7 +2,7 @@
   <a-form
     :model="formData"
     layout="horizontal"
-    autocomplete="off"
+    :autocomplete="rememberPassword ? 'on' : 'off'"
     @finish="handleSubmit"
   >
     <a-form-item
@@ -11,8 +11,8 @@
     >
       <a-input
         v-model:value="formData.userName"
-        autocomplete="off"
-        name="username-login"
+        :autocomplete="rememberPassword ? 'username' : 'new-password'"
+        :name="rememberPassword ? 'username' : 'username-' + Date.now()"
         placeholder="用户名"
         size="large"
       >
@@ -27,8 +27,8 @@
     >
       <a-input-password
         v-model:value="formData.password"
-        autocomplete="new-password"
-        name="password-login"
+        :autocomplete="rememberPassword ? 'current-password' : 'new-password'"
+        :name="rememberPassword ? 'password' : 'password-' + Date.now()"
         placeholder="密码"
         size="large"
         type="password"
@@ -63,6 +63,14 @@
         </template>
       </a-input>
     </a-form-item>
+    <a-form-item name="rememberPassword">
+      <a-checkbox
+        v-model:checked="rememberPassword"
+        @change="handleRememberChange"
+      >
+        记住密码
+      </a-checkbox>
+    </a-form-item>
     <a-form-item>
       <a-button
         :loading="loading"
@@ -79,7 +87,9 @@
 
 <script lang="ts" setup>
 import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons-vue'
-import { reactive } from 'vue'
+import { onMounted, ref, reactive, watch, nextTick } from 'vue'
+
+import { localStorageMethods } from '@/framework/utils/common'
 
 interface Props {
   captchaUrl: string
@@ -102,6 +112,39 @@ const formData = reactive({
   password: '',
   captcha: ''
 })
+
+// 记住密码选项
+const rememberPassword = ref(false)
+
+// 从 localStorage 读取记住密码设置
+onMounted(() => {
+  const savedRememberPassword = localStorageMethods.getLocalStorage('REMEMBER_PASSWORD', 'false')
+  rememberPassword.value = savedRememberPassword === 'true'
+  
+  // 如果不记住密码，延迟清空表单（防止浏览器自动填充）
+  if (!rememberPassword.value) {
+    setTimeout(() => {
+      formData.userName = ''
+      formData.password = ''
+    }, 100)
+  }
+})
+
+// 监听记住密码选项变化，取消勾选时清空表单
+watch(rememberPassword, (newVal) => {
+  if (!newVal) {
+    nextTick(() => {
+      formData.userName = ''
+      formData.password = ''
+    })
+  }
+})
+
+// 处理记住密码选项变化
+const handleRememberChange = (e: any) => {
+  const checked = e.target.checked
+  localStorageMethods.setLocalStorage('REMEMBER_PASSWORD', checked ? 'true' : 'false')
+}
 
 const handleSubmit = () => {
   emit('submit', { ...formData })

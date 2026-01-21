@@ -1462,5 +1462,127 @@ onMounted(() => {
     box-shadow: 0 1px 4px rgba(255, 204, 128, 0.15) !important;
     backdrop-filter: blur(4px) !important;
   }
+
+  // 记住密码复选框样式
+  :deep(.ant-checkbox-wrapper) {
+    display: inline-flex !important;
+    align-items: center !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+    transition: all 0.3s ease !important;
+    user-select: none;
+    line-height: 1 !important;
+
+    &:hover {
+      color: rgba(255, 200, 140, 0.95) !important;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 180, 120, 0.3) !important;
+
+      .ant-checkbox-inner {
+        border-color: rgba(255, 180, 120, 0.8) !important;
+        background: linear-gradient(145deg,
+        rgba(30, 45, 75, 0.95) 0%,
+        rgba(35, 50, 80, 0.9) 100%) !important;
+        box-shadow: 0 0 12px rgba(255, 180, 120, 0.3),
+        inset 0 1px 0 rgba(255, 180, 120, 0.2) !important;
+      }
+    }
+
+    .ant-checkbox {
+      top: 0 !important;
+      align-self: center !important;
+      display: inline-flex !important;
+      align-items: center !important;
+
+      .ant-checkbox-inner {
+        width: 18px !important;
+        height: 18px !important;
+        border: 2px solid rgba(255, 180, 120, 0.5) !important;
+        border-radius: 4px !important;
+        background: linear-gradient(145deg,
+        rgba(25, 40, 65, 0.9) 0%,
+        rgba(30, 45, 70, 0.85) 100%) !important;
+        backdrop-filter: blur(10px) !important;
+        box-shadow: inset 0 1px 0 rgba(255, 180, 120, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        &::after {
+          border-color: #ffffff !important;
+          border-width: 2px !important;
+          width: 5px !important;
+          height: 9px !important;
+          transition: all 0.2s ease !important;
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: rotate(45deg) scale(0) translate(-50%, -50%) !important;
+          transform-origin: center !important;
+        }
+      }
+
+      &.ant-checkbox-checked {
+        .ant-checkbox-inner {
+          background: linear-gradient(145deg,
+          rgba(255, 180, 120, 0.9) 0%,
+          rgba(255, 200, 140, 0.8) 50%,
+          rgba(255, 220, 160, 0.85) 100%) !important;
+          border-color: rgba(255, 200, 140, 0.9) !important;
+          box-shadow: 0 0 15px rgba(255, 180, 120, 0.5),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3),
+          0 2px 8px rgba(0, 0, 0, 0.4) !important;
+
+          &::after {
+            border-color: rgba(20, 35, 60, 0.95) !important;
+            opacity: 1 !important;
+            transform: rotate(45deg) scale(1) translate(-75%, -60%) !important;
+          }
+        }
+
+        &::after {
+          border: none !important;
+        }
+      }
+
+      &.ant-checkbox-indeterminate {
+        .ant-checkbox-inner {
+          &::after {
+            background-color: rgba(255, 180, 120, 0.9) !important;
+          }
+        }
+      }
+    }
+
+    @media (max-width: 480px) {
+      font-size: 13px !important;
+
+      .ant-checkbox {
+        .ant-checkbox-inner {
+          width: 16px !important;
+          height: 16px !important;
+
+          &::after {
+            width: 4.5px !important;
+            height: 8px !important;
+          }
+        }
+      }
+    }
+  }
+
+  // 记住密码表单项样式调整
+  :deep(.ant-form-item) {
+    &:has(.ant-checkbox-wrapper) {
+      margin-bottom: 16px !important;
+
+      @media (max-width: 480px) {
+        margin-bottom: 14px !important;
+      }
+    }
+  }
 }
 </style>
