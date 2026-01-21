@@ -1539,7 +1539,7 @@ onMounted(() => {
           &::after {
             border-color: rgba(20, 35, 60, 0.95) !important;
             opacity: 1 !important;
-            transform: rotate(45deg) scale(1) translate(-75%, -60%) !important;
+            transform: rotate(45deg) scale(1) translate(-100%, -20%) !important;
           }
         }
 
