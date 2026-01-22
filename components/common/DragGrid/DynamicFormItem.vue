@@ -373,16 +373,24 @@ const handleUploadConfirm = () => {
           <!-- 开关 -->
           <div
             v-else-if="attribute.fieldType === FIELD_TYPE.SWITCH"
-            style="height: 32px; display: flex; align-items: center"
+            style="display: flex; align-items: center; gap: 8px;"
           >
-            <a-switch
-              v-model:checked="switchChecked"
+            <a-radio
+              :checked="switchChecked === '1'"
               :disabled="readonly"
-              style="width: 40px"
-              checked-value="1"
-              un-checked-value="0"
-              @change="(val) => emit('update:modelValue', val)"
-            />
+              value="1"
+              @click="emit('update:modelValue', switchChecked === '1' ? '' : '1')"
+            >
+              是
+            </a-radio>
+            <a-radio
+              :checked="switchChecked === '0'"
+              :disabled="readonly"
+              value="0"
+              @click="emit('update:modelValue', switchChecked === '0' ? '' : '0')"
+            >
+              否
+            </a-radio>
           </div>
 
           <!-- 数值输入 -->
