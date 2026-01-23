@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { FileOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { computed, ref, watch } from 'vue'
 
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
+import { downloadUrl } from '@/framework/network/request'
 import { strRemoveLF } from '@/framework/utils/common'
+import { getFileName } from '@/framework/utils/file'
 
 interface Attribute {
   id: string;
@@ -129,6 +131,19 @@ const formatDisplayValue = (value: any, fieldType: string) => {
     return value === '1' ? '是' : '否'
   }
   
+  // 文件类型：显示文件名而不是URL
+  if (
+    fieldType === FIELD_TYPE.IMAGE ||
+    fieldType === FIELD_TYPE.AUDIO ||
+    fieldType === FIELD_TYPE.VIDEO ||
+    fieldType === FIELD_TYPE.FILE
+  ) {
+    if (value === 'NO_FILE') {
+      return '无文件'
+    }
+    return getFileName(value) || value
+  }
+  
   // 其他类型直接返回
   return value
 }
@@ -250,6 +265,19 @@ const handleUploadConfirm = () => {
     }
   })
 }
+
+// 处理文件删除
+const handleFileDelete = () => {
+  currentValue.value = ''
+  fileExistenceChoice.value = null
+}
+
+// 处理文件下载
+const handleFileDownload = (url: string) => {
+  if (!url || url === 'NO_FILE') return
+  const fileName = getFileName(url)
+  downloadUrl(url, fileName || '文件')
+}
 </script>
 
 <template>
@@ -339,8 +367,25 @@ const handleUploadConfirm = () => {
 
       <div class="field-control-inline">
         <!-- readonly 模式：使用 span 显示值 -->
+        <!-- 文件类型特殊处理：显示可点击的文件名 -->
         <span
-          v-if="readonly"
+          v-if="readonly && (
+            attribute.fieldType === FIELD_TYPE.IMAGE ||
+            attribute.fieldType === FIELD_TYPE.AUDIO ||
+            attribute.fieldType === FIELD_TYPE.VIDEO ||
+            attribute.fieldType === FIELD_TYPE.FILE
+          ) && currentValue && currentValue !== 'NO_FILE'"
+          class="file-text"
+          style="cursor: pointer;"
+          @click="handleFileDownload(currentValue)"
+        >
+          <file-outlined style="margin-right: 4px;" />
+          {{ translatedDisplayValue || '-' }}
+        </span>
+        
+        <!-- 其他类型的 readonly 显示 -->
+        <span
+          v-else-if="readonly"
           class="readonly-value"
           :class="{ 'is-empty': !translatedDisplayValue || translatedDisplayValue === '-' }"
         >
@@ -371,27 +416,19 @@ const handleUploadConfirm = () => {
           </div>
 
           <!-- 开关 -->
-          <div
+          <a-radio-group
             v-else-if="attribute.fieldType === FIELD_TYPE.SWITCH"
+            v-model:value="switchChecked"
+            :disabled="readonly"
             style="display: flex; align-items: center; gap: 8px;"
           >
-            <a-radio
-              :checked="switchChecked === '1'"
-              :disabled="readonly"
-              value="1"
-              @click="emit('update:modelValue', switchChecked === '1' ? '' : '1')"
-            >
+            <a-radio value="1">
               是
             </a-radio>
-            <a-radio
-              :checked="switchChecked === '0'"
-              :disabled="readonly"
-              value="0"
-              @click="emit('update:modelValue', switchChecked === '0' ? '' : '0')"
-            >
+            <a-radio value="0">
               否
             </a-radio>
-          </div>
+          </a-radio-group>
 
           <!-- 数值输入 -->
           <div
@@ -517,25 +554,54 @@ const handleUploadConfirm = () => {
                 </a-radio>
               </a-radio-group>
               
-              <!-- 选择“有”：显示上传按钮 -->
+              <!-- 选择"有"：显示上传按钮或文件信息 -->
               <div
                 v-else-if="fileExistenceChoice === 'yes'"
-                style="display: flex; align-items: center; gap: 8px;"
+                style="display: flex; flex-direction: column; gap: 8px;"
               >
-                <a-button
-                  type="dashed"
-                  :disabled="readonly"
-                  style="flex: 1;"
-                  @click="handleFileUpload"
+                <!-- 已上传文件：显示文件名和操作按钮 -->
+                <div
+                  v-if="currentValue && currentValue !== 'NO_FILE'"
+                  style="display: flex; align-items: center; gap: 8px;"
                 >
-                  {{ currentValue && currentValue !== 'NO_FILE' ? '已上传，点击重新上传' : '点击上传' + getFieldTypeName(attribute.fieldType) }}
-                </a-button>
-                <a-button
-                  size="small"
-                  @click="fileExistenceChoice = null; currentValue = ''"
+                  <span
+                    :class="readonly ? 'file-text' : 'file-link'"
+                    style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                    @click="handleFileDownload(currentValue)"
+                  >
+                    <file-outlined style="margin-right: 4px;" />
+                    {{ getFileName(currentValue) || '已上传文件' }}
+                  </span>
+                  <a-button
+                    v-if="!readonly"
+                    size="small"
+                    danger
+                    @click="handleFileDelete"
+                  >
+                    删除
+                  </a-button>
+                </div>
+                              
+                <!-- 未上传文件：显示上传按钮 -->
+                <div
+                  v-else
+                  style="display: flex; align-items: center; gap: 8px;"
                 >
-                  重新选择
-                </a-button>
+                  <a-button
+                    type="dashed"
+                    :disabled="readonly"
+                    style="flex: 1;"
+                    @click="handleFileUpload"
+                  >
+                    点击上传{{ getFieldTypeName(attribute.fieldType) }}
+                  </a-button>
+                  <a-button
+                    size="small"
+                    @click="fileExistenceChoice = null; currentValue = ''"
+                  >
+                    重新选择
+                  </a-button>
+                </div>
               </div>
               
               <!-- 选择“没有”：显示确认信息 -->
@@ -558,16 +624,42 @@ const handleUploadConfirm = () => {
               </div>
             </template>
             
-            <!-- 必填：直接显示上传按钮 -->
-            <a-button
-              v-else
-              type="dashed"
-              :disabled="readonly"
-              style="width: 100%;"
-              @click="handleFileUpload"
-            >
-              {{ currentValue && currentValue !== 'NO_FILE' ? '已上传，点击重新上传' : '点击上传' + getFieldTypeName(attribute.fieldType) }}
-            </a-button>
+            <!-- 必填：直接显示上传按钮或文件信息 -->
+            <template v-else>
+              <!-- 已上传文件：显示文件名和操作按钮 -->
+              <div
+                v-if="currentValue && currentValue !== 'NO_FILE'"
+                style="display: flex; align-items: center; gap: 8px;"
+              >
+                <span
+                  :class="readonly ? 'file-text' : 'file-link'"
+                  style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                  @click="handleFileDownload(currentValue)"
+                >
+                  <file-outlined style="margin-right: 4px;" />
+                  {{ getFileName(currentValue) || '已上传文件' }}
+                </span>
+                <a-button
+                  v-if="!readonly"
+                  size="small"
+                  danger
+                  @click="handleFileDelete"
+                >
+                  删除
+                </a-button>
+              </div>
+              
+              <!-- 未上传文件：显示上传按钮 -->
+              <a-button
+                v-else
+                type="dashed"
+                :disabled="readonly"
+                style="width: 100%;"
+                @click="handleFileUpload"
+              >
+                点击上传{{ getFieldTypeName(attribute.fieldType) }}
+              </a-button>
+            </template>
           </div>
 
 
@@ -593,6 +685,7 @@ const handleUploadConfirm = () => {
   <upload-file
     ref="uploadFileModalRef"
     v-model:url="uploadUrl"
+    use-original-file-name
     @after-confirm="handleUploadConfirm"
   />
 </template>
@@ -768,5 +861,35 @@ const handleUploadConfirm = () => {
   justify-content: flex-start;
   gap: 5px;
   padding: 8px 0;
+}
+
+// 文件下载链接样式（编辑模式）
+.file-link {
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.3s;
+  
+  &:hover {
+    color: #40a9ff;
+    text-decoration: underline;
+  }
+  
+  &:active {
+    color: #096dd9;
+  }
+}
+
+// 文件文本样式（只读模式）
+.file-text {
+  color: #262626;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: none;
+  
+  &:hover {
+    color: #595959;
+  }
 }
 </style>
