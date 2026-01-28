@@ -832,6 +832,7 @@ let initFinished = false
  * @param showLoading 查询时是否显示加载中
  * @param gridCardWidth grid模式卡片宽度
  * @param showSearchTags 是否显示搜索条件标签
+ * @param computedColumns 单元格公式
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -886,6 +887,7 @@ const props = withDefaults(defineProps<{
     showLoading?: boolean
     gridCardWidth?: number
     showSearchTags?: boolean
+    computedColumns?: Record<string, (row: any) => any>
   }>(),
   {
     baseDomain: '/' + name,
@@ -937,7 +939,8 @@ const props = withDefaults(defineProps<{
     downloadFileName: (config: TableConfigType) => config.title,
     showLoading: false,
     gridCardWidth: 350,
-    showSearchTags: false
+    showSearchTags: false,
+    computedColumns: undefined
   })
 const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
@@ -1967,6 +1970,17 @@ const initData = (data: Array<any>) => {
   parsedDataSource.value = []
   config.saveAllButtonShow = false
   for (let index in data) {
+    // 计算衍生字段（computedColumns）
+    if (props.computedColumns) {
+      for (const [field, formula] of Object.entries(props.computedColumns)) {
+        try {
+          data[index][field] = formula(data[index])
+        } catch (e) {
+          console.warn(`计算字段 ${field} 失败:`, e)
+          data[index][field] = null
+        }
+      }
+    }
     const parsedData = _.cloneDeep(data[index])
     dataSourceMap.value.set(data[index][config.rowKey], data[index])
     columnArray.value.forEach((column: ColumnType) => {

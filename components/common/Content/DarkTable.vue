@@ -27,7 +27,9 @@
               :advance="advance"
               :advance-condition="advanceCondition"
               :base-domain="baseDomain"
+              :computed-columns="computedColumns"
               :current-page="currentPage"
+              :data="data"
               :default-sort-column="defaultSortColumn"
               :download-file-name="getDownloadFileName"
               :page-size="50"
@@ -82,6 +84,8 @@ const props = withDefaults(
     advance?: boolean
     selectColumnCondition?: Map<string, any>
     showLoading?: boolean
+    data?: Array<any>
+    computedColumns?: Record<string, (row: any) => any>
   }>(),
   {
     width: 260,
@@ -91,10 +95,12 @@ const props = withDefaults(
     defaultSortColumn: undefined,
     advance: false,
     selectColumnCondition: undefined,
-    showLoading: false
+    showLoading: false,
+    data: undefined,
+    computedColumns: undefined
   }
 )
-const { tableId, width, baseDomain, condition, advance, selectColumnCondition, showLoading } = toRefs(props)
+const { tableId, width, baseDomain, condition, advance, selectColumnCondition, showLoading, data, computedColumns } = toRefs(props)
 const currentPage: Ref<number> = ref(1)
 const advanceCondition = computed(() => {
   currentPage.value = 1
