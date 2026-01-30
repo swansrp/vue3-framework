@@ -122,6 +122,26 @@ create_package_json() {
   return 0
 }
 
+# 更新 deploy.sh 文件中的项目编码
+update_deploy_script() {
+  local project_code="$1"
+  local deploy_script="$ROOT_DIR/deploy.sh"
+  
+  if [ ! -f "$deploy_script" ]; then
+    print_warning "deploy.sh 文件不存在，跳过更新"
+    return 0
+  fi
+  
+  # 替换 projectDirArray
+  sed -i "s/projectDirArray=(\"projectCode\")/projectDirArray=(\"$project_code\")/" "$deploy_script"
+  
+  # 替换 echo 中的项目名
+  sed -i "s/echo \"|----0\.projectCode------------|\"/echo \"|----0.$project_code----------------|\"?/" "$deploy_script"
+  
+  print_success "已更新: deploy.sh (项目编码: $project_code)"
+  return 0
+}
+
 # 询问用户输入
 ask_input() {
   local prompt="$1"
@@ -216,6 +236,16 @@ main() {
   # 创建 package.json
   if ! create_package_json "$PROJECT_CODE" "$PROJECT_NAME"; then
     print_error "创建 package.json 失败"
+    exit 1
+  fi
+  
+  echo
+  echo "正在更新 deploy.sh..."
+  echo
+  
+  # 更新 deploy.sh 中的项目编码
+  if ! update_deploy_script "$PROJECT_CODE"; then
+    print_error "更新 deploy.sh 失败"
     exit 1
   fi
   

@@ -118,6 +118,29 @@ function createPackageJson(projectCode, projectName) {
 }
 
 /**
+ * 修改 deploy.sh 文件中的项目编码
+ */
+function updateDeployScript(projectCode) {
+  const deployScriptPath = path.join(rootDir, 'deploy.sh')
+  
+  if (!fs.existsSync(deployScriptPath)) {
+    console.warn('⚠ 警告: deploy.sh 文件不存在，跳过更新')
+    return
+  }
+
+  let content = fs.readFileSync(deployScriptPath, 'utf-8')
+  
+  // 替换 projectDirArray
+  content = content.replace(/projectDirArray=\("projectCode"\)/, `projectDirArray=("${projectCode}")`)
+  
+  // 替换 echo 中的项目名
+  content = content.replace(/echo "\|----0\.projectCode------------\|"/, `echo "|----0.${projectCode}----------------|`)
+  
+  fs.writeFileSync(deployScriptPath, content, 'utf-8')
+  console.log(`✓ 已更新: deploy.sh (项目编码: ${projectCode})`)
+}
+
+/**
  * 主函数
  */
 async function main() {
@@ -190,6 +213,13 @@ async function main() {
 
     // 创建 package.json
     createPackageJson(projectCode, projectName)
+
+    console.log()
+    console.log('正在更新 deploy.sh...')
+    console.log()
+
+    // 更新 deploy.sh 中的项目编码
+    updateDeployScript(projectCode)
 
     console.log()
     console.log('='.repeat(60))

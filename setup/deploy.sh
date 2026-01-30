@@ -1,14 +1,14 @@
 
 
 #======================= 修改这里 ============================
-projectDir='manage'
-projectDirArray=("tanya")
+projectDir='view'
+projectDirArray=("projectCode")
 remoteDir='/usr/local/nginx/html/'
-previewRemoteDir='/usr/local/nginx/html/preview/'
+previewRemoteDir='/usr/local/nginx/html/'
 sshUserName='root'
-remoteAddr='146.56.238.100'
-#ssh_config=${sshUserName}@${remoteAddr}
-ssh_config=tanya
+remoteAddr='152.136.57.16'
+ssh_config=${sshUserName}@${remoteAddr}
+#ssh_config=jenkins_backup
 #======================= 修改这里 ============================
 
 basepath=$(cd "$(dirname "$0")"; pwd)
@@ -21,10 +21,11 @@ then
 read -p "要部署的ip:" remoteAddr
 fi
 echo "┌-----------------------------┐"
-echo "|----0. tanya-pc--------------|"
+echo "|----0.projectCode------------|"
 echo "└-----------------------------┘"
 echo ""
 read -p "选择要部署的项目序号:" projectIndex
+projectDir=${projectDirArray[$projectIndex]}
 remoteDir=${remoteDir}${projectDirArray[$projectIndex]}
 previewRemoteDir=${previewRemoteDir}${projectDirArray[$projectIndex]}
 echo "要部署的项目: ${projectDirArray[$projectIndex]}"
@@ -49,30 +50,32 @@ preview(){
 		echo "部署文件不存在"
 		return 0;
 	fi
-	send "rm -rf ${previewRemoteDir}/${projectDir}"
-	send "mkdir -p ${previewRemoteDir}/${projectDir}"
-	scp -r ${basepath}/dist/* ${ssh_config}:"${previewRemoteDir}/${projectDir}"
+	send "rm -rf ${previewRemoteDir}-${projectDir}"
+	send "mkdir -p ${previewRemoteDir}-${projectDir}"
+	scp -r -O ${basepath}/dist/* ${ssh_config}:"${previewRemoteDir}-${projectDir}"
 	return 0
 }
 
 deploy() {
-	if dirExsit ${previewRemoteDir}/${projectDir}_old/; then
-		send "rm -rf ${previewRemoteDir}/${projectDir}_old"
+	if dirExsit ${previewRemoteDir}-${projectDir}_old/; then
+		send "rm -rf ${previewRemoteDir}-${projectDir}_old"
 	fi
-	if dirExsit ${previewRemoteDir}/${projectDir}_backup/; then
-		send "mv ${previewRemoteDir}/${projectDir}_backup ${previewRemoteDir}/${projectDir}_old"
+	if dirExsit ${previewRemoteDir}-${projectDir}_backup/; then
+		send "mv ${previewRemoteDir}-${projectDir}_backup ${previewRemoteDir}-${projectDir}_old"
 	fi
-	if dirExsit ${remoteDir}/${projectDir}/; then
-	    send "mv ${remoteDir}/${projectDir} ${previewRemoteDir}/${projectDir}_backup"
+	if dirExsit ${remoteDir}-${projectDir}/; then
+	    send "mv ${remoteDir}-${projectDir} ${previewRemoteDir}-${projectDir}_backup"
+	else
+		send "mkdir -p ${remoteDir}-${projectDir}"
 	fi
-	send "cp -r ${previewRemoteDir}/${projectDir} ${remoteDir}/${projectDir}"
+	send "cp -r ${previewRemoteDir}-${projectDir} ${remoteDir}"
 	return 0
 }
 
 rollback(){
-	if dirExsit ${previewRemoteDir}/${projectDir}_backup/; then
-		send "rm -rf ${remoteDir}/${projectDir}"
-		send "mv ${previewRemoteDir}/${projectDir}_backup ${previewRemoteDir}/${projectDir}"
+	if dirExsit ${previewRemoteDir}-${projectDir}_backup/; then
+		send "rm -rf ${remoteDir}-${projectDir}"
+		send "mv ${previewRemoteDir}-${projectDir}_backup ${previewRemoteDir}-${projectDir}"
 	else
 		echo "没有备份 回退失败"
 	fi
