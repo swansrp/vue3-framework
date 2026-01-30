@@ -61,7 +61,7 @@
               @check="onCommonIndicatorCheck"
               @drop="onCommonTreeDrop"
             >
-              <template #title="{ title, isLeaf, dataRef }">
+              <template #title="{ title, dataRef }">
                 <div
                   :class="{ 'search-highlight': isHighlighted(title) }"
                   class="tree-node-title"
@@ -104,7 +104,7 @@
               @check="onPersonalIndicatorCheck"
               @drop="onPersonalTreeDrop"
             >
-              <template #title="{ title, isLeaf, dataRef }">
+              <template #title="{ title, dataRef }">
                 <div
                   :class="{ 'search-highlight': isHighlighted(title) }"
                   class="tree-node-title"
