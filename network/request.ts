@@ -113,7 +113,7 @@ const clearAllTimers = () => {
 axiosInstance.interceptors.response.use(
   (resp) => {
     closeLoading(resp.config)
-    _handleTimeOut(resp.data)
+    _handleTimeOut(resp.data, resp.config)
     return Promise.resolve(resp)
   }, err => {
     if (err.config) {
@@ -123,7 +123,7 @@ axiosInstance.interceptors.response.use(
       clearAllTimers()
     }
     if(err.response) {
-      _handleTimeOut(err.response.data)
+      _handleTimeOut(err.response.data, err.config)
       if (err.response.status === 404)
         message.error('抱歉,尚未支持该服务!')
       else if (err.response.status === 504)
@@ -144,10 +144,12 @@ axiosInstance.interceptors.response.use(
   }
 )
 
-const _handleTimeOut = function (data: ResponseDataType) {
+const _handleTimeOut = function (data: ResponseDataType, config?: any) {
   if (data.status != null) {
     if (data.status.code === errCode.SESSION_TIME_OUT) {
-      navigation2Login()?.then()
+      // 如果是 logoff 请求，则不添加 redirect_uri
+      const isLogoffRequest = config?.url?.includes('/logoff')
+      navigation2Login(!isLogoffRequest)?.then()
     }
   }
 }

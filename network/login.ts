@@ -17,13 +17,13 @@ const commonStore = useCommonStore(pinia)
 let afterLoginHandler: Function
 localStorageMethods.setLocalStorage('loginRetryTime', '3')
 const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
-export const navigation2Login = () => {
+export const navigation2Login = (includeRedirectUri = true) => {
   let redirectUri
   if (isNotEmpty(import.meta.env.VITE_ssoDomain)) {
     redirectUri = import.meta.env.VITE_ssoDomain
     if (redirectUri === 'localhost') {
       const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
-      const redirect_uri = url === 'login' ? undefined : url
+      const redirect_uri = includeRedirectUri && url !== 'login' ? url : undefined
       return router.replace({
         path: ssoLoginUrl,
         query: { redirect_uri } as LocationQueryRaw
@@ -35,7 +35,11 @@ export const navigation2Login = () => {
     redirectUri = http + url.split('?')[0].split('/')[0] + '/sso'
   }
   const targetUrl = encodeURIComponent(window.location.href)
-  window.location.href = ssoLoginUrl + '&redirect_uri=' + redirectUri + '&target_url=' + targetUrl
+  if (includeRedirectUri) {
+    window.location.href = ssoLoginUrl + '&redirect_uri=' + redirectUri + '&target_url=' + targetUrl
+  } else {
+    window.location.href = ssoLoginUrl + '&target_url=' + targetUrl
+  }
 }
 
 
