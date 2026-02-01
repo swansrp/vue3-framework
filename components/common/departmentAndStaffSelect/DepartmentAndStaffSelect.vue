@@ -35,11 +35,12 @@
         :options="staffListOption"
         :max-tag-text-length="10"
         :virtual="false"
+        :filter-option="false"
         allow-clear
         label-in-value
         mode="multiple"
-        option-filter-prop="label"
         placeholder="请选择职工"
+        show-search
         @blur="handleBlur"
         @change="handleStaffChange"
         @search="handleInputChange"

@@ -93,11 +93,64 @@
         class="user-name-wrapper"
         style="padding: 20px;min-width: 720px"
       >
-        <UserPermission
-          :current-user-group-info="currentUserGroupInfo"
-          :render-bind-user-flag="renderBindUserFlag"
-          :need-default-permission-select="true"
-        />
+        <a-tabs
+          type="editable-card"
+          hide-add
+          style="height: 100%;"
+          @change="tabChange"
+        >
+          <a-tab-pane
+            :key="VIEW"
+            tab="查看权限树"
+            :closable="false"
+          >
+            <a-tree
+              v-if="groupPermissionTreeData.length"
+              :default-expand-all="true"
+              :show-line="true"
+              :tree-data="groupPermissionTreeData"
+            >
+              <template #title="{ dataRef }">
+                <Icon :icon="dataRef.icon" />{{ dataRef.title }}
+              </template>
+            </a-tree>
+            <a-empty
+              v-else
+              description="该用户组暂无权限"
+            />
+          </a-tab-pane>
+          <a-tab-pane
+            :key="EDIT"
+            tab="编辑权限树"
+            :closable="false"
+          >
+            <a-tree
+              v-if="completePermissionTreeData.length"
+              v-model:checked-keys="groupTreeCheckedKeys"
+              :default-expand-all="true"
+              :show-line="true"
+              checkable
+              check-strictly
+              :tree-data="completePermissionTreeData"
+              @check="checkGroupTreeNode"
+            >
+              <template #title="{ dataRef }">
+                <Icon :icon="dataRef.icon" />{{ dataRef.title }}
+              </template>
+            </a-tree>
+          </a-tab-pane>
+          <a-tab-pane
+            :key="LINK"
+            tab="关联用户"
+            :closable="false"
+          >
+            <UserPermission
+              :current-user-group-info="currentUserGroupInfo"
+              :render-bind-user-flag="renderBindUserFlag"
+              :need-default-permission-select="true"
+            />
+          </a-tab-pane>
+        </a-tabs>
       </a-layout-content>
     </a-layout>
     <dialog-box
@@ -133,6 +186,13 @@ import { Ref } from 'vue'
 import AddAndEditUserGroup from './addAndEditUserGroup/index.vue'
 
 import {
+  bindGroupPermission,
+  getGroupPermissionListById,
+  getGroupPermissionTree,
+  unbindGroupPermission
+} from '@/framework/apis/admin/groupPermission'
+import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
+import {
   addUserGroupNode,
   deleteUserGroupNode,
   editUserGroupNode,
@@ -145,7 +205,7 @@ import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import UserPermission from '@/framework/components/common/userPermission/index.vue'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import { getAllParentNodes, getBrotherNodes } from '@/framework/utils/common'
-import { QUERY_INTERVAL } from '@/framework/utils/constant'
+import { EDIT, LINK, QUERY_INTERVAL, VIEW } from '@/framework/utils/constant'
 import { IdName, IdNameArray } from '@/framework/utils/type'
 
 
@@ -169,6 +229,11 @@ let hasSelectUserGroup: Ref<boolean> = ref(false)
 let hasSelectUserGroupCategory: Ref<boolean> = ref(false)
 
 let renderBindUserFlag: Ref<number> = ref(0)
+
+// 权限树相关变量
+let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
+let groupTreeCheckedKeys: Ref<Array<string>> = ref([])
+let groupPermissionTreeData: Ref<Array<DataNode>> = ref([])
 
 
 const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
@@ -217,6 +282,31 @@ const selectUserGroup = (_: Key[], info: any) => {
   currentUserGroupInfo.value.id = id
   hasSelectUserGroup.value = true
   renderBindUserFlag.value += 1
+  // 加载用户组权限
+  renderGroupPermissionTree()
+  renderEditGroupPermissionTree()
+}
+
+// 渲染用户组权限树
+const renderGroupPermissionTree = () =>
+  getGroupPermissionTree(String(currentUserGroupInfo.value.id)).then(res => groupPermissionTreeData.value = res.payload)
+
+const renderEditGroupPermissionTree = () =>
+  getGroupPermissionListById(String(currentUserGroupInfo.value.id))
+    .then(res => groupTreeCheckedKeys.value = res.payload.map((record: DataNode) => record.key))
+
+const checkGroupTreeNode = (checked: any, e: { checked: boolean, node: DataNode }) => {
+  const entityId = String(currentUserGroupInfo.value.id)
+  const attachId = String(e.node.key)
+  if (e.checked) bindGroupPermission(entityId, attachId)
+  else unbindGroupPermission(entityId, attachId)
+}
+
+const tabChange = (key: any) => {
+  const keyStr = String(key)
+  if (keyStr === VIEW) renderGroupPermissionTree()
+  else if (keyStr === EDIT) renderEditGroupPermissionTree()
+  else if (keyStr === LINK) renderBindUserFlag.value += 1
 }
 
 const renderUserGroupTree = () => getUserGroupById(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
@@ -237,7 +327,10 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
   changeOrderPromise.then(() => updateUserGroupNodePId(String(dragKey), pid)).then(renderUserGroupTree)
 }
 
-onMounted(renderUserGroupType)
+onMounted(() => {
+  renderUserGroupType()
+  getCompletePermissionTree().then(res => completePermissionTreeData.value = res.payload)
+})
 
 watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL))
 

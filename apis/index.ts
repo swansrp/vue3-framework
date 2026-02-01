@@ -8,7 +8,7 @@ import { domain } from '@/framework/network/request'
 // 先导出 baseDomain，确保其他模块导入时已经初始化
 export const baseDomain = domain
 
-// 先导出 apiType，确保其他模块导入时已经初始化
+// 先导出 apiType,确保其他模块导入时已经初始化
 export const apiType: any = {
   navEdit: '/admin/menu',
   permit: '/permit',
@@ -20,8 +20,12 @@ export const apiType: any = {
   channel: '/partner/admin',
   rolePermission: '/admin/role/menu',
   roleUser: '/admin/role/user',
+  deptUser: '/admin/dept/user',
   userRole: '/admin/user/role',
   userGroup: '/group/user',
+  deptPermission: '/admin/dept/menu',
+  groupPermission: '/admin/group/menu',
+  permitApply: '/permit/apply',
   week: '/week',
   auth: '',
   config: '/config',

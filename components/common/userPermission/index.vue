@@ -119,6 +119,13 @@ import {
   unbindAllUserGroupList,
   unbindUserGroupList
 } from '@/framework/apis/admin/userGroup'
+import {
+  bindUserDeptList as bindDeptUserList,
+  editUserPermission as editDeptUserPermission,
+  getBindUser as getBindDeptUser,
+  unbindAllUserDeptList as unbindAllDeptUserList,
+  unbindUserDeptList as unbindDeptUserList
+} from '@/framework/apis/admin/deptUser'
 import { getDictListByDictName } from '@/framework/apis/common/common'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DepartmentAndStaffSelect
@@ -128,8 +135,36 @@ import { IdName, ValueLabel, ValueLabelArray } from '@/framework/utils/type'
 import EditUserPermission
   from '@/framework/views/MainContent/SystemManage/UserGroupMaintenance/editUserPermission/index.vue'
 
-const props = defineProps<{ currentUserGroupInfo: IdName, renderBindUserFlag: number, needDefaultPermissionSelect?: boolean }>()
-const { currentUserGroupInfo, renderBindUserFlag, needDefaultPermissionSelect } = toRefs(props)
+const props = withDefaults(defineProps<{
+  currentUserGroupInfo: IdName,
+  renderBindUserFlag: number,
+  needDefaultPermissionSelect?: boolean,
+  type?: 'group' | 'dept'
+}>(), {
+  needDefaultPermissionSelect: false,
+  type: 'group'
+})
+
+const { currentUserGroupInfo, renderBindUserFlag, needDefaultPermissionSelect, type } = toRefs(props)
+
+const api = computed(() => {
+  if (type.value === 'dept') {
+    return {
+      bind: bindDeptUserList,
+      edit: editDeptUserPermission,
+      get: getBindDeptUser,
+      unbindAll: unbindAllDeptUserList,
+      unbind: unbindDeptUserList
+    }
+  }
+  return {
+    bind: bindUserGroupList,
+    edit: editUserPermission,
+    get: getBindUser,
+    unbindAll: unbindAllUserGroupList,
+    unbind: unbindUserGroupList
+  }
+})
 
 let permissionList: Ref<ValueLabelArray> = ref([])
 getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList).then(() => currentPermission.value = permissionList.value[0].value)
@@ -157,7 +192,7 @@ let currentUserInfo: Ref<{ id: string, name: string, dataScope: string }> = ref(
 const handleAddUser = () => {
   const entityId = currentUserGroupInfo.value.id
   const userIdList = staffListValue.value.map(item => item.value)
-  bindUserGroupList(entityId, userIdList, currentPermission.value).then(renderBindUser)
+  api.value.bind(entityId, userIdList, currentPermission.value).then(renderBindUser)
     .then(() => {
       staffListValue.value = []
       departmentListValue.value = []
@@ -167,7 +202,7 @@ const handleAddUser = () => {
 const handleDeleteUser = () => {
   const entityId = currentUserGroupInfo.value.id
   const userIdList = staffListValue.value.map(item => item.value)
-  unbindAllUserGroupList(entityId, userIdList).then(renderBindUser)
+  api.value.unbindAll(entityId, userIdList).then(renderBindUser)
     .then(() => {
       staffListValue.value = []
       departmentListValue.value = []
@@ -178,13 +213,13 @@ const handleSearchUser = () => userList.value = userList.value.filter(user => us
 
 const handleUnbindUser = (attachId: string) => {
   const entityId = currentUserGroupInfo.value.id
-  unbindUserGroupList(entityId, attachId).then(renderBindUser)
+  api.value.unbind(entityId, attachId).then(renderBindUser)
 }
 
 const handleUnbindAllUser = () => {
   const entityId = currentUserGroupInfo.value.id
   const userIdList = userList.value.map(user => user.userId)
-  unbindAllUserGroupList(entityId, userIdList).then(renderBindUser)
+  api.value.unbindAll(entityId, userIdList).then(renderBindUser)
 }
 
 const handleChangePermission = (user: any) => {
@@ -195,11 +230,11 @@ const handleChangePermission = (user: any) => {
 }
 
 const handleEditUserPermission = (dataScope: string) =>
-  editUserPermission(dataScope, currentUserGroupInfo.value.id, currentUserInfo.value.id)
+  api.value.edit(dataScope, currentUserGroupInfo.value.id, currentUserInfo.value.id)
     .then(renderBindUser).then(() => editUserPermissionVisible.value = false)
 
 const renderBindUser = () =>
-  getBindUser(currentUserGroupInfo.value.id, searchUserName.value, selectPermission.value)
+  api.value.get(currentUserGroupInfo.value.id, searchUserName.value, selectPermission.value)
     .then(res => userList.value = res.payload)
 
 
