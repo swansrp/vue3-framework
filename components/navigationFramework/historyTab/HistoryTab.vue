@@ -50,7 +50,7 @@ const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
   
   if (!nextKey) {
     // 所有标签已关闭，返回首页
-    router.push('/');
+    router.push('/')
   } else if (activeKey.value === stringKey) {
     // 关闭的是当前标签，切换到下一个
     changeActivateKey(nextKey)

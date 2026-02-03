@@ -41,7 +41,7 @@ const selectedKeys = computed({
     // 非根路径：使用完整路径(支持子菜单高亮)
     return [currentRoutePath]
   },
-  set: (value: string[]) => {
+  set: (_value: string[]) => {
     // Ant Design Menu 会在用户点击时尝试设置这个值
     // 我们忽略它，因为状态由路由自动计算
   }
