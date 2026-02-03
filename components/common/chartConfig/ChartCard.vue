@@ -244,7 +244,7 @@ const showDropZone = ref(false)
 // 图表相关状态
 const chartLoading = ref(false)
 const chartData = ref<any[]>([])
-const portalConfig = ref<any>(null)
+const portalConfigs = ref<any>(null)
 
 // 弹窗相关状态
 const detailModalVisible = ref(false)
@@ -334,7 +334,7 @@ const dimensionValueMap = computed(() => {
 const loadPortalConfig = async () => {
   // 如果外部已传入 portalConfig，直接使用
   if (props.portalConfig) {
-    portalConfig.value = props.portalConfig
+    portalConfigs.value = props.portalConfig
     return
   }
 
@@ -347,8 +347,8 @@ const loadPortalConfig = async () => {
     }
 
     const response = await getPortalConfig(tableId)
-    portalConfig.value = response.payload
-    portalConfig.value.tableId = tableId
+    portalConfigs.value = response.payload
+    portalConfigs.value.tableId = tableId
   } catch (error) {
     console.error('加载Portal配置失败:', error)
   }
@@ -356,7 +356,7 @@ const loadPortalConfig = async () => {
 
 // 将指标配置转换为API请求参数
 const convertToRequestParams = (config: any) => {
-  if (!config || !portalConfig.value) return null
+  if (!config || !portalConfigs.value) return null
 
   const metricConditions: any[] = []
 
@@ -446,11 +446,11 @@ const loadChartData = async () => {
     chartLoading.value = true
 
     // 确保Portal配置已加载
-    if (!portalConfig.value) {
+    if (!portalConfigs.value) {
       await loadPortalConfig()
     }
 
-    if (!portalConfig.value) {
+    if (!portalConfigs.value) {
       console.warn('Portal配置未加载，跳过图表数据加载')
       return
     }
@@ -463,7 +463,7 @@ const loadChartData = async () => {
 
     // 调用统计API获取数据
     const response = await advancedStatisticRequest(
-      portalConfig.value.url,
+      portalConfigs.value.url,
       new Map(Object.entries(requestParams.selectColumnCondition || {})),
       requestParams.condition,
       requestParams.sort,
@@ -920,7 +920,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   isDestroyed.value = true
   chartData.value = []
-  portalConfig.value = null
+  portalConfigs.value = null
   // 清理防抖定时器
   debouncedLoadChartData.cancel()
   
