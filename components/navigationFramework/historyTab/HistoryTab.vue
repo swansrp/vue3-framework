@@ -20,98 +20,54 @@
 <script lang="ts" setup>
 import { Key } from 'ant-design-vue/es/table/interface'
 
-import { TabType } from '@/framework/components/navigationFramework/historyTab/type'
 import router from '@/framework/router'
 import pinia from '@/framework/store'
-import { useTabStore } from '@/framework/store/nav'
-import { CHANGE_TAB } from '@/framework/utils/constant'
-import mitt from '@/framework/utils/mitt'
+import { useNavigationStore } from '@/framework/store/navigation'
 
-const store = useTabStore(pinia)
-// 初始的tabs为空，leftNav组件会根据路由，通过修改store.tabActivateKey，更新tabs
-let tabs = ref<TabType[]>([])
-// 初始化当前要激活的tab
-const activeKey = ref<Key>('')
+const navigationStore = useNavigationStore(pinia)
 
-const historyPath: Array<Key> = []
-//保留历史页面（路由）对应的key，方便点击浏览器的“返回”按钮，返回到上一个页面使用
-const saveHistoryRoute = (key: Key) => {
-  // 防止两个连续的相同的路由
-  if(historyPath[historyPath.length-1] !== key)  historyPath.push(key)
-}
+// 响应式获取标签数据 - 从 navigationStore
+const tabs = computed(() => navigationStore.historyTabs)
+
+// activeKey 需要支持双向绑定,使用 computed 的 getter/setter
+const activeKey = computed({
+  get: () => navigationStore.activeTabKey,
+  set: (value: string) => {
+    // Ant Design Tabs 会在用户点击时设置这个值
+    // 我们通过 changeActivateKey 处理
+    if (value && value !== navigationStore.activeTabKey) {
+      changeActivateKey(value)
+    }
+  }
+})
 
 // 删除tab的回调函数
 const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
   if (!(typeof targetKey === 'string' || typeof targetKey === 'number')) return
-  let lastIndex = 0
-  // 找到要删除的前一个tab索引
-  tabs.value.some((tab, index) => {
-    if (tab.key === targetKey) {
-      lastIndex = index - 1
-      return true
-    }
-  })
-  // 删除掉目标tab
-  tabs.value = tabs.value.filter((tab) => tab.key !== targetKey)
-  // 这部分代码是根据antd vue 官方写的，其实是不用理解
-  if (tabs.value.length && activeKey.value === targetKey) {
-    // 如果 前一个tab索引 大于等于 0，可以直接赋值
-    if (lastIndex >= 0) {
-      activeKey.value = tabs.value[lastIndex].key
-      // 若得到的lastIndex为负数，则只展示tab中的第一个
-    } else {
-      activeKey.value = tabs.value[0].key
-    }
+  
+  const stringKey = String(targetKey)
+  const nextKey = navigationStore.removeHistoryTab(stringKey)
+  
+  if (!nextKey) {
+    // 所有标签已关闭，返回首页
+    router.push('/');
+  } else if (activeKey.value === stringKey) {
+    // 关闭的是当前标签，切换到下一个
+    changeActivateKey(nextKey)
   }
-  // 向pinia 中写入当前激活tab的key
-  if (tabs.value.length === 0) {
-    // 当所有tab都被关闭时，跳转到欢迎页（根路径）
-    console.log('[DEBUG] HistoryTab 所有tab已关闭，跳转到欢迎页')
-    router.push('/').then(() => {
-      store.tabActivateKey = ''
-      // 重置左侧菜单选中状态
-      store.isNeedLeftNav = true
-    })
-  } else {
-    changeActivateKey(activeKey.value)
-  }
-  // 向pinia中删除掉关于当前已删除tab的相关信息
-  store.deleteHistoryTab(targetKey)
 }
 
-// tab切换后的回调函数
+// 切换标签
 const changeActivateKey = (key: Key) => {
-  // 不要更换这两句话的顺序，否则会产生bug
-  // 保存用户最后选择的openKeys和tab
-  router.push(store.getRouterTarget(key)).then(() => {
-    // 修改tabStore中的相关状态
-    store.changeTab(key)
-    saveHistoryRoute(key)
-    // 通知左侧导航的更新，左侧导航会通知顶部导航的更新
-    mitt.emit(CHANGE_TAB)
+  const targetTab = navigationStore.tabKeyMap[key]
+  if (!targetTab) return
+  
+  // 跳转到对应路由，状态由路由守卫同步
+  router.push({ 
+    path: targetTab.fullPath,
+    query: targetTab.query 
   })
-  // 所有菜单都需要展示左侧导航
-  store.isNeedLeftNav = true
 }
-
-// 用于监听左侧导航栏中的选项选中情况，以及时更新tab
-watch(
-    () => store.tabActivateKey,
-    key => {
-      // 如果key不为空，则设置为当前key
-      if (key) {
-        activeKey.value = key
-        tabs.value = store._historyTabArray
-        saveHistoryRoute(activeKey.value)
-      }
-    },
-    { immediate: true }
-)
-
-watch(
-    () => store._historyTabArray.length,
-    () => tabs.value = store._historyTabArray
-)
 
 </script>
 

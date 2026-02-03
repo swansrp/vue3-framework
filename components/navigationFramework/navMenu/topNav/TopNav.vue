@@ -15,15 +15,42 @@ import { NavListType } from '../type'
 
 import router from '@/framework/router'
 import pinia from '@/framework/store'
-import { useTabStore } from '@/framework/store/nav'
+import { useNavigationStore } from '@/framework/store/navigation'
 import { useRouteStore } from '@/framework/store/route'
 
-const store = useTabStore(pinia)
+const navigationStore = useNavigationStore(pinia)
+const routeStore = useRouteStore(pinia)
 // 本组件中，使用接口返回的path字段作为a-menu组件的key
 // 因为path会被用于leftNav和HistoryTab等组件，用于当前顶部导航的判断
 const iconMap: Record<string, any> = Icons
-const routeStore = useRouteStore(pinia)
-const keys = reactive({ selectedKeys: [] as Array<string> })
+
+// 自动计算选中状态，响应式驱动，无需watch
+const selectedKeys = computed({
+  get: () => {
+    // 根据旧版本逻辑：
+    // - 根路径时使用 topNavPath
+    // - 非根路径时使用 currentRoutePath(完整路径)
+    const currentRoutePath = routeStore.currentRoutePath
+    const activeTopNavPath = navigationStore.activeTopNavPath
+    
+    // 如果是根路径，使用 activeTopNavPath
+    if (currentRoutePath === '' || currentRoutePath === '/') {
+      return activeTopNavPath ? [activeTopNavPath] : []
+    }
+    
+    // 非根路径：使用完整路径(支持子菜单高亮)
+    return [currentRoutePath]
+  },
+  set: (value: string[]) => {
+    // Ant Design Menu 会在用户点击时尝试设置这个值
+    // 我们忽略它，因为状态由路由自动计算
+  }
+})
+
+// 直接使用 computed 作为 v-model 的值，不再包装
+const keys = reactive({
+  selectedKeys: selectedKeys
+})
 
 // 转换后的菜单项数据，用于a-menu渲染
 const menuItems = computed(() => {
@@ -78,7 +105,7 @@ const clickNav = (path: any, children: any) => {
     child = child.children[0]
   }
   if (path.split('/').length === 1 && isNotEmpty(child)) {
-    router.push(`/${ child.path }`).then(() => store.setTopNavPath(path))
+    router.push(`/${ child.path }`)
   }
 }
 
@@ -97,9 +124,18 @@ const selectNav = (obj: any) => {
   const isFrame = routeStore.routePathIsFrameMap[fullPathForFrame]
   
   if (isFrame) {
-    console.log('====== 外链 ============')
-    // 外链菜单：立即设置菜单高亮状态
-    keys.selectedKeys = [selectedKey]
+    // 外链菜单：在打开外链前设置导航状态(保持原窗口菜单高亮)
+    // 设置 topNav 高亮
+    navigationStore.setActiveTopNav(selectedKey.split('/')[0])
+    // 设置 leftNav 高亮(如果是子菜单)
+    if (selectedKey.includes('/')) {
+      // 查找对应的节点
+      const routePath = fullPathForFrame
+      const node = routeStore.dynamicRouteMap[routePath]
+      if (node && node.key) {
+        navigationStore.setActiveLeftNav(node.key, [])
+      }
+    }
     
     // 打开外链
     const urlArray = fullPath.split('http')
@@ -111,40 +147,12 @@ const selectNav = (obj: any) => {
       window.open(routeUrl.href, '_blank')
     }
   } else {
-    console.log('Navigation to:', fullPath)
-    // 普通导航
-    router.push(fullPath).then(() => store.setTopNavPath(obj.keyPath[0]))
+    // 普通导航：只负责跳转，状态由路由守卫同步
+    router.push(fullPath)
   }
 }
 
-watch(
-    () => [menuItems.value, routeStore.currentRoutePath, store.topNavPath, store.updateTopNav],
-    () => {
-      console.log('[DEBUG] TopNav watch 触发', {
-        currentRoutePath: routeStore.currentRoutePath,
-        topNavPath: store.topNavPath,
-        menuItemKeys: menuItems.value.map(item => item.key)
-      })
-      
-      // 如果当前路径是根路径，使用 store.topNavPath 作为高亮菜单
-      if (routeStore.currentRoutePath === '' || routeStore.currentRoutePath === '/') {
-        if (store.topNavPath) {
-          console.log('[DEBUG] TopNav 根路径模式，使用 topNavPath:', store.topNavPath)
-          keys.selectedKeys = [store.topNavPath]
-        } else {
-          keys.selectedKeys = []
-        }
-      } else {
-        keys.selectedKeys = [routeStore.currentRoutePath]
-      }
-      
-      console.log('[DEBUG] TopNav 最终 selectedKeys:', keys.selectedKeys)
-    },
-    {
-      immediate: true,
-      deep: true
-    }
-)
+
 
 </script>
 <style scoped>

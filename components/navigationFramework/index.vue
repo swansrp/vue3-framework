@@ -26,9 +26,15 @@
     >
       <history-tab v-if="isNeedNav && !showDefaultContent" />
       <!-- 默认内容插槽：当访问根路径且有 default-content 插槽时显示 -->
-      <slot v-if="showDefaultContent" name="default-content"></slot>
+      <slot
+        v-if="showDefaultContent"
+        name="default-content"
+      ></slot>
       <!-- 正常路由内容 -->
-      <slot v-else name="router-view"></slot>
+      <slot
+        v-else
+        name="router-view"
+      ></slot>
     </div>
   </div>
   <div v-else>
@@ -59,11 +65,6 @@ const needLeftNav = !slots.content
 // 是否显示默认内容（根路径且有 default-content 插槽）
 const showDefaultContent = computed(() => {
   const result = route.path === '/' && !!slots['default-content']
-  console.log('[DEBUG] NavigationFramework showDefaultContent 计算', {
-    routePath: route.path,
-    hasSlot: !!slots['default-content'],
-    result
-  })
   return result
 })
 const tabStore = useTabStore(pinia)

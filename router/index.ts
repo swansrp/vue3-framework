@@ -8,9 +8,10 @@ import {
 } from 'vue-router'
 
 import { getQueryObject } from '@/framework/network/utils'
-import { enterFirstDynamicRoute, selectFirstTopNavOnly } from '@/framework/router/utils'
+import { enterFirstDynamicRoute } from '@/framework/router/utils'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
+import { useNavigationStore } from '@/framework/store/navigation'
 import { getComponent, useRouteStore } from '@/framework/store/route'
 
 /**
@@ -100,62 +101,84 @@ export const setRootPathMode = (mode: RootPathMode) => {
   rootPathMode = mode
 }
 
+/**
+ * 处理根路径的特殊逻辑
+ * 集中化处理三种根路径模式
+ */
+function handleRootPath(
+  navigationStore: ReturnType<typeof useNavigationStore>,
+  routeStore: ReturnType<typeof useRouteStore>,
+  next: NavigationGuardNext
+) {
+  switch (rootPathMode) {
+    case 'auto':
+      // 自动进入第一个路由
+      navigationStore.setShowLeftNav(false)
+      const leftNavPath = enterFirstDynamicRoute()
+      const queryStr = routeStore.dynamicRouteMap[leftNavPath] ? routeStore.dynamicRouteMap[leftNavPath].query : null
+      const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
+      next({ path: `/${leftNavPath}`, query })
+      break
+      
+    case 'showMenuOnly':
+      // 显示菜单但不选中
+      navigationStore.setShowLeftNav(true)
+      navigationStore.setShowNav(true)
+      
+      const topPath = routeStore.dynamicRoute[0]?.path
+      if (topPath) {
+        navigationStore.setActiveTopNav(topPath)
+      }
+      
+      // 清空左侧菜单选中和标签页
+      navigationStore.clearAllTabs()
+      next()
+      break
+      
+    case 'disabled':
+    default:
+      navigationStore.setShowLeftNav(false)
+      next()
+      break
+  }
+}
+
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  console.log('[DEBUG] enterDynamicRoute 开始执行', {
-    toPath: to.path,
-    fromPath: from.path,
-    rootPathMode,
-    toFullPath: to.fullPath
-  })
-  
+  const navigationStore = useNavigationStore(pinia)
   const routeStore = useRouteStore(pinia)
   const routePath = to.path.replace('/', '')
   const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
+  
+  // 设置导航显示状态
+  navigationStore.setShowNav(!currentPageIsFrame)
+  // 保持旧的tabStore兼容
   tabStore.isNeedNav = !currentPageIsFrame
 
+  // 阻止返回的处理
   if (routeStore.getLastRoute.fullPath === to.fullPath && routeStore.isBlockReturn) {
-    console.log('[DEBUG] 检测到阻止返回，取消导航')
     routeStore.blockReturnHandler()
     next(false)
     return
   }
+  
+  // 更新路由状态
   routeStore.setLastRoute(from)
   routeStore.setCurrentRoute(to)
   
-  // 根据不同模式处理根路径访问
+  // 根据路径类型处理
   if (to.path === '/') {
-    console.log('[DEBUG] 访问根路径，当前模式:', rootPathMode)
-    switch (rootPathMode) {
-      case 'auto':
-        console.log('[DEBUG] auto 模式：自动进入第一个动态路由')
-        // 自动进入第一个动态路由
-        tabStore.isNeedLeftNav = false
-        const leftNavPath = enterFirstDynamicRoute()
-        const queryStr = routeStore.dynamicRouteMap[leftNavPath] ? routeStore.dynamicRouteMap[leftNavPath].query : null
-        const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
-        console.log('[DEBUG] 跳转到:', `/${leftNavPath}`)
-        next({ path: `/${leftNavPath}`, query })
-        break
-      case 'showMenuOnly':
-        console.log('[DEBUG] showMenuOnly 模式：显示菜单但不自动选中')
-        // 显示菜单但不自动选中，显示默认内容
-        tabStore.isNeedLeftNav = true
-        tabStore.isNeedNav = true
-        selectFirstTopNavOnly()
-        console.log('[DEBUG] 停留在根路径，显示默认内容')
-        next()
-        break
-      case 'disabled':
-      default:
-        console.log('[DEBUG] disabled 模式：不做任何处理')
-        // 禁用模式，不做任何处理
-        tabStore.isNeedLeftNav = to.path !== '/'
-        next()
-        break
-    }
+    // 根路径集中处理
+    handleRootPath(navigationStore, routeStore, next)
+    return
   } else {
-    console.log('[DEBUG] 访问非根路径:', to.path)
+    // 非根路径：统一从路由同步导航状态
+    navigationStore.setShowLeftNav(true)
+    // 保持旧的tabStore兼容
     tabStore.isNeedLeftNav = true
+    
+    // 通过navigationStore统一同步状态
+    navigationStore.syncFromRoute(to)
+    
     next()
   }
 }

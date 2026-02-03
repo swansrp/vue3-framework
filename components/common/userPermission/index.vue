@@ -113,19 +113,19 @@
 import { Ref } from 'vue'
 
 import {
-  bindUserGroupList,
-  editUserPermission,
-  getBindUser,
-  unbindAllUserGroupList,
-  unbindUserGroupList
-} from '@/framework/apis/admin/userGroup'
-import {
   bindUserDeptList as bindDeptUserList,
   editUserPermission as editDeptUserPermission,
   getBindUser as getBindDeptUser,
   unbindAllUserDeptList as unbindAllDeptUserList,
   unbindUserDeptList as unbindDeptUserList
 } from '@/framework/apis/admin/deptUser'
+import {
+  bindUserGroupList,
+  editUserPermission,
+  getBindUser,
+  unbindAllUserGroupList,
+  unbindUserGroupList
+} from '@/framework/apis/admin/userGroup'
 import { getDictListByDictName } from '@/framework/apis/common/common'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DepartmentAndStaffSelect

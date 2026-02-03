@@ -83,27 +83,65 @@
 <script lang="ts" setup>
 import { LocationQueryRaw, useRouter } from 'vue-router'
 
-import { NavListType } from '../type'
 
 import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
-import { genAntdMenuFirstSelectObject, getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
+import { getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
 import { getQueryObject } from '@/framework/network/utils'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
+import { useNavigationStore } from '@/framework/store/navigation'
 import { useRouteStore } from '@/framework/store/route'
-import { isNotEmpty } from '@/framework/utils/common'
-import { CHANGE_TAB } from '@/framework/utils/constant'
-import mitt from '@/framework/utils/mitt'
 
 
 const router = useRouter()
+const navigationStore = useNavigationStore(pinia)
 const tabStore = useTabStore(pinia)
 const routeStore = useRouteStore(pinia)
 
-let { topNavPath } = tabStore
-let navList = ref([] as Array<NavListType>)
-const keys = reactive({ openKeys: [] as Array<string>, selectedKeys: [] as Array<string> })
-const collapsed = ref(false)
+// 响应式计算菜单列表 - 替代 initLeftNavList
+const navList = computed(() => {
+  if (!navigationStore.activeTopNavPath) return []
+  
+  const topNode = routeStore.dynamicRoute.find(
+    node => node.path === navigationStore.activeTopNavPath
+  )
+  return topNode?.children || []
+})
+
+// 响应式计算选中状态
+const selectedKeys = computed(() => 
+  navigationStore.activeLeftNavKey ? [navigationStore.activeLeftNavKey] : []
+)
+
+// 响应式计算展开状态
+const openKeys = computed({
+  get: () => navigationStore.openLeftNavKeys,
+  set: (keys: string[]) => {
+    navigationStore.openLeftNavKeys = keys
+  }
+})
+
+// 将 selectedKeys 和 openKeys 绑定到 keys 对象(兼容现有模板)
+// 注意: 不能直接把 computed 放入 reactive,需要用 ref 包装
+const keys = {
+  get selectedKeys() {
+    return selectedKeys.value
+  },
+  set selectedKeys(value: string[]) {
+    // computed 是只读的,通过 navigationStore 设置
+    if (value.length > 0) {
+      navigationStore.activeLeftNavKey = value[0]
+    }
+  },
+  get openKeys() {
+    return openKeys.value
+  },
+  set openKeys(value: string[]) {
+    navigationStore.openLeftNavKeys = value
+  }
+}
+
+const collapsed = ref(navigationStore.ui.leftNavCollapsed)
 
 // 拖拽相关状态
 const menuWidth = ref(250)
@@ -166,13 +204,6 @@ const toggleCollapsed = () => {
 }
 
 const selectLeftNav = (obj: any, triggerIsFrame = true) => {
-  console.log('[DEBUG] LeftNav selectLeftNav 被调用', {
-    obj,
-    triggerIsFrame,
-    currentRoutePath: router.currentRoute.value.path,
-    callStack: new Error().stack?.split('\n').slice(1, 4).join('\n')
-  })
-  
   // 添加安全检查
   if (!obj) {
     console.warn('selectLeftNav: obj is undefined', obj)
@@ -228,9 +259,17 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   // 重要：对于多级菜单，需要从topNav开始，层层递归拼接所有路径上的path
   // 获取从根节点到当前节点的完整路径
   const getFullPath = (item: any, navList: any[]): string => {
+    // 获取当前激活的顶部导航路径
+    const topNavPath = navigationStore.activeTopNavPath || routeStore.currentTopNav
+    
+    // 如果没有topNavPath，说明还未初始化，返回错误
+    if (!topNavPath) {
+      console.error('[LeftNav] getFullPath: topNavPath is empty!')
+      return `/${path}`
+    }
+    
     // 如果 key 为 undefined，使用回退逻辑
     if (!item.key) {
-      const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
       return `/${topNavPath}/${path}`
     }
     
@@ -258,11 +297,9 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
     const pathArray = findPathToItem(navList, item.key)
     if (pathArray) {
       // 从topNav开始拼接完整路径
-      const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
       return `/${topNavPath}/${pathArray.join('/')}`
     }
     // 如果没找到，回退到简单拼接
-    const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
     return `/${topNavPath}/${path}`
   }
   
@@ -273,7 +310,6 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   const fullPathForFrame = fullPath.startsWith('/') ? fullPath.substring(1) : fullPath
   const isFrame = routeStore.routePathIsFrameMap[fullPathForFrame] || routeStore.routePathIsFrameMap[path]
   if (isFrame && triggerIsFrame) {
-    console.log('====== 外链 ============')
     // 外链菜单：在打开外链前立即设置菜单高亮状态
     keys.selectedKeys = [selectedKey]
     const { keyPath } = getTitlePathByKey(navList.value, selectedKey)
@@ -289,7 +325,6 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
       window.open(routeUrl.href, '_blank')
     }
   } else {
-    console.log('Navigation to:', fullPath)
     // 使用path进行导航，而不是name
     router.push({
       path: fullPath,
@@ -298,209 +333,19 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
   }
 }
 
-watch(
-  () => routeStore.currentRouteNode,
-  (value) => {
-    console.log('[DEBUG] LeftNav watch currentRouteNode 触发', {
-      value,
-      hasComponent: value && isNotEmpty(value.component),
-      currentRoutePath: router.currentRoute.value.path
-    })
-    
-    if(value && isNotEmpty(value.component)) {
-      const selectedKey = value.key
-      keys.selectedKeys = [selectedKey]
-      
-      // 优化：使用全局路由映射来计算菜单展开状态，避免依赖navList.value
-      const getMenuKeysFromGlobalRoute = () => {
-        const currentRoutePath = router.currentRoute.value.fullPath.slice(1).split('?')[0]
-        const pathSegments = currentRoutePath.split('/')
-
-        // 如果有多级路径，需要找到所有父级菜单的key来展开
-        const openKeys: string[] = []
-        const titlePath: string[] = []
-        
-        // 从全局路由中寻找当前路径对应的完整层级
-        if (pathSegments.length > 1) {
-          // 构建逐级递增的路径来查找父级菜单
-          for (let i = 1; i < pathSegments.length; i++) {
-            const partialPath = pathSegments.slice(0, i + 1).join('/')
-            const routeNode = routeStore.dynamicRouteMap[partialPath]
-            if (routeNode) {
-              openKeys.push(routeNode.key)
-              titlePath.push(routeNode.title)
-            }
-          }
-        }
-        
-        // 如果通过全局路由没找到合适的openKeys，回退到navList查找
-        if (openKeys.length === 0 && navList.value.length > 0) {
-          const { titlePath: fallbackTitlePath, keyPath: fallbackKeyPath } = getTitlePathByKey(navList.value, selectedKey)
-          return {
-            openKeys: fallbackKeyPath,
-            titlePath: fallbackTitlePath
-          }
-        }
-        
-        return {
-          openKeys,
-          titlePath
-        }
-      }
-      
-      const { openKeys, titlePath } = getMenuKeysFromGlobalRoute()
-      keys.openKeys = openKeys
-      
-      // 选中左侧菜单后， 为面包屑提供数据
-      tabStore.setTitlePath(titlePath)
-      
-      // 选中左侧菜单后，增加对应的tab信息
-      // 对于多级菜单，必须从全局路由映射中查找完整路径
-      const getFullPathForWatch = (value: any): string => {
-        // 使用全局的路由映射查找完整路径，避免依赖当前navList状态
-        const currentRoutePath = router.currentRoute.value.fullPath.slice(1).split('?')[0]
-        
-        // 如果在全局路由映射中找到了对应的节点，直接使用当前路径
-        if (routeStore.dynamicRouteMap[currentRoutePath]) {
-          return `/${currentRoutePath}`
-        }
-        
-        // 如果没找到，尝试从value构建路径
-        if (value.name) {
-          const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
-          return `/${topNavPath}/${value.name}`
-        }
-        
-        // 最后的回退方案
-        const topNavPath = routeStore.currentTopNav || tabStore.topNavPath
-        return `/${topNavPath}/${value.path || ''}`
-      }
-      
-      const fullPath = getFullPathForWatch(value)
-      const tabData = { ...value, fullPath }
-      tabStore.addHistoryTab(tabData, fullPath)
-    }
-  },{
-    immediate: true
-  }
-)
-
-const getObjectByLeftNavPath = (currentNode: NavListType) => {
-  selectLeftNav({ item: currentNode }, false)
-}
-
-const initLeftNavList = () => {
-  // 获取当前实际路由路径（使用 routeStore 中存储的路由信息）
-  const currentPath = routeStore.getCurrentRoute?.path || router.currentRoute.value.path
-  
-  // 关键修复：在根路径时，始终使用 tabStore.topNavPath（如果存在）
-  // 这确保在 showMenuOnly 模式下，即使 watch 多次触发，也不会丢失 topNavPath
-  if (currentPath === '/' && tabStore.topNavPath) {
-    topNavPath = tabStore.topNavPath
-    console.log('[DEBUG] LeftNav 根路径模式，使用 tabStore.topNavPath:', topNavPath)
-  } else {
-    topNavPath = topNavPath || routeStore.currentTopNav
-  }
-  
-  // 如果当前路径是根路径，且 updateLeftNav 为 true，说明是 showMenuOnly 模式
-  // 此时不应该使用 routeStore.currentLeftNav（因为它是从 URL 解析的旧值）
-  const currentLeftNav = (currentPath === '/' && tabStore.updateLeftNav) 
-    ? '' 
-    : (tabStore.updateLeftNav && tabStore.tabActivateKey) 
-      ? tabStore.tabActivateKey 
-      : routeStore.currentLeftNav
-  
-  console.log('[DEBUG] LeftNav initLeftNavList', {
-    topNavPath,
-    currentLeftNav,
-    updateLeftNav: tabStore.updateLeftNav,
-    tabActivateKey: tabStore.tabActivateKey,
-    currentRoutePath: router.currentRoute.value.path,
-    currentPath,
-    tabStoreTopNavPath: tabStore.topNavPath
-  })
-  
-  // 如果没有topNavPath，说明当前在根路径，不需要展示左侧菜单
-  if (!topNavPath) return
-  for (const node of routeStore.dynamicRoute) {
-    if (node.path === topNavPath) {
-      navList.value = node.children
-      // navList没有内容，就没必要展示左侧导航菜单了
-      if (navList.value.length === 0) {
-        tabStore.isNeedLeftNav = false
-        return
-      }
-      // 如果地址栏中的fullPath存在关于左侧导航菜单的相关路径，则根据这个路径初始化左侧菜单的选中情况
-      if (currentLeftNav) {
-        console.log('[DEBUG] LeftNav has currentLeftNav')
-        if (tabStore.updateLeftNav) {
-          // 检查当前路由是否为根路径，如果是则不自动选中第一个菜单项
-          if (currentPath === '/') {
-            console.log('[DEBUG] LeftNav 在根路径，不自动选中菜单，清空选中状态')
-            // 清空菜单选中状态
-            keys.selectedKeys = []
-            keys.openKeys = []
-          } else {
-            genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
-          }
-        } else {
-          const query = router.currentRoute.value.fullPath.split('?')[1]
-          const currentNode = routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')]
-          if (currentNode) {
-            if(isNotEmpty(query)) {
-              currentNode.query = query
-            }
-            getObjectByLeftNavPath(currentNode)
-          } else {
-            console.warn('currentNode not found in dynamicRouteMap for path:', [topNavPath, currentLeftNav].join('/'))
-            genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
-          }
-        }
-      }
-      // 否则，默认选中第一个叶子节点
-      else {
-        // 检查当前路由是否为根路径，如果是则不自动选中第一个菜单项
-        if (currentPath === '/') {
-          console.log('[DEBUG] LeftNav 在根路径且无 currentLeftNav，不自动选中菜单，清空选中状态')
-          // 清空菜单选中状态
-          keys.selectedKeys = []
-          keys.openKeys = []
-        } else {
-          console.log('[DEBUG] LeftNav 非根路径，自动选中第一个菜单')
-          genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
-        }
-      }
-      break
-    }
-  }
-  tabStore.updateLeftNav = false
-}
-
-// 监听来着TopNav组件的菜单项选中事件
-watch(() => tabStore.topNavPath, (value) => {
-  topNavPath = value
-  initLeftNavList()
+// 同步collapsed状态到store
+watch(collapsed, (value) => {
+  navigationStore.setLeftNavCollapsed(value)
 })
 
-// 监听来着TopNav组件的菜单项选中事件
-watch(
-    () => router.currentRoute,
-    () => initLeftNavList(),
-    {
-      deep: true
-    }
-)
-
-// 监听来着HistoryTab组件的tab变更事件
-mitt.on(CHANGE_TAB, () => {
-  topNavPath = tabStore.topNavPath
-  initLeftNavList()
+// 同步menuWidth到store
+watch(menuWidth, (value) => {
+  navigationStore.setLeftNavWidth(value)
 })
 
 onMounted(() => {
-  initLeftNavList()
   // 初始化时同步宽度到 store
-  tabStore.setLeftNavWidth(menuWidth.value)
+  navigationStore.setLeftNavWidth(menuWidth.value)
 })
 
 
