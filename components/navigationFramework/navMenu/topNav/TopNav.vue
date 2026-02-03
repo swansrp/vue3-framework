@@ -118,9 +118,27 @@ const selectNav = (obj: any) => {
 }
 
 watch(
-    () => [menuItems.value, routeStore.currentRoutePath],
+    () => [menuItems.value, routeStore.currentRoutePath, store.topNavPath, store.updateTopNav],
     () => {
-      keys.selectedKeys = [routeStore.currentRoutePath]
+      console.log('[DEBUG] TopNav watch 触发', {
+        currentRoutePath: routeStore.currentRoutePath,
+        topNavPath: store.topNavPath,
+        menuItemKeys: menuItems.value.map(item => item.key)
+      })
+      
+      // 如果当前路径是根路径，使用 store.topNavPath 作为高亮菜单
+      if (routeStore.currentRoutePath === '' || routeStore.currentRoutePath === '/') {
+        if (store.topNavPath) {
+          console.log('[DEBUG] TopNav 根路径模式，使用 topNavPath:', store.topNavPath)
+          keys.selectedKeys = [store.topNavPath]
+        } else {
+          keys.selectedKeys = []
+        }
+      } else {
+        keys.selectedKeys = [routeStore.currentRoutePath]
+      }
+      
+      console.log('[DEBUG] TopNav 最终 selectedKeys:', keys.selectedKeys)
     },
     {
       immediate: true,

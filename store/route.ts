@@ -161,12 +161,22 @@ export const useRouteStore = defineStore('routeStore', {
       this.lastRoute = route
     },
     setCurrentRoute(route: RouteLocationNormalized) {
+      console.log('[DEBUG] routeStore setCurrentRoute', {
+        path: route.path,
+        fullPath: route.fullPath
+      })
       this.currentRoute = route
     },
   }, getters: {
     currentRouteNode(state) {
       const path = router.currentRoute.value.fullPath.slice(1).split('?')[0]
-      return state.dynamicRouteMap[path]
+      const node = state.dynamicRouteMap[path]
+      console.log('[DEBUG] routeStore currentRouteNode getter', {
+        currentPath: router.currentRoute.value.path,
+        path,
+        node: node ? { key: node.key, path: node.path, title: node.title } : null
+      })
+      return node
     },
     currentRoutePath() {
       return router.currentRoute.value.fullPath.slice(1)

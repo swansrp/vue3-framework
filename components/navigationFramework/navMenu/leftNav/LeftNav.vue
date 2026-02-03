@@ -166,6 +166,13 @@ const toggleCollapsed = () => {
 }
 
 const selectLeftNav = (obj: any, triggerIsFrame = true) => {
+  console.log('[DEBUG] LeftNav selectLeftNav 被调用', {
+    obj,
+    triggerIsFrame,
+    currentRoutePath: router.currentRoute.value.path,
+    callStack: new Error().stack?.split('\n').slice(1, 4).join('\n')
+  })
+  
   // 添加安全检查
   if (!obj) {
     console.warn('selectLeftNav: obj is undefined', obj)
@@ -294,6 +301,12 @@ const selectLeftNav = (obj: any, triggerIsFrame = true) => {
 watch(
   () => routeStore.currentRouteNode,
   (value) => {
+    console.log('[DEBUG] LeftNav watch currentRouteNode 触发', {
+      value,
+      hasComponent: value && isNotEmpty(value.component),
+      currentRoutePath: router.currentRoute.value.path
+    })
+    
     if(value && isNotEmpty(value.component)) {
       const selectedKey = value.key
       keys.selectedKeys = [selectedKey]
@@ -377,9 +390,36 @@ const getObjectByLeftNavPath = (currentNode: NavListType) => {
 }
 
 const initLeftNavList = () => {
-  topNavPath = topNavPath || routeStore.currentTopNav
-  const currentLeftNav = (tabStore.updateLeftNav && tabStore.tabActivateKey) ? tabStore.tabActivateKey : routeStore.currentLeftNav
-  topNavPath = (tabStore.updateLeftNav && tabStore.topNavPath) ? tabStore.topNavPath : routeStore.currentTopNav
+  // 获取当前实际路由路径（使用 routeStore 中存储的路由信息）
+  const currentPath = routeStore.getCurrentRoute?.path || router.currentRoute.value.path
+  
+  // 关键修复：在根路径时，始终使用 tabStore.topNavPath（如果存在）
+  // 这确保在 showMenuOnly 模式下，即使 watch 多次触发，也不会丢失 topNavPath
+  if (currentPath === '/' && tabStore.topNavPath) {
+    topNavPath = tabStore.topNavPath
+    console.log('[DEBUG] LeftNav 根路径模式，使用 tabStore.topNavPath:', topNavPath)
+  } else {
+    topNavPath = topNavPath || routeStore.currentTopNav
+  }
+  
+  // 如果当前路径是根路径，且 updateLeftNav 为 true，说明是 showMenuOnly 模式
+  // 此时不应该使用 routeStore.currentLeftNav（因为它是从 URL 解析的旧值）
+  const currentLeftNav = (currentPath === '/' && tabStore.updateLeftNav) 
+    ? '' 
+    : (tabStore.updateLeftNav && tabStore.tabActivateKey) 
+      ? tabStore.tabActivateKey 
+      : routeStore.currentLeftNav
+  
+  console.log('[DEBUG] LeftNav initLeftNavList', {
+    topNavPath,
+    currentLeftNav,
+    updateLeftNav: tabStore.updateLeftNav,
+    tabActivateKey: tabStore.tabActivateKey,
+    currentRoutePath: router.currentRoute.value.path,
+    currentPath,
+    tabStoreTopNavPath: tabStore.topNavPath
+  })
+  
   // 如果没有topNavPath，说明当前在根路径，不需要展示左侧菜单
   if (!topNavPath) return
   for (const node of routeStore.dynamicRoute) {
@@ -392,10 +432,17 @@ const initLeftNavList = () => {
       }
       // 如果地址栏中的fullPath存在关于左侧导航菜单的相关路径，则根据这个路径初始化左侧菜单的选中情况
       if (currentLeftNav) {
-        // console.log('currentLeftNav', topNavPath, currentLeftNav)
+        console.log('[DEBUG] LeftNav has currentLeftNav')
         if (tabStore.updateLeftNav) {
-          // const targetPath = `/${MAIN_CONTENT}/${tabStore.topNavPath}/${tabStore.tabActivateKey}`
-          genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
+          // 检查当前路由是否为根路径，如果是则不自动选中第一个菜单项
+          if (currentPath === '/') {
+            console.log('[DEBUG] LeftNav 在根路径，不自动选中菜单，清空选中状态')
+            // 清空菜单选中状态
+            keys.selectedKeys = []
+            keys.openKeys = []
+          } else {
+            genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
+          }
         } else {
           const query = router.currentRoute.value.fullPath.split('?')[1]
           const currentNode = routeStore.dynamicRouteMap[[topNavPath, currentLeftNav].join('/')]
@@ -412,7 +459,16 @@ const initLeftNavList = () => {
       }
       // 否则，默认选中第一个叶子节点
       else {
-        genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
+        // 检查当前路由是否为根路径，如果是则不自动选中第一个菜单项
+        if (currentPath === '/') {
+          console.log('[DEBUG] LeftNav 在根路径且无 currentLeftNav，不自动选中菜单，清空选中状态')
+          // 清空菜单选中状态
+          keys.selectedKeys = []
+          keys.openKeys = []
+        } else {
+          console.log('[DEBUG] LeftNav 非根路径，自动选中第一个菜单')
+          genAntdMenuFirstSelectObject(navList.value[0], selectLeftNav)
+        }
       }
       break
     }

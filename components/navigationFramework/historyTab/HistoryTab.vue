@@ -65,9 +65,13 @@ const removeTab = (targetKey: Key | MouseEvent | KeyboardEvent) => {
   }
   // 向pinia 中写入当前激活tab的key
   if (tabs.value.length === 0) {
-    // 当所有tab都被关闭时，自动切换到第一个可用的动态路由
-    // 这里不再设置为首页，而是让系统自动处理
-    // store.tabActivateKey = ''
+    // 当所有tab都被关闭时，跳转到欢迎页（根路径）
+    console.log('[DEBUG] HistoryTab 所有tab已关闭，跳转到欢迎页')
+    router.push('/').then(() => {
+      store.tabActivateKey = ''
+      // 重置左侧菜单选中状态
+      store.isNeedLeftNav = true
+    })
   } else {
     changeActivateKey(activeKey.value)
   }
