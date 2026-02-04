@@ -117,10 +117,10 @@ html body .dark-content-layout .portal-table .surely-table-row {
 }
 
 :deep(.surely-table-bordered .surely-table-cell:not(.surely-table-body-cell-range-single-cell):not( .surely-table-body-cell-range-selected)) {
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-top: none !important;
-    border-left: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 /* 表格主边框样式 */
@@ -167,10 +167,10 @@ html body .dark-content-layout .portal-table .surely-table-row {
 }
 
 :deep(.surely-table-cell) {
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-top: none !important;
-    border-left: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 .ellipsis {
@@ -939,10 +939,10 @@ html body .dark-content-layout .surely-table td,
 html body .dark-content-layout .portal-table td,
 html body .dark-content-layout .surely-table .surely-table-cell,
 html body .dark-content-layout .portal-table .surely-table-cell {
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-top: none !important;
-    border-left: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 /* 最后一行不显示下边框 */
@@ -1115,10 +1115,10 @@ html body .dark-content-layout .surely-table tr:nth-of-type(odd):hover {
 .dark-content-layout * .portal-table * .surely-table-cell,
 .dark-content-layout * td,
 .dark-content-layout * .surely-table-cell {
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-top: none !important;
-    border-left: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 /* 最后一行和最后一列边框去除 */

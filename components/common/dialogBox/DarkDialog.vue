@@ -147,10 +147,10 @@ onUnmounted(() => {
         // 单元格边框修复
         td,
         .surely-table-cell {
-          border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-right: none !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
           border-top: none !important;
-          border-left: none !important;
+          border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
         }
 
         // 最后一行和最后一列不显示边框
