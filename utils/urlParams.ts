@@ -9,14 +9,36 @@
  */
 export function parseUrlParams(): Record<string, string | string[]> {
   const params: Record<string, string | string[]> = {}
-  const searchParams = new URLSearchParams(window.location.search)
+  
+  // 处理 hash 模式和 history 模式
+  let search = window.location.search
+  
+  // 如果 search 为空，尝试从 hash 中提取（Vue Router hash 模式）
+  if (!search && window.location.hash) {
+    const hashParts = window.location.hash.split('?')
+    if (hashParts.length > 1) {
+      search = '?' + hashParts.slice(1).join('?')
+    }
+  }
+  
+  const searchParams = new URLSearchParams(search)
 
   searchParams.forEach((value, key) => {
-    // 如果参数值包含逗号，则分割为数组（支持多选）
-    if (value.includes(',')) {
-      params[key] = value.split(',').filter(item => item.trim())
+    // 检查是否已存在该参数（处理同名参数，如 ?key=a&key=b）
+    if (params[key]) {
+      // 如果已存在，转换为数组并追加
+      if (Array.isArray(params[key])) {
+        (params[key] as string[]).push(value)
+      } else {
+        params[key] = [params[key] as string, value]
+      }
     } else {
-      params[key] = value
+      // 如果参数值包含逗号，则分割为数组（支持多选，如 ?key=a,b,c）
+      if (value.includes(',')) {
+        params[key] = value.split(',').map(item => item.trim()).filter(item => item !== '')
+      } else {
+        params[key] = value
+      }
     }
   })
 
@@ -58,13 +80,24 @@ export function getUrlParam<T = any>(paramName: string, defaultValue?: T): T {
  */
 export function mapUrlParamsToRefs(mapping: Record<string, any>): void {
   const urlParams = parseUrlParams()
-  
+
   Object.keys(mapping).forEach(paramName => {
     const refValue = mapping[paramName]
     const urlValue = urlParams[paramName]
     
     if (urlValue !== undefined && urlValue !== null && urlValue !== '') {
-      refValue.value = urlValue
+      // 智能类型转换：如果 ref 初始值是数组，但 URL 参数是字符串，则转为数组
+      if (Array.isArray(refValue.value) && typeof urlValue === 'string') {
+        refValue.value = [urlValue]
+      } 
+      // 如果 ref 初始值是字符串，但 URL 参数是数组，则取第一个元素
+      else if (typeof refValue.value === 'string' && Array.isArray(urlValue)) {
+        refValue.value = urlValue.length > 0 ? urlValue[0] : ''
+      } 
+      // 类型一致，直接赋值
+      else {
+        refValue.value = urlValue
+      }
     }
   })
 }
