@@ -4,26 +4,29 @@ import { request } from '@/framework/network/request'
 const buildGetApi = (url: string) => buildGetApiByType(url, apiType.permitApply)
 const buildPostApi = (url: string) => buildPostApiByType(url, apiType.permitApply)
 
+// 权限树申请情况
+export const getPermitApplyMenuTree = () =>
+  request(buildGetApi('/menu/tree'), {}, {}, true) as Promise<any>
+
 // 提交权限申请
-export const submitPermitApply = (menuId: number, reason: string, userId: number) => 
-  request(buildPostApi('/submit'), {}, { menuId, reason, userId }, true) as Promise<any>
+export const submitPermitApply = (url: string) =>
+  request(buildPostApi(''), {url}, {}, true) as Promise<any>
 
 // 查询我的申请
-export const getMyApplyList = (userId: number) => 
-  request(buildGetApi('/my/list'), { userId }, {}, false) as Promise<any>
+export const getMyApplyList = (url: string) =>
+  request(buildGetApi(''), {url}, {}, false) as Promise<any>
 
-// 查询待审核申请(管理员)
-export const getPendingApplyList = () => 
-  request(buildGetApi('/pending/list'), {}, {}, false) as Promise<any>
+// 根据菜单ID获取申请记录
+export const getApplyRecordsByMenuId = (menuId: number) =>
+  request(buildGetApi(`/records/${menuId}`), {}, {}, true) as Promise<any>
 
-// 审核申请
-export const auditPermitApply = (id: number, status: string, auditRemark: string, auditBy: string) => 
-  request(buildPostApi('/audit'), {}, { id, status, auditRemark, auditBy }, true) as Promise<any>
+// 通过申请
+export const passApply = (id: string|number) =>
+  request(buildPostApi('/approve'), {id}, {}, true) as Promise<any>
 
-// 撤销用户权限
-export const revokePermission = (userId: number, menuId: number) => 
-  request(buildPostApi('/revoke'), {}, { userId, menuId }, true) as Promise<any>
+// 拒绝申请
+export const rejectApply = (id: string|number) =>
+  request(buildPostApi('/reject'), {id}, {}, true) as Promise<any>
 
-// 分页查询申请记录
-export const queryApplyList = () => 
-  request(buildPostApi('/query'), {}, {}, false) as Promise<any>
+
+
