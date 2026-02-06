@@ -23,6 +23,7 @@ export const apiType: any = {
   deptUser: '/admin/dept/user',
   userRole: '/admin/user/role',
   userGroup: '/group/user',
+  userPermission: '/admin/user/menu',
   deptPermission: '/admin/dept/menu',
   groupPermission: '/admin/group/menu',
   permitApply: '/permit/apply',

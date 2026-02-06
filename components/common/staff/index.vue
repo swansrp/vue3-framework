@@ -85,7 +85,7 @@ watch(
   () => modelValue.value,
   () => {
     if (labelInValue.value) {
-      if (modelValue.value.value) {
+      if (modelValue.value?.value) {
         getAccountInfo([modelValue.value.value], active.value).then((resp) => {
           staffList.value.length = 0
           resp.payload.forEach((res: any) => {

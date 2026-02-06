@@ -10,10 +10,17 @@
             <h3 style="margin: 0;">
               组织结构树
             </h3>
+            <a-input-search
+              v-model:value="searchKeyword"
+              placeholder="请输入部门名称进行筛选"
+              style="margin-top: 12px;"
+              @search="filterDeptTree"
+              @change="filterDeptTree"
+            />
           </div>
           <a-tree
-            v-if="deptTreeData.length"
-            :tree-data="deptTreeData"
+            v-if="filteredDeptTreeData.length"
+            :tree-data="filteredDeptTreeData"
             :default-expand-all="true"
             :show-line="true"
             @select="onSelectDeptNode"
@@ -26,7 +33,7 @@
           </a-tree>
           <a-empty
             v-else
-            description="暂无组织结构"
+            description="暂无匹配的组织结构"
           />
         </div>
       </a-layout-sider>
@@ -107,6 +114,8 @@ import UserPermission from '@/framework/components/common/userPermission/index.v
 import { EDIT, LINK, VIEW } from '@/framework/utils/constant'
 
 let deptTreeData: Ref<Array<DataNode>> = ref([])
+let filteredDeptTreeData: Ref<Array<DataNode>> = ref([])
+let searchKeyword: Ref<string> = ref('')
 let selectedDeptId: Ref<string> = ref('')
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
 let deptTreeCheckedKeys: Ref<Array<string>> = ref([])
@@ -114,7 +123,44 @@ let deptPermissionTreeData: Ref<Array<DataNode>> = ref([])
 let showPermissionTreeTab: Ref<boolean> = ref(false)
 let renderBindUserFlag: Ref<number> = ref(0)
 
-// 选择部门节点
+// 筛选部门树
+const filterDeptTree = () => {
+  if (!searchKeyword.value.trim()) {
+    filteredDeptTreeData.value = [...deptTreeData.value]
+    return
+  }
+  
+  const keyword = searchKeyword.value.toLowerCase().trim()
+  filteredDeptTreeData.value = filterTreeNodes(deptTreeData.value, keyword)
+}
+
+// 递归筛选树节点
+const filterTreeNodes = (nodes: DataNode[], keyword: string): DataNode[] => {
+  return nodes.filter(node => {
+    // 检查当前节点是否匹配
+    const isMatch = node.title?.toString().toLowerCase().includes(keyword)
+    
+    // 检查子节点是否有匹配的
+    let hasMatchingChildren = false
+    if (node.children && node.children.length > 0) {
+      const filteredChildren = filterTreeNodes(node.children as DataNode[], keyword)
+      if (filteredChildren.length > 0) {
+        hasMatchingChildren = true
+        // 更新当前节点的子节点为筛选后的结果
+        node.children = filteredChildren
+      }
+    }
+    
+    // 返回当前节点匹配或者有匹配的子节点
+    return isMatch || hasMatchingChildren
+  })
+}
+
+// 重置筛选
+const resetFilter = () => {
+  searchKeyword.value = ''
+  filteredDeptTreeData.value = [...deptTreeData.value]
+}
 const onSelectDeptNode = (selectedKeys: any[], _e: { node: DataNode }) => {
   if (selectedKeys.length === 0) return
   
@@ -155,6 +201,8 @@ const tabChange = (key: any) => {
 const loadDeptTree = () => {
   getDeptTree().then((res: any) => {
     deptTreeData.value = res.payload || []
+    // 初始化筛选数据
+    filteredDeptTreeData.value = [...deptTreeData.value]
   })
 }
 

@@ -111,6 +111,6 @@ onMounted(() => {
   min-width: 0;
   height: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 </style>
