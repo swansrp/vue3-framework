@@ -1,12 +1,20 @@
 <template>
   <div class="user-permit-container">
-    <a-row :gutter="24" class="main-content">
+    <a-row
+      :gutter="24"
+      class="main-content"
+    >
       <!-- 左侧：用户选择和菜单树 -->
       <a-col :span="8">
-        <a-card class="selection-panel" title="权限分析">
+        <a-card
+          class="selection-panel"
+          title="权限分析"
+        >
           <!-- 用户选择 -->
           <div class="user-selection">
-            <div class="section-title">选择用户</div>
+            <div class="section-title">
+              选择用户
+            </div>
             <Staff
               v-model="selectedStaffValue"
               :width="300"
@@ -18,7 +26,9 @@
 
           <!-- 菜单权限树 -->
           <div class="menu-tree-section">
-            <div class="section-title">选择菜单</div>
+            <div class="section-title">
+              选择菜单
+            </div>
             <div class="tree-wrapper">
               <a-tree
                 v-if="menuTreeData.length > 0"
@@ -32,12 +42,19 @@
               >
                 <template #title="{ title, icon }">
                   <span class="menu-item">
-                    <Icon v-if="icon" :icon="icon" style="margin-right: 8px" />
+                    <Icon
+                      v-if="icon"
+                      :icon="icon"
+                      style="margin-right: 8px"
+                    />
                     {{ title }}
                   </span>
                 </template>
               </a-tree>
-              <a-empty v-else description="暂无菜单数据" />
+              <a-empty
+                v-else
+                description="暂无菜单数据"
+              />
             </div>
           </div>
         </a-card>
@@ -47,10 +64,22 @@
       <a-col :span="16">
         <a-card class="result-panel">
           <template #title>
-            <a-tabs v-model:activeKey="activeTab" @change="handleTabChange">
-              <a-tab-pane key="explanation" tab="权限解释" />
-              <a-tab-pane key="view" tab="查看权限树" />
-              <a-tab-pane key="edit" tab="编辑权限树" />
+            <a-tabs
+              v-model:active-key="activeTab"
+              @change="handleTabChange"
+            >
+              <a-tab-pane
+                key="explanation"
+                tab="权限解释"
+              />
+              <a-tab-pane
+                key="view"
+                tab="查看权限树"
+              />
+              <a-tab-pane
+                key="edit"
+                tab="编辑权限树"
+              />
             </a-tabs>
           </template>
           <template #extra>
@@ -80,8 +109,14 @@
 
           <!-- 权限解释面板 -->
           <div v-show="activeTab === 'explanation'">
-            <a-spin :spinning="loading" size="large">
-              <div v-if="permitExplanation.length === 0 && !loading" class="empty-state">
+            <a-spin
+              :spinning="loading"
+              size="large"
+            >
+              <div
+                v-if="permitExplanation.length === 0 && !loading"
+                class="empty-state"
+              >
                 <a-empty description="请选择用户和菜单以查看权限解释">
                   <template #image>
                     <SolutionOutlined style="font-size: 48px; color: #1890ff" />
@@ -90,7 +125,10 @@
               </div>
 
               <!-- 权限解释时间线 -->
-              <div v-else class="permit-explanation">
+              <div
+                v-else
+                class="permit-explanation"
+              >
                 <a-timeline mode="left">
                   <a-timeline-item
                     v-for="(item, index) in permitExplanation"
@@ -105,7 +143,10 @@
                     
                     <div class="permit-item">
                       <div class="permit-header">
-                        <a-tag :color="getSourceTypeColor(item.sourceType)" class="source-tag">
+                        <a-tag
+                          :color="getSourceTypeColor(item.sourceType)"
+                          class="source-tag"
+                        >
                           {{ getSourceTypeLabel(item.sourceType) }}
                         </a-tag>
                         <span class="source-name">{{ item.sourceName }}</span>
@@ -122,8 +163,14 @@
 
           <!-- 查看权限树面板 -->
           <div v-show="activeTab === 'view'">
-            <a-spin :spinning="viewLoading" size="large">
-              <div v-if="userPermissionTreeData.length === 0 && !viewLoading" class="empty-state">
+            <a-spin
+              :spinning="viewLoading"
+              size="large"
+            >
+              <div
+                v-if="userPermissionTreeData.length === 0 && !viewLoading"
+                class="empty-state"
+              >
                 <a-empty description="请选择用户以查看权限树">
                   <template #image>
                     <SolutionOutlined style="font-size: 48px; color: #1890ff" />
@@ -138,7 +185,11 @@
                 :tree-data="userPermissionTreeData"
               >
                 <template #title="{ dataRef }">
-                  <Icon v-if="dataRef.icon" :icon="dataRef.icon" style="margin-right: 8px" />
+                  <Icon
+                    v-if="dataRef.icon"
+                    :icon="dataRef.icon"
+                    style="margin-right: 8px"
+                  />
                   {{ dataRef.title }}
                 </template>
               </a-tree>
@@ -147,8 +198,14 @@
 
           <!-- 编辑权限树面板 -->
           <div v-show="activeTab === 'edit'">
-            <a-spin :spinning="editLoading" size="large">
-              <div v-if="!selectedStaffValue" class="empty-state">
+            <a-spin
+              :spinning="editLoading"
+              size="large"
+            >
+              <div
+                v-if="!selectedStaffValue"
+                class="empty-state"
+              >
                 <a-empty description="请选择用户以编辑权限">
                   <template #image>
                     <SolutionOutlined style="font-size: 48px; color: #1890ff" />
@@ -156,7 +213,10 @@
                 </a-empty>
               </div>
               
-              <div v-else-if="completePermissionTreeData.length === 0 && !editLoading" class="empty-state">
+              <div
+                v-else-if="completePermissionTreeData.length === 0 && !editLoading"
+                class="empty-state"
+              >
                 <a-empty description="暂无权限数据">
                   <template #image>
                     <SolutionOutlined style="font-size: 48px; color: #1890ff" />
@@ -175,7 +235,11 @@
                 @check="checkUserTreeNode"
               >
                 <template #title="{ dataRef }">
-                  <Icon v-if="dataRef.icon" :icon="dataRef.icon" style="margin-right: 8px" />
+                  <Icon
+                    v-if="dataRef.icon"
+                    :icon="dataRef.icon"
+                    style="margin-right: 8px"
+                  />
                   {{ dataRef.title }}
                 </template>
               </a-tree>
@@ -191,8 +255,15 @@
 import { ReloadOutlined, SolutionOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import type { Key } from 'ant-design-vue/es/_util/type'
-import { computed, onMounted, ref, watch } from 'vue'
 import type { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { computed, onMounted, ref, watch } from 'vue'
+
+import type { UserPermitRes, SourceTypeEnum } from './types'
+import { 
+  SOURCE_TYPE_LABELS, 
+  SOURCE_TYPE_ICONS, 
+  SOURCE_TYPE_COLORS 
+} from './types'
 
 import { getUserMenuTree, getUserPermitSource } from '@/framework/apis/admin/navEdit'
 import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
@@ -204,12 +275,6 @@ import {
 } from '@/framework/apis/admin/userPermission'
 import Staff from '@/framework/components/common/staff/index.vue'
 
-import type { UserPermitRes, SourceTypeEnum } from './types'
-import { 
-  SOURCE_TYPE_LABELS, 
-  SOURCE_TYPE_ICONS, 
-  SOURCE_TYPE_COLORS 
-} from './types'
 
 // 状态管理
 const loading = ref(false)
@@ -246,32 +311,32 @@ const getSourceTypeColor = (type: SourceTypeEnum): string => {
 const handleMenuSelect = (selectedKeys: any[], info: any) => {
   if (selectedKeys.length > 0 && info.selected) {
     // 保持原始数据类型（数字），不转换为字符串
-    const selectedKey = selectedKeys[0];  // 直接使用数字类型
-    selectedMenuKeys.value = [selectedKey];
+    const selectedKey = selectedKeys[0]  // 直接使用数字类型
+    selectedMenuKeys.value = [selectedKey]
   } else if (selectedKeys.length === 0) {
-    selectedMenuKeys.value = [];
-    permitExplanation.value = [];
+    selectedMenuKeys.value = []
+    permitExplanation.value = []
   }
-};
+}
 
 const loadMenuTree = async (customerNumber?: string) => {
   try {
     // 如果没有提供用户编号，则清空菜单树
     if (!customerNumber) {
-      menuTreeData.value = [];
-      menuTreeKey.value += 1;
-      return;
+      menuTreeData.value = []
+      menuTreeKey.value += 1
+      return
     }
     
-    const response = await getUserMenuTree(customerNumber);
-    menuTreeData.value = response.payload || [];
-    menuTreeKey.value += 1;
+    const response = await getUserMenuTree(customerNumber)
+    menuTreeData.value = response.payload || []
+    menuTreeKey.value += 1
   } catch (error) {
-    console.error('加载用户菜单树失败:', error);
-    message.error('加载用户菜单树失败');
-    menuTreeData.value = [];
+    console.error('加载用户菜单树失败:', error)
+    message.error('加载用户菜单树失败')
+    menuTreeData.value = []
   }
-};
+}
 
 const loadPermitExplanation = async () => {
   if (!canRefresh.value) return
@@ -374,32 +439,32 @@ const saveUserPermissions = async () => {
 // 监听选中菜单变化
 watch(selectedMenuKeys, (newVal) => {
   if (newVal.length > 0) {
-    loadPermitExplanation();
+    loadPermitExplanation()
   }
-}, { deep: true });
+}, { deep: true })
 
 // 监听用户选择变化
 watch(selectedStaffValue, (newVal, _oldVal) => {
   // 当用户变化时，重新加载该用户的菜单树
-  const customerNumber = newVal?.value ?? '';
-  loadMenuTree(customerNumber);
+  const customerNumber = newVal?.value ?? ''
+  loadMenuTree(customerNumber)
   
   // 清空之前的菜单选择和权限解释
-  selectedMenuKeys.value = [];
-  permitExplanation.value = [];
+  selectedMenuKeys.value = []
+  permitExplanation.value = []
   
   // 清空权限树相关数据
-  userPermissionTreeData.value = [];
-  completePermissionTreeData.value = [];
-  userTreeCheckedKeys.value = [];
+  userPermissionTreeData.value = []
+  completePermissionTreeData.value = []
+  userTreeCheckedKeys.value = []
   
   // 如果当前是查看或编辑tab，重新加载对应数据
   if (activeTab.value === 'view' && newVal) {
-    loadUserPermissionTree();
+    loadUserPermissionTree()
   } else if (activeTab.value === 'edit' && newVal) {
-    loadEditUserPermissionTree();
+    loadEditUserPermissionTree()
   }
-}, { deep: true });
+}, { deep: true })
 
 
 

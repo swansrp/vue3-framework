@@ -110,6 +110,9 @@ function handleRootPath(
   routeStore: ReturnType<typeof useRouteStore>,
   next: NavigationGuardNext
 ) {
+  if(routeStore.dynamicRoute.length === 0) {
+    next()
+  }
   switch (rootPathMode) {
     case 'auto':
       // 自动进入第一个路由

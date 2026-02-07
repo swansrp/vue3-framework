@@ -156,11 +156,6 @@ const filterTreeNodes = (nodes: DataNode[], keyword: string): DataNode[] => {
   })
 }
 
-// 重置筛选
-const resetFilter = () => {
-  searchKeyword.value = ''
-  filteredDeptTreeData.value = [...deptTreeData.value]
-}
 const onSelectDeptNode = (selectedKeys: any[], _e: { node: DataNode }) => {
   if (selectedKeys.length === 0) return
   

@@ -1,9 +1,15 @@
 <template>
   <div class="permit-apply-container">
-    <a-row :gutter="24" class="main-content">
+    <a-row
+      :gutter="24"
+      class="main-content"
+    >
       <!-- 左侧：权限申请树 -->
       <a-col :span="8">
-        <a-card class="selection-panel" title="权限申请树">
+        <a-card
+          class="selection-panel"
+          title="权限申请树"
+        >
           <div class="tree-wrapper">
             <a-tree
               v-if="menuTreeData.length > 0"
@@ -27,14 +33,20 @@
                 </span>
               </template>
             </a-tree>
-            <a-empty v-else description="暂无权限申请数据" />
+            <a-empty
+              v-else
+              description="暂无权限申请数据"
+            />
           </div>
         </a-card>
       </a-col>
 
       <!-- 右侧：申请记录列表 -->
       <a-col :span="16">
-        <a-card class="result-panel" title="申请记录">
+        <a-card
+          class="result-panel"
+          title="申请记录"
+        >
           <template #extra>
             <a-button
               :disabled="!selectedMenuKeys.length"
@@ -48,206 +60,190 @@
             </a-button>
           </template>
 
-          <a-spin :spinning="loading" size="large">
-            <div v-if="applyRecords.length === 0 && !loading" class="empty-state">
-              <a-empty description="请选择菜单查看申请记录">
-                <template #image>
-                  <SolutionOutlined style="font-size: 48px; color: #1890ff" />
-                </template>
-              </a-empty>
-            </div>
-
-            <div v-else>
-              <Portal
-                ref="portalRef"
-                :advance-condition="advanceCondition"
-                table-id="permitApplyRecords"
-              >
-                <template #action="{ record }">
-                  <div class="action-buttons">
-                    <a-button
-                      v-if="record.status === 'pending'"
-                      type="primary"
-                      size="small"
-                      @click="handlePass(record.id)"
-                    >
-                      通过
-                    </a-button>
-                    <a-button
-                      v-if="record.status === 'pending'"
-                      type="primary"
-                      danger
-                      size="small"
-                      @click="handleReject(record.id)"
-                    >
-                      拒绝
-                    </a-button>
-                    <a-tag v-if="record.status === 'approved'" color="green">
-                      已通过
-                    </a-tag>
-                    <a-tag v-else-if="record.status === 'rejected'" color="red">
-                      已拒绝
-                    </a-tag>
-                    <a-tag v-else color="orange"> 待审批 </a-tag>
-                  </div>
-                </template>
-              </Portal>
-            </div>
-          </a-spin>
+          <Portal
+            ref="portalRef"
+            :advance-condition="advanceCondition"
+            table-id="AcPermitApply"
+            hide-add
+            hide-export
+            hide-refresh
+            read-only
+          >
+            <template #action="{ record }">
+              <div class="action-buttons">
+                <a-button
+                  v-if="record.status === '1'"
+                  type="primary"
+                  size="small"
+                  @click="handlePass(record.id)"
+                >
+                  通过
+                </a-button>
+                <a-button
+                  v-if="record.status === '1'"
+                  type="primary"
+                  danger
+                  size="small"
+                  @click="openRejectModal(record.id)"
+                >
+                  拒绝
+                </a-button>
+                <a-tag
+                  v-if="record.status === '3'"
+                  color="green"
+                >
+                  已通过
+                </a-tag>
+                <a-tag
+                  v-else-if="record.status === '2'"
+                  color="red"
+                >
+                  已拒绝
+                </a-tag>
+              </div>
+            </template>
+          </Portal>
         </a-card>
       </a-col>
     </a-row>
+
+    <a-modal
+      v-model:open="rejectModalVisible"
+      title="填写拒绝理由"
+      :confirm-loading="rejectLoading"
+      @ok="confirmReject"
+      @cancel="closeRejectModal"
+    >
+      <a-textarea
+        v-model:value="rejectReason"
+        :rows="4"
+        placeholder="请填写拒绝原因"
+        :maxlength="200"
+        show-count
+      />
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ReloadOutlined, SolutionOutlined } from "@ant-design/icons-vue";
-import { message } from "ant-design-vue";
-import type { Key } from "ant-design-vue/es/_util/type";
-import { computed, onMounted, ref } from "vue";
-import type { DataNode } from "ant-design-vue/es/vc-tree/interface";
+import { ReloadOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import type { Key } from 'ant-design-vue/es/_util/type'
+import type { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { computed, onMounted, ref } from 'vue'
+
+import type { PermitApplyRecord } from './types'
 
 import {
   getPermitApplyMenuTree,
   passApply,
-  rejectApply,
-  getApplyRecordsByMenuId,
-} from "@/framework/apis/admin/permitApply";
-import Portal from "@/framework/components/common/Portal/index.vue";
-import type { ConditionListType } from "@/framework/components/common/AdvancedSearch/ConditionList/type";
-import { FILTER_TYPE } from "@/framework/components/common/Portal/type";
-import { buildCondition } from "@/framework/components/common/Portal/utils";
+  rejectApply
+} from '@/framework/apis/admin/permitApply'
+import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import Portal from '@/framework/components/common/Portal/index.vue'
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 
-import type { PermitApplyRecord } from "./types";
 
 // 状态管理
-const loading = ref(false);
-const menuTreeData = ref<DataNode[]>([]);
-const menuTreeKey = ref(0);
-const selectedMenuKeys = ref<number[]>([]);
-const applyRecords = ref<PermitApplyRecord[]>([]);
+const menuTreeData = ref<DataNode[]>([])
+const menuTreeKey = ref(0)
+const selectedMenuKeys = ref<number[]>([])
+const applyRecords = ref<PermitApplyRecord[]>([])
+const rejectModalVisible = ref(false)
+const rejectReason = ref('')
+const rejectLoading = ref(false)
+const rejectTargetId = ref<string | number | null>(null)
 
 // Portal相关
-const portalRef = ref();
-const tableColumns = ref([
-  {
-    title: "申请人",
-    dataIndex: "applicantName",
-    key: "applicantName",
-    width: 120,
-  },
-  {
-    title: "申请理由",
-    dataIndex: "applyReason",
-    key: "applyReason",
-    ellipsis: true,
-  },
-  {
-    title: "申请时间",
-    dataIndex: "applyTime",
-    key: "applyTime",
-    width: 180,
-  },
-  {
-    title: "状态",
-    dataIndex: "status",
-    key: "status",
-    width: 100,
-    slots: { customRender: "status" },
-  },
-  {
-    title: "操作",
-    key: "action",
-    width: 150,
-    fixed: "right",
-    slots: { customRender: "action" },
-  },
-]);
-
+const portalRef = ref()
 const advanceCondition = computed(() => {
-  const conditionList = [
-    buildCondition("applicantName", FILTER_TYPE.LIKE, [""]),
-    buildCondition("applyTime", FILTER_TYPE.BETWEEN, []),
-    buildCondition("status", FILTER_TYPE.EQUAL, [""]),
-  ];
-  return { conditionList } as ConditionListType;
-});
-
-// 计算属性
-const canLoadRecords = computed(() => {
-  return selectedMenuKeys.value.length > 0;
-});
+  const conditionList = selectedMenuKeys.value.length > 0 ? [
+    buildCondition('menuId', FILTER_TYPE.EQUAL, selectedMenuKeys.value),
+  ]:[
+    buildCondition('status', FILTER_TYPE.EQUAL, ['1']),
+  ]
+  return { conditionList } as ConditionListType
+})
 
 // 方法定义
 const handleMenuSelect = (selectedKeys: Key[], info: any) => {
   if (selectedKeys.length > 0 && info.selected) {
-    selectedMenuKeys.value = [selectedKeys[0] as number];
-    loadApplyRecords();
+    selectedMenuKeys.value = [selectedKeys[0] as number]
   } else if (selectedKeys.length === 0) {
-    selectedMenuKeys.value = [];
-    applyRecords.value = [];
+    selectedMenuKeys.value = []
+    applyRecords.value = []
   }
-};
+}
 
 const loadMenuTree = async () => {
   try {
-    const response = await getPermitApplyMenuTree();
-    menuTreeData.value = response.payload || [];
-    menuTreeKey.value += 1;
+    const response = await getPermitApplyMenuTree()
+    menuTreeData.value = response.payload || []
+    menuTreeKey.value += 1
   } catch (error) {
-    console.error("加载权限申请树失败:", error);
-    message.error("加载权限申请树失败");
-    menuTreeData.value = [];
+    console.error('加载权限申请树失败:', error)
+    message.error('加载权限申请树失败')
+    menuTreeData.value = []
   }
-};
-
-const loadApplyRecords = async () => {
-  if (!canLoadRecords.value) return;
-
-  loading.value = true;
-  try {
-    const menuId = selectedMenuKeys.value[0];
-    const response = await getApplyRecordsByMenuId(menuId);
-    applyRecords.value = response.payload || [];
-  } catch (error) {
-    console.error("获取申请记录失败:", error);
-    message.error("获取申请记录失败");
-    applyRecords.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
+}
 
 const refreshApplyRecords = () => {
-  loadApplyRecords();
-};
+  portalRef.value.queryData()
+  loadMenuTree()
+}
 
 const handlePass = async (id: string | number) => {
   try {
-    await passApply(id);
-    message.success("审批通过成功");
-    loadApplyRecords();
+    await passApply(id)
+    message.success('审批通过成功')
+    portalRef.value.queryData()
+    await loadMenuTree()
   } catch (error) {
-    console.error("审批通过失败:", error);
-    message.error("审批通过失败");
+    console.error('审批通过失败:', error)
+    message.error('审批通过失败')
   }
-};
+}
 
-const handleReject = async (id: string | number) => {
-  try {
-    await rejectApply(id);
-    message.success("审批拒绝成功");
-    loadApplyRecords();
-  } catch (error) {
-    console.error("审批拒绝失败:", error);
-    message.error("审批拒绝失败");
+const openRejectModal = (id: string | number) => {
+  rejectTargetId.value = id
+  rejectReason.value = ''
+  rejectModalVisible.value = true
+}
+
+const closeRejectModal = () => {
+  rejectModalVisible.value = false
+}
+
+const confirmReject = async () => {
+  const id = rejectTargetId.value
+  const reason = rejectReason.value.trim()
+
+  if (!id) return
+  if (!reason) {
+    message.warning('请填写拒绝理由')
+    return
   }
-};
+
+  rejectLoading.value = true
+  try {
+    await rejectApply(id, reason)
+    message.success('审批拒绝成功')
+    rejectModalVisible.value = false
+    portalRef.value.queryData()
+    await loadMenuTree()
+  } catch (error) {
+    console.error('审批拒绝失败:', error)
+    message.error('审批拒绝失败')
+  } finally {
+    rejectLoading.value = false
+  }
+}
 
 // 生命周期
 onMounted(() => {
-  loadMenuTree();
-});
+  loadMenuTree()
+})
 </script>
 
 <style lang="less" scoped>
@@ -312,6 +308,8 @@ onMounted(() => {
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: center;
+    width: 100%;
   }
 }
 
