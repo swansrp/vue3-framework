@@ -25,20 +25,20 @@
       </a-select-option>
     </a-select>
   </a-form-item>
-  <div style="padding-top: 4px; margin-bottom: 8px">
+  <div class="button-group">
     <a-button
       :disabled="staffListValue.length === 0"
-      style="width: 200px;margin-left: 70px;"
       type="primary"
+      class="action-button"
       @click="handleAddUser"
     >
       添加
     </a-button>
     <a-button
       :disabled="staffListValue.length === 0"
-      danger
-      style="width: 200px;margin-left: 70px;"
       type="primary"
+      danger
+      class="action-button"
       @click="handleDeleteUser"
     >
       解绑
@@ -243,3 +243,44 @@ watch(selectPermission, renderBindUser)
 watch(renderBindUserFlag, renderBindUser, { immediate: true })
 
 </script>
+
+<style scoped>
+/* 按钮组响应式布局 */
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 8px 0;
+    margin: 8px 0;
+    align-items: center;
+}
+
+.action-button {
+    min-width: 120px;
+    flex: 1;
+    max-width: 200px;
+}
+
+/* 小屏幕适配 */
+@media screen and (max-width: 768px) {
+    .button-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .action-button {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+/* 确保有足够的垂直间距避免重叠 */
+:deep(.ant-form-item) {
+    margin-bottom: 16px;
+}
+
+.tag-box {
+    height: calc(100vh - 480px);
+    overflow: auto;
+}
+</style>

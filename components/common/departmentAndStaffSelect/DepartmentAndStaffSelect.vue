@@ -146,8 +146,8 @@ const emit = defineEmits(['update:staffListValue', 'update:departmentListValue',
 // 组件的样式配置
 const isHorizontal = layoutMode && layoutMode.value === 'horizontal'
 const flexDirection = computed(() => isHorizontal ? 'row' : 'column')
-const wrapperHeight = computed(() => isHorizontal ? '44px' : '88px')
-const marginBottom = computed(() => isHorizontal ? '0' : '24px')
+const wrapperHeight = computed(() => isHorizontal ? '44px' : 'auto')
+const marginBottom = computed(() => isHorizontal ? '0' : '12px')
 const inputWidth = computed(() => {
   if (!isHorizontal) {
     if (width && width.value) return width.value + 'px'

@@ -106,11 +106,11 @@
               :width="610"
               :is-multiple="true"
             />
-            <div style="padding-top: 4px; margin-bottom: 8px">
+            <div class="button-group">
               <a-button
                 :disabled="staffListValue.length === 0"
                 type="primary"
-                style="width: 200px;margin-left: 70px;"
+                class="action-button"
                 @click="handleAddRoleUser"
               >
                 添加
@@ -119,7 +119,7 @@
                 :disabled="staffListValue.length === 0"
                 type="primary"
                 danger
-                style="width: 200px;margin-left: 70px;"
+                class="action-button"
                 @click="handleDeleteRoleUser"
               >
                 解绑
@@ -354,5 +354,39 @@ onMounted(() => getCompletePermissionTree().then(res => completeRoleTreeData.val
 .tag-box {
     height: 480px;
     overflow: auto;
+}
+
+/* 按钮组响应式布局 */
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.action-button {
+    min-width: 120px;
+    flex: 1;
+    max-width: 200px;
+}
+
+/* 小屏幕适配 */
+@media screen and (max-width: 768px) {
+    .button-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .action-button {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+/* 确保有足够的垂直间距避免重叠 */
+:deep(.ant-form-item) {
+    margin-bottom: 16px;
 }
 </style>
