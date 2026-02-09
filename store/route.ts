@@ -139,8 +139,8 @@ export const useRouteStore = defineStore('routeStore', {
         } else this.clearButtonNode(node.children)
       }
     },
-    isButtonEnable(buttonPath: string): boolean {
-      const findButton = this.buttonMap.get(this.currentRoutePath)?.indexOf(buttonPath)
+    isButtonEnable(buttonPath: string, currentRoutePath = ''): boolean {
+      const findButton = this.buttonMap.get(currentRoutePath ? currentRoutePath : this.currentRoutePath)?.indexOf(buttonPath)
       return findButton !== undefined && findButton !== -1
     },
     getKeepAliveList() {
