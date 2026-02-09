@@ -209,7 +209,9 @@ const queryStaffList = (deptIdList: Array<string>, name = '') =>
     getStaffList(deptIdList, name).then(res => {
       staffListOption.value = res.payload
       staffListOption.value.forEach(option => {
-        option.label = option.label + '(' + option.deptName + ')'
+        if (option.deptName) {
+          option.label = option.label + '(' + option.deptName + ')'
+        }
         staffId2AvatarMap[option.value] = option.pictureLink || ''
       })
     })
@@ -272,6 +274,14 @@ watch(() => props.departmentListValue, value => localDepartmentListValue && valu
   display: inline-block;
   height: 38px;
   width: 30px;
+  vertical-align: middle;
+}
+
+/* 选项容器样式 - 确保头像和文字垂直居中对齐 */
+:deep(.ant-select-item-option-content) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .confirm-btn {
   color: #fff;
