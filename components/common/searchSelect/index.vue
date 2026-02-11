@@ -233,9 +233,9 @@ defineExpose({
     hasSearched.value = false // 重置标记
     if (keyword) {
       await searchData(keyword)
-    } else if (internalValue.value) {
+    } else {
       // 如果没有传入关键字,使用当前值作为关键字
-      await searchData(String(internalValue.value))
+      await searchData(String(internalValue.value || ''))
     }
   },
   // 清空选项列表
