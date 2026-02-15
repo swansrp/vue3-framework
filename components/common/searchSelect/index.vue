@@ -195,6 +195,10 @@ const searchData = debounce(async (keyword: string) => {
   } finally {
     loading.value = false
   }
+  if (options.value.length === 1) {
+    internalValue.value = options.value[0][props.valueField]
+    emit('update:modelValue', internalValue.value)
+  }
 }, props.debounceTime)
 
 // 处理选择变化
