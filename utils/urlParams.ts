@@ -20,8 +20,14 @@ export function parseUrlParams(): Record<string, string | string[]> {
       search = '?' + hashParts.slice(1).join('?')
     }
   }
+
+  // 处理未 encode 的多余 '?'，避免污染参数值
+  if (search) {
+    search = '?' + search.slice(1).replace(/\?/g, '&')
+  }
   
   const searchParams = new URLSearchParams(search)
+
 
   searchParams.forEach((value, key) => {
     // 检查是否已存在该参数（处理同名参数，如 ?key=a&key=b）

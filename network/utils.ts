@@ -2,7 +2,8 @@ import { EmptyObjectType } from '@/framework/utils/type'
 
 export const getQueryObject = function (url: string) {
   url = url || window.location.href
-  const search = url.substring(url.lastIndexOf('?') + 1).split('#')[0]
+  const rawSearch = url.substring(url.indexOf('?') + 1).split('#')[0]
+  const search = rawSearch.replace(/\?/g, '&')
   const obj: EmptyObjectType = {}
   const reg = /([^?&=]+)=([^?&=]*)/g
   search.replace(reg, (rs, $1, $2) => {
