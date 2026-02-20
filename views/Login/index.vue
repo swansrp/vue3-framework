@@ -17,7 +17,7 @@
       <password-reset-form
         v-if="passwordResetMode"
         :captcha-url="initPasswordCaptchaUrl"
-        :loading="loading"
+        :loading="loginProcessLoading"
         @submit="handleInitPassword"
         @update-captcha="updateCaptchaUrl"
       />
@@ -34,7 +34,7 @@
         <account-register-form
           v-else
           :captcha-url="registerCaptchaUrl"
-          :loading="loading"
+          :loading="loginProcessLoading"
           @submit="handleRegister"
           @update-captcha="updateCaptchaUrl"
           @to-login="changeToLoginMode"
@@ -56,7 +56,7 @@
           >
             <account-login-form
               :captcha-url="loginCaptchaUrl"
-              :loading="loading"
+              :loading="loginProcessLoading"
               @submit="handleAccountLogin"
               @update-captcha="updateCaptchaUrl"
             />
@@ -68,6 +68,7 @@
           >
             <phone-login-form
               :msg-code-key="msgCodeKey"
+              :loading="loginProcessLoading"
               @submit="handleMsgLogin"
             />
           </a-tab-pane>
@@ -88,7 +89,7 @@
     <password-expired-modal
       v-model="passwordExpiredModalVisible"
       :captcha-url="passwordChangeCaptchaUrl"
-      :loading="loading"
+      :loading="loginProcessLoading"
       @submit="handlePasswordExpired"
       @update-captcha="updateCaptchaUrl"
     />
@@ -139,6 +140,9 @@ const registerWithPhoneNumber: Ref<boolean> = ref(false)
 const msgCodeKey = ref(0)
 const passwordExpiredModalVisible = ref(false)
 
+// 专门用于控制所有登录相关按钮的禁用状态
+const loginProcessLoading: Ref<boolean> = ref(false)
+
 // 为不同场景创建独立的验证码URL
 const loginCaptchaUrl: Ref<string> = ref('')
 const registerCaptchaUrl: Ref<string> = ref('')
@@ -186,6 +190,7 @@ const handleSubmit = () => {
   const { userName, password, captcha } = formInline
   let captchaType = 'LOGIN_CAPTCHA'
   loading.value = true
+  loginProcessLoading.value = true
   login(captcha, userName, Md5.hashStr(password))
       .then((res) => {
         afterLogin(res)
@@ -201,33 +206,42 @@ const handleSubmit = () => {
           updateCaptchaUrl('PASSWORD_CHANGE_CAPTCHA')
         }
         recoveryFun(captchaType)
+        // 登录失败时重置按钮状态
+        loginProcessLoading.value = false
       })
 }
 const handleRegister = (data: { loginId: string; password: string; captcha: string }) => {
   const { loginId, password, captcha } = data
   loading.value = true
+  loginProcessLoading.value = true
   return passwordRegister(captcha, loginId, Md5.hashStr(password))
       .then((res) => {
         afterLogin(res)
       })
       .catch(() => {
         recoveryFun('LOGIN_CAPTCHA')
+        // 登录失败时重置按钮状态
+        loginProcessLoading.value = false
       })
 }
 
 const handleMsgRegister = (data: any) => {
   loading.value = true
+  loginProcessLoading.value = true
   return msgCodeRegister(data)
       .then((res) => {
         afterLogin(res)
       })
       .catch(() => {
         recoveryFun('LOGIN_CAPTCHA')
+        // 登录失败时重置按钮状态
+        loginProcessLoading.value = false
       })
 }
 
 const handleMsgLogin = (data: any) => {
   loading.value = true
+  loginProcessLoading.value = true
   return msgCodeLogin(data.phoneNumber, data.msgCode)
       .then((res) => {
         afterLogin(res)
@@ -235,6 +249,8 @@ const handleMsgLogin = (data: any) => {
       .catch(() => {
         msgCodeKey.value = msgCodeKey.value + 1
         loading.value = false
+        // 登录失败时重置按钮状态
+        loginProcessLoading.value = false
       })
 }
 
@@ -379,48 +395,45 @@ const afterLogin = (res: any) => {
   localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
   localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
   loading.value = false
+  // 注意：loginProcessLoading 在动画结束后才重置
 
+  const removeAnimation = () => {
+    if (successElement.parentNode) {
+      if (successElement.parentNode) {
+        document.body.removeChild(successElement)
+      }
+      if (document.head.contains(style)) {
+        document.head.removeChild(style)
+      }
+    }
+  }
   // 2.5秒后开始退场动画，完成后再跳转页面
   setTimeout(() => {
-    if (successElement.parentNode) {
-      successElement.style.animation =
-          'successSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) reverse'
-      setTimeout(() => {
-        if (successElement.parentNode) {
-          document.body.removeChild(successElement)
-        }
-        if (document.head.contains(style)) {
-          document.head.removeChild(style)
-        }
-        // 确保提示完全消失后再进行页面跳转
-        setTimeout(() => {
-          checkLoginState()
-              .then(() => {
-                router.replace(redirect_uri || '/')
-              })
-              .catch(() => {
-                // 如果登录状态检查失败，直接跳转
-                router.replace(redirect_uri || '/')
-              })
-        }, 100)
-      }, 400)
-    } else {
-      // 如果元素已经被移除，直接跳转
-      setTimeout(() => {
-        checkLoginState()
-            .then(() => {
-              router.replace(redirect_uri || '/')
+    checkLoginState()
+        .then(() => {
+          router.replace(redirect_uri || '/').then(() => {
+            nextTick(() => {
+              removeAnimation()
+              // 登录流程完全结束后重置按钮状态
+              loginProcessLoading.value = false
             })
-            .catch(() => {
-              router.replace(redirect_uri || '/')
+          })
+        })
+        .catch(() => {
+          router.replace(redirect_uri || '/').then(() => {
+            nextTick(() => {
+              removeAnimation()
+              // 登录流程完全结束后重置按钮状态
+              loginProcessLoading.value = false
             })
-      }, 100)
-    }
+          })
+        })
   }, 2500)
 }
 
 const handleInitPassword = (data: { password: string; passwordConfirm: string; captcha: string }) => {
   loading.value = true
+  loginProcessLoading.value = true
   const { password, passwordConfirm, captcha } = data
   const { userName } = formInline
   initPasswordAndLogin(
@@ -436,6 +449,8 @@ const handleInitPassword = (data: { password: string; passwordConfirm: string; c
         passwordResetMode.value = false
         title.value = document.title
         recoveryFun('LOGIN_CAPTCHA')
+        // 登录失败时重置按钮状态
+        loginProcessLoading.value = false
       })
 }
 
@@ -447,6 +462,7 @@ const changeToLoginMode = () => {
 // 处理密码过期的函数
 const handlePasswordExpired = (data: { password: string; passwordConfirm: string; captcha: string }) => {
   loading.value = true
+  loginProcessLoading.value = true
   const { password, passwordConfirm, captcha } = data
   const { userName, password: oldPassword } = formInline
 
@@ -466,6 +482,8 @@ const handlePasswordExpired = (data: { password: string; passwordConfirm: string
       .catch(() => {
         loading.value = false
         updateCaptchaUrl('PASSWORD_CHANGE_CAPTCHA')
+        // 登录失败时重置按钮状态
+        loginProcessLoading.value = false
       })
 }
 

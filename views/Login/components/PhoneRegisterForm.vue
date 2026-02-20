@@ -10,6 +10,7 @@
       :finish="handleSubmit"
       :phone-number-existed="false"
       :show-label="false"
+      :loading="props.loading"
       form-class="register-form"
       sms-type="REGISTER_MSG_CODE"
       submit-text="注册并登录"
@@ -81,10 +82,18 @@ import MsgCode from '@/framework/components/common/msgCode/index.vue'
 import { isNotEmpty } from '@/framework/utils/common'
 
 
+interface Props {
+  loading?: boolean
+}
+
 interface Emits {
   (e: 'submit', data: any): void
   (e: 'to-login'): void
 }
+
+const props = withDefaults(defineProps<Props>(), {
+  loading: false
+})
 
 const emit = defineEmits<Emits>()
 

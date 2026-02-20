@@ -116,7 +116,6 @@ import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 import { TimerType } from '@/framework/utils/type'
 
 const countDown = ref(-1)
-const loading: Ref<boolean> = ref(false)
 const props = withDefaults(
   defineProps<{
     smsType: string
@@ -125,6 +124,7 @@ const props = withDefaults(
     submitText?: string
     formData: { phoneNumber: string, msgCode: string, captcha: string }
     finish: (formData: any) => Promise<void>
+    loading?: boolean
     // 是否显示label
     showLabel?: boolean
     // 表单布局
@@ -139,6 +139,7 @@ const props = withDefaults(
   {
     submitText: '登录',
     phoneNumberExisted: undefined,
+    loading: false,
     showLabel: false,
     layout: 'horizontal',
     labelCol: undefined,
@@ -146,7 +147,7 @@ const props = withDefaults(
     formClass: ''
   }
 )
-const { smsType, phoneNumberExisted } = toRefs(props)
+const { smsType, phoneNumberExisted, loading } = toRefs(props)
 const emit = defineEmits<{
   (e: 'update:formData', value: any): void
 }>()

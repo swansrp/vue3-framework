@@ -3,6 +3,7 @@
     :key="msgCodeKey"
     v-model:form-data="formData"
     :finish="handleSubmit"
+    :loading="loading"
     :phone-number-existed="true"
     sms-type="LOGIN_MSG_CODE"
   />
@@ -15,6 +16,7 @@ import MsgCode from '@/framework/components/common/msgCode/index.vue'
 
 interface Props {
   msgCodeKey?: number
+  loading?: boolean
 }
 
 interface Emits {
@@ -22,7 +24,8 @@ interface Emits {
 }
 
 withDefaults(defineProps<Props>(), {
-  msgCodeKey: 0
+  msgCodeKey: 0,
+  loading: false
 })
 
 const emit = defineEmits<Emits>()
