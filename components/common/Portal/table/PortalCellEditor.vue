@@ -57,10 +57,7 @@
       />
     </div>
   </template>
-  <template
-    v-else-if="column.fieldType === FIELD_TYPE.SELECT||
-      column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
-  >
+  <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">
     <a-select
       :ref="editorRef"
       :bordered="false"
@@ -79,10 +76,36 @@
       @click.stop="closeEditor"
     />
   </template>
-  <template
-    v-else-if="column.fieldType === FIELD_TYPE.TREE||
-      column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
-  >
+  <template v-else-if="column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE">
+    <a-select
+      :ref="editorRef"
+      :bordered="false"
+      :get-popup-container="getPopupContainer"
+      :options="column.referenceDictOption || []"
+      :value="modelValue ? modelValue.split(',').filter(Boolean) : []"
+      mode="multiple"
+      open
+      style="width: 200px"
+      @deselect="v => {
+        const currentValues = modelValue ? modelValue.split(',').filter(Boolean) : [];
+        const newValues = currentValues.filter(item => item !== v);
+        const newValue = newValues.join(',');
+        cellUpdate(recordIndexs[0], column.dataIndex, newValue);
+        modelValue = newValue;
+      }"
+      @select="v => {
+        const currentValues = modelValue ? modelValue.split(',').filter(Boolean) : [];
+        const newValues = [...currentValues, v];
+        const newValue = newValues.join(',');
+        cellUpdate(recordIndexs[0], column.dataIndex, newValue);
+        modelValue = newValue;
+      }"
+      @keydown.esc="closeEditor"
+      @click.stop="closeEditor"
+      @blur="doFunctions(save, closeEditor)"
+    />
+  </template>
+  <template v-else-if="column.fieldType === FIELD_TYPE.TREE">
     <a-tree-select
       :ref="editorRef"
       :bordered="false"
@@ -92,7 +115,6 @@
       default-open
       :value="modelValue"
       style="width: 300px;"
-      tree-checkable
       tree-default-expand-all
       tree-node-filter-prop="label"
       @select="v => {
@@ -103,6 +125,28 @@
       }"
       @keydown.esc="closeEditor"
       @click.stop="closeEditor"
+    />
+  </template>
+  <template v-else-if="column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE">
+    <a-tree-select
+      :ref="editorRef"
+      :bordered="false"
+      :get-popup-container="getPopupContainer"
+      :tree-data="column.referenceDictOption || []"
+      allow-clear
+      default-open
+      :value="modelValue ? modelValue.split(',').filter(Boolean) : []"
+      style="width: 300px;"
+      tree-checkable
+      tree-default-expand-all
+      tree-node-filter-prop="label"
+      @change="v => {
+        const newValue = Array.isArray(v) ? v.join(',') : '';
+        cellUpdate(recordIndexs[0], column.dataIndex, newValue);
+        modelValue = newValue;
+      }"
+      @keydown.esc="closeEditor"
+      @blur="doFunctions(save, closeEditor)"
     />
   </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.DATE">

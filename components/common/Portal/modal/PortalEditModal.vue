@@ -71,17 +71,24 @@
                 un-checked-value="0"
               />
               <a-select
-                v-else-if="column.fieldType === FIELD_TYPE.SELECT||
-                  column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+                v-else-if="column.fieldType === FIELD_TYPE.SELECT"
                 :bordered="false"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                 :options="column.referenceDictOption || []"
                 :value="config.modal.data[column.dataIndex]"
                 @update:value=" v => config.modal.data[column.dataIndex] = v"
               />
+              <a-select
+                v-else-if="column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+                :bordered="false"
+                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                :options="column.referenceDictOption || []"
+                :value="getMultiSelectValue(config.modal.data[column.dataIndex])"
+                mode="multiple"
+                @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
+              />
               <a-tree-select
-                v-else-if="column.fieldType === FIELD_TYPE.TREE||
-                  column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+                v-else-if="column.fieldType === FIELD_TYPE.TREE"
                 :bordered="false"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
                 :tree-data="column.referenceDictOption || []"
@@ -90,6 +97,18 @@
                 tree-default-expand-all
                 tree-node-filter-prop="label"
                 @select="v => config.modal.data[column.dataIndex] = v"
+              />
+              <a-tree-select
+                v-else-if="column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+                :bordered="false"
+                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                :tree-data="column.referenceDictOption || []"
+                :value="getMultiSelectValue(config.modal.data[column.dataIndex])"
+                allow-clear
+                multiple
+                tree-default-expand-all
+                tree-node-filter-prop="label"
+                @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
               />
               <a-date-picker
                 v-else-if="column.fieldType === FIELD_TYPE.DATE"
@@ -307,6 +326,12 @@ const handleAdvanceSearchConfirm = () => {
   advancedCondition.show = false
 }
 const dict = dictStore()
+
+// 将逗号分隔的字符串转换为数组（用于多选组件）
+const getMultiSelectValue = (value: string): string[] => {
+  if (!value) return []
+  return String(value).split(',').filter(v => v !== '')
+}
 const showEntityConditionDialogBox = (column: ColumnType, condition: string) => {
   advancedCondition.currentColumn = column
   return getPortalConfig(column.referenceDict).then(async res => {
