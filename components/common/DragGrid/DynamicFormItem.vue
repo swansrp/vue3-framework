@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { FileOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
-import { computed, ref, watch } from 'vue'
+import {FileOutlined, QuestionCircleOutlined} from '@ant-design/icons-vue'
+import {computed, ref, watch} from 'vue'
 
-import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
-import { downloadUrl } from '@/framework/network/request'
-import { strRemoveLF } from '@/framework/utils/common'
-import { getFileName } from '@/framework/utils/file'
+import {downloadUrl} from '@/framework/network/request'
+import {strRemoveLF} from '@/framework/utils/common'
+import {getFileName} from '@/framework/utils/file'
 
 interface Attribute {
   id: string;
@@ -67,6 +67,24 @@ const switchChecked = computed({
   },
 })
 
+// 多选类型的值计算（数组与逗号分隔字符串转换）
+const multiSelectValue = computed({
+  get() {
+    const value = props.modelValue !== undefined
+      ? props.modelValue
+      : props.attribute.defaultValue
+    if (!value) return []
+    // 如果已经是数组，直接返回
+    if (Array.isArray(value)) return value
+    // 如果是逗号分隔的字符串，转换为数组
+    return String(value).split(',').filter(v => v !== '')
+  },
+  set(value: string[]) {
+    // 将数组转换为逗号分隔的字符串存储
+    emit('update:modelValue', value.join(','))
+  },
+})
+
 // 字段类型映射
 const fieldTypeMap: Record<string, string> = {
   [FIELD_TYPE.SECTION_TITLE]: '区域标题',
@@ -75,7 +93,9 @@ const fieldTypeMap: Record<string, string> = {
   [FIELD_TYPE.SWITCH]: '开关',
   [FIELD_TYPE.NUMBER]: '数值',
   [FIELD_TYPE.SELECT]: '下拉选择',
+  [FIELD_TYPE.SELECT_MULTI_IN_ONE]: '下拉选择(多选)',
   [FIELD_TYPE.TREE]: '树形选择',
+  [FIELD_TYPE.TREE_MULTI_IN_ONE]: '树形选择(多选)',
   [FIELD_TYPE.DATE]: '日期',
   [FIELD_TYPE.DATETIME]: '日期时间',
   [FIELD_TYPE.HREF]: '超链接',
@@ -160,15 +180,26 @@ watch(
     
     if (
       props.readonly &&
-      (props.attribute.fieldType === FIELD_TYPE.SELECT || 
-       props.attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) &&
+      (props.attribute.fieldType === FIELD_TYPE.SELECT ||
+       props.attribute.fieldType === FIELD_TYPE.TREE ||
+       props.attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+       props.attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) &&
       hasValidDict &&
       currentValue.value &&
       props.dictTranslateFn
     ) {
       try {
-        const label = await props.dictTranslateFn(props.attribute.dict, String(currentValue.value))
-        translatedDisplayValue.value = label
+        // 对于多选类型，需要翻译每个值
+        if (props.attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+            props.attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+          const values = String(currentValue.value).split(',').filter(v => v !== '')
+          const translatedValues = await Promise.all(
+            values.map(v => props.dictTranslateFn!(props.attribute.dict, v))
+          )
+          translatedDisplayValue.value = translatedValues.join(',')
+        } else {
+          translatedDisplayValue.value = await props.dictTranslateFn(props.attribute.dict, String(currentValue.value))
+        }
       } catch (error) {
         console.error('翻译失败:', error)
         translatedDisplayValue.value = formatDisplayValue(currentValue.value, props.attribute.fieldType)
@@ -450,12 +481,9 @@ const handleFileDownload = (url: string) => {
             >{{ attribute.unit }}</span>
           </div>
 
-          <!-- 下拉选择 -->
+          <!-- 下拉选择（单选） -->
           <slot
-            v-else-if="
-              attribute.fieldType === FIELD_TYPE.SELECT ||
-                attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE
-            "
+            v-else-if="attribute.fieldType === FIELD_TYPE.SELECT"
             name="select"
             :attribute="attribute"
             :value="currentValue"
@@ -470,12 +498,28 @@ const handleFileDownload = (url: string) => {
             />
           </slot>
 
-          <!-- 树形选择 -->
+          <!-- 下拉选择（多选） -->
           <slot
-            v-else-if="
-              attribute.fieldType === FIELD_TYPE.TREE ||
-                attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE
-            "
+            v-else-if="attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+            name="selectMulti"
+            :attribute="attribute"
+            :value="multiSelectValue"
+            :readonly="readonly"
+            :update-value="(val: string[]) => emit('update:modelValue', val.join(','))"
+          >
+            <a-select
+              v-model:value="multiSelectValue"
+              mode="multiple"
+              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+              :disabled="readonly"
+              allow-clear
+              style="width: 100%"
+            />
+          </slot>
+
+          <!-- 树形选择（单选） -->
+          <slot
+            v-else-if="attribute.fieldType === FIELD_TYPE.TREE"
             name="tree"
             :attribute="attribute"
             :value="currentValue"
@@ -484,6 +528,27 @@ const handleFileDownload = (url: string) => {
           >
             <a-tree-select
               v-model:value="currentValue"
+              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+              :disabled="readonly"
+              allow-clear
+              tree-default-expand-all
+              tree-node-filter-prop="label"
+              style="width: 100%"
+            />
+          </slot>
+
+          <!-- 树形选择（多选） -->
+          <slot
+            v-else-if="attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+            name="treeMulti"
+            :attribute="attribute"
+            :value="multiSelectValue"
+            :readonly="readonly"
+            :update-value="(val: string[]) => emit('update:modelValue', val.join(','))"
+          >
+            <a-tree-select
+              v-model:value="multiSelectValue"
+              multiple
               :placeholder="`请选择${strRemoveLF(attribute.label)}`"
               :disabled="readonly"
               allow-clear

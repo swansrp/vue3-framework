@@ -323,6 +323,17 @@ defineExpose({
               ></slot>
             </template>
 
+            <!-- 传递 selectMulti 插槽 -->
+            <template
+              v-if="$slots['selectMulti']"
+              #selectMulti="slotProps"
+            >
+              <slot
+                name="selectMulti"
+                v-bind="slotProps"
+              ></slot>
+            </template>
+
             <!-- 传递 tree 插槽 -->
             <template
               v-if="$slots['tree']"
@@ -330,6 +341,17 @@ defineExpose({
             >
               <slot
                 name="tree"
+                v-bind="slotProps"
+              ></slot>
+            </template>
+
+            <!-- 传递 treeMulti 插槽 -->
+            <template
+              v-if="$slots['treeMulti']"
+              #treeMulti="slotProps"
+            >
+              <slot
+                name="treeMulti"
                 v-bind="slotProps"
               ></slot>
             </template>
