@@ -9,6 +9,26 @@ import { request } from '@/framework/network/request'
 
 /**
  * 通过字典编码获取业务字典
+ * @api GET /biz/dict/existed
+ * @param params - 查询参数
+ * @param showSuccess - 是否显示成功提示（默认: true）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ * @responseTypes String "0" 不存在 "1" 已存在
+ */
+export const getDictExisted = (params?: {
+  /** 字典名称 */
+  name?: string
+  /** 字典编码 */
+  code?: string
+}, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildGetApiByType('/biz/dict/existed', '')
+  return request(api, params || {}, {}, showSuccess, showLoading, showErr)
+}
+
+
+/**
+ * 通过字典编码获取业务字典
  * @api GET /biz/dict/code
  * @param params - 查询参数
  * @param showSuccess - 是否显示成功提示（默认: true）
@@ -133,8 +153,8 @@ export const systemBizDictAddDict = (params?: {
 export const getDictList = (params?: {
   /** bizId */
   bizId?: string
-  /** name */
-  name?: string
+  /** code */
+  code?: string
 }, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildGetApiByType('/biz/dict/list', '')
   return request(api, params || {}, {}, showSuccess, showLoading, showErr)

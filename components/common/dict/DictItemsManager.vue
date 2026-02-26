@@ -12,7 +12,7 @@ import { ref, watch } from 'vue'
 import DictItemEditModal from './DictItemEditModal.vue'
 import DictItemsList from './DictItemsList.vue'
 
-import { deleteEnterpriseDict, systemBizDictAddDict, systemBizDictUpdateEnterpriseDict, getEnterpriseDictByCode, systemBizDictUpdateDictName } from '@/framework/apis/dict/bizDictController'
+import { deleteEnterpriseDict, systemBizDictAddDict, systemBizDictUpdateEnterpriseDict, getEnterpriseDictByCode, systemBizDictUpdateDictName, getDictExisted } from '@/framework/apis/dict/bizDictController'
 import type { BizDictVO } from '@/framework/apis/dict/bizDictController'
 
 interface Props {
@@ -139,7 +139,7 @@ const openForCreate = () => {
 }
 
 // 添加新字典项
-const addNewDictItem = () => {
+const addNewDictItem = async () => {
   // 创建模式下，先验证字典编码和名称
   if (isCreatingMode.value && !newDictCode.value) {
     message.warning('请先输入字典编码')
@@ -149,6 +149,28 @@ const addNewDictItem = () => {
   if (isCreatingMode.value && !newDictName.value) {
     message.warning('请先输入字典名称')
     return
+  }
+  
+  // 创建模式下，校验字典编码和名称是否已存在
+  if (isCreatingMode.value) {
+    try {
+      // 校验字典编码是否已存在
+      const codeCheckRes = await getDictExisted({ code: newDictCode.value }, false, false, false)
+      if (codeCheckRes?.payload === '1') {
+        message.warning(`字典编码 "${newDictCode.value}" 已存在，请使用其他编码`)
+        return
+      }
+      
+      // 校验字典名称是否已存在
+      const nameCheckRes = await getDictExisted({ name: newDictName.value }, false, false, false)
+      if (nameCheckRes?.payload === '1') {
+        message.warning(`字典名称 "${newDictName.value}" 已存在，请使用其他名称`)
+        return
+      }
+    } catch (error) {
+      console.error('校验字典失败:', error)
+      // 校验失败时不阻止操作，继续执行
+    }
   }
   
   const dictCode = isCreatingMode.value ? newDictCode.value : currentDictCode.value
@@ -184,6 +206,28 @@ const saveBatchAdd = async () => {
   if (isCreatingMode.value && !newDictCode.value) {
     message.warning('请先输入字典编码')
     return
+  }
+  
+  // 创建模式下，校验字典编码和名称是否已存在
+  if (isCreatingMode.value) {
+    try {
+      // 校验字典编码是否已存在
+      const codeCheckRes = await getDictExisted({ code: newDictCode.value }, false, false, false)
+      if (codeCheckRes?.payload === '1') {
+        message.warning(`字典编码 "${newDictCode.value}" 已存在，请使用其他编码`)
+        return
+      }
+      
+      // 校验字典名称是否已存在
+      const nameCheckRes = await getDictExisted({ name: newDictName.value }, false, false, false)
+      if (nameCheckRes?.payload === '1') {
+        message.warning(`字典名称 "${newDictName.value}" 已存在，请使用其他名称`)
+        return
+      }
+    } catch (error) {
+      console.error('校验字典失败:', error)
+      // 校验失败时不阻止操作，继续执行
+    }
   }
   
   // 企业端模式需要 entityId
@@ -431,6 +475,18 @@ const saveDictName = async () => {
   if (editingDictName.value === currentDictName.value) {
     isEditingDictName.value = false
     return
+  }
+  
+  // 校验新的字典名称是否已存在
+  try {
+    const nameCheckRes = await getDictExisted({ name: editingDictName.value }, false, false, false)
+    if (nameCheckRes?.payload === '1') {
+      message.warning(`字典名称 "${editingDictName.value}" 已存在，请使用其他名称`)
+      return
+    }
+  } catch (error) {
+    console.error('校验字典名称失败:', error)
+    // 校验失败时不阻止操作，继续执行
   }
   
   try {
