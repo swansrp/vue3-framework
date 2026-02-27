@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {FileOutlined, QuestionCircleOutlined} from '@ant-design/icons-vue'
-import {computed, ref, watch} from 'vue'
+import { FileOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { computed, ref, watch } from 'vue'
 
-import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
+import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
-import {downloadUrl} from '@/framework/network/request'
-import {strRemoveLF} from '@/framework/utils/common'
-import {getFileName} from '@/framework/utils/file'
+import { downloadUrl } from '@/framework/network/request'
+import { strRemoveLF } from '@/framework/utils/common'
+import { getFileName } from '@/framework/utils/file'
 
 interface Attribute {
   id: string;
@@ -59,7 +59,7 @@ const switchChecked = computed({
     // Switch 类型默认值为 '0'（未选中）
     const value = props.modelValue !== undefined
       ? props.modelValue
-      : (props.attribute.defaultValue || '0')
+      : (props.attribute.defaultValue ? props.attribute.defaultValue : undefined)
     return value
   },
   set(value) {
@@ -80,7 +80,6 @@ const multiSelectValue = computed({
     return String(value).split(',').filter(v => v !== '')
   },
   set(value: string[]) {
-    // 将数组转换为逗号分隔的字符串存储
     emit('update:modelValue', value.join(','))
   },
 })
@@ -505,7 +504,7 @@ const handleFileDownload = (url: string) => {
             :attribute="attribute"
             :value="multiSelectValue"
             :readonly="readonly"
-            :update-value="(val: string[]) => emit('update:modelValue', val.join(','))"
+            :update-value="(val: string[]) => emit('update:modelValue', Array.isArray(val) ? val.join(',') : String(val))"
           >
             <a-select
               v-model:value="multiSelectValue"
@@ -544,7 +543,7 @@ const handleFileDownload = (url: string) => {
             :attribute="attribute"
             :value="multiSelectValue"
             :readonly="readonly"
-            :update-value="(val: string[]) => emit('update:modelValue', val.join(','))"
+            :update-value="(val: string[]) => emit('update:modelValue', Array.isArray(val) ? val.join(',') : String(val))"
           >
             <a-tree-select
               v-model:value="multiSelectValue"
