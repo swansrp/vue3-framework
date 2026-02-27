@@ -29,6 +29,8 @@ interface Props {
   manageBtnText?: string
   // 是否允许清空
   allowClear?: boolean
+  // 是否多选，默认false
+  multiple?: boolean
 }
 
 interface Emits {
@@ -43,12 +45,37 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '请选择',
   showManageBtn: true,
   manageBtnText: '配置',
-  allowClear: true
+  allowClear: true,
+  multiple: false
 })
 
 const emit = defineEmits<Emits>()
 
-const internalValue = ref<string | number | undefined>(props.modelValue)
+// 解析逗号分隔的字符串为数组（多选模式）
+const parseValueToArray = (value: string | number | undefined): (string | number)[] => {
+  if (value === undefined || value === null || value === '') {
+    return []
+  }
+  if (Array.isArray(value)) {
+    return value
+  }
+  // 将逗号分隔的字符串转为数组
+  const strValue = String(value)
+  return strValue.split(',').filter(v => v !== '')
+}
+
+// 将数组转为逗号分隔的字符串
+const stringifyValue = (value: (string | number)[] | undefined): string | undefined => {
+  if (!value || value.length === 0) {
+    return undefined
+  }
+  return value.join(',')
+}
+
+// 内部值：单选时为 string|number|undefined，多选时为数组
+const internalValue = ref<string | number | undefined | (string | number)[]>(
+  props.multiple ? parseValueToArray(props.modelValue) : props.modelValue
+)
 const allDictItems = ref<BizDictVO[]>([]) // 所有字典项（系统+企业）
 const loading = ref(false)
 const manageModalVisible = ref(false)
@@ -109,11 +136,23 @@ const loadDictData = async () => {
 }
 
 // 处理选择变化
-const handleChange = (value: string | number | undefined) => {
+const handleChange = (value: string | number | undefined | (string | number)[]) => {
   internalValue.value = value
-  const option = allDictItems.value.find(item => item.value === value)
-  emit('update:modelValue', value)
-  emit('change', value, option)
+  
+  if (props.multiple) {
+    // 多选模式：返回逗号分隔的字符串
+    const strValue = stringifyValue(value as (string | number)[])
+    const selectedItems = (value as (string | number)[])
+      .map(v => allDictItems.value.find(item => item.value === v))
+      .filter(Boolean) as BizDictVO[]
+    emit('update:modelValue', strValue as any)
+    emit('change', strValue as any, selectedItems)
+  } else {
+    // 单选模式
+    const option = allDictItems.value.find(item => item.value === value)
+    emit('update:modelValue', value as string | number | undefined)
+    emit('change', value as string | number | undefined, option)
+  }
 }
 
 // 打开管理弹窗
@@ -292,7 +331,11 @@ const autoSaveSortOrder = async () => {
 
 // 监听外部值变化
 watch(() => props.modelValue, (newVal) => {
-  internalValue.value = newVal
+  if (props.multiple) {
+    internalValue.value = parseValueToArray(newVal)
+  } else {
+    internalValue.value = newVal
+  }
 })
 
 // 监听字典编码和企业ID变化，重新加载数据
@@ -320,6 +363,7 @@ defineExpose({
       :placeholder="placeholder"
       :allow-clear="allowClear"
       :options="selectOptions"
+      :mode="multiple ? 'multiple' : undefined"
       style="flex: 1"
       @change="handleChange"
     />
