@@ -61,6 +61,7 @@ const props = withDefaults(defineProps<Props<T>>(), {
 const emit = defineEmits<{
   (e: 'submit', values: Record<string, any>): void
   (e: 'validate', isValid: boolean, values: Record<string, any>): void
+  (e: 'fieldChange', fieldId: string | number, value: any): void  // 字段值变化事件
 }>()
 
 // 表单实例
@@ -87,6 +88,38 @@ const initFormData = () => {
 watch(() => props.items, () => {
   initFormData()
 }, { immediate: true, deep: true })
+
+// 字段名称到 ID 的映射
+const fieldNameToId = computed(() => {
+  const map = new Map<string, string | number>()
+  props.items.forEach(field => {
+    map.set(field.name, field.id)
+  })
+  return map
+})
+
+// 记录上一次的表单值（用于比较变化）
+const lastFormModel = ref<Record<string, any>>({})
+
+// 监听表单数据变化，触发 fieldChange 事件
+watch(formModel, (newModel) => {
+  // 遍历所有字段，找出变化的字段
+  for (const fieldName of Object.keys(newModel)) {
+    const newValue = newModel[fieldName]
+    const oldValue = lastFormModel.value[fieldName]
+    
+    // 只在值真正变化时触发
+    if (newValue !== oldValue) {
+      const fieldId = fieldNameToId.value.get(fieldName)
+      if (fieldId !== undefined) {
+        emit('fieldChange', fieldId, newValue)
+      }
+    }
+  }
+  
+  // 更新上一次的值
+  lastFormModel.value = { ...newModel }
+}, { deep: true })
 
 // 判断是否为文件类型
 const isFileType = (fieldType: string) => {
@@ -282,12 +315,12 @@ defineExpose({
       <!-- 自定义字段内容 -->
       <template #item="{ item: field }">
         <!-- 分割线：不需要表单验证 -->
-        <template v-if="field.fieldType === FIELD_TYPE.DIVIDER">
+        <template v-if="field.fieldType === FIELD_TYPE.DIVIDER || field.fieldType === FIELD_TYPE.SECTION_TITLE">
           <DynamicFormItem
             :attribute="{
               ...field,
               id: String(field.id),
-              isRequired: field.isRequired || '1'
+              isRequired: '0'
             }"
             :readonly="readonly"
             :show-label="false"
