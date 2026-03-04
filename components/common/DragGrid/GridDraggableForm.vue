@@ -74,9 +74,9 @@ const formModel = ref<Record<string, any>>({})
 const initFormData = () => {
   const data: Record<string, any> = {}
   props.items.forEach(field => {
-    // Switch 类型默认值为 '0'（未选中）
+    // Switch 类型默认值为 undefined（未选中状态），用户必须主动选择是或否
     if (field.fieldType === FIELD_TYPE.SWITCH) {
-      data[field.name] = field.data || field.defaultValue || '0'
+      data[field.name] = field.data || field.defaultValue || undefined
     } else {
       data[field.name] = field.data || field.defaultValue || undefined
     }

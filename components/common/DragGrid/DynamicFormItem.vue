@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { FileOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
-import { computed, ref, watch } from 'vue'
+import {FileOutlined, QuestionCircleOutlined} from '@ant-design/icons-vue'
+import {computed, ref, watch} from 'vue'
 
-import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
-import { downloadUrl } from '@/framework/network/request'
-import { strRemoveLF } from '@/framework/utils/common'
-import { getFileName } from '@/framework/utils/file'
+import {downloadUrl} from '@/framework/network/request'
+import {strRemoveLF} from '@/framework/utils/common'
+import {getFileName} from '@/framework/utils/file'
 
 interface Attribute {
   id: string;
@@ -56,11 +56,10 @@ const currentValue = computed({
 // 开关类型的值计算（与 currentValue 同步）
 const switchChecked = computed({
   get() {
-    // Switch 类型默认值为 '0'（未选中）
-    const value = props.modelValue !== undefined
+    // Switch 类型默认值为 undefined（未选中状态），用户必须主动选择是或否
+    return props.modelValue !== undefined
       ? props.modelValue
       : (props.attribute.defaultValue ? props.attribute.defaultValue : undefined)
-    return value
   },
   set(value) {
     emit('update:modelValue', value)
@@ -512,6 +511,8 @@ const handleFileDownload = (url: string) => {
               :placeholder="`请选择${strRemoveLF(attribute.label)}`"
               :disabled="readonly"
               allow-clear
+              :max-tag-count="2"
+              :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
               style="width: 100%"
             />
           </slot>
@@ -553,6 +554,8 @@ const handleFileDownload = (url: string) => {
               allow-clear
               tree-default-expand-all
               tree-node-filter-prop="label"
+              :max-tag-count="2"
+              :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
               style="width: 100%"
             />
           </slot>
@@ -820,17 +823,30 @@ const handleFileDownload = (url: string) => {
 }
 
 .readonly-value {
-  display: inline-block;
-  min-height: 32px;
-  line-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  line-height: 1.5;
+  padding: 2px 8px;
   color: #262626;
   font-size: 14px;
   word-break: break-all;
   white-space: pre-wrap;
+  background-color: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
   
   &.is-empty {
     color: #bfbfbf;
     font-style: italic;
+    background-color: transparent;
+    border-color: transparent;
+  }
+  
+  .field-unit {
+    margin-left: 4px;
+    color: #8c8c8c;
+    font-weight: 400;
   }
 }
 

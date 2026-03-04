@@ -5,7 +5,7 @@ import { ref, watch } from 'vue'
 
 import type { FormConfigInfo, MatrixInfo, ColumnInfo } from '../types'
 
-import AttributeFieldItem from '@/framework/components/common/DragGrid/DynamicFormItem.vue'
+import DynamicFormItem from '@/framework/components/common/DragGrid/DynamicFormItem.vue'
 import GridDraggableLayout, { type GridItem } from '@/framework/components/common/DragGrid/GridDraggableLayout.vue'
 import { sysFormConfigUpdate } from '@/framework/views/MainContent/dynamic/apis/sysFormConfigPortalController'
 
@@ -117,7 +117,7 @@ const handleAddField = () => {
       >
         <!-- 自定义字段内容 -->
         <template #item="{ item }">
-          <AttributeFieldItem
+          <DynamicFormItem
             :attribute="item"
             :readonly="false"
           >
@@ -148,7 +148,7 @@ const handleAddField = () => {
                 </a-popconfirm>
               </div>
             </template>
-          </AttributeFieldItem>
+          </DynamicFormItem>
         </template>
 
         <!-- 空状态 -->

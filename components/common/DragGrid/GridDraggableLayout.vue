@@ -348,16 +348,78 @@ const getItemStyle = (item: T) => {
     background-position: 0 0;
   }
 
-  &.readonly .grid-item {
-    cursor: default;
+  &.readonly {
+    // 只读模式下隐藏网格背景，使用纯白背景
+    background-image: none !important;
+    background-color: #fff;
+    padding: 16px;
+    
+    .grid-item {
+      cursor: default;
 
-    // 只读模式下隐藏边框和提示信息
-    :deep(.form-item-card) {
-      border: none;
-    }
+      // 只读模式下的表单项卡片样式 - 简洁无框设计
+      :deep(.form-item-card) {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 8px 0;
+        
+        &:hover {
+          border-color: transparent;
+          box-shadow: none;
+        }
+        
+        .field-row {
+          align-items: baseline;
+          
+          .field-label-inline {
+            color: #8c8c8c;
+            font-weight: 400;
+            font-size: 13px;
+          }
+          
+          .field-control-inline {
+            .readonly-value {
+              background: #f5f5f5;
+              border: 1px solid #e8e8e8;
+            }
+          }
+        }
+      }
+      
+      // 只读模式下的分割线样式
+      :deep(.form-divider-card) {
+        background: transparent;
+      }
+      
+      // 只读模式下的区域标题样式 - 添加上边框分隔
+      :deep(.form-section-title-card) {
+        background: transparent;
+        padding: 0 12px;
+        margin-top: 2px;
+        border-top: 5px solid #FAFAFA;
+        
+        .section-title-indicator {
+          width: 3px;
+          height: 14px;
+        }
+        
+        .section-title-text {
+          font-size: 13px;
+          font-weight: 600;
+          color: #262626;
+        }
+      }
+      
+      // 第一个区域标题不需要上边框
+      :deep(.form-section-title-card:first-of-type) {
+        margin-top: 0;
+      }
 
-    .grid-size-badge {
-      display: none;
+      .grid-size-badge {
+        display: none;
+      }
     }
   }
 

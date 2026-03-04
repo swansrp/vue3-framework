@@ -94,6 +94,18 @@ const selectOptions = computed(() => {
   }))
 })
 
+// 多选模式下超出数量时的占位显示
+const maxTagPlaceholder = (omittedValues: (string | number)[]) => {
+  if (omittedValues.length === 0) return ''
+  // 获取省略项的标签名称
+  const labels = omittedValues.map(v => {
+    const item = allDictItems.value.find(d => d.value === v)
+    return item?.label || v
+  })
+  // 显示省略的数量
+  return `+${omittedValues.length}...`
+}
+
 // 加载字典数据
 const loadDictData = async () => {
   if (!props.dictCode) {
@@ -364,6 +376,8 @@ defineExpose({
       :allow-clear="allowClear"
       :options="selectOptions"
       :mode="multiple ? 'multiple' : undefined"
+      :max-tag-count="multiple ? 2 : undefined"
+      :max-tag-placeholder="multiple ? maxTagPlaceholder : undefined"
       style="flex: 1"
       @change="handleChange"
     />
