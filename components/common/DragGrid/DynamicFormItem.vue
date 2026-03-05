@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {FileOutlined, QuestionCircleOutlined} from '@ant-design/icons-vue'
-import {computed, ref, watch} from 'vue'
+import { FileOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { computed, ref, watch } from 'vue'
 
-import {FIELD_TYPE} from '@/framework/components/common/Portal/type'
+import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
-import {downloadUrl} from '@/framework/network/request'
-import {strRemoveLF} from '@/framework/utils/common'
-import {getFileName} from '@/framework/utils/file'
+import { downloadUrl } from '@/framework/network/request'
+import { strRemoveLF } from '@/framework/utils/common'
+import { getFileName } from '@/framework/utils/file'
 
 interface Attribute {
   id: string;
@@ -20,6 +20,8 @@ interface Attribute {
   minValue?: string;
   maxValue?: string;
   labelWidth?: number; // 标签宽度（px）
+  dict?: string; // 字典编码
+  parentAttributeId?: string; // 父属性ID（级联字典用）
   [key: string]: any;
 }
 
@@ -29,11 +31,13 @@ interface Props {
   readonly?: boolean;
   showLabel?: boolean; // 是否显示标签
   dictTranslateFn?: (dictName: string, value: string) => Promise<string>; // 字典翻译函数
+  allFieldsValue?: Record<string, any>; // 当前表单所有字段的值（级联字典用）
 }
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   showLabel: true,
+  allFieldsValue: () => ({})
 })
 
 const emit = defineEmits<{
@@ -136,6 +140,17 @@ const labelWidthStyle = computed(() => {
     maxWidth: `${width}px`,
     width: `${width}px`,
   }
+})
+
+// 计算父属性的值（级联字典用）
+const parentValue = computed(() => {
+  if (!props.attribute.parentAttributeId || !props.allFieldsValue) {
+    return undefined
+  }
+  // allFieldsValue 的 key 是字段 name，需要通过 parentAttributeId 找到对应的 name
+  // 但这里我们只有 ID，所以需要外部传入 ID 到 value 的映射
+  // 暂时返回 undefined，由 GridDraggableForm 层面处理
+  return props.allFieldsValue[props.attribute.parentAttributeId]
 })
 
 // 格式化显示值
@@ -487,6 +502,8 @@ const handleFileDownload = (url: string) => {
             :value="currentValue"
             :readonly="readonly"
             :update-value="(val: any) => emit('update:modelValue', val)"
+            :parent-value="parentValue"
+            :all-fields-value="allFieldsValue"
           >
             <a-select
               v-model:value="currentValue"
@@ -504,6 +521,8 @@ const handleFileDownload = (url: string) => {
             :value="multiSelectValue"
             :readonly="readonly"
             :update-value="(val: string[]) => emit('update:modelValue', Array.isArray(val) ? val.join(',') : String(val))"
+            :parent-value="parentValue"
+            :all-fields-value="allFieldsValue"
           >
             <a-select
               v-model:value="multiSelectValue"

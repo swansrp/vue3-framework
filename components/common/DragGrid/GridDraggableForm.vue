@@ -5,6 +5,7 @@ import { ref, computed, watch } from 'vue'
 import GridDraggableLayout, { type GridItem } from './GridDraggableLayout.vue'
 
 import DynamicFormItem from '@/framework/components/common/DragGrid/DynamicFormItem.vue'
+import { evaluateVisibility } from '@/framework/components/common/DragGrid/visibilityCondition'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
 /**
@@ -28,6 +29,8 @@ export interface FormFieldItem extends GridItem {
   maxValue?: string         // 最大值
   description?: string      // 描述
   dict?: string             // 字典
+  parentAttributeId?: string // 父属性ID（级联字典用）
+  visibilityCondition?: string // 显示条件（JSON字符串）
   data: any                // 真正的数值
   [key: string]: any        // 允许其他扩展字段
 }
@@ -98,8 +101,72 @@ const fieldNameToId = computed(() => {
   return map
 })
 
+// 属性 ID 到值的映射（用于级联字典）
+const attributeIdToValue = computed(() => {
+  const map: Record<string, any> = {}
+  props.items.forEach(field => {
+    const value = formModel.value[field.name]
+    map[String(field.id)] = value
+  })
+  return map
+})
+
+// 字段可见性映射（响应式）
+const fieldVisibilityMap = computed(() => {
+  const map = new Map<string | number, boolean>()
+  props.items.forEach(field => {
+    const visible = !field.visibilityCondition 
+      ? true 
+      : evaluateVisibility(field.visibilityCondition, attributeIdToValue.value)
+    map.set(field.id, visible)
+  })
+  return map
+})
+
+// 可见字段列表（过滤后传给 GridDraggableLayout）
+const visibleItems = computed(() => {
+  return props.items.filter(field => fieldVisibilityMap.value.get(field.id) !== false)
+})
+
+// 记录上一次的可见性状态（用于检测隐藏）
+const lastVisibilityMap = ref<Map<string | number, boolean>>(new Map())
+
+// 监听字段可见性变化，隐藏时清空值
+watch(fieldVisibilityMap, (newMap) => {
+  props.items.forEach(field => {
+    const wasVisible = lastVisibilityMap.value.get(field.id) ?? true
+    const isNowVisible = newMap.get(field.id) ?? true
+    
+    // 从可见变为不可见时，清空字段值
+    if (wasVisible && !isNowVisible) {
+      formModel.value[field.name] = undefined
+    }
+  })
+  
+  // 更新上一次的可见性状态
+  lastVisibilityMap.value = new Map(newMap)
+}, { deep: true })
+
+// 计算字段是否可见（基于显示条件）
+const isFieldVisible = (field: T): boolean => {
+  return fieldVisibilityMap.value.get(field.id) ?? true
+}
+
 // 记录上一次的表单值（用于比较变化）
 const lastFormModel = ref<Record<string, any>>({})
+
+// 构建 parentAttributeId -> childFieldNames 的映射（级联字典用）
+const parentToChildrenMap = computed(() => {
+  const map = new Map<string, string[]>()
+  props.items.forEach(field => {
+    if (field.parentAttributeId) {
+      const children = map.get(field.parentAttributeId) || []
+      children.push(field.name)
+      map.set(field.parentAttributeId, children)
+    }
+  })
+  return map
+})
 
 // 监听表单数据变化，触发 fieldChange 事件
 watch(formModel, (newModel) => {
@@ -113,6 +180,15 @@ watch(formModel, (newModel) => {
       const fieldId = fieldNameToId.value.get(fieldName)
       if (fieldId !== undefined) {
         emit('fieldChange', fieldId, newValue)
+        
+        // 检查是否有子属性需要清空（级联字典）
+        const children = parentToChildrenMap.value.get(String(fieldId))
+        if (children && children.length > 0) {
+          // 清空所有子属性的值
+          children.forEach(childFieldName => {
+            formModel.value[childFieldName] = undefined
+          })
+        }
       }
     }
   }
@@ -303,7 +379,7 @@ defineExpose({
     class="grid-draggable-form"
   >
     <GridDraggableLayout
-      :items="items"
+      :items="visibleItems"
       :grid-size="gridSize"
       :gap="gap"
       :show-grid="false"
@@ -315,7 +391,11 @@ defineExpose({
       <!-- 自定义字段内容 -->
       <template #item="{ item: field }">
         <!-- 分割线：不需要表单验证 -->
-        <template v-if="field.fieldType === FIELD_TYPE.DIVIDER || field.fieldType === FIELD_TYPE.SECTION_TITLE">
+        <div
+          v-if="field.fieldType === FIELD_TYPE.DIVIDER || field.fieldType === FIELD_TYPE.SECTION_TITLE"
+          v-show="isFieldVisible(field)"
+          class="field-wrapper"
+        >
           <DynamicFormItem
             :attribute="{
               ...field,
@@ -325,11 +405,12 @@ defineExpose({
             :readonly="readonly"
             :show-label="false"
           />
-        </template>
+        </div>
 
         <!-- 普通字段：需要表单验证 -->
         <a-form-item
           v-else
+          v-show="isFieldVisible(field)"
           :name="field.name"
           class="form-field-item-wrapper"
         >
@@ -343,6 +424,7 @@ defineExpose({
             :readonly="readonly || field.readonly === '1'"
             :show-label="true"
             :dict-translate-fn="dictTranslateFn"
+            :all-fields-value="attributeIdToValue"
             @upload-confirmed="handleUploadConfirmed"
           >
             <!-- 传递 select 插槽 -->
@@ -411,6 +493,11 @@ defineExpose({
 <style scoped lang="less">
 .grid-draggable-form {
   width: 100%;
+
+  .field-wrapper {
+    width: 100%;
+    height: 100%;
+  }
 
   .form-field-item-wrapper {
     margin-bottom: 0;
