@@ -21,12 +21,18 @@
       class="modify-badge"
       placement="start"
     >
-      <a-switch
-        v-model:checked="record[column.dataIndex]"
-        checked-value="1"
+      <a-radio-group
+        v-model:value="record[column.dataIndex]"
         disabled
-        un-checked-value="0"
-      />
+        style="display: flex; align-items: center; gap: 8px;"
+      >
+        <a-radio value="1">
+          是
+        </a-radio>
+        <a-radio value="0">
+          否
+        </a-radio>
+      </a-radio-group>
     </a-badge-ribbon>
   </template>
   <template

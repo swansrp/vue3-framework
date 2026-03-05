@@ -30,12 +30,18 @@
           :span="column.detailSize"
         >
           <template v-if="column.fieldType === FIELD_TYPE.SWITCH">
-            <a-switch
-              v-model:checked="config.modal.data[`${column.dataIndex}`]"
-              checked-value="1"
+            <a-radio-group
+              v-model:value="config.modal.data[`${column.dataIndex}`]"
               disabled
-              un-checked-value="0"
-            />
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <a-radio value="1">
+                是
+              </a-radio>
+              <a-radio value="0">
+                否
+              </a-radio>
+            </a-radio-group>
           </template>
           <template
             v-else-if="column.fieldType === FIELD_TYPE.SELECT||

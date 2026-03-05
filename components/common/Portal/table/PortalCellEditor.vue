@@ -40,21 +40,26 @@
   </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.SWITCH">
     <div style="width: 100%; display: flex; justify-content: center">
-      <a-switch
+      <a-radio-group
         :ref="editorRef"
-        :checked="modelValue"
-        checked-value="1"
-        style="width: 40px;"
-        un-checked-value="0"
+        :value="modelValue"
+        style="display: flex; align-items: center; gap: 8px;"
         @keydown.esc="closeEditor"
-        @update:checked="
+        @update:value="
           v => {
             cellUpdate(recordIndexs[0], column.dataIndex, v)
             modelValue = v
             save();
             closeEditor()
           }"
-      />
+      >
+        <a-radio value="1">
+          是
+        </a-radio>
+        <a-radio value="0">
+          否
+        </a-radio>
+      </a-radio-group>
     </div>
   </template>
   <template v-else-if="column.fieldType === FIELD_TYPE.SELECT">

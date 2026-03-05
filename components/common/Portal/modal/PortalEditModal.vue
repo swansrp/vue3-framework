@@ -62,14 +62,19 @@
                 style="width: 100%"
                 @update:value=" v => config.modal.data[column.dataIndex] = v"
               />
-              <a-switch
+              <a-radio-group
                 v-else-if="column.fieldType === FIELD_TYPE.SWITCH"
-                v-model:checked="config.modal.data[column.dataIndex]"
+                v-model:value="config.modal.data[column.dataIndex]"
                 :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                checked-value="1"
-                style="width: 40px;"
-                un-checked-value="0"
-              />
+                style="display: flex; align-items: center; gap: 8px;"
+              >
+                <a-radio value="1">
+                  是
+                </a-radio>
+                <a-radio value="0">
+                  否
+                </a-radio>
+              </a-radio-group>
               <a-select
                 v-else-if="column.fieldType === FIELD_TYPE.SELECT"
                 :bordered="false"

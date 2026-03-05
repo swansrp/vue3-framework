@@ -48,11 +48,17 @@
       />
     </template>
     <template v-else-if="type === FIELD_TYPE.SWITCH">
-      <a-switch
-        v-model:checked="value"
-        placeholder="请输入属性值"
-        @change="$emit('update:conditionContentValue', value)"
-      />
+      <a-radio-group
+        v-model:value="value"
+        @change="$emit('update:conditionContentValue', [value])"
+      >
+        <a-radio value="1">
+          是
+        </a-radio>
+        <a-radio value="0">
+          否
+        </a-radio>
+      </a-radio-group>
     </template>
     <template v-else-if="type === FIELD_TYPE.SELECT || type === FIELD_TYPE.SELECT_MULTI_IN_ONE">
       <a-select
@@ -153,7 +159,16 @@ watch(() => props.type, getOption, { immediate: true })
 watch(() => props.reference, getOption, { immediate: true })
 watch(() => props.conditionContentValue, () => {
   valueArray.value = Array.isArray(props.conditionContentValue) ? props.conditionContentValue : []
-  value.value = Array.isArray(props.conditionContentValue) ? (props.conditionContentValue[0]) : undefined
+  let val = Array.isArray(props.conditionContentValue) ? (props.conditionContentValue[0]) : undefined
+  // Switch 类型：布尔值转换为 "1"/"0"
+  if (type.value === FIELD_TYPE.SWITCH) {
+    if (val === true || val === 'true' || val === 1 || val === '1') {
+      val = '1'
+    } else if (val === false || val === 'false' || val === 0 || val === '0') {
+      val = '0'
+    }
+  }
+  value.value = val
 }, { immediate: true })
 
 </script>
