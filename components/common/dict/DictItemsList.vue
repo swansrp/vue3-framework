@@ -20,6 +20,10 @@ interface Props {
   sortMode?: 'drag' | 'buttons'
   // 标题文本
   title?: string
+  // 字典名称映射（用于显示上级字典名称）
+  dictNameMap?: Record<string, string>
+  // 上级字典项值→标签映射（用于显示 parentValue 的标签）
+  parentValueLabelMap?: Record<string, string>
 }
 
 interface Emits {
@@ -32,7 +36,9 @@ const props = withDefaults(defineProps<Props>(), {
   entityIdField: 'bizId',
   isManageMode: false,
   sortMode: 'drag',
-  title: '所有字典项'
+  title: '所有字典项',
+  dictNameMap: () => ({}),
+  parentValueLabelMap: () => ({})
 })
 
 const emit = defineEmits<Emits>()
@@ -128,6 +134,17 @@ const handleEdit = (item: BizDictVO) => {
 const handleDelete = (item: BizDictVO) => {
   emit('delete', item)
 }
+
+// 获取字典名称
+const getDictName = (dictCode: string): string => {
+  return props.dictNameMap[dictCode] || dictCode
+}
+
+// 获取上级字典项的标签
+const getParentValueLabel = (parentDictCode: string, parentValue: string): string => {
+  const key = `${parentDictCode}_${parentValue}`
+  return props.parentValueLabelMap[key] || parentValue
+}
 </script>
 
 <template>
@@ -154,6 +171,18 @@ const handleDelete = (item: BizDictVO) => {
       />
       <div class="item-info">
         <span class="item-label">{{ item.label }}</span>
+        <span
+          v-if="item.parentDictCode && item.parentValue"
+          class="item-parent"
+        >
+          ← {{ getDictName(item.parentDictCode) }} / {{ getParentValueLabel(item.parentDictCode, item.parentValue) }}
+        </span>
+        <span
+          v-else-if="item.parentValue"
+          class="item-parent"
+        >
+          ← {{ item.parentValue }}
+        </span>
         <span
           v-if="item[entityIdField] == null"
           class="item-tag system"
@@ -282,6 +311,14 @@ const handleDelete = (item: BizDictVO) => {
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+      }
+      
+      .item-parent {
+        font-size: 12px;
+        color: #8c8c8c;
+        background: #f5f5f5;
+        padding: 2px 8px;
+        border-radius: 4px;
       }
       
       .item-value {

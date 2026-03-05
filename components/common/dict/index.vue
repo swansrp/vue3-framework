@@ -13,6 +13,8 @@ interface Props {
   modelValue?: string | number
   // 字典编码
   dictCode: string
+  // 父级字典项值（级联字典用）
+  parentCode?: string
   // 是否为管理端模式，默认false（企业端）
   isManageMode?: boolean
   // 企业ID字段配置，默认为 'bizId'
@@ -39,6 +41,7 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  parentCode: undefined,
   isManageMode: false,
   entityIdField: 'bizId',
   disabled: false,
@@ -97,12 +100,6 @@ const selectOptions = computed(() => {
 // 多选模式下超出数量时的占位显示
 const maxTagPlaceholder = (omittedValues: (string | number)[]) => {
   if (omittedValues.length === 0) return ''
-  // 获取省略项的标签名称
-  const labels = omittedValues.map(v => {
-    const item = allDictItems.value.find(d => d.value === v)
-    return item?.label || v
-  })
-  // 显示省略的数量
   return `+${omittedValues.length}...`
 }
 
@@ -126,7 +123,8 @@ const loadDictData = async () => {
     const res = await getEnterpriseDictByCode(
       { 
         dictCode: props.dictCode,
-        bizId: bizId as string | null
+        bizId: bizId as string | null,
+        ...(props.parentCode ? { parentValue: props.parentCode } : {})
       },
       false,
       false,
@@ -350,8 +348,16 @@ watch(() => props.modelValue, (newVal) => {
   }
 })
 
-// 监听字典编码和企业ID变化，重新加载数据
-watch([() => props.dictCode, () => props.entityId], () => {
+// 监听字典编码、企业ID、parentCode变化，重新加载数据
+watch([() => props.dictCode, () => props.entityId, () => props.parentCode], () => {
+  // 当 parentCode 变化时，清空当前值并重新加载
+  if (props.multiple) {
+    internalValue.value = []
+    emit('update:modelValue', undefined as any)
+  } else {
+    internalValue.value = undefined
+    emit('update:modelValue', undefined)
+  }
   loadDictData()
 }, { immediate: false })
 
@@ -429,6 +435,10 @@ defineExpose({
       v-model:visible="editModalVisible"
       :editing-item="editingItem"
       :all-items="allDictItems"
+      :current-item-id="editingItem?.id"
+      :current-dict-code="dictCode"
+      :is-manage-mode="isManageMode"
+      :entity-id="entityId"
       @save="saveEditItem"
     />
   </div>

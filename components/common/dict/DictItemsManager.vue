@@ -6,13 +6,13 @@
  */
 import { PlusOutlined, AppstoreAddOutlined } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
-import pinyin from 'pinyin'
 import { ref, watch } from 'vue'
 
+import { convertToPinyin } from '@/framework/utils/pinyin'
 import DictItemEditModal from './DictItemEditModal.vue'
 import DictItemsList from './DictItemsList.vue'
 
-import { deleteEnterpriseDict, systemBizDictAddDict, systemBizDictUpdateEnterpriseDict, getEnterpriseDictByCode, systemBizDictUpdateDictName, getDictExisted } from '@/framework/apis/dict/bizDictController'
+import { deleteEnterpriseDict, systemBizDictAddDict, systemBizDictUpdateEnterpriseDict, getEnterpriseDictByCode, systemBizDictUpdateDictName, getDictExisted, getDictList } from '@/framework/apis/dict/bizDictController'
 import type { BizDictVO } from '@/framework/apis/dict/bizDictController'
 
 interface Props {
@@ -49,49 +49,23 @@ const batchAddText = ref('')
 const isEditingDictName = ref(false)
 const editingDictName = ref('')
 
-// 将字典名称转换为拼音编码
-const convertNameToPinyinCode = (name: string): string => {
-  try {
-    // 将中文转换为拼音，使用下划线连接，并转为大写
-    const pinyinResult = pinyin(name, {
-      style: pinyin.STYLE_NORMAL, // 不带音调
-      heteronym: false // 不返回多音字的所有读音
-    })
-    // pinyin() 返回二维数组，需要展平并用下划线连接
-    const dictCode = pinyinResult
-      .map((item: string[]) => item[0]) // 取每个字的拼音
-      .filter((item: string) => /[a-zA-Z]/.test(item)) // 只保留字母
-      .join('_') // 用下划线连接
-      .toUpperCase() // 转大写
-    
-    return dictCode
-  } catch (error) {
-    console.warn('拼音转换失败:', error)
-    return ''
-  }
-}
+// 字典名称映射（用于显示上级字典名称）
+const dictNameMap = ref<Record<string, string>>({})
+
+// 上级字典项值→标签映射（用于显示 parentValue 的标签）
+// 格式: { "dictCode_value": "label" }
+const parentValueLabelMap = ref<Record<string, string>>({})
 
 // 监听字典名称变化，自动生成字典编码
 watch(() => newDictName.value, (newName) => {
-  // 只有当字典编码为空且没有字典项时才自动生成
-  if (!newDictCode.value && newName && manageDictItems.value.length === 0) {
-    const dictCode = convertNameToPinyinCode(newName)
+  // 当没有字典项时，自动同步拼音到字典编码
+  if (newName && manageDictItems.value.length === 0) {
+    const dictCode = convertToPinyin(newName, true)
     if (dictCode) {
       newDictCode.value = dictCode
     }
   }
 })
-
-// 手动同步拼音到字典编码
-const syncPinyinToDictCode = () => {
-  if (!newDictName.value) {
-    return
-  }
-  const dictCode = convertNameToPinyinCode(newDictName.value)
-  if (dictCode) {
-    newDictCode.value = dictCode
-  }
-}
 
 // 重新加载字典项
 const reloadDictItems = async (dictCode: string) => {
@@ -114,14 +88,27 @@ const reloadDictItems = async (dictCode: string) => {
 }
 
 // 打开管理弹窗（编辑现有字典）
-const open = (dictCode: string, items: BizDictVO[]) => {
+const open = async (dictCode: string, items: BizDictVO[]) => {
   isCreatingMode.value = false
   currentDictCode.value = dictCode
-  // 从现有项中获取 dictName
-  currentDictName.value = items.length > 0 && items[0].dictName ? items[0].dictName : ''
+  
+  // 如果传入的 items 为空，则从接口加载
+  if (items.length === 0) {
+    await reloadDictItems(dictCode)
+    // 从加载后的数据中获取 dictName
+    currentDictName.value = manageDictItems.value.length > 0 && manageDictItems.value[0].dictName ? manageDictItems.value[0].dictName : ''
+  } else {
+    // 从现有项中获取 dictName
+    currentDictName.value = items[0].dictName || ''
+    manageDictItems.value = JSON.parse(JSON.stringify(items))
+  }
+  
   editingDictName.value = currentDictName.value
   isEditingDictName.value = false
-  manageDictItems.value = JSON.parse(JSON.stringify(items))
+  // 加载字典名称映射
+  loadDictNameMap()
+  // 加载上级字典项的 value→label 映射
+  loadParentValueLabelMap()
   visible.value = true
 }
 
@@ -135,8 +122,78 @@ const openForCreate = () => {
   editingDictName.value = ''
   isEditingDictName.value = false
   manageDictItems.value = []
+  // 加载字典名称映射
+  loadDictNameMap()
   visible.value = true
 }
+
+// 加载字典名称映射
+const loadDictNameMap = async () => {
+  try {
+    const res = await getDictList({ bizId: props.isManageMode ? undefined : props.entityId || undefined }, false, false, false)
+    
+    if (res?.status?.code === 0 && res.payload) {
+      const nameMap: Record<string, string> = {}
+      ;(res.payload as Array<{ value?: string; label?: string }>).forEach((item: any) => {
+        if (item.value) {
+          nameMap[item.value] = item.label || item.value
+        }
+      })
+      dictNameMap.value = nameMap
+    }
+  } catch (error) {
+    console.error('加载字典名称映射失败:', error)
+  }
+}
+
+// 加载上级字典项的 value→label 映射
+const loadParentValueLabelMap = async () => {
+  // 收集所有需要加载的上级字典编码
+  const parentDictCodes = new Set<string>()
+  manageDictItems.value.forEach(item => {
+    if (item.parentDictCode) {
+      parentDictCodes.add(item.parentDictCode)
+    }
+  })
+  
+  if (parentDictCodes.size === 0) {
+    parentValueLabelMap.value = {}
+    return
+  }
+  
+  const bizId = props.isManageMode ? null : props.entityId
+  const newMap: Record<string, string> = {}
+  
+  // 并行加载所有上级字典的项
+  await Promise.all(
+    Array.from(parentDictCodes).map(async (dictCode) => {
+      try {
+        const res = await getEnterpriseDictByCode(
+          { dictCode, bizId: bizId as string },
+          false,
+          false,
+          false
+        )
+        
+        if (res?.status?.code === 0 && res.payload) {
+          const items = res.payload as BizDictVO[]
+          items.forEach(item => {
+            if (item.value) {
+              // 使用 "dictCode_value" 作为 key
+              newMap[`${dictCode}_${item.value}`] = item.label || item.value
+            }
+          })
+        }
+      } catch (error) {
+        console.error(`加载上级字典 ${dictCode} 失败:`, error)
+      }
+    })
+  )
+  
+  parentValueLabelMap.value = newMap
+}
+
+
 
 // 添加新字典项
 const addNewDictItem = async () => {
@@ -689,22 +746,11 @@ defineExpose({
               label="字典编码"
               required
             >
-              <a-input-group compact>
-                <a-input
-                  v-model:value="newDictCode"
-                  placeholder="如: PRODUCT_TYPE"
-                  :disabled="manageDictItems.length > 0"
-                  style="width: calc(100% - 80px)"
-                />
-                <a-button
-                  type="primary"
-                  style="width: 80px"
-                  :disabled="manageDictItems.length > 0"
-                  @click="syncPinyinToDictCode"
-                >
-                  同步拼音
-                </a-button>
-              </a-input-group>
+              <a-input
+                v-model:value="newDictCode"
+                placeholder="如: PRODUCT_TYPE"
+                :disabled="manageDictItems.length > 0"
+              />
               <template #extra>
                 <span style="color: #8c8c8c; font-size: 12px;">
                   建议使用大写字母和下划线，如: PRODUCT_TYPE
@@ -748,6 +794,8 @@ defineExpose({
             :items="manageDictItems"
             :entity-id-field="entityIdField"
             :is-manage-mode="isManageMode"
+            :dict-name-map="dictNameMap"
+            :parent-value-label-map="parentValueLabelMap"
             sort-mode="drag"
             @edit="editDictItem"
             @delete="deleteDictItem"
@@ -798,6 +846,10 @@ defineExpose({
       v-model:visible="editModalVisible"
       :editing-item="editingItem"
       :all-items="manageDictItems"
+      :current-item-id="editingItem?.id"
+      :current-dict-code="isCreatingMode ? newDictCode : currentDictCode"
+      :is-manage-mode="isManageMode"
+      :entity-id="entityId"
       @save="saveEditItem"
     />
   </div>
