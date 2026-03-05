@@ -41,7 +41,9 @@ export const getEnterpriseDictByCode = (params?: {
   /** bizId */
   bizId: string
   /** dictCode */
-  dictCode: string
+  dictCode: string,
+  /** parentValue 可选，不传时返回所有字典项 */
+  parentValue?: string
 }, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildGetApiByType('/biz/dict/code', '')
   return request(api, params || {}, {}, showSuccess, showLoading, showErr)
@@ -301,6 +303,10 @@ export interface BizDictVO {
   isDefault?: string
   /** 字典项显示名称 */
   label?: string
+  /** 父级字典编码（级联字典用） */
+  parentDictCode?: string
+  /** 父级字典项值（级联字典用） */
+  parentValue?: string
   /** 排序号 */
   sort?: number
   /** 更新时间 */
@@ -374,6 +380,56 @@ export type BizDictValueReqPageResponse = ResponseDataType & {
     currentPage: number
     pageSize: number
   }
+}
+
+/**
+ * 字典响应类型（包含字典项列表）
+ */
+export interface BizDictRes {
+  /** 字典编码 */
+  dictCode?: string
+  /** 字典名称 */
+  dictName?: string
+  /** 字典项列表 */
+  dictItemList?: BizDictVO[]
+}
+
+export type BizDictResListResponse = ResponseDataType & {
+  payload: BizDictRes[]
+}
+
+/**
+ * 根据字典名称模糊查询字典列表
+ * @api GET /biz/dict/search/name
+ * @param params - 查询参数
+ * @param showSuccess - 是否显示成功提示（默认: false）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ * @responseTypes BizDictRes[]
+ */
+export const searchByDictName = (params?: {
+  /** 字典名称 */
+  dictName?: string
+}, showSuccess = false, showLoading = false, showErr = true) => {
+  const api = buildGetApiByType('/biz/dict/search/name', '')
+  return request(api, params || {}, {}, showSuccess, showLoading, showErr) as Promise<BizDictResListResponse>
+}
+
+/**
+ * 根据字典项名称模糊查询字典列表
+ * @api GET /biz/dict/search/item
+ * @param params - 查询参数
+ * @param showSuccess - 是否显示成功提示（默认: false）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ * @responseTypes BizDictRes[]
+ */
+export const searchByDictItemName = (params?: {
+  /** 字典项名称（label） */
+  itemName?: string
+}, showSuccess = false, showLoading = false, showErr = true) => {
+  const api = buildGetApiByType('/biz/dict/search/item', '')
+  return request(api, params || {}, {}, showSuccess, showLoading, showErr) as Promise<BizDictResListResponse>
 }
 
 
