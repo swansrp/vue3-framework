@@ -48,7 +48,8 @@ export default defineConfig({
     }),
     Components({
       resolvers: [AntDesignVueResolver({
-        importStyle: false // css in js
+        importStyle: 'less', // 使用 less 预编译样式，兼容老浏览器
+        resolveIcons: true // 自动按需导入 antd 图标
       })],
       dirs: ['src/components', 'src/framework/components'],
       dts: 'src/components.d.ts'
