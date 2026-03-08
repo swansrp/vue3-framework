@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 
-import DictItemEditModal from '@/framework/components/common/dict/DictItemEditModal.vue'
-import DictItemsList from '@/framework/components/common/dict/DictItemsList.vue'
 import {
   searchByDictName,
   searchByDictItemName,
@@ -15,6 +13,8 @@ import {
   systemBizDictUpdateEnterpriseDict
 } from '@/framework/apis/dict/bizDictController'
 import type { BizDictVO, BizDictRes } from '@/framework/apis/dict/bizDictController'
+import DictItemEditModal from '@/framework/components/common/dict/DictItemEditModal.vue'
+import DictItemsList from '@/framework/components/common/dict/DictItemsList.vue'
 
 // 左侧字典列表
 const dictList = ref<BizDictRes[]>([])
@@ -36,9 +36,6 @@ const showItemSearchResults = ref(false)
 // 编辑弹窗
 const editModalVisible = ref(false)
 const editingItem = ref<BizDictVO | null>(null)
-
-// 搜索模式
-const searchMode = ref<'dict' | 'item'>('dict')
 
 // 字典名称映射（dictCode → dictName）
 const dictNameMap = ref<Record<string, string>>({})
@@ -351,7 +348,10 @@ loadDictNameMap()
               <span class="dict-name">{{ dict.dictName }}</span>
               <span class="dict-code">{{ dict.dictCode }}</span>
             </div>
-            <a-tag v-if="dict.dictItemList?.length" color="blue">
+            <a-tag
+              v-if="dict.dictItemList?.length"
+              color="blue"
+            >
               {{ dict.dictItemList.length }} 项
             </a-tag>
           </div>
@@ -370,7 +370,9 @@ loadDictNameMap()
           {{ selectedDictName }}
           <span class="dict-code-tag">{{ selectedDictCode }}</span>
         </h3>
-        <h3 v-else>字典项管理</h3>
+        <h3 v-else>
+          字典项管理
+        </h3>
         
         <!-- 反查搜索框 -->
         <a-input-search
@@ -384,10 +386,17 @@ loadDictNameMap()
 
       <div class="panel-content">
         <!-- 反查结果 -->
-        <div v-if="showItemSearchResults" class="item-search-results">
+        <div
+          v-if="showItemSearchResults"
+          class="item-search-results"
+        >
           <div class="search-result-header">
             <span>包含「{{ itemLabelSearch }}」的字典项结果</span>
-            <a-button type="link" size="small" @click="showItemSearchResults = false">
+            <a-button
+              type="link"
+              size="small"
+              @click="showItemSearchResults = false"
+            >
               关闭
             </a-button>
           </div>
@@ -410,7 +419,10 @@ loadDictNameMap()
                 >
                   {{ item.label }}
                 </a-tag>
-                <a-tag v-if="(dict.dictItemList?.length || 0) > 3" color="default">
+                <a-tag
+                  v-if="(dict.dictItemList?.length || 0) > 3"
+                  color="default"
+                >
                   +{{ dict.dictItemList!.length - 3 }}
                 </a-tag>
               </div>
@@ -423,10 +435,16 @@ loadDictNameMap()
         </div>
 
         <!-- 字典项列表 -->
-        <div v-else class="dict-items-content">
+        <div
+          v-else
+          class="dict-items-content"
+        >
           <template v-if="selectedDictCode">
             <div class="items-toolbar">
-              <a-button type="primary" @click="addNewDictItem">
+              <a-button
+                type="primary"
+                @click="addNewDictItem"
+              >
                 <template #icon>
                   <PlusOutlined />
                 </template>

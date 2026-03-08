@@ -3,8 +3,8 @@
  * 用于在运行时计算字段是否应该显示
  */
 
-import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
 /**

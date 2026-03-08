@@ -8,12 +8,12 @@ import { PlusOutlined, AppstoreAddOutlined } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
 import { ref, watch } from 'vue'
 
-import { convertToPinyin } from '@/framework/utils/pinyin'
 import DictItemEditModal from './DictItemEditModal.vue'
 import DictItemsList from './DictItemsList.vue'
 
 import { deleteEnterpriseDict, systemBizDictAddDict, systemBizDictUpdateEnterpriseDict, getEnterpriseDictByCode, systemBizDictUpdateDictName, getDictExisted, getDictList } from '@/framework/apis/dict/bizDictController'
 import type { BizDictVO } from '@/framework/apis/dict/bizDictController'
+import { convertToPinyin } from '@/framework/utils/pinyin'
 
 interface Props {
   // 是否为管理端模式
