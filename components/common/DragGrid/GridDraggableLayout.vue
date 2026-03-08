@@ -378,13 +378,6 @@ const getItemStyle = (item: T) => {
             font-weight: 400;
             font-size: 13px;
           }
-          
-          .field-control-inline {
-            .readonly-value {
-              background: #f5f5f5;
-              border: 1px solid #e8e8e8;
-            }
-          }
         }
       }
       

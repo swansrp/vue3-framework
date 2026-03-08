@@ -851,9 +851,6 @@ const handleFileDownload = (url: string) => {
   font-size: 14px;
   word-break: break-all;
   white-space: pre-wrap;
-  background-color: #f5f5f5;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
   
   &.is-empty {
     color: #bfbfbf;
