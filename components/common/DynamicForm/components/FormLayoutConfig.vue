@@ -29,7 +29,7 @@ const strLF2HtmlLF = (str: string) => {
 }
 
 interface Props {
-  productId: string
+  formId: string
   readonly?: boolean
 }
 
@@ -127,7 +127,7 @@ const loadAllData = async () => {
     // 1. 加载模块
     const modulesRes = await formSchemaModuleGeneralSelect({
       conditionList: [
-        { property: 'productionId', relation: FILTER_TYPE.EQUAL, value: [props.productId] },
+        { property: 'formId', relation: FILTER_TYPE.EQUAL, value: [props.formId] },
         { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
       ],
       orderList: [{ property: 'sort', type: 0 }]
@@ -313,9 +313,9 @@ const handleCopyFieldName = async (fieldName?: string) => {
   closeContextMenu()
 }
 
-// 监听产品变化
-watch(() => props.productId, () => {
-  if (props.productId) {
+// 监听表单变化
+watch(() => props.formId, () => {
+  if (props.formId) {
     loadAllData()
   }
 }, { immediate: true })

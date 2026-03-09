@@ -4,7 +4,7 @@ import { ref, watch } from 'vue'
 
 interface ModuleFormData {
   id: string
-  productionId: string
+  formId: string
   title: string
   description?: string
   multi: string
@@ -15,7 +15,7 @@ interface Props {
   visible: boolean
   formData: ModuleFormData
   isEdit: boolean
-  productId: string
+  formId: string
 }
 
 const props = defineProps<Props>()
@@ -72,10 +72,10 @@ const handleCancel = () => {
     >
       <a-form-item
         v-if="!isEdit"
-        label="产品ID"
+        label="表单ID"
       >
         <a-input
-          :value="productId"
+          :value="formId"
           disabled
           style="color: #1890ff; font-weight: 600"
         />

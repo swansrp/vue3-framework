@@ -45,7 +45,7 @@ export const evaluateCondition = (
     case FILTER_TYPE.NOT_EQUAL:
       // 不等于（支持布尔值语义转换）
       if (isEmpty) return true
-      return !targetValue?.some(v => normalizeValue(v) === normalizeValue(value)) ?? true
+      return !targetValue?.some(v => normalizeValue(v) === normalizeValue(value))
 
     case FILTER_TYPE.GREATER:
       // 大于
@@ -93,7 +93,7 @@ export const evaluateCondition = (
     case FILTER_TYPE.NOT_IN:
       // 不在列表中（支持布尔值语义转换）
       if (isEmpty) return true
-      return !targetValue?.some(v => normalizeValue(v) === normalizeValue(value)) ?? true
+      return !targetValue?.some(v => normalizeValue(v) === normalizeValue(value))
 
     case FILTER_TYPE.BETWEEN:
       // 区间

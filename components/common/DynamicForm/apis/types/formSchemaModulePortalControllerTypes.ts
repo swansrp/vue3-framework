@@ -69,8 +69,8 @@ export interface FormSchemaModuleVO {
   id?: number
   /** 是否多组数据 */
   multi?: string
-  /** 产品 id */
-  productionId?: number
+  /** 表单 id */
+  formId?: string
   /** 排序 */
   sort?: number
   /** 模块名称 */

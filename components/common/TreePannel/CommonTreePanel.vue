@@ -49,6 +49,8 @@ interface Props {
   orderUpdateApi?: string
   /** 父节点更新接口路径后缀，默认 '/pid' */
   pidUpdateApi?: string
+  /** 新增时的默认表单数据 */
+  defaultFormData?: Record<string, any>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -64,7 +66,8 @@ const props = withDefaults(defineProps<Props>(), {
   updateApi: '/update',
   deleteApi: '/delete',
   orderUpdateApi: '/order/update',
-  pidUpdateApi: '/pid'
+  pidUpdateApi: '/pid',
+  defaultFormData: () => ({})
 })
 
 const emit = defineEmits<{
@@ -166,10 +169,12 @@ const handleRefresh = () => {
 // 新增节点
 const handleAdd = (parentNode?: TreeNode) => {
   editingNode.value = null
+  const pidValue = parentNode?.key || parentNode?.id || null
   formData.value = {
     id: '',
     title: '',
-    pid: parentNode?.key || parentNode?.id || ''
+    pid: pidValue,
+    ...props.defaultFormData
   }
   editModalVisible.value = true
 }
@@ -178,6 +183,7 @@ const handleAdd = (parentNode?: TreeNode) => {
 const handleEdit = (node: TreeNode) => {
   editingNode.value = node
   formData.value = {
+    ...props.defaultFormData,
     id: node.key || node.id,
     title: node.title,
     pid: node.pid || '',
@@ -194,14 +200,20 @@ const handleSave = async () => {
   }
 
   try {
+    // 确保 pid 为 null 而不是空字符串
+    const submitData = {
+      ...formData.value,
+      pid: formData.value.pid || null
+    }
+    
     if (editingNode.value) {
       // 更新
       const api = buildPostApiByType(`${ props.urlPrefix }${ props.updateApi }`, '')
-      await request(api, {}, formData.value, true, true)
+      await request(api, {}, submitData, true, true)
     } else {
       // 新增
       const api = buildPostApiByType(`${ props.urlPrefix }${ props.insertApi }`, '')
-      await request(api, {}, formData.value, true, true)
+      await request(api, {}, submitData, true, true)
     }
 
     editModalVisible.value = false

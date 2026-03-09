@@ -408,7 +408,6 @@ const hasAttributes = () => props.group.attributes?.length > 0
 
       // v-html 内容容器
       > span {
-        flex: 1;
         min-width: 0;
         word-break: break-word;
       }

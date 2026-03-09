@@ -40,8 +40,8 @@ import Dict from '@/framework/components/common/dict/index.vue'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
 interface Props {
-  productId: string
-  productInfo?: any
+  formId: string
+  formInfo?: any
   /** 是否只读模式 */
   readonly?: boolean
 }
@@ -80,7 +80,7 @@ const attributeModalVisible = ref(false)
 // 表单数据
 const moduleFormData = ref({
   id: '',
-  productionId: '',
+  formId: '',
   title: '',
   description: '',
   multi: '0',
@@ -160,7 +160,7 @@ const loadModules = async () => {
   try {
     const res = await formSchemaModuleGeneralSelect({
       conditionList: [
-        { property: 'productionId', relation: FILTER_TYPE.EQUAL, value: [props.productId] },
+        { property: 'formId', relation: FILTER_TYPE.EQUAL, value: [props.formId] },
         { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
       ],
       orderList: [{ property: 'sort', type: 0 }]
@@ -231,6 +231,10 @@ const loadSectionsAndAttributes = async (moduleId: string) => {
 
 // 切换模块
 const handleStepChange = async (index: number) => {
+  // 如果 index 超出 modules 范围，忽略（这是点击"添加模块"按钮，由 @add 事件处理）
+  if (index >= modules.value.length) {
+    return
+  }
   currentModuleIndex.value = index
   const module = modules.value[index]
   if (module) {
@@ -243,7 +247,7 @@ const handleAddModule = () => {
   editingModule.value = null
   moduleFormData.value = {
     id: '',
-    productionId: props.productId,
+    formId: props.formId,
     title: '',
     description: '',
     multi: '0',
@@ -260,7 +264,7 @@ const handleEditModule = (module: any) => {
 
 const handleSaveModule = async (data: any) => {
   try {
-    const saveData = { ...data, productionId: props.productId }
+    const saveData = { ...data, formId: props.formId }
     
     if (editingModule.value) {
       await formSchemaModuleUpdate({}, saveData, true, true)
@@ -654,8 +658,8 @@ const handleUpdateAttributeSize = async (attribute: any, size: { width: number; 
 
 
 
-// 监听产品变化
-watch(() => props.productId, () => {
+// 监听表单变化
+watch(() => props.formId, () => {
   loadModules()
 }, { immediate: true })
 </script>
@@ -665,7 +669,7 @@ watch(() => props.productId, () => {
     <!-- 模拟 BioEval 的样式 -->
     <div class="config-header">
       <h2 style="color: #1890ff; font-weight: 600;">
-        {{ productInfo?.title || '产品' }} - 属性配置
+        {{ formInfo?.title || '表单' }} - 属性配置
       </h2>
       <a-space>
         <a-radio-group
@@ -746,7 +750,7 @@ watch(() => props.productId, () => {
     >
       <FormLayoutConfig
         ref="formLayoutConfigRef"
-        :product-id="productId"
+        :form-id="formId"
         :readonly="readonly"
         @edit-module="handleEditModule"
         @edit-section="handleEditSection"
@@ -766,7 +770,7 @@ watch(() => props.productId, () => {
       v-model:visible="moduleModalVisible"
       :form-data="moduleFormData"
       :is-edit="!!editingModule"
-      :product-id="productId"
+      :form-id="formId"
       @save="handleSaveModule"
     />
 

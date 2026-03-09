@@ -22,7 +22,7 @@ export const convertToPinyin = (text: string, uppercase = false): string => {
     // pinyin() 返回二维数组，需要展平并用下划线连接
     const result = pinyinResult
       .map((item: string[]) => item[0]) // 取每个字的拼音
-      .filter((item: string) => item && /[a-zA-Z]/.test(item)) // 只保留非空且包含字母的项
+      .filter((item: string) => item && /[a-zA-Z0-9]/.test(item)) // 只保留非空且包含字母的项
       .join('_') // 用下划线连接
     
     return uppercase ? result.toUpperCase() : result.toLowerCase()

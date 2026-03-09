@@ -18,16 +18,14 @@ const selectedTemplateInfo = ref<any>(null)
 // 树组件引用
 const treeRef = ref<InstanceType<typeof CommonTreePanel> | null>(null)
 
-// 编辑表单数据
-const editFormData = ref<Record<string, any>>({
-  id: '',
-  title: '',
-  pid: '',
+// 编辑表单数据 - 由 CommonTreePanel 通过插槽传入的 formData 管理
+// 这里只需要定义额外的默认字段
+const defaultFormFields = {
   code: '',
   description: '',
   status: 'draft',
   sort: 0
-})
+}
 
 // 处理模板选择
 const handleTemplateSelect = (templateId: string, templateInfo: any) => {
@@ -61,6 +59,7 @@ const getStatusText = (status: string) => {
           url-prefix="/form/schema"
           title="表单模板"
           :allow-select-parent="true"
+          :default-form-data="defaultFormFields"
           @select="handleTemplateSelect"
         >
           <!-- 自定义节点图标 -->
@@ -86,7 +85,7 @@ const getStatusText = (status: string) => {
           <!-- 自定义表单 -->
           <template #form="{ formData, isEdit }">
             <a-form
-              :model="editFormData"
+              :model="formData"
               :label-col="{ span: 6 }"
               :wrapper-col="{ span: 16 }"
               layout="horizontal"
@@ -96,7 +95,7 @@ const getStatusText = (status: string) => {
                 name="code"
               >
                 <a-input
-                  v-model:value="editFormData.code"
+                  v-model:value="formData.code"
                   placeholder="请输入模板编码（可选）"
                 />
               </a-form-item>
@@ -106,7 +105,7 @@ const getStatusText = (status: string) => {
                 required
               >
                 <a-input
-                  v-model:value="editFormData.title"
+                  v-model:value="formData.title"
                   placeholder="请输入模板名称"
                 />
               </a-form-item>
@@ -115,7 +114,7 @@ const getStatusText = (status: string) => {
                 name="description"
               >
                 <a-textarea
-                  v-model:value="editFormData.description"
+                  v-model:value="formData.description"
                   placeholder="请输入模板描述"
                   :rows="3"
                 />
@@ -124,7 +123,7 @@ const getStatusText = (status: string) => {
                 label="状态"
                 name="status"
               >
-                <a-select v-model:value="editFormData.status">
+                <a-select v-model:value="formData.status">
                   <a-select-option value="draft">
                     草稿
                   </a-select-option>
@@ -141,7 +140,7 @@ const getStatusText = (status: string) => {
                 name="sort"
               >
                 <a-input-number
-                  v-model:value="editFormData.sort"
+                  v-model:value="formData.sort"
                   :min="0"
                   style="width: 100%"
                 />
@@ -155,8 +154,8 @@ const getStatusText = (status: string) => {
       <template #content>
         <SchemaConfigPanel
           v-if="selectedTemplateId"
-          :product-id="selectedTemplateId"
-          :product-info="selectedTemplateInfo"
+          :form-id="selectedTemplateId"
+          :form-info="selectedTemplateInfo"
         />
         <div
           v-else

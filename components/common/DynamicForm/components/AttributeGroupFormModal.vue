@@ -164,30 +164,6 @@ const handleCancel = () => {
       :wrapper-col="{ span: 18 }"
     >
       <a-form-item
-        label="父分组"
-        name="pid"
-        tooltip="选择父分组后，当前分组将作为其子分组；不选则为顶级分组"
-      >
-        <a-select
-          v-model:value="localFormData.pid"
-          placeholder="请选择父分组（不选则为顶级分组）"
-          allow-clear
-          style="width: 100%"
-        >
-          <a-select-option :value="null">
-            无（顶级分组）
-          </a-select-option>
-          <a-select-option
-            v-for="group in parentGroupOptions"
-            :key="group.id"
-            :value="group.id"
-          >
-            {{ group.title }}
-          </a-select-option>
-        </a-select>
-      </a-form-item>
-
-      <a-form-item
         label="分组标题"
         name="title"
       >

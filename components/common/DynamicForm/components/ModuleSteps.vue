@@ -26,12 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const handleStepChange = (index: number) => {
-  // 如果点击的是最后一个（添加按钮），触发 add 事件
-  if (index === props.modules.length) {
-    emit('add')
-  } else {
-    emit('change', index)
-  }
+  emit('change', index)
 }
 
 const handleEdit = (module: Module, event: Event) => {
@@ -81,6 +76,7 @@ const handleDelete = (module: Module, event: Event) => {
       v-if="!readonly"
       key="add-module"
       class="add-step"
+      @click="emit('add')"
     >
       <template #icon>
         <span class="add-icon">
