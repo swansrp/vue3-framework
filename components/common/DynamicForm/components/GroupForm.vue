@@ -54,6 +54,7 @@ interface Props {
   attributes: Attribute[]
   rows: GroupRow[]  // 多行数据（多组模式）
   readonly?: boolean  // 是否只读模式
+  showSaveButton?: boolean  // 是否显示保存按钮
   isDefaultGroup?: boolean  // 是否为默认分组（sort=0）
   isFirstGroup?: boolean   // 是否为第一个分组
   dictTranslateFn?: (dictName: string, value: string) => Promise<string>  // 字典翻译函数
@@ -70,6 +71,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
+  showSaveButton: true,
   isDefaultGroup: false,
   isFirstGroup: false,
   defaultCollapsed: undefined,
@@ -614,7 +616,7 @@ defineExpose({
         
         <!-- 保存按钮 -->
         <a-button
-          v-if="!readonly"
+          v-if="!readonly && showSaveButton"
           type="primary"
           size="small"
           :loading="saving"
@@ -811,6 +813,7 @@ defineExpose({
         :attributes="getGroupAttributes(sectionId, String(childGroup.id))"
         :rows="getGroupRows(sectionInstanceId, String(childGroup.id))"
         :readonly="readonly"
+        :show-save-button="showSaveButton"
         :is-default-group="false"
         :is-first-group="false"
         :dict-translate-fn="dictTranslateFn"

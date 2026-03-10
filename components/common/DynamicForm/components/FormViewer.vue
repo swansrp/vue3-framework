@@ -401,15 +401,6 @@ defineExpose({
       <slot name="header">
         <!-- 默认标题栏实现 -->
         <div class="page-header">
-          <a-button
-            type="link"
-            @click="handleBack"
-          >
-            <template #icon>
-              <ArrowLeftOutlined />
-            </template>
-            返回列表
-          </a-button>
           <h2 class="page-title">
             {{ pageTitle }}
           </h2>
@@ -437,7 +428,7 @@ defineExpose({
 
       <!-- 主内容区 -->
       <div
-        v-else-if="historyInfo"
+        v-else-if="historyInfo || sectionInstances.length > 0"
         class="form-content"
       >
         <!-- 拒绝理由提示 -->
@@ -471,9 +462,9 @@ defineExpose({
           ></div>
         </div>
 
-        <!-- 模块步骤条 -->
+        <!-- 模块步骤条（多个模块时才显示） -->
         <div
-          v-if="modules.length > 0"
+          v-if="modules.length > 1"
           class="module-steps"
         >
           <ModuleSteps
@@ -488,11 +479,11 @@ defineExpose({
         <div
           v-if="currentModule"
           class="section-area"
-          :class="{ 'with-nav': showNavTree && !navTreeCollapsed }"
+          :class="{ 'with-nav': showNavTree && modules.length > 1 && !navTreeCollapsed }"
         >
-          <!-- 左侧导航树 -->
+          <!-- 左侧导航树（多个模块时才显示） -->
           <div
-            v-if="showNavTree"
+            v-if="showNavTree && modules.length > 1"
             class="nav-panel"
             :class="{ 'is-collapsed': navTreeCollapsed }"
           >
@@ -525,7 +516,7 @@ defineExpose({
             <div class="section-header">
               <h3>{{ currentModule.title }}</h3>
               <div class="section-actions">
-                <!-- 保存所有数据按钮 -->
+                <!-- 保存所有数据按钮（非lazyCreate模式，模块级别） -->
                 <a-button
                   v-if="!readonly && showSaveButton"
                   type="primary"
@@ -651,6 +642,7 @@ defineExpose({
                   :attributes="getGroupAttributes(currentInstance.sectionId, String(group.id))"
                   :rows="getGroupRows(currentInstance.instanceId, String(group.id))"
                   :readonly="readonly"
+                  :show-save-button="showSaveButton"
                   :is-default-group="group.sort === 0"
                   :is-first-group="groupIndex === 0"
                   :dict-translate-fn="translateDictValue"

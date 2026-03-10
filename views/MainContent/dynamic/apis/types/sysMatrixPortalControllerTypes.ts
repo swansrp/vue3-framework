@@ -76,6 +76,8 @@ export interface SysMatrixVO {
   updateBy?: string
   /** 更新人 */
   updateName?: string
+  /** 是否自增 */
+  autoIncrement: string
 }
 
 export interface AdvancedStatisticReq {

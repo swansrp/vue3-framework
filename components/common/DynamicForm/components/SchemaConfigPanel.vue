@@ -7,6 +7,7 @@ import { ref, watch, computed, h } from 'vue'
 import AttributeFormModal from './AttributeFormModal.vue'
 import AttributeGroupFormModal from './AttributeGroupFormModal.vue'
 import FormLayoutConfig from './FormLayoutConfig.vue'
+import MatrixMappingModal from './MatrixMappingModal.vue'
 import ModuleFormModal from './ModuleFormModal.vue'
 import ModuleSteps from './ModuleSteps.vue'
 import SectionBlock from './SectionBlock.vue'
@@ -76,6 +77,8 @@ const moduleModalVisible = ref(false)
 const sectionModalVisible = ref(false)
 const groupModalVisible = ref(false)
 const attributeModalVisible = ref(false)
+const matrixMappingModalVisible = ref(false)
+const currentMatrixSection = ref<any>(null)
 
 // 表单数据
 const moduleFormData = ref({
@@ -656,6 +659,17 @@ const handleUpdateAttributeSize = async (attribute: any, size: { width: number; 
   }
 }
 
+// ============ 矩阵映射配置 ============
+const handleConfigMatrix = (section: any) => {
+  currentMatrixSection.value = section
+  matrixMappingModalVisible.value = true
+}
+
+const handleMatrixSynced = async () => {
+  // 刷新数据
+  await loadSectionsAndAttributes(currentModule.value.id)
+}
+
 
 
 // 监听表单变化
@@ -734,6 +748,7 @@ watch(() => props.formId, () => {
         @delete-attribute="handleDeleteAttribute"
         @copy-attribute="handleCopyAttribute"
         @update-attribute-size="handleUpdateAttributeSize"
+        @config-matrix="handleConfigMatrix"
       />
 
       <a-empty
@@ -871,6 +886,16 @@ watch(() => props.formId, () => {
       :is-edit="!!editingGroup"
       :available-groups="currentGroups[groupFormData.sectionId] || []"
       @save="handleSaveGroup"
+    />
+
+    <!-- 矩阵映射配置弹窗 -->
+    <MatrixMappingModal
+      v-model:visible="matrixMappingModalVisible"
+      :section-id="currentMatrixSection?.id"
+      :section-title="currentMatrixSection?.title"
+      :table-name="currentMatrixSection?.tableName"
+      :attributes="currentAttributes[currentMatrixSection?.id] || []"
+      @synced="handleMatrixSynced"
     />
   </div>
 </template>

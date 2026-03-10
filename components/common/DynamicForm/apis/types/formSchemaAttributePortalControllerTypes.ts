@@ -6,7 +6,7 @@
 // ============================================================
 
 // 导入公共类型
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, QueryConditionReq, StatisticRes } from '../../../../../../apis/types/common'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, QueryConditionReq, StatisticRes } from './common'
 /**
  * 全局响应数据类型说明
  * @interface ResponseDataType
@@ -113,6 +113,8 @@ export interface FormSchemaAttributeVO {
   validationRule?: string
   /** 显示条件 */
   visibilityCondition?: string
+  /** 矩阵列 id */
+  matrixColumnId?: number
   /** 宽 */
   width?: number
 }

@@ -6,7 +6,7 @@
 // ============================================================
 
 // 导入公共类型
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, QueryConditionReq, StatisticRes } from '../../../../../../apis/types/common'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, QueryConditionReq, StatisticRes } from './common'
 /**
  * 全局响应数据类型说明
  * @interface ResponseDataType

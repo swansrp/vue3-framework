@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { DownOutlined, RightOutlined, EditOutlined, CopyOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, RightOutlined, EditOutlined, CopyOutlined, DatabaseOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { ref, watch, computed } from 'vue'
 
 import GroupTreeNode from './GroupTreeNode.vue'
+import MatrixMappingModal from './MatrixMappingModal.vue'
 import {
   formSchemaAttributeGroupGeneralSelect
 } from '../apis/formSchemaAttributeGroupPortalController'
@@ -85,6 +86,10 @@ const contextMenuVisible = ref(false)
 const contextMenuPosition = ref({ x: 0, y: 0 })
 const contextMenuTarget = ref<any>(null)
 const contextMenuType = ref<'module' | 'section' | 'group' | 'attribute'>('attribute')
+
+// 矩阵映射弹窗状态
+const matrixMappingVisible = ref(false)
+const currentMappingSection = ref<any>(null)
 
 // 构建分组树形结构（支持递归）
 const buildGroupTree = (groups: any[]) => {
@@ -313,6 +318,17 @@ const handleCopyFieldName = async (fieldName?: string) => {
   closeContextMenu()
 }
 
+// 打开矩阵映射弹窗
+const handleOpenMatrixMapping = (section: any) => {
+  currentMappingSection.value = section
+  matrixMappingVisible.value = true
+}
+
+// 矩阵映射同步完成
+const handleMatrixSynced = async () => {
+  await loadAllData()
+}
+
 // 监听表单变化
 watch(() => props.formId, () => {
   if (props.formId) {
@@ -432,6 +448,13 @@ defineExpose({
                   <span class="section-title">{{ section.title }}</span>
                 </div>
                 <div class="header-right">
+                  <a-button
+                    type="link"
+                    size="small"
+                    @click.stop="handleOpenMatrixMapping(section)"
+                  >
+                    <DatabaseOutlined /> 实体表
+                  </a-button>
                   <a-tag color="green">
                     {{ section.groupCount || 0 }} 分组
                   </a-tag>
@@ -532,6 +555,16 @@ defineExpose({
         />
       </div>
     </a-spin>
+
+    <!-- 矩阵映射弹窗 -->
+    <MatrixMappingModal
+      v-model:visible="matrixMappingVisible"
+      :section-id="currentMappingSection?.id || ''"
+      :section-title="currentMappingSection?.title || ''"
+      :table-name="currentMappingSection?.tableName"
+      :attributes="currentMappingSection?.allAttributes || []"
+      @synced="handleMatrixSynced"
+    />
   </div>
 </template>
 

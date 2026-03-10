@@ -5,7 +5,7 @@
 // Tag Description: Form Data Section Instance Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, FormDataSectionInstanceVO, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from '@/apis/types'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, FormDataSectionInstanceVO, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from './types'
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request, upload } from '@/framework/network/request'
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, UpOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, UpOutlined, DatabaseOutlined } from '@ant-design/icons-vue'
 import { ref, computed } from 'vue'
 
 import AttributeGroupBlock from './AttributeGroupBlock.vue'
@@ -70,6 +70,7 @@ const emit = defineEmits<{
   (e: 'deleteAttribute', attribute: Attribute): void
   (e: 'copyAttribute', attribute: Attribute): void
   (e: 'updateAttributeSize', attribute: Attribute, size: { width: number; height: number; positionX?: number; positionY?: number }): void
+  (e: 'configMatrix', section: Section): void
 }>()
 
 // 折叠状态
@@ -139,6 +140,13 @@ const handleAddChildGroup = (parentGroupId: string) => {
           @click="emit('editSection', section)"
         >
           <EditOutlined /> 编辑区块
+        </a-button>
+        <a-button
+          type="link"
+          size="small"
+          @click="emit('configMatrix', section)"
+        >
+          <DatabaseOutlined /> 实体表配置
         </a-button>
         <a-button
           type="link"

@@ -412,6 +412,7 @@ defineExpose({
           v-else
           v-show="isFieldVisible(field)"
           :name="field.name"
+          :data-attribute-id="field.id"
           class="form-field-item-wrapper"
         >
           <DynamicFormItem

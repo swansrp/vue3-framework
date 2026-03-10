@@ -2,9 +2,10 @@
 /**
  * 动态表单填写页面
  * 支持三种模式：
- * 1. 新增模式：只有 formId（从 URL 或 props 获取），需手动点击按钮创建记录
- * 2. 编辑模式：有 historyId（从 URL 或 props 获取），可编辑
- * 3. 查看模式：有 historyId + readonly 参数，只读
+ * 1. 新增模式（延迟创建）：只有 formId，填完后整体保存，不立即创建 historyId
+ * 2. 新增模式（立即创建）：只有 formId，点击按钮后立即创建 historyId，边填边保存
+ * 3. 编辑模式：有 historyId，可编辑，边填边保存
+ * 4. 查看模式：有 historyId + readonly 参数，只读
  * 
  * 参数来源：
  * - URL 参数：?formId=xxx 或 ?historyId=xxx&readonly=true
@@ -13,6 +14,7 @@
 import { message } from 'ant-design-vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,6 +23,9 @@ const router = useRouter()
 const formId = ref<string>('')
 const historyId = ref<string>('')
 const modeValue = ref<'edit' | 'view'>('edit') // 使用字符串类型
+
+// 新增模式类型：lazy（延迟创建）或 immediate（立即创建）
+const createMode = ref<'lazy' | 'immediate'>('lazy')
 
 // 计算是否只读
 const isReadonly = computed(() => modeValue.value === 'view')
@@ -37,6 +42,11 @@ const formRef = ref()
 const pageMode = computed(() => {
   // 新增模式下，只有点击创建按钮后才进入表单
   if (formId.value && !historyId.value) {
+    // 延迟创建模式：直接进入表单填写
+    if (createMode.value === 'lazy') {
+      return 'create-lazy'
+    }
+    // 立即创建模式：需要先点击按钮
     return isRecordCreated.value ? 'create' : 'prepare'
   }
   if (historyId.value) {
@@ -49,9 +59,11 @@ const pageMode = computed(() => {
 const modeTitle = computed(() => {
   switch (pageMode.value) {
     case 'prepare':
-      return '新增表单'
+      return '新增表单（立即创建）'
     case 'create':
-      return '新增表单'
+      return '新增表单（立即创建）'
+    case 'create-lazy':
+      return '新增表单（延迟创建）'
     case 'edit':
       return '编辑表单'
     case 'view':
@@ -79,9 +91,14 @@ const parseUrlParams = () => {
   if (query.readonly === 'true' || query.readonly === '1') {
     modeValue.value = 'view'
   }
+  
+  // 解析 createMode 参数
+  if (query.createMode === 'immediate') {
+    createMode.value = 'immediate'
+  }
 }
 
-// 创建新记录
+// 创建新记录（立即创建模式）
 const handleCreateRecord = async () => {
   if (!formId.value) {
     message.warning('请输入表单模板ID')
@@ -130,6 +147,13 @@ const handleManualSubmit = async () => {
   }
 }
 
+// 返回列表
+const handleBack = () => {
+  router.back()
+  // 或跳转到指定列表页
+  // router.push('/list')
+}
+
 // 应用参数设置
 const applyParams = () => {
   // 重置创建状态
@@ -140,13 +164,14 @@ const applyParams = () => {
   if (formId.value) query.formId = formId.value
   if (historyId.value) query.historyId = historyId.value
   if (modeValue.value === 'view') query.readonly = 'true'
+  if (createMode.value === 'immediate') query.createMode = 'immediate'
   
   router.replace({ query })
 }
 
 // 监听 historyId 变化（新增模式创建成功后会设置 historyId）
 watch(historyId, (newVal) => {
-  if (newVal && pageMode.value === 'create') {
+  if (newVal && (pageMode.value === 'create' || pageMode.value === 'create-lazy')) {
     // 新增成功后，更新 URL
     router.replace({ query: { historyId: newVal } })
   }
@@ -172,7 +197,7 @@ onMounted(() => {
         >
           <!-- 参数输入 -->
           <a-row :gutter="16">
-            <a-col :span="8">
+            <a-col :span="6">
               <a-form-item label="表单模板ID">
                 <a-input
                   v-model:value="formId"
@@ -181,7 +206,7 @@ onMounted(() => {
                 />
               </a-form-item>
             </a-col>
-            <a-col :span="8">
+            <a-col :span="6">
               <a-form-item label="填报记录ID">
                 <a-input
                   v-model:value="historyId"
@@ -190,7 +215,7 @@ onMounted(() => {
                 />
               </a-form-item>
             </a-col>
-            <a-col :span="8">
+            <a-col :span="6">
               <a-form-item label="模式">
                 <a-select v-model:value="modeValue">
                   <a-select-option value="edit">
@@ -198,6 +223,18 @@ onMounted(() => {
                   </a-select-option>
                   <a-select-option value="view">
                     只读模式
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="6">
+              <a-form-item label="新增模式">
+                <a-select v-model:value="createMode">
+                  <a-select-option value="lazy">
+                    延迟创建（填完再保存）
+                  </a-select-option>
+                  <a-select-option value="immediate">
+                    立即创建（边填边保存）
                   </a-select-option>
                 </a-select>
               </a-form-item>
@@ -223,7 +260,7 @@ onMounted(() => {
               </a-space>
             </a-col>
             <a-col :span="12">
-              <a-tag :color="pageMode === 'prepare' ? 'cyan' : pageMode === 'create' ? 'green' : pageMode === 'edit' ? 'blue' : 'orange'">
+              <a-tag :color="pageMode === 'prepare' ? 'cyan' : pageMode === 'create' ? 'green' : pageMode === 'create-lazy' ? 'purple' : pageMode === 'edit' ? 'blue' : 'orange'">
                 当前模式: {{ modeTitle }}
               </a-tag>
             </a-col>
@@ -235,10 +272,10 @@ onMounted(() => {
           <div class="usage-tips">
             <h4>使用说明：</h4>
             <ol>
-              <li><strong>新增模式：</strong>输入 formId 后点击"应用参数"，再点击"开始填写"按钮创建记录</li>
-              <li><strong>编辑模式：</strong>输入 historyId，可编辑已有记录</li>
+              <li><strong>延迟创建模式：</strong>输入 formId → 直接填写 → 点击保存时创建 historyId 并保存所有数据</li>
+              <li><strong>立即创建模式：</strong>输入 formId → 选择"立即创建"→ 点击"开始填写"创建 historyId → 边填边保存</li>
+              <li><strong>编辑模式：</strong>输入 historyId，可编辑已有记录，边填边保存</li>
               <li><strong>查看模式：</strong>输入 historyId + 选择只读模式，只能查看不能编辑</li>
-              <li><strong>URL 参数：</strong>?formId=xxx 或 ?historyId=xxx&amp;readonly=true</li>
             </ol>
           </div>
         </a-space>
@@ -247,7 +284,7 @@ onMounted(() => {
 
     <!-- 表单组件 -->
     <div class="form-content">
-      <!-- 新增准备模式：显示创建按钮 -->
+      <!-- 新增准备模式：显示创建按钮（仅立即创建模式） -->
       <div
         v-if="pageMode === 'prepare'"
         class="prepare-state"
@@ -255,7 +292,7 @@ onMounted(() => {
         <a-card :style="{ maxWidth: '600px', margin: '0 auto' }">
           <a-result
             title="准备创建新表单"
-            sub-title="点击下方按钮开始填写新表单，系统将自动创建填报记录"
+            sub-title="点击下方按钮开始填写新表单，系统将立即创建填报记录"
           >
             <template #icon>
               <span style="font-size: 72px;">📋</span>
@@ -273,6 +310,9 @@ onMounted(() => {
                   <a-descriptions-item label="表单模板ID">
                     {{ formId }}
                   </a-descriptions-item>
+                  <a-descriptions-item label="创建模式">
+                    立即创建（边填边保存）
+                  </a-descriptions-item>
                 </a-descriptions>
                 <a-button
                   type="primary"
@@ -288,7 +328,33 @@ onMounted(() => {
         </a-card>
       </div>
 
-      <!-- 新增模式 -->
+      <!-- 新增模式（延迟创建）- 填完再保存 -->
+      <DynamicForm
+        v-else-if="pageMode === 'create-lazy'"
+        ref="formRef"
+        :form-id="formId"
+        :readonly="false"
+        :show-submit="true"
+        :auto-init="true"
+        :lazy-create="true"
+        @submitted="handleSubmitted"
+        @saved="handleSaved"
+        @init:complete="handleInitComplete"
+      >
+        <template #header-actions>
+          <a-button
+            type="link"
+            @click="handleBack"
+          >
+            <template #icon>
+              <ArrowLeftOutlined />
+            </template>
+            返回列表
+          </a-button>
+        </template>
+      </DynamicForm>
+
+      <!-- 新增模式（立即创建）- 边填边保存 -->
       <DynamicForm
         v-else-if="pageMode === 'create'"
         ref="formRef"
@@ -296,10 +362,23 @@ onMounted(() => {
         :readonly="false"
         :show-submit="true"
         :auto-init="true"
+        :lazy-create="false"
         @submitted="handleSubmitted"
         @saved="handleSaved"
         @init:complete="handleInitComplete"
-      />
+      >
+        <template #header-actions>
+          <a-button
+            type="link"
+            @click="handleBack"
+          >
+            <template #icon>
+              <ArrowLeftOutlined />
+            </template>
+            返回列表
+          </a-button>
+        </template>
+      </DynamicForm>
 
       <!-- 编辑模式 -->
       <DynamicForm
@@ -312,7 +391,19 @@ onMounted(() => {
         @submitted="handleSubmitted"
         @saved="handleSaved"
         @init:complete="handleInitComplete"
-      />
+      >
+        <template #header-actions>
+          <a-button
+            type="link"
+            @click="handleBack"
+          >
+            <template #icon>
+              <ArrowLeftOutlined />
+            </template>
+            返回列表
+          </a-button>
+        </template>
+      </DynamicForm>
 
       <!-- 查看模式 -->
       <DynamicForm
@@ -323,7 +414,19 @@ onMounted(() => {
         :show-submit="false"
         :auto-init="true"
         @init:complete="handleInitComplete"
-      />
+      >
+        <template #header-actions>
+          <a-button
+            type="link"
+            @click="handleBack"
+          >
+            <template #icon>
+              <ArrowLeftOutlined />
+            </template>
+            返回列表
+          </a-button>
+        </template>
+      </DynamicForm>
 
       <!-- 空状态 -->
       <div
@@ -339,9 +442,12 @@ onMounted(() => {
           <a-space>
             <a-button
               type="primary"
-              @click="formId = 'test-form-id'"
+              @click="formId = 'test-form-id'; createMode = 'lazy'"
             >
-              测试新增
+              测试延迟创建
+            </a-button>
+            <a-button @click="formId = 'test-form-id'; createMode = 'immediate'">
+              测试立即创建
             </a-button>
             <a-button @click="historyId = 'test-history-id'">
               测试编辑

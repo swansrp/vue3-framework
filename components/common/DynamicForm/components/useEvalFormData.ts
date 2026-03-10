@@ -76,6 +76,13 @@ export function useEvalFormData() {
   const historyInfo = ref<any>(null)
   const formInfo = ref<any>(null) // 表单模板信息（替代 productInfo）
 
+  // 延迟创建模式：是否延迟创建 historyId
+  const lazyCreate = ref(false)
+  // 本地暂存数据（延迟创建模式下使用）
+  const localSectionInstances = ref<SectionInstance[]>([])
+  const localGroupInstances = ref<Record<string, GroupInstanceData[]>>({})
+  const localSavedSectionData = ref<Record<string, any>>({})
+
   // 模块数据
   const modules = ref<any[]>([])
   const currentModuleIndex = ref(0)
@@ -684,6 +691,51 @@ export function useEvalFormData() {
     await loadCurrentModuleData()
   }
 
+  // 延迟创建模式下创建 historyId
+  const createHistoryId = async (): Promise<string | null> => {
+    if (!formInfo.value) {
+      message.error('表单模板信息未加载')
+      return null
+    }
+    
+    console.log('[createHistoryId] formInfo:', formInfo.value)
+    console.log('[createHistoryId] formInfo.id:', formInfo.value.id)
+    
+    try {
+      // formId 可能是 UUID 字符串或数字，保持原样传递
+      const formIdValue = formInfo.value.id
+      const requestData: any = {
+        formId: typeof formIdValue === 'string' ? formIdValue : Number(formIdValue),
+        status: '0' // 草稿状态
+      }
+      console.log('[createHistoryId] 请求数据:', requestData)
+      
+      const createRes = await formDataHistoryAdd(
+        requestData,
+        false,
+        false,
+        true
+      )
+      
+      console.log('[createHistoryId] 响应:', createRes)
+      
+      if (createRes?.status?.code === 0 && createRes.payload) {
+        const newHistoryId = String(createRes.payload.id || createRes.payload)
+        historyId.value = newHistoryId
+        historyInfo.value = {
+          id: newHistoryId,
+          formId: formIdValue,
+          status: '0'
+        }
+        return newHistoryId
+      }
+      return null
+    } catch (error) {
+      console.error('创建填报记录失败:', error)
+      return null
+    }
+  }
+
   // 字典翻译缓存
   const dictTranslateCache = new Map<string, string>()
   const translatePendingPromises = new Map<string, Promise<string>>()
@@ -734,7 +786,7 @@ export function useEvalFormData() {
   }
 
   // 初始化数据
-  const initData = async (options: { forceReadonly?: boolean; formId?: string; historyId?: string } = {}) => {
+  const initData = async (options: { forceReadonly?: boolean; formId?: string; historyId?: string; lazyCreate?: boolean } = {}) => {
     // 优先使用传入的 formId，其次从 URL 获取
     const formIdFromUrl = route.query.formId as string
     const formId = options.formId || formIdFromUrl
@@ -743,6 +795,9 @@ export function useEvalFormData() {
     const historyIdFromUrl = route.query.historyId as string
     historyId.value = options.historyId || historyIdFromUrl || ''
     
+    // 设置延迟创建模式
+    lazyCreate.value = options.lazyCreate ?? false
+
     // 新增模式：只有 formId，没有 historyId
     if (!historyId.value && formId) {
       loading.value = true
@@ -755,10 +810,17 @@ export function useEvalFormData() {
           return false
         }
         
-        // 2. 创建新的填报记录
+        // 2. 延迟创建模式：不立即创建 historyId，只设置编辑权限
+        if (lazyCreate.value) {
+          canEdit.value = options.forceReadonly ? false : true
+          return true
+        }
+        
+        // 3. 非延迟创建模式：立即创建新的填报记录
+        const formIdValue = formId // 保持原始类型（可能是 UUID 字符串）
         const createRes = await formDataHistoryAdd(
           {
-            formId: Number(formId),
+            formId: formIdValue,
             status: '0' // 草稿状态
           },
           false, // 不显示成功提示
@@ -767,15 +829,15 @@ export function useEvalFormData() {
         )
         
         if (createRes?.status?.code === 0 && createRes.payload) {
-          // 3. 获取新创建的 historyId
+          // 4. 获取新创建的 historyId
           historyId.value = String(createRes.payload.id || createRes.payload)
           historyInfo.value = {
             id: historyId.value,
-            formId: Number(formId),
+            formId: formIdValue,
             status: '0'
           }
           
-          // 4. 模块数据已在 loadFormInfo 中加载，设置编辑权限
+          // 5. 模块数据已在 loadFormInfo 中加载，设置编辑权限
           canEdit.value = options.forceReadonly ? false : true
           return true
         } else {
@@ -840,6 +902,11 @@ export function useEvalFormData() {
     pageTitle,
     currentSectionInstanceId,
     selectedMutualOptions,
+    // 延迟创建模式
+    lazyCreate,
+    localSectionInstances,
+    localGroupInstances,
+    localSavedSectionData,
     
     // 方法
     loadHistoryInfo,
@@ -856,6 +923,7 @@ export function useEvalFormData() {
     handleModuleChange,
     translateDictValue,
     initData,
+    createHistoryId,
     // 进度计算
     parseRequired,
     getGroupProgress,

@@ -96,6 +96,8 @@ export const sysMatrixAdvancedSummary = (data?: AdvancedSummaryReq, showSuccess 
 export const createPhysicalTable = (params?: {
   /** id */
   id: number
+  /** 是否自增 */
+  autoIncrement?: string
 }, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildPostApiByType('/forge/matrix/create-table', '')
   return request(api, params || {}, {}, showSuccess, showLoading, showErr)
