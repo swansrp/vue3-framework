@@ -11,16 +11,6 @@
         <MatrixManage @select="handleSelectMatrix" />
       </a-tab-pane>
       <a-tab-pane
-        key="form"
-        tab="表单管理"
-        :disabled="!currentMatrix || currentMatrix.status === '0'"
-      >
-        <FormConfig
-          v-if="currentMatrix && currentMatrix.id"
-          :matrix="currentMatrix"
-        />
-      </a-tab-pane>
-      <a-tab-pane
         key="portal"
         tab="Portal配置"
         :disabled="!currentMatrix || currentMatrix.status === '0'"
@@ -40,7 +30,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-import FormConfig from './components/FormConfig.vue'
 import MatrixManage from './components/MatrixManage.vue'
 import type { MatrixInfo } from './types'
 import { refreshPortalForMatrix, generatePortalForMatrix } from '../apis/portalGenerateController'

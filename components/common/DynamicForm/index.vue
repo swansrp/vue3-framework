@@ -36,6 +36,8 @@ import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 interface Props {
   /** 表单模板ID (schemaProductionId)，优先于URL参数 */
   formId?: string
+  /** 表单模板编码，优先于 formId */
+  formCode?: string
   /** 上报记录ID，优先于URL参数 */
   historyId?: string
   /** 是否强制只读模式 */
@@ -56,6 +58,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   formId: undefined,
+  formCode: undefined,
   historyId: undefined,
   readonly: false,
   showSubmit: true,
@@ -116,6 +119,7 @@ const canEdit = computed(() => props.readonly ? false : originalCanEdit.value)
 
 // 从 props 或 URL 获取参数
 const formIdValue = computed(() => props.formId || route.query.formId as string || '')
+const formCodeValue = computed(() => props.formCode || route.query.formCode as string || '')
 const historyIdValue = computed(() => props.historyId || route.query.historyId as string || '')
 
 // 组件 ref
@@ -1196,6 +1200,7 @@ const init = async () => {
   const success = await originalInitData({ 
     forceReadonly: props.readonly,
     formId: formIdValue.value,
+    formCode: formCodeValue.value,
     historyId: historyIdValue.value,
     lazyCreate: props.lazyCreate
   })

@@ -27,6 +27,27 @@ const defaultFormFields = {
   sort: 0
 }
 
+// 表单校验规则
+const formRules = {
+  code: [
+    { required: true, message: '请输入模板编码', trigger: 'blur' },
+    { pattern: /^[a-z][a-z_]*$/, message: '编码必须以字母开头，只能包含小写字母和下划线', trigger: 'blur' }
+  ],
+  title: [
+    { required: true, message: '请输入模板名称', trigger: 'blur' }
+  ]
+}
+
+// 格式化编码：大写转小写，中划线转下划线
+const formatCode = (value: string): string => {
+  return value.toLowerCase().replace(/-/g, '_')
+}
+
+// 处理编码输入
+const handleCodeInput = (formData: any, value: string) => {
+  formData.code = formatCode(value)
+}
+
 // 处理模板选择
 const handleTemplateSelect = (templateId: string, templateInfo: any) => {
   selectedTemplateId.value = templateId
@@ -83,9 +104,11 @@ const getStatusText = (status: string) => {
           </template>
 
           <!-- 自定义表单 -->
-          <template #form="{ formData, isEdit }">
+          <template #form="{ formData, isEdit, formRef }">
             <a-form
+              :ref="(el: any) => { if (el) formRef = el }"
               :model="formData"
+              :rules="formRules"
               :label-col="{ span: 6 }"
               :wrapper-col="{ span: 16 }"
               layout="horizontal"
@@ -95,14 +118,15 @@ const getStatusText = (status: string) => {
                 name="code"
               >
                 <a-input
-                  v-model:value="formData.code"
-                  placeholder="请输入模板编码（可选）"
+                  :value="formData.code"
+                  placeholder="请输入模板编码（如：enterprise_eval）"
+                  @input="(e: InputEvent) => handleCodeInput(formData, (e.target as HTMLInputElement).value)"
+                  @change="(e: any) => handleCodeInput(formData, e.target.value)"
                 />
               </a-form-item>
               <a-form-item
                 label="模板名称"
                 name="title"
-                required
               >
                 <a-input
                   v-model:value="formData.title"

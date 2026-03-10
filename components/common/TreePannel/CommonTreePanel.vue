@@ -54,7 +54,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: '产品列表',
+  title: '树型结构数据标题',
   readonly: false,
   showRefresh: true,
   searchable: true,
@@ -94,6 +94,9 @@ const formData = ref<Record<string, any>>({
   title: '',
   pid: ''
 })
+
+// 表单引用（用于校验）
+const formRef = ref<any>(null)
 
 // 根据key查找节点
 const findNodeByKey = (nodes: TreeNode[], key: string): TreeNode | null => {
@@ -194,9 +197,20 @@ const handleEdit = (node: TreeNode) => {
 
 // 保存节点
 const handleSave = async () => {
-  if (!formData.value.title) {
-    message.error('请输入名称')
-    return
+  // 先尝试表单校验（如果插槽中使用了表单）
+  if (formRef.value?.validate) {
+    try {
+      await formRef.value.validate()
+    } catch {
+      // 校验失败，表单会自动显示错误信息
+      return
+    }
+  } else {
+    // 兼容旧逻辑：只检查 title
+    if (!formData.value.title) {
+      message.error('请输入名称')
+      return
+    }
   }
 
   try {
@@ -545,6 +559,7 @@ watch(() => props.urlPrefix, () => {
         :editing-node="editingNode"
         :form-data="formData"
         :is-edit="!!editingNode"
+        :form-ref="formRef"
         name="form"
       >
         <!-- 默认表单 -->

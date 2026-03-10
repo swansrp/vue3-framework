@@ -11,14 +11,13 @@ export { default as SectionFormModal } from './SectionFormModal.vue'
 export { default as AttributeFormModal } from './AttributeFormModal.vue'
 export { default as AttributeGroupFormModal } from './AttributeGroupFormModal.vue'
 export { default as FormLayoutConfig } from './FormLayoutConfig.vue'
-export { default as ProductTree } from './ProductTree.vue'
 
 /**
- * 评估表单填写组件（从 EvalForm 迁移）
+ * 评估表单填写组件
  * 用于动态表单填写、查看功能
  */
-export { default as EvalFormViewer } from './FormViewer.vue'
-export { default as EvalGroupForm } from './GroupForm.vue'
+export { default as FormViewer } from './FormViewer.vue'
+export { default as GroupForm } from './GroupForm.vue'
 export { default as SectionNavTree } from './SectionNavTree.vue'
 export { useEvalFormData } from './useEvalFormData'
 

@@ -11,16 +11,17 @@
  * - URL 参数：?formId=xxx 或 ?historyId=xxx&readonly=true
  * - Props 传入：作为组件使用时通过 props 传入
  */
+import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 
 // 参数状态
 const formId = ref<string>('')
+const formCode = ref<string>('')
 const historyId = ref<string>('')
 const modeValue = ref<'edit' | 'view'>('edit') // 使用字符串类型
 
@@ -41,7 +42,7 @@ const formRef = ref()
 // 页面模式
 const pageMode = computed(() => {
   // 新增模式下，只有点击创建按钮后才进入表单
-  if (formId.value && !historyId.value) {
+  if ((formId.value || formCode.value) && !historyId.value) {
     // 延迟创建模式：直接进入表单填写
     if (createMode.value === 'lazy') {
       return 'create-lazy'
@@ -82,6 +83,11 @@ const parseUrlParams = () => {
     formId.value = query.formId as string
   }
   
+  // 解析 formCode
+  if (query.formCode) {
+    formCode.value = query.formCode as string
+  }
+  
   // 解析 historyId
   if (query.historyId) {
     historyId.value = query.historyId as string
@@ -100,8 +106,8 @@ const parseUrlParams = () => {
 
 // 创建新记录（立即创建模式）
 const handleCreateRecord = async () => {
-  if (!formId.value) {
-    message.warning('请输入表单模板ID')
+  if (!formId.value && !formCode.value) {
+    message.warning('请输入表单模板ID或编码')
     return
   }
   
@@ -162,6 +168,7 @@ const applyParams = () => {
   // 更新 URL（不刷新页面）
   const query: Record<string, string> = {}
   if (formId.value) query.formId = formId.value
+  if (formCode.value) query.formCode = formCode.value
   if (historyId.value) query.historyId = historyId.value
   if (modeValue.value === 'view') query.readonly = 'true'
   if (createMode.value === 'immediate') query.createMode = 'immediate'
@@ -197,16 +204,25 @@ onMounted(() => {
         >
           <!-- 参数输入 -->
           <a-row :gutter="16">
-            <a-col :span="6">
+            <a-col :span="4">
               <a-form-item label="表单模板ID">
                 <a-input
                   v-model:value="formId"
-                  placeholder="输入 formId（新增模式）"
+                  placeholder="输入 formId"
                   allow-clear
                 />
               </a-form-item>
             </a-col>
-            <a-col :span="6">
+            <a-col :span="4">
+              <a-form-item label="表单编码">
+                <a-input
+                  v-model:value="formCode"
+                  placeholder="输入 formCode"
+                  allow-clear
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="4">
               <a-form-item label="填报记录ID">
                 <a-input
                   v-model:value="historyId"
@@ -215,7 +231,7 @@ onMounted(() => {
                 />
               </a-form-item>
             </a-col>
-            <a-col :span="6">
+            <a-col :span="4">
               <a-form-item label="模式">
                 <a-select v-model:value="modeValue">
                   <a-select-option value="edit">
@@ -227,7 +243,7 @@ onMounted(() => {
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :span="6">
+            <a-col :span="4">
               <a-form-item label="新增模式">
                 <a-select v-model:value="createMode">
                   <a-select-option value="lazy">
@@ -308,7 +324,10 @@ onMounted(() => {
                   size="small"
                 >
                   <a-descriptions-item label="表单模板ID">
-                    {{ formId }}
+                    {{ formId || '-' }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="表单编码">
+                    {{ formCode || '-' }}
                   </a-descriptions-item>
                   <a-descriptions-item label="创建模式">
                     立即创建（边填边保存）
@@ -333,6 +352,7 @@ onMounted(() => {
         v-else-if="pageMode === 'create-lazy'"
         ref="formRef"
         :form-id="formId"
+        :form-code="formCode"
         :readonly="false"
         :show-submit="true"
         :auto-init="true"
@@ -359,6 +379,7 @@ onMounted(() => {
         v-else-if="pageMode === 'create'"
         ref="formRef"
         :form-id="formId"
+        :form-code="formCode"
         :readonly="false"
         :show-submit="true"
         :auto-init="true"
@@ -433,7 +454,7 @@ onMounted(() => {
         v-else
         class="empty-state"
       >
-        <a-empty description="请输入表单模板ID（formId）或填报记录ID（historyId）">
+        <a-empty description="请输入表单编码（formCode）或表单模板ID（formId）或填报记录ID（historyId）">
           <template #image>
             <span style="font-size: 64px;">📝</span>
           </template>
@@ -442,11 +463,11 @@ onMounted(() => {
           <a-space>
             <a-button
               type="primary"
-              @click="formId = 'test-form-id'; createMode = 'lazy'"
+              @click="formCode = 'test-form'; createMode = 'lazy'"
             >
               测试延迟创建
             </a-button>
-            <a-button @click="formId = 'test-form-id'; createMode = 'immediate'">
+            <a-button @click="formCode = 'test-form'; createMode = 'immediate'">
               测试立即创建
             </a-button>
             <a-button @click="historyId = 'test-history-id'">

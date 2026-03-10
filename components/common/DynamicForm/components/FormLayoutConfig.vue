@@ -31,10 +31,12 @@ const strLF2HtmlLF = (str: string) => {
 
 interface Props {
   formId: string
+  formCode?: string  // 表单编码，用于生成表名前缀
   readonly?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  formCode: undefined,
   readonly: false
 })
 
@@ -563,6 +565,7 @@ defineExpose({
       :section-title="currentMappingSection?.title || ''"
       :table-name="currentMappingSection?.tableName"
       :attributes="currentMappingSection?.allAttributes || []"
+      :form-code="formCode"
       @synced="handleMatrixSynced"
     />
   </div>

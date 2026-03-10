@@ -4,7 +4,7 @@
  * 用于展示填报数据，支持只读和编辑模式
  * 优化版：支持左右布局、Section导航树、Group折叠卡片、进度显示
  */
-import { ArrowLeftOutlined, SaveOutlined, DeleteOutlined, DownOutlined, UpOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons-vue'
+import { SaveOutlined, DeleteOutlined, DownOutlined, UpOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons-vue'
 import { ref, computed, watch, provide, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 

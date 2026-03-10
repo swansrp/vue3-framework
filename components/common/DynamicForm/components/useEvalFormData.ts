@@ -14,7 +14,7 @@ import { formDataSectionInstanceGeneralSelect } from '../apis/formDataSectionIns
 import { formSchemaAttributeGroupGeneralSelect } from '../apis/formSchemaAttributeGroupPortalController'
 import { formSchemaAttributeGeneralSelect } from '../apis/formSchemaAttributePortalController'
 import { formSchemaModuleGeneralSelect } from '../apis/formSchemaModulePortalController'
-import { formSchemaQueryById } from '../apis/formSchemaPortalController'
+import { formSchemaGeneralSelect, formSchemaQueryById } from '../apis/formSchemaPortalController'
 import { formSchemaSectionGeneralSelect } from '../apis/formSchemaSectionPortalController'
 
 import { getDictByValue } from '@/framework/apis/dict/bizDictController'
@@ -151,7 +151,7 @@ export function useEvalFormData() {
     return true
   }
 
-  // 加载表单模板信息
+  // 加载表单模板信息（通过 ID）
   const loadFormInfo = async (formId: string) => {
     try {
       const res = await formSchemaQueryById(
@@ -164,10 +164,40 @@ export function useEvalFormData() {
       if (res?.status?.code === 0 && res.payload) {
         formInfo.value = res.payload
         // 传递 formId 给 loadModules，确保新增模式下也能正确加载
-        await loadModules(formId)
+        await loadModules(String(formInfo.value.id))
       }
     } catch (error) {
       console.error('加载表单模板失败:', error)
+    }
+  }
+
+  // 加载表单模板信息（通过 Code）
+  const loadFormInfoByCode = async (formCode: string) => {
+    try {
+      const res = await formSchemaGeneralSelect(
+        {
+          conditionList: [
+            { property: 'code', relation: FILTER_TYPE.EQUAL, value: [formCode] },
+            { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
+          ]
+        },
+        false,
+        false,
+        true
+      )
+
+      if (res?.status?.code === 0 && res.payload && res.payload.length > 0) {
+        formInfo.value = res.payload[0]
+        // 传递 formId 给 loadModules，确保新增模式下也能正确加载
+        await loadModules(String(formInfo.value.id))
+        return true
+      } else {
+        message.error('未找到表单模板')
+        return false
+      }
+    } catch (error) {
+      console.error('加载表单模板失败:', error)
+      return false
     }
   }
 
@@ -786,10 +816,12 @@ export function useEvalFormData() {
   }
 
   // 初始化数据
-  const initData = async (options: { forceReadonly?: boolean; formId?: string; historyId?: string; lazyCreate?: boolean } = {}) => {
-    // 优先使用传入的 formId，其次从 URL 获取
+  const initData = async (options: { forceReadonly?: boolean; formId?: string; formCode?: string; historyId?: string; lazyCreate?: boolean } = {}) => {
+    // 优先使用传入的 formId/formCode，其次从 URL 获取
     const formIdFromUrl = route.query.formId as string
+    const formCodeFromUrl = route.query.formCode as string
     const formId = options.formId || formIdFromUrl
+    const formCode = options.formCode || formCodeFromUrl
     
     // 优先使用传入的 historyId，其次从 URL 获取
     const historyIdFromUrl = route.query.historyId as string
@@ -798,14 +830,20 @@ export function useEvalFormData() {
     // 设置延迟创建模式
     lazyCreate.value = options.lazyCreate ?? false
 
-    // 新增模式：只有 formId，没有 historyId
-    if (!historyId.value && formId) {
+    // 新增模式：有 formCode 或 formId，没有 historyId
+    if (!historyId.value && (formCode || formId)) {
       loading.value = true
       try {
-        // 1. 先加载表单模板信息
-        await loadFormInfo(formId)
+        // 1. 先加载表单模板信息（优先使用 formCode）
+        let loadSuccess = false
+        if (formCode) {
+          loadSuccess = await loadFormInfoByCode(formCode)
+        } else if (formId) {
+          await loadFormInfo(formId)
+          loadSuccess = !!formInfo.value
+        }
         
-        if (!formInfo.value) {
+        if (!loadSuccess || !formInfo.value) {
           message.error('表单模板不存在')
           return false
         }
@@ -817,7 +855,7 @@ export function useEvalFormData() {
         }
         
         // 3. 非延迟创建模式：立即创建新的填报记录
-        const formIdValue = formId // 保持原始类型（可能是 UUID 字符串）
+        const formIdValue = formInfo.value.id // 使用加载后的表单 ID
         const createRes = await formDataHistoryAdd(
           {
             formId: formIdValue,
@@ -911,6 +949,7 @@ export function useEvalFormData() {
     // 方法
     loadHistoryInfo,
     loadFormInfo,
+    loadFormInfoByCode,
     loadModules,
     loadCurrentModuleData,
     loadAvailableSections,

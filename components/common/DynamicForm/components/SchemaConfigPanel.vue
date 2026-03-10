@@ -766,6 +766,7 @@ watch(() => props.formId, () => {
       <FormLayoutConfig
         ref="formLayoutConfigRef"
         :form-id="formId"
+        :form-code="formInfo?.code"
         :readonly="readonly"
         @edit-module="handleEditModule"
         @edit-section="handleEditSection"
@@ -895,6 +896,7 @@ watch(() => props.formId, () => {
       :section-title="currentMatrixSection?.title"
       :table-name="currentMatrixSection?.tableName"
       :attributes="currentAttributes[currentMatrixSection?.id] || []"
+      :form-code="formInfo?.code"
       @synced="handleMatrixSynced"
     />
   </div>

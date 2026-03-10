@@ -1,22 +1,23 @@
 <script lang="ts" setup>
-import {CheckOutlined, CloseOutlined, DatabaseOutlined, LinkOutlined, SyncOutlined} from '@ant-design/icons-vue'
-import {message, Modal} from 'ant-design-vue'
-import {computed, ref, watch} from 'vue'
+import { CheckOutlined, CloseOutlined, DatabaseOutlined, LinkOutlined, SyncOutlined } from '@ant-design/icons-vue'
+import { message, Modal } from 'ant-design-vue'
+import { computed, ref, watch } from 'vue'
 
-import {formSchemaAttributeUpdate} from '../apis/formSchemaAttributePortalController'
-import {formSchemaSectionUpdate} from '../apis/formSchemaSectionPortalController'
+import { formSchemaAttributeUpdate } from '../apis/formSchemaAttributePortalController'
+import { formSchemaSectionUpdate } from '../apis/formSchemaSectionPortalController'
+
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import {
+  sysMatrixColumnAdd,
+  sysMatrixColumnUpdate,
+  sysMatrixColumnGeneralSelect
+} from '@/framework/views/MainContent/dynamic/apis/sysMatrixColumnPortalController'
 import {
   createPhysicalTable,
   syncTableStructure,
   sysMatrixAdd,
   sysMatrixGeneralSelect
 } from '@/framework/views/MainContent/dynamic/apis/sysMatrixPortalController'
-import {
-  sysMatrixColumnAdd,
-  sysMatrixColumnUpdate,
-  sysMatrixColumnGeneralSelect
-} from '@/framework/views/MainContent/dynamic/apis/sysMatrixColumnPortalController'
-import {FILTER_TYPE} from '@/framework/components/common/Portal/type'
 
 interface Attribute {
   id: number
@@ -37,6 +38,7 @@ interface Props {
   sectionTitle: string
   tableName?: string  // 已关联的表名
   attributes: Attribute[]
+  formCode?: string  // 表单编码，用于生成表名前缀
 }
 
 const props = defineProps<Props>()
@@ -70,27 +72,35 @@ const tableName = ref('')
 const tableComment = ref('')
 const primaryKeyType = ref<'auto_increment' | 'uuid'>('auto_increment')  // 主键类型
 
+// 表名前缀（包含 formCode）
+const tablePrefix = computed(() => {
+  if (props.formCode) {
+    return `biz_${props.formCode}_`
+  }
+  return 'biz_'
+})
+
 // 字段类型映射
 const fieldTypeToColumnType = (fieldType: string): { type: string; length?: number; decimalPlaces?: number } => {
   const map: Record<string, { type: string; length?: number; decimalPlaces?: number }> = {
-    '1': {type: 'VARCHAR', length: 255},    // 文本输入
-    '2': {type: 'VARCHAR', length: 1},     // 开关
-    '3': {type: 'DECIMAL', length: 19, decimalPlaces: 4},  // 数值
-    '4': {type: 'VARCHAR', length: 50},     // 下拉选择
-    '5': {type: 'VARCHAR', length: 50},     // 树形选择
-    '6': {type: 'DATETIME'},                // 日期
-    '7': {type: 'DATETIME'},                // 日期时间
-    '8': {type: 'VARCHAR', length: 500},    // 超链接
-    '9': {type: 'TEXT'},                    // HTML
-    '10': {type: 'TEXT'},                   // 文本域
-    '12': {type: 'VARCHAR', length: 255},   // 图片
-    '13': {type: 'VARCHAR', length: 255},   // 视频
-    '14': {type: 'VARCHAR', length: 255},   // 音频
-    '15': {type: 'VARCHAR', length: 255},   // 文件
-    '18': {type: 'VARCHAR', length: 500},   // 下拉多选
-    '19': {type: 'VARCHAR', length: 500}    // 树形多选
+    '1': { type: 'VARCHAR', length: 255 },    // 文本输入
+    '2': { type: 'VARCHAR', length: 1 },     // 开关
+    '3': { type: 'DECIMAL', length: 19, decimalPlaces: 4 },  // 数值
+    '4': { type: 'VARCHAR', length: 50 },     // 下拉选择
+    '5': { type: 'VARCHAR', length: 50 },     // 树形选择
+    '6': { type: 'DATETIME' },                // 日期
+    '7': { type: 'DATETIME' },                // 日期时间
+    '8': { type: 'VARCHAR', length: 500 },    // 超链接
+    '9': { type: 'TEXT' },                    // HTML
+    '10': { type: 'TEXT' },                   // 文本域
+    '12': { type: 'VARCHAR', length: 255 },   // 图片
+    '13': { type: 'VARCHAR', length: 255 },   // 视频
+    '14': { type: 'VARCHAR', length: 255 },   // 音频
+    '15': { type: 'VARCHAR', length: 255 },   // 文件
+    '18': { type: 'VARCHAR', length: 500 },   // 下拉多选
+    '19': { type: 'VARCHAR', length: 500 }    // 树形多选
   }
-  return map[fieldType] || {type: 'VARCHAR', length: 255}
+  return map[fieldType] || { type: 'VARCHAR', length: 255 }
 }
 
 // 字段类型名称映射
@@ -133,7 +143,7 @@ const mappingStatus = computed(() => {
   const filterableAttrs = localAttributes.value.filter(a => a.fieldType !== '-1' && a.fieldType !== '-2')
   const total = filterableAttrs.length
   const mapped = filterableAttrs.filter(a => a.matrixColumnId).length
-  return {total, mapped, unmapped: total - mapped}
+  return { total, mapped, unmapped: total - mapped }
 })
 
 // 可映射的属性列表（排除显示类型 -1 和 -2）
@@ -164,7 +174,7 @@ const loadCurrentMatrix = async () => {
   try {
     const res = await sysMatrixGeneralSelect({
       conditionList: [
-        {property: 'tableName', relation: FILTER_TYPE.EQUAL, value: [props.tableName]}
+        { property: 'tableName', relation: FILTER_TYPE.EQUAL, value: [props.tableName] }
       ]
     } as any, false, false)
 
@@ -182,7 +192,7 @@ const loadMatrixColumns = async (matrixId: number) => {
   try {
     const res = await sysMatrixColumnGeneralSelect({
       conditionList: [
-        {property: 'matrixId', relation: FILTER_TYPE.EQUAL, value: [matrixId]}
+        { property: 'matrixId', relation: FILTER_TYPE.EQUAL, value: [matrixId] }
       ]
     } as any, false, false)
     matrixColumns.value = res.payload || []
@@ -249,7 +259,8 @@ const handleCreateMatrix = async () => {
 
   loading.value = true
   try {
-    const finalTableName = tableName.value.startsWith('biz_') ? tableName.value : `biz_${tableName.value}`
+    // 使用包含 formCode 的前缀
+    const finalTableName = tableName.value.startsWith(tablePrefix.value) ? tableName.value : `${tablePrefix.value}${tableName.value}`
 
     // 创建矩阵
     const resp = await sysMatrixAdd({
@@ -273,7 +284,7 @@ const handleCreateMatrix = async () => {
         columnType: 'VARCHAR',
         columnLength: 50,
         isIndex: '1',
-        isNullable: '1',
+        isNullable: '0',
         fieldType: '1',
         sort: 0
       }, false, false)
@@ -290,9 +301,9 @@ const handleCreateMatrix = async () => {
         columnType: 'VARCHAR',
         columnLength: 50,
         isIndex: '1',
-        isNullable: '1',
+        isNullable: '0',
         fieldType: '1',
-        sort: 0
+        sort: 1
       }, false, false)
 
       if (sectionInstanceIdColumn.payload) {
@@ -366,7 +377,7 @@ const handleSyncAttributes = async () => {
         // 已存在，查找并关联
         const existingCol = matrixColumns.value.find(c => c.columnName === columnName)
         if (existingCol && !attr.matrixColumnId) {
-          updatedAttributes.push({...attr, matrixColumnId: existingCol.id})
+          updatedAttributes.push({ ...attr, matrixColumnId: existingCol.id })
         }
         continue
       }
@@ -383,21 +394,21 @@ const handleSyncAttributes = async () => {
         columnLength,
         isIndex,
         fieldType: attr.fieldType,
-        isNullable: '0',
+        isNullable: '1',  // 所有字段一律不必填
         defaultValue: attr.defaultValue,
         referenceDict: attr.dict,
         sort: attr.sort || 0
       }
 
-      newColumns.push({attr, columnData})
+      newColumns.push({ attr, columnData })
       existingColumnNames.add(columnName)
     }
 
     // 批量创建新字段
-    for (const {attr, columnData} of newColumns) {
+    for (const { attr, columnData } of newColumns) {
       const res = await sysMatrixColumnAdd(columnData, false, false)
       if (res.payload) {
-        updatedAttributes.push({...attr, matrixColumnId: res.payload.id || res.payload})
+        updatedAttributes.push({ ...attr, matrixColumnId: res.payload.id || res.payload })
       }
     }
 
@@ -462,7 +473,7 @@ const handleSyncTableStructure = async () => {
 
   loading.value = true
   try {
-    await syncTableStructure({id: Number(currentMatrix.value.id)})
+    await syncTableStructure({ id: Number(currentMatrix.value.id) })
     await loadCurrentMatrix()
     message.success('同步表结构成功')
   } catch (error) {
@@ -520,12 +531,12 @@ const handleSaveMappedColumnChanges = async () => {
 // 获取矩阵状态显示
 const getMatrixStatusText = (status?: string) => {
   const map: Record<string, { text: string; color: string }> = {
-    '0': {text: '未创建', color: 'default'},
-    '1': {text: '已创建', color: 'blue'},
-    '2': {text: '已同步', color: 'green'},
-    '3': {text: '待同步', color: 'orange'}
+    '0': { text: '未创建', color: 'default' },
+    '1': { text: '已创建', color: 'blue' },
+    '2': { text: '已同步', color: 'green' },
+    '3': { text: '待同步', color: 'orange' }
   }
-  return map[status || '0'] || {text: '未知', color: 'default'}
+  return map[status || '0'] || { text: '未知', color: 'default' }
 }
 
 // 关闭弹窗
@@ -590,7 +601,10 @@ watch(() => props.visible, (val) => {
             type="info"
           />
 
-          <a-radio-group v-model:value="mode" style="margin-bottom: 16px;">
+          <a-radio-group
+            v-model:value="mode"
+            style="margin-bottom: 16px;"
+          >
             <a-radio value="create">
               <DatabaseOutlined />
               创建新表
@@ -602,14 +616,23 @@ watch(() => props.visible, (val) => {
           </a-radio-group>
 
           <!-- 创建新表 -->
-          <div v-if="mode === 'create'" class="create-form">
-            <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+          <div
+            v-if="mode === 'create'"
+            class="create-form"
+          >
+            <a-form
+              :label-col="{ span: 6 }"
+              :wrapper-col="{ span: 18 }"
+            >
               <a-row :gutter="24">
                 <a-col :span="12">
-                  <a-form-item label="表名" required>
+                  <a-form-item
+                    label="表名"
+                    required
+                  >
                     <a-input
                       v-model:value="tableName"
-                      addon-before="biz_"
+                      :addon-before="tablePrefix"
                       placeholder="如: section_101"
                     />
                   </a-form-item>
@@ -623,7 +646,10 @@ watch(() => props.visible, (val) => {
                   </a-form-item>
                 </a-col>
                 <a-col :span="12">
-                  <a-form-item label="主键类型" required>
+                  <a-form-item
+                    label="主键类型"
+                    required
+                  >
                     <a-radio-group v-model:value="primaryKeyType">
                       <a-radio value="auto_increment">
                         自增 (BIGINT)
@@ -649,7 +675,10 @@ watch(() => props.visible, (val) => {
           </div>
 
           <!-- 选择已有表 -->
-          <div v-if="mode === 'select'" class="select-form">
+          <div
+            v-if="mode === 'select'"
+            class="select-form"
+          >
             <a-table
               :columns="[
                 { title: '表名', dataIndex: 'tableName', key: 'tableName' },
@@ -685,7 +714,11 @@ watch(() => props.visible, (val) => {
         <!-- 已关联矩阵时显示配置界面 -->
         <template v-else>
           <div class="matrix-info">
-            <a-descriptions :column="3" bordered size="small">
+            <a-descriptions
+              :column="3"
+              bordered
+              size="small"
+            >
               <a-descriptions-item label="表名">
                 {{ currentMatrix.tableName }}
               </a-descriptions-item>
@@ -699,7 +732,10 @@ watch(() => props.visible, (val) => {
               </a-descriptions-item>
             </a-descriptions>
 
-            <div class="matrix-actions" style="margin-top: 16px;">
+            <div
+              class="matrix-actions"
+              style="margin-top: 16px;"
+            >
               <a-space>
                 <a-button
                   v-if="currentMatrix.status === '0'"
@@ -762,11 +798,17 @@ watch(() => props.visible, (val) => {
                 {{ getFieldTypeName(record.fieldType) }}
               </template>
               <template v-if="column.key === 'mapping'">
-                <a-tag v-if="record.matrixColumnId" color="green">
+                <a-tag
+                  v-if="record.matrixColumnId"
+                  color="green"
+                >
                   <CheckOutlined />
                   已映射
                 </a-tag>
-                <a-tag v-else color="orange">
+                <a-tag
+                  v-else
+                  color="orange"
+                >
                   <CloseOutlined />
                   未映射
                 </a-tag>
