@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { CheckOutlined, CloseOutlined, DatabaseOutlined, LinkOutlined, SyncOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import { formSchemaAttributeUpdate } from '../apis/formSchemaAttributePortalController'
 import { formSchemaSectionUpdate } from '../apis/formSchemaSectionPortalController'
@@ -34,10 +34,10 @@ interface Attribute {
 
 interface Props {
   visible: boolean
-  sectionId: number | string
-  sectionTitle: string
+  sectionId?: number | string
+  sectionTitle?: string
   tableName?: string  // 已关联的表名
-  attributes: Attribute[]
+  attributes?: Attribute[]
   formCode?: string  // 表单编码，用于生成表名前缀
 }
 
@@ -224,19 +224,29 @@ const initMappedColumnEdits = () => {
 
 // 初始化
 const initData = async () => {
+  console.log('[MatrixMappingModal] initData - props:', {
+    sectionId: props.sectionId,
+    sectionTitle: props.sectionTitle,
+    tableName: props.tableName,
+    formCode: props.formCode,
+    attributesCount: props.attributes?.length || 0,
+    attributes: props.attributes
+  })
+  
   mode.value = props.tableName ? 'none' : 'none'
   tableName.value = props.tableName || ''
   tableComment.value = props.sectionTitle || ''
   
   // 初始化本地属性列表
-  localAttributes.value = [...props.attributes]
+  localAttributes.value = [...(props.attributes || [])]
+  console.log('[MatrixMappingModal] initData - localAttributes count:', localAttributes.value.length)
   
   // 初始化字段名映射，默认使用属性名
   columnNamesMap.value = {}
   columnTypesMap.value = {}
   columnLengthsMap.value = {}
   columnIsIndexMap.value = {}
-  props.attributes.forEach(attr => {
+  ;(props.attributes || []).forEach(attr => {
     columnNamesMap.value[attr.id] = attr.name
     const typeInfo = fieldTypeToColumnType(attr.fieldType)
     columnTypesMap.value[attr.id] = typeInfo.type
@@ -244,6 +254,8 @@ const initData = async () => {
     columnIsIndexMap.value[attr.id] = '0'  // 默认不索引
   })
 
+  console.log('[MatrixMappingModal] initData - tablePrefix:', tablePrefix.value, 'formCode:', props.formCode)
+  
   await Promise.all([
     loadExistingMatrices(),
     loadCurrentMatrix()
@@ -312,7 +324,7 @@ const handleCreateMatrix = async () => {
 
       // 更新 section 的 tableName
       await formSchemaSectionUpdate({}, {
-        id: Number(props.sectionId),
+        id: Number(props.sectionId!),
         tableName: finalTableName
       }, false, false)
 
@@ -340,7 +352,7 @@ const handleSelectMatrix = async (matrixId: number) => {
     
     // 更新 section 的 tableName
     await formSchemaSectionUpdate({}, {
-      id: Number(props.sectionId),
+      id: Number(props.sectionId!),
       tableName: matrix.tableName
     }, false, false)
     
@@ -547,9 +559,29 @@ const handleClose = () => {
 // 监听 visible 变化
 watch(() => props.visible, (val) => {
   if (val) {
-    initData()
+    // 使用 nextTick 确保 props 已经更新
+    nextTick(() => {
+      initData()
+    })
   }
-})
+}, { immediate: true })
+
+// 监听 attributes 变化，实时更新本地数据
+watch(() => props.attributes, (newAttrs) => {
+  if (props.visible && newAttrs) {
+    localAttributes.value = [...newAttrs]
+    // 更新字段名映射
+    newAttrs.forEach(attr => {
+      if (!columnNamesMap.value[attr.id]) {
+        columnNamesMap.value[attr.id] = attr.name
+        const typeInfo = fieldTypeToColumnType(attr.fieldType)
+        columnTypesMap.value[attr.id] = typeInfo.type
+        columnLengthsMap.value[attr.id] = typeInfo.length
+        columnIsIndexMap.value[attr.id] = '0'
+      }
+    })
+  }
+}, { deep: true })
 </script>
 
 <template>
@@ -633,7 +665,7 @@ watch(() => props.visible, (val) => {
                     <a-input
                       v-model:value="tableName"
                       :addon-before="tablePrefix"
-                      placeholder="如: section_101"
+                      placeholder="如: user_info"
                     />
                   </a-form-item>
                 </a-col>
@@ -738,7 +770,7 @@ watch(() => props.visible, (val) => {
             >
               <a-space>
                 <a-button
-                  v-if="currentMatrix.status === '0'"
+                  v-if="currentMatrix.status === '0' || currentMatrix.status === 0"
                   type="primary"
                   @click="handleCreatePhysicalTable"
                 >
@@ -746,7 +778,7 @@ watch(() => props.visible, (val) => {
                   创建物理表
                 </a-button>
                 <a-button
-                  v-if="currentMatrix.status === '3'"
+                  v-if="currentMatrix.status === '3' || currentMatrix.status === 3"
                   danger
                   type="primary"
                   @click="handleSyncTableStructure"

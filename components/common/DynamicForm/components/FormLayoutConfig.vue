@@ -137,7 +137,7 @@ const loadAllData = async () => {
         { property: 'formId', relation: FILTER_TYPE.EQUAL, value: [props.formId] },
         { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
       ],
-      orderList: [{ property: 'sort', type: 0 }]
+      sortList: [{ property: 'sort', type: 0 }]
     } as any, false, false)
 
     if (modulesRes?.payload) {
@@ -150,7 +150,7 @@ const loadAllData = async () => {
             { property: 'moduleId', relation: FILTER_TYPE.EQUAL, value: [module.id] },
             { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
           ],
-          orderList: [{ property: 'sort', type: 0 }]
+          sortList: [{ property: 'sort', type: 0 }]
         } as any, false, false)
 
         module.sections = sectionsRes?.payload || []
@@ -163,7 +163,7 @@ const loadAllData = async () => {
               { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [section.id] },
               { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
             ],
-            orderList: [{ property: 'sort', type: 0 }]
+            sortList: [{ property: 'sort', type: 0 }]
           } as any, false, false)
 
           const allGroups = groupsRes?.payload || []
@@ -174,7 +174,7 @@ const loadAllData = async () => {
               { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [section.id] },
               { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
             ],
-            orderList: [{ property: 'sort', type: 0 }]
+            sortList: [{ property: 'sort', type: 0 }]
           } as any, false, false)
 
           const allAttributes = attrsRes?.payload || []
@@ -560,11 +560,12 @@ defineExpose({
 
     <!-- 矩阵映射弹窗 -->
     <MatrixMappingModal
+      v-if="currentMappingSection"
       v-model:visible="matrixMappingVisible"
-      :section-id="currentMappingSection?.id || ''"
-      :section-title="currentMappingSection?.title || ''"
-      :table-name="currentMappingSection?.tableName"
-      :attributes="currentMappingSection?.allAttributes || []"
+      :section-id="currentMappingSection.id"
+      :section-title="currentMappingSection.title"
+      :table-name="currentMappingSection.tableName"
+      :attributes="currentMappingSection.allAttributes || []"
       :form-code="formCode"
       @synced="handleMatrixSynced"
     />

@@ -214,7 +214,7 @@ export function useEvalFormData() {
           { property: 'formId', relation: FILTER_TYPE.EQUAL, value: [String(targetFormId)] },
           { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
         ],
-        orderList: [{ property: 'sort', type: 0 }]
+        sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
       if (res?.payload) {
@@ -251,7 +251,7 @@ export function useEvalFormData() {
           { property: 'moduleId', relation: FILTER_TYPE.EQUAL, value: [currentModule.value.id] },
           { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
         ],
-        orderList: [{ property: 'sort', type: 0 }]
+        sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
       console.log('[DEBUG] loadAvailableSections - sections API返回:', res)
@@ -291,7 +291,7 @@ export function useEvalFormData() {
           { property: 'sectionId', relation: FILTER_TYPE.IN, value: sectionIds },
           { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
         ],
-        orderList: [{ property: 'sort', type: 0 }]
+        sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
       console.log('[DEBUG] loadAllSectionGroups - API返回结果:', res)
@@ -333,7 +333,7 @@ export function useEvalFormData() {
           { property: 'sectionId', relation: FILTER_TYPE.IN, value: sectionIds },
           { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
         ],
-        orderList: [{ property: 'sort', type: 0 }]
+        sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
       if (res?.payload) {
@@ -365,7 +365,7 @@ export function useEvalFormData() {
           { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [sectionId] },
           { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
         ],
-        orderList: [{ property: 'sort', type: 0 }]
+        sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
       if (res?.payload) {
@@ -385,7 +385,7 @@ export function useEvalFormData() {
           { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [sectionId] },
           { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
         ],
-        orderList: [{ property: 'sort', type: 0 }]
+        sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
       if (res?.payload) {
@@ -447,7 +447,7 @@ export function useEvalFormData() {
         conditionList: [
           { property: 'sectionInstanceId', relation: FILTER_TYPE.EQUAL, value: [sectionInstanceId] }
         ],
-        orderList: [
+        sortList: [
           { property: 'groupId', type: 0 },
           { property: 'rowIndex', type: 0 }
         ]

@@ -166,7 +166,7 @@ const loadModules = async () => {
         { property: 'formId', relation: FILTER_TYPE.EQUAL, value: [props.formId] },
         { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
       ],
-      orderList: [{ property: 'sort', type: 0 }]
+      sortList: [{ property: 'sort', type: 0 }]
     }, false, false)
 
     if (res?.payload) {
@@ -190,7 +190,7 @@ const loadSectionsAndAttributes = async (moduleId: string) => {
         { property: 'moduleId', relation: FILTER_TYPE.EQUAL, value: [moduleId] },
         { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
       ],
-      orderList: [{ property: 'sort', type: 0 }]
+      sortList: [{ property: 'sort', type: 0 }]
     }, false, false)
     
     if (sectionsRes?.payload) {
@@ -204,7 +204,7 @@ const loadSectionsAndAttributes = async (moduleId: string) => {
             { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [section.id] },
             { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
           ],
-          orderList: [{ property: 'sort', type: 0 }]
+          sortList: [{ property: 'sort', type: 0 }]
         }, false, false)
         
         if (groupsRes?.payload) {
@@ -219,7 +219,7 @@ const loadSectionsAndAttributes = async (moduleId: string) => {
             { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [section.id] },
             { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
           ],
-          orderList: [{ property: 'sort', type: 0 }]
+          sortList: [{ property: 'sort', type: 0 }]
         }, false, false)
         
         if (attrsRes?.payload) {
@@ -661,7 +661,16 @@ const handleUpdateAttributeSize = async (attribute: any, size: { width: number; 
 
 // ============ 矩阵映射配置 ============
 const handleConfigMatrix = (section: any) => {
-  currentMatrixSection.value = section
+  // 确保 section.id 和 currentAttributes 的 key 类型一致
+  const sectionId = String(section.id)
+  const attributes = currentAttributes.value[sectionId] || currentAttributes.value[section.id] || []
+  
+  currentMatrixSection.value = {
+    ...section,
+    id: sectionId,
+    allAttributes: attributes  // 直接附加属性数据
+  }
+  
   matrixMappingModalVisible.value = true
 }
 
@@ -891,11 +900,12 @@ watch(() => props.formId, () => {
 
     <!-- 矩阵映射配置弹窗 -->
     <MatrixMappingModal
+      v-if="currentMatrixSection"
       v-model:visible="matrixMappingModalVisible"
-      :section-id="currentMatrixSection?.id"
-      :section-title="currentMatrixSection?.title"
-      :table-name="currentMatrixSection?.tableName"
-      :attributes="currentAttributes[currentMatrixSection?.id] || []"
+      :section-id="currentMatrixSection.id"
+      :section-title="currentMatrixSection.title"
+      :table-name="currentMatrixSection.tableName"
+      :attributes="currentMatrixSection.allAttributes || []"
       :form-code="formInfo?.code"
       @synced="handleMatrixSynced"
     />

@@ -291,7 +291,7 @@ const handleAddSection = async (sectionId: string) => {
         { property: 'historyId', relation: FILTER_TYPE.EQUAL, value: [composableHistoryId.value] },
         { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [sectionId] }
       ],
-      orderList: [{ property: 'id', type: 1 }]
+      sortList: [{ property: 'id', type: 1 }]
     } as any, false, false, true)
 
     const records = queryRes?.payload || []
@@ -986,7 +986,7 @@ const handleSaveAll = async () => {
             { property: 'historyId', relation: FILTER_TYPE.EQUAL, value: [newHistoryId] },
             { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [sectionId] }
           ],
-          orderList: [{ property: 'id', type: 1 }]
+          sortList: [{ property: 'id', type: 1 }]
         } as any, false, false, true)
         
         const records = queryRes?.payload || []

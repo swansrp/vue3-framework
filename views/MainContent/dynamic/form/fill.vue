@@ -226,12 +226,12 @@ onMounted(() => {
               <a-form-item label="填报记录ID">
                 <a-input
                   v-model:value="historyId"
-                  placeholder="输入 historyId（编辑/查看）"
+                  placeholder="输入 historyId"
                   allow-clear
                 />
               </a-form-item>
             </a-col>
-            <a-col :span="4">
+            <a-col :span="5">
               <a-form-item label="模式">
                 <a-select v-model:value="modeValue">
                   <a-select-option value="edit">
@@ -243,14 +243,14 @@ onMounted(() => {
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :span="4">
+            <a-col :span="7">
               <a-form-item label="新增模式">
                 <a-select v-model:value="createMode">
                   <a-select-option value="lazy">
-                    延迟创建（填完再保存）
+                    延迟创建
                   </a-select-option>
                   <a-select-option value="immediate">
-                    立即创建（边填边保存）
+                    立即创建
                   </a-select-option>
                 </a-select>
               </a-form-item>

@@ -73,6 +73,8 @@ export interface FormSchemaVO {
   sort?: number
   /** 状态: draft/published/archived */
   status?: string
+  /** 编码 */
+  code: string
   /** 表单名称 */
   title?: string
   /** 更新时间 */

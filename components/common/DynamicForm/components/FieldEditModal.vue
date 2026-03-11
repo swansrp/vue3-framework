@@ -88,7 +88,7 @@ const loadGroups = async () => {
         { property: 'sectionId', relation: FILTER_TYPE.EQUAL, value: [props.sectionId] },
         { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
       ],
-      orderList: [{ property: 'sort', type: 0 }]
+      sortList: [{ property: 'sort', type: 0 }]
     }, false, false)
     
     if (res?.payload) {

@@ -51,6 +51,8 @@ interface Props {
   pidUpdateApi?: string
   /** 新增时的默认表单数据 */
   defaultFormData?: Record<string, any>
+  /** 详情接口路径后缀，如 '/id'，设置后点击节点会自动获取详情 */
+  detailApi?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -67,7 +69,8 @@ const props = withDefaults(defineProps<Props>(), {
   deleteApi: '/delete',
   orderUpdateApi: '/order/update',
   pidUpdateApi: '/pid',
-  defaultFormData: () => ({})
+  defaultFormData: () => ({}),
+  detailApi: '/id'
 })
 
 const emit = defineEmits<{
@@ -142,7 +145,7 @@ defineExpose({
 })
 
 // 处理树节点选择
-const handleSelect = (keys: Key[], info: {
+const handleSelect = async (keys: Key[], info: {
   event: 'select'
   selected: boolean
   node: EventDataNode
@@ -155,7 +158,28 @@ const handleSelect = (keys: Key[], info: {
     const hasChildren = node.children && node.children.length > 0
     if (!hasChildren || props.allowSelectParent) {
       selectedKeys.value = keys
-      emit('select', String(keys[0]), node)
+      
+      // 如果配置了 detailApi，则获取节点详情
+      if (props.detailApi) {
+        try {
+          const nodeId = String(keys[0])
+          const api = buildGetApiByType(`${ props.urlPrefix }${ props.detailApi }`, '')
+          const res = await request(api, { id: nodeId }, {}, false, false)
+          
+          if (res?.payload) {
+            // 将详情数据合并到节点数据中
+            const detailData = res.payload
+            emit('select', nodeId, { ...node, ...detailData, data: detailData })
+          } else {
+            emit('select', nodeId, node)
+          }
+        } catch (error) {
+          console.error('获取节点详情失败:', error)
+          emit('select', String(keys[0]), node)
+        }
+      } else {
+        emit('select', String(keys[0]), node)
+      }
     } else {
       // 如果点击的是有子节点的节点，清空选择
       selectedKeys.value = []

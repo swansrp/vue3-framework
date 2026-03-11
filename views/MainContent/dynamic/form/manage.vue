@@ -49,9 +49,12 @@ const handleCodeInput = (formData: any, value: string) => {
 }
 
 // 处理模板选择
+// CommonTreePanel 配置了 detailApi="/id" 后，会自动获取节点详情
+// templateInfo 已包含完整的节点数据（包括 code 字段）
 const handleTemplateSelect = (templateId: string, templateInfo: any) => {
   selectedTemplateId.value = templateId
-  selectedTemplateInfo.value = templateInfo
+  // templateInfo 已包含详情数据（通过 detailApi 自动获取）
+  selectedTemplateInfo.value = templateInfo.data || templateInfo
 }
 
 // 获取状态标签文本
@@ -119,7 +122,7 @@ const getStatusText = (status: string) => {
               >
                 <a-input
                   :value="formData.code"
-                  placeholder="请输入模板编码（如：enterprise_eval）"
+                  placeholder="请输入模板编码（如：form_code）"
                   @input="(e: InputEvent) => handleCodeInput(formData, (e.target as HTMLInputElement).value)"
                   @change="(e: any) => handleCodeInput(formData, e.target.value)"
                 />
