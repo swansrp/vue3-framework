@@ -499,5 +499,29 @@ defineExpose({ showBindDialogBox, queryBindData })
 </script>
 
 <style scoped>
-
+/* 树形模式样式优化 */
+:deep(.ant-tree) {
+  .ant-tree-treenode {
+    padding: 4px 8px;
+    align-items: center;
+    
+    .ant-tree-checkbox {
+      margin-top: 0;
+      align-self: center;
+    }
+    
+    .ant-tree-node-content-wrapper {
+      display: flex;
+      align-items: center;
+      line-height: 22px;
+      
+      .ant-tree-title {
+        display: inline-flex;
+        align-items: center;
+        line-height: 22px;
+        vertical-align: middle;
+      }
+    }
+  }
+}
 </style>

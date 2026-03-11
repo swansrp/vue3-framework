@@ -353,29 +353,29 @@ const getItemStyle = (item: T) => {
     background-image: none !important;
     background-color: #fff;
     padding: 16px;
-    
+
     .grid-item {
       cursor: default;
 
-      // 只读模式下的表单项卡片样式 - 简洁无框设计
+      // 只读模式下的表单项卡片样式 - 简洁分割线设计
       :deep(.form-item-card) {
         background: transparent;
         border: none;
         border-radius: 0;
         box-shadow: none;
-        padding: 8px 0;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
         
         &:hover {
-          border-color: transparent;
-          box-shadow: none;
+          background: #fafafa;
         }
         
         .field-row {
-          align-items: baseline;
+          align-items: center;
           
           .field-label-inline {
-            color: #8c8c8c;
-            font-weight: 400;
+            color: #595959;
+            font-weight: 500;
             font-size: 13px;
           }
         }

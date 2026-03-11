@@ -512,8 +512,11 @@ defineExpose({
 
           <!-- 右侧内容区 -->
           <div class="content-panel">
-            <!-- 区块标题栏 -->
-            <div class="section-header">
+            <!-- 区块标题栏（多个模块时才显示） -->
+            <div
+              v-if="modules.length > 1"
+              class="section-header"
+            >
               <h3>{{ currentModule.title }}</h3>
               <div class="section-actions">
                 <!-- 保存所有数据按钮（非lazyCreate模式，模块级别） -->
