@@ -18,6 +18,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   readonly: false
 })
+
+const { modules, currentIndex, readonly } = toRefs(props)
 const emit = defineEmits<{
   (e: 'change', index: number): void
   (e: 'edit', module: Module): void

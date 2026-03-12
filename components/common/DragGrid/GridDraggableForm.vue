@@ -428,6 +428,23 @@ defineExpose({
             :all-fields-value="attributeIdToValue"
             @upload-confirmed="handleUploadConfirmed"
           >
+            <!-- 字段级 slot：只在有实际 slot 时才传递 -->
+            <template
+              v-if="$slots[`field:${field.name}`] || $slots['field']"
+              #field="slotProps"
+            >
+              <slot
+                v-if="$slots[`field:${field.name}`]"
+                :name="`field:${field.name}`"
+                v-bind="slotProps"
+              ></slot>
+              <slot
+                v-else-if="$slots['field']"
+                name="field"
+                v-bind="slotProps"
+              ></slot>
+            </template>
+
             <!-- 传递 select 插槽 -->
             <template
               v-if="$slots['select']"

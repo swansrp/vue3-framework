@@ -50,7 +50,7 @@ onMounted(() => {
 <style scoped lang="less">
 .form-view-container {
   height: 100%;
-  width: 100%;
+  width: 50%;
 }
 
 .empty-state {

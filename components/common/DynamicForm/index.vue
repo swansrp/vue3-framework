@@ -5,9 +5,9 @@
  * 1. 作为页面使用：从URL获取 formId 和 historyId 参数
  * 2. 作为组件使用：通过 props 传入 formId 和 historyId
  */
-import { SaveOutlined, SendOutlined } from '@ant-design/icons-vue'
+import { CheckOutlined, CloseOutlined, SaveOutlined, SendOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick, useSlots, h } from 'vue'
 import { useRoute } from 'vue-router'
 
 import {
@@ -29,7 +29,6 @@ import {
 import EvalFormViewer from './components/FormViewer.vue'
 import { useEvalFormData } from './components/useEvalFormData'
 
-import { submitProduction } from '@/apis/productionController'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
 // Props 定义
@@ -42,7 +41,7 @@ interface Props {
   historyId?: string
   /** 是否强制只读模式 */
   readonly?: boolean
-  /** 是否显示提交按钮 */
+  /** 是否显示提交按钮（已废弃，由 mode 和 status 自动控制） */
   showSubmit?: boolean
   /** 是否自动初始化 */
   autoInit?: boolean
@@ -54,7 +53,37 @@ interface Props {
   hasPermission?: boolean
   /** 记录是否不存在（由调用端控制） */
   recordNotFound?: boolean
+  /** 字段默认值，key=fieldName, value=默认值 */
+  defaultValues?: Record<string, any>
+  /** 企业ID，用于 dict 组件的 entity-id */
+  enterpriseId?: string
+  /** 模式：fill=填报模式，approve=审核模式 */
+  mode?: 'fill' | 'approve'
+  /** 业务状态（可选，覆盖 historyInfo.status）：0=未提交，1=待审核，2=未通过，3=已通过 */
+  status?: '0' | '1' | '2' | '3'
+  /** 拒绝理由（拒绝状态时显示） */
+  rejectReason?: string
 }
+
+/**
+ * 状态说明：
+ * '0' = 未提交 (UNKNOWN)
+ * '1' = 待审核 (APPLY)
+ * '2' = 未通过 (REJECT)
+ * '3' = 已通过 (APPROVAL)
+ *
+ * 填报模式(fill)下：
+ * - 未提交(0)：可编辑，显示提交按钮
+ * - 待审核(1)：只读
+ * - 未通过(2)：可编辑，显示提交按钮
+ * - 已通过(3)：只读
+ *
+ * 审核模式(approve)下：
+ * - 未提交(0)：只读
+ * - 待审核(1)：只读，显示通过和拒绝按钮
+ * - 未通过(2)：只读
+ * - 已通过(3)：只读
+ */
 
 const props = withDefaults(defineProps<Props>(), {
   formId: undefined,
@@ -66,26 +95,45 @@ const props = withDefaults(defineProps<Props>(), {
   lazyCreate: false,
   showNavTree: true,
   hasPermission: true,
-  recordNotFound: false
+  recordNotFound: false,
+  defaultValues: undefined,
+  enterpriseId: undefined,
+  mode: 'fill',
+  status: undefined,
+  rejectReason: undefined
 })
 
 // Emits
 const emit = defineEmits<{
+  /** 提交事件：框架保存完成后触发，业务端在此执行业务提交逻辑 */
+  (e: 'submit', historyId: string): void
+  /** 提交完成事件：业务端处理完成后触发 */
   (e: 'submitted', historyId: string): void
+  /** 保存完成事件 */
   (e: 'saved'): void
+  /** 初始化完成事件 */
   (e: 'init:complete', success: boolean): void
+  /** 审批通过事件：框架内部处理完成后触发，业务端在此执行业务审批逻辑 */
+  (e: 'approve', historyId: string): void
+  /** 审批拒绝事件：框架内部处理完成后触发，业务端在此执行业务拒绝逻辑 */
+  (e: 'reject', historyId: string, reason: string): void
 }>()
 
 const route = useRoute()
+const slots = useSlots()
+
+// 获取所有 field: 开头的 slot 名称
+const fieldSlotNames = computed(() => {
+  return Object.keys(slots).filter(name => name.startsWith('field:'))
+})
 
 // 使用 composable
 const {
   canEdit: originalCanEdit,
-  hasPermission,
-  recordNotFound,
   loading,
   historyId: composableHistoryId,
   historyInfo,
+  formInfo,
   modules,
   currentModuleIndex,
   currentModule,
@@ -114,8 +162,92 @@ const {
   createHistoryId
 } = useEvalFormData()
 
-// 计算是否可编辑（考虑 props.readonly）
-const canEdit = computed(() => props.readonly ? false : originalCanEdit.value)
+// 当前状态（优先使用 props.status，否则使用 historyInfo.status）
+const currentStatus = computed(() => props.status ?? historyInfo.value?.status ?? '')
+
+// 计算是否可编辑（根据模式和状态）
+const canEdit = computed(() => {
+  // 强制只读
+  if (props.readonly) return false
+  // 原始权限
+  if (!originalCanEdit.value) return false
+
+  const status = currentStatus.value
+
+  if (props.mode === 'fill') {
+    // 填报模式：未提交(0)和未通过(2)可编辑
+    return status === '0' || status === '2'
+  } else {
+    // 审核模式：全部只读
+    return false
+  }
+})
+
+// 是否显示提交按钮
+const showSubmitButton = computed(() => {
+  if (props.mode === 'fill') {
+    // 填报模式：未提交(0)和未通过(2)显示提交按钮
+    return currentStatus.value === '0' || currentStatus.value === '2'
+  }
+  return false
+})
+
+// 是否显示通过按钮
+const showApproveButton = computed(() => {
+  // 审核模式 + 待审核(1)状态
+  return props.mode === 'approve' && currentStatus.value === '1'
+})
+
+// 是否显示拒绝按钮
+const showRejectButton = computed(() => {
+  // 审核模式 + 待审核(1)状态
+  return props.mode === 'approve' && currentStatus.value === '1'
+})
+
+// 状态提示信息
+const statusAlert = computed(() => {
+  const status = currentStatus.value
+  const mode = props.mode
+
+  // 草稿状态 + 审核员 → 显示"未提交"
+  if (status === '0' && mode === 'approve') {
+    return {
+      type: 'warning' as const,
+      message: '该记录尚未提交，无法审核',
+      showReason: false
+    }
+  }
+
+  // 待审核状态 + 填报员 → 显示"审核中"
+  if (status === '1' && mode === 'fill') {
+    return {
+      type: 'info' as const,
+      message: '该记录正在审核中，请耐心等待',
+      showReason: false
+    }
+  }
+
+  // 拒绝状态 + 填报员 → 显示"已拒绝" + 理由
+  if (status === '2' && mode === 'fill') {
+    return {
+      type: 'error' as const,
+      message: '该记录已被拒绝',
+      showReason: true,
+      reason: props.rejectReason || historyInfo.value?.rejectReason || ''
+    }
+  }
+
+  // 已通过状态 → 显示"已通过"
+  if (status === '3') {
+    return {
+      type: 'success' as const,
+      message: '该记录已通过审核',
+      showReason: false
+    }
+  }
+
+  return null
+})
 
 // 从 props 或 URL 获取参数
 const formIdValue = computed(() => props.formId || route.query.formId as string || '')
@@ -129,10 +261,7 @@ const viewerRef = ref()
 const sectionSelectModalVisible = ref(false)
 const selectedSectionForModal = ref<string | undefined>(undefined)
 
-// 计算是否显示提交按钮
-const showSubmitButton = computed(() => {
-  return props.showSubmit && canEdit.value && historyInfo.value && (historyInfo.value.status === '0' || historyInfo.value.status === '2')
-})
+
 
 // lazyCreate 模式下显示保存按钮（复用提交按钮位置）
 const showLazySaveButton = computed(() => {
@@ -730,7 +859,7 @@ const scrollToValidationFailed = (sectionInstanceId: string, groupId?: string, a
 }
 
 // 保存 Section 数据
-const handleSaveSection = async (sectionInstanceId: string) => {
+const handleSaveSection = async (sectionInstanceId: string, options?: { skipValidation?: boolean }) => {
   try {
     const instance = savedSectionData.value[sectionInstanceId]
     if (!instance) { message.error('区块实例不存在'); return }
@@ -788,11 +917,13 @@ const handleSaveSection = async (sectionInstanceId: string) => {
       }
     }
 
-    const validation = validateRequiredFields(sectionInstanceId)
-    if (!validation.valid) {
-      message.warning(validation.message)
-      scrollToValidationFailed(sectionInstanceId, validation.groupId, validation.attributeId)
-      return
+    if (!options?.skipValidation) {
+      const validation = validateRequiredFields(sectionInstanceId)
+      if (!validation.valid) {
+        message.warning(validation.message)
+        scrollToValidationFailed(sectionInstanceId, validation.groupId, validation.attributeId)
+        return
+      }
     }
 
     const existingDataRes = await formDataGeneralSelect({
@@ -937,23 +1068,25 @@ const handleSaveGroup = async (sectionInstanceId: string, groupId: string) => {
 }
 
 // 保存所有数据
-const handleSaveAll = async () => {
+const handleSaveAll = async (options?: { skipValidation?: boolean }) => {
   try {
     // 延迟创建模式：先校验完整性，再创建 historyId
     if (lazyCreate.value && !composableHistoryId.value) {
       // 1. 先校验完整性
-      const flagValidation = validateFlagRules()
-      if (!flagValidation.valid) {
-        message.warning(flagValidation.message)
-        return
-      }
-
-      for (const instance of sectionInstances.value) {
-        const validation = validateRequiredFields(instance.instanceId)
-        if (!validation.valid) {
-          message.warning(validation.message)
-          scrollToValidationFailed(instance.instanceId, validation.groupId, validation.attributeId)
+      if (!options?.skipValidation) {
+        const flagValidation = validateFlagRules()
+        if (!flagValidation.valid) {
+          message.warning(flagValidation.message)
           return
+        }
+
+        for (const instance of sectionInstances.value) {
+          const validation = validateRequiredFields(instance.instanceId)
+          if (!validation.valid) {
+            message.warning(validation.message)
+            scrollToValidationFailed(instance.instanceId, validation.groupId, validation.attributeId)
+            return
+          }
         }
       }
 
@@ -1071,20 +1204,23 @@ const handleSaveAll = async () => {
       return
     }
 
-    const flagValidation = validateFlagRules()
-    if (!flagValidation.valid) { message.warning(flagValidation.message); return }
+    // 非延迟创建模式：校验并保存
+    if (!options?.skipValidation) {
+      const flagValidation = validateFlagRules()
+      if (!flagValidation.valid) { message.warning(flagValidation.message); return }
 
-    for (const instance of sectionInstances.value) {
-      const validation = validateRequiredFields(instance.instanceId)
-      if (!validation.valid) {
-        message.warning(validation.message)
-        scrollToValidationFailed(instance.instanceId, validation.groupId, validation.attributeId)
-        return
+      for (const instance of sectionInstances.value) {
+        const validation = validateRequiredFields(instance.instanceId)
+        if (!validation.valid) {
+          message.warning(validation.message)
+          scrollToValidationFailed(instance.instanceId, validation.groupId, validation.attributeId)
+          return
+        }
       }
     }
 
     for (const instance of sectionInstances.value) {
-      await handleSaveSection(instance.instanceId)
+      await handleSaveSection(instance.instanceId, { skipValidation: options?.skipValidation })
     }
     message.success('保存成功')
     emit('saved')
@@ -1136,16 +1272,75 @@ const handleSubmit = async () => {
         }
 
         await originalHandleModuleChange(originalModuleIndex)
-        await handleSaveAll()
-        await submitProduction({ historyId: composableHistoryId.value })
+        
+        // 数据已在编辑过程中实时保存，提交时只做校验，不重复保存
+        
+        // 触发 submit 事件，业务端执行业务提交逻辑
+        emit('submit', composableHistoryId.value)
 
         message.success('提交成功')
         emit('submitted', composableHistoryId.value)
-
-        setTimeout(() => window.close(), 1000)
       } catch (error) {
         console.error('提交失败:', error)
         message.error('提交失败')
+      }
+    },
+  })
+}
+
+// 审批通过
+const handleApprove = async () => {
+  Modal.confirm({
+    title: '确认审批',
+    content: '确认通过该填报数据的审批？',
+    okText: '确认通过',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        // 触发 approve 事件，业务端执行业务审批逻辑
+        emit('approve', composableHistoryId.value)
+      } catch (error) {
+        console.error('审批失败:', error)
+      }
+    },
+  })
+}
+
+// 审批拒绝
+const handleReject = async (reason = '') => {
+  // 触发 reject 事件，业务端执行业务拒绝逻辑
+  emit('reject', composableHistoryId.value, reason)
+}
+
+// 拒绝按钮点击（弹出输入框）
+const rejectReason = ref('')
+const handleRejectClick = () => {
+  rejectReason.value = ''
+  Modal.confirm({
+    title: '确认拒绝',
+    content: () => h('div', [
+      h('p', { style: 'margin-bottom: 8px;' }, '请输入拒绝理由：'),
+      h('textarea', {
+        class: 'ant-input',
+        style: 'width: 100%; min-height: 80px; padding: 4px 11px; border: 1px solid #d9d9d9; border-radius: 6px; resize: vertical;',
+        placeholder: '请输入拒绝理由',
+        onInput: (e: Event) => {
+          rejectReason.value = (e.target as HTMLTextAreaElement).value
+        }
+      })
+    ]),
+    okText: '确认拒绝',
+    okButtonProps: { danger: true },
+    cancelText: '取消',
+    async onOk() {
+      if (!rejectReason.value.trim()) {
+        message.warning('请输入拒绝理由')
+        return Promise.reject()
+      }
+      try {
+        emit('reject', composableHistoryId.value, rejectReason.value)
+      } catch (error) {
+        console.error('拒绝失败:', error)
       }
     },
   })
@@ -1180,13 +1375,11 @@ const handleLazySubmit = async () => {
         // 3. 保存数据
         await handleSaveAll()
         
-        // 4. 提交
-        await submitProduction({ historyId: composableHistoryId.value })
+        // 触发 submit 事件，业务端执行业务提交逻辑
+        emit('submit', composableHistoryId.value)
 
         message.success('提交成功')
         emit('submitted', composableHistoryId.value)
-
-        setTimeout(() => window.close(), 1000)
       } catch (error) {
         console.error('提交失败:', error)
         message.error('提交失败')
@@ -1207,6 +1400,13 @@ const init = async () => {
   emit('init:complete', success)
   
   if (success) {
+    // 将外部传入的 defaultValues 注入到每个 module
+    if (props.defaultValues) {
+      modules.value.forEach(module => {
+        module.defaultValues = props.defaultValues
+      })
+    }
+    
     if (availableSections.value.length === 1 && sectionInstances.value.length === 0 && canEdit.value) {
       await handleAddSection(availableSections.value[0].id)
     } else if (availableSections.value.length > 1 && sectionInstances.value.length === 0 && canEdit.value) {
@@ -1216,12 +1416,24 @@ const init = async () => {
   }
 }
 
-// 暴露方法
+// 暴露方法和属性
 defineExpose({
+  // 方法
   handleSaveAll,
   handleSubmit,
   handleSaveSection,
-  init
+  handleApprove,
+  handleReject,
+  init,
+  // 属性
+  historyInfo,
+  formInfo,
+  pageTitle,
+  canEdit,
+  currentStatus,
+  showSubmitButton,
+  showApproveButton,
+  showRejectButton
 })
 
 // 自动初始化
@@ -1260,6 +1472,7 @@ onMounted(async () => {
     :get-section-progress="getSectionProgress"
     :get-mutual-exclusive-groups="getMutualExclusiveGroups"
     :should-show-group="shouldShowGroup"
+    :enterprise-id="props.enterpriseId"
     @module-change="handleModuleChange"
     @add-section="handleAddSection"
     @remove-section="handleRemoveSection"
@@ -1272,42 +1485,120 @@ onMounted(async () => {
     @mutual-option-change="handleMutualOptionChange"
     @save-group="handleSaveGroup"
   >
-    <!-- 提交按钮区域 -->
+    <!-- 头部信息区域（企业名称等） -->
+    <template #header-info="slotProps">
+      <slot name="header-info" v-bind="slotProps"></slot>
+    </template>
+    
+    <!-- 状态提示（在表单内容区域显示） -->
+    <template #status-alert>
+      <a-alert
+        v-if="statusAlert"
+        :type="statusAlert.type"
+        :message="statusAlert.message"
+        show-icon
+        style="margin-bottom: 16px;"
+      >
+        <template v-if="statusAlert.showReason && statusAlert.reason" #description>
+          <div style="color: #666;">
+            <strong>拒绝理由：</strong>{{ statusAlert.reason }}
+          </div>
+        </template>
+      </a-alert>
+    </template>
+    
+    <!-- 按钮区域 -->
     <template #header-actions>
-      <!-- lazyCreate模式：暂存 + 提交按钮 -->
-      <template v-if="showLazySaveButton">
+      <slot name="header-actions">
+        <!-- lazyCreate模式：暂存 + 提交按钮 -->
+        <template v-if="showLazySaveButton">
+          <a-button
+            style="margin-left: 16px"
+            @click="handleSaveAll"
+          >
+            <template #icon>
+              <SaveOutlined />
+            </template>
+            暂存
+          </a-button>
+          <a-button
+            type="primary"
+            style="margin-left: 8px"
+            @click="handleLazySubmit"
+          >
+            <template #icon>
+              <SendOutlined />
+            </template>
+            提交
+          </a-button>
+        </template>
+        <!-- 填报模式：提交按钮 -->
         <a-button
-          style="margin-left: 16px"
-          @click="handleSaveAll"
-        >
-          <template #icon>
-            <SaveOutlined />
-          </template>
-          暂存
-        </a-button>
-        <a-button
+          v-if="showSubmitButton"
           type="primary"
-          style="margin-left: 8px"
-          @click="handleLazySubmit"
+          style="margin-left: 16px"
+          @click="handleSubmit"
         >
           <template #icon>
             <SendOutlined />
           </template>
           提交
         </a-button>
-      </template>
-      <!-- 非lazyCreate模式：提交按钮 -->
-      <a-button
-        v-if="showSubmitButton"
-        type="primary"
-        style="margin-left: 16px"
-        @click="handleSubmit"
-      >
-        <template #icon>
-          <SendOutlined />
+        <!-- 审核模式：通过 + 拒绝按钮 -->
+        <template v-if="showApproveButton || showRejectButton">
+          <a-button
+            v-if="showApproveButton"
+            type="primary"
+            style="margin-left: 16px"
+            @click="handleApprove"
+          >
+            <template #icon>
+              <CheckOutlined />
+            </template>
+            通过
+          </a-button>
+          <a-button
+            v-if="showRejectButton"
+            danger
+            style="margin-left: 8px"
+            @click="handleRejectClick"
+          >
+            <template #icon>
+              <CloseOutlined />
+            </template>
+            拒绝
+          </a-button>
         </template>
-        提交
-      </a-button>
+      </slot>
+    </template>
+    
+    <!-- 动态透传 field:xxx 插槽 -->
+    <template
+      v-for="slotName in fieldSlotNames"
+      :key="slotName"
+      #[slotName]="slotProps"
+    >
+      <slot
+        :name="slotName"
+        v-bind="slotProps"
+      ></slot>
+    </template>
+
+    <!-- slot 透传 -->
+    <template #select="slotProps">
+      <slot name="select" v-bind="slotProps"></slot>
+    </template>
+    
+    <template #selectMulti="slotProps">
+      <slot name="selectMulti" v-bind="slotProps"></slot>
+    </template>
+    
+    <template #tree="slotProps">
+      <slot name="tree" v-bind="slotProps"></slot>
+    </template>
+    
+    <template #treeMulti="slotProps">
+      <slot name="treeMulti" v-bind="slotProps"></slot>
     </template>
   </EvalFormViewer>
 

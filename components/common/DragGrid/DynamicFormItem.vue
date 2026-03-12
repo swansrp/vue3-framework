@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FileOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, useSlots } from 'vue'
 
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
@@ -39,6 +39,11 @@ const props = withDefaults(defineProps<Props>(), {
   showLabel: true,
   allFieldsValue: () => ({})
 })
+
+const slots = useSlots()
+
+// 检查是否有字段级 slot
+const hasFieldSlot = computed(() => !!slots['field'])
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void;
@@ -442,11 +447,25 @@ const handleFileDownload = (url: string) => {
 
         <!-- 编辑模式：显示表单组件 -->
         <template v-else>
-          <!-- 文本输入 -->
-          <div
-            v-if="attribute.fieldType === FIELD_TYPE.INPUT"
-            style="display: flex; align-items: center; gap: 4px;"
-          >
+          <!-- 字段级 slot：优先级最高，允许完全自定义字段渲染 -->
+          <slot
+            v-if="hasFieldSlot"
+            name="field"
+            :attribute="attribute"
+            :value="currentValue"
+            :readonly="readonly"
+            :update-value="(val: any) => emit('update:modelValue', val)"
+            :parent-value="parentValue"
+            :all-fields-value="allFieldsValue"
+          ></slot>
+
+          <!-- 默认字段类型渲染 -->
+          <template v-else>
+            <!-- 文本输入 -->
+            <div
+              v-if="attribute.fieldType === FIELD_TYPE.INPUT"
+              style="display: flex; align-items: center; gap: 4px;"
+            >
             <a-input
               v-model:value="currentValue"
               :placeholder="`请输入${strRemoveLF(attribute.label)}`"
@@ -757,6 +776,7 @@ const handleFileDownload = (url: string) => {
             :placeholder="`请输入${attribute.label}`"
             :disabled="readonly"
           />
+          </template>
         </template>
       </div>
 

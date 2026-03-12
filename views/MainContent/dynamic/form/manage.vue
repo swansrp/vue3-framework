@@ -9,14 +9,14 @@ import { ref } from 'vue'
 import { SchemaConfigPanel } from '../../../../components/common/DynamicForm/components'
 
 import ContentLayout from '@/framework/components/common/Content/ContentLayout.vue'
-import { CommonTreePanel } from '@/framework/components/common/TreePannel'
+import { TreePanel } from '@/framework/components/common/Panel'
 
 // 当前选中的模板
 const selectedTemplateId = ref<string | null>(null)
 const selectedTemplateInfo = ref<any>(null)
 
 // 树组件引用
-const treeRef = ref<InstanceType<typeof CommonTreePanel> | null>(null)
+const treeRef = ref<InstanceType<typeof TreePanel> | null>(null)
 
 // 编辑表单数据 - 由 CommonTreePanel 通过插槽传入的 formData 管理
 // 这里只需要定义额外的默认字段
@@ -78,7 +78,7 @@ const getStatusText = (status: string) => {
     >
       <!-- 左侧：模板树 -->
       <template #side>
-        <CommonTreePanel
+        <TreePanel
           ref="treeRef"
           url-prefix="/form/schema"
           title="表单模板"
@@ -174,7 +174,7 @@ const getStatusText = (status: string) => {
               </a-form-item>
             </a-form>
           </template>
-        </CommonTreePanel>
+        </TreePanel>
       </template>
 
       <!-- 右侧：模板配置面板 -->

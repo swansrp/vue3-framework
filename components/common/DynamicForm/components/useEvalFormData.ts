@@ -244,8 +244,6 @@ export function useEvalFormData() {
     
     loadingSections.value = true
     try {
-      console.log('[DEBUG] loadAvailableSections - 开始加载sections, moduleId:', currentModule.value.id)
-      
       const res = await formSchemaSectionGeneralSelect({
         conditionList: [
           { property: 'moduleId', relation: FILTER_TYPE.EQUAL, value: [currentModule.value.id] },
@@ -254,28 +252,20 @@ export function useEvalFormData() {
         sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
-      console.log('[DEBUG] loadAvailableSections - sections API返回:', res)
-      
       if (res?.payload && res.payload.length > 0) {
         availableSections.value = res.payload
-        console.log('[DEBUG] loadAvailableSections - 加载到sections数量:', availableSections.value.length)
         
         // 收集所有 sectionId（转换为字符串）
         const sectionIds = availableSections.value.map(section => String(section.id))
-        console.log('[DEBUG] loadAvailableSections - 收集到的sectionIds:', sectionIds)
         
         // 批量加载分组配置和属性定义
-        console.log('[DEBUG] loadAvailableSections - 开始并行加载分组和属性')
         await Promise.all([
           loadAllSectionGroups(sectionIds),
           loadAllSectionAttributes(sectionIds)
         ])
-        console.log('[DEBUG] loadAvailableSections - 批量加载完成')
-      } else {
-        console.warn('[DEBUG] loadAvailableSections - 没有找到sections')
       }
     } catch (error) {
-      console.error('[DEBUG] loadAvailableSections - 加载区块列表失败:', error)
+      console.error('加载区块列表失败:', error)
     } finally {
       loadingSections.value = false
     }
@@ -284,8 +274,6 @@ export function useEvalFormData() {
   // 批量加载所有section的分组配置
   const loadAllSectionGroups = async (sectionIds: string[]) => {
     try {
-      console.log('[DEBUG] loadAllSectionGroups - 开始批量加载分组配置, sectionIds:', sectionIds)
-      
       const res = await formSchemaAttributeGroupGeneralSelect({
         conditionList: [
           { property: 'sectionId', relation: FILTER_TYPE.IN, value: sectionIds },
@@ -294,11 +282,7 @@ export function useEvalFormData() {
         sortList: [{ property: 'sort', type: 0 }]
       } as any, false, false)
       
-      console.log('[DEBUG] loadAllSectionGroups - API返回结果:', res)
-      
       if (res?.payload) {
-        console.log('[DEBUG] loadAllSectionGroups - payload数据量:', res.payload.length)
-        
         // 按 sectionId 分组存储
         const groupMap = new Map<string, any[]>()
         res.payload.forEach((group: any) => {
@@ -309,19 +293,14 @@ export function useEvalFormData() {
           groupMap.get(sid)!.push(group)
         })
         
-        console.log('[DEBUG] loadAllSectionGroups - 分组后的Map:', Array.from(groupMap.entries()).map(([k, v]) => ({ sectionId: k, count: v.length })))
-        
         // 存储到 sectionGroups
         sectionIds.forEach(sectionId => {
           const sid = String(sectionId) // 确保类型一致
           sectionGroups.value[sectionId] = groupMap.get(sid) || []
-          console.log(`[DEBUG] loadAllSectionGroups - 存储到 sectionGroups[${sectionId}]:`, sectionGroups.value[sectionId]?.length || 0, '个分组')
         })
-      } else {
-        console.warn('[DEBUG] loadAllSectionGroups - 没有返回payload数据')
       }
     } catch (error) {
-      console.error('[DEBUG] loadAllSectionGroups - 加载分组配置失败:', error)
+      console.error('加载分组配置失败:', error)
     }
   }
 
@@ -716,6 +695,10 @@ export function useEvalFormData() {
 
   // 切换模块
   const handleModuleChange = async (index: number) => {
+    // 如果切换到的是当前模块，跳过加载
+    if (currentModuleIndex.value === index) {
+      return
+    }
     currentModuleIndex.value = index
     sectionInstances.value = []
     await loadCurrentModuleData()
@@ -728,9 +711,6 @@ export function useEvalFormData() {
       return null
     }
     
-    console.log('[createHistoryId] formInfo:', formInfo.value)
-    console.log('[createHistoryId] formInfo.id:', formInfo.value.id)
-    
     try {
       // formId 可能是 UUID 字符串或数字，保持原样传递
       const formIdValue = formInfo.value.id
@@ -738,7 +718,6 @@ export function useEvalFormData() {
         formId: typeof formIdValue === 'string' ? formIdValue : Number(formIdValue),
         status: '0' // 草稿状态
       }
-      console.log('[createHistoryId] 请求数据:', requestData)
       
       const createRes = await formDataHistoryAdd(
         requestData,
@@ -747,7 +726,7 @@ export function useEvalFormData() {
         true
       )
       
-      console.log('[createHistoryId] 响应:', createRes)
+
       
       if (createRes?.status?.code === 0 && createRes.payload) {
         const newHistoryId = String(createRes.payload.id || createRes.payload)

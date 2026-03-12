@@ -5,7 +5,7 @@
  * 优化版：支持左右布局、Section导航树、Group折叠卡片、进度显示
  */
 import { SaveOutlined, DeleteOutlined, DownOutlined, UpOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons-vue'
-import { ref, computed, watch, provide, nextTick } from 'vue'
+import { ref, computed, watch, provide, nextTick, useSlots } from 'vue'
 import { useRouter } from 'vue-router'
 
 import EvalGroupForm from './GroupForm.vue'
@@ -44,6 +44,9 @@ interface Props {
   showSaveButton?: boolean
   showNavTree?: boolean  // 是否显示导航树
   
+  // 企业ID，用于 dict 组件的 entity-id
+  enterpriseId?: string
+  
   // 方法
   getGroupRows: (sectionInstanceId: string, groupId: string) => any[]
   getGroupAttributes: (sectionId: string, groupId: string) => any[]
@@ -62,7 +65,8 @@ const props = withDefaults(defineProps<Props>(), {
   getSectionProgress: undefined,
   getMutualExclusiveGroups: undefined,
   shouldShowGroup: undefined,
-  getGroupTree: undefined
+  getGroupTree: undefined,
+  enterpriseId: undefined
 })
 
 // Emits
@@ -82,6 +86,12 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const slots = useSlots()
+
+// 获取所有 field: 开头的 slot 名称
+const fieldSlotNames = computed(() => {
+  return Object.keys(slots).filter(name => name.startsWith('field:'))
+})
 
 // EvalGroupForm 组件的 ref
 const groupFormRefs = ref<Record<string, any>>({})
@@ -431,6 +441,9 @@ defineExpose({
         v-else-if="historyInfo || sectionInstances.length > 0"
         class="form-content"
       >
+        <!-- 状态提示插槽 -->
+        <slot name="status-alert"></slot>
+
         <!-- 拒绝理由提示 -->
         <div
           v-if="historyInfo?.status === '2' && historyInfo?.confirmReason"
@@ -559,7 +572,7 @@ defineExpose({
                   
                   <!-- 子 Group 快捷导航 -->
                   <div
-                    v-if="getNavigableGroups(currentInstance.sectionId).length > 0"
+                    v-if="getNavigableGroups(currentInstance.sectionId).length > 1"
                     class="group-nav-buttons"
                   >
                     <a-button
@@ -656,11 +669,24 @@ defineExpose({
                   :section-id="currentInstance.sectionId"
                   :get-group-attributes-fn="getGroupAttributes"
                   :get-group-rows-fn="getGroupRows"
+                  :enterprise-id="enterpriseId"
                   @add-row="() => emit('addGroupRow', currentInstance.instanceId, String(group.id))"
                   @delete-row="(rowIndex) => emit('deleteGroupRow', currentInstance.instanceId, String(group.id), rowIndex)"
                   @update-data="(groupInstanceId, attributeId, value) => emit('updateData', currentInstance.instanceId, groupInstanceId, attributeId, value)"
                   @save-group="handleSaveGroup"
                 >
+                  <!-- 动态透传 field:xxx 插槽 -->
+                  <template
+                    v-for="slotName in fieldSlotNames"
+                    :key="slotName"
+                    #[slotName]="slotProps"
+                  >
+                    <slot
+                      :name="slotName"
+                      v-bind="slotProps"
+                    ></slot>
+                  </template>
+
                   <!-- 自定义 select 组件 -->
                   <template #select="{ attribute, value, readonly: isReadonly, updateValue, parentValue }">
                     <slot
@@ -676,6 +702,7 @@ defineExpose({
                         :model-value="value"
                         :dict-code="attribute.dict"
                         :parent-code="parentValue"
+                        :entity-id="enterpriseId"
                         :disabled="isReadonly"
                         :placeholder="`请选择${attribute.label}`"
                         @update:model-value="updateValue"
@@ -706,6 +733,7 @@ defineExpose({
                         :model-value="Array.isArray(value) ? value.join(',') : value"
                         :dict-code="attribute.dict"
                         :parent-code="parentValue"
+                        :entity-id="enterpriseId"
                         :disabled="isReadonly"
                         :placeholder="`请选择${attribute.label}`"
                         multiple
@@ -797,6 +825,7 @@ defineExpose({
 }
 
 .page-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -813,7 +842,10 @@ defineExpose({
 
   .header-info {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
+    max-width: 100%;
   }
 }
 

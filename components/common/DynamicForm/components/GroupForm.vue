@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { PlusOutlined, DeleteOutlined, DownOutlined, RightOutlined, CheckCircleFilled, MinusCircleFilled, SaveOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { ref, computed, watch, inject, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, inject, onMounted, onBeforeUnmount, nextTick, useSlots } from 'vue'
 
 import GridDraggableForm, { type FormFieldItem } from '../../DragGrid/GridDraggableForm.vue'
 
@@ -67,6 +67,8 @@ interface Props {
   // 用于递归渲染子 Group 的方法
   getGroupAttributesFn?: (sectionId: string | number, groupId: string) => any[]
   getGroupRowsFn?: (sectionInstanceId: string, groupId: string) => any[]
+  // 企业ID，用于 dict 组件的 entity-id
+  enterpriseId?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -80,7 +82,8 @@ const props = withDefaults(defineProps<Props>(), {
   sectionInstanceId: '',
   sectionId: '',
   getGroupAttributesFn: undefined,
-  getGroupRowsFn: undefined
+  getGroupRowsFn: undefined,
+  enterpriseId: undefined
 })
 
 const emit = defineEmits<{
@@ -89,6 +92,13 @@ const emit = defineEmits<{
   (e: 'updateData', groupInstanceId: string, attributeId: string, value: any): void  // 更新字段值
   (e: 'saveGroup', groupId: string, rowsData: Array<{ groupInstanceId: string; rowIndex: number; data: Record<string, any> }>): void  // 保存分组数据
 }>()
+
+const slots = useSlots()
+
+// 获取所有 field: 开头的 slot 名称
+const fieldSlotNames = computed(() => {
+  return Object.keys(slots).filter(name => name.startsWith('field:'))
+})
 
 // 从父组件 inject 方法（用于递归渲染子 Group）
 const injectedGetGroupAttributes = inject<(sectionId: string, groupId: string) => any[]>('getGroupAttributes', () => [])
@@ -651,6 +661,18 @@ defineExpose({
           :has-child-groups="hasChildGroups"
           @field-change="(attributeId: string, value: any) => handleFieldChange(singleGroupInstanceId, attributeId, value)"
         >
+          <!-- 动态透传 field:xxx 插槽 -->
+          <template
+            v-for="slotName in fieldSlotNames"
+            :key="slotName"
+            #[slotName]="slotProps"
+          >
+            <slot
+              :name="slotName"
+              v-bind="slotProps"
+            ></slot>
+          </template>
+
           <!-- 传递 select 插槽 -->
           <template
             v-if="$slots['select']"
@@ -731,6 +753,18 @@ defineExpose({
             :has-child-groups="hasChildGroups"
             @field-change="(attributeId: string, value: any) => handleFieldChange(row.groupInstanceId, attributeId, value)"
           >
+            <!-- 动态透传 field:xxx 插槽 -->
+            <template
+              v-for="slotName in fieldSlotNames"
+              :key="slotName"
+              #[slotName]="slotProps"
+            >
+              <slot
+                :name="slotName"
+                v-bind="slotProps"
+              ></slot>
+            </template>
+
             <!-- 传递 select 插槽 -->
             <template
               v-if="$slots['select']"
@@ -824,11 +858,24 @@ defineExpose({
         :section-id="sectionId"
         :get-group-attributes-fn="getGroupAttributes"
         :get-group-rows-fn="getGroupRows"
+        :enterprise-id="enterpriseId"
         @add-row="() => $emit('addRow')"
         @delete-row="(rowIndex) => $emit('deleteRow', rowIndex)"
         @update-data="(groupInstanceId, attributeId, value) => $emit('updateData', groupInstanceId, attributeId, value)"
         @save-group="(groupId, rowsData) => $emit('saveGroup', groupId, rowsData)"
       >
+        <!-- 动态透传 field:xxx 插槽 -->
+        <template
+          v-for="slotName in fieldSlotNames"
+          :key="slotName"
+          #[slotName]="slotProps"
+        >
+          <slot
+            :name="slotName"
+            v-bind="slotProps"
+          ></slot>
+        </template>
+
         <!-- 传递 select 插槽 -->
         <template
           v-if="$slots['select']"

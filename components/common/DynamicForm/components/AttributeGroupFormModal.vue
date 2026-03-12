@@ -87,31 +87,6 @@ const formRules = computed<Record<string, Rule[]>>(() => ({
     : []
 }))
 
-// 构建父分组选项（排除自己和自己的子孙节点）
-const parentGroupOptions = computed(() => {
-  if (!props.isEdit) {
-    // 新增模式：显示所有分组
-    return props.availableGroups || []
-  }
-  
-  // 编辑模式：排除自己和自己的子孙节点
-  const excludeIds = new Set<string>()
-  excludeIds.add(localFormData.value.id)
-  
-  // 递归查找所有子孙节点
-  const findChildren = (pid: string) => {
-    (props.availableGroups || []).forEach(group => {
-      if (String(group.pid) === pid) {
-        excludeIds.add(String(group.id))
-        findChildren(String(group.id))
-      }
-    })
-  }
-  findChildren(localFormData.value.id)
-  
-  return (props.availableGroups || []).filter(g => !excludeIds.has(String(g.id)))
-})
-
 // 监听 formData 变化
 watch(() => props.formData, (newVal) => {
   localFormData.value = { ...newVal }
