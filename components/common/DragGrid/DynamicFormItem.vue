@@ -466,204 +466,271 @@ const handleFileDownload = (url: string) => {
               v-if="attribute.fieldType === FIELD_TYPE.INPUT"
               style="display: flex; align-items: center; gap: 4px;"
             >
-            <a-input
-              v-model:value="currentValue"
-              :placeholder="`请输入${strRemoveLF(attribute.label)}`"
+              <a-input
+                v-model:value="currentValue"
+                :placeholder="`请输入${strRemoveLF(attribute.label)}`"
+                :disabled="readonly"
+                style="flex: 1;"
+              />
+              <span
+                v-if="attribute.unit"
+                class="field-unit-suffix"
+              >{{ attribute.unit }}</span>
+            </div>
+
+            <!-- 开关 -->
+            <a-radio-group
+              v-else-if="attribute.fieldType === FIELD_TYPE.SWITCH"
+              v-model:value="switchChecked"
               :disabled="readonly"
-              style="flex: 1;"
-            />
-            <span
-              v-if="attribute.unit"
-              class="field-unit-suffix"
-            >{{ attribute.unit }}</span>
-          </div>
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <a-radio value="1">
+                是
+              </a-radio>
+              <a-radio value="0">
+                否
+              </a-radio>
+            </a-radio-group>
 
-          <!-- 开关 -->
-          <a-radio-group
-            v-else-if="attribute.fieldType === FIELD_TYPE.SWITCH"
-            v-model:value="switchChecked"
-            :disabled="readonly"
-            style="display: flex; align-items: center; gap: 8px;"
-          >
-            <a-radio value="1">
-              是
-            </a-radio>
-            <a-radio value="0">
-              否
-            </a-radio>
-          </a-radio-group>
+            <!-- 数值输入 -->
+            <div
+              v-else-if="attribute.fieldType === FIELD_TYPE.NUMBER"
+              style="display: flex; align-items: center; gap: 4px;"
+            >
+              <a-input-number
+                v-model:value="currentValue"
+                :placeholder="`请输入${strRemoveLF(attribute.label)}`"
+                :max="attribute.maxValue ? Number(attribute.maxValue) : undefined"
+                :min="attribute.minValue ? Number(attribute.minValue) : undefined"
+                :disabled="readonly"
+                string-mode
+                style="flex: 1;"
+              />
+              <span
+                v-if="attribute.unit"
+                class="field-unit-suffix"
+              >{{ attribute.unit }}</span>
+            </div>
 
-          <!-- 数值输入 -->
-          <div
-            v-else-if="attribute.fieldType === FIELD_TYPE.NUMBER"
-            style="display: flex; align-items: center; gap: 4px;"
-          >
-            <a-input-number
+            <!-- 下拉选择（单选） -->
+            <slot
+              v-else-if="attribute.fieldType === FIELD_TYPE.SELECT"
+              name="select"
+              :attribute="attribute"
+              :value="currentValue"
+              :readonly="readonly"
+              :update-value="(val: any) => emit('update:modelValue', val)"
+              :parent-value="parentValue"
+              :all-fields-value="allFieldsValue"
+            >
+              <a-select
+                v-model:value="currentValue"
+                :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+                :disabled="readonly"
+                style="width: 100%"
+              />
+            </slot>
+
+            <!-- 下拉选择（多选） -->
+            <slot
+              v-else-if="attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+              name="selectMulti"
+              :attribute="attribute"
+              :value="multiSelectValue"
+              :readonly="readonly"
+              :update-value="(val: string[]) => emit('update:modelValue', Array.isArray(val) ? val.join(',') : String(val))"
+              :parent-value="parentValue"
+              :all-fields-value="allFieldsValue"
+            >
+              <a-select
+                v-model:value="multiSelectValue"
+                mode="multiple"
+                :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+                :disabled="readonly"
+                allow-clear
+                :max-tag-count="2"
+                :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
+                style="width: 100%"
+              />
+            </slot>
+
+            <!-- 树形选择（单选） -->
+            <slot
+              v-else-if="attribute.fieldType === FIELD_TYPE.TREE"
+              name="tree"
+              :attribute="attribute"
+              :value="currentValue"
+              :readonly="readonly"
+              :update-value="(val: any) => emit('update:modelValue', val)"
+            >
+              <a-tree-select
+                v-model:value="currentValue"
+                :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+                :disabled="readonly"
+                allow-clear
+                tree-default-expand-all
+                tree-node-filter-prop="label"
+                style="width: 100%"
+              />
+            </slot>
+
+            <!-- 树形选择（多选） -->
+            <slot
+              v-else-if="attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+              name="treeMulti"
+              :attribute="attribute"
+              :value="multiSelectValue"
+              :readonly="readonly"
+              :update-value="(val: string[]) => emit('update:modelValue', Array.isArray(val) ? val.join(',') : String(val))"
+            >
+              <a-tree-select
+                v-model:value="multiSelectValue"
+                multiple
+                :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+                :disabled="readonly"
+                allow-clear
+                tree-default-expand-all
+                tree-node-filter-prop="label"
+                :max-tag-count="2"
+                :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
+                style="width: 100%"
+              />
+            </slot>
+
+            <!-- 日期 -->
+            <a-date-picker
+              v-else-if="attribute.fieldType === FIELD_TYPE.DATE"
               v-model:value="currentValue"
-              :placeholder="`请输入${strRemoveLF(attribute.label)}`"
-              :max="attribute.maxValue ? Number(attribute.maxValue) : undefined"
-              :min="attribute.minValue ? Number(attribute.minValue) : undefined"
-              :disabled="readonly"
-              string-mode
-              style="flex: 1;"
-            />
-            <span
-              v-if="attribute.unit"
-              class="field-unit-suffix"
-            >{{ attribute.unit }}</span>
-          </div>
-
-          <!-- 下拉选择（单选） -->
-          <slot
-            v-else-if="attribute.fieldType === FIELD_TYPE.SELECT"
-            name="select"
-            :attribute="attribute"
-            :value="currentValue"
-            :readonly="readonly"
-            :update-value="(val: any) => emit('update:modelValue', val)"
-            :parent-value="parentValue"
-            :all-fields-value="allFieldsValue"
-          >
-            <a-select
-              v-model:value="currentValue"
-              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
-              :disabled="readonly"
-              style="width: 100%"
-            />
-          </slot>
-
-          <!-- 下拉选择（多选） -->
-          <slot
-            v-else-if="attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
-            name="selectMulti"
-            :attribute="attribute"
-            :value="multiSelectValue"
-            :readonly="readonly"
-            :update-value="(val: string[]) => emit('update:modelValue', Array.isArray(val) ? val.join(',') : String(val))"
-            :parent-value="parentValue"
-            :all-fields-value="allFieldsValue"
-          >
-            <a-select
-              v-model:value="multiSelectValue"
-              mode="multiple"
-              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+              :placeholder="`请选择${attribute.label}`"
               :disabled="readonly"
               allow-clear
-              :max-tag-count="2"
-              :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
+              format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD"
               style="width: 100%"
             />
-          </slot>
 
-          <!-- 树形选择（单选） -->
-          <slot
-            v-else-if="attribute.fieldType === FIELD_TYPE.TREE"
-            name="tree"
-            :attribute="attribute"
-            :value="currentValue"
-            :readonly="readonly"
-            :update-value="(val: any) => emit('update:modelValue', val)"
-          >
-            <a-tree-select
+            <!-- 日期时间 -->
+            <a-date-picker
+              v-else-if="attribute.fieldType === FIELD_TYPE.DATETIME"
               v-model:value="currentValue"
-              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+              :placeholder="`请选择${attribute.label}`"
               :disabled="readonly"
               allow-clear
-              tree-default-expand-all
-              tree-node-filter-prop="label"
+              show-time
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
               style="width: 100%"
             />
-          </slot>
 
-          <!-- 树形选择（多选） -->
-          <slot
-            v-else-if="attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
-            name="treeMulti"
-            :attribute="attribute"
-            :value="multiSelectValue"
-            :readonly="readonly"
-            :update-value="(val: string[]) => emit('update:modelValue', Array.isArray(val) ? val.join(',') : String(val))"
-          >
-            <a-tree-select
-              v-model:value="multiSelectValue"
-              multiple
-              :placeholder="`请选择${strRemoveLF(attribute.label)}`"
+            <!-- 文本域（超链接、HTML、文本域） -->
+            <a-textarea
+              v-else-if="isTextAreaType(attribute.fieldType)"
+              v-model:value="currentValue"
+              :placeholder="`请输入${attribute.label}`"
+              :auto-size="{ minRows: 3 }"
               :disabled="readonly"
-              allow-clear
-              tree-default-expand-all
-              tree-node-filter-prop="label"
-              :max-tag-count="2"
-              :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
               style="width: 100%"
             />
-          </slot>
 
-          <!-- 日期 -->
-          <a-date-picker
-            v-else-if="attribute.fieldType === FIELD_TYPE.DATE"
-            v-model:value="currentValue"
-            :placeholder="`请选择${attribute.label}`"
-            :disabled="readonly"
-            allow-clear
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            style="width: 100%"
-          />
-
-          <!-- 日期时间 -->
-          <a-date-picker
-            v-else-if="attribute.fieldType === FIELD_TYPE.DATETIME"
-            v-model:value="currentValue"
-            :placeholder="`请选择${attribute.label}`"
-            :disabled="readonly"
-            allow-clear
-            show-time
-            format="YYYY-MM-DD HH:mm:ss"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 100%"
-          />
-
-          <!-- 文本域（超链接、HTML、文本域） -->
-          <a-textarea
-            v-else-if="isTextAreaType(attribute.fieldType)"
-            v-model:value="currentValue"
-            :placeholder="`请输入${attribute.label}`"
-            :auto-size="{ minRows: 3 }"
-            :disabled="readonly"
-            style="width: 100%"
-          />
-
-          <!-- 多媒体类型（图片、音频、视频、文件） -->
-          <div
-            v-else-if="
-              attribute.fieldType === FIELD_TYPE.IMAGE ||
-                attribute.fieldType === FIELD_TYPE.AUDIO ||
-                attribute.fieldType === FIELD_TYPE.VIDEO ||
-                attribute.fieldType === FIELD_TYPE.FILE
-            "
-            style="display: flex; flex-direction: column; gap: 12px; width: 100%"
-          >
-            <!-- 非必填：先选择是否有文件 -->
-            <template v-if="attribute.isRequired !== '1'">
-              <!-- 选择 radio -->
-              <a-radio-group
-                v-if="!fileExistenceChoice"
-                class="file-choice-radio"
-                @change="(e) => handleFileExistenceChange(e.target.value)"
-              >
-                <a-radio value="yes">
-                  上传{{ getFieldTypeName(attribute.fieldType) }}
-                </a-radio>
-                <a-radio value="no">
-                  没有{{ getFieldTypeName(attribute.fieldType) }}
-                </a-radio>
-              </a-radio-group>
+            <!-- 多媒体类型（图片、音频、视频、文件） -->
+            <div
+              v-else-if="
+                attribute.fieldType === FIELD_TYPE.IMAGE ||
+                  attribute.fieldType === FIELD_TYPE.AUDIO ||
+                  attribute.fieldType === FIELD_TYPE.VIDEO ||
+                  attribute.fieldType === FIELD_TYPE.FILE
+              "
+              style="display: flex; flex-direction: column; gap: 12px; width: 100%"
+            >
+              <!-- 非必填：先选择是否有文件 -->
+              <template v-if="attribute.isRequired !== '1'">
+                <!-- 选择 radio -->
+                <a-radio-group
+                  v-if="!fileExistenceChoice"
+                  class="file-choice-radio"
+                  @change="(e) => handleFileExistenceChange(e.target.value)"
+                >
+                  <a-radio value="yes">
+                    上传{{ getFieldTypeName(attribute.fieldType) }}
+                  </a-radio>
+                  <a-radio value="no">
+                    没有{{ getFieldTypeName(attribute.fieldType) }}
+                  </a-radio>
+                </a-radio-group>
               
-              <!-- 选择"有"：显示上传按钮或文件信息 -->
-              <div
-                v-else-if="fileExistenceChoice === 'yes'"
-                style="display: flex; flex-direction: column; gap: 8px;"
-              >
+                <!-- 选择"有"：显示上传按钮或文件信息 -->
+                <div
+                  v-else-if="fileExistenceChoice === 'yes'"
+                  style="display: flex; flex-direction: column; gap: 8px;"
+                >
+                  <!-- 已上传文件：显示文件名和操作按钮 -->
+                  <div
+                    v-if="currentValue && currentValue !== 'NO_FILE'"
+                    style="display: flex; align-items: center; gap: 8px;"
+                  >
+                    <span
+                      :class="readonly ? 'file-text' : 'file-link'"
+                      style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                      @click="handleFileDownload(currentValue)"
+                    >
+                      <file-outlined style="margin-right: 4px;" />
+                      {{ getFileName(currentValue) || '已上传文件' }}
+                    </span>
+                    <a-button
+                      v-if="!readonly"
+                      size="small"
+                      danger
+                      @click="handleFileDelete"
+                    >
+                      删除
+                    </a-button>
+                  </div>
+                              
+                  <!-- 未上传文件：显示上传按钮 -->
+                  <div
+                    v-else
+                    style="display: flex; align-items: center; gap: 8px;"
+                  >
+                    <a-button
+                      type="dashed"
+                      :disabled="readonly"
+                      style="flex: 1;"
+                      @click="handleFileUpload"
+                    >
+                      点击上传{{ getFieldTypeName(attribute.fieldType) }}
+                    </a-button>
+                    <a-button
+                      size="small"
+                      @click="fileExistenceChoice = null; currentValue = ''"
+                    >
+                      重新选择
+                    </a-button>
+                  </div>
+                </div>
+              
+                <!-- 选择“没有”：显示确认信息 -->
+                <div
+                  v-else-if="fileExistenceChoice === 'no'"
+                  style="display: flex; align-items: center; gap: 8px;"
+                >
+                  <a-tag
+                    color="default"
+                    style="flex: 1; text-align: center; padding: 6px 12px; margin: 0;"
+                  >
+                    已确认没有{{ getFieldTypeName(attribute.fieldType) }}
+                  </a-tag>
+                  <a-button
+                    size="small"
+                    @click="fileExistenceChoice = null; currentValue = ''"
+                  >
+                    重新选择
+                  </a-button>
+                </div>
+              </template>
+            
+              <!-- 必填：直接显示上传按钮或文件信息 -->
+              <template v-else>
                 <!-- 已上传文件：显示文件名和操作按钮 -->
                 <div
                   v-if="currentValue && currentValue !== 'NO_FILE'"
@@ -686,96 +753,29 @@ const handleFileDownload = (url: string) => {
                     删除
                   </a-button>
                 </div>
-                              
+              
                 <!-- 未上传文件：显示上传按钮 -->
-                <div
+                <a-button
                   v-else
-                  style="display: flex; align-items: center; gap: 8px;"
+                  type="dashed"
+                  :disabled="readonly"
+                  style="width: 100%;"
+                  @click="handleFileUpload"
                 >
-                  <a-button
-                    type="dashed"
-                    :disabled="readonly"
-                    style="flex: 1;"
-                    @click="handleFileUpload"
-                  >
-                    点击上传{{ getFieldTypeName(attribute.fieldType) }}
-                  </a-button>
-                  <a-button
-                    size="small"
-                    @click="fileExistenceChoice = null; currentValue = ''"
-                  >
-                    重新选择
-                  </a-button>
-                </div>
-              </div>
-              
-              <!-- 选择“没有”：显示确认信息 -->
-              <div
-                v-else-if="fileExistenceChoice === 'no'"
-                style="display: flex; align-items: center; gap: 8px;"
-              >
-                <a-tag
-                  color="default"
-                  style="flex: 1; text-align: center; padding: 6px 12px; margin: 0;"
-                >
-                  已确认没有{{ getFieldTypeName(attribute.fieldType) }}
-                </a-tag>
-                <a-button
-                  size="small"
-                  @click="fileExistenceChoice = null; currentValue = ''"
-                >
-                  重新选择
+                  点击上传{{ getFieldTypeName(attribute.fieldType) }}
                 </a-button>
-              </div>
-            </template>
-            
-            <!-- 必填：直接显示上传按钮或文件信息 -->
-            <template v-else>
-              <!-- 已上传文件：显示文件名和操作按钮 -->
-              <div
-                v-if="currentValue && currentValue !== 'NO_FILE'"
-                style="display: flex; align-items: center; gap: 8px;"
-              >
-                <span
-                  :class="readonly ? 'file-text' : 'file-link'"
-                  style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                  @click="handleFileDownload(currentValue)"
-                >
-                  <file-outlined style="margin-right: 4px;" />
-                  {{ getFileName(currentValue) || '已上传文件' }}
-                </span>
-                <a-button
-                  v-if="!readonly"
-                  size="small"
-                  danger
-                  @click="handleFileDelete"
-                >
-                  删除
-                </a-button>
-              </div>
-              
-              <!-- 未上传文件：显示上传按钮 -->
-              <a-button
-                v-else
-                type="dashed"
-                :disabled="readonly"
-                style="width: 100%;"
-                @click="handleFileUpload"
-              >
-                点击上传{{ getFieldTypeName(attribute.fieldType) }}
-              </a-button>
-            </template>
-          </div>
+              </template>
+            </div>
 
 
 
-          <!-- 默认：文本输入 -->
-          <a-input
-            v-else
-            v-model:value="currentValue"
-            :placeholder="`请输入${attribute.label}`"
-            :disabled="readonly"
-          />
+            <!-- 默认：文本输入 -->
+            <a-input
+              v-else
+              v-model:value="currentValue"
+              :placeholder="`请输入${attribute.label}`"
+              :disabled="readonly"
+            />
           </template>
         </template>
       </div>

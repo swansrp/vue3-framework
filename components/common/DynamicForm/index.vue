@@ -16,6 +16,10 @@ import {
   formDataGroupInstanceAddList
 } from './apis/formDataGroupInstancePortalController'
 import {
+  formDataHistoryApprove,
+  formDataHistoryReject
+} from './apis/formDataHistoryPortalController'
+import {
   formDataGeneralSelect,
   formDataAddList,
   formDataUpdateList
@@ -1297,6 +1301,8 @@ const handleApprove = async () => {
     cancelText: '取消',
     async onOk() {
       try {
+        // 调用审批通过接口
+        await formDataHistoryApprove({ historyId: composableHistoryId.value })
         // 触发 approve 事件，业务端执行业务审批逻辑
         emit('approve', composableHistoryId.value)
       } catch (error) {
@@ -1308,6 +1314,8 @@ const handleApprove = async () => {
 
 // 审批拒绝
 const handleReject = async (reason = '') => {
+  // 调用审批拒绝接口
+  await formDataHistoryReject({ historyId: composableHistoryId.value, rejectReason: reason })
   // 触发 reject 事件，业务端执行业务拒绝逻辑
   emit('reject', composableHistoryId.value, reason)
 }
@@ -1338,6 +1346,9 @@ const handleRejectClick = () => {
         return Promise.reject()
       }
       try {
+        // 调用审批拒绝接口
+        await formDataHistoryReject({ historyId: composableHistoryId.value, rejectReason: rejectReason.value })
+        // 触发 reject 事件，业务端执行业务拒绝逻辑
         emit('reject', composableHistoryId.value, rejectReason.value)
       } catch (error) {
         console.error('拒绝失败:', error)
@@ -1397,7 +1408,7 @@ const init = async () => {
     historyId: historyIdValue.value,
     lazyCreate: props.lazyCreate
   })
-  emit('init:complete', success)
+  emit('init:complete', !!success)
   
   if (success) {
     // 将外部传入的 defaultValues 注入到每个 module
@@ -1487,7 +1498,10 @@ onMounted(async () => {
   >
     <!-- 头部信息区域（企业名称等） -->
     <template #header-info="slotProps">
-      <slot name="header-info" v-bind="slotProps"></slot>
+      <slot
+        name="header-info"
+        v-bind="slotProps"
+      ></slot>
     </template>
     
     <!-- 状态提示（在表单内容区域显示） -->
@@ -1499,7 +1513,10 @@ onMounted(async () => {
         show-icon
         style="margin-bottom: 16px;"
       >
-        <template v-if="statusAlert.showReason && statusAlert.reason" #description>
+        <template
+          v-if="statusAlert.showReason && statusAlert.reason"
+          #description
+        >
           <div style="color: #666;">
             <strong>拒绝理由：</strong>{{ statusAlert.reason }}
           </div>
@@ -1586,19 +1603,31 @@ onMounted(async () => {
 
     <!-- slot 透传 -->
     <template #select="slotProps">
-      <slot name="select" v-bind="slotProps"></slot>
+      <slot
+        name="select"
+        v-bind="slotProps"
+      ></slot>
     </template>
     
     <template #selectMulti="slotProps">
-      <slot name="selectMulti" v-bind="slotProps"></slot>
+      <slot
+        name="selectMulti"
+        v-bind="slotProps"
+      ></slot>
     </template>
     
     <template #tree="slotProps">
-      <slot name="tree" v-bind="slotProps"></slot>
+      <slot
+        name="tree"
+        v-bind="slotProps"
+      ></slot>
     </template>
     
     <template #treeMulti="slotProps">
-      <slot name="treeMulti" v-bind="slotProps"></slot>
+      <slot
+        name="treeMulti"
+        v-bind="slotProps"
+      ></slot>
     </template>
   </EvalFormViewer>
 

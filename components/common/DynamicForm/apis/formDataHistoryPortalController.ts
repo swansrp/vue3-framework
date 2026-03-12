@@ -469,3 +469,67 @@ export const formDataHistoryUpdateList = (params?: {
   return request(api, params || {}, data || {}, showSuccess, showLoading, showErr)
 }
 
+/**
+ * 审批通过表单填写历史
+ * - 将上报历史记录的状态从提交(1)变更为通过(3)
+ * - 记录审批人和审批时间
+ * @api POST /form/history/approve
+ * @param params - 查询参数
+ * @param showSuccess - 是否显示成功提示（默认: true）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ * @see {@link @/apis/types/formDataHistoryPortalControllerTypes} - 相关类型定义
+ * 
+ * @remarks
+ * **POST接口使用规范（重要）:**
+ * showSuccess - 默认true，成功时自动显示提示消息，通常保持默认值
+ * showErr - 默认true，失败时自动显示错误消息，通常保持默认值
+ * showLoading - 默认false，长时间处理的接口方法需要设置成true以显示loading图标，通常保持默认值
+ * 
+ * **调用建议:**
+ * 1. 调用此接口时使用默认参数即可（showSuccess=true, showErr=true）
+ * 2. 此接口不返回业务数据，仅返回操作状态
+ * 3. 数据更新流程：调用此POST接口 -> 等待成功 -> 调用相应的获取数据接口获取最新数据
+ * 4. request框架会根据showSuccess和showErr自动弹出操作结果提示
+ */
+export const formDataHistoryApprove = (params?: {
+  /** 上报历史记录ID */
+  historyId?: string
+}, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/form/history/approve', '')
+  return request(api, params || {}, {}, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 拒绝表单填写历史
+ * - 将上报历史记录的状态从提交(1)变更为退回(2)
+ * - 记录审批人和审批时间
+ * @api POST /form/history/reject
+ * @param params - 查询参数
+ * @param showSuccess - 是否显示成功提示（默认: true）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ * @see {@link @/apis/types/formDataHistoryPortalControllerTypes} - 相关类型定义
+ * 
+ * @remarks
+ * **POST接口使用规范（重要）:**
+ * showSuccess - 默认true，成功时自动显示提示消息，通常保持默认值
+ * showErr - 默认true，失败时自动显示错误消息，通常保持默认值
+ * showLoading - 默认false，长时间处理的接口方法需要设置成true以显示loading图标，通常保持默认值
+ * 
+ * **调用建议:**
+ * 1. 调用此接口时使用默认参数即可（showSuccess=true, showErr=true）
+ * 2. 此接口不返回业务数据，仅返回操作状态
+ * 3. 数据更新流程：调用此POST接口 -> 等待成功 -> 调用相应的获取数据接口获取最新数据
+ * 4. request框架会根据showSuccess和showErr自动弹出操作结果提示
+ */
+export const formDataHistoryReject = (params?: {
+  /** 上报历史记录ID */
+  historyId?: string
+  /** 拒绝原因 */
+  rejectReason?: string
+}, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/form/history/reject', '')
+  return request(api, params || {}, {}, showSuccess, showLoading, showErr)
+}
+
