@@ -1,3 +1,4 @@
+
 // ==================== Form Schema Section Portal Controller API ====================
 // 项目: mpbe-api
 // 文件: formSchemaSectionPortalController.ts
@@ -111,6 +112,35 @@ export const formSchemaSectionAdvancedStatistic = (data?: AdvancedStatisticReq, 
 export const formSchemaSectionAdvancedSummary = (data?: AdvancedSummaryReq, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildPostApiByType('/form/section/advanced/summary', '')
   return request(api, {}, data || {}, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 为区块创建数据表
+ * @api POST /form/section/createMatrix
+ * @param params - 查询参数
+ * @param data - 请求体数据
+ * @param showSuccess - 是否显示成功提示（默认: true）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ * @see {@link @/apis/types/formSchemaSectionPortalControllerTypes} - 相关类型定义
+ * 
+ * @remarks
+ * **POST接口使用规范（重要）:**
+ * showSuccess - 默认true，成功时自动显示提示消息，通常保持默认值
+ * showErr - 默认true，失败时自动显示错误消息，通常保持默认值
+ * showLoading - 默认false，长时间处理的接口方法需要设置成true以显示loading图标，通常保持默认值
+ * 
+ * **调用建议:**
+ * 1. 调用此接口时使用默认参数即可（showSuccess=true, showErr=true）
+ * 2. 数据更新流程：调用此POST接口 -> 等待成功 -> 调用相应的获取数据接口获取最新数据
+ * 3. request框架会根据showSuccess和showErr自动弹出操作结果提示
+ */
+export const formSchemaSectionCreateMatrix = (params?: {
+  /** sectionId */
+  sectionId?: number
+}, data?: any, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/form/section/createMatrix', '')
+  return request(api, params || {}, data || {}, showSuccess, showLoading, showErr)
 }
 
 /**

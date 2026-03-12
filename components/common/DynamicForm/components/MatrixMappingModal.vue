@@ -4,7 +4,7 @@ import { message, Modal } from 'ant-design-vue'
 import { computed, nextTick, ref, watch } from 'vue'
 
 import { formSchemaAttributeUpdate } from '../apis/formSchemaAttributePortalController'
-import { formSchemaSectionUpdate } from '../apis/formSchemaSectionPortalController'
+import { formSchemaSectionCreateMatrix, formSchemaSectionUpdate } from '../apis/formSchemaSectionPortalController'
 
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import {
@@ -274,12 +274,18 @@ const handleCreateMatrix = async () => {
     // 使用包含 formCode 的前缀
     const finalTableName = tableName.value.startsWith(tablePrefix.value) ? tableName.value : `${tablePrefix.value}${tableName.value}`
 
-    // 创建矩阵
-    const resp = await sysMatrixAdd({
-      tableName: finalTableName,
-      tableComment: tableComment.value || props.sectionTitle,
-      autoIncrement: primaryKeyType.value === 'auto_increment' ? '1' : '0'
-    })
+    // 调用后端接口创建矩阵（包含自动创建 history_id 和 section_instance_id 字段，以及更新 section 的 tableName）
+    const resp = await formSchemaSectionCreateMatrix(
+      { sectionId: Number(props.sectionId!) },
+      {
+        tableName: finalTableName,
+        tableComment: tableComment.value || props.sectionTitle,
+        autoIncrement: primaryKeyType.value === 'auto_increment' ? '1' : '0'
+      },
+      true,
+      false,
+      true
+    )
 
     const matrixInfo = resp.payload
 
@@ -287,46 +293,6 @@ const handleCreateMatrix = async () => {
       currentMatrix.value = matrixInfo
       matrixColumns.value = []
       mode.value = 'none'
-
-      // 自动创建 historyId 字段
-      const historyIdColumn = await sysMatrixColumnAdd({
-        matrixId: matrixInfo.id,
-        columnName: 'history_id',
-        columnComment: '历史记录ID',
-        columnType: 'VARCHAR',
-        columnLength: 50,
-        isIndex: '1',
-        isNullable: '0',
-        fieldType: '1',
-        sort: 0
-      }, false, false)
-
-      if (historyIdColumn.payload) {
-        matrixColumns.value.push(historyIdColumn.payload)
-      }
-
-      // 自动创建 sectionInstanceId 字段
-      const sectionInstanceIdColumn = await sysMatrixColumnAdd({
-        matrixId: matrixInfo.id,
-        columnName: 'section_instance_id',
-        columnComment: '填报区块实体id',
-        columnType: 'VARCHAR',
-        columnLength: 50,
-        isIndex: '1',
-        isNullable: '0',
-        fieldType: '1',
-        sort: 1
-      }, false, false)
-
-      if (sectionInstanceIdColumn.payload) {
-        matrixColumns.value.push(sectionInstanceIdColumn.payload)
-      }
-
-      // 更新 section 的 tableName
-      await formSchemaSectionUpdate({}, {
-        id: Number(props.sectionId!),
-        tableName: finalTableName
-      }, false, false)
 
       await loadExistingMatrices()
 
