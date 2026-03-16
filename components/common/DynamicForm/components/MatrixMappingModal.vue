@@ -15,7 +15,6 @@ import {
 import {
   createPhysicalTable,
   syncTableStructure,
-  sysMatrixAdd,
   sysMatrixGeneralSelect
 } from '@/framework/views/MainContent/dynamic/apis/sysMatrixPortalController'
 
