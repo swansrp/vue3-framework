@@ -40,13 +40,7 @@
             />
           </a-form-item>
           <a-form-item
-            :rules="[
-              {
-                required: true,
-                message: '两次密码不一致',
-                pattern: new RegExp('^' + formData.password + '$'),
-              },
-            ]"
+            :rules="[{ validator: passwordConfirmValidator, trigger: 'change' }]"
             has-feedback
             label="确认密码："
             name="passwordConfirm"
@@ -128,6 +122,13 @@ const formData = reactive({
 
 const passwordValidator = () => {
   return validatePassword(formData.password)
+}
+
+const passwordConfirmValidator = (_rule: any, value: string) => {
+  if (value !== formData.password) {
+    return Promise.reject('两次密码不一致')
+  }
+  return Promise.resolve()
 }
 
 const handleSubmit = () => {

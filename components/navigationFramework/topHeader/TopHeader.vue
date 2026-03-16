@@ -145,7 +145,7 @@
           />
         </a-form-item>
         <a-form-item
-          :rules="[{ required: true, message: '两次密码不一致', pattern: new RegExp('^'+ modifyPasswordModal.password + '$') }]"
+          :rules="[{ validator: passwordConfirmValidator, trigger: 'change' }]"
           has-feedback
           label="确认密码"
           name="passwordConfirm"
@@ -262,6 +262,13 @@ const userInfoModal = reactive({
   sex: userStore.sex,
   avatar: userStore.avatar
 })
+const passwordConfirmValidator = (_rule: any, value: string) => {
+  if (value !== modifyPasswordModal.password) {
+    return Promise.reject('两次密码不一致')
+  }
+  return Promise.resolve()
+}
+
 const modifyPassword = () => {
   changePassword(Md5.hashStr(modifyPasswordModal.oldPassword), Md5.hashStr(modifyPasswordModal.password), Md5.hashStr(modifyPasswordModal.passwordConfirm)).then(() => {
     modifyPasswordModal.open = false
