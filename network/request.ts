@@ -201,15 +201,15 @@ function request(apiType: ApiType,
   }).then(resp => {
     if (resp.data.status?.code !== errCode.SUCCESS) {
       if (resp.data.status?.msg) {
-        const errTypeMapList = ['info', 'warning', 'error']
+        const errTypeMapList = ['info', 'info', 'info', 'warning', 'error', 'error']
         const errLevel = +resp.data.payload.errLevel
-        const errType = errTypeMapList[errLevel]
+        const errType = errTypeMapList[errLevel] || 'error'
         if (showErr) {
           const msg = resp.data.payload.errMsg
           if (errType === 'info') message.info(msg)
           else if (errType === 'warning') message.warning(msg)
           else if (errType === 'error') message.error(msg)
-          throw new Error(resp.data.status.msg)
+          throw new Error(resp.data.status.details)
         } else {
           throw new Error(resp.data.status.details)
         }
