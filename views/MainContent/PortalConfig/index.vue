@@ -383,6 +383,13 @@
           <a-button
             style="margin-right: 10px"
             type="primary"
+            @click="showPortalTableConfigModal = true"
+          >
+            报表配置
+          </a-button>
+          <a-button
+            style="margin-right: 10px"
+            type="primary"
             @click="saveTableConfig(false)"
           >
             保存
@@ -1707,6 +1714,13 @@
         :personal-indicator-permissions="{ edit: false, delete: false }"
       />
     </a-modal>
+    <!-- DarkTable配置弹窗 -->
+    <PortalTableConfigModal
+      v-model="showPortalTableConfigModal"
+      :portal-name="tableConfig.name"
+      :portal-config="tableConfig"
+      :columns="tableConfig.columns"
+    />
   </div>
 </template>
 
@@ -1738,6 +1752,7 @@ import { nextTick, Ref, watch } from 'vue'
 
 import ColumnOrderModal from './components/ColumnOrderModal.vue'
 import FolderComponent from './components/FolderComponent.vue'
+import PortalTableConfigModal from './components/PortalTableConfigModal.vue'
 import IndicatorModal from './indicatorModal.vue'
 import SqlDraw from './sqlDraw.vue'
 
@@ -1890,6 +1905,7 @@ let copyConfigModal = reactive({
 const showSql: Ref<boolean> = ref(false)
 const sqlData: Ref<string> = ref('')
 const indicatorModalShow: Ref<boolean> = ref(false)
+const showPortalTableConfigModal: Ref<boolean> = ref(false)
 const showDataPreviewDrawer: Ref<boolean> = ref(false)
 const publicDashboardModalShow: Ref<boolean> = ref(false)
 const publicDashboardRefreshing: Ref<boolean> = ref(false)

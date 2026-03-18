@@ -424,6 +424,16 @@ html body .dark-content-layout .portal-table .surely-table-row {
     color: white !important;
 }
 
+/* 输入框清除按钮样式 */
+:deep(.ant-input-clear-icon),
+:deep(.ant-input-affix-wrapper .ant-input-clear-icon) {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:deep(.ant-input-clear-icon:hover) {
+    color: #1FC6FF !important;
+}
+
 :deep(.ant-select-selector) {
     background-color: rgb(21, 76, 121) !important;
 
@@ -438,6 +448,17 @@ html body .dark-content-layout .portal-table .surely-table-row {
             color: white;
         }
     }
+}
+
+/* 下拉箭头图标样式 */
+:deep(.ant-select-arrow),
+:deep(.ant-select-arrow-icon) {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:deep(.ant-select-arrow:hover),
+:deep(.ant-select-arrow-icon:hover) {
+    color: #1FC6FF !important;
 }
 
 :deep(.ant-picker) {
@@ -621,15 +642,12 @@ html body .dark-content-layout .portal-table .surely-table-row {
 /* 侧边栏内的表单元素深色主题 */
 :deep(.dark-content-layout .ant-input) {
     background-color: rgba(21, 76, 121, 0.6) !important;
-    border: 1px solid rgba(31, 198, 255, 0.4) !important;
     color: white !important;
 }
 
 :deep(.dark-content-layout .ant-input:focus),
 :deep(.dark-content-layout .ant-input:hover) {
     background-color: rgba(21, 76, 121, 0.8) !important;
-    border-color: #1FC6FF !important;
-    box-shadow: 0 0 8px rgba(31, 198, 255, 0.3) !important;
 }
 
 :deep(.ant-layout-content) {
