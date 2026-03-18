@@ -16,6 +16,7 @@ import {
   formDataGroupInstanceAddList
 } from './apis/formDataGroupInstancePortalController'
 import {
+  formDataHistorySubmit,
   formDataHistoryApprove,
   formDataHistoryReject
 } from './apis/formDataHistoryPortalController'
@@ -31,7 +32,8 @@ import {
   formDataSectionInstanceDeleteItem
 } from './apis/formDataSectionInstancePortalController'
 import EvalFormViewer from './components/FormViewer.vue'
-import { useEvalFormData } from './components/useEvalFormData'
+import { useFormData } from './components/useFormData'
+import { useFormDataPdf } from './components/useFormDataPdf'
 
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
@@ -164,7 +166,10 @@ const {
   // 延迟创建模式
   lazyCreate,
   createHistoryId
-} = useEvalFormData()
+} = useFormData()
+
+// PDF 导出
+const { exportPdf } = useFormDataPdf()
 
 // 当前状态（优先使用 props.status，否则使用 historyInfo.status）
 const currentStatus = computed(() => props.status ?? historyInfo.value?.status ?? '')
@@ -1279,7 +1284,10 @@ const handleSubmit = async () => {
         
         // 数据已在编辑过程中实时保存，提交时只做校验，不重复保存
         
-        // 触发 submit 事件，业务端执行业务提交逻辑
+        // 1. 先调用框架层提交接口
+        await formDataHistorySubmit({ historyId: composableHistoryId.value })
+        
+        // 2. 触发 submit 事件，业务端执行业务提交逻辑
         emit('submit', composableHistoryId.value)
 
         message.success('提交成功')
@@ -1386,7 +1394,10 @@ const handleLazySubmit = async () => {
         // 3. 保存数据
         await handleSaveAll()
         
-        // 触发 submit 事件，业务端执行业务提交逻辑
+        // 4. 调用框架层提交接口
+        await formDataHistorySubmit({ historyId: composableHistoryId.value })
+        
+        // 5. 触发 submit 事件，业务端执行业务提交逻辑
         emit('submit', composableHistoryId.value)
 
         message.success('提交成功')
@@ -1436,6 +1447,7 @@ defineExpose({
   handleApprove,
   handleReject,
   init,
+  exportPdf,
   // 属性
   historyInfo,
   formInfo,
@@ -1506,22 +1518,7 @@ onMounted(async () => {
     
     <!-- 状态提示（在表单内容区域显示） -->
     <template #status-alert>
-      <a-alert
-        v-if="statusAlert"
-        :type="statusAlert.type"
-        :message="statusAlert.message"
-        show-icon
-        style="margin-bottom: 16px;"
-      >
-        <template
-          v-if="statusAlert.showReason && statusAlert.reason"
-          #description
-        >
-          <div style="color: #666;">
-            <strong>拒绝理由：</strong>{{ statusAlert.reason }}
-          </div>
-        </template>
-      </a-alert>
+      <slot name="status-alert"></slot>
     </template>
     
     <!-- 按钮区域 -->

@@ -11,7 +11,7 @@ import { useRouter } from 'vue-router'
 import EvalGroupForm from './GroupForm.vue'
 import ModuleSteps from './ModuleSteps.vue'
 import SectionNavTree from './SectionNavTree.vue'
-import type { SectionInstance, SectionProgress, MutualExclusiveGroup } from './useEvalFormData'
+import type { SectionInstance, SectionProgress, MutualExclusiveGroup } from './useFormData'
 import { strLF2HtmlLF } from '../../../../utils/common'
 import Dict from '../../dict/index.vue'
 

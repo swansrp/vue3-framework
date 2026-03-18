@@ -60,7 +60,7 @@ export interface MutualExclusiveGroup {
   selectedGroupId?: string
 }
 
-export function useEvalFormData() {
+export function useFormData() {
   const route = useRoute()
 
   // 权限和状态（迁移后不再需要 enterpriseId）

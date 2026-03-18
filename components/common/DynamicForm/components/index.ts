@@ -19,7 +19,7 @@ export { default as FormLayoutConfig } from './FormLayoutConfig.vue'
 export { default as FormViewer } from './FormViewer.vue'
 export { default as GroupForm } from './GroupForm.vue'
 export { default as SectionNavTree } from './SectionNavTree.vue'
-export { useEvalFormData } from './useEvalFormData'
+export { useFormData } from './useFormData'
 
 // 导出类型
 export type { 
@@ -29,4 +29,4 @@ export type {
   SectionProgress, 
   RequiredParseResult, 
   MutualExclusiveGroup 
-} from './useEvalFormData'
+} from './useFormData'

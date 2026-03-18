@@ -533,3 +533,11 @@ export const formDataHistoryReject = (params?: {
   return request(api, params || {}, {}, showSuccess, showLoading, showErr)
 }
 
+export const formDataHistorySubmit = (params?: {
+  /** 上报历史记录ID */
+  historyId?: string
+}, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/form/history/submit', '')
+  return request(api, params || {}, {}, showSuccess, showLoading, showErr)
+}
+
