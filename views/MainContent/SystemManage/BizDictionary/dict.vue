@@ -13,6 +13,7 @@ import {
   systemBizDictUpdateEnterpriseDict
 } from '@/framework/apis/dict/bizDictController'
 import type { BizDictVO, BizDictRes } from '@/framework/apis/dict/bizDictController'
+import { addDict, deleteDict } from '@/framework/apis/dict/dict'
 import DictItemEditModal from '@/framework/components/common/dict/DictItemEditModal.vue'
 import DictItemsList from '@/framework/components/common/dict/DictItemsList.vue'
 
@@ -37,6 +38,11 @@ const showItemSearchResults = ref(false)
 const editModalVisible = ref(false)
 const editingItem = ref<BizDictVO | null>(null)
 
+// 新增字典弹窗
+const addDictModalVisible = ref(false)
+const addDictFormRef = ref()
+const addDictForm = ref({ dictName: '', dictTitle: '' })
+
 // 字典名称映射（dictCode → dictName）
 const dictNameMap = ref<Record<string, string>>({})
 
@@ -48,10 +54,10 @@ const loadDictList = async () => {
   dictListLoading.value = true
   try {
     const res = await searchByDictName(
-      dictNameSearch.value ? { dictName: dictNameSearch.value } : {},
-      false,
-      false,
-      true
+        dictNameSearch.value ? { dictName: dictNameSearch.value } : {},
+        false,
+        false,
+        true
     )
     if (res?.status?.code === 0 && res.payload) {
       dictList.value = res.payload
@@ -73,15 +79,15 @@ const searchByItemLabel = async () => {
     itemSearchResults.value = []
     return
   }
-  
+
   itemSearchLoading.value = true
   showItemSearchResults.value = true
   try {
     const res = await searchByDictItemName(
-      { itemName: itemLabelSearch.value },
-      false,
-      false,
-      true
+        { itemName: itemLabelSearch.value },
+        false,
+        false,
+        true
     )
     if (res?.status?.code === 0 && res.payload) {
       itemSearchResults.value = res.payload
@@ -110,14 +116,14 @@ const loadDictItems = async () => {
     dictItems.value = []
     return
   }
-  
+
   dictItemsLoading.value = true
   try {
     const res = await getEnterpriseDictByCode(
-      { dictCode: selectedDictCode.value, bizId: null as any },
-      false,
-      false,
-      true
+        { dictCode: selectedDictCode.value, bizId: null as any },
+        false,
+        false,
+        true
     )
     if (res?.status?.code === 0 && res.payload) {
       dictItems.value = (res.payload as BizDictVO[]).sort((a, b) => (a.sort || 0) - (b.sort || 0))
@@ -138,7 +144,7 @@ const loadDictItems = async () => {
 const loadDictNameMap = async () => {
   try {
     const res = await getDictList({ bizId: undefined }, false, false, false)
-    
+
     if (res?.status?.code === 0 && res.payload) {
       const nameMap: Record<string, string> = {}
       ;(res.payload as Array<{ value?: string; label?: string }>).forEach((item: any) => {
@@ -162,40 +168,40 @@ const loadParentValueLabelMap = async () => {
       parentDictCodes.add(item.parentDictCode)
     }
   })
-  
+
   if (parentDictCodes.size === 0) {
     parentValueLabelMap.value = {}
     return
   }
-  
+
   const newMap: Record<string, string> = {}
-  
+
   // 并行加载所有上级字典的项
   await Promise.all(
-    Array.from(parentDictCodes).map(async (dictCode) => {
-      try {
-        const res = await getEnterpriseDictByCode(
-          { dictCode, bizId: null as any },
-          false,
-          false,
-          false
-        )
-        
-        if (res?.status?.code === 0 && res.payload) {
-          const items = res.payload as BizDictVO[]
-          items.forEach(item => {
-            if (item.value) {
-              // 使用 "dictCode_value" 作为 key
-              newMap[`${dictCode}_${item.value}`] = item.label || item.value
-            }
-          })
+      Array.from(parentDictCodes).map(async (dictCode) => {
+        try {
+          const res = await getEnterpriseDictByCode(
+              { dictCode, bizId: null as any },
+              false,
+              false,
+              false
+          )
+
+          if (res?.status?.code === 0 && res.payload) {
+            const items = res.payload as BizDictVO[]
+            items.forEach(item => {
+              if (item.value) {
+                // 使用 "dictCode_value" 作为 key
+                newMap[`${dictCode}_${item.value}`] = item.label || item.value
+              }
+            })
+          }
+        } catch (error) {
+          console.error(`加载上级字典 ${dictCode} 失败:`, error)
         }
-      } catch (error) {
-        console.error(`加载上级字典 ${dictCode} 失败:`, error)
-      }
-    })
+      })
   )
-  
+
   parentValueLabelMap.value = newMap
 }
 
@@ -237,7 +243,7 @@ const deleteDictItem = async (item: BizDictVO) => {
     message.warning('系统字典项不能删除')
     return
   }
-  
+
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除字典项 "${item.label}" 吗？`,
@@ -280,17 +286,17 @@ const handleSortChange = async (items: BizDictVO[]) => {
   try {
     const updatePromises: Promise<any>[] = []
     let sortCounter = 0
-    
+
     items.forEach((item) => {
       if (!item.id) return
       sortCounter++
       const updatedItem = { ...item, sort: sortCounter }
       item.sort = sortCounter
       updatePromises.push(
-        systemBizDictUpdateEnterpriseDict({ bizId: null as any }, updatedItem)
+          systemBizDictUpdateEnterpriseDict({ bizId: null as any }, updatedItem)
       )
     })
-    
+
     await Promise.all(updatePromises)
     message.success('排序已保存')
     await loadDictItems()
@@ -298,6 +304,54 @@ const handleSortChange = async (items: BizDictVO[]) => {
     console.error('保存排序失败:', error)
     message.error('保存排序失败')
   }
+}
+
+// 添加字典
+const handleAddDict = () => {
+  addDictModalVisible.value = true
+}
+
+const onAddDictFinish = async () => {
+  try {
+    await addDict(addDictForm.value)
+    message.success('添加字典成功')
+    addDictModalVisible.value = false
+    addDictForm.value = { dictName: '', dictTitle: '' }
+    addDictFormRef.value?.resetFields()
+    await loadDictList()
+  } catch (error) {
+    console.error('添加字典失败:', error)
+  }
+}
+
+const resetAddDictForm = () => {
+  addDictFormRef.value?.resetFields()
+}
+
+// 删除字典
+const handleDeleteDict = () => {
+  if (!selectedDictCode.value) {
+    message.warning('请先选择一个字典')
+    return
+  }
+
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除字典 "${selectedDictName.value}" 吗？该操作会删除该字典对应的所有字典项！`,
+    okType: 'danger',
+    onOk: async () => {
+      try {
+        await deleteDict({ id: selectedDictCode.value })
+        message.success('删除字典成功')
+        selectedDictCode.value = ''
+        selectedDictName.value = ''
+        dictItems.value = []
+        await loadDictList()
+      } catch (error) {
+        console.error('删除字典失败:', error)
+      }
+    }
+  })
 }
 
 // 监听字典名称搜索
@@ -328,7 +382,19 @@ loadDictNameMap()
     <!-- 左侧字典列表 -->
     <div class="dict-list-panel">
       <div class="panel-header">
-        <h3>字典列表</h3>
+        <div class="header-top">
+          <h3>字典列表</h3>
+          <a-button
+            type="primary"
+            size="small"
+            @click="handleAddDict"
+          >
+            <template #icon>
+              <PlusOutlined />
+            </template>
+            新增字典
+          </a-button>
+        </div>
         <a-input-search
           v-model:value="dictNameSearch"
           placeholder="搜索字典名称"
@@ -373,7 +439,7 @@ loadDictNameMap()
         <h3 v-else>
           字典项管理
         </h3>
-        
+
         <!-- 反查搜索框 -->
         <a-input-search
           v-model:value="itemLabelSearch"
@@ -450,6 +516,12 @@ loadDictNameMap()
                 </template>
                 添加字典项
               </a-button>
+              <a-button
+                danger
+                @click="handleDeleteDict"
+              >
+                删除字典
+              </a-button>
             </div>
             <a-spin :spinning="dictItemsLoading">
               <DictItemsList
@@ -483,6 +555,36 @@ loadDictNameMap()
       :is-manage-mode="true"
       @save="saveEditItem"
     />
+
+    <!-- 新增字典弹窗 -->
+    <a-modal
+      v-model:open="addDictModalVisible"
+      title="新增字典"
+      @ok="onAddDictFinish"
+      @cancel="resetAddDictForm"
+    >
+      <a-form
+        ref="addDictFormRef"
+        :model="addDictForm"
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 14 }"
+      >
+        <a-form-item
+          label="字典名称"
+          name="dictTitle"
+          :rules="[{ required: true, message: '请输入字典名称!' }]"
+        >
+          <a-input v-model:value="addDictForm.dictTitle" />
+        </a-form-item>
+        <a-form-item
+          label="字典值"
+          name="dictName"
+          :rules="[{ required: true, message: '请填写字典值!' }]"
+        >
+          <a-input v-model:value="addDictForm.dictName" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -520,22 +622,29 @@ loadDictNameMap()
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 
-  h3 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
+  .header-top {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    margin-bottom: 12px;
 
-    .dict-code-tag {
-      font-size: 12px;
-      font-weight: normal;
-      color: #8c8c8c;
-      background: #f5f5f5;
-      padding: 2px 8px;
-      border-radius: 4px;
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .dict-code-tag {
+        font-size: 12px;
+        font-weight: normal;
+        color: #8c8c8c;
+        background: #f5f5f5;
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
     }
   }
 }
@@ -643,6 +752,8 @@ loadDictNameMap()
 .dict-items-content {
   .items-toolbar {
     margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
   }
 }
 </style>

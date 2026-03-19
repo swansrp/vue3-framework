@@ -209,7 +209,7 @@ function request(apiType: ApiType,
           if (errType === 'info') message.info(msg)
           else if (errType === 'warning') message.warning(msg)
           else if (errType === 'error') message.error(msg)
-          throw new Error(resp.data.status.details)
+          throw new Error(resp.data.status.msg)
         } else {
           throw new Error(resp.data.status.details)
         }
