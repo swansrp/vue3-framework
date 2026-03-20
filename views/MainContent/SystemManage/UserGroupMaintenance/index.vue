@@ -37,7 +37,19 @@
         theme="light"
       >
         <div style="padding: 10px 0">
+          <a-input
+            v-model:value="inputUserGroupTreeRootNodeName"
+            placeholder="请输入根节点名称"
+            style="width: 250px;margin-right: 10px"
+          />
+          <a-button
+            type="primary"
+            @click="addUserGroupTreeRootNode"
+          >
+            添加根节点
+          </a-button>
           <a-tree
+            style="margin-top: 20px"
             v-if="userGroupTreeData.length"
             :default-expand-all="true"
             :show-line="true"
@@ -75,17 +87,6 @@
             </template>
           </a-tree>
           <a-empty v-else />
-          <a-input
-            v-model:value="inputUserGroupTreeRootNodeName"
-            placeholder="请输入根节点名称"
-            style="width: 250px;margin-right: 10px"
-          />
-          <a-button
-            type="primary"
-            @click="addUserGroupTreeRootNode"
-          >
-            添加根节点
-          </a-button>
         </div>
       </a-layout-sider>
       <a-layout-content
@@ -124,13 +125,24 @@
             tab="编辑权限树"
             :closable="false"
           >
+            <div class="edit-tree-header">
+              <div class="header-row">
+                <a-checkbox v-model:checked="autoSelectParents" :disabled="!permissionCheckStrictly" style="margin-right: 15px;">自动带父节点</a-checkbox>
+                <span>独立选择</span>
+                <a-switch
+                  v-model:checked="permissionCheckStrictly"
+                  size="small"
+                  style="margin-left: 8px;"
+                />
+              </div>
+            </div>
             <a-tree
               v-if="completePermissionTreeData.length"
               v-model:checked-keys="groupTreeCheckedKeys"
               :default-expand-all="true"
               :show-line="true"
               checkable
-              check-strictly
+              :check-strictly="permissionCheckStrictly"
               :tree-data="completePermissionTreeData"
               @check="checkGroupTreeNode"
             >
@@ -162,6 +174,7 @@
     </dialog-box>
     <dialog-box
       v-model:visible="editUserGroupNodeVisible"
+      width="600px"
       title="编辑用户组"
     >
       <add-and-edit-user-group
@@ -210,7 +223,6 @@ import {
   updateUserGroupNodePId
 } from '@/framework/apis/admin/userGroup'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
-import UploadFile from '@/framework/components/common/uploadFile/index.vue'
 import UserPermission from '@/framework/components/common/userPermission/index.vue'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import { getAllParentNodes, getBrotherNodes } from '@/framework/utils/common'
@@ -247,11 +259,64 @@ const uploadParam = computed(() => ({
 
 // 权限树相关变量
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
-let groupTreeCheckedKeys: Ref<Array<string>> = ref([])
+let groupTreeCheckedKeys: Ref<string[] | { checked: string[]; halfChecked: string[] }> = ref([])
 let groupPermissionTreeData: Ref<Array<DataNode>> = ref([])
+// 独立选择：默认为否（false），此时父子节点联动
+let permissionCheckStrictly: Ref<boolean> = ref(false)
+// 是否自动选中父节点：独立选择开启时可选且默认开启，独立选择关闭时禁用且关闭
+let autoSelectParents: Ref<boolean> = ref(false)
+// 父子关系映射：childId -> parentId
+let parentMap: Ref<Map<string, string | null>> = ref(new Map())
+// 子节点映射：parentId -> childIds
+let childrenMap: Ref<Map<string, string[]>> = ref(new Map())
 
 
 const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
+
+// 构建父子关系映射
+const buildParentChildMap = (nodes: DataNode[], parentId: string | null = null) => {
+  nodes.forEach(node => {
+    const nodeId = String(node.key)
+    parentMap.value.set(nodeId, parentId)
+
+    if (node.children && node.children.length > 0) {
+      const childIds = node.children.map(child => String(child.key))
+      childrenMap.value.set(nodeId, childIds)
+      buildParentChildMap(node.children as DataNode[], nodeId)
+    } else {
+      childrenMap.value.set(nodeId, [])
+    }
+  })
+}
+
+// 获取所有父节点路径
+const getAllParentIds = (nodeId: string): string[] => {
+  const parents: string[] = []
+  let currentId: string | null = nodeId
+
+  while (currentId !== null) {
+    const parentId = parentMap.value.get(currentId)
+    if (parentId !== null && parentId !== undefined) {
+      parents.push(parentId)
+      currentId = parentId
+    } else {
+      break
+    }
+  }
+
+  return parents
+}
+
+// 获取所有子节点（递归）
+const getAllChildIds = (nodeId: string): string[] => {
+  const children = childrenMap.value.get(nodeId) || []
+  const result: string[] = []
+  children.forEach(childId => {
+    result.push(childId)
+    result.push(...getAllChildIds(childId))
+  })
+  return result
+}
 
 const onSearchUserGroupCategory = renderUserGroupType
 
@@ -308,13 +373,40 @@ const renderGroupPermissionTree = () =>
 
 const renderEditGroupPermissionTree = () =>
   getGroupPermissionListById(String(currentUserGroupInfo.value.id))
-    .then(res => groupTreeCheckedKeys.value = res.payload.map((record: DataNode) => record.key))
+    .then(res => groupTreeCheckedKeys.value = res.payload.map((record: DataNode) => String(record.key)))
 
 const checkGroupTreeNode = (checked: any, e: { checked: boolean, node: DataNode }) => {
   const entityId = String(currentUserGroupInfo.value.id)
   const attachId = String(e.node.key)
-  if (e.checked) bindGroupPermission(entityId, attachId)
-  else unbindGroupPermission(entityId, attachId)
+
+  if (e.checked) {
+    // 绑定权限
+    // 获取所有父节点
+    const parentIds = autoSelectParents.value ? getAllParentIds(attachId) : []
+
+    // 非独立选择模式下，需要绑定所有子节点
+    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
+
+    // 绑定权限（包括当前节点、所有父节点和子节点）
+    const nodesToBind = [attachId, ...parentIds, ...childIds]
+
+    nodesToBind.forEach(nodeId => {
+      bindGroupPermission(entityId, nodeId)
+    })
+    // 注意：使用 v-model:checked-keys 后，Tree 组件会自动更新选中状态
+  } else {
+    // 解绑权限
+    // 非独立选择模式下，需要解绑所有子节点
+    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
+
+    // 解绑权限（包括当前节点和所有子节点）
+    const nodesToUnbind = [attachId, ...childIds]
+
+    nodesToUnbind.forEach(nodeId => {
+      unbindGroupPermission(entityId, nodeId)
+    })
+    // 注意：使用 v-model:checked-keys 后，Tree 组件会自动更新选中状态
+  }
 }
 
 const tabChange = (key: any) => {
@@ -354,9 +446,41 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
 
 onMounted(() => {
   renderUserGroupType()
-  getCompletePermissionTree().then(res => completePermissionTreeData.value = res.payload)
+  getCompletePermissionTree().then(res => {
+    completePermissionTreeData.value = res.payload
+    // 构建权限树的父子关系映射
+    buildParentChildMap(completePermissionTreeData.value)
+  })
+})
+
+// 监听独立选择变化
+watch(permissionCheckStrictly, (newVal) => {
+  if (newVal) {
+    // 独立选择开启：自动带父节点可选，默认开启
+    autoSelectParents.value = true
+  } else {
+    // 独立选择关闭：自动带父节点禁用且关闭
+    autoSelectParents.value = false
+  }
 })
 
 watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL))
 
 </script>
+
+<style scoped>
+.edit-tree-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+}
+</style>

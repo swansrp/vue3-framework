@@ -71,6 +71,7 @@
       <a-layout-content style="min-width: 710px">
         <a-tabs
           v-if="showPermissionTreeTab"
+          v-model:activeKey="activeTab"
           type="editable-card"
           hide-add
           style="height: 100%;"
@@ -100,7 +101,7 @@
           >
             <div class="edit-tree-header">
               <div class="header-row">
-                <a-checkbox v-model:checked="autoSelectParents" style="margin-right: 15px;">自动带父节点</a-checkbox>
+                <a-checkbox v-model:checked="autoSelectParents" :disabled="!permissionCheckStrictly" style="margin-right: 15px;">自动带父节点</a-checkbox>
                 <span>独立选择</span>
                 <a-switch
                   v-model:checked="permissionCheckStrictly"
@@ -138,6 +139,7 @@
               :render-bind-user-flag="renderBindUserFlag"
               :need-default-permission-select="true"
               type="dept"
+              @import="handleImportUsers"
             />
           </a-tab-pane>
         </a-tabs>
@@ -163,7 +165,6 @@ import { ReloadOutlined } from '@ant-design/icons-vue'
 
 import { bindDeptPermission, getDeptTree, getDeptPermissionListById, getDeptPermissionTree, unbindDeptPermission } from '@/framework/apis/admin/deptPermission'
 import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
-import UploadFile from '@/framework/components/common/uploadFile/index.vue'
 import UserPermission from '@/framework/components/common/userPermission/index.vue'
 import { EDIT, LINK, VIEW } from '@/framework/utils/constant'
 
@@ -172,7 +173,8 @@ let filteredDeptTreeData: Ref<Array<DataNode>> = ref([])
 let searchKeyword: Ref<string> = ref('')
 let selectedDeptId: Ref<string> = ref('')
 let selectedDeptKeys: Ref<string[] | { checked: string[]; halfChecked: string[] }> = ref([])
-let deptMultiSelect: Ref<boolean> = ref(false)
+// 多选模式：默认开启
+let deptMultiSelect: Ref<boolean> = ref(true)
 
 // 监听多选模式变化，清空选中状态
 watch(deptMultiSelect, (newVal, oldVal) => {
@@ -185,8 +187,10 @@ watch(deptMultiSelect, (newVal, oldVal) => {
     halfCheckedKeys.value = []
   }
 })
-let deptCheckStrictly: Ref<boolean> = ref(true)
-let permissionCheckStrictly: Ref<boolean> = ref(true)
+// 左侧部门树独立选择：默认关闭（非独立选择，父子联动）
+let deptCheckStrictly: Ref<boolean> = ref(false)
+// 独立选择：默认为否（false），此时父子节点联动
+let permissionCheckStrictly: Ref<boolean> = ref(false)
 let deptTreeKey: Ref<number> = ref(0)
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
 let deptTreeCheckedKeys: Ref<Array<number>> = ref([])
@@ -195,8 +199,21 @@ let deptPermissionTreeData: Ref<Array<DataNode>> = ref([])
 let showPermissionTreeTab: Ref<boolean> = ref(false)
 let renderBindUserFlag: Ref<number> = ref(0)
 let selectedDeptName: Ref<string> = ref('')
-// 是否自动选中父节点
-let autoSelectParents: Ref<boolean> = ref(true)
+// 当前选中的 tab
+let activeTab: Ref<string> = ref(VIEW)
+// 是否自动选中父节点：独立选择开启时可选且默认开启，独立选择关闭时禁用且关闭
+let autoSelectParents: Ref<boolean> = ref(false)
+
+// 监听独立选择变化
+watch(permissionCheckStrictly, (newVal) => {
+  if (newVal) {
+    // 独立选择开启：自动带父节点可选，默认开启
+    autoSelectParents.value = true
+  } else {
+    // 独立选择关闭：自动带父节点禁用且关闭
+    autoSelectParents.value = false
+  }
+})
 // 存储每个部门的权限列表（多选模式用）
 let deptPermissionMap: Ref<Map<string, string[]>> = ref(new Map())
 // 父子关系映射：childId -> parentId
@@ -299,10 +316,20 @@ const onSelectDeptNode = (selectedKeys: any[], _e: { node: DataNode }) => {
   // 单选模式
   if (!deptMultiSelect.value) {
     showPermissionTreeTab.value = true
-    renderDeptPermissionTree(deptId).then(() => {
-      renderEditDeptPermissionTree(deptId)
-      renderBindUserFlag.value += 1
-    })
+    // 根据当前 tab 加载对应数据，不切换 tab
+    loadTabData(deptId)
+  }
+}
+
+// 根据当前 tab 加载对应数据
+const loadTabData = (deptId: string) => {
+  const currentTab = activeTab.value
+  if (currentTab === VIEW) {
+    renderDeptPermissionTree(deptId)
+  } else if (currentTab === EDIT) {
+    renderEditDeptPermissionTree(deptId)
+  } else if (currentTab === LINK) {
+    renderBindUserFlag.value += 1
   }
 }
 
@@ -393,6 +420,17 @@ const renderEditDeptPermissionTree = (deptId: string) =>
   getDeptPermissionListById(deptId)
     .then(res => deptTreeCheckedKeys.value = res.payload.map((record: DataNode) => Number(record.key)))
 
+// 获取所有子节点（递归）
+const getAllChildIds = (nodeId: number): number[] => {
+  const children = childrenMap.value.get(nodeId) || []
+  const result: number[] = []
+  children.forEach(childId => {
+    result.push(childId)
+    result.push(...getAllChildIds(childId))
+  })
+  return result
+}
+
 const checkDeptTreeNode = (checked: any, e: { checked: boolean, node: DataNode }) => {
   console.log('[DEBUG] checkDeptTreeNode called:', { checked, e })
 
@@ -428,8 +466,12 @@ const checkDeptTreeNode = (checked: any, e: { checked: boolean, node: DataNode }
     const parentIds = autoSelectParents.value ? getAllParentIds(attachId) : []
     console.log('[DEBUG] Parent nodes to bind:', parentIds)
 
-    // 绑定权限给所有选中的部门（包括当前节点和所有父节点）
-    const nodesToBind = [attachId, ...parentIds]
+    // 非独立选择模式下，需要绑定所有子节点
+    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
+    console.log('[DEBUG] Child nodes to bind:', childIds)
+
+    // 绑定权限给所有选中的部门（包括当前节点、所有父节点和子节点）
+    const nodesToBind = [attachId, ...parentIds, ...childIds]
 
     deptIds.forEach(entityId => {
       nodesToBind.forEach(nodeId => {
@@ -448,13 +490,23 @@ const checkDeptTreeNode = (checked: any, e: { checked: boolean, node: DataNode }
     halfCheckedKeys.value = halfCheckedKeys.value.filter(k => !nodesToBind.includes(k))
   } else {
     console.log('[DEBUG] Unbinding permission', attachId, 'from depts:', deptIds)
-    // 从所有选中的部门解绑权限
+
+    // 非独立选择模式下，需要解绑所有子节点
+    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
+    console.log('[DEBUG] Child nodes to unbind:', childIds)
+
+    // 从所有选中的部门解绑权限（包括当前节点和所有子节点）
+    const nodesToUnbind = [attachId, ...childIds]
+
     deptIds.forEach(entityId => {
-      unbindDeptPermission(entityId, String(attachId))
+      nodesToUnbind.forEach(nodeId => {
+        unbindDeptPermission(entityId, String(nodeId))
+      })
     })
+
     // 更新本地状态
-    deptTreeCheckedKeys.value = deptTreeCheckedKeys.value.filter(k => k !== attachId)
-    halfCheckedKeys.value = halfCheckedKeys.value.filter(k => k !== attachId)
+    deptTreeCheckedKeys.value = deptTreeCheckedKeys.value.filter(k => !nodesToUnbind.includes(k))
+    halfCheckedKeys.value = halfCheckedKeys.value.filter(k => !nodesToUnbind.includes(k))
   }
 
   console.log('[DEBUG] Updated state:', {
