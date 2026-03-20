@@ -148,6 +148,7 @@
               :current-user-group-info="currentUserGroupInfo"
               :render-bind-user-flag="renderBindUserFlag"
               :need-default-permission-select="true"
+              @import="handleImportUsers"
             />
           </a-tab-pane>
         </a-tabs>
@@ -168,6 +169,13 @@
         @callback="handleEditUserGroupTreeNode"
       />
     </dialog-box>
+
+    <upload-file
+      ref="uploadFileModal"
+      :upload-param="uploadParam"
+      excel-parse-url="/group/user/excel"
+      @after-confirm="handleAfterImportConfirm"
+    />
   </div>
 </template>
 
@@ -202,6 +210,7 @@ import {
   updateUserGroupNodePId
 } from '@/framework/apis/admin/userGroup'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
+import UploadFile from '@/framework/components/common/uploadFile/index.vue'
 import UserPermission from '@/framework/components/common/userPermission/index.vue'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import { getAllParentNodes, getBrotherNodes } from '@/framework/utils/common'
@@ -229,6 +238,12 @@ let hasSelectUserGroup: Ref<boolean> = ref(false)
 let hasSelectUserGroupCategory: Ref<boolean> = ref(false)
 
 let renderBindUserFlag: Ref<number> = ref(0)
+
+const uploadFileModal = ref()
+const uploadParam = computed(() => ({
+  groupType: currentUserGroupCategoryId.value,
+  groupName: currentUserGroupInfo.value.name
+}))
 
 // 权限树相关变量
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
@@ -307,6 +322,16 @@ const tabChange = (key: any) => {
   if (keyStr === VIEW) renderGroupPermissionTree()
   else if (keyStr === EDIT) renderEditGroupPermissionTree()
   else if (keyStr === LINK) renderBindUserFlag.value += 1
+}
+
+const handleImportUsers = () => {
+  console.log('[UserGroupMaintenance] 触发导入, uploadParam:', uploadParam.value)
+  uploadFileModal.value?.showUploadDialogBox('.xlsx')
+}
+
+const handleAfterImportConfirm = () => {
+  console.log('[UserGroupMaintenance] 导入完成，刷新用户列表')
+  renderBindUserFlag.value += 1
 }
 
 const renderUserGroupTree = () => getUserGroupById(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)

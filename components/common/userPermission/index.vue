@@ -26,23 +26,42 @@
     </a-select>
   </a-form-item>
   <div class="button-group">
-    <a-button
-      :disabled="staffListValue.length === 0"
-      type="primary"
-      class="action-button"
-      @click="handleAddUser"
-    >
-      添加
-    </a-button>
-    <a-button
-      :disabled="staffListValue.length === 0"
-      type="primary"
-      danger
-      class="action-button"
-      @click="handleDeleteUser"
-    >
-      解绑
-    </a-button>
+    <div class="left-buttons">
+      <a-button
+        :disabled="staffListValue.length === 0"
+        type="primary"
+        class="action-button"
+        @click="handleAddUser"
+      >
+        添加
+      </a-button>
+      <a-button
+        :disabled="staffListValue.length === 0"
+        type="primary"
+        danger
+        class="action-button"
+        @click="handleDeleteUser"
+      >
+        解绑
+      </a-button>
+    </div>
+    <div class="right-buttons">
+      <a-button
+        size="small"
+        :disabled="userList.length === 0"
+        @click="handleExport"
+      >
+        导出
+      </a-button>
+      <a-button
+        size="small"
+        type="primary"
+        ghost
+        @click="handleImport"
+      >
+        导入
+      </a-button>
+    </div>
   </div>
   <a-card
     size="small"
@@ -111,6 +130,7 @@
 <script lang="ts" setup>
 
 import { Ref } from 'vue'
+import * as XLSX from 'xlsx-js-style'
 
 import {
   bindUserDeptList as bindDeptUserList,
@@ -144,6 +164,10 @@ const props = withDefaults(defineProps<{
   needDefaultPermissionSelect: false,
   type: 'group'
 })
+
+const emit = defineEmits<{
+  (e: 'import'): void
+}>()
 
 const { currentUserGroupInfo, renderBindUserFlag, needDefaultPermissionSelect, type } = toRefs(props)
 
@@ -180,11 +204,13 @@ let currentPermission: Ref<string> = ref('')
 interface UserDataType extends ValueLabel {
   dataScopeDisplay: string
   dataScope: string,
-  userId: string
+  userId: string,
+  value: string
 }
 
-let currentUserInfo: Ref<{ id: string, name: string, dataScope: string }> = ref({
+let currentUserInfo: Ref<{ id: string, customerNumber: string, name: string, dataScope: string }> = ref({
   id: '',
+  customerNumber: '',
   name: '',
   dataScope: ''
 })
@@ -224,6 +250,7 @@ const handleUnbindAllUser = () => {
 
 const handleChangePermission = (user: any) => {
   currentUserInfo.value.id = user.userId
+  currentUserInfo.value.customerNumber = user.value
   currentUserInfo.value.name = user.label
   currentUserInfo.value.dataScope = user.dataScope
   editUserPermissionVisible.value = true
@@ -238,6 +265,37 @@ const renderBindUser = () =>
     .then(res => userList.value = res.payload)
 
 
+const handleExport = () => {
+  console.log('[UserPermission] 导出用户列表:', userList.value)
+  
+  // 构建Excel数据
+  const excelData = [
+    ['用户编码', '用户名', '权限'], // 表头
+    ...userList.value.map(user => [user.value, user.label, user.dataScopeDisplay])
+  ]
+  
+  // 创建工作簿和工作表
+  const ws = XLSX.utils.aoa_to_sheet(excelData)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '已绑定用户')
+  
+  // 设置列宽
+  ws['!cols'] = [
+    { wch: 20 }, // 用户编码
+    { wch: 20 }, // 用户名
+    { wch: 15 }  // 权限
+  ]
+  
+  // 导出文件
+  const fileName = `${currentUserGroupInfo.value.name}_已绑定用户_${new Date().toLocaleDateString()}.xlsx`
+  XLSX.writeFile(wb, fileName)
+}
+
+const handleImport = () => {
+  console.log('[UserPermission] 触发导入')
+  emit('import')
+}
+
 watch(searchUserName, renderBindUser)
 watch(selectPermission, renderBindUser)
 watch(renderBindUserFlag, renderBindUser, { immediate: true })
@@ -248,11 +306,20 @@ watch(renderBindUserFlag, renderBindUser, { immediate: true })
 /* 按钮组响应式布局 */
 .button-group {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    justify-content: space-between;
     padding: 8px 0;
     margin: 8px 0;
     align-items: center;
+}
+
+.left-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.right-buttons {
+    display: flex;
+    gap: 8px;
 }
 
 .action-button {

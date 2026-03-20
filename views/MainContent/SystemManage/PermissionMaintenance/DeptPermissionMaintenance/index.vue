@@ -89,10 +89,11 @@
             :closable="false"
           >
             <UserPermission
-              :current-user-group-info="{ id: selectedDeptId, name: '' }"
+              :current-user-group-info="{ id: selectedDeptId, name: selectedDeptName }"
               :render-bind-user-flag="renderBindUserFlag"
               :need-default-permission-select="true"
               type="dept"
+              @import="handleImportUsers"
             />
           </a-tab-pane>
         </a-tabs>
@@ -101,6 +102,13 @@
         </div>
       </a-layout-content>
     </a-layout>
+
+    <upload-file
+      ref="uploadFileModal"
+      :upload-param="uploadParam"
+      excel-parse-url="/dept/user/excel"
+      @after-confirm="handleAfterImportConfirm"
+    />
   </div>
 </template>
 
@@ -110,6 +118,7 @@ import { Ref } from 'vue'
 
 import { bindDeptPermission, getDeptTree, getDeptPermissionListById, getDeptPermissionTree, unbindDeptPermission } from '@/framework/apis/admin/deptPermission'
 import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
+import UploadFile from '@/framework/components/common/uploadFile/index.vue'
 import UserPermission from '@/framework/components/common/userPermission/index.vue'
 import { EDIT, LINK, VIEW } from '@/framework/utils/constant'
 
@@ -122,6 +131,13 @@ let deptTreeCheckedKeys: Ref<Array<string>> = ref([])
 let deptPermissionTreeData: Ref<Array<DataNode>> = ref([])
 let showPermissionTreeTab: Ref<boolean> = ref(false)
 let renderBindUserFlag: Ref<number> = ref(0)
+let selectedDeptName: Ref<string> = ref('')
+
+const uploadFileModal = ref()
+const uploadParam = computed(() => ({
+  deptId: selectedDeptId.value,
+  deptName: selectedDeptName.value
+}))
 
 // 筛选部门树
 const filterDeptTree = () => {
@@ -161,6 +177,7 @@ const onSelectDeptNode = (selectedKeys: any[], _e: { node: DataNode }) => {
   
   const deptId = String(selectedKeys[0])
   selectedDeptId.value = deptId
+  selectedDeptName.value = String(_e.node.title || '')
   
   // 加载部门权限和用户
   showPermissionTreeTab.value = true
@@ -191,6 +208,16 @@ const tabChange = (key: any) => {
   if (keyStr === VIEW) renderDeptPermissionTree(selectedDeptId.value)
   else if (keyStr === EDIT) renderEditDeptPermissionTree(selectedDeptId.value)
   else if (keyStr === LINK) renderBindUserFlag.value += 1
+}
+
+const handleImportUsers = () => {
+  console.log('[DeptPermissionMaintenance] 触发导入, uploadParam:', uploadParam.value)
+  uploadFileModal.value?.showUploadDialogBox('.xlsx')
+}
+
+const handleAfterImportConfirm = () => {
+  console.log('[DeptPermissionMaintenance] 导入完成，刷新用户列表')
+  renderBindUserFlag.value += 1
 }
 
 const loadDeptTree = () => {
