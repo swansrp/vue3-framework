@@ -449,7 +449,7 @@ export function useFormDataPdf() {
       background: #fff;
     }
     .table-wrapper {
-      border: 2px solid #333;
+      border: 1px solid #333;
       margin-bottom: 10px;
     }
     .table-wrapper .data-table,
@@ -714,8 +714,13 @@ export function useFormDataPdf() {
   
   /**
    * 导出 PDF（通过打印）
+   * @param historyId 历史记录ID
+   * @param options 配置选项
+   * @param options.debug 是否开启调试模式（默认false）
    */
-  const exportPdf = async (historyId: string): Promise<boolean> => {
+  const exportPdf = async (historyId: string, options?: { debug?: boolean }): Promise<boolean> => {
+    const isDebug = options?.debug ?? false
+    
     try {
       message.loading({ content: '正在生成报告...', key: 'exportPdf' })
       
@@ -732,29 +737,56 @@ export function useFormDataPdf() {
       // 2. 生成 HTML
       const html = await generatePdfHtml(data)
       
-      // 3. 打开新窗口打印
-      const printWindow = window.open('', '_blank')
-      if (!printWindow) {
-        message.error({ content: '无法打开打印窗口，请检查浏览器弹窗设置', key: 'exportPdf' })
-        return false
-      }
-      
-      printWindow.document.write(html)
-      printWindow.document.close()
-      
-      // 等待内容加载完成后打印
-      printWindow.onload = () => {
-        printWindow.print()
-      }
-      
-      // 如果 onload 不触发，延迟打印
-      setTimeout(() => {
-        if (!printWindow.closed) {
+      if (isDebug) {
+        // 调试模式：在新页面打开HTML内容供调试样式
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        
+        // 在新标签页中打开
+        const debugWindow = window.open(url, '_blank')
+        if (debugWindow) {
+          debugWindow.addEventListener('load', () => {
+            // 页面加载完成后释放 URL 对象
+            URL.revokeObjectURL(url)
+          })
+          message.success({ 
+            content: '报告已生成并在新页面打开，您可以调试样式', 
+            key: 'exportPdf',
+            duration: 5 
+          })
+        } else {
+          message.error({ 
+            content: '无法打开调试窗口，请检查浏览器弹窗设置', 
+            key: 'exportPdf' 
+          })
+          return false
+        }
+      } else {
+        // 正常打印模式
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) {
+          message.error({ content: '无法打开打印窗口，请检查浏览器弹窗设置', key: 'exportPdf' })
+          return false
+        }
+        
+        printWindow.document.write(html)
+        printWindow.document.close()
+        
+        // 等待内容加载完成后打印
+        printWindow.onload = () => {
           printWindow.print()
         }
-      }, 1000)
+        
+        // 如果 onload 不触发，延迟打印
+        setTimeout(() => {
+          if (!printWindow.closed) {
+            printWindow.print()
+          }
+        }, 1000)
+        
+        message.success({ content: '报告已生成，请在打印窗口选择"另存为PDF"', key: 'exportPdf' })
+      }
       
-      message.success({ content: '报告已生成，请在打印窗口选择"另存为PDF"', key: 'exportPdf' })
       return true
     } catch (error) {
       console.error('导出PDF失败:', error)
@@ -763,8 +795,61 @@ export function useFormDataPdf() {
     }
   }
   
+  /**
+   * 调试模式：仅在新页面打开HTML内容，不打印
+   * 方便调试样式问题
+   */
+  const debugPdfHtml = async (historyId: string): Promise<boolean> => {
+    try {
+      message.loading({ content: '正在生成报告...', key: 'debugPdf' })
+      
+      // 清空字典缓存
+      dictTranslateCache.clear()
+      
+      // 1. 加载所有数据
+      const data = await loadAllModulesDataForPdf(historyId)
+      if (!data) {
+        message.error({ content: '加载数据失败', key: 'debugPdf' })
+        return false
+      }
+      
+      // 2. 生成 HTML
+      const html = await generatePdfHtml(data)
+      
+      // 3. 创建 Blob 对象并在新页面打开
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      
+      // 在新标签页中打开
+      const debugWindow = window.open(url, '_blank')
+      if (debugWindow) {
+        debugWindow.addEventListener('load', () => {
+          // 页面加载完成后释放 URL 对象
+          URL.revokeObjectURL(url)
+        })
+        message.success({ 
+          content: '报告已生成并在新页面打开，您可以调试样式', 
+          key: 'debugPdf',
+          duration: 5 
+        })
+        return true
+      } else {
+        message.error({ 
+          content: '无法打开调试窗口，请检查浏览器弹窗设置', 
+          key: 'debugPdf' 
+        })
+        return false
+      }
+    } catch (error) {
+      console.error('调试PDF失败:', error)
+      message.error({ content: '生成失败', key: 'debugPdf' })
+      return false
+    }
+  }
+  
   return {
     exportPdf,
+    debugPdfHtml,  // 新增的调试方法
     loadAllModulesDataForPdf,
     generatePdfHtml
   }

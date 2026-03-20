@@ -49,8 +49,8 @@
             添加根节点
           </a-button>
           <a-tree
-            style="margin-top: 20px"
             v-if="userGroupTreeData.length"
+            style="margin-top: 20px"
             :default-expand-all="true"
             :show-line="true"
             :tree-data="userGroupTreeData"
@@ -126,8 +126,8 @@
             :closable="false"
           >
             <BindTree
-              :tree-data="completePermissionTreeData"
               v-model:checked-keys="groupTreeCheckedKeys"
+              :tree-data="completePermissionTreeData"
               :entity-ids="currentUserGroupInfo.id ? [String(currentUserGroupInfo.id)] : []"
               :bind-api="bindGroupPermission"
               :unbind-api="unbindGroupPermission"

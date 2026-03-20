@@ -226,8 +226,8 @@
               
               <template v-else-if="completePermissionTreeData.length > 0">
                 <BindTree
-                  :tree-data="completePermissionTreeData"
                   v-model:checked-keys="userTreeCheckedKeys"
+                  :tree-data="completePermissionTreeData"
                   :entity-ids="selectedStaffValue ? [selectedStaffValue.value] : []"
                   :bind-api="bindUserPermission"
                   :unbind-api="unbindUserPermission"

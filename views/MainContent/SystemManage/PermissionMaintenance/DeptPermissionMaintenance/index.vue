@@ -23,7 +23,9 @@
               </a-button>
             </div>
             <div class="tree-options">
-              <a-checkbox v-model:checked="deptMultiSelect">多选</a-checkbox>
+              <a-checkbox v-model:checked="deptMultiSelect">
+                多选
+              </a-checkbox>
               <span class="strictly-option">
                 <span>独立选择</span>
                 <a-switch
@@ -71,7 +73,7 @@
       <a-layout-content style="min-width: 710px">
         <a-tabs
           v-if="showPermissionTreeTab"
-          v-model:activeKey="activeTab"
+          v-model:active-key="activeTab"
           type="editable-card"
           hide-add
           style="height: 100%;"
@@ -100,9 +102,9 @@
             :closable="false"
           >
             <BindTree
-              :tree-data="completePermissionTreeData"
               v-model:checked-keys="deptTreeCheckedKeys"
               v-model:half-checked-keys="halfCheckedKeys"
+              :tree-data="completePermissionTreeData"
               multiple
               :entity-ids="selectedDeptIds"
               :bind-api="bindDeptPermission"
@@ -139,9 +141,9 @@
 </template>
 
 <script lang="ts" setup>
+import { ReloadOutlined } from '@ant-design/icons-vue'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { Ref } from 'vue'
-import { ReloadOutlined } from '@ant-design/icons-vue'
 
 import { bindDeptPermission, getDeptTree, getDeptPermissionListById, getDeptPermissionTree, unbindDeptPermission } from '@/framework/apis/admin/deptPermission'
 import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
