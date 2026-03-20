@@ -225,35 +225,13 @@
               </div>
               
               <template v-else-if="completePermissionTreeData.length > 0">
-                <div class="edit-tree-header">
-                  <div class="header-row">
-                    <a-checkbox v-model:checked="autoSelectParents" :disabled="!permissionCheckStrictly" style="margin-right: 15px;">自动带父节点</a-checkbox>
-                    <span>独立选择</span>
-                    <a-switch
-                      v-model:checked="permissionCheckStrictly"
-                      size="small"
-                      style="margin-left: 8px;"
-                    />
-                  </div>
-                </div>
-                <a-tree
-                  v-model:checked-keys="userTreeCheckedKeys"
-                  :default-expand-all="true"
-                  :show-line="true"
-                  checkable
-                  :check-strictly="permissionCheckStrictly"
+                <BindTree
                   :tree-data="completePermissionTreeData"
-                  @check="checkUserTreeNode"
-                >
-                  <template #title="{ dataRef }">
-                    <Icon
-                      v-if="dataRef.icon"
-                      :icon="dataRef.icon"
-                      style="margin-right: 8px"
-                    />
-                    {{ dataRef.title }}
-                  </template>
-                </a-tree>
+                  v-model:checked-keys="userTreeCheckedKeys"
+                  :entity-ids="selectedStaffValue ? [selectedStaffValue.value] : []"
+                  :bind-api="bindUserPermission"
+                  :unbind-api="unbindUserPermission"
+                />
               </template>
             </a-spin>
           </div>
@@ -285,6 +263,7 @@ import {
   bindUserPermission, 
   unbindUserPermission 
 } from '@/framework/apis/admin/userPermission'
+import { BindTree } from '@/framework/components/common/Panel'
 import Staff from '@/framework/components/common/staff/index.vue'
 
 
@@ -301,64 +280,11 @@ const permitExplanation = ref<UserPermitRes[]>([])
 const userPermissionTreeData = ref<DataNode[]>([])
 const completePermissionTreeData = ref<DataNode[]>([])
 const userTreeCheckedKeys = ref<string[] | { checked: string[]; halfChecked: string[] }>([])
-// 独立选择：默认为否（false），此时父子节点联动
-const permissionCheckStrictly = ref(false)
-// 是否自动选中父节点：独立选择开启时可选且默认开启，独立选择关闭时禁用且关闭
-const autoSelectParents = ref(false)
-// 父子关系映射：childId -> parentId
-const parentMap = ref<Map<string, string | null>>(new Map())
-// 子节点映射：parentId -> childIds
-const childrenMap = ref<Map<string, string[]>>(new Map())
 
 // 计算属性
 const canRefresh = computed(() => {
   return selectedStaffValue.value && selectedStaffValue.value.value && selectedMenuKeys.value.length > 0
 })
-
-// 构建父子关系映射
-const buildParentChildMap = (nodes: DataNode[], parentId: string | null = null) => {
-  nodes.forEach(node => {
-    const nodeId = String(node.key)
-    parentMap.value.set(nodeId, parentId)
-
-    if (node.children && node.children.length > 0) {
-      const childIds = node.children.map(child => String(child.key))
-      childrenMap.value.set(nodeId, childIds)
-      buildParentChildMap(node.children as DataNode[], nodeId)
-    } else {
-      childrenMap.value.set(nodeId, [])
-    }
-  })
-}
-
-// 获取所有父节点路径
-const getAllParentIds = (nodeId: string): string[] => {
-  const parents: string[] = []
-  let currentId: string | null = nodeId
-
-  while (currentId !== null) {
-    const parentId = parentMap.value.get(currentId)
-    if (parentId !== null && parentId !== undefined) {
-      parents.push(parentId)
-      currentId = parentId
-    } else {
-      break
-    }
-  }
-
-  return parents
-}
-
-// 获取所有子节点（递归）
-const getAllChildIds = (nodeId: string): string[] => {
-  const children = childrenMap.value.get(nodeId) || []
-  const result: string[] = []
-  children.forEach(childId => {
-    result.push(childId)
-    result.push(...getAllChildIds(childId))
-  })
-  return result
-}
 
 // 方法定义
 const getSourceTypeLabel = (type: SourceTypeEnum): string => {
@@ -482,43 +408,6 @@ const loadEditUserPermissionTree = async () => {
   }
 }
 
-// 新增方法：处理用户权限树节点勾选
-const checkUserTreeNode = (checked: any, e: { checked: boolean, node: DataNode }) => {
-  const userId = selectedStaffValue.value?.value
-  if (!userId) return
-  
-  const attachId = String(e.node.key)
-
-  if (e.checked) {
-    // 绑定权限
-    // 获取所有父节点
-    const parentIds = autoSelectParents.value ? getAllParentIds(attachId) : []
-
-    // 非独立选择模式下，需要绑定所有子节点
-    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
-
-    // 绑定权限（包括当前节点、所有父节点和子节点）
-    const nodesToBind = [attachId, ...parentIds, ...childIds]
-
-    nodesToBind.forEach(nodeId => {
-      bindUserPermission(userId, nodeId)
-    })
-    // 注意：使用 v-model:checked-keys 后，Tree 组件会自动更新选中状态
-  } else {
-    // 解绑权限
-    // 非独立选择模式下，需要解绑所有子节点
-    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
-
-    // 解绑权限（包括当前节点和所有子节点）
-    const nodesToUnbind = [attachId, ...childIds]
-
-    nodesToUnbind.forEach(nodeId => {
-      unbindUserPermission(userId, nodeId)
-    })
-    // 注意：使用 v-model:checked-keys 后，Tree 组件会自动更新选中状态
-  }
-}
-
 // 新增方法：保存用户权限
 const saveUserPermissions = async () => {
   message.success('权限保存成功')
@@ -562,22 +451,9 @@ onMounted(() => {
   // 预加载完整权限树用于编辑功能
   getCompletePermissionTree().then(res => {
     completePermissionTreeData.value = res.payload || []
-    // 构建权限树的父子关系映射
-    buildParentChildMap(completePermissionTreeData.value)
   }).catch(error => {
     console.error('预加载完整权限树失败:', error)
   })
-})
-
-// 监听独立选择变化
-watch(permissionCheckStrictly, (newVal) => {
-  if (newVal) {
-    // 独立选择开启：自动带父节点可选，默认开启
-    autoSelectParents.value = true
-  } else {
-    // 独立选择关闭：自动带父节点禁用且关闭
-    autoSelectParents.value = false
-  }
 })
 </script>
 
@@ -715,21 +591,6 @@ watch(permissionCheckStrictly, (newVal) => {
         border-left: 3px solid #1890ff;
       }
     }
-  }
-
-  .edit-tree-header {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-    padding: 8px 12px;
-    background: #fafafa;
-    border-radius: 4px;
-  }
-
-  .header-row {
-    display: flex;
-    align-items: center;
   }
 }
 
