@@ -350,3 +350,69 @@ onMounted(() => {
 watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL))
 
 </script>
+
+<style scoped>
+.wrapper {
+  height: 100%;
+  overflow: hidden;
+}
+
+.user-group-category-list-wrapper {
+  height: 100%;
+  overflow: hidden;
+}
+
+.user-group-category-list {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.user-group-list-wrapper {
+  height: 100%;
+  overflow: hidden;
+}
+
+.user-name-wrapper {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-content-holder) {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-tabpane) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+:deep(.bind-tree-container) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 查看权限树的样式 */
+:deep(.ant-tree) {
+  overflow-y: auto;
+}
+</style>

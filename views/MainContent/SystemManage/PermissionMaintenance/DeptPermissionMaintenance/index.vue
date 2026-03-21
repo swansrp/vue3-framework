@@ -442,11 +442,47 @@ onMounted(() => {
 
 .dept-permission-maintenance {
   height: 100%;
+  overflow: hidden;
 }
 
 :deep(.dept-permission-maintenance .ant-layout-content){
   height: 100%;
   padding: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-content-holder) {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-tabpane) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+:deep(.bind-tree-container) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .selected-dept {

@@ -4,29 +4,35 @@
       <div class="header-row">
         <a-checkbox
           v-model:checked="autoSelectParents"
-          :disabled="!permissionCheckStrictly"
           style="margin-right: 15px;"
         >
-          自动带父节点
+          父联动
         </a-checkbox>
-        <span>独立选择</span>
-        <a-switch
-          v-model:checked="permissionCheckStrictly"
-          size="small"
-          style="margin-left: 8px;"
+        <a-checkbox
+          v-model:checked="autoSelectChildren"
+        >
+          子联动
+        </a-checkbox>
+        <a-input-search
+          v-model:value="searchText"
+          placeholder="搜索(label/key)，逗号分隔多项"
+          style="margin-left: auto; width: 400px; flex-shrink: 0;"
+          allow-clear
+          @search="handleSearch"
+          @change="handleSearchChange"
         />
       </div>
     </div>
     <a-spin :spinning="loading">
       <a-tree
-        v-if="treeData.length > 0"
+        v-if="filteredTreeData.length > 0"
         :checked-keys="innerCheckedKeys"
         :half-checked-keys="halfCheckedKeys"
         :default-expand-all="true"
         :show-line="true"
         checkable
-        :check-strictly="permissionCheckStrictly"
-        :tree-data="treeData"
+        check-strictly
+        :tree-data="filteredTreeData"
         @check="handleCheck"
       >
         <template #title="{ dataRef }">
@@ -35,7 +41,7 @@
               v-if="dataRef.icon"
               :icon="dataRef.icon"
             />
-            {{ dataRef.title }}
+            <span v-html="dataRef._highlightedTitle || dataRef.title"></span>
             <span
               v-if="halfCheckedKeys.includes(dataRef.key)"
               class="partial-icon"
@@ -43,6 +49,10 @@
           </span>
         </template>
       </a-tree>
+      <a-empty
+        v-else-if="searchText && treeData.length > 0"
+        description="未找到匹配结果"
+      />
       <a-empty
         v-else
         description="暂无数据"
@@ -92,10 +102,84 @@ const emit = defineEmits<{
 }>()
 
 // 状态
-const permissionCheckStrictly = ref(false)
+const autoSelectChildren = ref(true)
 const autoSelectParents = ref(false)
 const parentMap = ref<Map<string | number, string | number | null>>(new Map())
 const childrenMap = ref<Map<string | number, (string | number)[]>>(new Map())
+const searchText = ref('')
+
+// 高亮匹配文本
+const highlightText = (text: string, keywords: string[]): string => {
+  if (!keywords.length || !text) return text
+  let result = text
+  keywords.forEach(keyword => {
+    if (keyword) {
+      const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+      result = result.replace(regex, '<span style="color: #1890ff; font-weight: bold;">$1</span>')
+    }
+  })
+  return result
+}
+
+// 检查节点是否匹配搜索条件
+const isNodeMatch = (node: DataNode, keywords: string[]): boolean => {
+  const title = String(node.title || '')
+  const key = String(node.key)
+  return keywords.some(keyword => {
+    if (!keyword) return false
+    const lowerKeyword = keyword.toLowerCase()
+    return title.toLowerCase().includes(lowerKeyword) || key.toLowerCase().includes(lowerKeyword)
+  })
+}
+
+// 过滤树数据并高亮匹配节点
+const filterTreeData = (nodes: DataNode[], keywords: string[]): DataNode[] => {
+  return nodes.map(node => {
+    const isMatch = isNodeMatch(node, keywords)
+    const hasMatchingChildren = node.children && node.children.length > 0
+    const filteredChildren = hasMatchingChildren ? filterTreeData(node.children as DataNode[], keywords) : []
+
+    // 如果当前节点匹配或有匹配的子节点，则保留
+    if (isMatch || filteredChildren.length > 0) {
+      const highlightedTitle = keywords.length > 0 ? highlightText(String(node.title || ''), keywords) : String(node.title || '')
+      return {
+        ...node,
+        _highlightedTitle: highlightedTitle,
+        children: filteredChildren.length > 0 ? filteredChildren : node.children
+      }
+    }
+    return null
+  }).filter(Boolean) as DataNode[]
+}
+
+// 过滤后的树数据
+const filteredTreeData = computed(() => {
+  if (!searchText.value.trim()) {
+    return props.treeData
+  }
+
+  // 支持逗号分隔的多项查询
+  const keywords = searchText.value.split(',')
+    .map(k => k.trim())
+    .filter(k => k.length > 0)
+
+  if (keywords.length === 0) {
+    return props.treeData
+  }
+
+  return filterTreeData(props.treeData, keywords)
+})
+
+// 处理搜索
+const handleSearch = (value: string) => {
+  searchText.value = value
+}
+
+// 处理搜索输入变化
+const handleSearchChange = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  searchText.value = target.value
+}
 
 // 内部选中状态
 const innerCheckedKeys = computed({
@@ -156,24 +240,44 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
   // 独立选择模式下 checked 是数组，非独立选择模式下是 { checked: [], halfChecked: [] }
   const isArray = Array.isArray(checked)
   const currentCheckedKeys: (string | number)[] = isArray
-    ? checked
-    : (checked as { checked: (string | number)[] }).checked
+      ? checked
+      : (checked as { checked: (string | number)[] }).checked
   const currentHalfCheckedKeys: (string | number)[] = isArray
-    ? []
-    : (checked as { halfChecked: (string | number)[] }).halfChecked
+      ? []
+      : (checked as { halfChecked: (string | number)[] }).halfChecked
 
   // 计算新的选中状态
   let newCheckedKeys = [...currentCheckedKeys]
   let newHalfCheckedKeys = [...currentHalfCheckedKeys]
 
-  // 自动带父节点逻辑：勾选时自动选中所有父节点
-  if (autoSelectParents.value && e.checked) {
-    const parentIds = getAllParentIds(attachId)
-    if (parentIds.length > 0) {
-      // 将父节点从半选移到全选
-      newHalfCheckedKeys = newHalfCheckedKeys.filter(k => !parentIds.includes(k))
-      // 添加父节点到全选
-      newCheckedKeys = [...new Set([...newCheckedKeys, ...parentIds])]
+  if (e.checked) {
+    // 勾选时
+    // 自动带父节点逻辑：勾选时自动选中所有父节点
+    if (autoSelectParents.value) {
+      const parentIds = getAllParentIds(attachId)
+      if (parentIds.length > 0) {
+        // 将父节点从半选移到全选
+        newHalfCheckedKeys = newHalfCheckedKeys.filter(k => !parentIds.includes(k))
+        // 添加父节点到全选
+        newCheckedKeys = [...new Set([...newCheckedKeys, ...parentIds])]
+      }
+    }
+    // 自动带子节点逻辑：勾选时自动选中所有子节点
+    if (autoSelectChildren.value) {
+      const childIds = getAllChildIds(attachId)
+      newCheckedKeys = [...new Set([...newCheckedKeys, ...childIds])]
+    }
+  } else {
+    // 取消勾选时
+    // 自动带父节点逻辑：取消时同时取消所有父节点
+    if (autoSelectParents.value) {
+      const parentIds = getAllParentIds(attachId)
+      newCheckedKeys = newCheckedKeys.filter(k => !parentIds.includes(k))
+    }
+    // 自动带子节点逻辑：取消时同时取消所有子节点
+    if (autoSelectChildren.value) {
+      const childIds = getAllChildIds(attachId)
+      newCheckedKeys = newCheckedKeys.filter(k => !childIds.includes(k))
     }
   }
 
@@ -200,7 +304,7 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
   if (e.checked) {
     // 绑定权限
     const parentIds = autoSelectParents.value ? getAllParentIds(attachId) : []
-    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
+    const childIds = autoSelectChildren.value ? getAllChildIds(attachId) : []
     const nodesToBind = [attachId, ...parentIds, ...childIds]
 
     entityIds.forEach(entityId => {
@@ -210,8 +314,9 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
     })
   } else {
     // 解绑权限
-    const childIds = permissionCheckStrictly.value ? [] : getAllChildIds(attachId)
-    const nodesToUnbind = [attachId, ...childIds]
+    const parentIds = autoSelectParents.value ? getAllParentIds(attachId) : []
+    const childIds = autoSelectChildren.value ? getAllChildIds(attachId) : []
+    const nodesToUnbind = [attachId, ...parentIds, ...childIds]
 
     entityIds.forEach(entityId => {
       nodesToUnbind.forEach(nodeId => {
@@ -220,15 +325,6 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
     })
   }
 }
-
-// 监听独立选择变化
-watch(permissionCheckStrictly, (newVal) => {
-  if (newVal) {
-    autoSelectParents.value = true
-  } else {
-    autoSelectParents.value = false
-  }
-})
 
 // 监听树数据变化，重新构建映射
 watch(() => props.treeData, (newData) => {
@@ -258,7 +354,13 @@ defineExpose({
 
 <style scoped lang="less">
 .bind-tree-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
   .edit-tree-header {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -270,6 +372,31 @@ defineExpose({
 
   .header-row {
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  :deep(.ant-spin-nested-loading),
+  :deep(.ant-spin-container) {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; // 关键：允许 flex 子项收缩
+  }
+
+  :deep(.ant-tree) {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0; // 关键：允许 flex 子项收缩
+  }
+
+  :deep(.ant-empty) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
   }
 

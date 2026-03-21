@@ -470,9 +470,15 @@ onMounted(() => {
   .selection-panel,
   .result-panel {
     height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     :deep(.ant-card-body) {
       height: calc(100% - 56px);
-      overflow-y: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
   }
 
@@ -592,6 +598,37 @@ onMounted(() => {
       }
     }
   }
+}
+
+:deep(.ant-tabs) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-content-holder) {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-tabpane) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+:deep(.bind-tree-container) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 // 响应式设计

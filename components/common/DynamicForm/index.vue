@@ -213,51 +213,6 @@ const showRejectButton = computed(() => {
   return props.mode === 'approve' && currentStatus.value === '1'
 })
 
-// 状态提示信息
-const statusAlert = computed(() => {
-  const status = currentStatus.value
-  const mode = props.mode
-
-  // 草稿状态 + 审核员 → 显示"未提交"
-  if (status === '0' && mode === 'approve') {
-    return {
-      type: 'warning' as const,
-      message: '该记录尚未提交，无法审核',
-      showReason: false
-    }
-  }
-
-  // 待审核状态 + 填报员 → 显示"审核中"
-  if (status === '1' && mode === 'fill') {
-    return {
-      type: 'info' as const,
-      message: '该记录正在审核中，请耐心等待',
-      showReason: false
-    }
-  }
-
-  // 拒绝状态 + 填报员 → 显示"已拒绝" + 理由
-  if (status === '2' && mode === 'fill') {
-    return {
-      type: 'error' as const,
-      message: '该记录已被拒绝',
-      showReason: true,
-      reason: props.rejectReason || historyInfo.value?.rejectReason || ''
-    }
-  }
-
-  // 已通过状态 → 显示"已通过"
-  if (status === '3') {
-    return {
-      type: 'success' as const,
-      message: '该记录已通过审核',
-      showReason: false
-    }
-  }
-
-  return null
-})
-
 // 从 props 或 URL 获取参数
 const formIdValue = computed(() => props.formId || route.query.formId as string || '')
 const formCodeValue = computed(() => props.formCode || route.query.formCode as string || '')
