@@ -74,11 +74,11 @@
               />
               <a-tab-pane
                 key="view"
-                tab="查看权限树"
+                tab="查看个人权限树"
               />
               <a-tab-pane
                 key="edit"
-                tab="编辑权限树"
+                tab="编辑个人权限树"
               />
             </a-tabs>
           </template>

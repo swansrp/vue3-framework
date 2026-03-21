@@ -314,12 +314,10 @@ const tabChange = (key: any) => {
 }
 
 const handleImportUsers = () => {
-  console.log('[UserGroupMaintenance] 触发导入, uploadParam:', uploadParam.value)
   uploadFileModal.value?.showUploadDialogBox('.xlsx')
 }
 
 const handleAfterImportConfirm = () => {
-  console.log('[UserGroupMaintenance] 导入完成，刷新用户列表')
   renderBindUserFlag.value += 1
 }
 

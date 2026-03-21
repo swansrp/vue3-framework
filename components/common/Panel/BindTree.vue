@@ -27,8 +27,9 @@
       <a-spin :spinning="loading">
         <a-tree
           v-if="filteredTreeData.length > 0"
+          :key="treeKey"
           :checked-keys="innerCheckedKeys"
-          :half-checked-keys="halfCheckedKeys"
+          :half-checked-keys="innerHalfCheckedKeys"
           :default-expand-all="true"
           :show-line="true"
           checkable
@@ -65,7 +66,7 @@
 
 <script lang="ts" setup>
 import type { DataNode } from 'ant-design-vue/es/vc-tree/interface'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, toRefs, watch } from 'vue'
 
 // Props 定义
 interface Props {
@@ -96,6 +97,8 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false
 })
 
+const { treeData, checkedKeys, halfCheckedKeys, multiple, entityIds, bindApi, unbindApi, loading } = toRefs(props)
+
 // Emits 定义
 const emit = defineEmits<{
   'update:checkedKeys': [keys: string[] | number[]]
@@ -109,6 +112,7 @@ const autoSelectParents = ref(false)
 const parentMap = ref<Map<string | number, string | number | null>>(new Map())
 const childrenMap = ref<Map<string | number, (string | number)[]>>(new Map())
 const searchText = ref('')
+const treeKey = ref(0)
 
 // 高亮匹配文本
 const highlightText = (text: string, keywords: string[]): string => {
@@ -154,10 +158,33 @@ const filterTreeData = (nodes: DataNode[], keywords: string[]): DataNode[] => {
   }).filter(Boolean) as DataNode[]
 }
 
+// halfCheckedKeys 也统一转换为 string 类型
+const innerHalfCheckedKeys = computed(() => {
+  const keys = halfCheckedKeys.value || []
+  return keys.map(k => String(k))
+})
+
+// 递归转换树节点的 key 为 string
+const convertTreeKeysToString = (nodes: DataNode[]): DataNode[] => {
+  return nodes.map(node => {
+    const convertedNode: DataNode = {
+      ...node,
+      key: String(node.key)
+    }
+    if (node.children && node.children.length > 0) {
+      convertedNode.children = convertTreeKeysToString(node.children as DataNode[])
+    }
+    return convertedNode
+  })
+}
+
 // 过滤后的树数据
 const filteredTreeData = computed(() => {
+  // 先转换 key 为 string
+  const convertedTreeData = convertTreeKeysToString(treeData.value || [])
+  
   if (!searchText.value.trim()) {
-    return props.treeData
+    return convertedTreeData
   }
 
   // 支持逗号分隔的多项查询
@@ -166,10 +193,10 @@ const filteredTreeData = computed(() => {
     .filter(k => k.length > 0)
 
   if (keywords.length === 0) {
-    return props.treeData
+    return convertedTreeData
   }
 
-  return filterTreeData(props.treeData, keywords)
+  return filterTreeData(convertedTreeData, keywords)
 })
 
 // 处理搜索
@@ -183,9 +210,12 @@ const handleSearchChange = (e: Event) => {
   searchText.value = target.value
 }
 
-// 内部选中状态
+// 内部选中状态 - 统一转换为 string 类型
 const innerCheckedKeys = computed({
-  get: () => props.checkedKeys,
+  get: () => {
+    const keys = checkedKeys.value || []
+    return keys.map(k => String(k))
+  },
   set: (val) => emit('update:checkedKeys', val)
 })
 
@@ -293,13 +323,12 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
   emit('check', checked, e)
 
   // 如果没有提供 bindApi/unbindApi，则不执行绑定/解绑逻辑
-  if (!props.bindApi || !props.unbindApi) {
+  if (!bindApi.value || !unbindApi.value) {
     return
   }
 
   // 获取实体ID数组
-  const entityIds = props.entityIds
-  if (entityIds.length === 0) {
+  if (entityIds.value.length === 0) {
     return
   }
 
@@ -309,9 +338,9 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
     const childIds = autoSelectChildren.value ? getAllChildIds(attachId) : []
     const nodesToBind = [attachId, ...parentIds, ...childIds]
 
-    entityIds.forEach(entityId => {
+    entityIds.value.forEach(entityId => {
       nodesToBind.forEach(nodeId => {
-        props.bindApi!(entityId, String(nodeId))
+        bindApi.value!(entityId, String(nodeId))
       })
     })
   } else {
@@ -320,16 +349,16 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
     const childIds = autoSelectChildren.value ? getAllChildIds(attachId) : []
     const nodesToUnbind = [attachId, ...parentIds, ...childIds]
 
-    entityIds.forEach(entityId => {
+    entityIds.value.forEach(entityId => {
       nodesToUnbind.forEach(nodeId => {
-        props.unbindApi!(entityId, String(nodeId))
+        unbindApi.value!(entityId, String(nodeId))
       })
     })
   }
 }
 
 // 监听树数据变化，重新构建映射
-watch(() => props.treeData, (newData) => {
+watch(() => treeData.value, (newData) => {
   if (newData && newData.length > 0) {
     parentMap.value.clear()
     childrenMap.value.clear()
@@ -337,10 +366,15 @@ watch(() => props.treeData, (newData) => {
   }
 }, { immediate: true, deep: true })
 
+watch(() => checkedKeys.value, () => {
+  // 强制重新渲染树
+  treeKey.value += 1
+}, { deep: true })
+
 // 组件挂载时构建映射
 onMounted(() => {
-  if (props.treeData.length > 0) {
-    buildParentChildMap(props.treeData)
+  if (treeData.value.length > 0) {
+    buildParentChildMap(treeData.value)
   }
 })
 
