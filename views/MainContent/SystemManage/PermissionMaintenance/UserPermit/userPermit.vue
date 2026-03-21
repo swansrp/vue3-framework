@@ -460,11 +460,20 @@ onMounted(() => {
 <style lang="less" scoped>
 .user-permit-container {
   padding: 20px;
-  height: 100%;
+  height: calc(100vh - 104px); /* 顶部header 60px + history-tab 36px + padding 8px */
   background-color: #f5f5f5;
+  overflow: hidden;
 
   .main-content {
     height: 100%;
+
+    :deep(.ant-row) {
+      height: 100%;
+    }
+
+    :deep(.ant-col) {
+      height: 100%;
+    }
   }
 
   .selection-panel,
@@ -473,8 +482,13 @@ onMounted(() => {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    :deep(.ant-card) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
     :deep(.ant-card-body) {
-      height: calc(100% - 56px);
+      flex: 1;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -492,13 +506,20 @@ onMounted(() => {
   }
 
   .menu-tree-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+
     .tree-wrapper {
+      flex: 1;
       border: 1px solid #d9d9d9;
       border-radius: 4px;
       padding: 12px;
       background-color: #fff;
-      max-height: calc(100vh - 350px);
       overflow-y: auto;
+      min-height: 0;
 
       :deep(.ant-tree) {
         .ant-tree-treenode {
@@ -521,11 +542,57 @@ onMounted(() => {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100%;
-    min-height: 300px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  // 右侧面板内容区域需要独立滚动
+  .result-panel {
+    :deep(.ant-card-head) {
+      flex-shrink: 0;
+    }
+
+    // 每个 tab 内容区域
+    > :deep(.ant-card-body) > div {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+
+      > .ant-spin-nested-loading {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+
+        > .ant-spin-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          overflow: hidden;
+        }
+      }
+
+      > .ant-tree {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+      }
+
+      > .bind-tree-container {
+        flex: 1;
+        min-height: 0;
+      }
+    }
   }
 
   .permit-explanation {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
     padding: 20px 0;
 
     :deep(.ant-timeline) {

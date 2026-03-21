@@ -23,41 +23,43 @@
         />
       </div>
     </div>
-    <a-spin :spinning="loading">
-      <a-tree
-        v-if="filteredTreeData.length > 0"
-        :checked-keys="innerCheckedKeys"
-        :half-checked-keys="halfCheckedKeys"
-        :default-expand-all="true"
-        :show-line="true"
-        checkable
-        check-strictly
-        :tree-data="filteredTreeData"
-        @check="handleCheck"
-      >
-        <template #title="{ dataRef }">
-          <span>
-            <Icon
-              v-if="dataRef.icon"
-              :icon="dataRef.icon"
-            />
-            <span v-html="dataRef._highlightedTitle || dataRef.title"></span>
-            <span
-              v-if="halfCheckedKeys.includes(dataRef.key)"
-              class="partial-icon"
-            >◐</span>
-          </span>
-        </template>
-      </a-tree>
-      <a-empty
-        v-else-if="searchText && treeData.length > 0"
-        description="未找到匹配结果"
-      />
-      <a-empty
-        v-else
-        description="暂无数据"
-      />
-    </a-spin>
+    <div class="tree-scroll-wrapper">
+      <a-spin :spinning="loading">
+        <a-tree
+          v-if="filteredTreeData.length > 0"
+          :checked-keys="innerCheckedKeys"
+          :half-checked-keys="halfCheckedKeys"
+          :default-expand-all="true"
+          :show-line="true"
+          checkable
+          check-strictly
+          :tree-data="filteredTreeData"
+          @check="handleCheck"
+        >
+          <template #title="{ dataRef }">
+            <span>
+              <Icon
+                v-if="dataRef.icon"
+                :icon="dataRef.icon"
+              />
+              <span v-html="dataRef._highlightedTitle || dataRef.title"></span>
+              <span
+                v-if="halfCheckedKeys.includes(dataRef.key)"
+                class="partial-icon"
+              >◐</span>
+            </span>
+          </template>
+        </a-tree>
+        <a-empty
+          v-else-if="searchText && treeData.length > 0"
+          description="未找到匹配结果"
+        />
+        <a-empty
+          v-else
+          description="暂无数据"
+        />
+      </a-spin>
+    </div>
   </div>
 </template>
 
@@ -377,19 +379,34 @@ defineExpose({
     gap: 12px;
   }
 
-  :deep(.ant-spin-nested-loading),
-  :deep(.ant-spin-container) {
+  // 新增：滚动包裹容器
+  .tree-scroll-wrapper {
     flex: 1;
-    overflow: hidden;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 0; // 关键：允许 flex 子项收缩
+  }
+
+  // spin 组件内部结构
+  .tree-scroll-wrapper :deep(.ant-spin-nested-loading) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tree-scroll-wrapper :deep(.ant-spin-container) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   :deep(.ant-tree) {
     flex: 1;
-    overflow-y: auto;
-    min-height: 0; // 关键：允许 flex 子项收缩
+    min-height: 0;
   }
 
   :deep(.ant-empty) {

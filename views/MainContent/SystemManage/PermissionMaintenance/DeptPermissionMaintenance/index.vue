@@ -1,5 +1,5 @@
 <template>
-  <div style="height: calc(100% - 66px);">
+  <div style="height: calc(100vh - 96px); overflow: hidden;">
     <a-layout class="dept-permission-maintenance">
       <a-layout-sider
         class="dept-tree-wrap"
@@ -277,24 +277,18 @@ const loadTabData = (deptId: string) => {
 
 // 多选模式下勾选部门节点
 const onCheckDeptNode = (checked: string[] | { checked: string[]; halfChecked: string[] }, e: { checked: boolean, node: DataNode }) => {
-  console.log('[DEBUG] onCheckDeptNode called:', { checked, e })
-
   // 根据 check-strictly 模式获取实际的 checked 数组
   const checkedArr = Array.isArray(checked) ? checked : checked.checked
-
-  console.log('[DEBUG] checkedArr:', checkedArr)
 
   selectedDeptKeys.value = checked
 
   if (checkedArr.length === 0) {
-    console.log('[DEBUG] No departments selected, hiding permission tree')
     showPermissionTreeTab.value = false
     deptTreeCheckedKeys.value = []
     halfCheckedKeys.value = []
     return
   }
 
-  console.log('[DEBUG] Showing permission tree and loading permissions for depts:', checkedArr)
   showPermissionTreeTab.value = true
   // 加载所有选中部门的权限
   loadMultipleDeptPermissions(checkedArr)
@@ -302,15 +296,12 @@ const onCheckDeptNode = (checked: string[] | { checked: string[]; halfChecked: s
 
 // 加载多个部门的权限并计算选中/半选状态
 const loadMultipleDeptPermissions = async (deptIds: string[]) => {
-  console.log('[DEBUG] loadMultipleDeptPermissions called with deptIds:', deptIds)
-
   deptPermissionMap.value = new Map()
 
   // 并行加载所有部门的权限
   const promises = deptIds.map(deptId =>
     getDeptPermissionListById(deptId).then(res => {
       const keys = res.payload.map((record: DataNode) => Number(record.key))
-      console.log(`[DEBUG] Dept ${deptId} permissions:`, keys)
       deptPermissionMap.value.set(deptId, keys)
       return keys
     })
@@ -329,15 +320,11 @@ const loadMultipleDeptPermissions = async (deptIds: string[]) => {
   const halfKeys: number[] = []
   const deptCount = deptIds.length
 
-  console.log('[DEBUG] Total unique permissions:', allPermissionKeys.size)
-  console.log('[DEBUG] Dept count:', deptCount)
-
   allPermissionKeys.forEach(key => {
     let count = 0
     deptPermissionMap.value.forEach(keys => {
       if (keys.includes(key)) count++
     })
-    console.log(`[DEBUG] Permission ${key}: found in ${count}/${deptCount} depts`)
     if (count === deptCount) {
       checkedKeys.push(key)
     } else if (count > 0) {
@@ -347,12 +334,6 @@ const loadMultipleDeptPermissions = async (deptIds: string[]) => {
 
   deptTreeCheckedKeys.value = checkedKeys
   halfCheckedKeys.value = halfKeys
-
-  console.log('[DEBUG] Final state:', {
-    checkedKeys,
-    halfCheckedKeys,
-    deptPermissionMap: Object.fromEntries(deptPermissionMap.value)
-  })
 }
 
 const renderDeptPermissionTree = (deptId: string) =>
@@ -372,12 +353,10 @@ const tabChange = (key: any) => {
 }
 
 const handleImportUsers = () => {
-  console.log('[DeptPermissionMaintenance] 触发导入, uploadParam:', uploadParam.value)
   uploadFileModal.value?.showUploadDialogBox('.xlsx')
 }
 
 const handleAfterImportConfirm = () => {
-  console.log('[DeptPermissionMaintenance] 导入完成，刷新用户列表')
   renderBindUserFlag.value += 1
 }
 
@@ -402,15 +381,22 @@ onMounted(() => {
 .dept-tree-wrap {
   background: #fff;
   border-right: 1px solid #f0f0f0;
+  height: 100%;
+}
+
+.dept-tree-wrap :deep(.ant-layout-sider-children) {
+  height: 100%;
 }
 
 .dept-tree-container {
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .dept-tree-header {
+  flex-shrink: 0;
   background: white;
   padding: 16px;
   border-bottom: 1px solid #f0f0f0;
@@ -434,10 +420,20 @@ onMounted(() => {
   align-items: center;
 }
 
-.dept-tree-wrap :deep(.ant-tree) {
+.dept-tree-container :deep(.ant-tree) {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
+}
+
+.dept-tree-container :deep(.ant-empty) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
 }
 
 .dept-permission-maintenance {
@@ -452,6 +448,46 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* 没有 tabs 时 empty 状态居中 */
+:deep(.dept-permission-maintenance .ant-layout-content > div:not(.ant-tabs)) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 查看权限树 tab 中的树独立滚动 */
+:deep(.ant-tabs-tabpane > .ant-tree) {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-tabpane > .ant-empty) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+}
+
+/* 关联用户 tab 中的 ant-spin 结构 */
+:deep(.ant-tabs-tabpane > .ant-spin-nested-loading) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.ant-tabs-tabpane > .ant-spin-nested-loading > .ant-spin-container) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 :deep(.ant-tabs) {
@@ -469,6 +505,13 @@ onMounted(() => {
   min-height: 0;
 }
 
+:deep(.ant-tabs-content) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 :deep(.ant-tabs-tabpane) {
   height: 100%;
   display: flex;
@@ -481,7 +524,6 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   overflow: hidden;
 }
 

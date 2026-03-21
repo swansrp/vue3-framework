@@ -36,21 +36,22 @@
         width="400"
         theme="light"
       >
-        <div style="padding: 10px 0">
-          <a-input
-            v-model:value="inputUserGroupTreeRootNodeName"
-            placeholder="请输入根节点名称"
-            style="width: 250px;margin-right: 10px"
-          />
-          <a-button
-            type="primary"
-            @click="addUserGroupTreeRootNode"
-          >
-            添加根节点
-          </a-button>
+        <div>
+          <div style="display: flex">
+            <a-input
+              v-model:value="inputUserGroupTreeRootNodeName"
+              placeholder="请输入根节点名称"
+              style="width: 200px;margin-right: 10px"
+            />
+            <a-button
+              type="primary"
+              @click="addUserGroupTreeRootNode"
+            >
+              添加根节点
+            </a-button>
+          </div>
           <a-tree
             v-if="userGroupTreeData.length"
-            style="margin-top: 20px"
             :default-expand-all="true"
             :show-line="true"
             :tree-data="userGroupTreeData"
@@ -353,7 +354,7 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
 
 <style scoped>
 .wrapper {
-  height: 100%;
+  height: calc(100vh - 96px); /* 顶部header 60px + history-tab 36px */
   overflow: hidden;
 }
 
@@ -362,14 +363,71 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
   overflow: hidden;
 }
 
+.user-group-category-list-wrapper :deep(.ant-layout-sider-children) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .user-group-category-list {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.user-group-category-list :deep(.ant-list-header) {
+  flex-shrink: 0;
+}
+
+.user-group-category-list :deep(.ant-list-items) {
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .user-group-list-wrapper {
   height: 100%;
   overflow: hidden;
+}
+
+.user-group-list-wrapper :deep(.ant-layout-sider-children) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 中间的 div 容器 */
+.user-group-list-wrapper :deep(.ant-layout-sider-children > div) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px 0;
+  overflow: hidden;
+}
+
+/* 输入框和按钮行 */
+.user-group-list-wrapper :deep(.ant-layout-sider-children > div > div:first-child) {
+  flex-shrink: 0;
+  padding: 0 10px;
+}
+
+.user-group-list-wrapper :deep(.ant-tree) {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  margin-top: 20px;
+  padding: 0 10px;
+}
+
+.user-group-list-wrapper :deep(.ant-empty) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
 }
 
 .user-name-wrapper {
@@ -395,6 +453,13 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
   min-height: 0;
 }
 
+:deep(.ant-tabs-content) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 :deep(.ant-tabs-tabpane) {
   height: 100%;
   display: flex;
@@ -411,8 +476,34 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
   overflow: hidden;
 }
 
-/* 查看权限树的样式 */
-:deep(.ant-tree) {
+/* 查看权限树 tab 中的树独立滚动 */
+:deep(.ant-tabs-tabpane > .ant-tree) {
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
+}
+
+:deep(.ant-tabs-tabpane > .ant-empty) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+}
+
+/* 关联用户 tab 中的 ant-spin 结构 */
+:deep(.ant-tabs-tabpane > .ant-spin-nested-loading) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.ant-tabs-tabpane > .ant-spin-nested-loading > .ant-spin-container) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 </style>
