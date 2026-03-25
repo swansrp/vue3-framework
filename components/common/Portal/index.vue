@@ -534,7 +534,7 @@
                 </slot>
               </template>
               <template
-                v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
+                v-if="(isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded) && allTextAreaColumnsNotEmpty(record)"
                 #expandedRowRender="{record, index}"
               >
                 <slot
@@ -792,7 +792,7 @@ let initFinished = false
  * @param actionWidth 操作栏宽度
  * @param indexWidth 序号栏宽度
  * @param indexTitle 序号栏标题
- * @param advance 是否支持高级查询(需要having查询时不能支持高级查询)
+ * @param advance 是否支持高级查询(后端已升级 现在均支持)
  * @param advanceButton 是否显示高级查询按钮
  * @param statisticButton 是否显示统计按钮
  * @param selectColumnCondition 动态字段条件
