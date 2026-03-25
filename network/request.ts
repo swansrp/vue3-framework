@@ -11,6 +11,14 @@ export const domain = '/' + name
 message.config({ maxCount: 1 })
 
 /**
+ * 生成唯一请求ID
+ * 格式: 时间戳_UUID
+ */
+const generateRequestId = (): string => {
+  return `${Date.now()}_${crypto.randomUUID()}`
+}
+
+/**
  * 自定义JSON解析器，将大整数转换为字符串以避免精度丢失
  * JavaScript的Number类型安全整数范围是 -(2^53-1) 到 (2^53-1)
  */
@@ -196,7 +204,8 @@ function request(apiType: ApiType,
     headers: {
       'Content-Type': 'application/json',
       'api-version': apiType.version,
-      'client-type': 0
+      'client-type': 0,
+      'X-Request-Id': generateRequestId()
     }
   }).then(resp => {
     if (resp.data.status?.code !== errCode.SUCCESS) {
