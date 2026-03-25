@@ -10,10 +10,12 @@ import {
   getDictList,
   deleteEnterpriseDict,
   systemBizDictAddDict,
-  systemBizDictUpdateEnterpriseDict
+  systemBizDictUpdateEnterpriseDict,
+  getDictExisted,
+  systemBizDictUpdateDictName
 } from '@/framework/apis/dict/bizDictController'
 import type { BizDictVO, BizDictRes } from '@/framework/apis/dict/bizDictController'
-import { addDict, deleteDict } from '@/framework/apis/dict/dict'
+import { deleteDict } from '@/framework/apis/dict/dict'
 import DictItemEditModal from '@/framework/components/common/dict/DictItemEditModal.vue'
 import DictItemsList from '@/framework/components/common/dict/DictItemsList.vue'
 
@@ -41,7 +43,19 @@ const editingItem = ref<BizDictVO | null>(null)
 // 新增字典弹窗
 const addDictModalVisible = ref(false)
 const addDictFormRef = ref()
-const addDictForm = ref({ dictName: '', dictTitle: '' })
+// 新增字典表单：包含字典类型信息和第一个字典项
+const addDictForm = ref({
+  dictCode: '',      // 字典编码
+  dictName: '',      // 字典名称
+  label: '',         // 第一个字典项名称
+  value: '',         // 第一个字典项值
+  description: '',   // 描述
+  isDefault: '0'     // 是否默认
+})
+
+// 编辑字典名称
+const isEditingDictName = ref(false)
+const editingDictName = ref('')
 
 // 字典名称映射（dictCode → dictName）
 const dictNameMap = ref<Record<string, string>>({})
@@ -306,21 +320,121 @@ const handleSortChange = async (items: BizDictVO[]) => {
   }
 }
 
-// 添加字典
+// 添加字典（一步完成：创建字典类型 + 添加第一个字典项）
 const handleAddDict = () => {
   addDictModalVisible.value = true
 }
 
 const onAddDictFinish = async () => {
+  // 校验字典编码是否已存在
   try {
-    await addDict(addDictForm.value)
-    message.success('添加字典成功')
+    const codeCheckRes = await getDictExisted({ code: addDictForm.value.dictCode }, false, false, false)
+    if (codeCheckRes?.payload === '1') {
+      message.warning(`字典编码 "${addDictForm.value.dictCode}" 已存在，请使用其他编码`)
+      return
+    }
+  } catch (error) {
+    console.error('校验字典编码失败:', error)
+  }
+  
+  // 校验字典名称是否已存在
+  try {
+    const nameCheckRes = await getDictExisted({ name: addDictForm.value.dictName }, false, false, false)
+    if (nameCheckRes?.payload === '1') {
+      message.warning(`字典名称 "${addDictForm.value.dictName}" 已存在，请使用其他名称`)
+      return
+    }
+  } catch (error) {
+    console.error('校验字典名称失败:', error)
+  }
+  
+  try {
+    // 使用业务字典接口添加第一个字典项，同时创建字典类型
+    await systemBizDictAddDict(
+      { bizId: null as any },
+      {
+        dictCode: addDictForm.value.dictCode,
+        dictName: addDictForm.value.dictName,
+        label: addDictForm.value.label,
+        value: addDictForm.value.value,
+        description: addDictForm.value.description,
+        isDefault: addDictForm.value.isDefault,
+        sort: 1,
+        bizId: null
+      }
+    )
+    message.success('字典创建成功')
     addDictModalVisible.value = false
-    addDictForm.value = { dictName: '', dictTitle: '' }
+    // 选中新创建的字典
+    selectedDictCode.value = addDictForm.value.dictCode
+    selectedDictName.value = addDictForm.value.dictName
+    // 重置表单
+    addDictForm.value = {
+      dictCode: '',
+      dictName: '',
+      label: '',
+      value: '',
+      description: '',
+      isDefault: '0'
+    }
     addDictFormRef.value?.resetFields()
     await loadDictList()
+    await loadDictItems()
   } catch (error) {
     console.error('添加字典失败:', error)
+  }
+}
+
+// 编辑字典名称
+const startEditDictName = () => {
+  editingDictName.value = selectedDictName.value
+  isEditingDictName.value = true
+}
+
+const cancelEditDictName = () => {
+  editingDictName.value = ''
+  isEditingDictName.value = false
+}
+
+const saveDictName = async () => {
+  if (!editingDictName.value.trim()) {
+    message.warning('字典名称不能为空')
+    return
+  }
+  
+  if (editingDictName.value === selectedDictName.value) {
+    isEditingDictName.value = false
+    return
+  }
+  
+  // 校验新的字典名称是否已存在
+  try {
+    const nameCheckRes = await getDictExisted({ name: editingDictName.value }, false, false, false)
+    if (nameCheckRes?.payload === '1') {
+      message.warning(`字典名称 "${editingDictName.value}" 已存在，请使用其他名称`)
+      return
+    }
+  } catch (error) {
+    console.error('校验字典名称失败:', error)
+  }
+  
+  try {
+    // 调用更新字典名称接口
+    // value 填 dictCode, label 填 dictName
+    await systemBizDictUpdateDictName({
+      value: selectedDictCode.value,
+      label: editingDictName.value
+    })
+    
+    selectedDictName.value = editingDictName.value
+    isEditingDictName.value = false
+    message.success('字典名称更新成功')
+    
+    // 重新加载字典列表和字典项
+    await loadDictList()
+    await loadDictItems()
+  } catch (error) {
+    console.error('更新字典名称失败:', error)
   }
 }
 
@@ -432,8 +546,39 @@ loadDictNameMap()
     <!-- 右侧字典项管理 -->
     <div class="dict-items-panel">
       <div class="panel-header">
-        <h3 v-if="selectedDictCode">
-          {{ selectedDictName }}
+        <h3 v-if="selectedDictCode" style="display: flex; align-items: center; gap: 8px;">
+          <template v-if="!isEditingDictName">
+            <span>{{ selectedDictName }}</span>
+            <a-button
+              type="link"
+              size="small"
+              @click="startEditDictName"
+            >
+              编辑
+            </a-button>
+          </template>
+          <template v-else>
+            <a-input
+              v-model:value="editingDictName"
+              placeholder="请输入字典名称"
+              style="width: 200px;"
+              size="small"
+              @press-enter="saveDictName"
+            />
+            <a-button
+              type="primary"
+              size="small"
+              @click="saveDictName"
+            >
+              保存
+            </a-button>
+            <a-button
+              size="small"
+              @click="cancelEditDictName"
+            >
+              取消
+            </a-button>
+          </template>
           <span class="dict-code-tag">{{ selectedDictCode }}</span>
         </h3>
         <h3 v-else>
@@ -560,6 +705,7 @@ loadDictNameMap()
     <a-modal
       v-model:open="addDictModalVisible"
       title="新增字典"
+      :width="520"
       @ok="onAddDictFinish"
       @cancel="resetAddDictForm"
     >
@@ -569,19 +715,45 @@ loadDictNameMap()
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 14 }"
       >
+        <a-divider orientation="left">字典类型</a-divider>
         <a-form-item
           label="字典名称"
-          name="dictTitle"
+          name="dictName"
           :rules="[{ required: true, message: '请输入字典名称!' }]"
         >
-          <a-input v-model:value="addDictForm.dictTitle" />
+          <a-input v-model:value="addDictForm.dictName" placeholder="如：订单状态" />
         </a-form-item>
         <a-form-item
-          label="字典值"
-          name="dictName"
-          :rules="[{ required: true, message: '请填写字典值!' }]"
+          label="字典编码"
+          name="dictCode"
+          :rules="[{ required: true, message: '请填写字典编码!' }]"
         >
-          <a-input v-model:value="addDictForm.dictName" />
+          <a-input v-model:value="addDictForm.dictCode" placeholder="如：ORDER_STATUS" />
+        </a-form-item>
+        
+        <a-divider orientation="left">第一个字典项</a-divider>
+        <a-form-item
+          label="字典项名称"
+          name="label"
+          :rules="[{ required: true, message: '请输入字典项名称!' }]"
+        >
+          <a-input v-model:value="addDictForm.label" placeholder="如：待审批" />
+        </a-form-item>
+        <a-form-item
+          label="字典项值"
+          name="value"
+          :rules="[{ required: true, message: '请填写字典项值!' }]"
+        >
+          <a-input v-model:value="addDictForm.value" placeholder="如：PENDING" />
+        </a-form-item>
+        <a-form-item label="描述">
+          <a-input v-model:value="addDictForm.description" placeholder="可选" />
+        </a-form-item>
+        <a-form-item label="是否默认">
+          <a-switch
+            :checked="addDictForm.isDefault === '1'"
+            @change="addDictForm.isDefault = $event ? '1' : '0'"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
