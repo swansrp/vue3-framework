@@ -66,7 +66,7 @@
   <a-card
     size="small"
     style="height: calc(100vh - 410px)"
-    title="已绑定用户"
+    :title="`已绑定用户 (${userList.length})`"
   >
     <template #extra>
       <a-select
