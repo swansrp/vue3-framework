@@ -23,3 +23,4 @@ export const getCompletePermissionTree = () => request(buildGetApi('/tree'), {},
 
 export const getUserMenuTree = (customerNumber: string) => request(buildGetApi('/user/permit'), { customerNumber }, {}, false, false) as Promise<any>
 export const getUserPermitSource = (menuId: string|number, customerNumber: string) => request(buildGetApi('/user/permit/source'), { menuId, customerNumber }, {}, false, false) as Promise<any>
+export const getPermitSource = (menuId: string|number, customerNumber: string) => request(buildGetApi('/permit/targets'), { menuId, customerNumber }, {}, false, false) as Promise<any>

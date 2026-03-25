@@ -159,8 +159,56 @@
         v-if="!menuConfigItem"
         class="config-warning"
       >
-        顶部导航和左侧导航的叶子节点必须要配置“路由路径”和“组件地址”
+        顶部导航和左侧导航的叶子节点必须要配置"路由路径"和"组件地址"
       </div>
+    </div>
+        
+    <!--菜单绑定信息区域-->
+    <div class="permit-source-panel">
+      <div class="panel-title">
+        菜单绑定情况
+      </div>
+      <a-spin :spinning="permitSourceLoading">
+        <div
+          v-if="!menuId"
+          class="empty-tip"
+        >
+          请先选择一个菜单节点
+        </div>
+        <div
+          v-else-if="permitSourceData.length === 0 && !permitSourceLoading"
+          class="empty-tip"
+        >
+          该菜单暂无绑定信息
+        </div>
+        <div
+          v-else
+          class="permit-source-list"
+        >
+          <a-timeline mode="left">
+            <a-timeline-item
+              v-for="(item, index) in permitSourceData"
+              :key="index"
+              :color="getSourceTypeColor(item.sourceType)"
+            >
+              <div class="permit-item">
+                <div class="permit-header">
+                  <a-tag
+                    :color="getSourceTypeColor(item.sourceType)"
+                    class="source-tag"
+                  >
+                    {{ getSourceTypeLabel(item.sourceType) }}
+                  </a-tag>
+                  <span class="source-name">{{ item.sourceName }}</span>
+                </div>
+                <div class="permit-path">
+                  {{ item.path }}
+                </div>
+              </div>
+            </a-timeline-item>
+          </a-timeline>
+        </div>
+      </a-spin>
     </div>
   </div>
 </template>
@@ -173,7 +221,7 @@ import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { Ref } from 'vue'
 
-import { changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder } from '@/framework/apis/admin/navEdit'
+import { changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder, getPermitSource } from '@/framework/apis/admin/navEdit'
 import TreeEditForm from '@/framework/components/common/treeEditForm/TreeEditForm.vue'
 import { FormState } from '@/framework/components/common/treeEditForm/type'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
@@ -206,6 +254,47 @@ let editMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
 let addSubMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
 let addRootMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
 let canEnterSubMenuFlag: Ref<boolean> = ref(false)
+
+// 菜单绑定信息相关状态
+let permitSourceLoading: Ref<boolean> = ref(false)
+let permitSourceData: Ref<PermitSourceItem[]> = ref([])
+
+// 权限来源类型枚举
+enum SourceTypeEnum {
+  USER = 'USER',
+  ROLE = 'ROLE',
+  DEPT = 'DEPT',
+  DEPT_DATA_SCOPE = 'DEPT_DATA_SCOPE',
+  GROUP = 'GROUP',
+  GROUP_DATA_SCOPE = 'GROUP_DATA_SCOPE'
+}
+
+// 权限来源类型对应的中文描述
+const SOURCE_TYPE_LABELS: Record<SourceTypeEnum, string> = {
+  [SourceTypeEnum.USER]: '用户',
+  [SourceTypeEnum.ROLE]: '角色',
+  [SourceTypeEnum.DEPT]: '部门',
+  [SourceTypeEnum.DEPT_DATA_SCOPE]: '部门数据范围',
+  [SourceTypeEnum.GROUP]: '用户组',
+  [SourceTypeEnum.GROUP_DATA_SCOPE]: '用户组数据范围'
+}
+
+// 权限来源类型对应的颜色
+const SOURCE_TYPE_COLORS: Record<SourceTypeEnum, string> = {
+  [SourceTypeEnum.USER]: '#1890ff',
+  [SourceTypeEnum.ROLE]: '#722ed1',
+  [SourceTypeEnum.DEPT]: '#52c41a',
+  [SourceTypeEnum.DEPT_DATA_SCOPE]: '#fa8c16',
+  [SourceTypeEnum.GROUP]: '#eb2f96',
+  [SourceTypeEnum.GROUP_DATA_SCOPE]: '#fa8c16'
+}
+
+interface PermitSourceItem {
+  sourceType: SourceTypeEnum
+  sourceId: number
+  sourceName: string
+  path: string
+}
 
 type TreeKeyType = string[] | number[]
 type MenuConfigItem = 'addRootMenu' | 'currentConfig' | ''
@@ -278,6 +367,33 @@ const selectTreeNode = (_: string, info: any) => {
   menuConfigItem.value = 'currentConfig'
   // 每次点击tree的节点后,默认展示编辑tab
   tabActiveKey.value = 'editNode'
+  
+  // 加载菜单绑定信息
+  loadPermitSource(node.menuId)
+}
+
+// 加载菜单绑定信息
+const loadPermitSource = async (menuId: number) => {
+  if (!menuId) return
+  permitSourceLoading.value = true
+  try {
+    // 不传 customerNumber，查询该菜单绑定的所有目标
+    const result = await getPermitSource(menuId, '')
+    permitSourceData.value = result.payload || []
+  } catch (error) {
+    console.error('获取菜单绑定信息失败:', error)
+    permitSourceData.value = []
+  } finally {
+    permitSourceLoading.value = false
+  }
+}
+
+const getSourceTypeLabel = (type: SourceTypeEnum): string => {
+  return SOURCE_TYPE_LABELS[type] || type
+}
+
+const getSourceTypeColor = (type: SourceTypeEnum): string => {
+  return SOURCE_TYPE_COLORS[type] || '#cccccc'
 }
 
 
@@ -440,6 +556,78 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
   justify-content: center;
   align-items: center;
   color: #f5222d;
+}
+
+.permit-source-panel {
+  width: 350px;
+  height: 700px;
+  margin: 15px 15px 15px 0;
+  padding: 15px;
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  overflow-y: auto;
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e8e8e8;
+  margin-bottom: 15px;
+}
+
+.empty-tip {
+  text-align: center;
+  color: #8e8e8e;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.permit-source-list {
+  padding: 10px 5px;
+}
+
+.permit-item {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
+}
+
+.permit-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.permit-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.source-tag {
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.source-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1d;
+}
+
+.permit-path {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #595959;
+  padding: 6px 10px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  border-left: 3px solid #1890ff;
 }
 </style>
 
