@@ -12,11 +12,9 @@ message.config({ maxCount: 1 })
 
 /**
  * 生成唯一请求ID
- * 格式: 时间戳_UUID
+ * 格式: 年月日时分秒毫秒_UUID
  */
-const generateRequestId = (): string => {
-  return `${Date.now()}_${crypto.randomUUID()}`
-}
+const generateRequestId = (): string => `${new Date().toISOString().replace(/[-:T.Z]/g, '')}_${crypto.randomUUID().replace(/-/g, '')}`
 
 /**
  * 自定义JSON解析器，将大整数转换为字符串以避免精度丢失
