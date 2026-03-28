@@ -222,11 +222,12 @@ const innerCheckedKeys = computed({
 // 构建父子关系映射
 const buildParentChildMap = (nodes: DataNode[], parentId: string | number | null = null) => {
   nodes.forEach(node => {
-    const nodeId = node.key
-    parentMap.value.set(nodeId, parentId)
+    // 统一转换为字符串类型，确保 key 类型一致
+    const nodeId = String(node.key)
+    parentMap.value.set(nodeId, parentId !== null ? String(parentId) : null)
 
     if (node.children && node.children.length > 0) {
-      const childIds = node.children.map(child => child.key)
+      const childIds = node.children.map(child => String(child.key))
       childrenMap.value.set(nodeId, childIds)
       buildParentChildMap(node.children as DataNode[], nodeId)
     } else {
