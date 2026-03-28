@@ -467,7 +467,7 @@ import {
   getPortalTableList,
   updatePortalTable,
   updatePortalTableFilter,
-  updatePortalTableFilterOrder
+  updatePortalTableFilterOrder, IdOrderReqVO
 } from '@/framework/apis/portal/table'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
@@ -797,11 +797,11 @@ const handleDeleteFilter = async (filter: PortalTableFilterVO) => {
 // 拖拽排序结束
 const handleFilterDragEnd = async () => {
   // 更新 displayOrder
-  const orderList: { id: number; order: number }[] = []
+  const orderList: IdOrderReqVO[] = []
   filterList.value.forEach((filter, index) => {
     filter.displayOrder = index + 1
     if (filter.id) {
-      orderList.push({ id: filter.id, order: index + 1 })
+      orderList.push({ id: filter.id, showOrder: index + 1 })
     }
   })
 
