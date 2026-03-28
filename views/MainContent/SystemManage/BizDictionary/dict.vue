@@ -546,7 +546,10 @@ loadDictNameMap()
     <!-- 右侧字典项管理 -->
     <div class="dict-items-panel">
       <div class="panel-header">
-        <h3 v-if="selectedDictCode" style="display: flex; align-items: center; gap: 8px;">
+        <h3
+          v-if="selectedDictCode"
+          style="display: flex; align-items: center; gap: 8px;"
+        >
           <template v-if="!isEditingDictName">
             <span>{{ selectedDictName }}</span>
             <a-button
@@ -715,39 +718,58 @@ loadDictNameMap()
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 14 }"
       >
-        <a-divider orientation="left">字典类型</a-divider>
+        <a-divider orientation="left">
+          字典类型
+        </a-divider>
         <a-form-item
           label="字典名称"
           name="dictName"
           :rules="[{ required: true, message: '请输入字典名称!' }]"
         >
-          <a-input v-model:value="addDictForm.dictName" placeholder="如：订单状态" />
+          <a-input
+            v-model:value="addDictForm.dictName"
+            placeholder="如：订单状态"
+          />
         </a-form-item>
         <a-form-item
           label="字典编码"
           name="dictCode"
           :rules="[{ required: true, message: '请填写字典编码!' }]"
         >
-          <a-input v-model:value="addDictForm.dictCode" placeholder="如：ORDER_STATUS" />
+          <a-input
+            v-model:value="addDictForm.dictCode"
+            placeholder="如：ORDER_STATUS"
+          />
         </a-form-item>
         
-        <a-divider orientation="left">第一个字典项</a-divider>
+        <a-divider orientation="left">
+          第一个字典项
+        </a-divider>
         <a-form-item
           label="字典项名称"
           name="label"
           :rules="[{ required: true, message: '请输入字典项名称!' }]"
         >
-          <a-input v-model:value="addDictForm.label" placeholder="如：待审批" />
+          <a-input
+            v-model:value="addDictForm.label"
+            placeholder="如：待审批"
+          />
         </a-form-item>
         <a-form-item
           label="字典项值"
           name="value"
           :rules="[{ required: true, message: '请填写字典项值!' }]"
         >
-          <a-input v-model:value="addDictForm.value" placeholder="如：PENDING" />
+          <a-input
+            v-model:value="addDictForm.value"
+            placeholder="如：PENDING"
+          />
         </a-form-item>
         <a-form-item label="描述">
-          <a-input v-model:value="addDictForm.description" placeholder="可选" />
+          <a-input
+            v-model:value="addDictForm.description"
+            placeholder="可选"
+          />
         </a-form-item>
         <a-form-item label="是否默认">
           <a-switch
