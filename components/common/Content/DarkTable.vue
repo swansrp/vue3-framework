@@ -40,6 +40,7 @@
               hide-row-selection
               read-only
               multi-header
+              @config-loaded="(...args) => emit('config-loaded', ...args)"
             >
               <!-- 转发所有具名插槽 -->
               <template
@@ -102,6 +103,7 @@ const props = withDefaults(
 )
 const { tableId, width, baseDomain, condition, advance, selectColumnCondition, showLoading, data, computedColumns } = toRefs(props)
 const currentPage: Ref<number> = ref(1)
+const emit = defineEmits(['config-loaded'])
 const advanceCondition = computed(() => {
   currentPage.value = 1
   return { conditionList: condition.value } as ConditionListType

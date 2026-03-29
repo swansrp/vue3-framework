@@ -255,6 +255,14 @@
                     >
                       <a-row :gutter="24">
                         <a-col :span="12">
+                          <a-form-item label="字段编码">
+                            <a-input
+                              v-model:value="selectedFilter.code"
+                              placeholder="请输入字段编码"
+                            />
+                          </a-form-item>
+                        </a-col>
+                        <a-col :span="12">
                           <a-form-item label="字段标签">
                             <a-input
                               v-model:value="selectedFilter.label"
@@ -302,10 +310,68 @@
                           </a-form-item>
                         </a-col>
                         <a-col :span="12">
-                          <a-form-item label="筛选条件">
-                            <a-button @click="openFilterConditionModal">
-                              {{ selectedFilter.condition ? '已配置条件' : '配置筛选条件' }}
+                          <a-form-item label="通用筛选条件">
+                            <a-button @click="openDefaultConditionModal">
+                              {{ hasDefaultCondition ? '已配置通用条件' : '配置通用条件' }}
                             </a-button>
+                          </a-form-item>
+                        </a-col>
+                        <a-col :span="24">
+                          <a-form-item
+                            label="特殊选项条件"
+                            :label-col="{ span: 3 }"
+                            :wrapper-col="{ span: 21 }"
+                          >
+                            <div class="option-condition-section">
+                              <div class="option-condition-header">
+                                <span>为字典选项配置专属条件（可选）</span>
+                                <a-button
+                                  v-if="selectedFilter.dictCode"
+                                  type="link"
+                                  size="small"
+                                  @click="loadFilterDictOptions"
+                                >
+                                  加载字典选项
+                                </a-button>
+                              </div>
+                              <div
+                                v-if="filterDictOptions.length > 0"
+                                class="option-condition-list"
+                              >
+                                <div
+                                  v-for="option in filterDictOptions"
+                                  :key="option.value"
+                                  class="option-condition-item"
+                                >
+                                  <span class="option-label">{{ option.label }}</span>
+                                  <span class="option-value">({{ option.value }})</span>
+                                  <a-button
+                                    type="link"
+                                    size="small"
+                                    @click="openOptionConditionModal(option.value)"
+                                  >
+                                    {{ conditionConfig.options[option.value] ? '已配置' : '配置' }}
+                                  </a-button>
+                                  <a-button
+                                    v-if="conditionConfig.options[option.value]"
+                                    type="link"
+                                    size="small"
+                                    danger
+                                    @click="removeOptionCondition(option.value)"
+                                  >
+                                    删除
+                                  </a-button>
+                                </div>
+                              </div>
+                              <a-empty
+                                v-else-if="selectedFilter.dictCode"
+                                description="点击上方按钮加载字典选项"
+                              />
+                              <a-empty
+                                v-else
+                                description="请先选择字典编码"
+                              />
+                            </div>
                           </a-form-item>
                         </a-col>
                         <a-col :span="12">
@@ -515,6 +581,7 @@ const addFilterTab = ref('fromField')
 // 从字段创建表单
 const fieldCreateForm = reactive({
   selectedFieldKey: '',
+  code: '',
   label: ''
 })
 
@@ -533,6 +600,103 @@ const filterConditionConfig = reactive({
   condition: {} as ConditionType,
   okText: '保存条件'
 })
+
+// 条件配置（新格式）
+interface ConditionConfig {
+  default: any[]  // 通用兜底 condition
+  options: Record<string, any[]>  // 按字典值映射的特殊 condition
+}
+
+// 当前筛选项的条件配置
+const conditionConfig = reactive<ConditionConfig>({
+  default: [],
+  options: {}
+})
+
+// 当前编辑的特殊选项值
+const editingOptionValue = ref<string>('')
+
+// 当前筛选项的字典选项列表
+const filterDictOptions = ref<Array<{ label: string; value: string }>>([])
+
+// 判断是否有通用 condition
+const hasDefaultCondition = computed(() => {
+  return conditionConfig.default && conditionConfig.default.length > 0
+})
+
+// 判断是否是新格式的 condition
+const isNewConditionFormat = (condition: any): condition is ConditionConfig => {
+  return condition && typeof condition === 'object' && 'default' in condition
+}
+
+// 解析 condition 字符串到 conditionConfig
+const parseCondition = (conditionStr: string | undefined) => {
+  if (!conditionStr) {
+    conditionConfig.default = []
+    conditionConfig.options = {}
+    return
+  }
+  
+  try {
+    const parsed = JSON.parse(conditionStr)
+    
+    if (isNewConditionFormat(parsed)) {
+      // 新格式
+      conditionConfig.default = parsed.default || []
+      conditionConfig.options = parsed.options || {}
+    } else {
+      // 老格式，作为通用 condition
+      if (Array.isArray(parsed)) {
+        conditionConfig.default = parsed
+      } else if (parsed.conditionList && Array.isArray(parsed.conditionList)) {
+        conditionConfig.default = parsed.conditionList
+      } else {
+        conditionConfig.default = []
+      }
+      conditionConfig.options = {}
+    }
+  } catch (e) {
+    console.warn('解析 condition 失败:', e)
+    conditionConfig.default = []
+    conditionConfig.options = {}
+  }
+}
+
+// 序列化 conditionConfig 到字符串
+const serializeCondition = (): string => {
+  const config: ConditionConfig = {
+    default: conditionConfig.default,
+    options: conditionConfig.options
+  }
+  return JSON.stringify(config)
+}
+
+// 加载当前筛选项的字典选项
+const loadFilterDictOptions = async () => {
+  if (!selectedFilter.value?.dictCode) {
+    filterDictOptions.value = []
+    return
+  }
+  
+  try {
+    const res = await dict.getDict(selectedFilter.value.dictCode)
+    filterDictOptions.value = (res || []).map((item: any) => ({
+      label: item.label || item.value,
+      value: String(item.value)
+    }))
+  } catch (error) {
+    console.error('加载字典选项失败:', error)
+    filterDictOptions.value = []
+  }
+}
+
+// 删除特殊选项条件
+const removeOptionCondition = (optionValue: string) => {
+  delete conditionConfig.options[optionValue]
+  // 保存
+  selectedFilter.value!.condition = serializeCondition()
+  handleSaveFilter(selectedFilter.value!)
+}
 
 // 筛选类型选项
 const filterTypeOptions = FILTER_TYPE_OPTIONS
@@ -665,6 +829,14 @@ const handleSelectTable = async (table: PortalTableVO) => {
 // 选择筛选项
 const handleSelectFilter = (filter: PortalTableFilterVO) => {
   selectedFilter.value = filter
+  // 解析 condition 到 conditionConfig
+  parseCondition(filter.condition)
+  // 清空字典选项，需要用户手动加载
+  filterDictOptions.value = []
+  // 如果有 dictCode，自动加载
+  if (filter.dictCode) {
+    loadFilterDictOptions()
+  }
 }
 
 // 加载筛选项列表
@@ -873,6 +1045,7 @@ const filterFieldOption = (input: string, option: any) => {
 const handleFieldChange = (value: string) => {
   const selectedField = availableFields.value.find(f => f.key === value)
   if (selectedField) {
+    fieldCreateForm.code = selectedField.property
     fieldCreateForm.label = selectedField.displayName
   }
 }
@@ -981,6 +1154,7 @@ const handleCreateFromField = async () => {
 
   const newFilter: PortalTableFilterVO = {
     tableId: selectedTable.value!.id!,
+    code: fieldCreateForm.code,
     label: fieldCreateForm.label,
     filterType,
     dictCode,
@@ -1070,14 +1244,9 @@ const handleCreateManual = async () => {
   }
 }
 
-// 打开筛选条件配置弹窗
-const openFilterConditionModal = () => {
-  if (!selectedFilter.value) return
-
-  // 构建可用的字段列表（传入 Portal 的所有字段）
+// 构建字段列表（通用方法）
+const buildColumnArray = () => {
   filterConditionConfig.columnArray = []
-  
-  // 传入所有可用字段
   if (props.columns && props.columns.length > 0) {
     filterConditionConfig.columnArray = props.columns.map((col: any) => ({
       key: col.property,
@@ -1086,42 +1255,36 @@ const openFilterConditionModal = () => {
       referenceDictOption: col.referenceDictOption
     }))
   }
+}
 
-  // 解析已有的条件配置
-  if (selectedFilter.value.condition) {
-    try {
-      // condition 字段存储的是双重序列化的字符串
-      const conditionStr = selectedFilter.value.condition
-      const parsedCondition = JSON.parse(conditionStr)
-      
-      // 如果是数组格式（conditionList），直接使用
-      if (Array.isArray(parsedCondition)) {
-        filterConditionConfig.condition = {
-          andOr: '0', // 默认 AND
-          conditionList: parsedCondition
-        }
-      } 
-      // 如果是对象格式，直接使用
-      else if (typeof parsedCondition === 'object') {
-        filterConditionConfig.condition = parsedCondition
-      }
-      // 如果是字符串格式，再次解析
-      else if (typeof parsedCondition === 'string') {
-        const doubleParsed = JSON.parse(parsedCondition)
-        filterConditionConfig.condition = {
-          andOr: '0',
-          conditionList: Array.isArray(doubleParsed) ? doubleParsed : [doubleParsed]
-        }
-      }
-      else {
-        filterConditionConfig.condition = {} as ConditionType
-      }
-    } catch (e) {
-      console.warn('解析 condition 失败:', e)
-      filterConditionConfig.condition = {} as ConditionType
-    }
-  } else {
-    filterConditionConfig.condition = {} as ConditionType
+// 打开通用条件配置弹窗
+const openDefaultConditionModal = () => {
+  if (!selectedFilter.value) return
+
+  buildColumnArray()
+  editingOptionValue.value = '' // 标记为编辑通用条件
+
+  // 使用 conditionConfig.default 作为当前条件
+  filterConditionConfig.condition = {
+    andOr: '0',
+    conditionList: conditionConfig.default || []
+  }
+
+  filterConditionConfig.show = true
+}
+
+// 打开特殊选项条件配置弹窗
+const openOptionConditionModal = (optionValue: string) => {
+  if (!selectedFilter.value) return
+
+  buildColumnArray()
+  editingOptionValue.value = optionValue // 标记为编辑特殊选项条件
+
+  // 使用该选项的专属条件
+  const optionCondition = conditionConfig.options[optionValue] || []
+  filterConditionConfig.condition = {
+    andOr: '0',
+    conditionList: optionCondition
   }
 
   filterConditionConfig.show = true
@@ -1131,8 +1294,23 @@ const openFilterConditionModal = () => {
 const saveFilterCondition = (condition: ConditionType) => {
   if (!selectedFilter.value) return
 
-  // 将条件序列化为 JSON 字符串存储
-  selectedFilter.value.condition = JSON.stringify(condition)
+  const conditionList = condition.conditionList || []
+
+  if (editingOptionValue.value) {
+    // 保存特殊选项条件
+    if (conditionList.length > 0) {
+      conditionConfig.options[editingOptionValue.value] = conditionList
+    } else {
+      // 空条件则删除
+      delete conditionConfig.options[editingOptionValue.value]
+    }
+  } else {
+    // 保存通用条件
+    conditionConfig.default = conditionList
+  }
+
+  // 序列化存储
+  selectedFilter.value.condition = serializeCondition()
   filterConditionConfig.show = false
 
   // 自动保存
@@ -1457,5 +1635,54 @@ const handleCancel = () => {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+}
+
+.option-condition-section {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.option-condition-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+.option-condition-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.option-condition-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background: #fff;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f0f7ff;
+  }
+
+  .option-label {
+    font-weight: 500;
+    margin-right: 4px;
+  }
+
+  .option-value {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-right: auto;
+  }
 }
 </style>

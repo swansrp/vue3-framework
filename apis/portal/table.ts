@@ -48,6 +48,8 @@ export interface PortalTableFilterVO {
   filterType?: string
   /** 主键 ID */
   id?: number
+  /** 筛选条目编码 */
+  code?: string
   /** 筛选条目标签 */
   label?: string
   /** 是否多选 */
