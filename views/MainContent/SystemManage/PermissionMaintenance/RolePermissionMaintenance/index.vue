@@ -1,8 +1,16 @@
 <template>
   <div style="height: calc(100% - 66px)">
     <a-layout class="role-permission-user-maintenance">
-      <a-layout-sider class="role-list-wrap" width="400">
-        <a-list :data-source="roleData" bordered class="role-list" style="height: 100%">
+      <a-layout-sider
+        class="role-list-wrap"
+        width="400"
+      >
+        <a-list
+          :data-source="roleData"
+          bordered
+          class="role-list"
+          style="height: 100%"
+        >
           <template #header>
             <a-input
               v-model:value="inputRoleName"
@@ -10,7 +18,12 @@
               style="width: 276px; margin-right: 10px"
               @search="initAndUpdateRoleList"
             />
-            <a-button type="primary" @click="addRoleBoxVisible = true"> 添加 </a-button>
+            <a-button
+              type="primary"
+              @click="addRoleBoxVisible = true"
+            >
+              添加
+            </a-button>
           </template>
           <template #renderItem="{ item, index }">
             <a-list-item
@@ -20,7 +33,11 @@
               <div class="a-list-item-content">
                 {{ item.roleName }}
                 <div>
-                  <a-button size="small" type="primary" @click="onEditRole(item)">
+                  <a-button
+                    size="small"
+                    type="primary"
+                    @click="onEditRole(item)"
+                  >
                     编辑
                   </a-button>
                   <delete-pop-confirm
@@ -41,7 +58,11 @@
           style="height: 100%"
           @change="tabChange"
         >
-          <a-tab-pane :key="VIEW" tab="查看权限树" :closable="false">
+          <a-tab-pane
+            :key="VIEW"
+            tab="查看权限树"
+            :closable="false"
+          >
             <a-tree
               v-if="rolePermissionTreeData.length"
               :default-expand-all="true"
@@ -54,17 +75,25 @@
             </a-tree>
             <a-empty v-else />
           </a-tab-pane>
-          <a-tab-pane :key="EDIT" tab="编辑权限树" :closable="false">
+          <a-tab-pane
+            :key="EDIT"
+            tab="编辑权限树"
+            :closable="false"
+          >
             <BindTree
               v-if="completeRoleTreeData.length"
-              :tree-data="completeRoleTreeData"
               v-model:checked-keys="roleTreeCheckedKeys"
+              :tree-data="completeRoleTreeData"
               :entity-ids="[currentRoleDate.roleId]"
               :bind-api="bindRolePermission"
               :unbind-api="unbindRolePermission"
             />
           </a-tab-pane>
-          <a-tab-pane :key="LINK" tab="关联用户" :closable="false">
+          <a-tab-pane
+            :key="LINK"
+            tab="关联用户"
+            :closable="false"
+          >
             <department-and-staff-select
               v-model:staff-list-value="staffListValue"
               layout-mode="vertical"
@@ -90,7 +119,10 @@
                 解绑
               </a-button>
             </div>
-            <a-card size="small" title="已绑定用户">
+            <a-card
+              size="small"
+              title="已绑定用户"
+            >
               <template #extra>
                 <a-input-search
                   v-model:value="searchUserName"
@@ -106,7 +138,10 @@
                 />
               </template>
               <a-empty v-if="!userList.length" />
-              <div v-else class="tag-box">
+              <div
+                v-else
+                class="tag-box"
+              >
                 <a-tag
                   v-for="user in userList"
                   :key="user.value"
@@ -126,25 +161,36 @@
         </div>
       </a-layout-content>
     </a-layout>
-    <dialog-box v-model:visible="addRoleBoxVisible" title="添加角色" :width="600">
+    <dialog-box
+      v-model:visible="addRoleBoxVisible"
+      title="添加角色"
+      :width="600"
+    >
       <add-and-edit-role-form @callback="handleAddRole" />
     </dialog-box>
-    <dialog-box v-model:visible="editRoleBoxVisible" title="编辑角色" :width="600">
-      <add-and-edit-role-form :form-data="currentRoleDate" @callback="handleEditRole" />
+    <dialog-box
+      v-model:visible="editRoleBoxVisible"
+      title="编辑角色"
+      :width="600"
+    >
+      <add-and-edit-role-form
+        :form-data="currentRoleDate"
+        @callback="handleEditRole"
+      />
     </dialog-box>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { DataNode } from "ant-design-vue/es/vc-tree/interface";
-import * as _ from "lodash";
-import { Ref } from "vue";
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import * as _ from 'lodash'
+import { Ref } from 'vue'
 
-import { initRoleData, RoleDataType } from "../type";
-import AddAndEditRoleForm from "./AddAndEditRoleForm/index.vue";
-import BindTree from "@/framework/components/common/Panel/BindTree.vue";
+import { initRoleData, RoleDataType } from '../type'
+import AddAndEditRoleForm from './AddAndEditRoleForm/index.vue'
 
-import { getCompletePermissionTree } from "@/framework/apis/admin/navEdit";
+
+import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
 import {
   addRole,
   bindRolePermission,
@@ -154,120 +200,121 @@ import {
   getRolePermissionListById,
   getRolePermissionTree,
   unbindRolePermission,
-} from "@/framework/apis/admin/rolePermission";
+} from '@/framework/apis/admin/rolePermission'
 import {
   bindRoleUserList,
   getRoleUserList,
   unbindRoleUser,
   unbindRoleUserList,
-} from "@/framework/apis/admin/roleUser";
-import DeletePopConfirm from "@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue";
-import { EDIT, LINK, QUERY_INTERVAL, VIEW } from "@/framework/utils/constant";
-import { ValueLabelArray } from "@/framework/utils/type";
+} from '@/framework/apis/admin/roleUser'
+import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
+import BindTree from '@/framework/components/common/Panel/BindTree.vue'
+import { EDIT, LINK, QUERY_INTERVAL, VIEW } from '@/framework/utils/constant'
+import { ValueLabelArray } from '@/framework/utils/type'
 
-let inputRoleName: Ref<string> = ref("");
-let activateItemIndex: Ref<number> = ref(-1);
-let roleData: Ref<Array<RoleDataType>> = ref([]);
-let addRoleBoxVisible: Ref<boolean> = ref(false);
-let editRoleBoxVisible: Ref<boolean> = ref(false);
-let completeRoleTreeData: Ref<Array<DataNode>> = ref([]);
-let roleTreeCheckedKeys: Ref<Array<string>> = ref([]);
-let rolePermissionTreeData: Ref<Array<DataNode>> = ref([]);
-let currentRoleDate: Ref<RoleDataType> = ref(initRoleData);
-let showPermissionTreeTab: Ref<boolean> = ref(false);
-let searchUserName: Ref<string> = ref("");
+let inputRoleName: Ref<string> = ref('')
+let activateItemIndex: Ref<number> = ref(-1)
+let roleData: Ref<Array<RoleDataType>> = ref([])
+let addRoleBoxVisible: Ref<boolean> = ref(false)
+let editRoleBoxVisible: Ref<boolean> = ref(false)
+let completeRoleTreeData: Ref<Array<DataNode>> = ref([])
+let roleTreeCheckedKeys: Ref<Array<string>> = ref([])
+let rolePermissionTreeData: Ref<Array<DataNode>> = ref([])
+let currentRoleDate: Ref<RoleDataType> = ref(initRoleData)
+let showPermissionTreeTab: Ref<boolean> = ref(false)
+let searchUserName: Ref<string> = ref('')
 
 // 角色-用户相关变量
-const staffListValue: Ref<ValueLabelArray> = ref([]);
-const userList: Ref<ValueLabelArray> = ref([]);
-const userListBackUp: Ref<ValueLabelArray> = ref([]);
+const staffListValue: Ref<ValueLabelArray> = ref([])
+const userList: Ref<ValueLabelArray> = ref([])
+const userListBackUp: Ref<ValueLabelArray> = ref([])
 const handleAddRoleUser = () => {
-  const entityId = currentRoleDate.value.roleId;
-  const userIdList = staffListValue.value.map((item) => item.value);
-  bindRoleUserList(entityId, userIdList).then(renderRoleUserList);
-};
+  const entityId = currentRoleDate.value.roleId
+  const userIdList = staffListValue.value.map((item) => item.value)
+  bindRoleUserList(entityId, userIdList).then(renderRoleUserList)
+}
 const handleDeleteRoleUser = () => {
-  const entityId = currentRoleDate.value.roleId;
-  const userIdList = staffListValue.value.map((item) => item.value);
-  unbindRoleUserList(entityId, userIdList).then(renderRoleUserList);
-};
+  const entityId = currentRoleDate.value.roleId
+  const userIdList = staffListValue.value.map((item) => item.value)
+  unbindRoleUserList(entityId, userIdList).then(renderRoleUserList)
+}
 
 const handleUnbindRoleUser = (attachId: string) => {
-  const entityId = currentRoleDate.value.roleId;
-  unbindRoleUser(entityId, attachId).then(renderRoleUserList);
-};
+  const entityId = currentRoleDate.value.roleId
+  unbindRoleUser(entityId, attachId).then(renderRoleUserList)
+}
 
 const handleUnbindAllRoleUser = () => {
-  const entityId = currentRoleDate.value.roleId;
-  const userIdList = userList.value.map((user) => user.value);
-  unbindRoleUserList(entityId, userIdList).then(renderRoleUserList);
-};
+  const entityId = currentRoleDate.value.roleId
+  const userIdList = userList.value.map((user) => user.value)
+  unbindRoleUserList(entityId, userIdList).then(renderRoleUserList)
+}
 
 const initAndUpdateRoleList = () =>
-  getRoleList(inputRoleName.value).then((res) => (roleData.value = res.payload.records));
+  getRoleList(inputRoleName.value).then((res) => (roleData.value = res.payload.records))
 
 const queryRoleDetail = (roleData: RoleDataType, index: number) => {
-  activateItemIndex.value = index;
-  currentRoleDate.value = roleData;
-  showPermissionTreeTab.value = true;
-  renderRolePermissionTree().then(renderEditRolePermissionTree).then(renderRoleUserList);
-};
+  activateItemIndex.value = index
+  currentRoleDate.value = roleData
+  showPermissionTreeTab.value = true
+  renderRolePermissionTree().then(renderEditRolePermissionTree).then(renderRoleUserList)
+}
 
 const renderRolePermissionTree = () =>
   getRolePermissionTree(currentRoleDate.value.roleId).then(
     (res) => (rolePermissionTreeData.value = res.payload)
-  );
+  )
 
 const renderEditRolePermissionTree = () =>
   getRolePermissionListById(currentRoleDate.value.roleId).then(
     (res) =>
       (roleTreeCheckedKeys.value = res.payload.map((record: DataNode) => record.key))
-  );
+  )
 
 const renderRoleUserList = () =>
   getRoleUserList(currentRoleDate.value.roleId).then((res) => {
-    userList.value = res.payload;
-    userListBackUp.value = res.payload;
-  });
+    userList.value = res.payload
+    userListBackUp.value = res.payload
+  })
 
-const handleDeleteRole = (id: string) => deleteRole(id).then(initAndUpdateRoleList);
+const handleDeleteRole = (id: string) => deleteRole(id).then(initAndUpdateRoleList)
 
 const handleAddRole = (roleData: RoleDataType) =>
   addRole(roleData.roleName)
     .then(() => (addRoleBoxVisible.value = false))
     .then(initAndUpdateRoleList)
-    .then(() => (addRoleBoxVisible.value = false));
+    .then(() => (addRoleBoxVisible.value = false))
 
 const onEditRole = (roleData: RoleDataType) => {
-  currentRoleDate.value = roleData;
-  editRoleBoxVisible.value = true;
-};
+  currentRoleDate.value = roleData
+  editRoleBoxVisible.value = true
+}
 
 const handleEditRole = (role: RoleDataType) =>
   editRole(role)
     .then(initAndUpdateRoleList)
-    .then(() => (editRoleBoxVisible.value = false));
+    .then(() => (editRoleBoxVisible.value = false))
 
 const tabChange = (key: string) => {
-  if (key === VIEW) renderRolePermissionTree();
-  else if (key === EDIT) renderEditRolePermissionTree();
-  else if (key === LINK) renderRoleUserList();
-};
+  if (key === VIEW) renderRolePermissionTree()
+  else if (key === EDIT) renderEditRolePermissionTree()
+  else if (key === LINK) renderRoleUserList()
+}
 
 const handleSearchUser = () =>
   (userList.value = userList.value.filter(
     (user) => user.label.indexOf(searchUserName.value) > -1
-  ));
+  ))
 
-watch(searchUserName, (name) => !name && (userList.value = userListBackUp.value));
+watch(searchUserName, (name) => !name && (userList.value = userListBackUp.value))
 
-watch(inputRoleName, _.debounce(initAndUpdateRoleList, QUERY_INTERVAL));
+watch(inputRoleName, _.debounce(initAndUpdateRoleList, QUERY_INTERVAL))
 
-onBeforeMount(initAndUpdateRoleList);
+onBeforeMount(initAndUpdateRoleList)
 
 onMounted(() =>
   getCompletePermissionTree().then((res) => (completeRoleTreeData.value = res.payload))
-);
+)
 </script>
 
 <style scoped>
