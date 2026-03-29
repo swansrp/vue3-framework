@@ -270,6 +270,68 @@ const scrollToBottom = (container: Ref, force = false) => {
   }
 }
 
+// 解析内置时间变量并返回实际时间值（兜底+专项双模式）
+const resolveDynamicVariable = (value: string | undefined): string | undefined => {
+  if (!value || value === '' || value === null || value === undefined) {
+    return undefined
+  }
+
+  // 定义内置时间变量映射
+  const timeVariables: Record<string, string> = {
+    '${currentYear}': new Date().getFullYear().toString(),
+    '${currentMonth}': `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}`,
+    '${currentDay}': new Date().toISOString().slice(0, 10),
+    '${currentDateTime}': new Date().toISOString(),
+    '${lastYear}': `${new Date().getFullYear() - 1}`,
+    '${nextYear}': `${new Date().getFullYear() + 1}`,
+    '${lastMonth}': (() => {
+      const now = new Date()
+      let year = now.getFullYear()
+      let month = now.getMonth() + 1
+      if (month === 1) {
+        year = year - 1
+        month = 12
+      } else {
+        month = month - 1
+      }
+      return `${year}${month.toString().padStart(2, '0')}`
+    })(),
+    '${nextMonth}': (() => {
+      const now = new Date()
+      let year = now.getFullYear()
+      let month = now.getMonth() + 1
+      if (month === 12) {
+        year = year + 1
+        month = 1
+      } else {
+        month = month + 1
+      }
+      return `${year}${month.toString().padStart(2, '0')}`
+    })(),
+    '${lastDay}': (() => {
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      return yesterday.toISOString().slice(0, 10)
+    })(),
+    '${nextDay}': (() => {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      return tomorrow.toISOString().slice(0, 10)
+    })(),
+  }
+
+  // 检查是否是内置时间变量
+  if (value.startsWith('${') && value.endsWith('}')) {
+    const resolvedValue = timeVariables[value]
+    if (resolvedValue !== undefined) {
+      return resolvedValue
+    }
+  }
+
+  // 返回原始值（专项值）
+  return value
+}
+
 const getTextWidth = (text: string, split = true, size = 1.6) => {
   const textArray = text?.toString().split(/\n|\\n/g) || []
   let maxWidth = 0
@@ -319,5 +381,6 @@ export {
   clearFrom,
   parseCssValue,
   scrollToBottom,
-  getTextWidth
+  getTextWidth,
+  resolveDynamicVariable
 }

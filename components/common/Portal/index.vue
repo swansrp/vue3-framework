@@ -224,6 +224,7 @@
               :pagination="false"
               :range-selection="false"
               :row-expandable="props.rowExpandable || allTextAreaColumnsNotEmpty"
+              :expand-icon="customExpandIcon"
               :row-selection="hideRowSelection ? null : rowSelection"
               :row-key="config.rowKey"
               :scroll="{x: getTableWidth(), y: getTableHeight()}"
@@ -516,7 +517,7 @@
                   :name="'cellEditor_' + column.dataIndex"
                   :record="record"
                   :save="save"
-                  record-indexs="recordIndexs"
+                  :record-indexs="recordIndexs"
                 >
                   <portal-cell-editor
                     :close-editor="closeEditor"
@@ -534,7 +535,7 @@
                 </slot>
               </template>
               <template
-                v-if="(isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded) && allTextAreaColumnsNotEmpty(record)"
+                v-if="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
                 #expandedRowRender="{record, index}"
               >
                 <slot
@@ -709,7 +710,7 @@ import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
-import { createVNode, nextTick, Ref, useSlots } from 'vue'
+import { createVNode, h, nextTick, Ref, useSlots } from 'vue'
 
 import { name } from '@/../package.json'
 import {
@@ -772,6 +773,7 @@ import {
   isEmpty,
   isNotEmpty,
   log,
+  resolveDynamicVariable,
   updateTableSize,
   uuid
 } from '@/framework/utils/common'
@@ -943,6 +945,7 @@ const props = withDefaults(defineProps<{
     computedColumns: undefined
   })
 const emit = defineEmits<{
+  (e: 'configLoaded', config: any, columnArray: any, columns: any, bindTabs: any): void
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
   (e: 'selectedData', selectedData: Array<any>): void
   (e: 'expand', expanded: boolean, record: any): void
@@ -1918,16 +1921,46 @@ const advancedCondition = reactive({
 // endregion
 
 //region 常用功能函数
+// 递归解析条件中的动态变量
+const resolve = (condition: ConditionType | ConditionListType[] | undefined) => {
+  if (!condition) return
+
+  // 处理 ConditionType 类型
+  if ('conditionList' in condition && Array.isArray(condition.conditionList)) {
+    condition.conditionList.forEach(item => resolve(item))
+  }
+
+  // 处理 ConditionListType 数组
+  if (Array.isArray(condition)) {
+    condition.forEach(item => resolve(item))
+  }
+
+  // 处理单个 ConditionListType 的 value 数组
+  if ('value' in condition && Array.isArray(condition.value)) {
+    condition.value = condition.value.map(v => {
+      if (typeof v === 'string') {
+        return resolveDynamicVariable(v)
+      }
+      return v
+    })
+  }
+}
+
 const queryCondition = () => {
   let query: QueryType
   if (config.advancedSearchAble) {
     query = getAdvancedCondition()
+    // 递归所有条件 替换${}动态值
+    resolve(query.condition)
   } else {
     query = getGeneralCondition()
+    resolve(query.conditionList)
   }
+  
   if (isNotEmpty(props.selectColumnCondition)) {
     query = { ...query, selectColumnCondition: props.selectColumnCondition }
   }
+
   return query
 }
 const getConfig = () => {
@@ -1948,6 +1981,32 @@ const allTextAreaColumnsNotEmpty = (record: DefaultRecordType) => {
     }
   }
   return false
+}
+
+/**
+ * 自定义展开按钮渲染
+ * 当 expandable 为 false 时返回 null，完全不显示按钮
+ */
+const customExpandIcon = (props: { prefixCls: string; expanded: boolean; record: any; disabled: boolean; onExpand: (record: any, e: MouseEvent) => void }) => {
+  const { expanded, disabled, onExpand, record } = props
+  // 如果不可展开，返回 null 完全隐藏按钮
+  if (disabled) {
+    return null
+  }
+
+  // 渲染自定义展开按钮：白色背景、蓝色图标
+  return h(
+      'span',
+      {
+        class: ['custom-expand-icon', expanded ? 'custom-expand-icon-expanded' : 'custom-expand-icon-collapsed'],
+        onClick: (e: MouseEvent) => {
+          e.stopPropagation()
+          onExpand(record, e)
+        }
+      },
+      // 加号或减号图标
+      expanded ? '−' : '+'
+  )
 }
 const queryData = () => {
   // 外部组件调用queryData接口 尚未完成初始化
@@ -2327,6 +2386,7 @@ const initConfig = async () => {
     console.log('init finish')
     config.key = config.key + 1
     console.debug(config, columnArray.value, columns.value, bindTabs.value)
+    emit('configLoaded', config, columnArray.value, columns.value, bindTabs.value)
     return await Promise.all(promiseList)
   })
 }
@@ -2656,6 +2716,45 @@ defineExpose({
   color: #374151;
   border-right: 1px solid #f3f4f6;
   transition: all 0.2s ease;
+}
+
+// 自定义展开图标样式
+:deep(.custom-expand-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #3b82f6;
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer !important;
+  transition: all 0.2s ease;
+  user-select: none;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  text-align: center;
+  vertical-align: middle;
+
+  &:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+
+  // 展开状态（减号）
+  &.custom-expand-icon-expanded {
+    color: #3b82f6;
+  }
+
+  // 折叠状态（加号）
+  &.custom-expand-icon-collapsed {
+    color: #3b82f6;
+  }
 }
 
 // 过滤器样式
