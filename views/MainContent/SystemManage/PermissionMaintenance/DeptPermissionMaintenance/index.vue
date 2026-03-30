@@ -177,8 +177,8 @@ watch(deptMultiSelect, (newVal, oldVal) => {
 let deptCheckStrictly: Ref<boolean> = ref(false)
 let deptTreeKey: Ref<number> = ref(0)
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
-let deptTreeCheckedKeys: Ref<Array<number>> = ref([])
-let halfCheckedKeys: Ref<Array<number>> = ref([])
+let deptTreeCheckedKeys: Ref<Array<string | number>> = ref([])
+let halfCheckedKeys: Ref<Array<string | number>> = ref([])
 let deptPermissionTreeData: Ref<Array<DataNode>> = ref([])
 let showPermissionTreeTab: Ref<boolean> = ref(false)
 let renderBindUserFlag: Ref<number> = ref(0)
@@ -354,8 +354,8 @@ const loadMultipleDeptPermissions = async (deptIds: string[]) => {
     keys.forEach(key => allPermissionKeys.add(key))
   })
 
-  const checkedKeys: number[] = []
-  const halfKeys: number[] = []
+  const checkedKeys: (string | number)[] = []
+  const halfKeys: (string | number)[] = []
   const deptCount = deptIds.length
 
   allPermissionKeys.forEach(key => {

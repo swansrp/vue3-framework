@@ -45,7 +45,7 @@
               />
               <span v-html="dataRef._highlightedTitle || dataRef.title"></span>
               <span
-                v-if="halfCheckedKeys.includes(dataRef.key)"
+                v-if="innerHalfCheckedKeys.includes(dataRef.key)"
                 class="partial-icon"
               >◐</span>
             </span>
