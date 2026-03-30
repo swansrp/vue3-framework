@@ -116,13 +116,16 @@
             tab="关联用户"
             :closable="false"
           >
-            <UserPermission
-              :current-user-group-info="{ id: selectedDeptId, name: selectedDeptName }"
-              :render-bind-user-flag="renderBindUserFlag"
-              :need-default-permission-select="true"
-              type="dept"
-              @import="handleImportUsers"
-            />
+            <template v-if="isSingleDeptSelected">
+              <UserPermission
+                :current-user-group-info="{ id: selectedSingleDeptId, name: selectedSingleDeptName }"
+                :render-bind-user-flag="renderBindUserFlag"
+                :need-default-permission-select="true"
+                type="dept"
+                @import="handleImportUsers"
+              />
+            </template>
+            <a-empty v-else description="关联用户功能仅支持单个部门，请只选择一个部门" />
           </a-tab-pane>
         </a-tabs>
         <div v-else>
@@ -195,6 +198,41 @@ const selectedDeptIds = computed(() => {
   } else {
     return selectedDeptId.value ? [selectedDeptId.value] : []
   }
+})
+
+// 计算属性：是否只选中了一个部门（单选模式或多选模式只选一个）
+const isSingleDeptSelected = computed(() => selectedDeptIds.value.length === 1)
+
+// 计算属性：获取单个选中部门的ID（用于关联用户功能）
+const selectedSingleDeptId = computed(() => {
+  if (deptMultiSelect.value) {
+    return selectedDeptIds.value[0] || ''
+  }
+  return selectedDeptId.value
+})
+
+// 计算属性：获取单个选中部门的名称（用于关联用户功能）
+const selectedSingleDeptName = computed(() => {
+  if (isSingleDeptSelected.value) {
+    // 多选模式下需要从树数据中查找名称
+    if (deptMultiSelect.value && selectedSingleDeptId.value) {
+      const findNodeName = (nodes: DataNode[], targetKey: string): string => {
+        for (const node of nodes) {
+          if (node.key === targetKey) {
+            return String(node.title || '')
+          }
+          if (node.children && node.children.length > 0) {
+            const result = findNodeName(node.children as DataNode[], targetKey)
+            if (result) return result
+          }
+        }
+        return ''
+      }
+      return findNodeName(filteredDeptTreeData.value, selectedSingleDeptId.value)
+    }
+    return selectedDeptName.value
+  }
+  return ''
 })
 
 const uploadFileModal = ref()
