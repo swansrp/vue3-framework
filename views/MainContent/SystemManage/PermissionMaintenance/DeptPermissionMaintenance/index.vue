@@ -125,7 +125,10 @@
                 @import="handleImportUsers"
               />
             </template>
-            <a-empty v-else description="关联用户功能仅支持单个部门，请只选择一个部门" />
+            <a-empty
+              v-else
+              description="关联用户功能仅支持单个部门，请只选择一个部门"
+            />
           </a-tab-pane>
         </a-tabs>
         <div v-else>

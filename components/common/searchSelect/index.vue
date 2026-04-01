@@ -213,7 +213,12 @@ const handleChange = (value: string | number | undefined) => {
 }
 
 // 监听外部值变化
-watch(() => props.modelValue, async (newVal) => {
+watch(() => props.modelValue, async (newVal, oldVal) => {
+  // 如果值相同，不重复处理
+  if (newVal === oldVal) return
+  // 如果都是空值，也不处理
+  if (!newVal && !oldVal) return
+  
   internalValue.value = newVal
   
   // 根据值加载对应的选项
