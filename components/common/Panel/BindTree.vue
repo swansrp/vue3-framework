@@ -76,8 +76,6 @@ interface Props {
   checkedKeys?: string[] | number[]
   /** 半选的keys（多选模式用） */
   halfCheckedKeys?: string[] | number[]
-  /** 是否多选模式 */
-  multiple?: boolean
   /** 绑定的实体ID数组 */
   entityIds?: string[]
   /** 绑定API函数 */
@@ -92,12 +90,11 @@ const props = withDefaults(defineProps<Props>(), {
   treeData: () => [],
   checkedKeys: () => [],
   halfCheckedKeys: () => [],
-  multiple: false,
   entityIds: () => [],
   loading: false
 })
 
-const { treeData, checkedKeys, halfCheckedKeys, multiple, entityIds, bindApi, unbindApi, loading } = toRefs(props)
+const { treeData, checkedKeys, halfCheckedKeys, entityIds, bindApi, unbindApi, loading } = toRefs(props)
 
 // Emits 定义
 const emit = defineEmits<{

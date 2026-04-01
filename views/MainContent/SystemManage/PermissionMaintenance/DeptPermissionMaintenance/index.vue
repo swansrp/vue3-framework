@@ -317,7 +317,7 @@ const loadTabData = (deptId: string) => {
 }
 
 // 多选模式下勾选部门节点
-const onCheckDeptNode = (checked: string[] | { checked: string[]; halfChecked: string[] }, e: { checked: boolean, node: DataNode }) => {
+const onCheckDeptNode = (checked: string[] | { checked: string[]; halfChecked: string[] }, _e: { checked: boolean, node: DataNode }) => {
   // 根据 check-strictly 模式获取实际的 checked 数组
   const checkedArr = Array.isArray(checked) ? checked : checked.checked
 
