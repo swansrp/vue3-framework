@@ -8,7 +8,6 @@ import { SaveOutlined, DeleteOutlined, DownOutlined, UpOutlined, MenuFoldOutline
 import { ref, computed, watch, provide, nextTick, useSlots } from 'vue'
 import { useRouter } from 'vue-router'
 
-import EvalGroupForm from './GroupForm.vue'
 import ModuleSteps from './ModuleSteps.vue'
 import SectionNavTree from './SectionNavTree.vue'
 import type { SectionInstance, SectionProgress, MutualExclusiveGroup } from './useFormData'
@@ -644,7 +643,7 @@ defineExpose({
                 :key="group.id"
                 class="group-block"
               >
-                <EvalGroupForm
+                <GroupForm
                   :ref="(el) => { if (el) groupFormRefs[`${currentInstance.instanceId}_${String(group.id)}`] = el }"
                   :group="{
                     id: String(group.id),
@@ -659,7 +658,7 @@ defineExpose({
                   :rows="getGroupRows(currentInstance.instanceId, String(group.id))"
                   :readonly="readonly"
                   :show-save-button="showSaveButton"
-                  :is-default-group="group.sort === 0"
+                  :is-default-group="getDisplayGroups(currentInstance.sectionId).length === 1 && !(group.children && group.children.length > 0)"
                   :is-first-group="groupIndex === 0"
                   :dict-translate-fn="translateDictValue"
                   :default-values="currentModule?.defaultValues"
@@ -787,7 +786,7 @@ defineExpose({
                       @update:value="updateValue"
                     />
                   </template>
-                </EvalGroupForm>
+                </GroupForm>
               </div>
             </div>
 

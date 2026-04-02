@@ -645,6 +645,45 @@ defineExpose({
       v-show="!collapsed || !showGroupTitle"
       class="group-content"
     >
+      <!-- 默认分组的进度显示 -->
+      <div
+        v-if="isDefaultGroup && showProgress"
+        class="default-group-progress"
+      >
+        <template v-if="isComplete">
+          <span class="progress-text complete">
+            <CheckCircleFilled /> 已完成
+          </span>
+        </template>
+        <template v-else-if="isContainerGroup">
+          <span
+            v-if="progress.filled > 0"
+            class="progress-text in-progress"
+          >
+            <MinusCircleFilled /> 已完成 {{ progress.filled }}/{{ progress.total }} 个子分组
+          </span>
+          <span
+            v-else
+            class="progress-text empty"
+          >
+            未填写
+          </span>
+        </template>
+        <template v-else>
+          <span
+            v-if="progress.filled > 0"
+            class="progress-text in-progress"
+          >
+            <MinusCircleFilled /> 已填 {{ progress.filled }}/{{ progress.total }}
+          </span>
+          <span
+            v-else
+            class="progress-text empty"
+          >
+            未填写
+          </span>
+        </template>
+      </div>
       <!-- 单组模式：只显示一个表单（仅在有字段定义或没有子分组时显示） -->
       <div
         v-if="!isMultiMode && (attributes.length > 0 || !hasChildGroups)"
@@ -839,7 +878,7 @@ defineExpose({
       v-if="hasChildGroups && !collapsed"
       class="child-groups"
     >
-      <EvalGroupForm
+      <GroupForm
         v-for="childGroup in group.children"
         :key="childGroup.id"
         :ref="setChildGroupRef(String(childGroup.id))"
@@ -919,7 +958,7 @@ defineExpose({
             v-bind="slotProps"
           ></slot>
         </template>
-      </EvalGroupForm>
+      </GroupForm>
     </div>
   </div>
 </template>
@@ -1018,24 +1057,25 @@ defineExpose({
         justify-content: center;
       }
     }
+  }
+  
+  // 进度文本样式（通用）
+  .progress-text {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     
-    .progress-text {
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      
-      &.complete {
-        color: #52c41a;
-      }
-      
-      &.in-progress {
-        color: #1890ff;
-      }
-      
-      &.empty {
-        color: #999;
-      }
+    &.complete {
+      color: #52c41a;
+    }
+    
+    &.in-progress {
+      color: #1890ff;
+    }
+    
+    &.empty {
+      color: #999;
     }
   }
   
@@ -1043,6 +1083,16 @@ defineExpose({
     padding: 16px;
     background: #fff;
     animation: slideDown 0.3s ease;
+  }
+
+  .default-group-progress {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+    margin-right: 12px;
+    margin-top: 1px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
   }
 
   .single-form {

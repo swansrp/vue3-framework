@@ -118,11 +118,12 @@ watch(() => localFormData.value.label, (newLabel) => {
   }
 })
 
-// 监听字段类型变化，区域标题和分割线自动设置宽度和X坐标
+// 监听字段类型变化，区域标题和分割线自动设置宽度、X坐标和非必填
 watch(() => localFormData.value.fieldType, (newType) => {
   if (newType === '-1' || newType === '-2') {
     localFormData.value.width = 100
     localFormData.value.positionX = 0
+    localFormData.value.isRequired = '0'  // 区域标题和分割线自动设置为非必填
   }
 })
 

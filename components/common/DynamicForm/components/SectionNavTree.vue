@@ -118,10 +118,22 @@ const getInstanceStatus = (instanceId: string): 'complete' | 'inProgress' | 'emp
   return 'empty'
 }
 
-// 获取实例进度
-const getInstanceProgress = (instanceId: string): SectionProgress | null => {
-  if (!props.getSectionProgress) return null
-  return props.getSectionProgress(instanceId)
+// 缓存所有实例的进度数据（避免模板中多次调用函数）
+const instanceProgressMap = computed(() => {
+  const map: Record<string, SectionProgress> = {}
+  if (!props.getSectionProgress) return map
+  
+  props.instances.forEach(instance => {
+    const progress = props.getSectionProgress!(instance.instanceId)
+    map[instance.instanceId] = progress
+  })
+  
+  return map
+})
+
+// 获取缓存的实例进度
+const getCachedProgress = (instanceId: string): SectionProgress | null => {
+  return instanceProgressMap.value[instanceId] || null
 }
 
 // 是否可以添加实例
@@ -270,15 +282,18 @@ const handleRemoveInstance = (instanceId: string, event: Event) => {
             </div>
             
             <!-- 第二行：进度条 -->
-            <div
-              v-if="getInstanceProgress(instance.instanceId)"
-              class="progress-bar"
-            >
-              <div
-                class="progress-fill"
-                :style="{ width: `${getInstanceProgress(instance.instanceId)?.percent || 0}%` }"
-              ></div>
-            </div>
+            <template v-if="getCachedProgress(instance.instanceId)">
+              <a-tooltip
+                :title="`已完成 ${getCachedProgress(instance.instanceId)!.completed}/${getCachedProgress(instance.instanceId)!.total} 项`"
+              >
+                <div class="progress-bar">
+                  <div
+                    class="progress-fill"
+                    :style="{ width: `${getCachedProgress(instance.instanceId)!.percent}%` }"
+                  ></div>
+                </div>
+              </a-tooltip>
+            </template>
           </div>
         </div>
         

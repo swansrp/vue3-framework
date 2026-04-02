@@ -408,6 +408,14 @@ export function useFormData() {
         }
         
         if (loadedInstances.length > 0) {
+          // 按照 availableSections 的顺序排序（availableSections 已按 sort 字段排序）
+          const sectionOrderMap = new Map(availableSections.value.map((s, index) => [String(s.id), index]))
+          loadedInstances.sort((a, b) => {
+            const orderA = sectionOrderMap.get(a.sectionId) ?? Infinity
+            const orderB = sectionOrderMap.get(b.sectionId) ?? Infinity
+            return orderA - orderB
+          })
+          
           sectionInstances.value = loadedInstances
         }
       }
@@ -563,16 +571,35 @@ export function useFormData() {
     const sectionId = String(instance.sectionId)
     const groups = sectionGroups.value[sectionId] || []
     
+    // 过滤掉容器型 group（没有自己的 attributes 的 group 不计入进度）
+    const groupsWithAttrs = groups.filter(group => {
+      const attrs = getGroupAttributes(sectionId, String(group.id))
+      return attrs.length > 0 // 只有有字段的 group 才计入进度
+    })
+    
     let completedGroups = 0
-    for (const group of groups) {
+    const groupDetails: Array<{ id: string; title: string; filled: number; total: number; percent: number; isComplete: boolean }> = []
+    
+    for (const group of groupsWithAttrs) {
       const progress = getGroupProgress(sectionInstanceId, String(group.id))
-      if (progress.percent === 100) completedGroups++
+      const isComplete = progress.percent === 100
+      if (isComplete) completedGroups++
+      
+      groupDetails.push({
+        id: String(group.id),
+        title: group.title || '',
+        filled: progress.filled,
+        total: progress.total,
+        percent: progress.percent,
+        isComplete
+      })
     }
+    
     
     return {
       completed: completedGroups,
-      total: groups.length,
-      percent: groups.length > 0 ? Math.round(completedGroups / groups.length * 100) : 0
+      total: groupsWithAttrs.length,
+      percent: groupsWithAttrs.length > 0 ? Math.round(completedGroups / groupsWithAttrs.length * 100) : 0
     }
   }
 
