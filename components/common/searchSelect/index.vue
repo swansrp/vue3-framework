@@ -195,11 +195,16 @@ const searchData = debounce(async (keyword: string) => {
   } finally {
     loading.value = false
   }
+  // 当只有一个结果时自动选择，但只在值真正变化时才 emit
   if (options.value.length === 1) {
     const option = options.value[0]
-    internalValue.value = option[props.valueField]
-    emit('update:modelValue', internalValue.value)
-    emit('change', internalValue.value, option)
+    const newValue = option[props.valueField]
+    // 只有当值真正变化时才触发事件，避免循环触发
+    if (newValue !== internalValue.value) {
+      internalValue.value = newValue
+      emit('update:modelValue', internalValue.value)
+      emit('change', internalValue.value, option)
+    }
   }
 }, props.debounceTime)
 
