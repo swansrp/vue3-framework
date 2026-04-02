@@ -12,7 +12,7 @@
       <a-input
         v-model:value="formData.userName"
         :autocomplete="rememberPassword ? 'username' : 'new-password'"
-        :name="rememberPassword ? 'username' : 'username-' + Date.now()"
+        :name="rememberPassword ? 'username' : 'username-' + randomSuffix"
         placeholder="用户名"
         size="large"
       >
@@ -28,7 +28,7 @@
       <a-input-password
         v-model:value="formData.password"
         :autocomplete="rememberPassword ? 'current-password' : 'new-password'"
-        :name="rememberPassword ? 'password' : 'password-' + Date.now()"
+        :name="rememberPassword ? 'password' : 'password-' + randomSuffix"
         placeholder="密码"
         size="large"
         type="password"
@@ -116,10 +116,16 @@ const formData = reactive({
 // 记住密码选项
 const rememberPassword = ref(false)
 
+// 生成固定的随机后缀，避免每次渲染时变化导致输入框重新渲染
+const randomSuffix = ref('')
+
 // 从 localStorage 读取记住密码设置
 onMounted(() => {
   const savedRememberPassword = localStorageMethods.getLocalStorage('REMEMBER_PASSWORD', 'false')
   rememberPassword.value = savedRememberPassword === 'true'
+  
+  // 生成固定的随机后缀
+  randomSuffix.value = Date.now().toString()
   
   // 如果不记住密码，延迟清空表单（防止浏览器自动填充）
   if (!rememberPassword.value) {
