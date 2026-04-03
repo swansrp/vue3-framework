@@ -7,6 +7,7 @@ import GridDraggableLayout, { type GridItem } from './GridDraggableLayout.vue'
 import DynamicFormItem from '@/framework/components/common/DragGrid/DynamicFormItem.vue'
 import { evaluateVisibility } from '@/framework/components/common/DragGrid/visibilityCondition'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
+import { strRemoveLF } from '@/framework/utils/common'
 
 /**
  * 表单字段项接口
@@ -225,38 +226,40 @@ const getFieldRules = (field: T) => {
 
   // 必填验证
   if (field.isRequired === '1') {
+    // 移除 label 中的换行符，用于错误提示信息
+    const labelWithoutLF = strRemoveLF(field.label)
     // Switch 类型的必填校验：'0' 和 '1' 都是有效值
     if (field.fieldType === FIELD_TYPE.SWITCH) {
       rules.push({
         required: true,
-        message: `请选择${field.label}`,
+        message: `请选择${labelWithoutLF}`,
         trigger: ['blur', 'change'],
         validator: (_rule: any, value: any) => {
           // Switch 的值为 '0' 或 '1' 都算有效
           if (value === '0' || value === '1') {
             return Promise.resolve()
           }
-          return Promise.reject(`请选择${field.label}`)
+          return Promise.reject(`请选择${labelWithoutLF}`)
         }
       })
     } else if (isFileType(field.fieldType)) {
       // 文件类型的必填校验：必须有实际的 URL 值
       rules.push({
         required: true,
-        message: `请上传${field.label}`,
+        message: `请上传${labelWithoutLF}`,
         trigger: ['blur', 'change'],
         validator: (_rule: any, value: any) => {
           // 有值且不是空字符串即为有效
           if (value && value.trim() !== '') {
             return Promise.resolve()
           }
-          return Promise.reject(`请上传${field.label}`)
+          return Promise.reject(`请上传${labelWithoutLF}`)
         }
       })
     } else {
       rules.push({
         required: true,
-        message: `请输入${field.label}`,
+        message: `请输入${labelWithoutLF}`,
         trigger: ['blur', 'change']
       })
     }
@@ -541,6 +544,10 @@ defineExpose({
     :deep(.ant-form-item-explain) {
       font-size: 12px;
       line-height: 1;
+      position: absolute;
+      bottom: 2px;
+      left: 0;
+      z-index: 10;
 
       .ant-form-item-explain-error {
         white-space: nowrap;
