@@ -187,8 +187,13 @@ const updateContainerProgress = () => {
   }
 }
 
+// 记录用户主动编辑过的字段（key: `${groupInstanceId}_${attributeId}`）
+const userTouchedFields = new Set<string>()
+
 // 字段值变化处理
 const handleFieldChange = (groupInstanceId: string, attributeId: string, value: any) => {
+  // 标记该字段已被用户交互过
+  userTouchedFields.add(`${groupInstanceId}_${attributeId}`)
   // 实时更新本地数据状态，用于进度计算
   updateLocalRowData(groupInstanceId, attributeId, value)
   emit('updateData', groupInstanceId, attributeId, value)
@@ -217,16 +222,28 @@ watch(() => props.rows, () => {
   initLocalRowsData()
 }, { immediate: true, deep: true })
 
-// 计算填写进度（基于本地实时数据）
+// 判断字段是否算作已填写（考虑后端数据和默认值）
+// 如果用户主动清空了字段，则不再用默认值算作已填写
+const isFieldFilled = (groupInstanceId: string, rowData: Record<string, any>, attr: Attribute): boolean => {
+  const value = rowData[attr.id]
+  if (value !== undefined && value !== null && value !== '') return true
+  // 用户主动清空过的字段，不算已填写
+  if (userTouchedFields.has(`${groupInstanceId}_${attr.id}`)) return false
+  // 后端没有值且用户未编辑过时，检查是否有默认值
+  const defaultValue = props.defaultValues?.[attr.name] ?? attr.defaultValue
+  return defaultValue !== undefined && defaultValue !== null && defaultValue !== ''
+}
+
+// 计算填写进度（基于本地实时数据，同时考虑默认值）
 const progress = computed<GroupProgress>(() => {
   // 容器型分组：返回缓存的进度（不在 computed 中访问子组件）
   if (isContainerGroup.value) {
     return containerProgress.value
   }
   
-  // 获取本地实时数据
-  const localRows = Object.values(localRowsData.value)
-  const rowCount = Math.max(1, localRows.length || props.rows.length)
+  // 获取本地实时数据（保留 groupInstanceId 用于判断 touched 状态）
+  const localRowsEntries = Object.entries(localRowsData.value)
+  const rowCount = Math.max(1, localRowsEntries.length || props.rows.length)
   
   // 普通分组：基于字段填写情况计算进度
   const requiredAttrs = props.attributes.filter(a => a.isRequired === '1')
@@ -237,10 +254,9 @@ const progress = computed<GroupProgress>(() => {
     let filled = 0
     let total = props.attributes.length * rowCount
     
-    for (const rowData of localRows) {
+    for (const [groupInstanceId, rowData] of localRowsEntries) {
       for (const attr of props.attributes) {
-        const value = rowData[attr.id]
-        if (value !== undefined && value !== null && value !== '') {
+        if (isFieldFilled(groupInstanceId, rowData, attr)) {
           filled++
         }
       }
@@ -255,10 +271,9 @@ const progress = computed<GroupProgress>(() => {
   
   // 有必填字段，只统计必填字段
   let filled = 0
-  for (const rowData of localRows) {
+  for (const [groupInstanceId, rowData] of localRowsEntries) {
     for (const attr of requiredAttrs) {
-      const value = rowData[attr.id]
-      if (value !== undefined && value !== null && value !== '') {
+      if (isFieldFilled(groupInstanceId, rowData, attr)) {
         filled++
       }
     }
@@ -314,18 +329,27 @@ const toggleCollapse = () => {
 }
 
 // 转换attributes为FormFieldItem格式（用于单行或多行的每一行）
-const convertToFormFields = (rowData: Record<string, any>): FormFieldItem[] => {
+// useLocalData: 是否使用的是本地实时数据（用户已交互过），此时不再自动填充默认值
+const convertToFormFields = (rowData: Record<string, any>, useLocalData = false): FormFieldItem[] => {
   return props.attributes.map(attr => {
     const widthPercent = attr.width ? Math.round(attr.width) : 10
     const posXPercent = attr.positionX !== undefined && attr.positionX !== null ? Math.round(attr.positionX) : 0
     
     // 值的优先级：实际数据 > 默认值（外部传入） > 字段默认值
+    // 只有在非本地数据（后端原始数据）时才自动填充默认值
     const actualValue = rowData[attr.id]
-    const defaultValue = props.defaultValues?.[attr.name] ?? attr.defaultValue
+    let data: any
+    if (useLocalData) {
+      // 用户已交互过，严格使用当前值，不自动填充默认值
+      data = actualValue
+    } else {
+      const defaultValue = props.defaultValues?.[attr.name] ?? attr.defaultValue
+      data = actualValue ?? defaultValue ?? undefined
+    }
     
     return {
       ...attr,
-      data: actualValue ?? defaultValue ?? undefined,
+      data,
       width: widthPercent,
       height: attr.height || 1,
       positionX: posXPercent,
@@ -334,10 +358,16 @@ const convertToFormFields = (rowData: Record<string, any>): FormFieldItem[] => {
   })
 }
 
-// 单组模式的表单字段
+// 单组模式的表单字段（优先使用 localRowsData，允许用户清空默认值）
 const singleFormFields = computed(() => {
   const firstRow = props.rows[0]
-  return firstRow ? convertToFormFields(firstRow.data) : convertToFormFields({})
+  if (firstRow) {
+    const localData = localRowsData.value[firstRow.groupInstanceId]
+    // 如果 localRowsData 有该行的数据（用户可能已清空），优先使用
+    // 否则回退到 props.rows 的原始数据
+    return convertToFormFields(localData !== undefined ? localData : firstRow.data, localData !== undefined)
+  }
+  return convertToFormFields({}, false)
 })
 
 // 单组模式的 groupInstanceId
@@ -345,12 +375,16 @@ const singleGroupInstanceId = computed(() => {
   return props.rows[0]?.groupInstanceId || ''
 })
 
-// 多组模式的行列表
+// 多组模式的行列表（优先使用 localRowsData，允许用户清空默认值）
 const multiRows = computed(() => {
-  return props.rows.map((row) => ({
-    ...row,
-    fields: convertToFormFields(row.data)
-  }))
+  return props.rows.map((row) => {
+    const localData = localRowsData.value[row.groupInstanceId]
+    const useLocal = localData !== undefined
+    return {
+      ...row,
+      fields: convertToFormFields(useLocal ? localData : row.data, useLocal)
+    }
+  })
 })
 
 // GridDraggableForm 组件的 ref

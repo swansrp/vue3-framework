@@ -33,7 +33,6 @@ import {
 } from './apis/formDataSectionInstancePortalController'
 import EvalFormViewer from './components/FormViewer.vue'
 import { useFormData } from './components/useFormData'
-import { useFormDataPdf } from './components/useFormDataPdf'
 
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
@@ -62,11 +61,11 @@ interface Props {
   /** 字段默认值，key=fieldName, value=默认值 */
   defaultValues?: Record<string, any>
   /** 企业ID，用于 dict 组件的 entity-id */
-  enterpriseId?: string
+  enterpriseId?: string | number
   /** 模式：fill=填报模式，approve=审核模式 */
   mode?: 'fill' | 'approve'
   /** 业务状态（可选，覆盖 historyInfo.status）：0=未提交，1=待审核，2=未通过，3=已通过 */
-  status?: '0' | '1' | '2' | '3'
+  status?: string | '0' | '1' | '2' | '3'
   /** 拒绝理由（拒绝状态时显示） */
   rejectReason?: string
 }
@@ -167,9 +166,6 @@ const {
   lazyCreate,
   createHistoryId
 } = useFormData()
-
-// PDF 导出
-const { exportPdf } = useFormDataPdf()
 
 // 当前状态（优先使用 props.status，否则使用 historyInfo.status）
 const currentStatus = computed(() => props.status ?? historyInfo.value?.status ?? '')
@@ -1402,7 +1398,6 @@ defineExpose({
   handleApprove,
   handleReject,
   init,
-  exportPdf,
   // 属性
   historyInfo,
   formInfo,

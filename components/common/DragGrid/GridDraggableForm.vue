@@ -73,6 +73,9 @@ const formRef = ref()
 // 表单数据模型
 const formModel = ref<Record<string, any>>({})
 
+// 记录用户是否主动编辑过某个字段（key: fieldName）
+const userTouchedFields = new Set<string>()
+
 // 初始化表单数据
 const initFormData = () => {
   const data: Record<string, any> = {}
@@ -81,7 +84,12 @@ const initFormData = () => {
     if (field.fieldType === FIELD_TYPE.SWITCH) {
       data[field.name] = field.data || field.defaultValue || undefined
     } else {
-      data[field.name] = field.data || field.defaultValue || undefined
+      // 如果用户主动清空过该字段，不再用默认值回填
+      if (userTouchedFields.has(field.name)) {
+        data[field.name] = field.data ?? undefined
+      } else {
+        data[field.name] = field.data || field.defaultValue || undefined
+      }
     }
   })
   formModel.value = data
@@ -177,6 +185,9 @@ watch(formModel, (newModel) => {
     
     // 只在值真正变化时触发
     if (newValue !== oldValue) {
+      // 标记该字段已被用户交互过（用于阻止默认值回填）
+      userTouchedFields.add(fieldName)
+      
       const fieldId = fieldNameToId.value.get(fieldName)
       if (fieldId !== undefined) {
         emit('fieldChange', fieldId, newValue)
@@ -187,6 +198,7 @@ watch(formModel, (newModel) => {
           // 清空所有子属性的值
           children.forEach(childFieldName => {
             formModel.value[childFieldName] = undefined
+            userTouchedFields.add(childFieldName)
           })
         }
       }
