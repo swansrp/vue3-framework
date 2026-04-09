@@ -133,7 +133,7 @@ const activeKey = ref('1')
 const title: Ref<string> = ref(document.title)
 const router = useRouter()
 const loading: Ref<boolean> = ref(false)
-const formInline = reactive({ userName: '', password: '', captcha: '' })
+const formInline = reactive({ userName: '', password: '', captcha: '', rememberPassword: false })
 const passwordResetMode: Ref<Boolean> = ref(false)
 const registerMode: Ref<Boolean> = ref(false)
 const registerWithPhoneNumber: Ref<boolean> = ref(false)
@@ -181,7 +181,7 @@ const recoveryFun = (captchaType: string) => {
 }
 
 // 账号登录处理
-const handleAccountLogin = (data: { userName: string; password: string; captcha: string }) => {
+const handleAccountLogin = (data: { userName: string; password: string; captcha: string; rememberPassword: boolean }) => {
   Object.assign(formInline, data)
   handleSubmit()
 }
@@ -394,6 +394,16 @@ const afterLogin = (res: any) => {
   const { accessToken, refreshToken } = res.payload
   localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, accessToken)
   localStorageMethods.setLocalStorage(REFRESH_TOKEN, refreshToken)
+  
+  // 如果勾选了记住密码，保存用户名和密码（base64编码）
+  if (formInline.rememberPassword) {
+    const encodeBase64 = (str: string): string => {
+      return btoa(unescape(encodeURIComponent(str)))
+    }
+    localStorageMethods.setLocalStorage('SAVED_USERNAME', formInline.userName)
+    localStorageMethods.setLocalStorage('SAVED_PASSWORD', encodeBase64(formInline.password))
+  }
+  
   loading.value = false
   // 注意：loginProcessLoading 在动画结束后才重置
 

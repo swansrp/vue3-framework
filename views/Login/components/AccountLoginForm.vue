@@ -87,7 +87,7 @@
 
 <script lang="ts" setup>
 import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons-vue'
-import { onMounted, ref, reactive, watch, nextTick } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 
 import { localStorageMethods } from '@/framework/utils/common'
 
@@ -97,7 +97,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'submit', data: { userName: string; password: string; captcha: string }): void
+  (e: 'submit', data: { userName: string; password: string; captcha: string; rememberPassword: boolean }): void
   (e: 'update-captcha', type: string): void
 }
 
@@ -119,6 +119,19 @@ const rememberPassword = ref(false)
 // 生成固定的随机后缀，避免每次渲染时变化导致输入框重新渲染
 const randomSuffix = ref('')
 
+// Base64 编解码工具
+const encodeBase64 = (str: string): string => {
+  return btoa(unescape(encodeURIComponent(str)))
+}
+
+const decodeBase64 = (str: string): string => {
+  try {
+    return decodeURIComponent(escape(atob(str)))
+  } catch {
+    return ''
+  }
+}
+
 // 从 localStorage 读取记住密码设置
 onMounted(() => {
   const savedRememberPassword = localStorageMethods.getLocalStorage('REMEMBER_PASSWORD', 'false')
@@ -127,8 +140,13 @@ onMounted(() => {
   // 生成固定的随机后缀
   randomSuffix.value = Date.now().toString()
   
-  // 如果不记住密码，延迟清空表单（防止浏览器自动填充）
-  if (!rememberPassword.value) {
+  // 如果记住密码，读取保存的用户名和密码
+  if (rememberPassword.value) {
+    formData.userName = localStorageMethods.getLocalStorage('SAVED_USERNAME', '')
+    const savedPassword = localStorageMethods.getLocalStorage('SAVED_PASSWORD', '')
+    formData.password = savedPassword ? decodeBase64(savedPassword) : ''
+  } else {
+    // 如果不记住密码，延迟清空表单（防止浏览器自动填充）
     setTimeout(() => {
       formData.userName = ''
       formData.password = ''
@@ -136,23 +154,18 @@ onMounted(() => {
   }
 })
 
-// 监听记住密码选项变化，取消勾选时清空表单
-watch(rememberPassword, (newVal) => {
-  if (!newVal) {
-    nextTick(() => {
-      formData.userName = ''
-      formData.password = ''
-    })
-  }
-})
-
 // 处理记住密码选项变化
 const handleRememberChange = (e: any) => {
   const checked = e.target.checked
   localStorageMethods.setLocalStorage('REMEMBER_PASSWORD', checked ? 'true' : 'false')
+  // 取消记住密码时，清除保存的用户名和密码
+  if (!checked) {
+    localStorageMethods.setLocalStorage('SAVED_USERNAME', '')
+    localStorageMethods.setLocalStorage('SAVED_PASSWORD', '')
+  }
 }
 
 const handleSubmit = () => {
-  emit('submit', { ...formData })
+  emit('submit', { ...formData, rememberPassword: rememberPassword.value })
 }
 </script>
