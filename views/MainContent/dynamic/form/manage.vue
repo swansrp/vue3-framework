@@ -107,7 +107,7 @@ const getStatusText = (status: string) => {
           </template>
 
           <!-- 自定义表单 -->
-          <template #form="{ formData, isEdit, formRef }">
+          <template #form="{ formData, formRef }">
             <a-form
               :ref="(el: any) => { if (el) formRef = el }"
               :model="formData"

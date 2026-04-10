@@ -49,7 +49,7 @@ const handleDelete = (module: Module, event: Event) => {
     @change="handleStepChange"
   >
     <a-step
-      v-for="(module, index) in modules"
+      v-for="(module) in modules"
       :key="module.id"
       :title="module.title"
     >

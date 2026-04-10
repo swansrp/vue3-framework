@@ -280,7 +280,7 @@ defineExpose({
     @search="searchData"
   >
     <!-- 下拉选项的自定义渲染 -->
-    <template #option="{ label, value, data }">
+    <template #option="{ label, data }">
       <slot
         name="option"
         :option="data"

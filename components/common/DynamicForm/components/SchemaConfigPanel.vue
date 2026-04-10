@@ -816,13 +816,13 @@ watch(() => props.formId, () => {
       @save="handleSaveAttribute"
     >
       <!-- 自定义 select 组件：使用 Dict 替换默认的 a-select -->
-      <template #select="{ attribute, value, readonly, updateValue, parentValue }">
+      <template #select="{ attribute, value, readonly: isReadonly, updateValue, parentValue }">
         <!-- 如果字段有 dict 属性，使用 Dict -->
         <dict
           v-if="attribute.dict"
           :dict-code="attribute.dict"
           :parent-code="parentValue"
-          :disabled="readonly"
+          :disabled="isReadonly"
           :model-value="value"
           :placeholder="`请选择${attribute.label}`"
           :is-manage-mode="true"
@@ -832,7 +832,7 @@ watch(() => props.formId, () => {
         <!-- 否则使用默认的 a-select -->
         <a-select
           v-else
-          :disabled="readonly"
+          :disabled="isReadonly"
           :placeholder="`请选择${attribute.label}`"
           :value="value"
           style="width: 100%"
@@ -841,12 +841,12 @@ watch(() => props.formId, () => {
       </template>
 
       <!-- 自定义 selectMulti 组件 -->
-      <template #selectMulti="{ attribute, value, readonly, updateValue, parentValue }">
+      <template #selectMulti="{ attribute, value, readonly: isReadonly, updateValue, parentValue }">
         <dict
           v-if="attribute.dict"
           :dict-code="attribute.dict"
           :parent-code="parentValue"
-          :disabled="readonly"
+          :disabled="isReadonly"
           :model-value="value"
           :placeholder="`请选择${attribute.label}`"
           :is-manage-mode="true"
@@ -856,7 +856,7 @@ watch(() => props.formId, () => {
         />
         <a-select
           v-else
-          :disabled="readonly"
+          :disabled="isReadonly"
           :placeholder="`请选择${attribute.label}`"
           :value="value"
           mode="multiple"
@@ -866,9 +866,9 @@ watch(() => props.formId, () => {
       </template>
 
       <!-- 自定义 tree 组件 -->
-      <template #tree="{ attribute, value, readonly, updateValue }">
+      <template #tree="{ attribute, value, readonly: isReadonly, updateValue }">
         <a-tree-select
-          :disabled="readonly"
+          :disabled="isReadonly"
           :placeholder="`请选择${attribute.label}`"
           :value="value"
           style="width: 100%"
@@ -877,9 +877,9 @@ watch(() => props.formId, () => {
       </template>
 
       <!-- 自定义 treeMulti 组件 -->
-      <template #treeMulti="{ attribute, value, readonly, updateValue }">
+      <template #treeMulti="{ attribute, value, readonly: isReadonly, updateValue }">
         <a-tree-select
-          :disabled="readonly"
+          :disabled="isReadonly"
           :placeholder="`请选择${attribute.label}`"
           :value="value"
           multiple
