@@ -119,11 +119,7 @@ const rememberPassword = ref(false)
 // 生成固定的随机后缀，避免每次渲染时变化导致输入框重新渲染
 const randomSuffix = ref('')
 
-// Base64 编解码工具
-const encodeBase64 = (str: string): string => {
-  return btoa(unescape(encodeURIComponent(str)))
-}
-
+// Base64 解码工具
 const decodeBase64 = (str: string): string => {
   try {
     return decodeURIComponent(escape(atob(str)))

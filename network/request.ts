@@ -11,10 +11,27 @@ export const domain = '/' + name
 message.config({ maxCount: 1 })
 
 /**
+ * 生成 UUID v4 (兼容旧版浏览器)
+ */
+const generateUUID = (): string => {
+  // 检查是否支持 crypto.randomUUID
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  
+  // 降级方案：使用数学方法生成 UUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+/**
  * 生成唯一请求ID
  * 格式: 年月日时分秒毫秒_UUID
  */
-const generateRequestId = (): string => `${new Date().toISOString().replace(/[-:T.Z]/g, '')}_${crypto.randomUUID().replace(/-/g, '')}`
+const generateRequestId = (): string => `${new Date().toISOString().replace(/[-:T.Z]/g, '')}_${generateUUID().replace(/-/g, '')}`
 
 /**
  * 自定义JSON解析器，将大整数转换为字符串以避免精度丢失
@@ -328,7 +345,7 @@ const downloadBlob = (blob: Blob, fileName: string | undefined) => {
   // IE10以上支持blob但是依然不支持download
   if ('download' in document.createElement('a')) { // 支持a标签download的浏览器
     const link = document.createElement('a') // 创建a标签
-    link.download = fileName || window.crypto.randomUUID() // a 标签添加属性
+    link.download = fileName || generateUUID() // a 标签添加属性
     link.style.display = 'none'
     link.href = URL.createObjectURL(blob)
     document.body.appendChild(link)

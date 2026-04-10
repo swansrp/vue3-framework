@@ -50,9 +50,34 @@ preview(){
 		echo "部署文件不存在"
 		return 0;
 	fi
+	
+	echo "开始压缩文件..."
+	# 删除旧的压缩包
+	if test -f ${basepath}/dist.tar.gz; then
+		rm -f ${basepath}/dist.tar.gz
+	fi
+	
+	# 压缩 dist 目录
+	cd ${basepath}
+	tar -czf dist.tar.gz dist/
+	cd - > /dev/null
+	
+	echo "压缩完成,开始上传..."
+	# 清理远程预览目录
 	send "rm -rf ${previewRemoteDir}-${projectDir}"
 	send "mkdir -p ${previewRemoteDir}-${projectDir}"
-	scp -r -O ${basepath}/dist/* ${ssh_config}:"${previewRemoteDir}-${projectDir}"
+	
+	# 上传压缩包
+	scp -O ${basepath}/dist.tar.gz ${ssh_config}:"${previewRemoteDir}-${projectDir}/"
+	
+	# 远程解压缩
+	echo "开始解压缩..."
+	send "cd ${previewRemoteDir}-${projectDir} && tar -xzf dist.tar.gz && rm -f dist.tar.gz && mv dist/* . && rm -rf dist/"
+	
+	# 删除本地压缩包
+	rm -f ${basepath}/dist.tar.gz
+	
+	echo "部署完成!"
 	return 0
 }
 
