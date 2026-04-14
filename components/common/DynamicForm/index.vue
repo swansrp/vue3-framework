@@ -1361,6 +1361,106 @@ const handleLazySubmit = async () => {
   })
 }
 
+// 初始化 defaultValue 并保存到后端
+const initDefaultValues = async () => {
+  // 只在有 defaultValues 且可编辑时才执行
+  if (!props.defaultValues || !canEdit.value) {
+    return
+  }
+
+  let hasSaved = false
+
+  // 遍历所有 section instances
+  for (const sectionInst of sectionInstances.value) {
+    const sectionInstanceId = sectionInst.instanceId
+    const sectionId = sectionInst.sectionId
+    
+    // 获取该 section 的所有 attributes
+    const attributes = sectionAttributes.value[sectionId] || []
+    
+    // 构建 fieldName -> attribute 的映射
+    const attrMap = new Map<string, any>()
+    attributes.forEach(attr => {
+      attrMap.set(attr.name, attr)
+    })
+    
+    // 遍历所有 group instances
+    const groupInsts = groupInstances.value[sectionInstanceId] || []
+    
+    for (const groupInst of groupInsts) {
+      const groupInstanceId = groupInst.groupInstanceId
+      
+      // 检查每个字段，如果后端没有值但有 defaultValue，则保存
+      for (const [fieldName, defaultValue] of Object.entries(props.defaultValues)) {
+        const attr = attrMap.get(fieldName)
+        if (!attr) {
+          console.warn(`[DynamicForm] 找不到字段: ${fieldName}`)
+          continue
+        }
+        
+        const attributeId = String(attr.id)
+        const currentValue = groupInst.data[attributeId]
+        
+        // 如果后端没有值（undefined、null、空字符串），但有 defaultValue
+        if ((currentValue === undefined || currentValue === null || currentValue === '') && 
+            defaultValue !== undefined && defaultValue !== null && defaultValue !== '') {
+          
+          try {
+            // 延迟创建模式：只更新本地数据
+            if (lazyCreate.value && !composableHistoryId.value) {
+              groupInst.data[attributeId] = defaultValue
+              hasSaved = true
+              continue
+            }
+            
+            // 检查后端是否已有数据
+            const existingDataRes = await formDataGeneralSelect({
+              conditionList: [
+                { property: 'groupInstanceId', relation: FILTER_TYPE.EQUAL, value: [groupInstanceId] },
+                { property: 'attributeId', relation: FILTER_TYPE.EQUAL, value: [attributeId] },
+                { property: 'valid', relation: FILTER_TYPE.EQUAL, value: ['1'] }
+              ]
+            } as any, false, false)
+            
+            const dataItem = {
+              historyId: composableHistoryId.value,
+              sectionInstanceId, groupInstanceId, attributeId,
+              value: defaultValue, valid: '1'
+            }
+            
+            // 保存或更新
+            if (existingDataRes?.payload && existingDataRes.payload.length > 0) {
+              await formDataUpdateList(undefined, [{ id: existingDataRes.payload[0].id, ...dataItem }], false, false, true)
+            } else {
+              await formDataAddList([dataItem], false, false, true)
+            }
+            
+            hasSaved = true
+          } catch (error) {
+            console.error(`[DynamicForm] 保存 defaultValue 失败: ${fieldName}`, error)
+          }
+        }
+      }
+    }
+    
+    // 更新 section 的 formContent
+    if (hasSaved) {
+      await updateSectionFormContent(sectionInstanceId)
+    }
+  }
+  
+  // 如果有保存操作，重新拉取数据（lazyCreate模式不需要重新拉取）
+  if (hasSaved && !lazyCreate.value) {
+    
+    // 重新加载所有 section instances 的数据
+    for (const sectionInst of sectionInstances.value) {
+      await loadGroupInstances(sectionInst.instanceId)
+    }
+  } else if (hasSaved && lazyCreate.value) {
+    console.log('[DynamicForm] lazyCreate模式，defaultValue 已写入本地数据，不重新拉取')
+  }
+}
+
 // 初始化
 const init = async () => {
   const success = await originalInitData({ 
@@ -1386,6 +1486,9 @@ const init = async () => {
       sectionSelectModalVisible.value = true
       selectedSectionForModal.value = undefined
     }
+    
+    // 初始化 defaultValue 并保存到后端
+    await initDefaultValues()
   }
 }
 
@@ -1445,7 +1548,7 @@ onMounted(async () => {
     :get-section-progress="getSectionProgress"
     :get-mutual-exclusive-groups="getMutualExclusiveGroups"
     :should-show-group="shouldShowGroup"
-    :enterprise-id="props.enterpriseId"
+    :enterprise-id="props.enterpriseId !== undefined ? String(props.enterpriseId) : undefined"
     @module-change="handleModuleChange"
     @add-section="handleAddSection"
     @remove-section="handleRemoveSection"

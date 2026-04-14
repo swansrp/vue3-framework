@@ -222,28 +222,38 @@ watch(() => props.rows, () => {
   initLocalRowsData()
 }, { immediate: true, deep: true })
 
-// 判断字段是否算作已填写（考虑后端数据和默认值）
-// 如果用户主动清空了字段，则不再用默认值算作已填写
-const isFieldFilled = (groupInstanceId: string, rowData: Record<string, any>, attr: Attribute): boolean => {
-  const value = rowData[attr.id]
-  if (value !== undefined && value !== null && value !== '') return true
-  // 用户主动清空过的字段，不算已填写
-  if (userTouchedFields.has(`${groupInstanceId}_${attr.id}`)) return false
-  // 后端没有值且用户未编辑过时，检查是否有默认值
-  const defaultValue = props.defaultValues?.[attr.name] ?? attr.defaultValue
-  return defaultValue !== undefined && defaultValue !== null && defaultValue !== ''
+// 判断字段是否算作已填写
+// 逻辑：
+// 1. 如果 rowData 中存在该字段（包括空字符串），说明用户已交互过，以用户数据为准
+// 2. 如果 rowData 中不存在该字段（undefined），说明是初始状态，才考虑 defaultValue
+const isFieldFilled = (rowData: Record<string, any>, attr: Attribute): boolean => {
+  if (!attr || !attr.id) return false
+  
+  const backendValue = rowData[attr.id]
+  
+  // 如果 rowData 中存在该字段（即使是空字符串），说明用户已交互过
+  // 此时以用户数据为准，检查是否有实际值
+  if (backendValue !== undefined) {
+    return backendValue !== null && backendValue !== ''
+  }
+  
+  // 如果 rowData 中不存在该字段（undefined），说明是初始状态
+  // 此时检查字段配置是否有 defaultValue
+  if (attr.defaultValue !== undefined && attr.defaultValue !== null && attr.defaultValue !== '') {
+    return true
+  }
+  
+  return false
 }
 
-// 计算填写进度（基于本地实时数据，同时考虑默认值）
+// 计算填写进度（基于后端数据）
 const progress = computed<GroupProgress>(() => {
   // 容器型分组：返回缓存的进度（不在 computed 中访问子组件）
   if (isContainerGroup.value) {
     return containerProgress.value
   }
   
-  // 获取本地实时数据（保留 groupInstanceId 用于判断 touched 状态）
-  const localRowsEntries = Object.entries(localRowsData.value)
-  const rowCount = Math.max(1, localRowsEntries.length || props.rows.length)
+  const rowCount = Math.max(1, props.rows.length)
   
   // 普通分组：基于字段填写情况计算进度
   const requiredAttrs = props.attributes.filter(a => a.isRequired === '1')
@@ -252,11 +262,11 @@ const progress = computed<GroupProgress>(() => {
   if (totalRequired === 0) {
     // 没有必填字段，统计所有已填字段
     let filled = 0
-    let total = props.attributes.length * rowCount
+    const total = props.attributes.length * rowCount
     
-    for (const [groupInstanceId, rowData] of localRowsEntries) {
+    for (const row of props.rows) {
       for (const attr of props.attributes) {
-        if (isFieldFilled(groupInstanceId, rowData, attr)) {
+        if (isFieldFilled(row.data, attr)) {
           filled++
         }
       }
@@ -271,9 +281,11 @@ const progress = computed<GroupProgress>(() => {
   
   // 有必填字段，只统计必填字段
   let filled = 0
-  for (const [groupInstanceId, rowData] of localRowsEntries) {
+  for (const row of props.rows) {
     for (const attr of requiredAttrs) {
-      if (isFieldFilled(groupInstanceId, rowData, attr)) {
+      const isFilled = isFieldFilled(row.data, attr)
+      
+      if (isFilled) {
         filled++
       }
     }
@@ -335,16 +347,17 @@ const convertToFormFields = (rowData: Record<string, any>, useLocalData = false)
     const widthPercent = attr.width ? Math.round(attr.width) : 10
     const posXPercent = attr.positionX !== undefined && attr.positionX !== null ? Math.round(attr.positionX) : 0
     
-    // 值的优先级：实际数据 > 默认值（外部传入） > 字段默认值
-    // 只有在非本地数据（后端原始数据）时才自动填充默认值
-    const actualValue = rowData[attr.id]
+    // 值的优先级：
+    // 1. 如果用户已交互过（useLocalData=true），直接使用本地数据（包括用户清空的空值）
+    // 2. 否则：后端数据 > 字段配置的 defaultValue
     let data: any
     if (useLocalData) {
-      // 用户已交互过，严格使用当前值，不自动填充默认值
-      data = actualValue
+      // 用户已交互，直接使用本地数据
+      data = rowData[attr.id]
     } else {
-      const defaultValue = props.defaultValues?.[attr.name] ?? attr.defaultValue
-      data = actualValue ?? defaultValue ?? undefined
+      // 使用后端数据，如果没有则使用字段配置的 defaultValue
+      const backendValue = rowData[attr.id]
+      data = backendValue ?? attr.defaultValue ?? undefined
     }
     
     return {
