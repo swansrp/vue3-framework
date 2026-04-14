@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends FormFieldItem">
 import { message } from 'ant-design-vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 
 import GridDraggableLayout, { type GridItem } from './GridDraggableLayout.vue'
 
@@ -77,8 +77,14 @@ const formModel = ref<Record<string, any>>({})
 // 记录用户是否主动编辑过某个字段（key: fieldName）
 const userTouchedFields = new Set<string>()
 
+// 初始化标志：防止初始化时触发 formModel watch 错误标记 userTouchedFields
+const isInitializing = ref(false)
+
 // 初始化表单数据
 const initFormData = () => {
+  // 设置初始化标志，阻止 watch 标记 userTouchedFields
+  isInitializing.value = true
+  
   const data: Record<string, any> = {}
   props.items.forEach(field => {
     // Switch 类型默认值为 undefined（未选中状态），用户必须主动选择是或否
@@ -93,7 +99,13 @@ const initFormData = () => {
       }
     }
   })
+  
   formModel.value = data
+  
+  // 下一帧再取消初始化标志，确保 watch 不会触发
+  nextTick(() => {
+    isInitializing.value = false
+  })
 }
 
 // 监听字段变化，重新初始化表单
@@ -179,6 +191,11 @@ const parentToChildrenMap = computed(() => {
 
 // 监听表单数据变化，触发 fieldChange 事件
 watch(formModel, (newModel) => {
+  // 初始化期间，不触发 fieldChange 事件和 userTouchedFields 标记
+  if (isInitializing.value) {
+    return
+  }
+  
   // 遍历所有字段，找出变化的字段
   for (const fieldName of Object.keys(newModel)) {
     const newValue = newModel[fieldName]

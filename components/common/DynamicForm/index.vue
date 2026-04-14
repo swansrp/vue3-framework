@@ -509,7 +509,7 @@ const handleUpdateGroupData = async (sectionInstanceId: string, groupInstanceId:
     const timer = setTimeout(() => {
       updateSectionFormContent(sectionInstanceId)
       formContentUpdateTimers.delete(sectionInstanceId)
-    }, 2000)
+    }, 1000)
     formContentUpdateTimers.set(sectionInstanceId, timer)
   } catch (error) {
     console.error('保存字段数据失败:', error)
