@@ -67,13 +67,14 @@ watch(value, (newValue) => {
 watch(options, (newOptions) => {
   if (newOptions && newOptions.length > 0) {
     // 如果当前选中的值在新 options 中不存在，重新查找或使用第一个
-    const found = newOptions.find(item => item.value === selectedItem.value.value)
+    const currentSelectedValue = selectedItem.value?.value
+    const found = newOptions.find(item => item.value === currentSelectedValue)
     if (!found) {
       // 尝试根据当前 value 查找，否则使用第一个选项
       const valueFound = newOptions.find(item => item.value === value.value)
       selectedItem.value = valueFound || newOptions[0]
       // 同步更新外部 value
-      if (selectedItem.value.value !== value.value) {
+      if (selectedItem.value && selectedItem.value.value !== value.value) {
         emit('update:value', selectedItem.value.value)
       }
     } else {
