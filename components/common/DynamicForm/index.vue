@@ -936,7 +936,7 @@ const handleSaveGroup = async (sectionInstanceId: string, groupId: string) => {
       return null
     }
 
-    const currentGroup = findGroupWithChildren(getGroupTree(String(instance.sectionId)), groupId)
+    const currentGroup = findGroupWithChildren(getGroupTree(String(instance.sectionId)), String(groupId))
     if (!currentGroup) { message.error('分组不存在'); return }
 
     const allFormData: Array<{ groupInstanceId: string; attributeId: string; value: any }> = []

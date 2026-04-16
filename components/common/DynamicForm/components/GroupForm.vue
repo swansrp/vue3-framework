@@ -234,7 +234,14 @@ const isFieldFilled = (rowData: Record<string, any>, attr: Attribute): boolean =
   // 如果 rowData 中存在该字段（即使是空字符串），说明用户已交互过
   // 此时以用户数据为准，检查是否有实际值
   if (backendValue !== undefined) {
-    return backendValue !== null && backendValue !== ''
+    if (backendValue !== null && backendValue !== '') {
+      return true
+    }
+    // 后端存了空值，但字段配置了 defaultValue，界面上会显示默认值，视为已填写
+    if (attr.defaultValue !== undefined && attr.defaultValue !== null && attr.defaultValue !== '') {
+      return true
+    }
+    return false
   }
   
   // 如果 rowData 中不存在该字段（undefined），说明是初始状态
@@ -929,7 +936,7 @@ defineExpose({
         v-for="childGroup in group.children"
         :key="childGroup.id"
         :ref="setChildGroupRef(String(childGroup.id))"
-        :group="childGroup"
+        :group="{ ...childGroup, id: String(childGroup.id) }"
         :attributes="getGroupAttributes(sectionId, String(childGroup.id))"
         :rows="getGroupRows(sectionInstanceId, String(childGroup.id))"
         :readonly="readonly"
@@ -1109,9 +1116,10 @@ defineExpose({
   // 进度文本样式（通用）
   .progress-text {
     font-size: 13px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
+    line-height: 1;
     
     &.complete {
       color: #52c41a;
