@@ -70,8 +70,8 @@ export default defineConfig({
             if (id.includes('marked') || id.includes('turndown')) {
               return 'markdown-vendor'
             }
-            // vue 核心
-            if (id.includes('vue/') || id.includes('vue-router') || id.includes('pinia') || id.includes('@vue/')) {
+            // vue 核心（vue-demi 被 pinia 依赖且自身依赖 vue，必须同 chunk 避免循环引用）
+            if (id.includes('vue/') || id.includes('vue-router') || id.includes('pinia') || id.includes('@vue/') || id.includes('vue-demi')) {
               return 'vue-core'
             }
             // 工具库
