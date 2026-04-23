@@ -15,68 +15,11 @@ import VueSetupExtend from 'vite-plugin-vue-setup-extend'
 // https://vitejs.dev/config/
 export default defineConfig({
   build: {
-    chunkSizeWarningLimit: 3000,
-    reportCompressedSize: false,
-    sourcemap: true,
-    minify: false,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // echarts 全家桶
-            if (id.includes('echarts') || id.includes('zrender')) {
-              return 'echarts-vendor'
-            }
-            // antd + surely-table 同源，归入同一 chunk
-            if (id.includes('ant-design-vue') || id.includes('@ant-design') || id.includes('@surely-vue')) {
-              return 'antd-vendor'
-            }
-            // excel 处理
-            if (id.includes('exceljs') || id.includes('xlsx-js-style')) {
-              return 'excel-vendor'
-            }
-            // 富文本编辑器
-            if (id.includes('tinymce') || id.includes('@tiptap') || id.includes('tiptap-extend')) {
-              return 'editor-vendor'
-            }
-            // pdf / 截图
-            if (id.includes('html2canvas') || id.includes('jspdf') || id.includes('dompurify')) {
-              return 'document-vendor'
-            }
-            // 拼音（体积大，独立拆分）
-            if (id.includes('pinyin')) {
-              return 'pinyin-vendor'
-            }
-            // G6 图编辑
-            if (id.includes('@antv/g6') || id.includes('@antv')) {
-              return 'g6-vendor'
-            }
-            // datav 大屏组件
-            if (id.includes('datav-vue3') || id.includes('v-scale-screen')) {
-              return 'datav-vendor'
-            }
-            // swiper 轮播
-            if (id.includes('swiper') || id.includes('vue-awesome-swiper')) {
-              return 'swiper-vendor'
-            }
-            // 布局 / 拖拽
-            if (id.includes('grid-layout-plus') || id.includes('interactjs')) {
-              return 'layout-vendor'
-            }
-            // 代码编辑器
-            if (id.includes('brace') || id.includes('bin-editor-next') || id.includes('sql-formatter')) {
-              return 'code-editor-vendor'
-            }
-            // markdown 处理
-            if (id.includes('marked') || id.includes('turndown')) {
-              return 'markdown-vendor'
-            }
-            // 工具库
-            if (id.includes('lodash') || id.includes('axios') || id.includes('qs') || id.includes('core-js') || id.includes('tslib')) {
-              return 'vendor-utils'
-            }
-            // 兜底
-            return 'vendor'
+            return id.toString().split('node_modules/')[1].split('/')[0].toString()
           }
         }
       },
