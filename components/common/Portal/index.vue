@@ -2173,15 +2173,6 @@ const init = async () => {
   initQueryCondition()
   await initConfig()
   initFinished = true
-  watch(props, (value, old) => {
-    if (value.readOnly != old.readOnly) {
-      config.readOnly = value.readOnly
-    }
-    console.debug('propsChanged', value, old)
-    config.pageSize = value.pageSize
-    config.currentPage = value.currentPage
-    queryData()
-  })
 
   if (config.treeMode) {
     await queryTreeData()
@@ -2470,6 +2461,41 @@ watch(() => props.tableId, value => {
   config.tableId = value
   refresh()
 })
+
+// 监听 advanceCondition 变化（左侧点击切换时 PortalBindTab 更新查询条件）
+watch(() => props.advanceCondition, (newVal, oldVal) => {
+  if (!initFinished) return
+  if (newVal !== oldVal) {
+    queryData()
+  }
+})
+
+// 监听 readOnly 属性变化
+watch(() => props.readOnly, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    config.readOnly = newVal
+  }
+})
+
+// 监听分页属性变化，仅在初始化完成后生效
+watch(
+  [() => props.pageSize, () => props.currentPage],
+  ([newPageSize, newCurrentPage], [oldPageSize, oldCurrentPage]) => {
+    if (!initFinished) return
+    let changed = false
+    if (newPageSize !== oldPageSize) {
+      config.pageSize = newPageSize
+      changed = true
+    }
+    if (newCurrentPage !== oldCurrentPage) {
+      config.currentPage = newCurrentPage
+      changed = true
+    }
+    if (changed) {
+      queryData()
+    }
+  }
+)
 
 watch(
   () => data.value,

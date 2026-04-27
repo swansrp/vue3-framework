@@ -9,14 +9,7 @@
         tab="系统字典"
       >
         <portal
-          :bind-tabs="[{
-            bindType: '0',
-            title: '字典条目',
-            tableId: 'SysDict',
-            showBind: false,
-            bindFieldProperty: 'dictName',
-            defaultSortColumn: [{property: 'dictName', type: 0}, {property: 'dictSort', type: 0}]
-          }]"
+          :bind-tabs="dictBindTabs"
           list-mode
           single-select
           table-id="SysDictType"
@@ -36,8 +29,20 @@
 import { ref } from 'vue'
 
 import BizDictManage from '@/framework/views/MainContent/SystemManage/BizDictionary/dict.vue'
+import type { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 
 const activeTab = ref('sysDict')
+
+const dictBindTabs = ref<Array<PortalBindType>>([
+  {
+    bindType: '0',
+    title: '字典条目',
+    tableId: 'SysDict',
+    showBind: false,
+    bindFieldProperty: 'dictName',
+    defaultSortColumn: [{ property: 'dictName', type: 0 }, { property: 'dictSort', type: 0 }]
+  }
+])
 </script>
 
 <style scoped>
