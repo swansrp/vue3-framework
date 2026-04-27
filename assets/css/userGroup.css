@@ -1,31 +1,23 @@
-.wrapper {
-    height: calc(100% - 90px);
-}
-
+/* 仅保留装饰性样式，布局由 scoped 样式控制 */
 .user-group-category-list-wrapper, .user-group-list-wrapper {
     background-color: #fff;
-    height: 100%;
 }
 
 .user-group-list-wrapper {
-    margin-top: 10px;
     padding: 10px;
     box-sizing: border-box;
-    overflow: auto;
-    height: calc(100vh - 155px);
     border-radius: 10px;
     box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
 }
 
 .user-group-category-list {
     width: 250px;
-    height: calc(100vh - 155px);
     box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
     margin: 10px 15px;
 }
 
-.user-group-category-list .ant-spin-container{
-    max-height: 680px;
+/* 移除 max-height: 680px 硬编码，滚动由 scoped 的 overflow-y: auto 控制 */
+.user-group-category-list .ant-spin-container {
     overflow: auto;
     cursor: pointer;
 }
@@ -40,8 +32,8 @@
     border-right: 3px solid #1890ff;
 }
 
+/* 仅保留装饰性样式 */
 .user-name-wrapper {
-    margin: 10px 0 0 15px;
     border-radius: 8px;
     box-sizing: border-box;
     box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);

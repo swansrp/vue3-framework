@@ -357,151 +357,38 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
 }
 
 .user-group-category-list-wrapper {
-  height: 100%;
-  overflow: hidden;
-}
-
-.user-group-category-list-wrapper :deep(.ant-layout-sider-children) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  height: calc(100vh - 155px);
+  overflow-y: auto;
 }
 
 .user-group-category-list {
+  width: 250px;
+  height: calc(100vh - 155px);
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  margin: 0 15px;
+}
+
+/* 确保列表内部容器填满高度 */
+.user-group-category-list :deep(.ant-spin-container) {
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.user-group-category-list :deep(.ant-list-header) {
-  flex-shrink: 0;
-}
-
-.user-group-category-list :deep(.ant-list-items) {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
+  overflow: auto;
 }
 
 .user-group-list-wrapper {
-  height: 100%;
-  overflow: hidden;
-}
-
-.user-group-list-wrapper :deep(.ant-layout-sider-children) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 中间的 div 容器 */
-.user-group-list-wrapper :deep(.ant-layout-sider-children > div) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 10px 0;
-  overflow: hidden;
-}
-
-/* 输入框和按钮行 */
-.user-group-list-wrapper :deep(.ant-layout-sider-children > div > div:first-child) {
-  flex-shrink: 0;
-  padding: 0 10px;
-}
-
-.user-group-list-wrapper :deep(.ant-tree) {
-  flex: 1;
+  height: calc(100vh - 155px);
   overflow-y: auto;
-  min-height: 0;
-  margin-top: 20px;
-  padding: 0 10px;
-}
-
-.user-group-list-wrapper :deep(.ant-empty) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 0;
+  padding: 10px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
 }
 
 .user-name-wrapper {
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-:deep(.ant-tabs) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-:deep(.ant-tabs-content-holder) {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-:deep(.ant-tabs-content) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-:deep(.ant-tabs-tabpane) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
-
-:deep(.bind-tree-container) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* 查看权限树 tab 中的树独立滚动 */
-:deep(.ant-tabs-tabpane > .ant-tree) {
-  flex: 1;
+  height: calc(100vh - 165px);
   overflow-y: auto;
-  min-height: 0;
-}
-
-:deep(.ant-tabs-tabpane > .ant-empty) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 0;
-}
-
-/* 关联用户 tab 中的 ant-spin 结构 */
-:deep(.ant-tabs-tabpane > .ant-spin-nested-loading) {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-:deep(.ant-tabs-tabpane > .ant-spin-nested-loading > .ant-spin-container) {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  margin: 10px 0 0 15px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
 }
 </style>

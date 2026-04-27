@@ -502,20 +502,60 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
 }
 
 .user-group-category-list-wrapper {
-  height: 100%;
+  height: calc(100vh - 155px);
   overflow-y: auto;
+}
+
+.user-group-category-list {
+  width: 250px;
+  height: calc(100vh - 155px);
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  margin: 0 15px;
+}
+
+/* 确保列表内部容器填满高度 */
+:deep(.user-group-category-list .ant-spin-container) {
+  height: 100%;
+  overflow: auto;
 }
 
 .user-group-list-wrapper {
-  height: 100%;
+  height: calc(100vh - 155px);
   overflow-y: auto;
+  padding: 10px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
 }
 
 .user-name-wrapper {
+  height: calc(100vh - 165px);
+  overflow-y: auto;
+  margin: 10px 0 0 15px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+}
+
+/* 确保 ant-tabs 撑满高度并允许内容滚动 */
+:deep(.ant-tabs) {
   height: 100%;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+:deep(.ant-tabs-content-holder) {
+  flex: 1;
+  overflow: hidden;
+}
+
+:deep(.ant-tabs-content) {
+  height: 100%;
+}
+
+:deep(.ant-tabs-tabpane) {
+  height: 100%;
+  overflow-y: auto;
 }
 
 .tab-pane-content {
