@@ -18,7 +18,7 @@
       <template #content>
         <div class="dark-dialog">
           <div class="title">
-            {{ router.currentRoute.value.meta.title }}
+            {{ props.title || router.currentRoute.value.meta.title }}
           </div>
           <div class="dialog-info">
             <portal
@@ -79,6 +79,7 @@ const props = withDefaults(
     tableId: string
     width?: number | string
     baseDomain?: string
+    title?: string
     downloadFileName?: string
     defaultSortColumn?: Array<QuerySortType>
     condition?: Array<ConditionListType>
@@ -91,6 +92,7 @@ const props = withDefaults(
   {
     width: 260,
     baseDomain: undefined,
+    title: '',
     downloadFileName: undefined,
     condition: [] as any,
     defaultSortColumn: undefined,

@@ -28,8 +28,8 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import BizDictManage from '@/framework/views/MainContent/SystemManage/BizDictionary/dict.vue'
 import type { PortalBindType } from '@/framework/components/common/Portal/bind/type'
+import BizDictManage from '@/framework/views/MainContent/SystemManage/BizDictionary/dict.vue'
 
 const activeTab = ref('sysDict')
 
