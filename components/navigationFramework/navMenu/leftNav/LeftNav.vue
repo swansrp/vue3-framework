@@ -381,7 +381,7 @@ onMounted(() => {
 
 /* ====== 菜单项基础样式 ====== */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
-  margin: 2px 8px;
+  margin: 4px 10px;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
   padding: 0 12px;
@@ -389,6 +389,13 @@ onMounted(() => {
   line-height: 34px;
   color: var(--nav-text);
   position: relative;
+  /* 每项底部添加微弱的水平分隔线，提升视觉层次感 */
+  border-bottom: 1px solid var(--nav-item-separator);
+}
+
+/* 最后一项去除分隔线，避免多余边框 */
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-item:last-of-type) {
+  border-bottom: none;
 }
 
 /* 未选中菜单项悬停 */
@@ -453,13 +460,14 @@ onMounted(() => {
 
 /* ====== 子菜单标题 ====== */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title) {
-  margin: 2px 8px;
+  margin: 4px 10px;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
   padding: 0 12px;
   height: 34px;
   line-height: 34px;
   color: var(--nav-text);
+  border-bottom: 1px solid var(--nav-item-separator);
 }
 
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title:hover) {
@@ -527,7 +535,12 @@ onMounted(() => {
   border-radius: var(--radius-md);
   padding: 0 12px 0 28px;
   color: var(--nav-text);
-  margin: 2px 8px 2px 12px;
+  margin: 4px 8px 4px 12px;
+  border-bottom: 1px solid var(--nav-item-separator);
+}
+
+:deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item:last-of-type) {
+  border-bottom: none;
 }
 
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item:not(.ant-menu-item-selected):hover) {

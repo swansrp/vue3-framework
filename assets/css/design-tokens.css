@@ -131,6 +131,9 @@
   --nav-toggle-arrow: var(--text-tertiary);      /* 折叠箭头色 */
   --nav-toggle-arrow-hover: var(--accent);       /* 箭头悬停色 */
 
+  /* --- 菜单项分隔线（水平边框），增加视觉层次 --- */
+  --nav-item-separator: transparent;             /* 默认透明（不显示），各主题按需覆盖 */
+
   /* --- 选中项增强特效（经典蓝使用，其他主题默认关闭） --- */
   --nav-selected-border: none;                   /* 2px 边框 */
   --nav-selected-transform: none;                /* translateY+scale */
@@ -148,6 +151,7 @@
   --topnav-selected-shadow: none;                /* 选中项底部发光 */
   --topnav-dropdown-selected-indicator: transparent; /* 下拉选中左侧条色 */
   --topnav-text: var(--text-secondary);           /* 菜单文字色，classic需覆盖 */
+  --topnav-item-bg: transparent;                  /* 菜单项默认背景，各主题按需覆盖 */
 
   /* ===================================================================
      TopHeader — 顶栏用户区与设置按钮
@@ -275,6 +279,13 @@
   --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(79, 108, 247, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04);
   --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(79, 108, 247, 0.06);
+
+  /* --- 左导航菜单增强（indigo 主题专用） --- */
+  --nav-bg-hover: rgba(79, 108, 247, 0.05);      /* 悬停：靛蓝微染，比灰色更醒目 */
+  --nav-item-separator: rgba(0, 0, 0, 0.05);     /* 菜单项间微弱的水平分隔线 */
+
+  /* --- TopNav 菜单项增强 --- */
+  --topnav-item-bg: rgba(79, 108, 247, 0.04);    /* 菜单项默认淡淡底色，增强可辨识度 */
 }
 
 /* ==================== ② ocean — 企业蓝 ====================
@@ -317,6 +328,13 @@
   --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 16px rgba(37, 99, 235, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04);
   --shadow-card-hover: 0 2px 6px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(37, 99, 235, 0.06);
+
+  /* --- 左导航菜单增强（ocean 主题专用） --- */
+  --nav-bg-hover: rgba(37, 99, 235, 0.05);        /* 悬停：标准蓝微染 */
+  --nav-item-separator: rgba(15, 23, 42, 0.05);   /* 菜单项间微弱的水平分隔线 */
+
+  /* --- TopNav 菜单项增强 --- */
+  --topnav-item-bg: rgba(37, 99, 235, 0.04);      /* 菜单项默认淡淡底色 */
 }
 
 /* ==================== ③ navy — 深海军蓝 ====================
@@ -359,6 +377,13 @@
   --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 16px rgba(30, 64, 175, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04);
   --shadow-card-hover: 0 2px 6px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(30, 64, 175, 0.06);
+
+  /* --- 左导航菜单增强（navy 主题专用） --- */
+  --nav-bg-hover: rgba(30, 64, 175, 0.05);         /* 悬停：深蓝微染 */
+  --nav-item-separator: rgba(15, 23, 42, 0.06);    /* 菜单项间微弱的水平分隔线 */
+
+  /* --- TopNav 菜单项增强 --- */
+  --topnav-item-bg: rgba(30, 64, 175, 0.04);       /* 菜单项默认淡淡底色 */
 }
 
 /* ==================== 深色主题 ====================
@@ -439,6 +464,8 @@
   --nav-toggle-bg-hover: var(--accent-soft);
   --nav-toggle-arrow: var(--text-tertiary);
   --nav-toggle-arrow-hover: var(--accent);
+  --nav-item-separator: rgba(255, 255, 255, 0.04); /* 菜单项间微弱的水平分隔线 */
+  --topnav-item-bg: rgba(255, 255, 255, 0.04);    /* 菜单项默认淡淡底色 */
   --topnav-selected-shadow: none;
   --topnav-dropdown-selected-indicator: transparent;
   --header-avatar-border: var(--header-icon-color);
@@ -501,6 +528,13 @@
   --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
   --shadow-card: 0 1px 3px rgba(30, 25, 20, 0.03), 0 4px 16px rgba(249, 115, 22, 0.04), 0 0 0 1px rgba(30, 25, 20, 0.04);
   --shadow-card-hover: 0 2px 6px rgba(30, 25, 20, 0.04), 0 8px 24px rgba(249, 115, 22, 0.06);
+
+  /* --- 左导航菜单增强（amber 主题专用） --- */
+  --nav-bg-hover: rgba(249, 115, 22, 0.05);        /* 悬停：琥珀橙微染 */
+  --nav-item-separator: rgba(30, 25, 20, 0.05);    /* 菜单项间微弱的水平分隔线 */
+
+  /* --- TopNav 菜单项增强 --- */
+  --topnav-item-bg: rgba(249, 115, 22, 0.04);      /* 菜单项默认淡淡底色 */
 }
 
 /* ==================== ⑤ classic — 经典蓝（原始配色） ====================
@@ -560,8 +594,8 @@
   --header-user-text-secondary: rgba(0, 0, 0, 0.45);
   --header-icon-color: rgba(0, 0, 0, 0.65);
   --header-hover-bg: rgba(0, 0, 0, 0.04);
-  --header-btn-hover-bg: rgba(255, 255, 255, 0.10);
-  --header-btn-hover-color: #ffffff;
+  --header-btn-hover-bg: rgba(24, 144, 255, 0.10);  /* 可见的蓝色微染背景 */
+  --header-btn-hover-color: #1890ff;                  /* 使用品牌蓝，白色顶栏上清晰可见 */
   --nav-text: rgba(255, 255, 255, 0.65);
   --nav-text-hover: #ffffff;
   --nav-text-tertiary: rgba(255, 255, 255, 0.35);
@@ -582,6 +616,8 @@
   --nav-toggle-bg-hover: rgba(24, 144, 255, 0.25);
   --nav-toggle-arrow: rgba(255, 255, 255, 0.35);
   --nav-toggle-arrow-hover: #ffffff;
+  --nav-item-separator: rgba(255, 255, 255, 0.06); /* 菜单项间微弱的水平分隔线 */
+  --topnav-item-bg: rgba(24, 144, 255, 0.04);     /* 菜单项默认淡淡底色 */
   --topnav-selected-shadow: 0 2px 8px rgba(24,144,255,0.25);
   --topnav-dropdown-selected-indicator: #1890ff;
   --topnav-text: #303133;

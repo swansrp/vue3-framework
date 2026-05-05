@@ -59,7 +59,7 @@
         </div>
       </div>
       <!-- 主题切换按钮：左键切换深色/浅色，右键切换浅色主题风格 -->
-      <div class="theme-toggle-wrapper">
+      <div v-if="themeStore.switchEnabled" class="theme-toggle-wrapper">
         <a-dropdown
           :trigger="['contextmenu']"
         >
@@ -140,7 +140,7 @@
               </svg>
               <!-- 月亮图标 (浅色模式下) -->
               <svg
-              v-else
+                v-else
                 viewBox="0 0 24 24"
                 width="16"
                 height="16"

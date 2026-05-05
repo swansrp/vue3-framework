@@ -3062,8 +3062,7 @@ defineExpose({
 }
 
 :deep(.ant-spin) {
-  background: var(--bg-overlay);
-  backdrop-filter: blur(4px);
+  background: transparent;
   border-radius: var(--radius-xl);
 }
 

@@ -170,45 +170,41 @@ const selectNav = (obj: any) => {
   position: relative !important;
   z-index: 10 !important;
   display: flex !important;
-  gap: 4px !important;
 }
 
-/* 顶部菜单项基础样式 */
+/* 顶部菜单项基础样式 — 精致药丸造型 */
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-item),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu) {
-  margin: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
+  margin: 9px 3px !important;
+  border-radius: 16px !important;
+  background: var(--topnav-item-bg) !important;
   box-shadow: none !important;
   transition: all var(--transition-fast) !important;
   position: relative !important;
-  height: 50px !important;
-  line-height: 50px !important;
+  height: 32px !important;
+  line-height: 32px !important;
   border: none !important;
-  border-bottom: 2px solid transparent !important;
-  padding: 0 var(--space-lg) !important;
+  padding: 0 14px !important;
   color: var(--topnav-text) !important;
   font-weight: 400 !important;
   font-size: 14px !important;
 }
 
-/* 悬停效果 */
+/* 悬停效果：背景色加深 */
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-item:hover),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu:hover),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-active) {
-  background: transparent !important;
+  background: var(--accent-soft) !important;
   color: var(--accent) !important;
-  border-bottom-color: var(--accent-mid) !important;
 }
 
-/* 激活状态 */
+/* 激活状态：强调色背景 + 微边框 */
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-item-selected),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-selected) {
-  background: transparent !important;
+  background: var(--accent-soft) !important;
   color: var(--accent) !important;
   font-weight: 500 !important;
-  border-bottom-color: var(--accent) !important;
-  box-shadow: var(--topnav-selected-shadow) !important;
+  box-shadow: inset 0 0 0 1px var(--accent-mid) !important;
 }
 
 /* 隐藏 Ant Design 默认底部边框 */
