@@ -283,16 +283,16 @@ onMounted(() => {
 
 // 指标配置表单样式
 .dynamic-fields-container {
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 12px;
-  background-color: #fafafa;
+  background-color: var(--bg-hover);
 
   .dynamic-field-item {
     margin-bottom: 8px;
     padding: 8px;
-    background-color: #ffffff;
-    border: 1px solid #e8e8e8;
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
     border-radius: 4px;
 
     &:last-child {
@@ -300,8 +300,8 @@ onMounted(() => {
     }
 
     &:hover {
-      border-color: #40a9ff;
-      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
     }
   }
 }
@@ -342,8 +342,8 @@ onMounted(() => {
 // 删除按钮样式
 .ant-btn-text.ant-btn-dangerous {
   &:hover {
-    background-color: #fff2f0;
-    border-color: #ff4d4f;
+    background-color: var(--danger-soft);
+    border-color: var(--danger);
   }
 }
 </style>

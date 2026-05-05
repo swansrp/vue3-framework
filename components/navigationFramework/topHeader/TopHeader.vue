@@ -58,6 +58,125 @@
           {{ userStore.deptName }}
         </div>
       </div>
+      <!-- 主题切换按钮：左键切换深色/浅色，右键切换浅色主题风格 -->
+      <div class="theme-toggle-wrapper">
+        <a-dropdown
+          :trigger="['contextmenu']"
+        >
+          <a-button
+            shape="circle"
+            size="large"
+            type="text"
+            class="theme-toggle-btn"
+            title="点击切换深色/浅色主题，右键切换浅色主题风格"
+            @click="themeStore.toggleTheme"
+          >
+            <template #icon>
+              <!-- 太阳图标 (深色模式下) -->
+              <svg
+                v-if="themeStore.isDark"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="5"
+                />
+                <line
+                  x1="12"
+                  y1="1"
+                  x2="12"
+                  y2="3"
+                />
+                <line
+                  x1="12"
+                  y1="21"
+                  x2="12"
+                  y2="23"
+                />
+                <line
+                  x1="4.22"
+                  y1="4.22"
+                  x2="5.64"
+                  y2="5.64"
+                />
+                <line
+                  x1="18.36"
+                  y1="18.36"
+                  x2="19.78"
+                  y2="19.78"
+                />
+                <line
+                  x1="1"
+                  y1="12"
+                  x2="3"
+                  y2="12"
+                />
+                <line
+                  x1="21"
+                  y1="12"
+                  x2="23"
+                  y2="12"
+                />
+                <line
+                  x1="4.22"
+                  y1="19.78"
+                  x2="5.64"
+                  y2="18.36"
+                />
+                <line
+                  x1="18.36"
+                  y1="5.64"
+                  x2="19.78"
+                  y2="4.22"
+                />
+              </svg>
+              <!-- 月亮图标 (浅色模式下) -->
+              <svg
+              v-else
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            </template>
+          </a-button>
+          <template #overlay>
+            <a-menu
+              v-if="!themeStore.isDark"
+              class="theme-palette-menu"
+              @click="handleThemeSelect"
+            >
+              <a-menu-item
+                v-for="t in LIGHT_THEMES"
+                :key="t.id"
+                class="theme-palette-item"
+                :class="{ 'ant-menu-item-selected': themeStore.themeId === t.id }"
+              >
+                <span
+                  class="theme-swatch"
+                  :style="{ background: t.swatch }"
+                ></span>
+                <span class="theme-label">{{ t.label }}</span>
+                <span class="theme-desc">{{ t.desc }}</span>
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </div>
       <div class="top_user_setting">
         <a-dropdown trigger="click">
           <template #overlay>
@@ -238,6 +357,7 @@ import { afterLogin } from '@/framework/network/login'
 import pinia from '@/framework/store'
 import { dictStore } from '@/framework/store/common'
 import { useTabStore } from '@/framework/store/nav'
+import { LIGHT_THEMES, useThemeStore } from '@/framework/store/theme'
 import { useUserStore } from '@/framework/store/user'
 import { isNotEmpty, localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
@@ -245,6 +365,12 @@ import { validatePassword } from '@/framework/utils/passwordValidator'
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
+const themeStore = useThemeStore(pinia)
+
+const handleThemeSelect = (e: any) => {
+  themeStore.setTheme(e.key)
+}
+
 const genderOptionList = ref<Array<{value: string, label: string}>>([])
 const router = useRouter()
 const localLoginType = import.meta.env.VITE_ssoDomain === 'localhost'
@@ -314,40 +440,53 @@ onMounted(() => {
   display: flex;
   position: relative;
   overflow: visible;
-  background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--top-header-bg);
+  backdrop-filter: var(--top-header-blur);
+  -webkit-backdrop-filter: var(--top-header-blur);
+  border-bottom: var(--top-header-border);
   padding: 0;
   box-sizing: border-box;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  z-index: 20;
 }
 
 .top_title {
   height: 100%;
-  font-size: 17px;
+  font-size: 16px;
   padding: 0 20px;
-  font-weight: bold;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   box-sizing: border-box;
-  color: #ffffff;
-  /* 增强立体感的深色渐变 - 增加光影层次 */
-  background: linear-gradient(135deg, 
-    #1a2332 0%, 
-    #252f42 25%,
-    #2d3a52 50%,
-    #252f42 75%,
-    #1a2332 100%);
+  color: var(--header-title-color);
+  background: var(--header-title-bg);
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   z-index: 999;
-  /* 添加与左侧菜单一致的右侧阴影 */
-  box-shadow: 5px 0 5px 0 rgba(0, 0, 0, 0.5);
-  /* 添加内阴影增强立体感 */
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
-/* LOGO区域内部光影效果 - 增强立体感 */
+/* Logo区域右侧柔和分隔 - 用伪元素替代border-right，更精致 */
+.top_title::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--border-subtle) 30%,
+    var(--border-subtle) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Logo区域底部柔和光晕 */
 .top_title::before {
   content: '';
   position: absolute;
@@ -356,7 +495,7 @@ onMounted(() => {
   right: 0;
   height: 50%;
   background: linear-gradient(to bottom,
-    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.04) 0%,
     transparent 100%);
   pointer-events: none;
   border-radius: 0;
@@ -382,105 +521,86 @@ onMounted(() => {
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 0 16px;
+  padding: 0 var(--space-lg);
   flex-shrink: 0;
-  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  border-left: 1px solid var(--border-subtle);
 }
 
 .top_user {
-  width: 240px;
   height: 100%;
-  position: absolute;
-  right: 0;
   display: flex;
   align-items: center;
   box-sizing: border-box;
-  padding: 0 16px 0 12px;
+  padding: 0 var(--space-lg) 0 var(--space-md);
   flex: 0 0 auto;
   background: transparent;
   position: relative;
-  transition: all 0.3s ease;
+  transition: background var(--transition-fast);
+  cursor: pointer;
+  gap: var(--space-sm);
 }
 
 .top_user:hover {
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 8px;
+  background: var(--header-hover-bg);
 }
 
 /* 用户头像区域 */
 .user-avatar-wrapper {
   position: relative;
-  margin-right: 12px;
   flex-shrink: 0;
 }
 
 .user-avatar {
-  border: 2px solid rgba(24, 144, 255, 0.3);
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 2px solid var(--header-avatar-border);
+  box-shadow: var(--header-avatar-shadow);
+  transition: all var(--transition-fast);
 }
 
 .user-avatar:hover {
-  border-color: rgba(24, 144, 255, 0.6);
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
-  transform: translateY(-1px);
+  border-color: var(--accent-mid);
+  box-shadow: var(--header-avatar-hover-shadow);
+  transform: var(--header-avatar-hover-transform);
 }
 
 /* 在线状态指示器 */
 .user-status-indicator {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 10px;
-  height: 10px;
-  background: linear-gradient(45deg, #52c41a, #73d13d);
-  border: 2px solid #fff;
+  bottom: 1px;
+  right: 1px;
+  width: 8px;
+  height: 8px;
+  background: var(--header-status-bg);
+  border: 2px solid var(--bg-elevated);
   border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3), 0 0 0 0 rgba(82, 196, 26, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3), 0 0 0 6px rgba(82, 196, 26, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.3), 0 0 0 0 rgba(82, 196, 26, 0);
-  }
+  animation: var(--header-status-animation);
 }
 
 /* 用户信息区域 */
 .user-info {
-  flex: 1;
   min-width: 0;
-  margin-right: 8px;
+  margin-right: var(--space-sm);
 }
 
 .user-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1f36;
-  line-height: 1.2;
-  margin-bottom: 2px;
+  font-size: var(--header-user-name-size);
+  font-weight: var(--header-user-name-weight);
+  color: var(--header-user-text);
+  line-height: 1.3;
 }
 
 .user-role {
-  font-size: 12px;
-  color: #5a5e66;
+  font-size: 11px;
+  color: var(--header-user-text-secondary);
   line-height: 1;
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.08), rgba(24, 144, 255, 0.04));
-  padding: 2px 8px;
-  border-radius: 10px;
   display: inline-block;
-  font-weight: 500;
   max-width: 100px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  border: 1px solid rgba(24, 144, 255, 0.15);
+  background: var(--header-role-bg);
+  border: var(--header-role-border);
+  border-radius: var(--header-role-radius);
+  padding: var(--header-role-padding);
 }
 
 /* 设置按钮区域 */
@@ -489,51 +609,116 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+/* 主题切换按钮 */
+.theme-toggle-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-right: var(--space-xs);
+}
+
+.theme-toggle-btn {
+  color: var(--header-icon-color) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--header-btn-hover-color) !important;
+  background: var(--header-btn-hover-bg) !important;
+}
+
 .setting-button {
-  background: #f5f7fa !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  color: #5a5e66 !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  background: var(--header-setting-bg) !important;
+  border: var(--header-setting-border) !important;
+  box-shadow: var(--header-setting-shadow);
+  color: var(--header-icon-color) !important;
+  transition: all var(--transition-fast) !important;
 }
 
 .setting-button:hover {
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(24, 144, 255, 0.05) 100%) !important;
-  border-color: rgba(24, 144, 255, 0.25) !important;
-  color: #1890ff !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.15);
+  background: var(--header-btn-hover-bg) !important;
+  color: var(--header-btn-hover-color) !important;
+  box-shadow: var(--header-setting-hover-shadow) !important;
+  transform: var(--header-setting-hover-transform);
 }
 
 .setting-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+  transform: var(--header-setting-active-transform);
 }
 
-/* 下拉菜单美化 */
+/* 下拉菜单 - 深色主题 */
 :deep(.user-dropdown-menu) {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 21, 41, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   padding: 4px;
 }
 
 :deep(.user-dropdown-menu .ant-menu-item) {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   margin: 2px 0;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
+  color: var(--text-secondary);
 }
 
 :deep(.user-dropdown-menu .ant-menu-item:hover) {
-  background: linear-gradient(90deg, 
-    rgba(24, 144, 255, 0.08), 
-    rgba(24, 144, 255, 0.04));
-  color: rgba(24, 144, 255, 0.9);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 :deep(.top_user_setting .ant-btn-circle) {
   margin-right: 0;
+}
+
+/* ==================== 主题色板菜单 ==================== */
+.theme-palette-menu {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: 6px !important;
+  min-width: 180px !important;
+}
+
+.theme-palette-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 12px !important;
+  border-radius: var(--radius-md) !important;
+  margin: 2px 0 !important;
+  height: auto !important;
+  line-height: 1.3 !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.theme-palette-item:hover {
+  background: var(--accent-soft) !important;
+}
+
+.theme-palette-item.ant-menu-item-selected {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+}
+
+.theme-swatch {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+}
+
+.theme-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.theme-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: auto;
 }
 </style>

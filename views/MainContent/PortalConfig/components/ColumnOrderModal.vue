@@ -367,9 +367,9 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
   max-height: 600px;
   overflow-y: auto;
   padding: 12px;
-  background: #fafafa;
+  background: var(--bg-hover);
   border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--border-subtle);
 }
 
 .field-list {
@@ -383,8 +383,8 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: white;
-  border: 2px solid #e8e8e8;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-subtle);
   border-radius: 6px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: grab;
@@ -393,28 +393,28 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
   position: relative;
 
   &:hover {
-    background: #f5f5f5;
-    border-color: #d9d9d9;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    background: var(--bg-hover);
+    border-color: var(--border-subtle);
+    box-shadow: var(--shadow-sm);
 
     .drag-handle {
       opacity: 1;
-      color: #1890ff;
+      color: var(--accent);
     }
   }
 
   &.dragging {
     opacity: 0.6;
-    background: #fafafa;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: var(--bg-hover);
+    box-shadow: var(--shadow-md);
     cursor: grabbing;
     z-index: 1000;
     transform: scale(1.02);
   }
 
   &.drag-over {
-    border-color: #1890ff;
-    background: #e6f7ff;
+    border-color: var(--accent);
+    background: var(--accent-soft);
   }
 
   &.field-highlight {
@@ -423,7 +423,7 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
 
   &.field-dimmed {
     opacity: 0.4;
-    background: #f5f5f5;
+    background: var(--bg-hover);
   }
 
   .drag-handle {
@@ -431,7 +431,7 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
     align-items: center;
     justify-content: center;
     font-size: 14px;
-    color: #bfbfbf;
+    color: var(--text-tertiary);
     opacity: 0.5;
     transition: all 0.3s ease;
     flex-shrink: 0;
@@ -456,7 +456,7 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
   .field-name {
     font-size: 13px;
     font-weight: 500;
-    color: #333;
+    color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -465,7 +465,7 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
 
   .field-property {
     font-size: 11px;
-    color: #999;
+    color: var(--text-tertiary);
     font-family: 'Consolas', 'Courier New', monospace;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -481,11 +481,11 @@ const handleQuickConfig = (column: ColumnItem, type: string) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f0f0f0;
+    background: var(--bg-active);
     border-radius: 50%;
     font-size: 11px;
     font-weight: 600;
-    color: #666;
+    color: var(--text-secondary);
   }
 }
 

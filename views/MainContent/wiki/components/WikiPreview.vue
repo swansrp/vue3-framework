@@ -124,7 +124,7 @@ const handleClose = () => {
   right: 0;
   bottom: 0;
   z-index: 100;
-  background: #fff;
+  background: var(--bg-elevated);
   display: flex;
   flex-direction: column;
   overflow: hidden;

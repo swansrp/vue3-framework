@@ -782,11 +782,11 @@
           >
             <div
               style="
-                background-color: white;
+                background-color: var(--bg-elevated);
                 width: 240px;
                 padding: 8px;
                 border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                box-shadow: var(--shadow-md);
               "
             >
               <!-- 排序操作 -->

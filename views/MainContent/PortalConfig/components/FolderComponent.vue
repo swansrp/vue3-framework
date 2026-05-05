@@ -397,8 +397,8 @@ const onMouseLeave = (e: Event) => {
 }
 
 .folder-content {
-  background: white;
-  border-left: 2px solid #f0f0f0;
+  background: var(--bg-elevated);
+  border-left: 2px solid var(--border-subtle);
 }
 
 .table-item {
@@ -408,32 +408,32 @@ const onMouseLeave = (e: Event) => {
 }
 
 .table-item:hover:not(.activate-item) {
-  background-color: #f0f8ff !important;
-  border-left-color: #91d5ff !important;
+  background-color: var(--accent-soft) !important;
+  border-left-color: var(--accent-mid) !important;
 }
 
 .activate-item {
-  background-color: #d6edff !important;
-  border-left-color: #1890ff !important;
-  box-shadow: inset 2px 0 4px rgba(24, 144, 255, 0.1) !important;
+  background-color: var(--accent-soft) !important;
+  border-left-color: var(--accent) !important;
+  box-shadow: inset 2px 0 4px rgba(79, 108, 247, 0.1) !important;
 }
 
 .file-icon {
   margin-right: 8px;
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--text-tertiary);
 }
 
 .item-label {
   font-size: 14px;
-  color: #262626;
+  color: var(--text-primary);
   line-height: 1.4;
 }
 </style>
 
 <style lang="less" scoped>
 .folder-group {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .folder-header {
@@ -441,83 +441,83 @@ const onMouseLeave = (e: Event) => {
   align-items: center;
   padding: 12px 15px;
   cursor: pointer;
-  background: #f8f9fa !important;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--bg-hover) !important;
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 600;
-  color: #262626 !important;  /* 优化文件夹标题颜色 */
+  color: var(--text-primary) !important;
   transition: all 0.15s;
   font-size: 14px !important;
 }
 
 .folder-header:hover {
-  background: #e9ecef !important;
-  color: #000000 !important;  /* 悬停时使用更深的颜色 */
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;  /* 悬停时使用更深的颜色 */
 }
 
 .folder-header.folder-expanded {
-  background: #dee2e6 !important;
-  color: #000000 !important;  /* 展开时使用更深的颜色 */
+  background: var(--bg-active) !important;
+  color: var(--text-primary) !important;  /* 展开时使用更深的颜色 */
 }
 
 /* 根据深度的样式类 */
 .folder-depth-0 {
-  background: #f8f9fa !important;
+  background: var(--bg-hover) !important;
   font-weight: 600 !important;
   font-size: 14px !important;
-  color: #262626 !important;  /* 优化第一层文件夹颜色 */
+  color: var(--text-primary) !important;  /* 优化第一层文件夹颜色 */
 }
 
 .folder-depth-0:hover {
-  background: #e9ecef !important;
-  color: #000000 !important;
+  background: var(--bg-active) !important;
+  color: var(--text-primary) !important;
 }
 
 .folder-depth-0.folder-expanded {
-  background: #dee2e6 !important;
-  color: #000000 !important;
+  background: var(--bg-active) !important;
+  color: var(--text-primary) !important;
 }
 
 .folder-depth-1 {
-  background: #fafafa !important;
+  background: var(--bg-hover) !important;
   font-weight: 500 !important;
   font-size: 14px !important;
-  color: #262626 !important;  /* 优化第二层文件夹颜色 */
+  color: var(--text-primary) !important;  /* 优化第二层文件夹颜色 */
 }
 
 .folder-depth-1:hover {
-  background: #f0f0f0 !important;
-  color: #000000 !important;
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
 }
 
 .folder-depth-1.folder-expanded {
-  background: #e8e8e8 !important;
-  color: #000000 !important;
+  background: var(--bg-active) !important;
+  color: var(--text-primary) !important;
 }
 
 .folder-depth-2,
 .folder-depth-3 {
-  background: #f5f5f5 !important;
+  background: var(--bg-hover) !important;
   font-weight: 400 !important;
   font-size: 14px !important;
-  color: #262626 !important;  /* 优化第三层及更深层文件夹颜色 */
+  color: var(--text-primary) !important;  /* 优化第三层及更深层文件夹颜色 */
 }
 
 .folder-depth-2:hover,
 .folder-depth-3:hover {
-  background: #ebebeb !important;
-  color: #000000 !important;
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
 }
 
 .folder-depth-2.folder-expanded,
 .folder-depth-3.folder-expanded {
-  background: #e0e0e0 !important;
-  color: #000000 !important;
+  background: var(--bg-active) !important;
+  color: var(--text-primary) !important;
 }
 
 .folder-icon {
   margin-right: 8px;
   font-size: 14px !important;
-  color: #595959 !important;  /* 优化图标颜色 */
+  color: var(--text-secondary) !important;  /* 优化图标颜色 */
 }
 
 .folder-title {
@@ -527,13 +527,13 @@ const onMouseLeave = (e: Event) => {
 
 .folder-count {
   font-size: 12px;
-  color: #595959;  /* 优化数量显示颜色 */
+  color: var(--text-secondary);  /* 优化数量显示颜色 */
   margin-left: 4px;
 }
 
 .folder-content {
-  background: white;
-  border-left: 2px solid #f0f0f0;
+  background: var(--bg-elevated);
+  border-left: 2px solid var(--border-subtle);
 }
 
 .table-item {
@@ -541,20 +541,20 @@ const onMouseLeave = (e: Event) => {
   align-items: center;
   padding: 12px 0;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
-  background: white;
+  background: var(--bg-elevated);
   position: relative;
   border-left: 4px solid transparent;
 }
 
 .table-item:hover:not(.activate-item) {
-  background-color: #f0f8ff;
-  border-left-color: #91d5ff;
+  background-color: var(--accent-soft);
+  border-left-color: var(--accent-mid);
 }
 
 .table-item:last-child {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .table-item .item-content {
@@ -568,18 +568,18 @@ const onMouseLeave = (e: Event) => {
 .file-icon {
   margin-right: 8px;
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--text-tertiary);
 }
 
 .item-label {
   font-size: 14px;
-  color: #262626;
+  color: var(--text-primary);
   line-height: 1.4;
 }
 
 .activate-item {
-  background-color: #d6edff;
-  border-left-color: #1890ff;
-  box-shadow: inset 2px 0 4px rgba(24, 144, 255, 0.1);
+  background-color: var(--accent-soft);
+  border-left-color: var(--accent);
+  box-shadow: inset 2px 0 4px rgba(79, 108, 247, 0.1);
 }
 </style>

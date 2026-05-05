@@ -208,7 +208,7 @@ const getStatusText = (status: string) => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  background: #fff;
+  background: var(--bg-elevated);
   border-radius: 8px;
 }
 

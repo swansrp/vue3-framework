@@ -240,7 +240,7 @@ export default defineComponent({
           formatter: (params: any) => {
             const unit = pieMetric.unit || ''
             let result = `<strong>${params.name}</strong><br/>`
-            result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${pieMetric.dataName}</strong><br/>`
+            result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${pieMetric.dataName}</strong><br/>`
             // 格式化当前扇区的数值显示
             const formattedValue = (() => {
               if (pieMetric?.unitConfig) {
@@ -275,7 +275,7 @@ export default defineComponent({
                 maximumFractionDigits: 0
               })
             })()
-            result += `<span style="color: #666; font-size: 12px;">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+            result += `<span style="color: var(--text-secondary); font-size: 12px;">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
             return result
           }
         },

@@ -236,8 +236,8 @@ console.log('Hello Wiki!')
   display: flex;
   height: 100%;
   gap: 0;
-  background: #fff;
-  border: 1px solid #d9d9d9;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   overflow: hidden;
 

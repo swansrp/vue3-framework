@@ -394,8 +394,8 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid #e6e8eb;
-    background: #fafafa;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-hover);
   }
 
   .grid-content {
@@ -410,13 +410,13 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
 
     .grid-item {
       position: relative;
-      background: #ffffff;
-      border: 1px solid #e6e8eb;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
       border-radius: 12px;
       padding: 20px;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-sm);
       user-select: none;
       /* 自动撑开内容 */
       min-height: 180px;
@@ -427,15 +427,15 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
       overflow: hidden;
 
       &:hover {
-        border-color: #1677ff;
-        box-shadow: 0 2px 8px rgba(22, 119, 255, 0.15);
+        border-color: var(--accent);
+        box-shadow: var(--shadow-glow);
         transform: translateY(-2px);
       }
 
       &.grid-item-selected {
-        border-color: #1677ff;
-        background: #f0f8ff;
-        box-shadow: 0 2px 8px rgba(22, 119, 255, 0.15);
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        box-shadow: var(--shadow-glow);
       }
 
       &.grid-item-draggable {
@@ -443,7 +443,7 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
         
         &:hover {
           transform: scale(1.02);
-          box-shadow: 0 4px 12px rgba(22, 119, 255, 0.2);
+          box-shadow: var(--shadow-md);
         }
         
         &:active {
@@ -454,7 +454,7 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
       &.grid-item-dragging {
         opacity: 0.6;
         transform: rotate(5deg) scale(1.05);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--shadow-lg);
         z-index: 1000;
       }
 
@@ -463,17 +463,17 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
         top: 8px;
         left: 8px;
         z-index: 2;
-        color: #666;
+        color: var(--text-secondary);
         font-size: 16px;
         cursor: grab;
         padding: 4px;
         border-radius: 4px;
-        background: rgba(255, 255, 255, 0.8);
+        background: var(--bg-elevated);
         transition: all 0.2s ease;
         
         &:hover {
-          background: rgba(22, 119, 255, 0.1);
-          color: #1677ff;
+          background: var(--accent-soft);
+          color: var(--accent);
         }
       }
 
@@ -490,12 +490,12 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
           height: auto;
           min-width: auto;
           border-radius: 4px;
-          background: rgba(255, 255, 255, 0.9);
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+          background: var(--bg-elevated);
+          box-shadow: var(--shadow-sm);
           
           &:hover {
-            background: rgba(22, 119, 255, 0.1);
-            color: #1677ff;
+            background: var(--accent-soft);
+            color: var(--accent);
           }
           
           .anticon {
@@ -528,7 +528,7 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
         .grid-item-name {
           font-size: 14px;
           font-weight: 500;
-          color: #333;
+          color: var(--text-primary);
           text-align: center;
           word-break: break-word;
           line-height: 1.4;
@@ -550,8 +550,8 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-top: 1px solid #e6e8eb;
-    background: #fafafa;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-hover);
   }
 }
 

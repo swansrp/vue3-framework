@@ -22,7 +22,7 @@
   />
   <a-tag
     v-else
-    style="background: #fff; margin-top:2px; border-style: dashed"
+    style="background: var(--bg-elevated); margin-top:2px; border-style: dashed"
     @click="inputVisible = true"
   >
     <plus-outlined />

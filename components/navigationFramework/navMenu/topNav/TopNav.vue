@@ -160,12 +160,12 @@ const selectNav = (obj: any) => {
   user-select: none;
 }
 
-/* 顶部菜单容器样式 - 简洁水平布局 */
+/* 顶部菜单容器 */
 :global(.ant-menu.ant-menu-horizontal) {
   line-height: 50px !important;
   background: transparent !important;
   border-bottom: none !important;
-  padding: 0 20px !important;
+  padding: 0 var(--space-xl) !important;
   box-shadow: none !important;
   position: relative !important;
   z-index: 10 !important;
@@ -180,14 +180,14 @@ const selectNav = (obj: any) => {
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  transition: all 0.25s ease !important;
+  transition: all var(--transition-fast) !important;
   position: relative !important;
   height: 50px !important;
   line-height: 50px !important;
   border: none !important;
   border-bottom: 2px solid transparent !important;
-  padding: 0 20px !important;
-  color: #303133 !important;
+  padding: 0 var(--space-lg) !important;
+  color: var(--topnav-text) !important;
   font-weight: 400 !important;
   font-size: 14px !important;
 }
@@ -197,21 +197,21 @@ const selectNav = (obj: any) => {
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu:hover),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-active) {
   background: transparent !important;
-  color: #1890ff !important;
-  border-bottom-color: rgba(24, 144, 255, 0.4) !important;
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent-mid) !important;
 }
 
 /* 激活状态 */
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-item-selected),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-selected) {
   background: transparent !important;
-  color: #1890ff !important;
+  color: var(--accent) !important;
   font-weight: 500 !important;
-  border-bottom-color: #1890ff !important;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.25) !important;
+  border-bottom-color: var(--accent) !important;
+  box-shadow: var(--topnav-selected-shadow) !important;
 }
 
-/* 隐藏 Ant Design 默认的底部边框，避免双层蓝线 */
+/* 隐藏 Ant Design 默认底部边框 */
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-item-selected::after),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu-selected::after),
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-item::after),
@@ -220,75 +220,72 @@ const selectNav = (obj: any) => {
   border-bottom: none !important;
 }
 
-/* submenu 标题样式 */
+/* submenu 标题 */
 :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu .ant-menu-submenu-title) {
   padding: 0 !important;
   color: inherit !important;
 }
 
-/* 下拉菜单容器样式 */
+/* 下拉菜单容器 */
 :global(.ant-menu-submenu-popup) {
-  background: #ffffff !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+  background: var(--bg-elevated) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--border-subtle) !important;
   margin-top: 4px !important;
   overflow: hidden !important;
 }
 
-/* 下拉菜单内容容器 */
 :global(.ant-menu-submenu-popup .ant-menu) {
-  padding: 0 !important;
+  padding: 4px !important;
+  background: transparent !important;
 }
 
-/* 下拉菜单项样式 */
+/* 下拉菜单项 */
 :global(.ant-menu-submenu-popup .ant-menu-item) {
-  margin: 0 !important;
-  border-radius: 0 !important;
-  padding: 0 20px !important;
-  height: 40px !important;
-  line-height: 40px !important;
-  color: #303133 !important;
-  transition: all 0.2s ease !important;
+  margin: 2px 4px !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 0 var(--space-lg) !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  color: var(--topnav-text) !important;
+  transition: all var(--transition-fast) !important;
   font-weight: 400 !important;
   font-size: 14px !important;
   width: 100% !important;
 }
 
-/* 下拉菜单中的submenu标题样式 */
 :global(.ant-menu-submenu-popup .ant-menu-submenu .ant-menu-submenu-title) {
-  margin: 0 !important;
-  border-radius: 0 !important;
-  padding: 0 20px !important;
-  height: 40px !important;
-  line-height: 40px !important;
-  color: #303133 !important;
-  transition: all 0.2s ease !important;
+  margin: 2px 4px !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 0 var(--space-lg) !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  color: var(--topnav-text) !important;
+  transition: all var(--transition-fast) !important;
   font-weight: 400 !important;
   font-size: 14px !important;
   width: 100% !important;
 }
 
-/* 下拉菜单项悬停 */
 :global(.ant-menu-submenu-popup .ant-menu-item:hover),
 :global(.ant-menu-submenu-popup .ant-menu-submenu-title:hover) {
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.06), rgba(64, 169, 255, 0.08)) !important;
-  color: #1890ff !important;
-  font-weight: 500 !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
 }
 
-/* 下拉菜单项选中 */
 :global(.ant-menu-submenu-popup .ant-menu-item-selected) {
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.1), rgba(64, 169, 255, 0.15)) !important;
-  color: #1890ff !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
   font-weight: 500 !important;
-  box-shadow: inset 3px 0 0 #1890ff !important;
+  box-shadow: inset 3px 0 0 var(--topnav-dropdown-selected-indicator) !important;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
   :global(.ant-menu.ant-menu-horizontal > .ant-menu-item),
   :global(.ant-menu.ant-menu-horizontal > .ant-menu-submenu) {
-    padding: 0 16px !important;
+    padding: 0 var(--space-sm) !important;
     font-size: 13px !important;
   }
 }

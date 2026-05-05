@@ -686,9 +686,9 @@ defineExpose({
     .preview-section {
       margin-bottom: 32px;
       padding: 20px;
-      background: #fafafa;
+      background: var(--bg-hover);
       border-radius: 8px;
-      border: 1px solid #f0f0f0;
+      border: 1px solid var(--border-subtle);
     }
 
     .section-header {
@@ -736,11 +736,11 @@ defineExpose({
         }
 
         &.selected {
-          border-color: #1890ff;
-          background: #e6f7ff;
+          border-color: var(--accent);
+          background: var(--accent-soft);
 
           .dict-item-value {
-            color: #1890ff;
+            color: var(--accent);
           }
         }
 

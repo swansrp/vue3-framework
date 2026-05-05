@@ -37,7 +37,7 @@
             <template #label>
               <span
                 v-if="column.required"
-                style="color: #ff4d4f; margin-right: 4px;"
+                style="color: var(--danger); margin-right: 4px;"
               >*</span>
               <span>{{ strRemoveLF(column.title) }}</span>
             </template>

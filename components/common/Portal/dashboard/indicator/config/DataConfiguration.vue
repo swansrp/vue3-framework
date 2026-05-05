@@ -136,7 +136,7 @@
                   v-if="isMetricUnitDisabled(metric)"
                   :title="getUnitTooltip(metric)"
                 >
-                  <InfoCircleOutlined style="margin-left: 4px; color: #666;" />
+                  <InfoCircleOutlined style="margin-left: 4px; color: var(--text-secondary);" />
                 </a-tooltip>
               </span>
             </div>
@@ -310,7 +310,7 @@
               v-if="hasUnitConfig()"
               class="unit-tip"
             >
-              <small style="color: #666;">金额单位由系统根据计算配置自动生成</small>
+              <small style="color: var(--text-secondary);">金额单位由系统根据计算配置自动生成</small>
             </div>
           </a-form-item>
         </a-form>
@@ -1018,7 +1018,7 @@ const getUnitTooltip = (metric: DataMetricUI): string => {
     transition: all 0.3s;
 
     &:hover {
-      background-color: #f0f2f5;
+      background-color: var(--bg-hover);
     }
 
     .data-header {
@@ -1032,12 +1032,12 @@ const getUnitTooltip = (metric: DataMetricUI): string => {
         margin: 0;
         font-size: 14px;
         font-weight: 600;
-        color: #262626;
+        color: var(--text-primary);
       }
     }
 
     .collapse-btn {
-      color: #8c8c8c;
+      color: var(--text-tertiary);
       transition: all 0.2s;
       width: 24px;
       height: 24px;
@@ -1047,23 +1047,23 @@ const getUnitTooltip = (metric: DataMetricUI): string => {
       border-radius: 4px;
 
       &:hover {
-        color: #1890ff;
-        background-color: #e6f7ff;
+        color: var(--accent);
+        background-color: var(--accent-soft);
       }
     }
   }
 
   .data-list {
     .data-item {
-      border: 1px solid #e8e8e8;
+      border: 1px solid var(--border-subtle);
       border-radius: 6px;
       margin-bottom: 12px;
       padding: 12px;
-      background: white;
+      background: var(--bg-elevated);
       transition: all 0.3s ease;
 
       &:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-md);
       }
 
       .data-item-header {
@@ -1139,15 +1139,15 @@ const getUnitTooltip = (metric: DataMetricUI): string => {
               align-items: center;
               font-size: 11px;
               padding: 4px 6px;
-              background: #fafafa;
+              background: var(--bg-hover);
               border-radius: 4px;
-              border: 1px solid #f0f0f0;
+              border: 1px solid var(--border-subtle);
               min-width: 0; // 确保可以收缩
               width: 100%; // 确保占满网格列宽度
               box-sizing: border-box; // 包含padding和border在内
 
               .item-name {
-                color: #595959;
+                color: var(--text-secondary);
                 flex: 1;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -1161,7 +1161,7 @@ const getUnitTooltip = (metric: DataMetricUI): string => {
                 width: 18px;
                 height: 18px;
                 border-radius: 2px;
-                border: 1px solid #d9d9d9;
+                border: 1px solid var(--border-subtle);
                 padding: 0;
                 cursor: pointer;
                 margin-left: 4px;
@@ -1175,8 +1175,8 @@ const getUnitTooltip = (metric: DataMetricUI): string => {
               }
 
               &:hover {
-                background: #f5f5f5;
-                border-color: #d9d9d9;
+                background: var(--bg-hover);
+                border-color: var(--border-hover);
                 transition: all 0.2s ease;
               }
             }

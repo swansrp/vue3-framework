@@ -373,8 +373,8 @@ const setupGlobalDragListeners = () => {
 <style lang="less" scoped>
 .left-panel {
   width: 300px;
-  background: white;
-  border-right: 1px solid #e8e8e8;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
 
@@ -383,8 +383,8 @@ const setupGlobalDragListeners = () => {
     justify-content: center;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid #e8e8e8;
-    background: #fafafa;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-hover);
     height: 64px;
     box-sizing: border-box;
 

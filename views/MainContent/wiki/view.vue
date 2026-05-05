@@ -652,7 +652,7 @@ watch(() => pageId.value, () => {
 <style scoped lang="less">
 .wiki-view-page {
   min-height: calc(100vh - 60px);
-  background: #fff;
+  background: var(--bg-base);
   // 树形目录模式需要 padding，单页面模式不需要
   padding: 0;
 
@@ -668,8 +668,8 @@ watch(() => pageId.value, () => {
       flex-shrink: 0;
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      background: #fff;
+      box-shadow: var(--shadow-md);
+      background: var(--bg-elevated);
     }
 
     .wiki-main {
@@ -677,8 +677,8 @@ watch(() => pageId.value, () => {
       position: relative;
       border-radius: 8px;
       overflow-y: auto;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      background: #fff;
+      box-shadow: var(--shadow-md);
+      background: var(--bg-elevated);
       display: flex;
       flex-direction: column;
     }
@@ -719,14 +719,14 @@ watch(() => pageId.value, () => {
   justify-content: center;
   align-items: center;
   min-height: 60vh;
-  background: #fff;
+  background: var(--bg-elevated);
   border-radius: 8px;
 }
 
 .content-container {
   width: 100%;
   min-height: calc(100vh - 60px);
-  background: #fff;
+  background: var(--bg-elevated);
   padding: 32px 48px;
   box-shadow: none;
 }
@@ -790,9 +790,9 @@ watch(() => pageId.value, () => {
 .editor-container {
   margin-top: 16px;
   min-height: 500px;
-  background: #fff;
+  background: var(--bg-elevated);
   border-radius: 4px;
   padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 </style>

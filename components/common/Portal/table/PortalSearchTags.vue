@@ -278,14 +278,28 @@ const isWideTag = (tag: SearchTag): boolean => {
   display: flex;
   align-items: center;
   padding: 8px 20px;
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.03) 0%, rgba(24, 144, 255, 0.08) 100%);
-  border-bottom: 1px solid rgba(24, 144, 255, 0.15);
+  background: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-mid) 100%);
+  border-bottom: 1px solid var(--border-active);
   min-height: 40px;
+  position: relative;
+
+  // 顶部微弱内阴影增加凹陷感
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
+    opacity: 0.15;
+    pointer-events: none;
+  }
 
   .tags-label {
     display: flex;
     align-items: center;
-    color: #1890ff;
+    color: var(--accent);
     font-size: 13px;
     font-weight: 500;
     margin-right: 12px;
@@ -310,7 +324,7 @@ const isWideTag = (tag: SearchTag): boolean => {
     transition: all 0.2s ease;
 
     &:hover {
-      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+      box-shadow: var(--shadow-glow);
     }
 
     .tag-title {
@@ -319,7 +333,7 @@ const isWideTag = (tag: SearchTag): boolean => {
     }
 
     .tag-relation {
-      color: #8c8c8c;
+      color: var(--text-tertiary);
       margin-right: 4px;
     }
 
@@ -339,14 +353,14 @@ const isWideTag = (tag: SearchTag): boolean => {
   }
 
   .clear-all-btn {
-    color: #ff4d4f;
+    color: var(--danger);
     font-size: 12px;
     padding: 0 4px;
     height: 24px;
     line-height: 22px;
 
     &:hover {
-      color: #ff7875;
+      color: var(--danger);
     }
   }
 }

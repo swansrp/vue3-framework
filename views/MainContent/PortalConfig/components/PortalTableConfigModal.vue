@@ -1341,12 +1341,12 @@ const handleCancel = () => {
 
 .panel-header {
   padding: 12px 16px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-weight: 500;
-  background: #fafafa;
+  background: var(--bg-hover);
   border-radius: 8px 8px 0 0;
 }
 
@@ -1371,8 +1371,8 @@ const handleCancel = () => {
   }
 
   &.active {
-    background: #e6f7ff;
-    border: 1px solid #1890ff;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
   }
 }
 
@@ -1390,7 +1390,7 @@ const handleCancel = () => {
 
 .table-info {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--text-tertiary);
   margin-top: 4px;
 }
 
@@ -1409,15 +1409,15 @@ const handleCancel = () => {
 .basic-config-section {
   flex-shrink: 0;
   margin-bottom: 16px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .section-title {
   padding: 12px 16px;
-  background: #fafafa;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--bg-hover);
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 500;
   display: flex;
   justify-content: space-between;
@@ -1430,9 +1430,9 @@ const handleCancel = () => {
 
 .filter-columns-config {
   margin-top: 16px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--bg-hover);
 
   .filter-columns-header {
     padding: 10px 16px;
@@ -1444,23 +1444,23 @@ const handleCancel = () => {
     user-select: none;
 
     &:hover {
-      background: #f0f0f0;
+      background: var(--bg-active);
     }
 
     .filter-columns-title {
       font-weight: 500;
       font-size: 14px;
-      color: #333;
+      color: var(--text-primary);
     }
 
     .filter-columns-count {
       font-size: 13px;
-      color: #8c8c8c;
+      color: var(--text-tertiary);
     }
 
     .anticon {
       font-size: 14px;
-      color: #8c8c8c;
+      color: var(--text-tertiary);
       transition: transform 0.2s;
     }
   }
@@ -1470,25 +1470,25 @@ const handleCancel = () => {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    border-top: 1px solid #e8e8e8;
+    border-top: 1px solid var(--border-subtle);
 
     .ant-checkbox-wrapper {
       margin: 0;
       padding: 6px 10px;
-      background: #fff;
-      border: 1px solid #d9d9d9;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
       border-radius: 4px;
       transition: all 0.2s;
 
       &:hover {
-        border-color: #1890ff;
-        background: #f0f7ff;
+        border-color: var(--accent);
+        background: var(--accent-soft);
       }
 
       &.ant-checkbox-wrapper-checked {
-        background: #e6f7ff;
-        border-color: #1890ff;
-        color: #1890ff;
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
         font-weight: 500;
       }
 
@@ -1528,10 +1528,10 @@ const handleCancel = () => {
 
 .filter-list-header {
   padding: 10px 16px;
-  background: #f9f9f9;
-  border-bottom: 1px solid #f0f0f0;
+  background: var(--bg-hover);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1554,17 +1554,17 @@ const handleCancel = () => {
   gap: 10px;
 
   &:hover {
-    background: #f5f5f5;
+    background: var(--bg-hover);
   }
 
   &.active {
-    background: #e6f7ff;
-    border: 1px solid #1890ff;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
   }
 
   &.drag-over {
-    border: 2px dashed #1890ff;
-    background: #f0f7ff;
+    border: 2px dashed var(--accent);
+    background: var(--accent-soft);
   }
 }
 
@@ -1614,12 +1614,12 @@ const handleCancel = () => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 
 .filter-detail-header {
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1640,9 +1640,9 @@ const handleCancel = () => {
 .option-condition-section {
   margin-top: 8px;
   padding: 12px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--bg-hover);
 }
 
 .option-condition-header {
@@ -1651,14 +1651,14 @@ const handleCancel = () => {
   align-items: center;
   padding: 8px 12px;
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .option-condition-list {
   max-height: 200px;
   overflow-y: auto;
   padding: 8px 12px;
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .option-condition-item {
@@ -1667,11 +1667,11 @@ const handleCancel = () => {
   padding: 8px 12px;
   border-radius: 4px;
   margin-bottom: 4px;
-  background: #fff;
+  background: var(--bg-elevated);
   transition: all 0.2s;
 
   &:hover {
-    background: #f0f7ff;
+    background: var(--accent-soft);
   }
 
   .option-label {
@@ -1681,7 +1681,7 @@ const handleCancel = () => {
 
   .option-value {
     font-size: 12px;
-    color: #8c8c8c;
+    color: var(--text-tertiary);
     margin-right: auto;
   }
 }

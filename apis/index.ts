@@ -1,12 +1,12 @@
 import { Method } from 'axios'
 
 
+import { name } from '@/../package.json'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { QuerySortType, QueryType, UpdateOrderType, UpdatePidType } from '@/framework/components/common/Portal/type'
 import { download, request, upload } from '@/framework/network/request'
-import { domain } from '@/framework/network/request'
-// 先导出 baseDomain，确保其他模块导入时已经初始化
-export const baseDomain = domain
+// 独立计算 baseDomain，避免从 request.ts 导入 domain 导致的模块初始化 TDZ 问题
+export const baseDomain = '/' + name
 
 // 先导出 apiType,确保其他模块导入时已经初始化
 export const apiType: any = {

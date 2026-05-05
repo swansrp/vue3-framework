@@ -132,7 +132,7 @@
         >
           <caret-right-outlined
             :rotate="layoutSiderDisplay ? 180 : 0"
-            style="color: #1677ff;font-size: 15px;margin-right: 5px"
+            style="color: var(--accent);font-size: 15px;margin-right: 5px"
             @click="handleLayoutSiderDisplay"
           />
           <span>{{ selectedEntityName }}</span>
@@ -2578,36 +2578,64 @@ defineExpose({
 })
 </script>
 <style lang="less" scoped>
+// ============ 全局动画关键帧 ============
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmerMove {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes breatheShadow {
+  0%, 100% { box-shadow: var(--shadow-card); }
+  50% { box-shadow: var(--shadow-card-hover); }
+}
+// =====================================
+
 // 主要容器样式
 .portal-tree-wrapper {
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  border: 1px solid #e6e8eb;
-  border-radius: 8px;
+  background: linear-gradient(145deg, var(--bg-elevated), var(--bg-hover));
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
   box-sizing: border-box;
   overflow: auto;
   height: calc(100vh - 200px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-md);
   }
 }
 
 .portal-tree-bind-wrapper {
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  border: 1px solid #e6e8eb;
+  background: linear-gradient(145deg, var(--bg-elevated), var(--bg-hover));
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   box-sizing: border-box;
   overflow: auto;
   height: calc(100vh - 150px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-md);
   margin: 10px 15px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), 0 3px 10px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-lg);
   }
 }
 
@@ -2615,13 +2643,14 @@ defineExpose({
   height: calc(100% - 70px);
   display: flex;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  animation: fadeSlideIn 0.5s ease-out;
 
   .menu-tree {
     width: 280px;
-    background: linear-gradient(145deg, #ffffff, #f8f9fa);
-    border: 1px solid #e6e8eb;
-    border-radius: 12px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08), 0 1px 6px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(145deg, var(--bg-elevated), var(--bg-hover));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
     margin: 5px 0 5px 15px;
     position: relative;
     overflow: hidden;
@@ -2629,7 +2658,7 @@ defineExpose({
 
     &:hover {
       transform: translateY(-1px);
-      box-shadow: 0 5px 16px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.12);
+      box-shadow: var(--shadow-lg);
     }
 
     .no-data {
@@ -2637,7 +2666,7 @@ defineExpose({
       font-size: 16px;
       font-weight: 500;
       text-align: center;
-      color: #64748b;
+      color: var(--text-secondary);
       padding: 40px 20px;
       letter-spacing: 0.5px;
     }
@@ -2647,9 +2676,9 @@ defineExpose({
       font-weight: 600;
       text-align: center;
       padding: 16px 0;
-      color: #1e293b;
-      background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
-      border-bottom: 2px solid #e2e8f0;
+      color: var(--text-primary);
+      background: linear-gradient(90deg, var(--bg-hover) 0%, var(--bg-active) 100%);
+      border-bottom: 2px solid var(--border-subtle);
       letter-spacing: 0.5px;
     }
   }
@@ -2660,10 +2689,11 @@ defineExpose({
     align-items: center;
     margin: 8px 20px 8px 15px;
     padding: 12px 16px;
-    background: linear-gradient(145deg, #ffffff, #f8f9fa);
-    border: 1px solid #e6e8eb;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    background: var(--card-gradient);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    animation: fadeSlideIn 0.4s ease-out 0.08s both;
   }
 
   .portal-table-space {
@@ -2677,11 +2707,27 @@ defineExpose({
       left: 50%;
       transform: translateX(-50%);
       width: 99%;
-      background: #ffffff;
-      border-radius: 12px;
+      background: var(--card-gradient);
+      border-radius: var(--radius-xl);
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.08);
-      border: 1px solid #e6e8eb;
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--border-subtle);
+      animation: fadeIn 0.5s ease-out 0.15s both;
+
+      // 顶部装饰线 —— 流光渐变色带
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent-soft) 0%, var(--accent) 30%, var(--accent-light) 50%, var(--accent) 70%, var(--accent-soft) 100%);
+        background-size: 200% 100%;
+        animation: shimmerMove 6s ease-in-out infinite;
+        z-index: 10;
+        pointer-events: none;
+      }
     }
   }
 }
@@ -2692,15 +2738,30 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: linear-gradient(145deg, #f8f9fa, #ffffff);
-  border-top: 1px solid #e6e8eb;
-  border-radius: 0 0 12px 12px;
+  background: var(--card-gradient);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  position: relative;
+  animation: fadeSlideIn 0.4s ease-out 0.2s both;
+
+  // 顶部分隔色带
+  &::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--card-accent-top);
+    opacity: 0.4;
+    pointer-events: none;
+  }
 }
 
 // 表格主体样式
 :deep(.surely-table-body-viewport-container) {
   min-height: 350px !important;
-  background: #ffffff;
+  background: var(--bg-elevated);
 }
 
 :deep(.surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner) {
@@ -2713,34 +2774,48 @@ defineExpose({
   font-weight: 600;
   flex-direction: column;
   justify-content: center;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 14px;
   letter-spacing: 0.3px;
 }
 
 :deep(.surely-table-header-cell) {
   font-weight: 600;
-  background: #f8fafc !important;
-  color: #374151 !important;
-  border-bottom: 1px solid #e5e7eb !important;
+  background: var(--card-gradient-header) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
   font-size: 14px;
   letter-spacing: 0.3px;
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card);
+  position: relative;
+
+  // 底部细线分隔
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--card-accent-top);
+    opacity: 0.3;
+    pointer-events: none;
+  }
 
   // 移除动画效果，保持静态样式
   &:hover {
-    background: #f8fafc !important;
+    background: var(--card-gradient-header) !important;
     transform: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-card);
   }
 }
 
 // 单元格样式
 :deep(.surely-table-cell) {
   font-size: 14px;
-  color: #374151;
-  border-right: 1px solid #f3f4f6;
+  color: var(--text-primary);
+  border-right: 1px solid var(--border-subtle);
   transition: all 0.2s ease;
 }
 
@@ -2752,10 +2827,10 @@ defineExpose({
   width: 18px;
   height: 18px;
   line-height: 16px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  color: #3b82f6;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
   font-size: 16px;
   font-weight: 400;
   cursor: pointer !important;
@@ -2768,34 +2843,34 @@ defineExpose({
   vertical-align: middle;
 
   &:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
   }
 
   // 展开状态（减号）
   &.custom-expand-icon-expanded {
-    color: #3b82f6;
+    color: var(--accent);
   }
 
   // 折叠状态（加号）
   &.custom-expand-icon-collapsed {
-    color: #3b82f6;
+    color: var(--accent);
   }
 }
 
 // 过滤器样式
 .filter-active {
-  color: #3b82f6 !important;
+  color: var(--accent) !important;
   opacity: 1 !important;
   font-weight: 600;
 }
 
 // 弹出菜单样式优化
 .menu-popup-container {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   width: fit-content !important;
   min-width: 200px;
   max-height: 320px;
@@ -2811,7 +2886,7 @@ defineExpose({
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, #f1f5f9, transparent);
+    background: linear-gradient(90deg, transparent, var(--bg-hover), transparent);
     opacity: 0.6;
   }
 
@@ -2825,11 +2900,11 @@ defineExpose({
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--text-tertiary);
     border-radius: 3px;
 
     &:hover {
-      background: #94a3b8;
+      background: var(--text-secondary);
     }
   }
 }
@@ -2857,13 +2932,13 @@ defineExpose({
     width: 100%;
     padding: 10px 16px;
     font-size: 14px;
-    color: #374151;
+    color: var(--text-primary);
     font-weight: 500;
     line-height: 1.4;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 0;
     margin: 0;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--border-subtle);
     position: relative;
 
     // 首个项目的特殊样式
@@ -2880,8 +2955,8 @@ defineExpose({
     }
 
     &:hover {
-      background: #f8fafc;
-      color: #1e40af;
+      background: var(--bg-hover);
+      color: var(--accent);
       transform: none;
 
       // 微妙的左侧标识
@@ -2892,20 +2967,20 @@ defineExpose({
         top: 0;
         bottom: 0;
         width: 3px;
-        background: #3b82f6;
+        background: var(--accent);
         opacity: 0.6;
         transition: all 0.2s ease;
       }
     }
 
     &.disabled {
-      color: #9ca3af;
+      color: var(--text-tertiary);
       cursor: not-allowed;
       opacity: 0.5;
 
       &:hover {
         background: transparent;
-        color: #9ca3af;
+        color: var(--text-tertiary);
 
         &::before {
           display: none;
@@ -2918,21 +2993,21 @@ defineExpose({
       margin-right: 8px;
 
       .ant-checkbox-inner {
-        border-color: #d1d5db;
+        border-color: var(--border-hover);
 
         &:hover {
-          border-color: #3b82f6;
+          border-color: var(--accent);
         }
       }
     }
 
     .ant-btn {
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-      border-color: #d1d5db;
+      box-shadow: var(--shadow-sm);
+      border-color: var(--border-hover);
 
       &:hover {
-        border-color: #3b82f6;
-        color: #3b82f6;
+        border-color: var(--accent);
+        color: var(--accent);
       }
     }
   }
@@ -2940,21 +3015,21 @@ defineExpose({
 
 .surely-table-cell > .surely-table-cell-edit-wrapper > .surely-table-cell-edit-inner {
   padding: 4px !important;
-  border-radius: 4px;
-  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hover);
   transition: all 0.2s ease;
 
   &:focus-within {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
 }
 
 // 列表模式激活样式
 .activate-item {
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
-  border-right: 4px solid #3b82f6;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-mid)) !important;
+  border-right: 4px solid var(--accent);
+  box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -2966,17 +3041,17 @@ defineExpose({
 }
 
 :deep(::-webkit-scrollbar-track) {
-  background: #f1f5f9;
-  border-radius: 4px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
 }
 
 :deep(::-webkit-scrollbar-thumb) {
-  background: linear-gradient(135deg, #cbd5e1, #94a3b8);
-  border-radius: 4px;
+  background: linear-gradient(135deg, var(--text-tertiary), var(--text-secondary));
+  border-radius: var(--radius-sm);
   transition: all 0.2s ease;
 
   &:hover {
-    background: linear-gradient(135deg, #94a3b8, #64748b);
+    background: linear-gradient(135deg, var(--text-secondary), var(--text-primary));
   }
 }
 
@@ -2987,9 +3062,9 @@ defineExpose({
 }
 
 :deep(.ant-spin) {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-overlay);
   backdrop-filter: blur(4px);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
 }
 
 // 空状态样式
@@ -2997,41 +3072,82 @@ defineExpose({
   padding: 40px 20px;
 
   .ant-empty-description {
-    color: #64748b;
+    color: var(--text-secondary);
     font-size: 14px;
   }
 }
 
+</style>
+
+<style lang="less">
+// ============ surely-vue/table 全局样式覆盖 ============
+// 必须放在非 scoped 块中，否则 scoped [data-v-xxx] 无法匹配库渲染的元素
+.surely-table-wrapper {
+  // 包装容器也需要设置变量，因为 footer/title 与 .surely-table 同级
+  --surely-table-background-color: var(--bg-hover);
+  --surely-table-text-color: var(--text-primary);
+  --surely-table-border-color: var(--border-subtle);
+  --surely-table-border-color-base: var(--border-hover);
+}
+
+.surely-table-footer {
+  background: var(--card-gradient);
+  color: var(--text-primary);
+  border-top: 1px solid var(--border-subtle);
+}
+
 .surely-table {
-  // 使用组件自带的奇偶类名，更稳定可靠
+  background: var(--card-gradient);
+  border-radius: var(--radius-md);
+
+  --surely-table-bg: var(--bg-elevated);
+  --surely-table-row-bg: var(--bg-elevated);
+  --surely-table-component-background: var(--bg-elevated);
+  --surely-table-background-color: var(--bg-hover);
+  --surely-table-row-hover-bg: var(--bg-active);
+  --surely-table-expanded-row-bg: var(--bg-hover);
+  --surely-table-background-color-selected: var(--accent-soft);
+  --surely-table-background-color-summary: var(--bg-hover);
+  --surely-table-border-color: var(--border-subtle);
+  --surely-table-border-color-base: var(--border-hover);
+  --surely-table-text-color: var(--text-primary);
+  --surely-table-text-color-secondary: var(--text-secondary);
+  --surely-table-header-color: var(--text-primary);
+  --surely-table-header-sort-bg: var(--bg-active);
+  --surely-table-body-sort-bg: var(--bg-hover);
+  --surely-table-header-cell-split-color: var(--border-subtle);
+  --surely-table-header-icon-color: var(--text-tertiary);
+  --surely-table-header-icon-color-hover: var(--text-secondary);
+  --surely-table-header-filter-active-bg: var(--accent-soft);
+  --surely-table-header-sort-active-bg: var(--bg-active);
+  --surely-table-header-drag-bg: var(--bg-active);
+  --surely-table-disabled-color: var(--text-tertiary);
+  --surely-table-disabled-bg: var(--bg-hover);
+
   .surely-table-row-even,
   tbody tr.surely-table-row-even,
   .surely-table-body .surely-table-row-even {
-    background-color: #f9fafb !important;
+    background-color: var(--accent-subtle) !important;
   }
 
   .surely-table-row-odd,
   tbody tr.surely-table-row-odd,
   .surely-table-body .surely-table-row-odd {
-    background-color: #ffffff !important;
+    background-color: var(--bg-elevated) !important;
   }
 
   .surely-table-row-even:hover,
   tbody tr.surely-table-row-even:hover,
-  .surely-table-body .surely-table-row-even:hover {
-    background-color: #f3f4f6 !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
+  .surely-table-body .surely-table-row-even:hover,
   .surely-table-row-odd:hover,
   tbody tr.surely-table-row-odd:hover,
   .surely-table-body .surely-table-row-odd:hover {
-    background-color: #f8fafc !important;
+    background-color: var(--accent-soft) !important;
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+      0 1px 4px rgba(0, 0, 0, 0.06),
+      0 0 12px var(--accent-glow);
+    transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   }
 }
 </style>

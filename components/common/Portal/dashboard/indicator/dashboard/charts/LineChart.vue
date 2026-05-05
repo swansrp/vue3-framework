@@ -579,7 +579,7 @@ export default defineComponent({
                 const metric = props.dataMetrics.find(m => m.dataName === statType)
                 const entries = groupedParams[statType]
                 const totalRaw = entries.totalRaw
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${statType}</strong><br/>`
                 entries.params.forEach((param: any) => {
                   const percentage = totalRaw > 0 ? ((param.rawValue / totalRaw) * 100).toFixed(1) : '0.0'
                   const formattedRaw = formatOriginalValue(metric, param.rawValue)
@@ -588,9 +588,9 @@ export default defineComponent({
                 const formattedTotal = formatOriginalValue(metric, totalRaw)
                 const grandTotal = globalRawTotalsByStatType[statType] || 0
                 const subtotalPercentage = grandTotal > 0 ? ((totalRaw / grandTotal) * 100).toFixed(2) : '0.00'
-                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal} (${formatSharePercent(subtotalPercentage)})</span><br/>`
+                result += `<span style="color: var(--text-secondary); font-size: 12px;">小计: ${formattedTotal} (${formatSharePercent(subtotalPercentage)})</span><br/>`
                 const formattedGrandTotal = formatOriginalValue(metric, grandTotal)
-                result += `<span style="color: #666; font-size: 12px; font-weight: bold;\">总计: ${formattedGrandTotal}</span></div>`
+                result += `<span style="color: var(--text-secondary); font-size: 12px; font-weight: bold;\">总计: ${formattedGrandTotal}</span></div>`
               })
             } else {
               const categoryName = params[0].axisValue
@@ -607,10 +607,10 @@ export default defineComponent({
                 const totalRaw = globalTotalsMap[statType] || 0
                 const percentage = totalRaw > 0 ? ((rawValue / totalRaw) * 100).toFixed(2) : '0.00'
                 const formattedValue = formatOriginalValue(metric, rawValue)
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${metric?.dataName || statType}</strong><br/>`
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${metric?.dataName || statType}</strong><br/>`
                 result += `${param.marker}${categoryName}：${formattedValue} (${formatSharePercent(percentage)})<br/>`
                 const formattedTotal = formatOriginalValue(metric, totalRaw)
-                result += `<span style="color: #666; font-size: 12px;">总计：${formattedTotal}</span></div>`
+                result += `<span style="color: var(--text-secondary); font-size: 12px;">总计：${formattedTotal}</span></div>`
               } else {
                 params.forEach((param: any) => {
                   const statType = param.seriesName
@@ -619,10 +619,10 @@ export default defineComponent({
                   const totalRaw = globalTotalsMap[statType] || 0
                   const percentage = totalRaw > 0 ? ((rawValue / totalRaw) * 100).toFixed(2) : '0.00'
                   const formattedValue = formatOriginalValue(metric, rawValue)
-                  result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${metric?.dataName || statType}</strong><br/>`
+                  result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${metric?.dataName || statType}</strong><br/>`
                   result += `${param.marker}${metric?.dataName || statType}：${formattedValue} (${formatSharePercent(percentage)})<br/>`
                   const formattedTotal = formatOriginalValue(metric, totalRaw)
-                  result += `<span style="color: #666; font-size: 12px;">总计：${formattedTotal}</span></div>`
+                  result += `<span style="color: var(--text-secondary); font-size: 12px;">总计：${formattedTotal}</span></div>`
                 })
               }
             }

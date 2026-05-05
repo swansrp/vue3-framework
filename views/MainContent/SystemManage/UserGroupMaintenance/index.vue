@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <a-layout style="height: 100%;background-color: #fff">
+    <a-layout style="height: 100%;background-color: var(--bg-elevated)">
       <a-layout-sider
         class="user-group-category-list-wrapper"
         width="280"

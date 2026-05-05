@@ -319,7 +319,7 @@ onMounted(() =>
 
 <style scoped>
 .role-list-wrap {
-  background: #fff;
+  background: var(--bg-elevated);
 }
 
 .role-list {
@@ -349,7 +349,7 @@ onMounted(() =>
 
 .activate-item {
   font-weight: bold;
-  color: #1989fa;
+  color: var(--accent);
 }
 .a-list-item-content {
   width: 100%;

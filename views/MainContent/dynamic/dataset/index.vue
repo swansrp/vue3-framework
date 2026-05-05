@@ -77,11 +77,11 @@ const handleGeneratePortal = (params: { portalName: string, displayName: string,
 .dataset-container {
   padding: 16px;
   height: 100%;
-  background: #f0f2f5;
+  background: var(--bg-base);
 
   :deep(.ant-tabs) {
     height: 100%;
-    background: #fff;
+    background: var(--bg-elevated);
     padding: 0;
     border-radius: 4px;
   }

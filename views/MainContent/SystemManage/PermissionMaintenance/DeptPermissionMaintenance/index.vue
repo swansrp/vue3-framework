@@ -420,8 +420,8 @@ onMounted(() => {
 
 <style scoped>
 .dept-tree-wrap {
-  background: #fff;
-  border-right: 1px solid #f0f0f0;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-subtle);
   height: 100%;
 }
 
@@ -438,9 +438,9 @@ onMounted(() => {
 
 .dept-tree-header {
   flex-shrink: 0;
-  background: white;
+  background: var(--bg-elevated);
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .header-title-row {

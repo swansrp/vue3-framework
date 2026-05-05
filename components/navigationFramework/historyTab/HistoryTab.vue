@@ -74,25 +74,41 @@ const changeActivateKey = (key: Key) => {
 <style>
 .history-tags {
   height: 36px;
-  padding: 4px 20px 0 20px;
+  padding: 4px var(--space-xl) 0 var(--space-xl);
   box-sizing: border-box;
-  background: transparent;
-  border-bottom: none;
+  background: var(--history-tab-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-subtle);
   user-select: none;
   display: flex;
   align-items: center;
   margin: 0;
   border-radius: 0;
-  box-shadow: none;
+  box-shadow: var(--shadow-tab);
   overflow: visible;
+  position: relative;
+  z-index: 5;
 }
 
-/* 去掉pane面板，以只保留顶部选择tab */
+/* Tab条底部与内容区域的分隔线 */
+.history-tags::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-subtle);
+  z-index: 0;
+}
+
+/* 去掉pane面板 */
 .history-tags .card-container > .ant-tabs-card .ant-tabs-content > .ant-tabs-tabpane {
   display: none;
 }
 
-/* Tab容器样式优化 */
+/* Tab容器 */
 .history-tags .ant-tabs {
   margin: 0;
   height: 100%;
@@ -119,98 +135,101 @@ const changeActivateKey = (key: Key) => {
   display: flex;
   align-items: center;
   overflow: visible;
+  gap: 2px;
 }
 
-/* Tab项基础样式 - 轻量扁平设计 */
+/* Tab项基础样式 */
 .history-tags .ant-tabs-tab {
-  margin: 0 1px !important;
-  border: none !important;
-  border-radius: 4px 4px 0 0 !important;
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.05) 0%, 
-    rgba(255, 255, 255, 0.02) 100%);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1),
-              0 1px 2px rgba(0, 0, 0, 0.05);
-  backdrop-filter: none;
-  transition: all 0.2s ease;
+  margin: 0 !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-bottom: none !important;
+  border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+  background: var(--bg-hover);
+  padding: 0 12px !important;
+  transition: all var(--transition-fast);
   position: relative;
-  height: 28px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none !important;
-  border-bottom: 2px solid transparent !important;
+  opacity: 0.65;
+  box-shadow: none;
 }
 
-/* Tab悬停效果 - 轻微提亮 */
+/* Tab悬停 */
 .history-tags .ant-tabs-tab:hover {
-  background: linear-gradient(135deg, 
-    rgba(24, 144, 255, 0.06) 0%, 
-    rgba(64, 169, 255, 0.08) 100%);
-  box-shadow: inset 0 -1px 0 rgba(24, 144, 255, 0.15),
-              0 2px 6px rgba(0, 0, 0, 0.08),
-              0 0 12px rgba(24, 144, 255, 0.1);
-  transform: none;
-  border-color: transparent !important;
+  background: var(--bg-elevated);
+  opacity: 1;
+  border-color: var(--border-hover) !important;
+  box-shadow: var(--history-tab-shadow);
+  transform: translateY(-1px);
 }
 
-/* Tab按钮内容样式 */
+/* Tab按钮文字 */
 .history-tags .ant-tabs-tab .ant-tabs-tab-btn {
-  color: #606266;
+  color: var(--text-secondary);
   font-weight: 400;
   font-size: 12px;
   padding: 0 2px;
-  transition: color 0.2s ease;
+  transition: color var(--transition-fast);
   line-height: 1.3;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Tab悬停时文字颜色 */
+/* Tab悬停文字 */
 .history-tags .ant-tabs-tab:hover .ant-tabs-tab-btn {
-  color: #1890ff;
+  color: var(--text-primary);
 }
 
-/* 激活状态的Tab样式 - 简洁蓝色 */
+/* 激活Tab */
 .history-tags .ant-tabs.ant-tabs-card .ant-tabs-nav .ant-tabs-tab-active {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.08) 0%, 
-    rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.08) 100%);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08),
-              inset 0 1px 2px rgba(0, 0, 0, 0.06),
-              0 0 8px rgba(24, 144, 255, 0.25),
-              0 0 16px rgba(24, 144, 255, 0.15),
-              0 0 24px rgba(24, 144, 255, 0.08),
-              inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  border: none !important;
-  border-bottom: 2px solid rgba(24, 144, 255, 0.4) !important;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--bg-elevated) !important;
+  opacity: 1;
   position: relative;
-  transform: translateY(-1px);
   z-index: 10;
+  box-shadow:
+    var(--history-tab-active-shadow),
+    0 1px 0 var(--bg-elevated);
+  transform: translateY(-1px);
 }
 
-/* 移除底部指示线 */
+/* 激活Tab底部连接线 — 遮盖底部分隔线 */
 .history-tags .ant-tabs.ant-tabs-card .ant-tabs-nav .ant-tabs-tab-active::after {
-  display: none;
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--bg-elevated);
+  z-index: 2;
 }
 
-/* 激活状态的Tab文字和关闭按钮颜色 */
-.history-tags .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn,
-.history-tags .ant-tabs.ant-tabs-card .ant-tabs-nav .ant-tabs-tab-active .ant-tabs-tab-remove {
-  color: #1890ff;
-  font-weight: 400;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* 激活Tab上方靛蓝指示线 */
+.history-tags .ant-tabs.ant-tabs-card .ant-tabs-nav .ant-tabs-tab-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+  pointer-events: none;
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
-/* 关闭按钮样式优化 - 圆形设计 */
+/* 激活Tab文字 */
+.history-tags .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* 关闭按钮 */
 .history-tags .ant-tabs-tab-remove {
   margin-left: 4px;
-  color: #bfbfbf;
-  transition: all 0.2s ease;
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
   border-radius: 50%;
   width: 14px;
   height: 14px;
@@ -220,27 +239,14 @@ const changeActivateKey = (key: Key) => {
   font-size: 10px;
   line-height: 1;
   background: transparent;
+  order: 1;
 }
 
-/* 关闭按钮悬停效果 */
 .history-tags .ant-tabs-tab-remove:hover {
-  color: #ff4d4f;
-  background: rgba(255, 77, 79, 0.1);
-  transform: scale(1.15);
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
-/* 激活状态Tab的关闭按钮 */
-.history-tags .ant-tabs-tab-active .ant-tabs-tab-remove {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-/* 激活状态Tab的关闭按钮悬停效果 */
-.history-tags .ant-tabs-tab-active .ant-tabs-tab-remove:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Tab内容区域样式 */
 .history-tags .ant-tabs-card.ant-tabs-small > .ant-tabs-nav .ant-tabs-tab {
   padding: 0 8px;
   min-width: 45px;
@@ -251,32 +257,30 @@ const changeActivateKey = (key: Key) => {
   justify-content: center;
 }
 
-/* 去掉tab组件自带的边框 */
+/* 去掉tab组件底部边框线 */
 .history-tags .ant-tabs-top > .ant-tabs-nav::before {
   display: none;
 }
 
-/* Tab内容区域对齐优化 */
 .history-tags .ant-tabs-nav-wrap {
   padding: 0;
 }
 
-/* 响应式设计 - 在较小屏幕上调整样式 */
+/* 响应式 */
 @media (max-width: 768px) {
   .history-tags {
     height: 34px;
     padding: 2px 4px;
   }
-  
   .history-tags .ant-tabs-card.ant-tabs-small > .ant-tabs-nav .ant-tabs-tab {
     padding: 3px 6px;
     min-width: 50px;
     font-size: 12px;
-    height: 26px;
+    height: 28px;
   }
 }
 
-/* 滚动条美化（如果Tab过多需要滚动） */
+/* 隐藏滚动条 */
 .history-tags .ant-tabs-nav-wrap::-webkit-scrollbar {
   height: 0;
 }
@@ -287,10 +291,5 @@ const changeActivateKey = (key: Key) => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 120px;
-}
-
-/* 优化Tab之间的间距 */
-.history-tags .ant-tabs-nav-list {
-  gap: 0;
 }
 </style>

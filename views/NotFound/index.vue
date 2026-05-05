@@ -1,5 +1,5 @@
 <template>
-  <div style="background:#f0f2f5;height: 100%;">
+  <div style="background:var(--bg-base);height: 100%;">
     <div class="notfound-wrapper">
       <div class="wscn-http404">
         <div class="pic-404">

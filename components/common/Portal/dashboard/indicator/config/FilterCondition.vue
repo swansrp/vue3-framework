@@ -545,21 +545,21 @@ const toggleCollapse = () => {
     box-sizing: border-box;
 
     &:hover {
-      background-color: #f0f2f5;
+      background-color: var(--bg-hover);
     }
 
     h4 {
       margin: 0;
       font-size: 14px;
       font-weight: 600;
-      color: #262626;
+      color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .collapse-btn {
-      color: #8c8c8c;
+      color: var(--text-tertiary);
       transition: all 0.2s;
       width: 24px;
       height: 24px;
@@ -570,19 +570,19 @@ const toggleCollapse = () => {
       flex-shrink: 0;
 
       &:hover {
-        color: #1890ff;
-        background-color: #e6f7ff;
+        color: var(--accent);
+        background-color: var(--accent-soft);
       }
     }
   }
 
   .filter-drop {
     min-height: 50px;
-    border: 2px dashed #d9d9d9;
+    border: 2px dashed var(--border-subtle);
     border-radius: 6px;
     padding: 8px 12px;
     transition: all 0.3s ease;
-    background: #fafafa;
+    background: var(--bg-hover);
     position: relative;
     display: flex;
     flex-direction: column;
@@ -591,13 +591,13 @@ const toggleCollapse = () => {
     box-sizing: border-box;
 
     &.drag-over {
-      border-color: #1890ff;
-      background: #f6ffed;
+      border-color: var(--accent);
+      background: var(--success-soft);
     }
 
     &.has-content {
-      border-color: #52c41a;
-      background: white;
+      border-color: var(--success);
+      background: var(--bg-elevated);
     }
 
     .filter-delete-btn {
@@ -607,7 +607,7 @@ const toggleCollapse = () => {
       z-index: 2;
       
       :deep(.ant-btn) {
-        color: #ff4d4f;
+        color: var(--danger);
         width: 24px;
         height: 24px;
         display: flex;
@@ -617,15 +617,15 @@ const toggleCollapse = () => {
         border-radius: 50%;
         
         &:hover {
-          background-color: #fff2f0;
-          border-color: #ffccc7;
+          background-color: var(--danger-soft);
+          border-color: var(--border-hover);
         }
       }
     }
 
     .drop-placeholder {
       text-align: center;
-      color: #8c8c8c;
+      color: var(--text-tertiary);
       font-size: 12px;
       width: 100%;
     }
@@ -638,7 +638,7 @@ const toggleCollapse = () => {
       .filter-header {
         margin-bottom: 8px;
         font-weight: 600;
-        color: #262626;
+        color: var(--text-primary);
         width: 100%;
         box-sizing: border-box;
         white-space: nowrap;
@@ -668,12 +668,12 @@ const toggleCollapse = () => {
           min-width: 0; // 防止按钮过宽
 
           &:hover {
-            background: #f0f8ff;
+            background: var(--accent-soft);
           }
         }
 
         .clear-btn {
-          color: #000000;
+          color: var(--text-primary);
           font-size: 11px;
           padding: 2px 6px;
           height: 24px;
@@ -706,13 +706,13 @@ const toggleCollapse = () => {
     width: 100%;
     
     :deep(.ant-btn) {
-      color: #1890ff;
-      border-color: #1890ff;
+      color: var(--accent);
+      border-color: var(--accent);
       width: 100%;
       
       &:hover {
-        color: #40a9ff;
-        border-color: #40a9ff;
+        color: var(--accent-light);
+        border-color: var(--accent-light);
       }
     }
   }
@@ -720,9 +720,9 @@ const toggleCollapse = () => {
   // 拖拽悬停时的样式
   .add-filter-btn.drag-over {
     :deep(.ant-btn) {
-      color: #fff;
-      background-color: #1890ff;
-      border-color: #1890ff;
+      color: var(--bg-elevated);
+      background-color: var(--accent);
+      border-color: var(--accent);
     }
   }
 }

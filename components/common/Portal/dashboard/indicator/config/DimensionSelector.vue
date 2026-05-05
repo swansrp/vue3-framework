@@ -400,18 +400,18 @@ const toggleCollapse = () => {
     transition: all 0.3s;
 
     &:hover {
-      background-color: #f0f2f5;
+      background-color: var(--bg-hover);
     }
 
     h4 {
       margin: 0;
       font-size: 14px;
       font-weight: 600;
-      color: #262626;
+      color: var(--text-primary);
     }
 
     .collapse-btn {
-      color: #8c8c8c;
+      color: var(--text-tertiary);
       transition: all 0.2s;
       width: 24px;
       height: 24px;
@@ -421,8 +421,8 @@ const toggleCollapse = () => {
       border-radius: 4px;
 
       &:hover {
-        color: #1890ff;
-        background-color: #e6f7ff;
+        color: var(--accent);
+        background-color: var(--accent-soft);
       }
     }
   }
@@ -436,14 +436,14 @@ const toggleCollapse = () => {
       gap: 8px;
       margin-bottom: 8px;
       font-size: 13px;
-      color: #595959;
+      color: var(--text-secondary);
 
       .required {
-        color: #ff4d4f;
+        color: var(--danger);
       }
 
       .dimension-tip {
-        color: #8c8c8c;
+        color: var(--text-tertiary);
         font-size: 12px;
         font-style: italic;
         margin-left: auto;
@@ -451,29 +451,29 @@ const toggleCollapse = () => {
 
       .clear-btn {
         margin-left: auto;
-        color: #000000;
+        color: var(--text-primary);
       }
     }
 
     .drop-zone {
       min-height: 50px;
-      border: 2px dashed #d9d9d9;
+      border: 2px dashed var(--border-subtle);
       border-radius: 6px;
       padding: 8px 12px;
       transition: all 0.3s ease;
-      background: #fafafa;
+      background: var(--bg-hover);
       position: relative;
       display: flex;
       align-items: center;
 
       &.drag-over {
-        border-color: #1890ff;
-        background: #f6ffed;
+        border-color: var(--accent);
+        background: var(--success-soft);
       }
 
       &.drag-forbidden {
-        border-color: #d9d9d9 !important;
-        background: #f5f5f5 !important;
+        border-color: var(--border-subtle) !important;
+        background: var(--bg-hover) !important;
 
         .drop-placeholder {
           opacity: 0.3;
@@ -481,19 +481,19 @@ const toggleCollapse = () => {
       }
 
       &.has-content {
-        border-color: #52c41a;
-        background: white;
+        border-color: var(--success);
+        background: var(--bg-elevated);
       }
 
       &.disabled {
-        background: #f5f5f5;
-        border-color: #d9d9d9;
+        background: var(--bg-hover);
+        border-color: var(--border-subtle);
         border-style: dashed;
         opacity: 0.6;
         cursor: not-allowed;
 
         .drop-placeholder {
-          color: #bfbfbf;
+          color: var(--text-tertiary);
         }
       }
 
@@ -507,22 +507,22 @@ const toggleCollapse = () => {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        background: rgba(51, 51, 51, 0.9);
+        background: var(--bg-overlay);
         border-radius: 4px;
         z-index: 10;
         pointer-events: none;
 
         .forbidden-icon {
           font-size: 30px;
-          color: #ff0000;
+          color: var(--danger);
           margin-bottom: 5px;
           font-weight: bold;
-          text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+          text-shadow: 0 0 8px var(--bg-overlay);
           animation: pulse 1.5s ease-in-out infinite alternate;
         }
 
         .forbidden-text {
-          color: #ff0000;
+          color: var(--danger);
           font-size: 14px;
           font-weight: 600;
           text-align: center;
@@ -532,12 +532,12 @@ const toggleCollapse = () => {
 
       .drop-placeholder {
         text-align: center;
-        color: #8c8c8c;
+        color: var(--text-tertiary);
         font-size: 12px;
         width: 100%;
 
         &.warning-hint {
-          color: #999999;
+          color: var(--text-tertiary);
           font-weight: 400;
           position: relative;
 
@@ -546,7 +546,7 @@ const toggleCollapse = () => {
             margin-right: 4px;
             font-size: 12px;
             opacity: 0.7;
-            color: #bfbfbf;
+            color: var(--text-tertiary);
           }
         }
       }
@@ -562,7 +562,7 @@ const toggleCollapse = () => {
 
           .dimension-title {
             font-weight: 600;
-            color: #262626;
+            color: var(--text-primary);
             flex: 1;
             white-space: nowrap;
             overflow: hidden;

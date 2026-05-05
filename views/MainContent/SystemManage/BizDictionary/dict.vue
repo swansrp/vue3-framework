@@ -793,9 +793,9 @@ loadDictNameMap()
 
 .dict-list-panel,
 .dict-items-panel {
-  background: #fff;
+  background: var(--bg-elevated);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -435,12 +435,12 @@ onMounted(() => {
 
   .help-text {
     font-size: 12px;
-    color: #999;
+    color: var(--text-tertiary);
     margin-top: 4px;
   }
 
   .test-result {
-    background: #f5f5f5;
+    background: var(--bg-hover);
     padding: 12px;
     border-radius: 4px;
     max-height: 300px;

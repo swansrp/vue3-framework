@@ -461,7 +461,7 @@ onMounted(() => {
 .user-permit-container {
   padding: 20px;
   height: calc(100vh - 104px); /* 顶部header 60px + history-tab 36px + padding 8px */
-  background-color: #f5f5f5;
+  background-color: var(--bg-base);
   overflow: hidden;
 
   .main-content {
@@ -500,9 +500,9 @@ onMounted(() => {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 12px;
-    color: #1d1d1d;
+    color: var(--text-primary);
     padding-bottom: 8px;
-    border-bottom: 2px solid #1890ff;
+    border-bottom: 2px solid var(--accent);
   }
 
   .menu-tree-section {
@@ -517,7 +517,7 @@ onMounted(() => {
       border: 1px solid #d9d9d9;
       border-radius: 4px;
       padding: 12px;
-      background-color: #fff;
+      background-color: var(--bg-elevated);
       overflow-y: auto;
       min-height: 0;
 
@@ -624,15 +624,15 @@ onMounted(() => {
     }
 
     .permit-item {
-      background: #fff;
-      border: 1px solid #e8e8e8;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
       border-radius: 6px;
       padding: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+      box-shadow: var(--shadow-sm);
       transition: all 0.3s;
 
       &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--shadow-md);
         transform: translateY(-2px);
       }
 
@@ -650,18 +650,18 @@ onMounted(() => {
         .source-name {
           font-size: 16px;
           font-weight: 600;
-          color: #1d1d1d;
+          color: var(--text-primary);
         }
       }
 
       .permit-path {
         font-size: 14px;
         line-height: 1.6;
-        color: #595959;
+        color: var(--text-secondary);
         padding: 8px 12px;
-        background-color: #fafafa;
+        background-color: var(--bg-hover);
         border-radius: 4px;
-        border-left: 3px solid #1890ff;
+        border-left: 3px solid var(--accent);
       }
     }
   }

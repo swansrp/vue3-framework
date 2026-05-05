@@ -189,7 +189,7 @@ const handleAddField = () => {
   .designer-content {
     flex: 1;
     overflow: auto;
-    background: #fafafa;
+    background: var(--bg-hover);
     padding: 16px;
     border-radius: 4px;
   }

@@ -130,7 +130,7 @@
                     style="width: 100%;"
                   >
                     <strong>JOIN条件:</strong> 
-                    <code style="background: #f5f5f5; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-left: 8px;">
+                    <code style="background: var(--bg-hover); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-left: 8px;">
                       {{ table.joinCondition }}
                     </code>
                   </div>
@@ -216,7 +216,7 @@
                 style="width: 100%;"
               >
                 <strong>JOIN条件:</strong>
-                <code style="background: #f5f5f5; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-left: 8px;">
+                <code style="background: var(--bg-hover); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-left: 8px;">
                   {{ table.joinCondition }}
                 </code>
               </div>
@@ -259,7 +259,7 @@
               </a-tag>
               <span
                 v-if="col.remark"
-                style="color: #999"
+                style="color: var(--text-tertiary)"
               >
                 ({{ col.remark }})
               </span>
@@ -708,7 +708,7 @@ const handleCancel = () => {
 
 <style scoped lang="less">
 .sql-example {
-  background: #f5f5f5;
+  background: var(--bg-hover);
   padding: 12px;
   border-radius: 4px;
   font-family: 'Consolas', 'Monaco', monospace;
@@ -719,7 +719,7 @@ const handleCancel = () => {
 
 .sql-container {
   .sql-display {
-    background: #f5f5f5;
+    background: var(--bg-hover);
     padding: 16px;
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', monospace;

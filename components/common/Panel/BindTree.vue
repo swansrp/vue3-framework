@@ -400,7 +400,7 @@ defineExpose({
     gap: 8px;
     margin-bottom: 12px;
     padding: 8px 12px;
-    background: #fafafa;
+    background: var(--bg-hover);
     border-radius: 4px;
   }
 

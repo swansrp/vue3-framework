@@ -95,7 +95,7 @@ onMounted(() => {
 
 <style lang="less" scoped>
 .activate-item {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: var(--accent-soft);
+  border-right: 3px solid var(--accent);
 }
 </style>

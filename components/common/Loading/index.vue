@@ -20,12 +20,12 @@
   left: 0;
   display: none;
   z-index: 9999;
-  background-color: rgba(255, 255, 255, 0.8);
+  background: transparent;
 }
 .load-box {
   width: 160px;
   height: 120px;
-  color: #409eff;
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -35,6 +35,9 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+:deep(.ant-spin-dot-item) {
+  background-color: var(--accent);
 }
 
 </style>

@@ -226,7 +226,7 @@ const handleReset = (column: any) => {
 
 <style lang="less" scoped>
 .filter-column {
-  background-color: white;
+  background-color: var(--bg-elevated);
   width: fit-content;
   padding: 8px 16px 8px 16px
 }

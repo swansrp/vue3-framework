@@ -535,7 +535,7 @@ const handleCancel = () => {
         margin: 0 0 16px 0;
         font-size: 14px;
         font-weight: 600;
-        color: #262626;
+        color: var(--text-primary);
         text-align: center;
       }
     }
@@ -620,7 +620,7 @@ const handleCancel = () => {
 
     .alpha-label {
       font-size: 12px;
-      color: #666;
+      color: var(--text-secondary);
       min-width: 50px;
     }
 
@@ -654,7 +654,7 @@ const handleCancel = () => {
 
     .alpha-value {
       font-size: 12px;
-      color: #666;
+      color: var(--text-secondary);
       min-width: 35px;
       text-align: right;
     }

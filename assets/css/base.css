@@ -2,10 +2,10 @@
 
 /*:root -> 获取根元素html*/
 :root {
-    --color-text: #666;
-    --color-high-text: #ff5777;
-    --color-tint: #ff8198;
-    --color-background: #fff;
+    --color-text: var(--text-secondary);
+    --color-high-text: var(--accent);
+    --color-tint: var(--accent);
+    --color-background: var(--bg-base);
     --font-size: 14px;
     --line-height: 1.5;
 }
@@ -20,6 +20,7 @@
 
 html {
     height: 100%;
+    background: var(--bg-base);
     /*min-width: 1200px;*/
 }
 
@@ -39,6 +40,7 @@ body {
     flex-direction: column;
     height: 100%;
     width: 100%;
+    background: var(--bg-base);
 }
 
 .center {

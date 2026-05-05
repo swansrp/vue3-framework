@@ -22,7 +22,7 @@
     />
     <div
       class="content-body"
-      :style="{ backgroundColor: isNeedNav ? '#f5f7fa' : 'transparent'}"
+      :style="{ backgroundColor: isNeedNav ? 'var(--bg-base)' : 'transparent'}"
     >
       <history-tab v-if="isNeedNav && !showDefaultContent" />
       <!-- 默认内容插槽：当访问根路径且有 default-content 插槽时显示 -->
@@ -37,7 +37,10 @@
       ></slot>
     </div>
   </div>
-  <div v-else>
+  <div
+    v-else
+    class="content-else"
+  >
     <slot name="content"></slot>
   </div>
 </template>
@@ -112,5 +115,12 @@ onMounted(() => {
   height: 100%;
   overflow-x: hidden;
   overflow-y: hidden;
+  background: var(--bg-base);
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.02);
+}
+
+.content-else {
+  flex: 1;
+  background: var(--bg-base);
 }
 </style>

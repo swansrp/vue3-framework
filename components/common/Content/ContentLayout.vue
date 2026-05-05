@@ -191,11 +191,11 @@ onMounted(() => {
 
 <style lang="less" scoped>
 .side-wrapper {
-  background-color: white;
+  background-color: var(--bg-elevated);
   box-sizing: border-box;
   overflow: auto;
   height: calc(100% - 20px);
-  box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
+  box-shadow: var(--shadow-md);
   margin: 10px 15px;
 }
 
@@ -224,7 +224,7 @@ onMounted(() => {
   will-change: background-color, transform;
   
   &:hover {
-    background: rgba(24, 144, 255, 0.1);
+    background: var(--accent-soft);
     
     .drag-indicator {
       opacity: 1;
@@ -233,7 +233,7 @@ onMounted(() => {
   }
   
   &.dragging {
-    background: rgba(24, 144, 255, 0.2);
+    background: var(--accent-mid);
     transition: none;
     
     .drag-indicator {
@@ -257,14 +257,14 @@ onMounted(() => {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: #8c8c8c;
+  background: var(--text-tertiary);
   transition: background-color 0.15s ease;
   will-change: background-color;
 }
 
 .drag-handle:hover .drag-dot,
 .drag-handle.dragging .drag-dot {
-  background: #1890ff;
+  background: var(--accent);
 }
 
 .collapse-button-wrapper {
@@ -279,20 +279,20 @@ onMounted(() => {
   width: 24px;
   height: 40px;
   border-radius: 0 8px 8px 0;
-  background: #fff;
-  border: 1px solid #d9d9d9;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hover);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  color: #666;
+  color: var(--text-secondary);
   will-change: color, border-color, box-shadow, transform;
   
   &:hover {
-    color: #1890ff;
-    border-color: #1890ff;
-    box-shadow: 2px 0 12px rgba(24, 144, 255, 0.2);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-glow);
     transform: translateX(2px);
   }
   

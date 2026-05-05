@@ -37,17 +37,29 @@ watch(() => store.titlePath, () => breadCrumbData.value =  store.titlePath || ['
 .crumb-search {
   display: flex;
   align-items: center;
-  border-bottom: none;
+  border: 1px solid var(--border-subtle);
   box-sizing: border-box;
-  padding: 12px 20px;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--bg-elevated);
   position: relative;
-  margin: 8px 12px 0 12px;
-  border-radius: 8px;
+  margin: var(--space-sm) var(--space-md) 0 var(--space-md);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
 }
 
 .bread-crumb {
   width: 520px;
+}
+
+:deep(.ant-breadcrumb a) {
+  color: var(--text-secondary);
+}
+
+:deep(.ant-breadcrumb a:hover) {
+  color: var(--accent);
+}
+
+:deep(.ant-breadcrumb span:last-child) {
+  color: var(--text-primary);
 }
 </style>

@@ -431,12 +431,12 @@ window.addEventListener('resize', _.debounce(updateContentWidth, 50))
   cursor: pointer;
 }
 :deep(.dictionary-config-list .ant-spin-container li:hover){
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: var(--accent-soft);
+  border-right: 3px solid var(--accent);
 }
 .activate-item {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: var(--accent-soft);
+  border-right: 3px solid var(--accent);
 }
 
 .list-footer-content {

@@ -265,7 +265,7 @@ const invertSelection = () => {
       box-sizing: border-box;
 
       &:hover {
-        background: #f0f0f0;
+        background: var(--bg-hover);
 
         .drag-handle {
           opacity: 1;
@@ -274,8 +274,8 @@ const invertSelection = () => {
 
       &.dragging {
         opacity: 0.6;
-        background: #fafafa;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        background: var(--bg-hover);
+        box-shadow: var(--shadow-md);
         cursor: grabbing;
         z-index: 1000;
       }
@@ -290,14 +290,14 @@ const invertSelection = () => {
         align-items: center;
         justify-content: center;
         cursor: grab;
-        color: #8c8c8c;
+        color: var(--text-tertiary);
         font-size: 14px;
         opacity: 0.5;
         transition: all 0.3s ease;
         padding: 2px;
 
         &:hover {
-          color: #1890ff;
+          color: var(--accent);
           opacity: 1;
           transform: scale(1.1);
         }
@@ -329,7 +329,7 @@ const invertSelection = () => {
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .drag-list-move {

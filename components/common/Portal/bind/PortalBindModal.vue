@@ -264,7 +264,7 @@ const highlightKeyword = (text: string) => {
   if (!searchKeyword.value || !text) return text
   const keyword = searchKeyword.value
   const regex = new RegExp(`(${keyword})`, 'gi')
-  return text.replace(regex, '<span style="color: #1890ff; font-weight: 700;">$1</span>')
+  return text.replace(regex, '<span style="color: var(--accent); font-weight: 700;">$1</span>')
 }
 const showBindDialogBox = async (entityId: any, record: any) => {
   bindDialogBox.tab = '0'

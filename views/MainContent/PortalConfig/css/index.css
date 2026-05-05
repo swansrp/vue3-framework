@@ -11,15 +11,15 @@
   height: 85vh;
   box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
   margin: 10px 15px;
-  background: white;
+  background: var(--bg-elevated);
   display: flex;
   flex-direction: column;
   /* 移除 overflow 属性，由内部容器处理滚动 */
 }
 .folder-header-controls {
   padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-hover);
   flex-shrink: 0;
   /* 防止被压缩 */
 }
@@ -32,8 +32,8 @@
 }
 .folder-footer-controls {
   padding: 12px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-hover);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -45,37 +45,37 @@
   /* 防止被压缩 */
 }
 .folder-group {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .ungrouped-header {
   display: flex;
   align-items: center;
   padding: 12px 15px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 500;
-  color: #6c757d;
+  color: var(--text-secondary);
   font-size: 14px;
-  background: #f5f5f5;
+  background: var(--bg-hover);
 }
 .folder-header {
   display: flex;
   align-items: center;
   padding: 12px 15px;
   cursor: pointer;
-  background: #f8f9fa !important;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--bg-hover) !important;
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 600;
-  color: #495057;
+  color: var(--text-primary);
   transition: all 0.2s;
   font-size: 14px !important;
 }
 .folder-header:hover {
-  background: #e9ecef !important;
-  color: #212529;
+  background: var(--bg-active) !important;
+  color: var(--text-primary);
 }
 .folder-header.folder-expanded {
-  background: #dee2e6 !important;
-  color: #212529;
+  background: var(--bg-active) !important;
+  color: var(--text-primary);
 }
 /* 确保所有嵌套文件夹都有正确样式 */
 .folder-group .folder-header {
@@ -83,86 +83,86 @@
   align-items: center;
   padding: 12px 15px;
   cursor: pointer;
-  background: #f8f9fa !important;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--bg-hover) !important;
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 500;
-  color: #495057;
+  color: var(--text-primary);
   transition: all 0.2s;
   font-size: 14px !important;
 }
 .folder-group .folder-header:hover {
-  background: #e9ecef !important;
-  color: #212529;
+  background: var(--bg-active) !important;
+  color: var(--text-primary);
 }
 .folder-group .folder-header.folder-expanded {
-  background: #dee2e6 !important;
-  color: #212529;
+  background: var(--bg-active) !important;
+  color: var(--text-primary);
 }
 /* 二级文件夹 */
 .folder-content .folder-group .folder-header {
-  background: #fafafa !important;
+  background: var(--bg-hover) !important;
   font-weight: 500;
   font-size: 14px !important;
 }
 .folder-content .folder-group .folder-header:hover {
-  background: #f0f0f0 !important;
+  background: var(--bg-active) !important;
 }
 .folder-content .folder-group .folder-header.folder-expanded {
-  background: #e8e8e8 !important;
+  background: var(--bg-active) !important;
 }
 /* 三级及更深层文件夹 */
 .folder-content .folder-content .folder-group .folder-header {
-  background: #f5f5f5 !important;
+  background: var(--bg-hover) !important;
   font-weight: 400;
   font-size: 14px !important;
 }
 .folder-content .folder-content .folder-group .folder-header:hover {
-  background: #ebebeb !important;
+  background: var(--bg-active) !important;
 }
 .folder-content .folder-content .folder-group .folder-header.folder-expanded {
-  background: #e0e0e0 !important;
+  background: var(--bg-active) !important;
 }
 /* 根据深度的样式类 */
 .folder-depth-0 {
-  background: #f8f9fa !important;
+  background: var(--bg-hover) !important;
   font-weight: 600 !important;
   font-size: 14px !important;
 }
 .folder-depth-0:hover {
-  background: #e9ecef !important;
+  background: var(--bg-active) !important;
 }
 .folder-depth-0.folder-expanded {
-  background: #dee2e6 !important;
+  background: var(--bg-active) !important;
 }
 .folder-depth-1 {
-  background: #fafafa !important;
+  background: var(--bg-hover) !important;
   font-weight: 500 !important;
   font-size: 14px !important;
 }
 .folder-depth-1:hover {
-  background: #f0f0f0 !important;
+  background: var(--bg-active) !important;
 }
 .folder-depth-1.folder-expanded {
-  background: #e8e8e8 !important;
+  background: var(--bg-active) !important;
 }
 .folder-depth-2,
 .folder-depth-3 {
-  background: #f5f5f5 !important;
+  background: var(--bg-hover) !important;
   font-weight: 400 !important;
   font-size: 14px !important;
 }
 .folder-depth-2:hover,
 .folder-depth-3:hover {
-  background: #ebebeb !important;
+  background: var(--bg-active) !important;
 }
 .folder-depth-2.folder-expanded,
 .folder-depth-3.folder-expanded {
-  background: #e0e0e0 !important;
+  background: var(--bg-active) !important;
 }
 .folder-icon {
   margin-right: 8px;
   font-size: 14px !important;
-  color: #6c757d !important;
+  color: var(--text-secondary) !important;
 }
 .folder-title {
   flex: 1;
@@ -170,28 +170,28 @@
 }
 .folder-count {
   font-size: 12px;
-  color: #6c757d;
+  color: var(--text-secondary);
   margin-left: 4px;
 }
 .folder-content {
-  background: white;
-  border-left: 2px solid #f0f0f0;
+  background: var(--bg-elevated);
+  border-left: 2px solid var(--border-subtle);
 }
 .table-item {
   display: flex;
   align-items: center;
   padding: 12px 0;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
   transition: all 0.2s;
-  background: white;
+  background: var(--bg-elevated);
 }
 .table-item:hover {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: var(--accent-soft);
+  border-right: 3px solid var(--accent);
 }
 .table-item:last-child {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .table-item .item-content {
   display: flex;
@@ -204,29 +204,29 @@
 .file-icon {
   margin-right: 8px;
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--text-tertiary);
 }
 .item-label {
   font-size: 14px;
-  color: #262626;
+  color: var(--text-primary);
   line-height: 1.4;
 }
 .highlight-text {
-  background-color: #ff4d4f !important;
+  background-color: var(--danger) !important;
   color: #fff !important;
   font-weight: bold !important;
   padding: 1px 3px;
   border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(255, 77, 79, 0.3);
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.3);
 }
 /* 确保 v-html渲染的高亮样式正确显示 */
 :deep(.highlight-text) {
-  background-color: #ff4d4f !important;
+  background-color: var(--danger) !important;
   color: #fff !important;
   font-weight: bold !important;
   padding: 1px 3px !important;
   border-radius: 3px !important;
-  box-shadow: 0 1px 2px rgba(255, 77, 79, 0.3) !important;
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.3) !important;
 }
 .table-config {
   width: calc(100vw - 540px);
@@ -236,8 +236,8 @@
   margin-bottom: 5px !important;
 }
 .activate-item {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: var(--accent-soft);
+  border-right: 3px solid var(--accent);
 }
 .column-list {
   width: 250px;
@@ -250,8 +250,8 @@
   cursor: pointer;
 }
 :deep(.column-list .ant-spin-container li:hover) {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: var(--accent-soft);
+  border-right: 3px solid var(--accent);
 }
 :deep(.surely-table-popup-container-inner) {
   width: 260px;

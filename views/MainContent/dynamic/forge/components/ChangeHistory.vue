@@ -326,7 +326,7 @@ onMounted(() => {
   .version-dot {
     display: inline-block;
     padding: 2px 8px;
-    background: #1890ff;
+    background: var(--accent);
     color: white;
     border-radius: 10px;
     font-size: 12px;
@@ -378,13 +378,13 @@ onMounted(() => {
       pre {
         margin-top: 8px;
         padding: 12px;
-        background: #f5f5f5;
+        background: var(--bg-hover);
         border-radius: 4px;
         overflow-x: auto;
 
         code {
           font-size: 12px;
-          color: #333;
+          color: var(--text-primary);
         }
       }
     }

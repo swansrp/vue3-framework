@@ -1,6 +1,9 @@
 <template>
-  <!--  添加antd vue 对中文的支持，如表单等-->
-  <a-config-provider :locale="zhCN">
+  <!--  添加antd vue 对中文的支持，如表单等 + 深色主题自动切换 -->
+  <a-config-provider
+    :locale="zhCN"
+    :theme="antTheme"
+  >
     <navigation-framework>
       <!-- header-extra 插槽供业务层注入自定义内容 -->
       <template
@@ -32,7 +35,18 @@ import dayjs from 'dayjs'
 import updateLocale from 'dayjs/plugin/updateLocale'
 
 import NavigationFramework from '@/framework/components/navigationFramework/index.vue'
+
+import { theme } from 'ant-design-vue'
+
 import { useRouteStore } from '@/framework/store/route'
+import { useThemeStore } from '@/framework/store/theme'
+
+const themeStore = useThemeStore()
+
+// Ant Design 主题配置 - 随系统 data-theme 自动切换
+const antTheme = computed(() => ({
+  algorithm: themeStore.isDark ? theme.darkAlgorithm : theme.defaultAlgorithm
+}))
 
 const routeStore = useRouteStore()
 dayjs.extend(updateLocale)

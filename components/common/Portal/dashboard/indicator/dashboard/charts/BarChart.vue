@@ -595,7 +595,7 @@ export default defineComponent({
 
               // 为每个统计类型显示数据
               Object.keys(groupedParams).forEach(statType => {
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${statType}</strong><br/>`
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${statType}</strong><br/>`
 
                 const typeParams = groupedParams[statType]
                 const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
@@ -641,7 +641,7 @@ export default defineComponent({
                 // 添加总计
                 const grandTotal = grandTotalsMap[statType] || 0
                 const subtotalPercentage = grandTotal > 0 ? ((total / grandTotal) * 100).toFixed(2) : '0.00'
-                result += `<span style="color: #666; font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''} (${subtotalPercentage}%)</span><br/>`
+                result += `<span style="color: var(--text-secondary); font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''} (${subtotalPercentage}%)</span><br/>`
 
                 const formattedGrandTotal = (() => {
                   if (metric?.unitConfig) {
@@ -656,7 +656,7 @@ export default defineComponent({
                     maximumFractionDigits: 0
                   })
                 })()
-                result += `<span style="color: #666; font-size: 12px; font-weight: bold;">总计: ${formattedGrandTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
+                result += `<span style="color: var(--text-secondary); font-size: 12px; font-weight: bold;">总计: ${formattedGrandTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
               })
             } else {
               // 单维度：仅保留“分组 + 数量(百分比) + 总计”，不展示同级分布列表
@@ -693,7 +693,7 @@ export default defineComponent({
                 const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
 
                 // 区块：显示指标名 -> 蓝色块内显示带圆点的“分类名：值（%）” -> 总计
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;"><strong>${metric?.dataName || statType}</strong><br/>`
+                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${metric?.dataName || statType}</strong><br/>`
                 result += `${param.marker}${categoryName}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
 
                 const formattedTotal = (() => {
@@ -703,7 +703,7 @@ export default defineComponent({
                   }
                   return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
                 })()
-                result += `<span style=\"color: #666; font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+                result += `<span style=\"color: var(--text-secondary); font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
               } else {
                 // 多指标：每个指标单独成块，块内先显示指标名，再蓝色块显示（圆点 + 指标名：值（%））和总计
                 params.forEach((param: any) => {
@@ -722,7 +722,7 @@ export default defineComponent({
                   const total = totalsMap[statType] || 0
                   const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
 
-                  result += `<div style=\"margin: 8px 0; padding: 4px; border-left: 3px solid #1890ff; background: #f0f9ff;\"><strong>${metric?.dataName || statType}</strong><br/>`
+                  result += `<div style=\"margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);\"><strong>${metric?.dataName || statType}</strong><br/>`
                   // 多指标场景，值行使用指标名作为标签
                   result += `${param.marker}${metric?.dataName || statType}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
 
@@ -734,7 +734,7 @@ export default defineComponent({
                     return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
                   })()
 
-                  result += `<span style=\"color: #666; font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+                  result += `<span style=\"color: var(--text-secondary); font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
                 })
               }
             }

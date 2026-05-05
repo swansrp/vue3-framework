@@ -566,7 +566,7 @@ watch(() => parentId.value, (newVal) => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #fff;
+  background: var(--bg-elevated);
 
   &-toolbar {
     flex-shrink: 0;

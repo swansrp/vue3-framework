@@ -1,0 +1,635 @@
+/* ====================================================================
+   Design Tokens — 主题设计令牌系统
+   ====================================================================
+
+   【文件定位】
+   这是项目的设计令牌（Design Tokens）定义文件，掌管全部主题的色彩
+   体系。它是整个 UI 层与主题之间的"唯一真相来源"（Single Source
+   of Truth）。所有文字色、背景色、边框、阴影、圆角、间距、过渡
+   动画等视觉属性，均应优先引用此文件中的 CSS 变量，而非硬编码。
+
+   【工作方式】
+   :root 定义"不变量"（过渡/圆角/间距）以及"默认主题的回退值"。
+   每个 [data-theme="xxx"] 块只覆盖需要改变的变量，未覆盖的变量
+   会回退到 :root 中的值（其中引用型变量如 var(--accent) 则跟随
+   当前主题的 --accent 定义）。
+
+   【页面/组件开发守则】
+   1. ❌ 禁止硬编码任何颜色、阴影、圆角、间距值
+   2. ✅ 优先使用此文件中的变量，如 background: var(--bg-elevated)
+   3. ✅ 语义化引用：用 var(--text-primary) 而非 var(--accent) 做正文
+   4. ✅ 新的功能性变量应优先用 var() 引用已有变量，而非写死值
+   5. ⚠️ 如需新增变量，先在此文件的 :root 中声明默认值，再在各主题中覆盖
+
+   【新增主题】
+   只需在文件末尾追加新的 [data-theme="xxx"] { ... } 块，定义以下
+   全套变量即可（复制任一已有主题并替换所有值）：
+     - 基底色：--bg-*（base / elevated / hover / active / overlay）
+     - 边框色：--border-*（subtle / hover / active）
+     - 文字色：--text-*（primary / secondary / tertiary）
+     - 主题色：--accent 及其变体（subtle / soft / mid / glow / light）
+     - 语义色：--success / --danger / --warning
+     - 阴影：--shadow-*（sm / md / lg / glow / elevated / tab / card 等）
+     - 卡片：--card-*（gradient / accent-top）
+     - 导航/顶栏：--left-nav-*、--top-header-*、--nav-*、--header-* 全套
+     - 顶栏细节：--header-avatar-*、--header-role-*、--header-user-name-*、
+       --header-status-*、--header-setting-* 以及 --topnav-*
+
+   【data-theme 取值】
+     indigo — 靛蓝现代（默认）
+     ocean  — 企业蓝
+     navy   — 深海军蓝  
+     dark   — 深色主题
+     amber  — 琥珀橙
+     classic— 经典蓝（基于原始 git 配色，与旧版一致）
+
+   ================================================================ */
+
+/* ====================================================================
+   不变量 — 过渡 / 圆角 / 间距
+   这些在不同主题间不变化，可直接在组件中使用
+   ==================================================================== */
+:root {
+  /* --- 过渡动画 --- */
+  --transition-fast: 0.15s cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-normal: 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  /* --- 圆角 --- */
+  --radius-sm: 6px;   /* 小控件、输入框、下拉项 */
+  --radius-md: 8px;   /* 卡片、容器、对话框 */
+  --radius-lg: 12px;  /* 下拉菜单、弹出面板 */
+  --radius-xl: 16px;  /* 大弹窗、模态框 */
+
+  /* --- 间距 --- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* ===================================================================
+     导航 / 顶栏 — 结构背景
+     对应组件：
+       leftNav  → background: var(--left-nav-bg)
+       topHeader→ background: var(--top-header-bg)
+       topTitle → color: var(--header-title-color)
+     =================================================================== */
+  --left-nav-bg: rgba(248, 248, 250, 0.90);    /* 左侧导航列背景 */
+  --left-nav-blur: blur(16px);                   /* 毛玻璃效果 */
+  --left-nav-border: 1px solid var(--border-subtle);  /* 右侧分割线 */
+  --top-header-bg: rgba(255, 255, 255, 0.72);   /* 顶部栏背景 */
+  --top-header-blur: blur(20px) saturate(1.4);   /* 毛玻璃+色彩增强 */
+  --top-header-border: 1px solid rgba(0, 0, 0, 0.08); /* 底部阴影线 */
+
+  /* --- Logo区域背景（经典蓝等深色标题区） --- */
+  --header-title-bg: transparent;
+
+  /* --- 历史标签栏（HistoryTab） --- */
+  --history-tab-bg: rgba(250, 250, 252, 0.85);    /* 标签栏背景 */
+  --history-tab-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05); /* tab hover阴影 */
+  --history-tab-active-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06); /* 激活tab阴影 */
+
+  /* --- 全局Loading遮罩 --- */
+  --loading-mask: rgba(0, 0, 0, 0.15);             /* 加载遮罩背景 */
+
+  /* --- 顶栏文字与图标 --- */
+  --header-title-color: var(--text-primary);        /* 项目名称文字 */
+  --header-user-text: var(--text-primary);          /* 用户名字 */
+  --header-user-text-secondary: var(--text-tertiary); /* 用户角色/部门文字 */
+  --header-icon-color: var(--text-secondary);       /* 图标（设置/主题切换） */
+  --header-hover-bg: var(--bg-hover);               /* 用户区域hover背景 */
+  --header-btn-hover-bg: var(--accent-soft);        /* 按钮hover背景 */
+  --header-btn-hover-color: var(--accent);          /* 按钮hover文字色 */
+
+  /* ===================================================================
+     左导航 — 菜单项颜色与交互
+     对应组件：leftNav/LeftNav.vue
+       menu item         → color: var(--nav-text)
+       hover             → background: var(--nav-bg-hover)
+                           color: var(--nav-text-hover)
+       selected          → background: var(--nav-selected-bg)
+                           color: var(--nav-selected-color)
+       selected left bar → background: var(--nav-selected-indicator)
+                           box-shadow: var(--nav-selected-glow)
+       submenu line      → background: var(--nav-line)
+       collapse toggle   → background: var(--nav-toggle-bg)
+       toggle arrow      → color: var(--nav-toggle-arrow)
+     =================================================================== */
+  --nav-text: var(--text-secondary);             /* 未选中文字色(暗淡) */
+  --nav-text-hover: var(--text-primary);         /* 悬停/展开时文字色(亮) */
+  --nav-text-tertiary: var(--text-tertiary);     /* 箭头/辅助提示/子标题 */
+  --nav-bg-hover: var(--bg-hover);               /* 悬停背景色 */
+  --nav-selected-bg: var(--accent-soft);         /* 选中项背景 */
+  --nav-selected-color: var(--accent);           /* 选中项文字色 */
+  --nav-selected-indicator: var(--accent);       /* 左侧指示线色 */
+  --nav-selected-glow: var(--accent-glow);       /* 指示线发光(扩散阴影) */
+  --nav-line: var(--border-subtle);              /* 子菜单左侧竖线 */
+  --nav-toggle-bg: var(--bg-hover);              /* 折叠/展开按钮背景 */
+  --nav-toggle-bg-hover: var(--accent-soft);     /* 按钮悬停背景 */
+  --nav-toggle-arrow: var(--text-tertiary);      /* 折叠箭头色 */
+  --nav-toggle-arrow-hover: var(--accent);       /* 箭头悬停色 */
+
+  /* --- 选中项增强特效（经典蓝使用，其他主题默认关闭） --- */
+  --nav-selected-border: none;                   /* 2px 边框 */
+  --nav-selected-transform: none;                /* translateY+scale */
+  --nav-selected-font-weight: 500;               /* 字重（经典蓝700） */
+  --nav-selected-text-shadow: none;              /* 文字发光 */
+  --nav-selected-indicator-width: 3px;           /* 指示线宽度（经典蓝6px） */
+  --nav-indicator-animation: none;               /* 脉冲动画 */
+
+  /* ===================================================================
+     TopNav — 顶部水平导航
+     对应组件：topNav/TopNav.vue
+       selected       → box-shadow: var(--topnav-selected-shadow)
+       dropdown item  → box-shadow: inset 3px 0 0 var(--...indicator)
+     =================================================================== */
+  --topnav-selected-shadow: none;                /* 选中项底部发光 */
+  --topnav-dropdown-selected-indicator: transparent; /* 下拉选中左侧条色 */
+  --topnav-text: var(--text-secondary);           /* 菜单文字色，classic需覆盖 */
+
+  /* ===================================================================
+     TopHeader — 顶栏用户区与设置按钮
+     对应组件：topHeader/TopHeader.vue
+       user-avatar   → border / box-shadow
+       user-name     → font-size / font-weight
+       user-role     → background / border / border-radius / padding
+       status-indicator → background / animation
+       setting-button → background / border / box-shadow (normal/hover/active)
+     =================================================================== */
+  --header-avatar-border: var(--header-icon-color);  /* 头像边框色 */
+  --header-avatar-shadow: none;                      /* 头像阴影 */
+  --header-avatar-hover-shadow: none;                /* 头像hover阴影 */
+  --header-avatar-hover-transform: none;             /* 头像hover上移 */
+  --header-role-bg: transparent;                     /* 角色标签渐变背景 */
+  --header-role-border: none;                        /* 角色标签边框 */
+  --header-role-radius: 0;                           /* 角色标签圆角 */
+  --header-role-padding: 0;                          /* 角色标签内边距 */
+  --header-user-name-size: 13px;                     /* 用户名字号 */
+  --header-user-name-weight: 500;                    /* 用户名字重 */
+  --header-status-bg: var(--success);                /* 在线绿点背景 */
+  --header-status-animation: none;                   /* 绿点脉冲动画 */
+
+  /* --- 设置按钮（齿轮图标） --- */
+  --header-setting-bg: transparent;              /* 按钮背景 */
+  --header-setting-border: none;                 /* 按钮边框 */
+  --header-setting-shadow: none;                 /* 按钮阴影 */
+  --header-setting-hover-shadow: none;           /* hover阴影（classic:蓝色光晕） */
+  --header-setting-hover-transform: none;        /* hover上移 */
+  --header-setting-active-transform: none;       /* 按下效果 */
+}
+
+/* ====================================================================
+   主题色变量（每个 [data-theme="xxx"] 必须定义以下全套变量）
+
+   每个主题块只需定义"值类"变量（硬编码色值），"引用类"变量
+   （如 var(--bg-base)）在 :root 中已有默认定义，但在主题色差异
+   较大时建议显式覆盖以保证语义正确。
+
+   ┌──────────────────┬────────────────────────────────────────┐
+   │ 分类             │ 变量名                                 │
+   ├──────────────────┼────────────────────────────────────────┤
+   │ 基底背景         │ --bg-base / --bg-elevated / --bg-hover │
+   │                  │ --bg-active / --bg-overlay             │
+   │ 边框             │ --border-subtle / --border-hover       │
+   │                  │ --border-active                        │
+   │ 文字             │ --text-primary / --text-secondary      │
+   │                  │ --text-tertiary                        │
+   │ 主题色(品牌色)   │ --accent / --accent-subtle             │
+   │                  │ --accent-soft / --accent-mid           │
+   │                  │ --accent-glow / --accent-light         │
+   │ 语义色           │ --success / --danger / --warning       │
+   │ 阴影             │ --shadow-sm / --shadow-md / --shadow-lg│
+   │                  │ --shadow-glow / --shadow-elevated      │
+   │                  │ --shadow-tab / --shadow-nav-divider    │
+   │                  │ --shadow-card / --shadow-card-hover    │
+   │ 卡片             │ --card-gradient / --card-gradient-header│
+   │                  │ --card-accent-top                      │
+   │ 左导航结构       │ --left-nav-bg / --left-nav-blur        │
+   │                  │ --left-nav-border                      │
+   │ 顶栏结构         │ --top-header-bg / --top-header-blur    │
+   │                  │ --top-header-border / --history-tab-*  │
+   │ 顶栏文字/图标    │ --header-title-color / --header-title-bg  │
+   │                  │ --header-user-*                         │
+   │                  │ --header-icon-color / --header-hover-bg │
+   │                  │ --header-btn-hover-*                   │
+   │ 左导航菜单       │ --nav-text / --nav-text-hover          │
+   │                  │ --nav-text-tertiary / --nav-bg-hover   │
+   │                  │ --nav-selected-* / --nav-line           │
+   │                  │ --nav-toggle-*                          │
+   │ TopNav           │ --topnav-selected-shadow                │
+   │                  │ --topnav-dropdown-selected-indicator    │
+   │                  │ --topnav-text                           │
+   │ 头像/角色/状态   │ --header-avatar-* / --header-role-*    │
+   │                  │ --header-user-name-* / --header-status-*│
+   │ 设置按钮         │ --header-setting-*                      │
+   │ 全局Loading      │ --loading-mask                          │
+   └──────────────────┴────────────────────────────────────────┘
+
+   新增主题步骤：
+     1. 确定 data-theme 属性值
+     2. 复制下方任一完整主题块
+     3. 替换所有色值为新主题的设计方案
+     4. 确保以上表中的每个变量都有值
+   ==================================================================== */
+
+/* ==================== ① indigo — 靛蓝现代（默认主题） ====================
+   干净的冷色调，适合通用企业后台
+   --bg-base: #f3f3f5 冷灰基底
+   --accent: #4f6cf7 靛蓝
+   ======================================================================== */
+:root,
+[data-theme="indigo"] {
+  --bg-base: #f3f3f5;
+  --bg-elevated: #ffffff;
+  --bg-hover: #ececf0;
+  --bg-active: #e2e2e6;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-hover: rgba(0, 0, 0, 0.10);
+  --border-active: rgba(79, 108, 247, 0.4);
+  --text-primary: rgba(0, 0, 0, 0.85);
+  --text-secondary: rgba(0, 0, 0, 0.48);
+  --text-tertiary: rgba(0, 0, 0, 0.28);
+  --accent: #4f6cf7;
+  --accent-subtle: rgba(79, 108, 247, 0.03);
+  --accent-soft: rgba(79, 108, 247, 0.08);
+  --accent-mid: rgba(79, 108, 247, 0.2);
+  --accent-glow: rgba(79, 108, 247, 0.25);
+  --accent-light: #6b83f7;
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.1);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --warning: #f59e0b;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.10);
+  --shadow-glow: 0 0 20px rgba(79, 108, 247, 0.10);
+  --shadow-elevated: 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-tab: 0 -1px 0 rgba(0, 0, 0, 0.03), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-nav-divider: 1px 0 6px rgba(0, 0, 0, 0.06);
+  --card-gradient: linear-gradient(135deg, #ffffff 0%, #fafafe 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(79, 108, 247, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(79, 108, 247, 0.06);
+}
+
+/* ==================== ② ocean — 企业蓝 ====================
+   沉稳的海洋蓝，适合金融/政务类场景
+   --bg-base: #f1f3f6 柔蓝灰基底
+   --accent: #2563eb 标准蓝
+   ========================================================== */
+[data-theme="ocean"] {
+  --bg-base: #f1f3f6;
+  --bg-elevated: #ffffff;
+  --bg-hover: #eaedf1;
+  --bg-active: #dee2e8;
+  --bg-overlay: rgba(15, 23, 42, 0.5);
+  --border-subtle: rgba(15, 23, 42, 0.06);
+  --border-hover: rgba(15, 23, 42, 0.10);
+  --border-active: rgba(37, 99, 235, 0.4);
+  --text-primary: rgba(15, 23, 42, 0.85);
+  --text-secondary: rgba(15, 23, 42, 0.48);
+  --text-tertiary: rgba(15, 23, 42, 0.28);
+  --accent: #2563eb;
+  --accent-subtle: rgba(37, 99, 235, 0.03);
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --accent-mid: rgba(37, 99, 235, 0.2);
+  --accent-glow: rgba(37, 99, 235, 0.25);
+  --accent-light: #3b82f6;
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.1);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --warning: #f59e0b;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 4px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.10);
+  --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.10);
+  --shadow-elevated: 0 2px 4px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.08);
+  --shadow-tab: 0 -1px 0 rgba(15, 23, 42, 0.03), 0 2px 6px rgba(15, 23, 42, 0.06);
+  --shadow-nav-divider: 1px 0 6px rgba(15, 23, 42, 0.06);
+  --card-gradient: linear-gradient(135deg, #ffffff 0%, #f8f9fb 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 16px rgba(37, 99, 235, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(37, 99, 235, 0.06);
+}
+
+/* ==================== ③ navy — 深海军蓝 ====================
+   比 ocean 更深的蓝色调，适合强调权威感的场景
+   --bg-base: #f2f3f5 灰白基底
+   --accent: #1e40af 深蓝
+   ========================================================== */
+[data-theme="navy"] {
+  --bg-base: #f2f3f5;
+  --bg-elevated: #ffffff;
+  --bg-hover: #e6e9ef;
+  --bg-active: #d5dae3;
+  --bg-overlay: rgba(15, 23, 42, 0.5);
+  --border-subtle: rgba(15, 23, 42, 0.07);
+  --border-hover: rgba(15, 23, 42, 0.11);
+  --border-active: rgba(30, 64, 175, 0.4);
+  --text-primary: rgba(15, 23, 42, 0.88);
+  --text-secondary: rgba(15, 23, 42, 0.50);
+  --text-tertiary: rgba(15, 23, 42, 0.30);
+  --accent: #1e40af;
+  --accent-subtle: rgba(30, 64, 175, 0.03);
+  --accent-soft: rgba(30, 64, 175, 0.08);
+  --accent-mid: rgba(30, 64, 175, 0.2);
+  --accent-glow: rgba(30, 64, 175, 0.25);
+  --accent-light: #3b82f6;
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.1);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --warning: #f59e0b;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 4px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.10);
+  --shadow-glow: 0 0 20px rgba(30, 64, 175, 0.10);
+  --shadow-elevated: 0 2px 4px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.08);
+  --shadow-tab: 0 -1px 0 rgba(15, 23, 42, 0.03), 0 2px 6px rgba(15, 23, 42, 0.06);
+  --shadow-nav-divider: 1px 0 6px rgba(15, 23, 42, 0.06);
+  --card-gradient: linear-gradient(135deg, #ffffff 0%, #f7f8fb 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 16px rgba(30, 64, 175, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(30, 64, 175, 0.06);
+}
+
+/* ==================== 深色主题 ====================
+   全暗色背景，适合低光环境或开发者偏好
+   注意：此主题必须显式覆盖所有 --left-nav-* / --top-header-* /
+   --nav-* / --header-* 变量，因为 :root 中的回退值是浅色
+   --bg-base: #0f0f11 深灰黑
+   --accent: #4f6cf7 亮靛蓝（与 indigo 相同色相）
+   ========================================================== */
+[data-theme="dark"] {
+  --bg-base: #0f0f11;
+  --bg-elevated: #1a1a1e;
+  --bg-hover: #232329;
+  --bg-active: #2a2a32;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.1);
+  --border-active: rgba(79, 108, 247, 0.4);
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-tertiary: rgba(255, 255, 255, 0.35);
+  --accent: #4f6cf7;
+  --accent-subtle: rgba(79, 108, 247, 0.04);
+  --accent-soft: rgba(79, 108, 247, 0.12);
+  --accent-mid: rgba(79, 108, 247, 0.25);
+  --accent-glow: rgba(79, 108, 247, 0.35);
+  --accent-light: #6b83f7;
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.12);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.12);
+  --warning: #f59e0b;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(79, 108, 247, 0.15);
+  --shadow-elevated: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-tab: 0 -1px 0 rgba(255, 255, 255, 0.03), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-nav-divider: 2px 0 8px rgba(0, 0, 0, 0.3);
+  --card-gradient: linear-gradient(135deg, #1a1a1e 0%, #1e1e24 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-subtle) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), rgba(79, 108, 247, 0.2));
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(79, 108, 247, 0.05);
+  --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(79, 108, 247, 0.08);
+  --left-nav-bg: #16161a;
+  --left-nav-blur: none;
+  --left-nav-border: 1px solid var(--border-subtle);
+  --top-header-bg: #16161a;
+  --top-header-blur: none;
+  --top-header-border: 1px solid var(--border-subtle);
+  --history-tab-bg: #141416;
+  --history-tab-shadow: 0 -1px 4px rgba(0, 0, 0, 0.25);
+  --history-tab-active-shadow: 0 -1px 4px rgba(0, 0, 0, 0.3);
+  --loading-mask: rgba(0, 0, 0, 0.45);
+  --header-title-color: var(--text-primary);
+  --header-user-text: var(--text-primary);
+  --header-user-text-secondary: var(--text-tertiary);
+  --header-icon-color: var(--text-secondary);
+  --header-hover-bg: rgba(255, 255, 255, 0.04);
+  --header-btn-hover-bg: var(--accent-soft);
+  --header-btn-hover-color: var(--accent);
+  --nav-text: var(--text-secondary);
+  --nav-text-hover: var(--text-primary);
+  --nav-text-tertiary: var(--text-tertiary);
+  --nav-bg-hover: rgba(255, 255, 255, 0.06);
+  --nav-selected-bg: var(--accent-soft);
+  --nav-selected-color: var(--accent);
+  --nav-selected-indicator: var(--accent);
+  --nav-selected-glow: var(--accent-glow);
+  --nav-selected-border: none;
+  --nav-selected-transform: none;
+  --nav-selected-font-weight: 500;
+  --nav-selected-text-shadow: none;
+  --nav-selected-indicator-width: 3px;
+  --nav-indicator-animation: none;
+  --nav-line: var(--border-subtle);
+  --nav-toggle-bg: rgba(255, 255, 255, 0.06);
+  --nav-toggle-bg-hover: var(--accent-soft);
+  --nav-toggle-arrow: var(--text-tertiary);
+  --nav-toggle-arrow-hover: var(--accent);
+  --topnav-selected-shadow: none;
+  --topnav-dropdown-selected-indicator: transparent;
+  --header-avatar-border: var(--header-icon-color);
+  --header-avatar-shadow: none;
+  --header-avatar-hover-shadow: none;
+  --header-avatar-hover-transform: none;
+  --header-role-bg: transparent;
+  --header-role-border: none;
+  --header-role-radius: 0;
+  --header-role-padding: 0;
+  --header-user-name-size: 13px;
+  --header-user-name-weight: 500;
+  --header-status-bg: var(--success);
+  --header-status-animation: none;
+  --header-setting-bg: transparent;
+  --header-setting-border: none;
+  --header-setting-shadow: none;
+  --header-setting-hover-shadow: none;
+  --header-setting-hover-transform: none;
+  --header-setting-active-transform: none;
+}
+
+/* ==================== ④ amber — 琥珀橙 ====================
+   温暖的橙色调主题，适合创意/活力型企业
+   --bg-base: #f6f3ef 暖米灰基底
+   --accent: #f97316 琥珀橙
+   ========================================================== */
+[data-theme="amber"] {
+  --bg-base: #f6f3ef;
+  --bg-elevated: #ffffff;
+  --bg-hover: #eeebe6;
+  --bg-active: #e3dfd8;
+  --bg-overlay: rgba(30, 25, 20, 0.5);
+  --border-subtle: rgba(30, 25, 20, 0.06);
+  --border-hover: rgba(30, 25, 20, 0.10);
+  --border-active: rgba(249, 115, 22, 0.4);
+  --text-primary: rgba(30, 25, 20, 0.85);
+  --text-secondary: rgba(30, 25, 20, 0.48);
+  --text-tertiary: rgba(30, 25, 20, 0.28);
+  --accent: #f97316;
+  --accent-subtle: rgba(249, 115, 22, 0.03);
+  --accent-soft: rgba(249, 115, 22, 0.08);
+  --accent-mid: rgba(249, 115, 22, 0.2);
+  --accent-glow: rgba(249, 115, 22, 0.25);
+  --accent-light: #fb923c;
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.1);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --warning: #f59e0b;
+  --shadow-sm: 0 1px 2px rgba(30, 25, 20, 0.04), 0 1px 4px rgba(30, 25, 20, 0.05);
+  --shadow-md: 0 2px 4px rgba(30, 25, 20, 0.04), 0 4px 12px rgba(30, 25, 20, 0.08);
+  --shadow-lg: 0 4px 8px rgba(30, 25, 20, 0.04), 0 8px 24px rgba(30, 25, 20, 0.10);
+  --shadow-glow: 0 0 20px rgba(249, 115, 22, 0.10);
+  --shadow-elevated: 0 2px 4px rgba(30, 25, 20, 0.04), 0 6px 16px rgba(30, 25, 20, 0.08);
+  --shadow-tab: 0 -1px 0 rgba(30, 25, 20, 0.03), 0 2px 6px rgba(30, 25, 20, 0.06);
+  --shadow-nav-divider: 1px 0 6px rgba(30, 25, 20, 0.06);
+  --card-gradient: linear-gradient(135deg, #ffffff 0%, #faf6f0 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
+  --shadow-card: 0 1px 3px rgba(30, 25, 20, 0.03), 0 4px 16px rgba(249, 115, 22, 0.04), 0 0 0 1px rgba(30, 25, 20, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(30, 25, 20, 0.04), 0 8px 24px rgba(249, 115, 22, 0.06);
+}
+
+/* ==================== ⑤ classic — 经典蓝（原始配色） ====================
+   基于 git commit d203c25 的原始硬编码颜色值，用于恪守旧版视觉风格。
+   导航为深色渐变（--left-nav-bg / --top-header-bg: 深蓝渐变），
+   选中项使用"凹陷按下"效果（内阴影 + 缩放 + 2px 边框 + 脉冲动画）。
+   新增主题时请勿直接修改此块，如需变体请新建 [data-theme="xxx"]。
+   --accent: #1890ff Ant Design 标准蓝
+   ======================================================================= */
+[data-theme="classic"] {
+  --bg-base: #f0f2f5;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f5f7fa;
+  --bg-active: #e6f7ff;
+  --bg-overlay: rgba(0, 0, 0, 0.45);
+  --border-subtle: #e8e8e8;
+  --border-hover: #d9d9d9;
+  --border-active: rgba(24, 144, 255, 0.4);
+  --text-primary: rgba(0, 0, 0, 0.85);
+  --text-secondary: rgba(0, 0, 0, 0.45);
+  --text-tertiary: rgba(0, 0, 0, 0.25);
+  --accent: #1890ff;
+  --accent-subtle: rgba(24, 144, 255, 0.03);
+  --accent-soft: rgba(24, 144, 255, 0.06);
+  --accent-mid: rgba(24, 144, 255, 0.15);
+  --accent-glow: rgba(24, 144, 255, 0.2);
+  --accent-light: #40a9ff;
+  --success: #52c41a;
+  --success-soft: rgba(82, 196, 26, 0.1);
+  --danger: #ff4d4f;
+  --danger-soft: rgba(255, 77, 79, 0.1);
+  --warning: #faad14;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 20px rgba(24, 144, 255, 0.08);
+  --shadow-elevated: 0 2px 4px rgba(0, 0, 0, 0.06), 0 6px 16px rgba(0, 0, 0, 0.06);
+  --shadow-tab: 0 -1px 0 rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-nav-divider: 1px 0 6px rgba(0, 0, 0, 0.06);
+  --card-gradient: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(24, 144, 255, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(24, 144, 255, 0.05);
+  --left-nav-bg: linear-gradient(135deg, #1a2332, #1a1f36);
+  --left-nav-blur: none;
+  --left-nav-border: none;
+  --top-header-bg: #ffffff;
+  --top-header-blur: none;
+  --top-header-border: none;
+  --header-title-bg: linear-gradient(135deg, #1a2332 0%, #252f42 25%, #2d3a52 50%, #252f42 75%, #1a2332 100%);
+  --history-tab-bg: #f0f2f5;
+  --history-tab-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
+  --history-tab-active-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06);
+  --header-title-color: #ffffff;
+  --header-user-text: #1a1f36;
+  --header-user-text-secondary: rgba(0, 0, 0, 0.45);
+  --header-icon-color: rgba(0, 0, 0, 0.65);
+  --header-hover-bg: rgba(0, 0, 0, 0.04);
+  --header-btn-hover-bg: rgba(255, 255, 255, 0.10);
+  --header-btn-hover-color: #ffffff;
+  --nav-text: rgba(255, 255, 255, 0.65);
+  --nav-text-hover: #ffffff;
+  --nav-text-tertiary: rgba(255, 255, 255, 0.35);
+  --nav-bg-hover: rgba(255, 255, 255, 0.08);
+  --nav-selected-bg: linear-gradient(135deg, rgba(10,90,180,0.5), rgba(24,144,255,0.4), rgba(10,90,180,0.5));
+  --nav-selected-color: #ffffff;
+  --nav-selected-indicator: #ffffff;
+  --nav-selected-glow: rgba(24, 144, 255, 0.5);
+  --nav-selected-border: 2px solid rgba(24,144,255,0.7);
+  --nav-selected-shadow: inset 0 4px 12px rgba(0,0,0,0.5), inset 0 2px 6px rgba(0,0,0,0.4), inset 0 -2px 8px rgba(0,0,0,0.3), inset 0 0 30px rgba(0,0,0,0.2), 0 0 30px rgba(24,144,255,0.6), 0 0 15px rgba(24,144,255,0.4);
+  --nav-selected-transform: translateY(1px) scale(0.98);
+  --nav-selected-font-weight: 700;
+  --nav-selected-text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  --nav-selected-indicator-width: 6px;
+  --nav-indicator-animation: nav-indicator-pulse 2s ease-in-out infinite;
+  --nav-line: rgba(255, 255, 255, 0.08);
+  --nav-toggle-bg: rgba(255, 255, 255, 0.06);
+  --nav-toggle-bg-hover: rgba(24, 144, 255, 0.25);
+  --nav-toggle-arrow: rgba(255, 255, 255, 0.35);
+  --nav-toggle-arrow-hover: #ffffff;
+  --topnav-selected-shadow: 0 2px 8px rgba(24,144,255,0.25);
+  --topnav-dropdown-selected-indicator: #1890ff;
+  --topnav-text: #303133;
+  --header-avatar-border: rgba(24,144,255,0.3);
+  --header-avatar-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  --header-avatar-hover-shadow: 0 4px 12px rgba(24,144,255,0.2);
+  --header-avatar-hover-transform: translateY(-1px);
+  --header-role-bg: linear-gradient(90deg, rgba(24,144,255,0.08), rgba(24,144,255,0.04));
+  --header-role-border: 1px solid rgba(24,144,255,0.15);
+  --header-role-radius: 10px;
+  --header-role-padding: 2px 8px;
+  --header-user-name-size: 14px;
+  --header-user-name-weight: 600;
+  --header-status-bg: linear-gradient(45deg, #52c41a, #73d13d);
+  --header-status-animation: header-status-pulse 2s infinite;
+  --header-setting-bg: #f5f7fa;
+  --header-setting-border: 1px solid rgba(0,0,0,0.08);
+  --header-setting-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  --header-setting-hover-shadow: 0 4px 8px rgba(24,144,255,0.15);
+  --header-setting-hover-transform: translateY(-1px);
+  --header-setting-active-transform: translateY(0);
+}
+
+/* ====================================================================
+   关键帧动画
+   在 classic 主题中通过 --nav-indicator-animation 和
+   --header-status-animation 引用；其他主题默认不启用（值为 none）。
+   ==================================================================== */
+
+/* --- 左导航选中态左侧指示线脉冲发光（仅 classic 主题启用） --- */
+@keyframes nav-indicator-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(24,144,255,0.9), 0 0 8px rgba(64,169,255,0.7);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(24,144,255,1), 0 0 12px rgba(64,169,255,0.9);
+  }
+}
+
+/* --- 顶栏用户在线状态圆点脉冲动画（仅 classic 主题启用） --- */
+@keyframes header-status-pulse {
+  0% {
+    box-shadow: 0 0 0 1px rgba(82,196,26,0.3), 0 0 0 0 rgba(82,196,26,0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 1px rgba(82,196,26,0.3), 0 0 0 6px rgba(82,196,26,0);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(82,196,26,0.3), 0 0 0 0 rgba(82,196,26,0);
+  }
+}

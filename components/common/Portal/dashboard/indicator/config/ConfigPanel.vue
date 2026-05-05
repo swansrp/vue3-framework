@@ -356,8 +356,8 @@ const resetConfiguration = () => {
 <style scoped lang="less">
 .right-panel {
   width: 350px;
-  background: white;
-  border-left: 1px solid #e8e8e8;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   flex-shrink: 0; // 防止被压缩
@@ -368,8 +368,8 @@ const resetConfiguration = () => {
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid #e8e8e8;
-    background: #fafafa;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-hover);
     height: 64px;
     box-sizing: border-box;
 
@@ -379,10 +379,10 @@ const resetConfiguration = () => {
       gap: 8px;
 
       .collapse-btn {
-        color: #666;
+        color: var(--text-secondary);
 
         &:hover {
-          color: #1890ff;
+          color: var(--accent);
         }
       }
     }

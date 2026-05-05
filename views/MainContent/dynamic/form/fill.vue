@@ -488,13 +488,13 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #f0f2f5;
+  background: var(--bg-base);
 }
 
 .control-panel {
   padding: 16px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 
   .usage-tips {

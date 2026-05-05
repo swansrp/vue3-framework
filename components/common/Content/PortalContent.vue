@@ -120,8 +120,8 @@ onMounted(() => {
 
 <style lang="less" scoped>
 .activate-item {
-  background-color: #e6f7ff;
-  border-right: 3px solid #1890ff;
+  background-color: var(--accent-soft);
+  border-right: 3px solid var(--accent);
 }
 
 // 针对list模式优化样式层叠问题
@@ -176,8 +176,8 @@ onMounted(() => {
       margin: 0 !important;
       // 保留一定的圆角和阴影，但减弱效果
       border-radius: 8px !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-      border: 1px solid #f0f0f0 !important;
+      box-shadow: var(--shadow-sm) !important;
+      border: 1px solid var(--border-subtle) !important;
     }
   }
 }

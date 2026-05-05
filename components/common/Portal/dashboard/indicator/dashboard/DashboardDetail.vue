@@ -109,25 +109,25 @@ const condition = computed(() => {
 
 .dimension-info-card,
 .data-table-card {
-  background: #fff;
+  background: var(--bg-elevated);
   border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--border-subtle);
   overflow: hidden;
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #1890ff;
-    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-glow);
   }
 
   .card-header {
-    background: linear-gradient(135deg, #f0f7ff 0%, #e6f4ff 100%);
+    background: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-mid) 100%);
     padding: 12px 16px;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid var(--border-subtle);
 
     h3 {
       margin: 0;
-      color: #262626;
+      color: var(--text-primary);
       font-size: 16px;
       font-weight: 600;
       display: flex;
@@ -140,11 +140,11 @@ const condition = computed(() => {
 
       .condition-text {
         font-weight: 400;
-        color: #595959;
+        color: var(--text-secondary);
         margin-left: 8px;
 
         strong {
-          color: #262626;
+          color: var(--text-primary);
           font-weight: 600;
         }
       }

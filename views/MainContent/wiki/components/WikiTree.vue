@@ -313,14 +313,14 @@ watch(
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #fff;
-  border-right: 1px solid #f0f0f0;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-subtle);
 
   &-header {
     display: flex;
     gap: 8px;
     padding: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-subtle);
 
     .tree-actions {
       display: flex;
@@ -341,7 +341,7 @@ watch(
   z-index: 1000;
   min-width: 150px;
   padding: 4px 0;
-  background: #fff;
+  background: var(--bg-elevated);
   border-radius: 4px;
   box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08),
     0 9px 28px 8px rgba(0, 0, 0, 0.05);
