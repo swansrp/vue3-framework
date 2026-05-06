@@ -3083,6 +3083,7 @@ defineExpose({
 // 必须放在非 scoped 块中，否则 scoped [data-v-xxx] 无法匹配库渲染的元素
 .surely-table-wrapper {
   // 包装容器也需要设置变量，因为 footer/title 与 .surely-table 同级
+  --surely-table-bg: var(--bg-elevated);
   --surely-table-background-color: var(--bg-hover);
   --surely-table-text-color: var(--text-primary);
   --surely-table-border-color: var(--border-subtle);
@@ -3147,6 +3148,35 @@ defineExpose({
       0 1px 4px rgba(0, 0, 0, 0.06),
       0 0 12px var(--accent-glow);
     transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  // ============ 锁定列（fixed column）背景修正 ============
+  // surely-vue/table 的锁定列容器 .surely-table-fix-left/right 默认无背景，
+  // 滚动内容会从透明容器下方透出，造成字体重叠。
+  // 必须给容器和 cell 都设置不透明背景。
+
+  .surely-table-fix-left,
+  .surely-table-fix-right {
+    background: var(--bg-elevated, #ffffff) !important;
+  }
+
+  // 表头区域的固定列容器需要与表头背景一致
+  .surely-table-header-container .surely-table-fix-left,
+  .surely-table-header-container .surely-table-fix-right {
+    background: var(--bg-hover, #f0f0f0) !important;
+  }
+
+  // 固定表头 cell 背景修正：原始 --card-gradient-header 包含半透明色，
+  // 滚动时其他表头 cell 会从固定表头 cell 下方透出。
+  // 用 color-mix 将半透明渐变色转为不透明等效色，保持视觉一致。
+  .surely-table-header-cell.surely-table-cell-fix-left,
+  .surely-table-header-cell.surely-table-cell-fix-right,
+  .surely-table-header-cell.surely-table-cell-fix-left-last {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent, #4f6cf7) 8%, var(--bg-elevated, #ffffff)),
+      var(--bg-hover, #ececf0)
+    ) !important;
   }
 }
 </style>

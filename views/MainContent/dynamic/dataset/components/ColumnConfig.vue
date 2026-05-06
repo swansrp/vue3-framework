@@ -185,7 +185,7 @@ const handleSubmit = async (data: DatasetColumnInfo) => {
   try {
     // 使用 props.dataset.id 作为 datasetId
     if (props.dataset.id) {
-      data.tableId = String(props.dataset.id)
+      data.datasetId = props.dataset.id
       
       if (currentColumn.value?.id) {
         await datasetConfigUpdateColumn(data, true, false)

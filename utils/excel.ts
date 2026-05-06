@@ -122,7 +122,8 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
           cell.t = 's'
         }
 
-        if (columns[C].fieldType === FIELD_TYPE.MONEY) {
+        const col = columns[C]
+        if (col?.fieldType === FIELD_TYPE.MONEY) {
           //将有千分位的数据去掉千分位
           cell.v = cell.v.replace(/,/g, '')
           const value = parseFloat(cell.v)
@@ -132,7 +133,9 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
           }
         }
         ws[cell_ref] = cell
-        columnWidthArray[C].wpx = Math.max(columnWidthArray[C].wpx, getTextWidth(cell.v))
+        if (columnWidthArray[C]) {
+          columnWidthArray[C].wpx = Math.max(columnWidthArray[C].wpx, getTextWidth(cell.v))
+        }
       }
     }
   }
