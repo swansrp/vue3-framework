@@ -1748,7 +1748,9 @@ import { CellRenderArgs } from '@surely-vue/table'
 import { MenuProps } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import * as _ from 'lodash'
-import { nextTick, Ref, watch } from 'vue'
+import { nextTick, onMounted, Ref, watch } from 'vue'
+
+import { getUrlParam } from '@/framework/network/utils'
 
 import ColumnOrderModal from './components/ColumnOrderModal.vue'
 import FolderComponent from './components/FolderComponent.vue'
@@ -2177,7 +2179,7 @@ const onSearch = (preserveFolderState = false) => {
   // 保存当前文件夹展开状态
   const savedFolderState = preserveFolderState ? { ...expandedFolders } : null
   
-  getPortalList(
+  return getPortalList(
     inputTableName.value, 
     selectedRole.value,
     props.dataMode || undefined,
@@ -2589,7 +2591,20 @@ const autoExpandMatchedFolders = () => {
 
 onMounted(() => {
   init().then(() => {
-    onSearch()
+    // 从 URL 中识别 tableId 参数
+    const urlTableId = getUrlParam<string>('tableId')
+    onSearch().then(() => {
+      if (urlTableId) {
+        const found = tableList.value.find(item => item.value === urlTableId)
+        if (found) {
+          // 将表格名称填入搜索框，触发文件夹筛选定位
+          inputTableName.value = found.label
+          autoExpandMatchedFolders()
+          // 选中并加载该表格配置
+          getTableConfigByName(found.value)
+        }
+      }
+    })
   })
 })
 
