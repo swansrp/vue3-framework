@@ -4,12 +4,92 @@
 /* 最高优先级的全局深色主题覆盖 */
 /* =========================== */
 
-/* 强制覆盖所有表格背景 */
-html body .dark-content-layout .surely-table,
-html body .dark-content-layout .portal-table .surely-table,
-html body .dark-content-layout .portal-table {
-    background-color: rgb(2, 57, 85) !important;
-    background: rgb(2, 57, 85) !important;
+/* ====================================================================
+   深色内容区设计令牌覆盖
+   将 .dark-content-layout 内的所有 CSS 变量强制设为深色值，
+   使 Portal 组件中的 var(--bg-elevated) 等引用自动解析为深色。
+   这是从根源上隔离主题的关键：Portal 的非 scoped 样式块使用
+   var() 引用设计令牌，只要在此处覆盖令牌值，Portal 样式就会
+   自动适配深色，无需与 dark.css 的 !important 硬编码覆盖打架。
+   ==================================================================== */
+.dark-content-layout {
+    /* --- 基底背景 --- */
+    --bg-base: #0A1F2E !important;
+    --bg-elevated: #0E3D55 !important;
+    --bg-hover: #154A66 !important;
+    --bg-active: #1B475D !important;
+    --bg-overlay: rgba(0, 0, 0, 0.6) !important;
+
+    /* --- 边框 --- */
+    --border-subtle: rgba(255, 255, 255, 0.1) !important;
+    --border-hover: rgba(255, 255, 255, 0.2) !important;
+    --border-active: rgba(31, 198, 255, 0.4) !important;
+
+    /* --- 文字 --- */
+    --text-primary: #ffffff !important;
+    --text-secondary: rgba(255, 255, 255, 0.7) !important;
+    --text-tertiary: rgba(255, 255, 255, 0.5) !important;
+
+    /* --- 主题色 --- */
+    --accent: #1FC6FF !important;
+    --accent-subtle: #1B475D !important;
+    --accent-soft: #154A66 !important;
+    --accent-mid: rgba(31, 198, 255, 0.2) !important;
+    --accent-glow: rgba(31, 198, 255, 0.25) !important;
+    --accent-light: #5AD3FB !important;
+
+    /* --- 语义色 --- */
+    --success: #22c55e !important;
+    --danger: #ef4444 !important;
+    --warning: #f59e0b !important;
+
+    /* --- 阴影 --- */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    --shadow-glow: 0 0 20px rgba(31, 198, 255, 0.15) !important;
+    --shadow-elevated: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(31, 198, 255, 0.05) !important;
+    --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(31, 198, 255, 0.08) !important;
+
+    /* --- 卡片 --- */
+    --card-gradient: linear-gradient(135deg, rgba(14, 61, 85, 0.98), rgba(27, 71, 93, 0.98)) !important;
+    --card-gradient-header: linear-gradient(135deg, rgb(2, 57, 85), rgb(3, 69, 102)) !important;
+    --card-accent-top: linear-gradient(90deg, #1FC6FF, #5AD3FB, rgba(31, 198, 255, 0.2)) !important;
+
+    /* ===================================================================
+       surely-vue/table CSS 变量覆盖
+       Portal 组件的非 scoped 样式块通过 var() 设置这些变量，
+       在此直接覆盖为深色值，确保表格内部所有元素都使用深色。
+       =================================================================== */
+    --surely-table-bg: #0E3D55 !important;
+    --surely-table-row-bg: #0E3D55 !important;
+    --surely-table-component-background: #0E3D55 !important;
+    --surely-table-background-color: rgb(2, 57, 85) !important;
+    --surely-table-row-hover-bg: #154A66 !important;
+    --surely-table-expanded-row-bg: #154A66 !important;
+    --surely-table-background-color-selected: rgba(31, 198, 255, 0.15) !important;
+    --surely-table-background-color-summary: #154A66 !important;
+    --surely-table-border-color: rgba(255, 255, 255, 0.1) !important;
+    --surely-table-border-color-base: rgba(255, 255, 255, 0.2) !important;
+    --surely-table-text-color: #ffffff !important;
+    --surely-table-text-color-secondary: rgba(255, 255, 255, 0.7) !important;
+    --surely-table-header-color: #ffffff !important;
+    --surely-table-header-sort-bg: #154A66 !important;
+    --surely-table-body-sort-bg: #154A66 !important;
+    --surely-table-header-cell-split-color: rgba(255, 255, 255, 0.1) !important;
+    --surely-table-header-icon-color: rgba(255, 255, 255, 0.5) !important;
+    --surely-table-header-icon-color-hover: #1FC6FF !important;
+    --surely-table-header-filter-active-bg: rgba(31, 198, 255, 0.15) !important;
+    --surely-table-header-sort-active-bg: #154A66 !important;
+    --surely-table-header-drag-bg: #154A66 !important;
+    --surely-table-disabled-color: rgba(255, 255, 255, 0.3) !important;
+    --surely-table-disabled-bg: #154A66 !important;
+    --surely-table-row-even-bg: #1B475D !important;
+    --surely-table-row-odd-bg: #0E3D55 !important;
+    --surely-table-row-even-hover-bg: #1F5570 !important;
+    --surely-table-row-odd-hover-bg: #154A66 !important;
+    --surely-table-border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* 强制覆盖表格主体背景 */
@@ -26,65 +106,6 @@ html body .dark-content-layout .surely-table .surely-table-row,
 html body .dark-content-layout .portal-table .surely-table-row {
     background-color: #0E3D55 !important;
     background: #0E3D55 !important;
-    color: #ffffff !important;
-}
-
-:deep(.surely-table), :deep(.surely-table-header), :deep(.surely-table-header-cell) {
-    background-color: rgb(2, 57, 85) !important;
-    --surely-table-background-color: transparent;
-}
-
-:deep(.surely-table-header-cell) {
-    color: #ffffff !important;
-    font-family: 'Noto Sans SC', serif;
-    font-size: 16px;
-    font-weight: 600;
-    background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0));
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* 禁用表头的所有动画效果，保持静态稳定 */
-    transition: none !important;
-    transform: none !important;
-    animation: none !important;
-}
-
-/* 表头内容文字样式强化 */
-:deep(.surely-table-header-cell .surely-table-cell-content) {
-    color: #ffffff !important;
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* 表头内部所有文本元素 */
-:deep(.surely-table-header-cell span),
-:deep(.surely-table-header-cell div),
-:deep(.surely-table-header-cell .table-title-cell) {
-    color: #ffffff !important;
-}
-
-:deep(.surely-table-thead) {
-    height: 70px;
-    background-color: rgb(2, 57, 85) !important;
-}
-
-/* 表头的悬停效果禁用 */
-:deep(.surely-table-header-cell:hover) {
-    background-color: rgb(2, 57, 85) !important;
-    background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0)) !important;
-    transition: none !important;
-    transform: none !important;
-    animation: none !important;
-    box-shadow: none !important;
-    color: #ffffff !important;
-}
-
-/* 表头文字颜色的最高优先级覆盖 */
-:deep(.surely-table-header-cell *) {
-    color: #ffffff !important;
-}
-
-:deep(.surely-table-header-cell:hover *) {
     color: #ffffff !important;
 }
 
@@ -157,13 +178,6 @@ html body .dark-content-layout .portal-table .surely-table-row {
     color: #fff;
     font-size: 16px;
     font-family: 'Noto Sans SC', serif;
-}
-
-:deep(.surely-table-header) {
-    border: 2px solid rgba(31, 198, 255, 0.6) !important;
-    border-bottom: 2px solid rgba(31, 198, 255, 0.8) !important;
-    border-radius: 8px 8px 0 0 !important;
-    background: linear-gradient(135deg, rgb(2, 57, 85), rgb(3, 69, 102)) !important;
 }
 
 :deep(.surely-table-cell) {
@@ -816,16 +830,28 @@ html body .dark-content-layout .portal-table .surely-table-row {
     box-shadow: 0 2px 8px rgba(0, 172, 255, 0.2);
 }
 
-/* 表头样式强化 - 禁用所有动画效果 */
-.dark-content-layout .surely-table-header-cell {
+/* 表头样式强化 - 使用高特异性选择器覆盖 Portal 的 :deep 样式 */
+:deep(.dark-content-layout .surely-table-header-cell) {
+    /* 使用 background 简写 + background-image 分开设置，对抗 Portal 的 background 简写 !important */
+    background: rgb(2, 57, 85) !important;
+    background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0)) !important;
+    color: #ffffff !important;
+    font-family: 'Noto Sans SC', serif;
+    font-size: 16px;
+    font-weight: 600;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* 禁用表头的所有动画效果，保持静态稳定 */
     transition: none !important;
     transform: none !important;
     animation: none !important;
     box-shadow: none !important;
-    color: #ffffff !important;
 }
 
-.dark-content-layout .surely-table-header-cell:hover {
+:deep(.dark-content-layout .surely-table-header-cell:hover) {
+    background-color: rgb(2, 57, 85) !important;
+    background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0)) !important;
     transition: none !important;
     transform: none !important;
     animation: none !important;
@@ -834,24 +860,43 @@ html body .dark-content-layout .portal-table .surely-table-row {
 }
 
 /* 表头内部所有文本元素颜色强制设定 */
-.dark-content-layout .surely-table-header-cell .surely-table-cell-content,
-.dark-content-layout .surely-table-header-cell span,
-.dark-content-layout .surely-table-header-cell div,
-.dark-content-layout .surely-table-header-cell .table-title-cell {
+:deep(.dark-content-layout .surely-table-header-cell .surely-table-cell-content),
+:deep(.dark-content-layout .surely-table-header-cell span),
+:deep(.dark-content-layout .surely-table-header-cell div),
+:deep(.dark-content-layout .surely-table-header-cell .table-title-cell) {
     color: #ffffff !important;
     font-weight: 600;
 }
 
-/* 排序和筛选图标 */
-.dark-content-layout .surely-table-header-cell .surely-table-column-sorter,
-.dark-content-layout .surely-table-header-cell .surely-table-filter-trigger,
-.dark-content-layout .surely-table-header-cell .ant-dropdown-trigger {
+/* 表头文字颜色的最高优先级覆盖 - 所有后代元素 */
+:deep(.dark-content-layout .surely-table-header-cell *) {
     color: #ffffff !important;
 }
 
-.dark-content-layout .surely-table-header-cell .surely-table-column-sorter:hover,
-.dark-content-layout .surely-table-header-cell .surely-table-filter-trigger:hover,
-.dark-content-layout .surely-table-header-cell .ant-dropdown-trigger:hover {
+:deep(.dark-content-layout .surely-table-header-cell:hover *) {
+    color: #ffffff !important;
+}
+
+/* 表头内容文字样式强化 */
+:deep(.dark-content-layout .surely-table-header-cell .surely-table-cell-content) {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+:deep(.dark-content-layout .surely-table-thead) {
+    height: 70px;
+    background-color: rgb(2, 57, 85) !important;
+}
+
+/* 排序和筛选图标 */
+:deep(.dark-content-layout .surely-table-header-cell .surely-table-column-sorter),
+:deep(.dark-content-layout .surely-table-header-cell .surely-table-filter-trigger),
+:deep(.dark-content-layout .surely-table-header-cell .ant-dropdown-trigger) {
+    color: #ffffff !important;
+}
+
+:deep(.dark-content-layout .surely-table-header-cell .surely-table-column-sorter:hover),
+:deep(.dark-content-layout .surely-table-header-cell .surely-table-filter-trigger:hover),
+:deep(.dark-content-layout .surely-table-header-cell .ant-dropdown-trigger:hover) {
     color: #1FC6FF !important;
 }
 
@@ -927,8 +972,10 @@ html body .dark-content-layout .portal-table .surely-table-row {
 }
 
 /* 表头边框加强 */
-.dark-content-layout .surely-table-header {
+:deep(.dark-content-layout .surely-table-header) {
+    border: 2px solid rgba(31, 198, 255, 0.6) !important;
     border-bottom: 3px solid rgba(31, 198, 255, 0.7) !important;
+    border-radius: 8px 8px 0 0 !important;
     background: linear-gradient(135deg, 
         rgb(2, 57, 85) 0%, 
         rgb(3, 69, 102) 50%, 
@@ -1104,15 +1151,6 @@ html body .dark-content-layout .surely-table tr:nth-of-type(odd):hover {
     background: #154A66 !important;
 }
 
-/* 使用CSS变量强制覆盖 */
-.dark-content-layout {
-    --surely-table-row-even-bg: #1B475D !important;
-    --surely-table-row-odd-bg: #0E3D55 !important;
-    --surely-table-row-even-hover-bg: #1F5570 !important;
-    --surely-table-row-odd-hover-bg: #154A66 !important;
-    --surely-table-border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
 /* =========================== */
 /* 最终边框颜色覆盖 */
 /* =========================== */
@@ -1198,4 +1236,110 @@ html body .dark-content-layout .surely-table tr:nth-of-type(odd):hover {
                 0 2px 8px rgba(0, 0, 0, 0.2),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
     overflow: hidden;
+}
+
+/* ===================================================================
+   :global() 全局覆盖——自动生成非 scoped 规则，无需额外文件引入
+   覆盖 Portal 的非 scoped 样式（表头/固定列/边框/流光条等）
+   =================================================================== */
+
+:global(.dark-content-layout.dark-content-layout .surely-table-header-cell),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-cell) {
+  background: rgb(2, 57, 85) !important;
+  background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0)) !important;
+  color: #ffffff !important;
+  font-family: 'Noto Sans SC', serif;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid rgba(31, 198, 255, 0.4) !important;
+  transition: none !important;
+  transform: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-header-cell:hover),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-cell:hover) {
+  background: rgb(2, 57, 85) !important;
+  background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0)) !important;
+  color: #ffffff !important;
+  transition: none !important;
+  transform: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-header-cell *),
+:global(.dark-content-layout.dark-content-layout .surely-table-header-cell:hover *),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-cell *),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-cell:hover *) {
+  color: #ffffff !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-thead),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-thead) {
+  background-color: rgb(2, 57, 85) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-header),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header) {
+  background: linear-gradient(135deg,
+    rgb(2, 57, 85) 0%,
+    rgb(3, 69, 102) 50%,
+    rgb(2, 57, 85) 100%) !important;
+  border: 2px solid rgba(31, 198, 255, 0.6) !important;
+  border-bottom: 3px solid rgba(31, 198, 255, 0.7) !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-header-cell.surely-table-cell-fix-left),
+:global(.dark-content-layout.dark-content-layout .surely-table-header-cell.surely-table-cell-fix-right),
+:global(.dark-content-layout.dark-content-layout .surely-table-header-cell.surely-table-cell-fix-left-last),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-cell.surely-table-cell-fix-left),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-cell.surely-table-cell-fix-right),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-cell.surely-table-cell-fix-left-last) {
+  background: rgb(2, 57, 85) !important;
+  background-image: linear-gradient(to top, rgba(90, 211, 251, 0.4), rgba(90, 211, 251, 0)) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-fix-left),
+:global(.dark-content-layout.dark-content-layout .surely-table-fix-right),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-fix-left),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-fix-right) {
+  background: rgb(2, 57, 85) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-header-container .surely-table-fix-left),
+:global(.dark-content-layout.dark-content-layout .surely-table-header-container .surely-table-fix-right),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-container .surely-table-fix-left),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-header-container .surely-table-fix-right) {
+  background: rgb(2, 57, 85) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-horizontal-scroll),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-horizontal-scroll) {
+  background: rgb(2, 57, 85) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .surely-table-bordered),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-bordered) {
+  border-color: rgba(31, 198, 255, 0.2) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .portal-table::before),
+:global(.dark-dialog-mask.dark-dialog-mask .portal-table::before) {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(31, 198, 255, 0.2) 30%,
+    rgba(90, 211, 251, 0.3) 50%,
+    rgba(31, 198, 255, 0.2) 70%,
+    transparent 100%) !important;
+}
+
+/* ====== 滚动条伪元素背景修正 ====== */
+:global(.dark-content-layout.dark-content-layout .surely-table-bordered .surely-table-header-scrollbar::after),
+:global(.dark-content-layout.dark-content-layout .surely-table-bordered .surely-table-summary-scrollbar::after),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-bordered .surely-table-header-scrollbar::after),
+:global(.dark-dialog-mask.dark-dialog-mask .surely-table-bordered .surely-table-summary-scrollbar::after) {
+  background: rgb(2, 57, 85) !important;
 }
