@@ -84,70 +84,38 @@
         </div>
       </div>
       <!-- 右键菜单 -->
-      <a-dropdown
-        v-if="tableList.length !== 0 && selectedRole === '0'"
-        v-model:open="contextMenuVisible"
-        :trigger="['contextmenu']"
-      >
+      <teleport to="body">
         <div
-          :style="{
-            position: 'fixed',
-            left: contextMenuPosition.x + 'px',
-            top: contextMenuPosition.y + 'px',
-            width: '1px',
-            height: '1px',
-            pointerEvents: 'none'
-          }"
-        ></div>
-        <template #overlay>
-          <a-menu v-if="contextMenuItem">
+          v-if="contextMenuVisible && tableList.length !== 0 && selectedRole === '0'"
+          class="context-menu-overlay"
+          @click="contextMenuVisible = false"
+          @contextmenu.prevent="contextMenuVisible = false"
+        >
+          <a-menu
+            :style="{
+              position: 'fixed',
+              left: contextMenuPosition.x + 'px',
+              top: contextMenuPosition.y + 'px',
+              zIndex: 9999
+            }"
+            @click="handleMenuClick"
+          >
             <a-menu-item key="0">
-              <a-popconfirm
-                title="注意 即将恢复该配置到默认状态"
-                @confirm="handleRefreshConfig"
-              >
-                <a-button
-                  type="text"
-                  size="small"
-                >
-                  恢复
-                  <template #icon>
-                    <UndoOutlined />
-                  </template>
-                </a-button>
-              </a-popconfirm>
+              <UndoOutlined />
+              恢复
             </a-menu-item>
             <a-menu-item key="1">
-              <a-button
-                type="text"
-                size="small"
-                @click="handleOpenCopyModal"
-              >
-                复制
-                <template #icon>
-                  <CopyOutlined />
-                </template>
-              </a-button>
+              <CopyOutlined />
+              复制
             </a-menu-item>
-            <a-menu-item key="2">
-              <a-popconfirm
-                title="注意 即将删除该配置"
-                @confirm="handleDeleteConfig"
-              >
-                <a-button
-                  type="text"
-                  size="small"
-                >
-                  删除
-                  <template #icon>
-                    <DeleteOutlined />
-                  </template>
-                </a-button>
-              </a-popconfirm>
+            <a-menu-divider />
+            <a-menu-item key="2" danger>
+              <DeleteOutlined />
+              删除
             </a-menu-item>
           </a-menu>
-        </template>
-      </a-dropdown>
+        </div>
+      </teleport>
     </div>
   </div>
 </template>
@@ -155,6 +123,7 @@
 <script lang="ts" setup>
 import { CaretDownOutlined, CaretRightOutlined, FileTextOutlined, FolderOutlined, UndoOutlined, CopyOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { computed, ref } from 'vue'
+import { Modal } from 'ant-design-vue'
 
 // 定义Props接口
 interface FolderComponentProps {
@@ -187,6 +156,28 @@ const emit = defineEmits(['refresh-config', 'open-copy-modal', 'delete-config'])
 const contextMenuVisible = ref(false)
 const contextMenuItem = ref<any>(null)
 const contextMenuPosition = ref({ x: 0, y: 0 })
+
+// 菜单点击处理
+const handleMenuClick = ({ key }: { key: string | number }) => {
+  contextMenuVisible.value = false
+  const menuKey = String(key)
+  if (menuKey === '0') {
+    Modal.confirm({
+      title: '注意',
+      content: '即将恢复该配置到默认状态',
+      onOk: () => handleRefreshConfig()
+    })
+  } else if (menuKey === '1') {
+    handleOpenCopyModal()
+  } else if (menuKey === '2') {
+    Modal.confirm({
+      title: '注意',
+      content: '即将删除该配置',
+      okType: 'danger',
+      onOk: () => handleDeleteConfig()
+    })
+  }
+}
 
 // 处理右键菜单
 const handleContextMenu = (e: MouseEvent, item: any) => {
@@ -390,6 +381,16 @@ const onMouseLeave = (e: Event) => {
 
 .folder-group {
   margin: 0;
+}
+
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998;
+  background: transparent;
 }
 
 .folder-header {

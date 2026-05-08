@@ -75,7 +75,8 @@ const props = withDefaults(defineProps<{
   checkStrictly?: boolean
   config: TableConfigType,
   treeData: Array<DataNode>,
-  selectedTreeData?: Array<any>
+  selectedTreeData?: Array<any>,
+  rowAllowSelect?: (record: any) => boolean
 }>(), {
   treeCheckAble: false,
   checkStrictly: false,

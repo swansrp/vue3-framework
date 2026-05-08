@@ -49,7 +49,8 @@
         :class="{ 
           'grid-item-selected': selectedItems.includes(record.value),
           'grid-item-draggable': isDragMode,
-          'grid-item-dragging': draggedIndex === index
+          'grid-item-dragging': draggedIndex === index,
+          'grid-item-disabled': prop.rowAllowSelect ? !prop.rowAllowSelect(record) : false
         }"
         :draggable="isDragMode"
         @click="handleItemClick(record)"
@@ -202,7 +203,8 @@ const prop = defineProps<{
   dataSource: Array<any>,
   paginationChange: (page: number, pageSize: number) => void,
   rowSelection: any,
-  cardWidth?: number
+  cardWidth?: number,
+  rowAllowSelect?: (record: any) => boolean
 }>()
 
 const { dataSource, config, rowSelection, cardWidth } = toRefs(prop)
@@ -252,6 +254,7 @@ const onGridDataSearch = () => {
 
 const handleItemClick = (record: any) => {
   if (isDragMode.value) return // 拖拽模式下不处理点击
+  if (prop.rowAllowSelect && !prop.rowAllowSelect(record)) return // 禁用item不能点击
   
   if (rowSelection.value) {
     if (rowSelection.value.type === 'radio') {
@@ -456,6 +459,18 @@ watch(() => rowSelection.value?.selectedRowKeys, (newKeys) => {
         transform: rotate(5deg) scale(1.05);
         box-shadow: var(--shadow-lg);
         z-index: 1000;
+      }
+
+      &.grid-item-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #f5f5f5;
+
+        &:hover {
+          transform: none;
+          box-shadow: none;
+          border-color: #e8e8e8;
+        }
       }
 
       .grid-item-drag-handle {

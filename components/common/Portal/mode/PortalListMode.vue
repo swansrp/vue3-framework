@@ -123,7 +123,8 @@ const prop = defineProps<{
   dataSource: Array<any>,
   paginationChange: Function,
   rowSelection: any,
-  singleSelect?: boolean
+  singleSelect?: boolean,
+  rowAllowSelect?: (record: any) => boolean
 }>()
 
 const { dataSource, config, rowSelection, singleSelect } = toRefs(prop)
@@ -187,6 +188,10 @@ const handleCustomRow = (record: any) => {
     onClick: (event: MouseEvent) => {
       // 如果没有 rowSelection，说明禁用了行选择
       if (!rowSelection.value) {
+        return
+      }
+      // 如果 rowAllowSelect 返回 false，则不允许选中
+      if (prop.rowAllowSelect && !prop.rowAllowSelect(record)) {
         return
       }
       

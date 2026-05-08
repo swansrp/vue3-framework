@@ -18,6 +18,7 @@
               :config="config"
               :tree-check-able="props.treeCheckAble"
               :tree-data="treeData"
+              :row-allow-select="props.rowAllowSelect"
               @update-tree="updateTree"
               @handle-tree-selected="handleTreeSelected"
               @handle-menu-context-view="handleMenuContextView"
@@ -47,6 +48,7 @@
             :row-selection="hideRowSelection ? null : rowSelection"
             :single-select="singleSelect"
             :title-column="titleColumn"
+            :row-allow-select="props.rowAllowSelect"
             class="list-mode-table"
             @search="onListDataSearch"
             @row-drag-end="_updateOrder"
@@ -82,6 +84,7 @@
             :row-selection="hideRowSelection ? null : rowSelection"
             :title-column="titleColumn"
             :card-width="props.gridCardWidth"
+            :row-allow-select="props.rowAllowSelect"
             class="grid-mode-table"
             @search="onListDataSearch"
             @row-drag-end="_updateOrder"
@@ -888,6 +891,7 @@ const props = withDefaults(defineProps<{
     downloadFileName?: (config: TableConfigType) => string
     showLoading?: boolean
     gridCardWidth?: number
+    rowAllowSelect?: (record: any) => boolean
     showSearchTags?: boolean
     computedColumns?: Record<string, (row: any) => any>
   }>(),
@@ -941,6 +945,7 @@ const props = withDefaults(defineProps<{
     downloadFileName: (config: TableConfigType) => config.title,
     showLoading: false,
     gridCardWidth: 350,
+    rowAllowSelect: undefined,
     showSearchTags: false,
     computedColumns: undefined
   })
@@ -1396,6 +1401,15 @@ const updateTree = async (info: AntTreeNodeDropEvent) => {
 }
 const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedNodes: any, node: any, event: any }) => {
   if (e.selected) {
+    // 如果 rowAllowSelect 返回 false，则不允许选中该树节点
+    if (props.rowAllowSelect && !props.rowAllowSelect(e.node.dataRef || e.node)) {
+      // 从 selectedTreeData 中移除不允许选中的节点
+      selectedTreeData.value = selectedKeys.filter((key: any) => {
+        const foundNode = e.selectedNodes?.find((n: any) => n.key === key)
+        return foundNode && props.rowAllowSelect(foundNode.dataRef || foundNode)
+      })
+      return
+    }
     selectedTreeDataNode.value = e.node
     emit('selectedData', selectedKeys)
   }
