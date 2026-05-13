@@ -5,7 +5,7 @@
       :width="_width"
       class="side-wrapper"
     >
-      <div style="margin: 10px">
+      <div class="side-panel">
         <slot name="side"></slot>
       </div>
     </a-layout-sider>
@@ -197,6 +197,13 @@ onMounted(() => {
   height: calc(100% - 20px);
   box-shadow: var(--shadow-md);
   margin: 10px 15px;
+}
+
+.side-panel {
+  margin: 10px;
+  height: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
 }
 
 .resize-container {

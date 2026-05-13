@@ -15,7 +15,9 @@
             v-if="tabs.length > 1"
             class="tab-remove"
             @click.stop="removeTab(getTabKey(item))"
-          >×</button>
+          >
+            ×
+          </button>
         </div>
       </div>
     </div>

@@ -48,6 +48,10 @@ const handleSelect = (nodeId, nodeInfo) => {
 | `pidUpdateApi` | 父节点更新接口路径后缀 | `string` | `'/pid'` | ❌ |
 | `defaultFormData` | 新增时的默认表单数据 | `Record<string, any>` | `{}` | ❌ |
 | `detailApi` | 详情接口路径后缀，设置后点击节点会自动获取详情 | `string` | `'/id'` | ❌ |
+| `expandAll` | 是否默认展开所有节点，默认 false（仅展开第一层） | `boolean` | `false` | ❌ |
+| `emptyText` | 空数据提示文字 | `string` | `'暂无数据，请点击上方「新增」按钮'` | ❌ |
+| `titleField` | 标题字段名，校验和提交时会使用此字段。设为 `'name'` 后校验 `formData.name`，提交时自动同步到 `title` | `string` | `'title'` | ❌ |
+| `onValidate` | 自定义校验函数，返回 `true` 通过或错误信息字符串 | `(formData, isEdit) => true \| string` | - | ❌ |
 
 ## Events 事件
 
@@ -377,6 +381,8 @@ interface TreeNode {
 3. **拖拽排序**: 需要后端支持排序接口和父节点更新接口
 4. **自定义表单**: 使用 `form` 插槽时，表单校验需要自行处理
 5. **节点选择**: 默认不允许选择有子节点的节点，可通过 `allowSelectParent` 开启
+6. **标题字段映射**: 当后端字段名为 `name` 而非 `title` 时，通过 `title-field="name"` 指定，组件会自动校验该字段并在提交时同步到 `title`
+7. **自定义校验**: 通过 `on-validate` 传入校验函数，优先级高于表单校验和默认校验
 
 ---
 

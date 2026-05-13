@@ -59,7 +59,10 @@
         </div>
       </div>
       <!-- 主题切换按钮：左键切换深色/浅色，右键切换浅色主题风格 -->
-      <div v-if="themeStore.switchEnabled" class="theme-toggle-wrapper">
+      <div
+        v-if="themeStore.switchEnabled"
+        class="theme-toggle-wrapper"
+      >
         <a-dropdown
           :trigger="['contextmenu']"
         >

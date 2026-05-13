@@ -109,7 +109,10 @@
               复制
             </a-menu-item>
             <a-menu-divider />
-            <a-menu-item key="2" danger>
+            <a-menu-item
+              key="2"
+              danger
+            >
               <DeleteOutlined />
               删除
             </a-menu-item>
@@ -122,8 +125,8 @@
 
 <script lang="ts" setup>
 import { CaretDownOutlined, CaretRightOutlined, FileTextOutlined, FolderOutlined, UndoOutlined, CopyOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { computed, ref } from 'vue'
 import { Modal } from 'ant-design-vue'
+import { computed, ref } from 'vue'
 
 // 定义Props接口
 interface FolderComponentProps {

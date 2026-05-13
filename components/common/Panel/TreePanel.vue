@@ -53,6 +53,14 @@ interface Props {
   defaultFormData?: Record<string, any>
   /** 详情接口路径后缀，如 '/id'，设置后点击节点会自动获取详情 */
   detailApi?: string
+  /** 是否默认展开所有节点，默认 false（仅展开第一层） */
+  expandAll?: boolean
+  /** 空数据提示文字 */
+  emptyText?: string
+  /** 标题字段名，默认 'title'。校验和提交时会使用此字段 */
+  titleField?: string
+  /** 自定义校验函数，返回 true 表示通过，返回错误信息字符串表示失败 */
+  onValidate?: (formData: Record<string, any>, isEdit: boolean) => true | string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -70,7 +78,11 @@ const props = withDefaults(defineProps<Props>(), {
   orderUpdateApi: '/order/update',
   pidUpdateApi: '/pid',
   defaultFormData: () => ({}),
-  detailApi: '/id'
+  detailApi: '/id',
+  expandAll: false,
+  emptyText: '暂无数据，请点击上方「新增」按钮',
+  titleField: 'title',
+  onValidate: undefined
 })
 
 const emit = defineEmits<{
@@ -113,6 +125,21 @@ const findNodeByKey = (nodes: TreeNode[], key: string): TreeNode | null => {
   return null
 }
 
+// 递归收集所有有子节点的节点的 key
+const collectExpandedKeys = (nodes: TreeNode[]): Key[] => {
+  const keys: Key[] = []
+  const traverse = (list: TreeNode[]) => {
+    for (const node of list) {
+      if (node.children && node.children.length > 0) {
+        keys.push(node.key || node.id)
+        traverse(node.children)
+      }
+    }
+  }
+  traverse(nodes)
+  return keys
+}
+
 // 加载树数据
 const loadTreeData = async () => {
   loading.value = true
@@ -121,9 +148,11 @@ const loadTreeData = async () => {
     const res = await request(api, {}, {}, false, false)
     if (res?.payload) {
       treeData.value = res.payload
-      // 自动展开第一层
-      if (res.payload.length > 0) {
-        expandedKeys.value = res.payload.map((item: any) => item.key || item.id)
+      // 根据 expandAll 配置决定默认展开策略
+      if (props.expandAll) {
+        expandedKeys.value = collectExpandedKeys(res.payload)
+      } else {
+        expandedKeys.value = res.payload.map((item: TreeNode) => item.key || item.id)
       }
       emit('loaded', res.payload)
     }
@@ -152,6 +181,11 @@ const handleSelect = async (keys: Key[], info: {
   selectedNodes: DataNode[]
   nativeEvent: MouseEvent
 }) => {
+  if (keys.length === 0) {
+    emit('select', '', null)
+    return
+  }
+
   if (keys.length > 0) {
     const node = info.node
     // 根据配置决定是否允许选择有子节点的节点
@@ -211,18 +245,25 @@ const handleEdit = (node: TreeNode) => {
   editingNode.value = node
   formData.value = {
     ...props.defaultFormData,
+    ...node,
     id: node.key || node.id,
     title: node.title,
-    pid: node.pid || '',
-    ...node
+    pid: node.pid || ''
   }
   editModalVisible.value = true
 }
 
 // 保存节点
 const handleSave = async () => {
-  // 先尝试表单校验（如果插槽中使用了表单）
-  if (formRef.value?.validate) {
+  // 优先使用自定义校验函数
+  if (props.onValidate) {
+    const result = props.onValidate(formData.value, !!editingNode.value)
+    if (result !== true) {
+      message.error(result)
+      return
+    }
+  } else if (formRef.value?.validate) {
+    // 尝试表单校验（如果插槽中使用了表单）
     try {
       await formRef.value.validate()
     } catch {
@@ -230,8 +271,9 @@ const handleSave = async () => {
       return
     }
   } else {
-    // 兼容旧逻辑：只检查 title
-    if (!formData.value.title) {
+    // 兼容旧逻辑：只检查标题字段
+    const titleValue = formData.value[props.titleField] || formData.value.title
+    if (!titleValue) {
       message.error('请输入名称')
       return
     }
@@ -239,9 +281,11 @@ const handleSave = async () => {
 
   try {
     // 确保 pid 为 null 而不是空字符串
+    // 将 titleField 对应的值同步到 title（树节点显示用）
     const submitData = {
       ...formData.value,
-      pid: formData.value.pid || null
+      pid: formData.value.pid || null,
+      title: formData.value[props.titleField] || formData.value.title
     }
     
     if (editingNode.value) {
@@ -387,18 +431,30 @@ const onExpand = (keys: Key[]) => {
   autoExpandParent.value = false
 }
 
+// HTML 转义，防止 XSS 注入
+const escapeHtml = (str: string): string => {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 // 高亮匹配的文本
 const highlightText = (text: string) => {
   const value = searchValue.value.trim()
-  if (!value) return text
+  if (!value) return escapeHtml(text)
 
-  const index = text.toLowerCase().indexOf(value.toLowerCase())
-  if (index === -1) return text
+  const lowerText = text.toLowerCase()
+  const lowerValue = value.toLowerCase()
+  const index = lowerText.indexOf(lowerValue)
+  if (index === -1) return escapeHtml(text)
+
+  // 先转义各片段，再对匹配部分包裹高亮 span
+  const escapedValue = escapeHtml(text.substring(index, index + value.length))
+  const escapedBefore = escapeHtml(text.substring(0, index))
+  const escapedAfter = escapeHtml(text.substring(index + value.length))
 
   return (
-      text.substring(0, index) +
-      `<span style="color: #ff4d4f; font-weight: 700;">${ text.substring(index, index + value.length) }</span>` +
-      text.substring(index + value.length)
+      escapedBefore +
+      `<span style="color: #ff4d4f; font-weight: 700;">${escapedValue}</span>` +
+      escapedAfter
   )
 }
 
@@ -567,7 +623,8 @@ watch(() => props.urlPrefix, () => {
         </a-tree>
         <a-empty
           v-else
-          description="暂无数据"
+          class="tree-empty"
+          :description="props.emptyText"
         />
       </a-spin>
     </div>
@@ -656,6 +713,36 @@ watch(() => props.urlPrefix, () => {
   background: #ffffff;
   border-radius: 6px;
   padding: 4px;
+
+  // a-spin 撑满容器
+  :deep(.ant-spin-nested-loading) {
+    height: 100%;
+  }
+  :deep(.ant-spin-container) {
+    height: 100%;
+  }
+
+  // 空数据状态：填满整个内容区
+  .tree-empty {
+    height: 100%;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 40px 0;
+
+    :deep(.ant-empty-image) {
+      margin-bottom: 12px;
+    }
+
+    :deep(.ant-empty-description) {
+      font-size: 14px;
+      color: #999;
+      line-height: 1.6;
+    }
+  }
 
   :deep(.ant-tree) {
     .ant-badge:not(.ant-badge-status) {
