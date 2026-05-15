@@ -2484,6 +2484,14 @@ watch(() => props.advanceCondition, (newVal, oldVal) => {
   }
 })
 
+// 监听 selectColumnCondition 变化，重新查询数据
+watch(() => props.selectColumnCondition, (newVal, oldVal) => {
+  if (!initFinished) return
+  if (newVal !== oldVal) {
+    queryData()
+  }
+}, { deep: true })
+
 // 监听 readOnly 属性变化
 watch(() => props.readOnly, (newVal, oldVal) => {
   if (newVal !== oldVal) {
