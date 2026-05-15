@@ -1,7 +1,6 @@
 
 
 #======================= 修改这里 ============================
-projectDir='view'
 projectDirArray=("projectCode")
 remoteDir='/usr/local/nginx/html/'
 previewRemoteDir='/usr/local/nginx/html/'
@@ -12,22 +11,17 @@ ssh_config=${sshUserName}@${remoteAddr}
 #======================= 修改这里 ============================
 
 basepath=$(cd "$(dirname "$0")"; pwd)
-if [[ $# -ne 0 ]] ; then
-echo "要部署的项目:$1"
-projectDir=$1
-fi
 if test -z $remoteAddr
 then
 read -p "要部署的ip:" remoteAddr
 fi
 echo "┌-----------------------------┐"
-echo "|----0.projectCode------------|"
+echo "|----0.projectCode-----------|"?
 echo "└-----------------------------┘"
 echo ""
 read -p "选择要部署的项目序号:" projectIndex
-projectDir=${projectDirArray[$projectIndex]}
-remoteDir=${remoteDir}${projectDirArray[$projectIndex]}
-previewRemoteDir=${previewRemoteDir}preview_${projectDirArray[$projectIndex]}
+remoteDir=${remoteDir}${projectDirArray[$projectIndex]}/view
+previewRemoteDir=${previewRemoteDir}${projectDirArray[$projectIndex]}/view
 echo "要部署的项目: ${projectDirArray[$projectIndex]}"
 
 
