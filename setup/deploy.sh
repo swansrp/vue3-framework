@@ -27,7 +27,7 @@ echo ""
 read -p "选择要部署的项目序号:" projectIndex
 projectDir=${projectDirArray[$projectIndex]}
 remoteDir=${remoteDir}${projectDirArray[$projectIndex]}
-previewRemoteDir=${previewRemoteDir}${projectDirArray[$projectIndex]}
+previewRemoteDir=${previewRemoteDir}preview_${projectDirArray[$projectIndex]}
 echo "要部署的项目: ${projectDirArray[$projectIndex]}"
 
 
@@ -64,15 +64,15 @@ preview(){
 	
 	echo "压缩完成,开始上传..."
 	# 清理远程预览目录
-	send "rm -rf ${previewRemoteDir}-${projectDir}"
-	send "mkdir -p ${previewRemoteDir}-${projectDir}"
+	send "rm -rf ${previewRemoteDir}"
+	send "mkdir -p ${previewRemoteDir}"
 	
 	# 上传压缩包
-	scp -O ${basepath}/dist.tar.gz ${ssh_config}:"${previewRemoteDir}-${projectDir}/"
+	scp -O ${basepath}/dist.tar.gz ${ssh_config}:"${previewRemoteDir}/"
 	
 	# 远程解压缩
 	echo "开始解压缩..."
-	send "cd ${previewRemoteDir}-${projectDir} && tar -xzf dist.tar.gz && rm -f dist.tar.gz && mv dist/* . && rm -rf dist/"
+	send "cd ${previewRemoteDir} && tar -xzf dist.tar.gz && rm -f dist.tar.gz && mv dist/* . && rm -rf dist/"
 	
 	# 删除本地压缩包
 	rm -f ${basepath}/dist.tar.gz
@@ -82,25 +82,25 @@ preview(){
 }
 
 deploy() {
-	if dirExsit ${previewRemoteDir}-${projectDir}_old/; then
-		send "rm -rf ${previewRemoteDir}-${projectDir}_old"
+	if dirExsit ${remoteDir}_old/; then
+		send "rm -rf ${remoteDir}_old"
 	fi
-	if dirExsit ${previewRemoteDir}-${projectDir}_backup/; then
-		send "mv ${previewRemoteDir}-${projectDir}_backup ${previewRemoteDir}-${projectDir}_old"
+	if dirExsit ${remoteDir}_backup/; then
+		send "mv ${remoteDir}_backup ${remoteDir}_old"
 	fi
-	if dirExsit ${remoteDir}-${projectDir}/; then
-	    send "mv ${remoteDir}-${projectDir} ${previewRemoteDir}-${projectDir}_backup"
+	if dirExsit ${remoteDir}/; then
+	    send "mv ${remoteDir} ${remoteDir}_backup"
 	else
-		send "mkdir -p ${remoteDir}-${projectDir}"
+		send "mkdir -p ${remoteDir}"
 	fi
-	send "cp -r ${previewRemoteDir}-${projectDir} ${remoteDir}"
+	send "cp -r ${previewRemoteDir} ${remoteDir}"
 	return 0
 }
 
 rollback(){
-	if dirExsit ${previewRemoteDir}-${projectDir}_backup/; then
-		send "rm -rf ${remoteDir}-${projectDir}"
-		send "mv ${previewRemoteDir}-${projectDir}_backup ${previewRemoteDir}-${projectDir}"
+	if dirExsit ${remoteDir}_backup/; then
+		send "rm -rf ${remoteDir}"
+		send "mv ${remoteDir}_backup ${remoteDir}"
 	else
 		echo "没有备份 回退失败"
 	fi
