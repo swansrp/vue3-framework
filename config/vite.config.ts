@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 
 import legacyPlugin from '@vitejs/plugin-legacy'
@@ -11,6 +12,10 @@ import eslintPlugin from 'vite-plugin-eslint'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import VueSetupExtend from 'vite-plugin-vue-setup-extend'
+
+// 从 package.json 读取项目名，用于动态生成代理路径
+const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf-8'))
+const apiPrefix = `/${pkg.name}`
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -113,6 +118,12 @@ export default defineConfig({
   base: './',
   server: {
     host: '0.0.0.0',
-    port: 8082 //vite项目启动时自定义端口
+    port: 8082, //vite项目启动时自定义端口
+    proxy: {
+      [apiPrefix]: {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true
+      }
+    }
   }
 })
