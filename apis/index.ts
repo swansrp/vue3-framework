@@ -403,13 +403,17 @@ export const generalQueryRequest = (
   currentPage: number,
   domain: string = baseDomain,
   showSuccess = false,
-  showLoading = true
+  showLoading = true,
+  selectColumnList?: string[],
+  distinct?: string
 ) => request(generalQueryApi(type, domain), {}, {
   selectColumnCondition: Object.fromEntries(selectColumnCondition),
   conditionList,
   sortList,
   pageSize,
-  currentPage
+  currentPage,
+  selectColumnList,
+  distinct
 }, showSuccess, showLoading) as Promise<any>
 
 export const generalSelectRequest = (
@@ -419,11 +423,15 @@ export const generalSelectRequest = (
   sortList: Array<QuerySortType>,
   domain: string = baseDomain,
   showSuccess = false,
-  showLoading = false
+  showLoading = false,
+  selectColumnList?: string[],
+  distinct?: string
 ) => request(generalSelectApi(type, domain), {}, {
   selectColumnCondition: Object.fromEntries(selectColumnCondition),
   conditionList,
-  sortList
+  sortList,
+  selectColumnList,
+  distinct
 }, showSuccess, showLoading) as Promise<any>
 
 export const generalSummaryRequest = (
@@ -487,13 +495,17 @@ export const advancedQueryRequest = (
   currentPage: number,
   domain: string = baseDomain,
   showSuccess = false,
-  showLoading = false
+  showLoading = false,
+  selectColumnList?: string[],
+  distinct?: string
 ) => request(advancedQueryApi(type, domain), {}, {
   selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
   sortList,
   pageSize,
-  currentPage
+  currentPage,
+  selectColumnList,
+  distinct
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedSelectRequest = (
@@ -503,11 +515,15 @@ export const advancedSelectRequest = (
   sortList: Array<QuerySortType>,
   domain: string = baseDomain,
   showSuccess = false,
-  showLoading = false
+  showLoading = false,
+  selectColumnList?: string[],
+  distinct?: string
 ) => request(advancedSelectApi(type, domain), {}, {
   selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
-  sortList
+  sortList,
+  selectColumnList,
+  distinct
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedSummaryRequest = (

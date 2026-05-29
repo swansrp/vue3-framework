@@ -68,14 +68,14 @@ export const deleteEntity = (url: string, id: string, baseDomain?: string, showS
 export const deleteEntityList = (url: string, id: Array<string>, baseDomain?: string, showSuccess = true, showLoading = true) =>
   deleteListRequest('/' + url, {}, id, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false) =>
-  advancedQueryRequest('/' + url, query.selectColumnCondition,  query.condition, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading) as Promise<any>
+export const advancedQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false, selectColumnList?: string[], distinct?: string) =>
+  advancedQueryRequest('/' + url, query.selectColumnCondition,  query.condition, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading, selectColumnList, distinct) as Promise<any>
 
-export const generalQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false) =>
-  generalQueryRequest('/' + url, query.selectColumnCondition,  query.conditionList, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading) as Promise<any>
+export const generalQuery = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = false, selectColumnList?: string[], distinct?: string) =>
+  generalQueryRequest('/' + url, query.selectColumnCondition,  query.conditionList, query.sortList, query.pageSize, query.currentPage, baseDomain, showSuccess, showLoading, selectColumnList, distinct) as Promise<any>
 
-export const generalSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
-  generalSelectRequest('/' + url, query.selectColumnCondition,  query.conditionList, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
+export const generalSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true, selectColumnList?: string[], distinct?: string) =>
+  generalSelectRequest('/' + url, query.selectColumnCondition,  query.conditionList, query.sortList, baseDomain, showSuccess, showLoading, selectColumnList, distinct) as Promise<any>
 
 export const generalSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = false) =>
   generalSummaryRequest('/' + url, query.selectColumnCondition,  query.conditionList, query.sortList, columns, baseDomain, showSuccess, showLoading) as Promise<any>
@@ -86,8 +86,8 @@ export const generalCount = (url: string, query: QueryType, baseDomain?: string,
 export const generalStatistic = (url: string, query: QueryType, sort: 0 | 1 | null, metricColumn: Array<{column: string, dictMap: any}>, metricCondition: Array<any>, statisticColumn: Array<{value: string, label: string}>, majorCondition='1', baseDomain?: string, showSuccess = true, showLoading = false) =>
   generalStatisticRequest('/' + url, query.selectColumnCondition,  query.conditionList, sort, metricColumn, metricCondition, statisticColumn, majorCondition, baseDomain, showSuccess, showLoading) as Promise<any>
 
-export const advancedSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true) =>
-  advancedSelectRequest('/' + url, query.selectColumnCondition,  query.condition, query.sortList, baseDomain, showSuccess, showLoading) as Promise<any>
+export const advancedSelect = (url: string, query: QueryType, baseDomain?: string, showSuccess = true, showLoading = true, selectColumnList?: string[], distinct?: string) =>
+  advancedSelectRequest('/' + url, query.selectColumnCondition,  query.condition, query.sortList, baseDomain, showSuccess, showLoading, selectColumnList, distinct) as Promise<any>
 
 export const advancedSummary = (url: string, query: QueryType, columns: Array<string>, baseDomain?: string, showSuccess = true, showLoading = false) =>
   advancedSummaryRequest('/' + url, query.selectColumnCondition,  query.condition, query.sortList, columns, baseDomain, showSuccess, showLoading) as Promise<any>

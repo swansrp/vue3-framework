@@ -5,7 +5,7 @@ import pinia from '@/framework/store'
 import STable from '@surely-vue/table'
 import { createApp } from 'vue'
 import '@/framework/assets/css/base.css'
-
+import '@/framework/assets/css/design-tokens.css'
 import VueLazyload from 'vue-lazyload'
 
 import '@surely-vue/table/dist/index.less'
