@@ -17,43 +17,45 @@
     @row-drag-end="handleRowDragEnd"
   >
     <template #bodyCell="{ column, record}">
-      <slot
-        name="display"
-        :record="record"
-      >
-        <a-dropdown :trigger="['contextmenu']">
-          <div
-            :style="{textAlign: column.contentAlign || 'left',
-                     textOverflow: 'ellipsis',
-                     whiteSpace: 'nowrap',
-                     overflow: 'hidden',
-                     height: '100%'}"
+      <a-dropdown :trigger="['contextmenu']">
+        <div>
+          <slot
+            name="display"
+            :record="record"
           >
-            {{ record[`${column.dataIndex}`] }}
-          </div>
-          <template #overlay>
-            <a-menu @click="({ key: menuKey }) => handleMenuContext(record.value, menuKey)">
-              <a-menu-item key="1">
-                查看详情
+            <div
+              :style="{textAlign: column.contentAlign || 'left',
+                       textOverflow: 'ellipsis',
+                       whiteSpace: 'nowrap',
+                       overflow: 'hidden',
+                       height: '100%'}"
+            >
+              {{ record[`${column.dataIndex}`] }}
+            </div>
+          </slot>
+        </div>
+        <template #overlay>
+          <a-menu @click="({ key: menuKey }: any) => handleMenuContext(record.value, menuKey)">
+            <a-menu-item key="1">
+              查看详情
+            </a-menu-item>
+            <template v-if="!config.readOnly">
+              <a-menu-item key="2">
+                新增记录
               </a-menu-item>
-              <template v-if="!config.readOnly">
-                <a-menu-item key="2">
-                  新增记录
-                </a-menu-item>
-                <a-menu-item key="3">
-                  编辑记录
-                </a-menu-item>
-                <a-menu-item key="4">
-                  复制记录
-                </a-menu-item>
-                <a-menu-item key="5">
-                  删除记录
-                </a-menu-item>
-              </template>
-            </a-menu>
-          </template>
-        </a-dropdown>
-      </slot>
+              <a-menu-item key="3">
+                编辑记录
+              </a-menu-item>
+              <a-menu-item key="4">
+                复制记录
+              </a-menu-item>
+              <a-menu-item key="5">
+                删除记录
+              </a-menu-item>
+            </template>
+          </a-menu>
+        </template>
+      </a-dropdown>
     </template>
     <template #tooltipTitle="{ value }">
       {{ value }}
