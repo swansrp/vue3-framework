@@ -634,10 +634,23 @@ const handleFormatSql = () => {
   }
   
   try {
-    // 简单的SQL格式化：添加换行和缩进
-    let formatted = formState.sql
-      .replace(/\s+/g, ' ') // 合并多个空格
-      .replace(/\s*,\s*/g, ',\n  ') // 逗号后换行
+    // 提取 -- 单行注释为占位符，防止格式化时破坏注释与代码的对应关系
+    const comments: string[] = []
+    let sql = formState.sql.replace(/--.*/g, (match) => {
+      comments.push(match)
+      return `/*__CMT${comments.length - 1}__*/`
+    })
+
+    // 合并空白
+    sql = sql.replace(/\s+/g, ' ').trim()
+
+    // 逗号处理：当逗号后紧跟注释占位符时，注释与逗号保持同行，换行在注释之后
+    sql = sql.replace(/,\s*(\/\*__CMT\d+__\*\/)\s*/g, (_, cmt) => `, ${cmt}\n  `)
+    // 普通逗号换行
+    sql = sql.replace(/,\s+/g, ',\n  ')
+
+    // SQL关键字换行
+    sql = sql
       .replace(/\bSELECT\b/gi, 'SELECT\n  ')
       .replace(/\bFROM\b/gi, '\nFROM ')
       .replace(/\b(INNER|LEFT|RIGHT|FULL)\s+JOIN\b/gi, '\n$1 JOIN ')
@@ -648,7 +661,15 @@ const handleFormatSql = () => {
       .replace(/\bON\b/gi, 'ON ')
       .trim()
 
-    formState.sql = formatted
+    // 清理多余空行
+    sql = sql.replace(/\n\s*\n/g, '\n')
+
+    // 恢复注释
+    comments.forEach((comment, idx) => {
+      sql = sql.replace(`/*__CMT${idx}__*/`, comment)
+    })
+
+    formState.sql = sql
     message.success('SQL格式化成功')
   } catch (error) {
     console.error('格式化失败:', error)
