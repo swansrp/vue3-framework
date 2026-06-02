@@ -25,7 +25,7 @@
               </span>
             </a-tooltip>
           </template>
-          <FirstDimensionControl
+          <DimensionControl
             v-model:visible-dimensions="visibleFirstDimensions"
             v-model:all-dimensions="allFirstDimensions"
             :received-data="receivedData"
@@ -49,7 +49,7 @@
               </span>
             </a-tooltip>
           </template>
-          <SecondDimensionControl
+          <DimensionControl
             v-model:visible-dimensions="visibleSecondDimensions"
             v-model:all-dimensions="allSecondDimensions"
             :received-data="receivedData"
@@ -118,8 +118,7 @@ import { AppstoreOutlined, BarChartOutlined, DatabaseOutlined, PieChartOutlined 
 import { message } from 'ant-design-vue'
 import { computed, nextTick, ref, toRefs } from 'vue'
 
-import FirstDimensionControl from './control/FirstDimensionControl.vue'
-import SecondDimensionControl from './control/SecondDimensionControl.vue'
+import DimensionControl from './control/DimensionControl.vue'
 import StatisticControl from './control/StatisticControl.vue'
 import DashboardDetailModal from './DashboardDetail.vue'
 import UniversalChart from './UniversalChart.vue'

@@ -96,16 +96,46 @@
       @generated="onIndicatorsGenerated"
       @close="showDictGenerator = false"
     />
+
+    <!-- 同步图表配置按钮 -->
+    <div
+      v-if="config?.name"
+      style="text-align: right; padding: 12px 24px; border-top: 1px solid #f0f0f0;"
+    >
+      <a-button
+        :loading="syncing"
+        type="primary"
+        @click="handleSyncCharts"
+      >
+        <template #icon>
+          <SyncOutlined />
+        </template>
+        同步图表配置
+      </a-button>
+    </div>
   </dialog-box>
+
+  <!-- 同步审查弹窗 -->
+  <chart-sync-review-modal
+    v-model:visible="showSyncReview"
+    :scan-result="scanResult"
+    :tree-data="indicatorTreeData"
+    @applied="onSyncApplied"
+  />
 </template>
 
 <script lang="ts" setup>
 
-import { ThunderboltOutlined } from '@ant-design/icons-vue'
+import { ThunderboltOutlined, SyncOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
 import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
 import IndicatorForm from './components/IndicatorForm.vue'
+import ChartSyncReviewModal from '@/framework/components/common/PortalConfig/sync/ChartSyncReviewModal.vue'
+
+import type { ScanResult } from '@/utils/syncAllChartIndicators'
+import { scanAllCharts } from '@/utils/syncAllChartIndicators'
+import { getIndicatorConfig } from '@/framework/apis/portal'
 
 import { ConditionVO } from '@/apis/types'
 import { addEntity, updateEntitySelective } from '@/framework/apis/portal'
@@ -121,6 +151,7 @@ const props = withDefaults(
   defineProps<{
     show: boolean
     config: any
+    dict?: any
   }>(),
   {}
 )
@@ -186,6 +217,56 @@ const modifyFormData = ref<any>({})
 // 字典生成器显示状态
 const showDictGenerator = ref(false)
 
+// 同步图表配置相关状态
+const syncing = ref(false)
+const showSyncReview = ref(false)
+const scanResult = ref<ScanResult | null>(null)
+const indicatorTreeData = ref<any[]>([])
+
+const handleSyncCharts = async () => {
+  const tableId = config.value?.name
+  if (!tableId) {
+    message.warning('未找到 tableId，无法同步')
+    return
+  }
+  syncing.value = true
+  scanResult.value = null
+  console.log('[SyncDebug] handleSyncCharts - tableId:', tableId,
+    'selectedGroupValue:', selectedTreeData.value[0])
+  try {
+    // 加载指标树 + 扫描所有图表
+    const [result, treeResp] = await Promise.all([
+      scanAllCharts(tableId, selectedTreeData.value[0]),
+      getIndicatorConfig(tableId)
+    ])
+    scanResult.value = result
+    indicatorTreeData.value = treeResp.payload || []
+    showSyncReview.value = true
+  } catch (e: any) {
+    message.error('扫描图表配置失败：' + (e?.message || '未知错误'))
+  } finally {
+    syncing.value = false
+  }
+}
+
+const onSyncApplied = async (updatedCount: number) => {
+  if (updatedCount > 0) {
+    message.success(`已更新 ${updatedCount} 个图表配置`)
+  }
+  // 应用完成后重新扫描，刷新 diff 状态
+  const tableId = config.value?.name
+  if (!tableId) return
+  try {
+    const [result, treeResp] = await Promise.all([
+      scanAllCharts(tableId, selectedTreeData.value[0]),
+      getIndicatorConfig(tableId)
+    ])
+    scanResult.value = result
+    indicatorTreeData.value = treeResp.payload || []
+  } catch {
+    // 刷新失败不影响已有结果
+  }
+}
 
 // 新的添加和修改方法
 const updateAddFormData = (data: any) => {
