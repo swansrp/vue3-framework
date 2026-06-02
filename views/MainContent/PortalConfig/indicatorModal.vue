@@ -131,10 +131,10 @@ import { message } from 'ant-design-vue'
 
 import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
 import IndicatorForm from './components/IndicatorForm.vue'
-import ChartSyncReviewModal from '@/framework/components/common/PortalConfig/sync/ChartSyncReviewModal.vue'
+import ChartSyncReviewModal from './components/ChartSyncReviewModal.vue'
 
-import type { ScanResult } from '@/utils/syncAllChartIndicators'
-import { scanAllCharts } from '@/utils/syncAllChartIndicators'
+import type { ScanResult } from './utils/syncAllChartIndicators'
+import { scanAllCharts } from './utils/syncAllChartIndicators'
 import { getIndicatorConfig } from '@/framework/apis/portal'
 
 import { ConditionVO } from '@/apis/types'
