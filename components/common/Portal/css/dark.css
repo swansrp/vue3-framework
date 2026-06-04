@@ -1336,6 +1336,90 @@ html body .dark-content-layout .surely-table tr:nth-of-type(odd):hover {
     transparent 100%) !important;
 }
 
+/* ====== Ant Tabs 深色主题覆盖 ====== */
+/* 覆盖 Ant Design ConfigProvider CSS-in-JS 注入的浅色 tabs 样式 */
+:global(.dark-content-layout.dark-content-layout .ant-tabs),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs) {
+  color: #ffffff !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-nav),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-nav) {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(31, 198, 255, 0.15) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-nav::before),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-nav::before) {
+  border-bottom: none !important;
+}
+
+/* 未选中 tab：半透明白色，层级清晰 */
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tab),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tab) {
+  color: rgba(255, 255, 255, 0.45) !important;
+  background: transparent !important;
+  border: none !important;
+  transition: color 0.25s ease !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tab:hover),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tab:hover) {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* 选中 tab：亮白文字 + 微光，与未选中态形成强对比 */
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tab-active),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tab-active) {
+  color: #ffffff !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tab-active .ant-tabs-tab-btn),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  text-shadow: 0 0 12px rgba(31, 198, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 禁用 tab */
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tab-disabled),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tab-disabled) {
+  color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tab-disabled .ant-tabs-tab-btn),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tab-disabled .ant-tabs-tab-btn) {
+  color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tab-btn),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tab-btn) {
+  color: inherit !important;
+}
+
+/* 选中指示线：渐变 + 圆角 + 发光，提升视觉层次 */
+:global(.dark-content-layout.dark-content-layout .ant-tabs-ink-bar),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-ink-bar) {
+  background: linear-gradient(90deg, #1FC6FF, #5AD3FB, #1FC6FF) !important;
+  height: 2px !important;
+  border-radius: 2px !important;
+  box-shadow:
+    0 0 10px rgba(31, 198, 255, 0.6),
+    0 0 20px rgba(31, 198, 255, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-content-holder),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-content-holder) {
+  background: transparent !important;
+}
+
+:global(.dark-content-layout.dark-content-layout .ant-tabs-tabpane),
+:global(.dark-dialog-mask.dark-dialog-mask .ant-tabs-tabpane) {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
 /* ====== 滚动条伪元素背景修正 ====== */
 :global(.dark-content-layout.dark-content-layout .surely-table-bordered .surely-table-header-scrollbar::after),
 :global(.dark-content-layout.dark-content-layout .surely-table-bordered .surely-table-summary-scrollbar::after),
