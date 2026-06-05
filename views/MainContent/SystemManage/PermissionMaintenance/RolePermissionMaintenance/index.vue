@@ -32,7 +32,7 @@
             >
               <div class="a-list-item-content">
                 {{ item.roleName }}
-                <div>
+                <div v-if="item.status !== -1">
                   <a-button
                     size="small"
                     type="primary"
@@ -41,7 +41,6 @@
                     编辑
                   </a-button>
                   <delete-pop-confirm
-                    v-if="item.status !== -1"
                     @delete-event="handleDeleteRole(item.roleId)"
                   />
                 </div>
