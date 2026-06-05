@@ -182,10 +182,11 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 import type { ScanResult, GroupDiff } from '../utils/syncAllChartIndicators'
+
 import { updateCommonStatistic, updatePersonalStatistic } from '@/framework/components/common/chartConfig/api'
 import DimensionControl from '@/framework/components/common/Portal/dashboard/indicator/dashboard/control/DimensionControl.vue'
 

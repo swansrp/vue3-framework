@@ -129,15 +129,14 @@
 import { ThunderboltOutlined, SyncOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
+import ChartSyncReviewModal from './components/ChartSyncReviewModal.vue'
 import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
 import IndicatorForm from './components/IndicatorForm.vue'
-import ChartSyncReviewModal from './components/ChartSyncReviewModal.vue'
-
 import type { ScanResult } from './utils/syncAllChartIndicators'
 import { scanAllCharts } from './utils/syncAllChartIndicators'
-import { getIndicatorConfig } from '@/framework/apis/portal'
 
 import { ConditionVO } from '@/apis/types'
+import { getIndicatorConfig } from '@/framework/apis/portal'
 import { addEntity, updateEntitySelective } from '@/framework/apis/portal'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'

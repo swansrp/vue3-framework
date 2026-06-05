@@ -208,21 +208,28 @@ for BRANCH in "${BRANCHES[@]}"; do
   if ! safe_push "$GITEE_URL" "$BRANCH"; then
     log_warn "推送失败，尝试 fetch + rebase 后重推..."
     if [ "$DRY_RUN" != true ]; then
-      git fetch "$GITEE_URL" "$BRANCH" 2>/dev/null || true
-      git rebase FETCH_HEAD 2>/dev/null || true
-      safe_push "$GITEE_URL" "$BRANCH" || {
-        log_error "推送到 gitee 失败，跳过反向同步"
+      if git fetch "$GITEE_URL" "$BRANCH" 2>/dev/null && git rebase FETCH_HEAD; then
+        safe_push "$GITEE_URL" "$BRANCH" || {
+          log_error "推送到 gitee 失败，跳过反向同步"
+          FAILED_BRANCHES+=("$BRANCH")
+          echo ""
+          continue
+        }
+      else
+        git rebase --abort 2>/dev/null || true
+        log_error "rebase gitee/$BRANCH 失败，跳过反向同步"
         FAILED_BRANCHES+=("$BRANCH")
         echo ""
         continue
-      }
+      fi
     fi
   fi
 
   # ---- gitee -> origin ----
   log_info "rebase 到 gitee/$BRANCH"
   if ! git fetch "$GITEE_URL" "$BRANCH" 2>&1 || ! git rebase FETCH_HEAD; then
-    log_error "rebase gitee/$BRANCH 失败，跳过推送到 $REMOTE_ORIGIN"
+    log_error "rebase gitee/$BRANCH 失败，正在中止..."
+    git rebase --abort 2>/dev/null || true
     FAILED_BRANCHES+=("$BRANCH")
     echo ""
     continue
@@ -232,13 +239,20 @@ for BRANCH in "${BRANCHES[@]}"; do
   if ! safe_push "$REMOTE_ORIGIN" "$BRANCH"; then
     log_warn "推送失败，尝试 pull --rebase 后重推..."
     if [ "$DRY_RUN" != true ]; then
-      git pull "$REMOTE_ORIGIN" "$BRANCH" --rebase 2>/dev/null || true
-      safe_push "$REMOTE_ORIGIN" "$BRANCH" || {
-        log_error "推送到 $REMOTE_ORIGIN 最终失败"
+      if git pull "$REMOTE_ORIGIN" "$BRANCH" --rebase 2>/dev/null; then
+        safe_push "$REMOTE_ORIGIN" "$BRANCH" || {
+          log_error "推送到 $REMOTE_ORIGIN 最终失败"
+          FAILED_BRANCHES+=("$BRANCH")
+          echo ""
+          continue
+        }
+      else
+        git rebase --abort 2>/dev/null || true
+        log_error "rebase $REMOTE_ORIGIN/$BRANCH 失败"
         FAILED_BRANCHES+=("$BRANCH")
         echo ""
         continue
-      }
+      fi
     fi
   fi
 
