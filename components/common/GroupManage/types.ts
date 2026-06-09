@@ -1,5 +1,3 @@
-import { Component } from 'vue'
-
 export interface GroupBindProperty {
     // vue key 用于刷新组件
     key?: boolean
@@ -13,10 +11,6 @@ export interface GroupBindProperty {
     readOnly?: boolean
     // 树形结构
     treeMode?: boolean
-    // 自定义组件模式（非 list / tree，完全由子组件自行渲染）
-    customComponent?: Component
-    // 传递给自定义组件的额外 props
-    customComponentProps?: Record<string, any>
     // 字典名称
     dict?: string
     // 待绑定树或者列表

@@ -123,19 +123,18 @@
             v-for="bindTab in bindTabs"
             :key="bindTab.tabKey"
           >
-            <!-- 自定义组件模式：完全由传入的组件渲染 -->
-            <template v-if="bindTab.customComponent">
+            <!-- 自定义插槽模式：父组件提供 tab_${tabKey} 插槽时生效 -->
+            <template v-if="slots['tab_' + bindTab.tabKey]">
               <a-tab-pane
                 :key="bindTab.tabKey"
                 :tab="bindTab.title"
               >
                 <div class="tab-pane-content">
-                  <component
-                    :is="bindTab.customComponent"
-                    v-bind="bindTab.customComponentProps || {}"
+                  <slot
+                    :name="'tab_' + bindTab.tabKey"
                     :bind-tab="bindTab"
                     :user-group-info="currentUserGroupInfo"
-                  />
+                  ></slot>
                 </div>
               </a-tab-pane>
             </template>
@@ -284,6 +283,7 @@ import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { QUERY_INTERVAL, USER } from '@/framework/utils/constant'
 import { IdName } from '@/framework/utils/type'
 
+const slots = useSlots()
 const userGroupCategory = ref<IdName[]>([])
 const activateDictItem = ref(-1)
 const inputUserGroupCategoryName = ref('')
@@ -310,8 +310,8 @@ const selectUserGroup = (_: Key[], info: any) => {
   hasSelectUserGroup.value = true
   if (isNotEmpty(bindTabs)) {
     for (let bindTab of bindTabs) {
-      // 自定义组件模式跳过数据加载，由子组件自行管理
-      if (bindTab.customComponent) continue
+      // 自定义插槽模式跳过数据加载，由父组件自行管理
+      if (slots['tab_' + bindTab.tabKey]) continue
       getAllBindListByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
         bindTab.bindData = resp.payload || []
         bindTab.checked = []
@@ -369,8 +369,8 @@ const currentBindTab = computed(() => {
   }
   for (let bindTab of bindTabs) {
     if (activeTabKey.value === bindTab.tabKey + '_bind') {
-      // 自定义组件模式不显示批量操作按钮
-      if (bindTab.customComponent) return null
+      // 自定义插槽模式不显示批量操作按钮
+      if (slots['tab_' + bindTab.tabKey]) return null
       return bindTab
     }
   }
@@ -494,8 +494,8 @@ onMounted(() => {
   renderUserGroupType()
   if (isNotEmpty(bindTabs)) {
     for (let bindTab of bindTabs) {
-      // 自定义组件模式跳过初始化，由子组件自行管理
-      if (bindTab.customComponent) continue
+      // 自定义插槽模式跳过初始化，由父组件自行管理
+      if (slots['tab_' + bindTab.tabKey]) continue
       bindTab.key = true
       bindTab.checked = []
       if (isEmpty(bindTab.data)) {
