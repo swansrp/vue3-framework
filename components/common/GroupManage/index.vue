@@ -57,8 +57,7 @@
       >
         <a-tabs
           v-model:active-key="activeTabKey"
-          style="margin-left: 10px; height: 100%; display: flex; flex-direction: column;"
-          @change="changeTab"
+          style="margin-left: 10px;"
         >
           <template #rightExtra>
             <div
@@ -124,7 +123,23 @@
             v-for="bindTab in bindTabs"
             :key="bindTab.tabKey"
           >
-            <template v-if="bindTab.readOnly">
+            <!-- 自定义组件模式：完全由传入的组件渲染 -->
+            <template v-if="bindTab.customComponent">
+              <a-tab-pane
+                :key="bindTab.tabKey"
+                :tab="bindTab.title"
+              >
+                <div class="tab-pane-content">
+                  <component
+                    :is="bindTab.customComponent"
+                    v-bind="bindTab.customComponentProps || {}"
+                    :bind-tab="bindTab"
+                    :user-group-info="currentUserGroupInfo"
+                  />
+                </div>
+              </a-tab-pane>
+            </template>
+            <template v-else-if="bindTab.readOnly">
               <a-tab-pane
                 :key="bindTab.tabKey"
                 :tab="bindTab.title"
@@ -255,10 +270,11 @@
 
 <script lang="ts" setup>
 import '@/framework/assets/css/userGroup.css'
+import { message } from 'ant-design-vue'
 import { Key } from 'ant-design-vue/es/table/interface'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
-import { Ref } from 'vue'
+
 
 import { getUserGroupTree, getUserGroupType } from '@/framework/apis/admin/userGroup'
 import { bindReplaceBatchAttachByUrl, getAllBindListByUrl, getBindInfoByUrl, updateBindInfoByUrl } from '@/framework/apis/portal'
@@ -266,17 +282,17 @@ import { GroupBindProperty } from '@/framework/components/common/GroupManage/typ
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { QUERY_INTERVAL, USER } from '@/framework/utils/constant'
-import { IdName, IdNameArray } from '@/framework/utils/type'
+import { IdName } from '@/framework/utils/type'
 
-let userGroupCategory: Ref<IdNameArray> = ref([])
-let activateDictItem: Ref<number> = ref(-1)
-let inputUserGroupCategoryName: Ref<string> = ref('')
-let currentUserGroupCategoryId: Ref<string> = ref('')
-let userGroupTreeData: Ref<Array<DataNode>> = ref([])
-let hasSelectUserGroupCategory: Ref<boolean> = ref(false)
-let hasSelectUserGroup: Ref<boolean> = ref(false)
-let currentUserGroupInfo: Ref<IdName> = ref({ name: '', id: '' })
-let renderBindUserFlag: Ref<number> = ref(0)
+const userGroupCategory = ref<IdName[]>([])
+const activateDictItem = ref(-1)
+const inputUserGroupCategoryName = ref('')
+const currentUserGroupCategoryId = ref('')
+const userGroupTreeData = ref<DataNode[]>([])
+const hasSelectUserGroupCategory = ref(false)
+const hasSelectUserGroup = ref(false)
+const currentUserGroupInfo = ref<IdName>({ name: '', id: '' })
+const renderBindUserFlag = ref(0)
 const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
 const renderUserGroupTree = () => getUserGroupTree(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
 const getCurrentUserGroupCategory = (id: string, index: number) => {
@@ -290,11 +306,12 @@ const getCurrentUserGroupCategory = (id: string, index: number) => {
 const onSearchUserGroupCategory = renderUserGroupType
 const selectUserGroup = (_: Key[], info: any) => {
   const { id, name } = info.node
-  currentUserGroupInfo.value.name = name
-  currentUserGroupInfo.value.id = id
+  currentUserGroupInfo.value = { id, name }
   hasSelectUserGroup.value = true
   if (isNotEmpty(bindTabs)) {
     for (let bindTab of bindTabs) {
+      // 自定义组件模式跳过数据加载，由子组件自行管理
+      if (bindTab.customComponent) continue
       getAllBindListByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
         bindTab.bindData = resp.payload || []
         bindTab.checked = []
@@ -339,13 +356,12 @@ const selectUserGroup = (_: Key[], info: any) => {
           })
           bindTab.key = !bindTab.key
         }
+      }).catch(() => {
+        message.error('加载绑定数据失败')
       })
     }
   }
   renderBindUserFlag.value += 1
-}
-const changeTab = () => {
-
 }
 const currentBindTab = computed(() => {
   if (!activeTabKey.value || activeTabKey.value === USER) {
@@ -353,19 +369,38 @@ const currentBindTab = computed(() => {
   }
   for (let bindTab of bindTabs) {
     if (activeTabKey.value === bindTab.tabKey + '_bind') {
+      // 自定义组件模式不显示批量操作按钮
+      if (bindTab.customComponent) return null
       return bindTab
     }
   }
   return null
 })
+/** 递归获取树节点所有 key */
+const getAllTreeKeys = (nodes: any[]): any[] => {
+  let keys: any[] = []
+  nodes.forEach(node => {
+    keys.push(node.key)
+    if (node.children?.length) {
+      keys = keys.concat(getAllTreeKeys(node.children))
+    }
+  })
+  return keys
+}
+
 const handleChecked = (checkedValue: any, tab: any) => {
-  bindReplaceBatchAttachByUrl(tab.baseUrl, currentUserGroupInfo.value.id, checkedValue || [])
-      .then(() => {
-        getAllBindListByUrl(tab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
-          tab.bindData = resp.payload || []
-          tab.key = !tab.key
-        })
+  // a-tree 的 @check 返回 { checked, halfChecked }，a-checkbox-group 返回数组
+  const values = Array.isArray(checkedValue) ? checkedValue : checkedValue?.checked || []
+  bindReplaceBatchAttachByUrl(tab.baseUrl, currentUserGroupInfo.value.id, values)
+    .then(() => {
+      getAllBindListByUrl(tab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
+        tab.bindData = resp.payload || []
+        tab.key = !tab.key
       })
+    })
+    .catch(() => {
+      message.error('操作失败，请重试')
+    })
 }
 const selectAll = (tab: any) => {
   tab.checked = tab.data.map((item: any) => item.value)
@@ -373,7 +408,8 @@ const selectAll = (tab: any) => {
 }
 const invertSelect = (tab: any) => {
   const allValues = tab.data.map((item: any) => item.value)
-  tab.checked = allValues.filter((val: any) => !tab.checked.includes(val))
+  const currentChecked = tab.checked || []
+  tab.checked = allValues.filter((val: any) => !currentChecked.includes(val))
   handleChecked(tab.checked, tab)
 }
 const clearAll = (tab: any) => {
@@ -381,17 +417,7 @@ const clearAll = (tab: any) => {
   handleChecked(tab.checked, tab)
 }
 const selectAllTree = (tab: any) => {
-  const getAllKeys = (nodes: any[]): any[] => {
-    let keys: any[] = []
-    nodes.forEach(node => {
-      keys.push(node.key)
-      if (node.children && node.children.length > 0) {
-        keys = keys.concat(getAllKeys(node.children))
-      }
-    })
-    return keys
-  }
-  tab.checked = getAllKeys(tab.data)
+  tab.checked = getAllTreeKeys(tab.data)
   handleChecked(tab.checked, tab)
 }
 const clearAllTree = (tab: any) => {
@@ -408,20 +434,10 @@ const isAllSelected = (tab: any) => {
 }
 const isAllSelectedTree = (tab: any) => {
   if (!tab.data || !tab.checked) return false
-  const getAllKeys = (nodes: any[]): any[] => {
-    let keys: any[] = []
-    nodes.forEach(node => {
-      keys.push(node.key)
-      if (node.children && node.children.length > 0) {
-        keys = keys.concat(getAllKeys(node.children))
-      }
-    })
-    return keys
-  }
-  const allKeys = getAllKeys(tab.data)
+  const allKeys = getAllTreeKeys(tab.data)
   return allKeys.length > 0 && allKeys.every((key: any) => tab.checked.includes(key))
 }
-let activeTabKey: Ref<string> = ref(USER)
+const activeTabKey = ref<string>(USER)
 
 const props = withDefaults(
     defineProps<{
@@ -478,6 +494,8 @@ onMounted(() => {
   renderUserGroupType()
   if (isNotEmpty(bindTabs)) {
     for (let bindTab of bindTabs) {
+      // 自定义组件模式跳过初始化，由子组件自行管理
+      if (bindTab.customComponent) continue
       bindTab.key = true
       bindTab.checked = []
       if (isEmpty(bindTab.data)) {
