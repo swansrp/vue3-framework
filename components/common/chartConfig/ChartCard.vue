@@ -13,42 +13,47 @@
           class="subtitle"
         >{{ indicator.subTitle }}</span>
       </div>
-      <div
-        v-if="canEdit"
-        class="header-actions"
-      >
-        <a-tooltip title="编辑">
-          <EditOutlined @click="$emit('edit')" />
+      <div class="header-actions">
+        <a-tooltip title="导出Excel">
+          <DownloadOutlined
+            :class="{ 'action-icon-disabled': chartLoading }"
+            @click="handleExportExcel"
+          />
         </a-tooltip>
-        <a-dropdown :trigger="['click']">
-          <a-tooltip title="更多操作">
-            <EllipsisOutlined />
+        <template v-if="canEdit">
+          <a-tooltip title="编辑">
+            <EditOutlined @click="$emit('edit')" />
           </a-tooltip>
-          <template #overlay>
-            <a-menu>
-              <a-menu-item
-                key="refresh"
-                @click="refreshChart"
-              >
-                <ReloadOutlined />
-                刷新
-              </a-menu-item>
-              <!-- <a-menu-item key="rename" @click="renameChart">
-                <EditOutlined />
-                重命名
-              </a-menu-item> -->
-              <a-menu-divider v-if="canDelete" />
-              <a-menu-item
-                v-if="canDelete"
-                key="delete"
-                @click="$emit('delete')"
-              >
-                <DeleteOutlined />
-                删除
-              </a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
+          <a-dropdown :trigger="['click']">
+            <a-tooltip title="更多操作">
+              <EllipsisOutlined />
+            </a-tooltip>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item
+                  key="refresh"
+                  @click="refreshChart"
+                >
+                  <ReloadOutlined />
+                  刷新
+                </a-menu-item>
+                <!-- <a-menu-item key="rename" @click="renameChart">
+                  <EditOutlined />
+                  重命名
+                </a-menu-item> -->
+                <a-menu-divider v-if="canDelete" />
+                <a-menu-item
+                  v-if="canDelete"
+                  key="delete"
+                  @click="$emit('delete')"
+                >
+                  <DeleteOutlined />
+                  删除
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </template>
       </div>
     </div>
 
@@ -165,7 +170,8 @@ const DashboardDetail = defineAsyncComponent(() =>
   import('@/framework/components/common/Portal/dashboard/indicator/dashboard/DashboardDetail.vue')
 )
 import { message } from 'ant-design-vue'
-import { BarChartOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import ExcelJS from 'exceljs'
+import { BarChartOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, EllipsisOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 
 import { advancedStatisticRequest } from '@/framework/apis'
 import { getPortalConfig } from '@/framework/apis/portal/config'
@@ -529,6 +535,125 @@ const refreshChart = async () => {
 // 强制刷新图表（不显示提示消息，用于外部调用）
 const forceRefresh = async () => {
   await loadChartData()
+}
+
+// ================== 导出 Excel 逻辑 ==================
+// 按配置顺序排列维度值（与图表显示一致）
+const getOrderedDimValues = (dataValues: string[], configuredItems?: any[]) => {
+  if (!configuredItems?.length) return dataValues
+  const dataSet = new Set(dataValues)
+  const ordered = configuredItems.map((i: any) => i.itemName).filter((n: string) => dataSet.has(n))
+  const extras = dataValues.filter(v => !configuredItems.some((i: any) => i.itemName === v))
+  return [...ordered, ...extras]
+}
+
+// 为 worksheet 应用统一样式
+const applySheetStyles = (worksheet: ExcelJS.Worksheet) => {
+  const header = worksheet.getRow(1)
+  header.font = { bold: true }
+  header.alignment = { horizontal: 'center', vertical: 'middle' }
+  header.eachCell((cell) => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E2F3' } }
+    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+  })
+  for (let i = 2; i <= worksheet.rowCount; i++) {
+    worksheet.getRow(i).eachCell((cell) => {
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    })
+  }
+  worksheet.columns?.forEach((column: any) => {
+    let maxLength = 10
+    column.eachCell?.({ includeEmpty: true }, (cell: any) => {
+      const cellValue = cell.value ? String(cell.value) : ''
+      const len = [...cellValue].reduce((acc, ch) => acc + (ch.charCodeAt(0) > 127 ? 2 : 1), 0)
+      maxLength = Math.max(maxLength, len)
+    })
+    column.width = maxLength + 2
+  })
+}
+
+const handleExportExcel = async () => {
+  if (chartLoading.value) {
+    message.warning('数据加载中，请稍后再试')
+    return
+  }
+  if (!safeChartData.value || safeChartData.value.length === 0) {
+    message.warning('当前图表没有数据可导出')
+    return
+  }
+
+  try {
+    const workbook = new ExcelJS.Workbook()
+    const config = indicatorConfig.value
+
+    // 展开数据
+    const flattenedData: Array<{ firstDim: string; secondDim: string; statisticType: string; statistic: number }> = []
+    safeChartData.value.forEach((item: any) => {
+      const parts = item.metricLabel.split('&&')
+      const firstDim = parts[0] || ''
+      const secondDim = parts[1] || ''
+      if (item.children && item.children.length > 0) {
+        item.children.forEach((child: any) => {
+          flattenedData.push({ firstDim, secondDim, statisticType: child.metric, statistic: child.statistic })
+        })
+      } else {
+        flattenedData.push({ firstDim, secondDim, statisticType: item.metric || '', statistic: item.statistic })
+      }
+    })
+
+    // 按配置顺序排列维度值
+    const rawFirstDimValues = [...new Set(flattenedData.map(d => d.firstDim))]
+    const rawSecondDimValues = [...new Set(flattenedData.map(d => d.secondDim))].filter(v => v !== '')
+    const statisticTypes = [...new Set(flattenedData.map(d => d.statisticType))]
+    const firstDimValues = getOrderedDimValues(rawFirstDimValues, config?.firstDimension?.indicatorItems)
+    const secondDimValues = getOrderedDimValues(rawSecondDimValues, config?.secondDimension?.indicatorItems)
+    const hasSecondDim = secondDimValues.length > 0
+    const sanitizeSheetName = (name: string) => name.substring(0, 31).replace(/[\\\/\*\?\[\]:]/g, '')
+
+    // 按指标分别创建 sheet，sheet 名称为统计指标名称
+    for (const stat of statisticTypes) {
+      const worksheet = workbook.addWorksheet(sanitizeSheetName(stat || '指标数据'))
+
+      if (hasSecondDim) {
+        worksheet.addRow([config?.secondDimension?.groupName || '第二维度', ...firstDimValues])
+        for (const secVal of secondDimValues) {
+          const row: (string | number | null)[] = [secVal]
+          for (const first of firstDimValues) {
+            const match = flattenedData.find(d => d.firstDim === first && d.secondDim === secVal && d.statisticType === stat)
+            row.push(match ? match.statistic : null)
+          }
+          worksheet.addRow(row)
+        }
+      } else {
+        worksheet.addRow([config?.firstDimension?.groupName || '第一维度', ...firstDimValues])
+        const row: (string | number | null)[] = [stat]
+        for (const firstVal of firstDimValues) {
+          const match = flattenedData.find(d => d.firstDim === firstVal && d.statisticType === stat)
+          row.push(match ? match.statistic : null)
+        }
+        worksheet.addRow(row)
+      }
+
+      applySheetStyles(worksheet)
+    }
+
+    // 生成并下载
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${props.indicator.title || '图表数据'}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    message.success('导出成功')
+  } catch (error) {
+    console.error('导出 Excel 失败:', error)
+    message.error('导出 Excel 失败，请稍后重试')
+  }
 }
 
 // 重命名图表
@@ -1018,6 +1143,12 @@ defineExpose({
           background: #f0f0f0;
           color: #1890ff;
         }
+      }
+
+      .action-icon-disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
       }
     }
   }

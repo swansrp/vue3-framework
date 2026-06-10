@@ -26,19 +26,13 @@
                 >
                   <a-select
                     v-model:value="selectedDict"
-                    :filter-option="filterDict"
+                    :options="dictList"
                     placeholder="请选择要生成指标的字典"
                     show-search
+                    :filter-option="filterDict"
                     @change="onDictChange"
-                  >
-                    <a-select-option
-                      v-for="dict in dictList"
-                      :key="dict.value"
-                      :value="dict.value"
-                    >
-                      {{ dict.label }}
-                    </a-select-option>
-                  </a-select>
+                    @select="(v: any) => console.log('[a-select @select] 字典选择:', v)"
+                  />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -453,10 +447,16 @@ const loadDictItems = async (dictName: string) => {
 }
 
 const filterDict = (input: string, option: any) => {
-  return option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+  const label = option.label ?? option.children ?? ''
+  return String(label).toLowerCase().indexOf(input.toLowerCase()) >= 0
 }
 
-const onDictChange = async (value: string | undefined) => {
+// 搜索相关方法
+const onSearchChange = () => {
+  // 搜索时不需要额外处理，computed 会自动更新
+}
+
+const onDictChange = async (value: any) => {
   dictValidateStatus.value = ''
   dictErrorMessage.value = ''
 
@@ -470,11 +470,6 @@ const onDictChange = async (value: string | undefined) => {
     dictItems.value = []
     selectedDictItems.value.clear()
   }
-}
-
-// 搜索相关方法
-const onSearchChange = () => {
-  // 搜索时不需要额外处理，computed 会自动更新
 }
 
 // 选中/排除相关方法
