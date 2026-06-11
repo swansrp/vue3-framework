@@ -161,6 +161,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, defineAsyncComponent 
 
 import type { DashboardItem } from './types'
 
+import { advancedStatisticRequest } from '@/framework/apis'
+import { getPortalConfig } from '@/framework/apis/portal/config'
 import Marquee from '@/framework/components/common/marquee/index.vue'
 import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
@@ -173,8 +175,6 @@ import { message } from 'ant-design-vue'
 import ExcelJS from 'exceljs'
 import { BarChartOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, EllipsisOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 
-import { advancedStatisticRequest } from '@/framework/apis'
-import { getPortalConfig } from '@/framework/apis/portal/config'
 
 interface Props {
   indicator: DashboardItem;
