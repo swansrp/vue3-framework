@@ -56,7 +56,7 @@ export const getExtensions = (placeholder?: string) => [
   // 代码块高亮
   CodeBlockLowlight.configure({
     lowlight,
-    defaultLanguage: 'plaintext',
+    defaultLanguage: null, // null = 未指定语言时使用 highlightAuto 自动检测
     HTMLAttributes: {
       class: 'tiptap-code-block',
     },
@@ -142,7 +142,7 @@ export const getViewerExtensions = () => [
   }),
   CodeBlockLowlight.configure({
     lowlight,
-    defaultLanguage: 'plaintext',
+    defaultLanguage: null, // null = 未指定语言时使用 highlightAuto 自动检测
   }),
   TextStyle,
   Color,

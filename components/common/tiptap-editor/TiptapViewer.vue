@@ -136,6 +136,8 @@ onBeforeUnmount(() => {
         font-size: 14px;
         line-height: 1.6;
       }
+
+      // hljs 语法高亮样式已集中到 design-tokens.css 全局规则
     }
 
     // 行内代码
@@ -151,12 +153,16 @@ onBeforeUnmount(() => {
     // 引用
     blockquote {
       border-left: 4px solid #1890ff;
-      padding-left: 16px;
       margin: 1em 0;
-      color: #666;
-      background: #f9f9f9;
       padding: 12px 16px;
+      color: #666;
+      background: #f0f5ff;
       border-radius: 0 4px 4px 0;
+
+      p {
+        color: inherit;
+        margin: 0.3em 0;
+      }
     }
 
     // 列表
@@ -247,6 +253,7 @@ onBeforeUnmount(() => {
       gap: 16px;
       margin: 1em 0;
       padding: 8px 0;
+      white-space: normal; // 重置 ProseMirror 的 pre-wrap
     }
 
     .column {
@@ -256,6 +263,7 @@ onBeforeUnmount(() => {
       border: 1px solid #e8e8e8;
       border-radius: 4px;
       background: #fafafa;
+      white-space: normal; // 同上
     }
   }
 }

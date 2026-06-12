@@ -175,6 +175,23 @@
   --header-status-bg: var(--success);                /* 在线绿点背景 */
   --header-status-animation: none;                   /* 绿点脉冲动画 */
 
+  /* ===================================================================
+     代码高亮 (hljs) — VS Code Dark 风格色板
+     代码块背景始终为暗色 (#1e1e1e)，因此各主题共用同一套高亮色。
+     如需更换代码主题，只需覆盖以下变量即可。
+     =================================================================== */
+  --hljs-comment: #6a9955;            /* 注释 / 引用 */
+  --hljs-keyword: #569cd6;            /* 关键字 / 标签名 / 段落标记 */
+  --hljs-string: #ce9178;             /* 字符串 / 新增 / 模板 */
+  --hljs-number: #b5cea8;             /* 数字 / 字面量 */
+  --hljs-built-in: #4ec9b0;           /* 内建类型 / 类名 */
+  --hljs-function: #dcdcaa;           /* 函数名 / 标题 */
+  --hljs-params: #9cdcfe;             /* 参数 / 属性 / 变量 */
+  --hljs-selector: #d7ba7d;           /* CSS 选择器 */
+  --hljs-symbol: #b5cea8;             /* 符号 / 列表标记 */
+  --hljs-regexp: #d16969;             /* 正则表达式 */
+  --hljs-deletion-bg: rgba(255, 0, 0, 0.1); /* 删除行背景 */
+
   /* --- 设置按钮（齿轮图标） --- */
   --header-setting-bg: transparent;              /* 按钮背景 */
   --header-setting-border: none;                 /* 按钮边框 */
@@ -669,3 +686,42 @@
     box-shadow: 0 0 0 1px rgba(82,196,26,0.3), 0 0 0 0 rgba(82,196,26,0);
   }
 }
+
+/* ====================================================================
+   全局 hljs 语法高亮样式
+   供 Tiptap CodeBlockLowlight 渲染的代码块使用。
+   放在全局 CSS 中避免各 scoped 组件重复定义；
+   PDF 等离屏渲染场景无法访问 CSS 变量，需在导出逻辑中硬编码色值。
+   ==================================================================== */
+pre .hljs-comment,
+pre .hljs-quote { color: var(--hljs-comment); font-style: italic; }
+pre .hljs-keyword,
+pre .hljs-selector-tag,
+pre .hljs-section,
+pre .hljs-meta,
+pre .hljs-tag,
+pre .hljs-name { color: var(--hljs-keyword); }
+pre .hljs-string,
+pre .hljs-addition,
+pre .hljs-template-tag,
+pre .hljs-template-variable { color: var(--hljs-string); }
+pre .hljs-number,
+pre .hljs-literal,
+pre .hljs-symbol,
+pre .hljs-bullet { color: var(--hljs-number); }
+pre .hljs-built_in,
+pre .hljs-type,
+pre .hljs-class { color: var(--hljs-built-in); }
+pre .hljs-function,
+pre .hljs-title { color: var(--hljs-function); }
+pre .hljs-params,
+pre .hljs-attr,
+pre .hljs-variable,
+pre .hljs-attribute,
+pre .hljs-property { color: var(--hljs-params); }
+pre .hljs-selector-class,
+pre .hljs-selector-id { color: var(--hljs-selector); }
+pre .hljs-regexp { color: var(--hljs-regexp); }
+pre .hljs-deletion { color: var(--hljs-string); background: var(--hljs-deletion-bg); }
+pre .hljs-emphasis { font-style: italic; }
+pre .hljs-strong { font-weight: bold; }

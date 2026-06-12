@@ -9,7 +9,8 @@ import {
   BoldOutlined,
   CheckSquareOutlined,
   CodeOutlined,
-  ColumnHeightOutlined,
+  SplitCellsOutlined,
+  FilePdfOutlined,
   FontColorsOutlined,
   HighlightOutlined,
   ItalicOutlined,
@@ -26,16 +27,46 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons-vue'
 import type { Editor } from '@tiptap/vue-3'
+import { message } from 'ant-design-vue'
 
+import { exportTiptapToPdf } from './export-pdf'
 import { CODE_LANGUAGES } from './types'
 
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
 const props = defineProps<{
   editor: Editor | undefined
+  /** 是否显示导出PDF按钮 */
+  exportPdf?: boolean
+  /** 导出PDF文件名（不含扩展名） */
+  exportPdfFileName?: string
 }>()
 
-const { editor } = toRefs(props)
+const { editor, exportPdf, exportPdfFileName } = toRefs(props)
+
+// 导出PDF
+const exportPdfLoading = ref(false)
+const handleExportPdf = async () => {
+  if (!editor.value) return
+  const html = editor.value.getHTML()
+  if (!html || editor.value.isEmpty) {
+    message.warning('编辑器内容为空，无法导出')
+    return
+  }
+  exportPdfLoading.value = true
+  try {
+    const ok = await exportTiptapToPdf(html, { fileName: exportPdfFileName.value || 'document' })
+    if (ok) {
+      message.success('PDF导出成功')
+    } else {
+      message.error('PDF导出失败')
+    }
+  } catch {
+    message.error('PDF导出失败')
+  } finally {
+    exportPdfLoading.value = false
+  }
+}
 
 // 标题级别选项
 const headingOptions = [
@@ -529,7 +560,24 @@ const insertColumns = () => {
           @click="openColumnModal"
         >
           <template #icon>
-            <column-height-outlined />
+            <split-cells-outlined />
+          </template>
+        </a-button>
+      </a-tooltip>
+    </div>
+
+    <!-- 导出PDF（最右侧） -->
+    <div v-if="exportPdf" class="toolbar-group" style="margin-left: auto;">
+      <a-divider type="vertical" />
+      <a-tooltip title="导出PDF">
+        <a-button
+          type="text"
+          size="small"
+          :loading="exportPdfLoading"
+          @click="handleExportPdf"
+        >
+          <template #icon>
+            <file-pdf-outlined />
           </template>
         </a-button>
       </a-tooltip>
