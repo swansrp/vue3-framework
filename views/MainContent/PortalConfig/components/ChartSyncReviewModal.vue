@@ -229,10 +229,6 @@ const _visible = ref(props.visible)
 watch(() => props.visible, (val) => { _visible.value = val })
 watch(() => _visible.value, (val) => { emit('update:visible', val) })
 
-function handleCancel() {
-  _visible.value = false
-}
-
 function invertSelection() {
   if (!props.scanResult) return
   const changedIds = props.scanResult.charts

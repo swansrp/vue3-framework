@@ -567,7 +567,11 @@ const insertColumns = () => {
     </div>
 
     <!-- 导出PDF（最右侧） -->
-    <div v-if="exportPdf" class="toolbar-group" style="margin-left: auto;">
+    <div
+      v-if="exportPdf"
+      class="toolbar-group"
+      style="margin-left: auto;"
+    >
       <a-divider type="vertical" />
       <a-tooltip title="导出PDF">
         <a-button
