@@ -1,11 +1,11 @@
 /**
  * Tiptap 富文本内容导出为 PDF
- * 复用 @/utils/pdf-generator 的 generatePdfBlob 引擎，支持完整分页逻辑
+ * 复用 @/framework/utils/pdf-generator 的 generatePdfBlob 引擎，支持完整分页逻辑
  */
 
 import { common, createLowlight } from 'lowlight'
 
-import { generatePdfBlob } from '@/utils/pdf-generator'
+import { generatePdfBlob } from '@/framework/utils/pdf-generator'
 
 /** 导出配置 */
 export interface ExportPdfOptions {
