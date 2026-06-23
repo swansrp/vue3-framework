@@ -139,19 +139,22 @@ export const getQueryObject = function (url: string) {
 
 
 export const removeURLParameter = function (url: string, parameter: string) {
-  const urlParts = url.split('?')
-  if (urlParts.length >= 2) {
-    // 参数名前缀
-    const prefix = encodeURIComponent(parameter) + '='
-    const pars = urlParts[1].split(/[&;]/g)
-    // 循环查找匹配参数
-    for (let i = pars.length; i-- > 0;) {
-      if (pars[i].lastIndexOf(prefix, 0) !== -1) {
-        // 存在则删除
-        pars.splice(i, 1)
-      }
+  const firstQ = url.indexOf('?')
+  if (firstQ === -1) return url
+  const base = url.substring(0, firstQ)
+  // 取第一个 ? 之后、第一个 # 之前的所有内容（包含后续的 ? 都在 query 部分）
+  const queryAndHash = url.substring(firstQ + 1)
+  const hashIdx = queryAndHash.indexOf('#')
+  const queryStr = hashIdx !== -1 ? queryAndHash.substring(0, hashIdx) : queryAndHash
+  const hash = hashIdx !== -1 ? queryAndHash.substring(hashIdx) : ''
+  // 替换 query 中所有多余的 ? 为 &
+  const normalized = queryStr.replace(/\?/g, '&')
+  const prefix = encodeURIComponent(parameter) + '='
+  const pars = normalized.split(/[&;]/g)
+  for (let i = pars.length; i-- > 0;) {
+    if (pars[i].lastIndexOf(prefix, 0) !== -1) {
+      pars.splice(i, 1)
     }
-    return urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : '')
   }
-  return url
+  return base + (pars.length > 0 ? '?' + pars.join('&') : '') + hash
 }

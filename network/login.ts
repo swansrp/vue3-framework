@@ -87,9 +87,9 @@ export const checkLoginState = async () => {
   const queryObject = getQueryObject(window.location.href)
   if (isNotEmpty(queryObject)) {
     if (isNotEmpty(queryObject.target_url)) {
-      const targetUrl = queryObject.target_url
+      const targetUrl = String(queryObject.target_url)
       delete queryObject.target_url
-      window.location.href = targetUrl + '?' + qs.stringify(queryObject, { arrayFormat: 'repeat' })
+      window.location.href = targetUrl + (targetUrl.includes('?') ? '&' : '?') + qs.stringify(queryObject, { arrayFormat: 'repeat' })
     } else if (isNotEmpty(queryObject.id_token)) {
       userStore.setIdToken(<string>queryObject.id_token).then(() => {
         window.location.href = removeURLParameter(window.location.href, ID_TOKEN)
