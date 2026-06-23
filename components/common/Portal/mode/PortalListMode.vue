@@ -1,121 +1,137 @@
 <template>
-  <s-table
-    :columns="[{
-      rowDrag: config.orderMode && !config.readOnly,
-      align: 'center',
-      dataIndex: 'label'
-    }]"
-    :show-header="isNotEmpty(rowSelection)"
-    :data-source="dataSource"
-    :pagination="false"
-    bordered
-    :row-selection="rowSelection"
-    :range-selection="isEmpty(rowSelection) ? 'single' : false"
-    :custom-row="handleCustomRow"
-    row-key="value"
-    size="small"
-    @row-drag-end="handleRowDragEnd"
-  >
-    <template #bodyCell="{ column, record}">
-      <a-dropdown :trigger="['contextmenu']">
-        <div>
-          <slot
-            name="display"
-            :record="record"
-          >
-            <div
-              :style="{textAlign: column.contentAlign || 'left',
-                       textOverflow: 'ellipsis',
-                       whiteSpace: 'nowrap',
-                       overflow: 'hidden',
-                       height: '100%'}"
-            >
-              {{ record[`${column.dataIndex}`] }}
-            </div>
-          </slot>
-        </div>
-        <template #overlay>
-          <a-menu @click="({ key: menuKey }: any) => handleMenuContext(record.value, menuKey)">
-            <a-menu-item key="1">
-              查看详情
-            </a-menu-item>
-            <template v-if="!config.readOnly">
-              <a-menu-item key="2">
-                新增记录
-              </a-menu-item>
-              <a-menu-item key="3">
-                编辑记录
-              </a-menu-item>
-              <a-menu-item key="4">
-                复制记录
-              </a-menu-item>
-              <a-menu-item key="5">
-                删除记录
-              </a-menu-item>
-            </template>
-          </a-menu>
-        </template>
-      </a-dropdown>
-    </template>
-    <template #tooltipTitle="{ value }">
-      {{ value }}
-    </template>
-    <template #title>
-      <div style="display: flex; align-items: center">
-        <lock-outlined
-          v-if="searchStrict"
-          style="margin-right: 5px"
-          @click="searchStrict = !searchStrict"
-        />
-        <unlock-outlined
-          v-else
-          style="margin-right: 5px"
-          @click="searchStrict = !searchStrict"
-        />
-        <a-input-search
-          v-model:value="searchName"
-          :placeholder="(searchStrict ? '' : '模糊') + '搜索 ' + (titleColumn.title || '')"
-          enter-button
-          @search="onListDataSearch"
-        />
-      </div>
-    </template>
-    <template #footer>
-      <div class="pagination">
-        <div>
-          <slot name="footer-action"></slot>
-        </div>
-        <div style="display: flex;">
-          <a-pagination
-            v-model:current="config.currentPage"
-            v-model:page-size="config.pageSize"
-            :page-size="config.pageSize"
-            :size="config.size"
-            :total="config.total"
-            hide-on-single-page
-            show-less-items
-            @change="paginationChange"
-          >
-            <template #itemRender="{ type, originalElement }">
-              <a v-if="type === 'prev'">&lt;</a>
-              <a v-else-if="type === 'next'">&gt;</a>
-              <component
-                :is="originalElement"
-                v-else
-              />
-            </template>
-          </a-pagination>
+  <div class="portal-list-wrapper">
+    <s-table
+      :columns="[{
+        rowDrag: config.orderMode && !config.readOnly,
+        align: 'center',
+        dataIndex: 'label'
+      }]"
+      :show-header="isNotEmpty(rowSelection)"
+      :data-source="dataSource"
+      :pagination="false"
+      bordered
+      :row-selection="rowSelection"
+      :range-selection="isEmpty(rowSelection) ? 'single' : false"
+      :custom-row="handleCustomRow"
+      row-key="value"
+      size="small"
+      @row-drag-end="handleRowDragEnd"
+    >
+      <template #bodyCell="{ column, record}">
+        <a-dropdown :trigger="['contextmenu']">
           <div>
-            <slot name="end-action"></slot>
+            <slot
+              name="display"
+              :record="record"
+            >
+              <div
+                :style="{textAlign: column.contentAlign || 'left',
+                         textOverflow: 'ellipsis',
+                         whiteSpace: 'nowrap',
+                         overflow: 'hidden',
+                         height: '100%'}"
+              >
+                {{ record[`${column.dataIndex}`] }}
+              </div>
+            </slot>
+          </div>
+          <template #overlay>
+            <a-menu @click="({ key: menuKey }: any) => handleMenuContext(record.value, menuKey)">
+              <a-menu-item key="1">
+                查看详情
+              </a-menu-item>
+              <template v-if="!config.readOnly">
+                <a-menu-item key="3">
+                  编辑记录
+                </a-menu-item>
+                <a-menu-item key="4">
+                  复制记录
+                </a-menu-item>
+                <a-menu-item key="5">
+                  删除记录
+                </a-menu-item>
+              </template>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </template>
+      <template #tooltipTitle="{ value }">
+        {{ value }}
+      </template>
+      <template #title>
+        <div style="display: flex; align-items: center">
+          <lock-outlined
+            v-if="searchStrict"
+            style="margin-right: 5px"
+            @click="searchStrict = !searchStrict"
+          />
+          <unlock-outlined
+            v-else
+            style="margin-right: 5px"
+            @click="searchStrict = !searchStrict"
+          />
+          <a-input-search
+            v-model:value="searchName"
+            :placeholder="(searchStrict ? '' : '模糊') + '搜索 ' + (titleColumn.title || '')"
+            enter-button
+            @search="onListDataSearch"
+          />
+        </div>
+      </template>
+      <template #footer>
+        <div class="pagination">
+          <div>
+            <slot name="footer-action"></slot>
+          </div>
+          <div style="display: flex;">
+            <a-pagination
+              v-model:current="config.currentPage"
+              v-model:page-size="config.pageSize"
+              :page-size="config.pageSize"
+              :size="config.size"
+              :total="config.total"
+              hide-on-single-page
+              show-less-items
+              @change="paginationChange"
+            >
+              <template #itemRender="{ type, originalElement }">
+                <a v-if="type === 'prev'">&lt;</a>
+                <a v-else-if="type === 'next'">&gt;</a>
+                <component
+                  :is="originalElement"
+                  v-else
+                />
+              </template>
+            </a-pagination>
+            <div>
+              <slot name="end-action"></slot>
+            </div>
           </div>
         </div>
-      </div>
-    </template>
-  </s-table>
+      </template>
+    </s-table>
+    <!-- 悬浮新增按钮 -->
+    <a-tooltip
+      v-if="!config.readOnly && config.addModalAble"
+      title="新增"
+    >
+      <a-button
+        type="primary"
+        shape="circle"
+        size="large"
+        class="fab-add"
+        @click="emit('addRecord')"
+      >
+        <template #icon>
+          <PlusOutlined />
+        </template>
+      </a-button>
+    </a-tooltip>
+  </div>
 </template>
 
 <script lang="ts" setup>
-import { LockOutlined, UnlockOutlined } from '@ant-design/icons-vue'
+import { LockOutlined, PlusOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 
 import { ColumnType, TableConfigType, UpdateOrderType } from '@/framework/components/common/Portal/type'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
@@ -140,10 +156,10 @@ const emit = defineEmits<{
   (e: 'search', searchName: string, searchStrict: boolean): void
   (e: 'rowDragEnd', data: Array<UpdateOrderType>): void
   (e: 'handleMenuContextView', recordId: any): void
-  (e: 'handleMenuContextAdd', recordId: any): void
   (e: 'handleMenuContextModify', recordId: any): void
   (e: 'handleMenuContextCopy', recordId: any): void
   (e: 'handleMenuContextDelete', recordId: any): void
+  (e: 'addRecord'): void
 }>()
 const searchName = ref('')
 const searchStrict = ref(false)
@@ -154,9 +170,6 @@ const handleMenuContext = (recordId: any, menuKey: string) => {
   switch (menuKey) {
     case '1':
       emit('handleMenuContextView', recordId)
-      break
-    case '2':
-      emit('handleMenuContextAdd', recordId)
       break
     case '3':
       emit('handleMenuContextModify', recordId)
@@ -235,9 +248,22 @@ const handleCustomRow = (record: any) => {
 </script>
 
 <style lang="less" scoped>
+.portal-list-wrapper {
+  position: relative;
+  height: 100%;
+}
+
 .pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.fab-add {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 </style>

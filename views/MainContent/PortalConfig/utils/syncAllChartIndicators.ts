@@ -104,7 +104,6 @@ function reconcileVisibleDimensions(
   oldAllItems: Array<{ itemName: string; itemValue: string }>,
   mergedItems: Array<{ itemName: string; itemValue: string }>
 ): string[] {
-  const oldVisibleSet = new Set(oldVisible || [])
   const oldAllNames = new Set(oldAllItems.map(i => i.itemName))
   const mergedNames = mergedItems.map(i => i.itemName)
 

@@ -53,10 +53,10 @@
             @search="onListDataSearch"
             @row-drag-end="_updateOrder"
             @handle-menu-context-view="handleMenuContextView"
-            @handle-menu-context-add="handleMenuContextAdd"
             @handle-menu-context-modify="handleMenuContextModify"
             @handle-menu-context-copy="handleMenuContextCopy"
             @handle-menu-context-delete="handleMenuContextDelete"
+            @add-record="addRow"
           >
             <template #display="{record}">
               <slot
@@ -2200,6 +2200,22 @@ const init = async () => {
 }
 const initConfig = async () => {
   return await getPortalConfig(config.tableId).then(async res => {
+    // [DEBUG] Portal 初始化诊断
+    console.log('[Portal DEBUG] tableId:', config.tableId)
+    console.log('[Portal DEBUG] getPortalConfig response:', res)
+    if (!res || !res.payload) {
+      console.error('[Portal DEBUG] ❌ Portal 配置不存在! tableId =', config.tableId)
+      console.error('[Portal DEBUG] 请在后台 Portal配置管理 中添加 tableCode =', config.tableId, '的配置')
+      return
+    }
+    console.log('[Portal DEBUG] ✅ Portal 配置已加载:', {
+      tableId: config.tableId,
+      displayName: res.payload.displayName,
+      url: res.payload.url,
+      readOnly: res.payload.readOnly,
+      idColumn: res.payload.idColumn,
+      columns: res.payload.columns?.length || 0
+    })
     dictColumnArray.length = 0
     columnArray.value.length = 0
     columnDisplayMap.value.clear()
