@@ -167,7 +167,7 @@
         </div>
         <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
         <a-tree
-          :key="treeData"
+          :key="treeData.length"
           :default-expand-all="true"
           :draggable="!config.readOnly && config.treeDragAble"
           :show-line="true"
@@ -246,7 +246,7 @@
               @change="handleTableChange"
               @expand="handleExpand"
               @column-drag-end="handleColumnDragEnd"
-              @row-drag-end="() => isNotEmpty(rowDragEnd) ? rowDragEnd(dataSource, config.currentPage, config.pageSize) : handleRowDragEnd()"
+              @row-drag-end="() => isNotEmpty(rowDragEnd) ? rowDragEnd!(dataSource, config.currentPage, config.pageSize) : handleRowDragEnd()"
             >
               <!-- region 表头样式 -->
               <template #headerCell="{title, column}">
@@ -298,7 +298,7 @@
                 >
                   <portal-body-cell
                     v-if="isNotEmpty($slots.action) || isNotEmpty($slots.index) || !config.readOnly"
-                    :key="modifyCellMap.get(index + column.dataIndex).current"
+                    :key="modifyCellMap.get(index + column.dataIndex)?.current"
                     :column="column"
                     :config="config"
                     :display-index="isEmpty($slots.index)"
@@ -574,7 +574,7 @@
                       v-model:page-size="config.pageSize"
                       :page-size-options="['10','20','30','50','100','200', '500', '1000']"
                       :show-total="total => `共 ${total} 项`"
-                      :size="config.size"
+                      :size="config.size === 'middle' ? 'default' : config.size"
                       :total="config.total"
                       show-less-items
                       show-quick-jumper
@@ -801,6 +801,8 @@ let initFinished = false
  * @param advanceButton 是否显示高级查询按钮
  * @param statisticButton 是否显示统计按钮
  * @param selectColumnCondition 动态字段条件
+ * @param selectColumnList 指定返回的列列表
+ * @param distinct 是否去重查询
  * @param advanceCondition 默认查询参数
  * @param defaultSortColumn 默认排序字段
  * @param singleSelect 是否单选
@@ -855,6 +857,8 @@ const props = withDefaults(defineProps<{
     advance?: boolean,
     advanceButton?: boolean,
     statisticButton?: boolean,
+    selectColumnList?: string[]
+    distinct?: string,
     selectColumnCondition?: Map<string, string>,
     advanceCondition?: ConditionListType,
     defaultSortColumn?: Array<QuerySortType>,
@@ -910,6 +914,8 @@ const props = withDefaults(defineProps<{
     advanceButton: false,
     statisticButton: false,
     selectColumnCondition: undefined,
+    selectColumnList: undefined,
+    distinct: undefined,
     advanceCondition: undefined,
     defaultSortColumn: undefined,
     singleSelect: false,
@@ -1406,7 +1412,7 @@ const handleTreeSelected = (selectedKeys: any, e: { selected: boolean, selectedN
       // 从 selectedTreeData 中移除不允许选中的节点
       selectedTreeData.value = selectedKeys.filter((key: any) => {
         const foundNode = e.selectedNodes?.find((n: any) => n.key === key)
-        return foundNode && props.rowAllowSelect(foundNode.dataRef || foundNode)
+        return foundNode && props.rowAllowSelect!(foundNode.dataRef || foundNode)
       })
       return
     }
@@ -1710,8 +1716,8 @@ const getGeneralCondition = () => {
 
   return queryCondition
 }
-const queryConditionMap = reactive(new Map<String, ConditionListType>())
-const querySortMap = reactive(new Map<String, QuerySortType>())
+const queryConditionMap = reactive(new Map<string, ConditionListType>())
+const querySortMap = reactive(new Map<string, QuerySortType>())
 // 用于通知列筛选器清空的信号
 const clearFilterColumns = reactive(new Set<string>())
 const initQueryCondition = () => {
@@ -1936,7 +1942,7 @@ const advancedCondition = reactive({
 
 //region 常用功能函数
 // 递归解析条件中的动态变量
-const resolve = (condition: ConditionType | ConditionListType[] | undefined) => {
+const resolve = (condition: ConditionType | ConditionListType | ConditionListType[] | undefined) => {
   if (!condition) return
 
   // 处理 ConditionType 类型
@@ -1973,6 +1979,12 @@ const queryCondition = () => {
   
   if (isNotEmpty(props.selectColumnCondition)) {
     query = { ...query, selectColumnCondition: props.selectColumnCondition }
+  }
+  if (isNotEmpty(props.selectColumnList)) {
+    query = { ...query, selectColumnList: props.selectColumnList }
+  }
+  if (isNotEmpty(props.distinct)) {
+    query = { ...query, distinct: props.distinct }
   }
 
   return query
@@ -2092,9 +2104,9 @@ const queryDataAsync = async (condition: QueryType) => {
       return await props.query(config.url, condition).then(resolve)
     } else {
       if (config.advancedSearchAble) {
-        return await advancedQuery(config.url, condition, config.baseDomain, true, showLoading.value).then(resolve)
+        return await advancedQuery(config.url, condition, config.baseDomain, true, showLoading.value, props.selectColumnList, props.distinct).then(resolve)
       } else {
-        return await generalQuery(config.url, condition, config.baseDomain, true, showLoading.value).then(resolve)
+        return await generalQuery(config.url, condition, config.baseDomain, true, showLoading.value, props.selectColumnList, props.distinct).then(resolve)
       }
     }
   }
@@ -2146,9 +2158,9 @@ const download = () => {
         excelExport(dataArray, multiHeadColumns.value, columns.value, downloadFileName.value(config))
       }
       if (config.advancedSearchAble) {
-        advancedSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
+        advancedSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct).then((resp: any) => resolve(resp))
       } else {
-        generalSelect(config.url, queryCondition(), config.baseDomain).then((resp: any) => resolve(resp))
+        generalSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct).then((resp: any) => resolve(resp))
       }
     }
   }
@@ -2363,6 +2375,14 @@ const initConfig = async () => {
       columnRaw.set(column.dataIndex, _.cloneDeep(column))
     }
     columnArray.value.sort((a, b) => a.order - b.order)
+
+    // 当 selectColumnList 不为空时，只显示定义的列
+    if (isNotEmpty(props.selectColumnList)) {
+      const allowedSet = new Set(props.selectColumnList)
+      columnArray.value = columnArray.value.filter(col => allowedSet.has(col.dataIndex))
+      columnArray.value.forEach(col => { col.checked = true })
+    }
+
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
       if (isNotEmpty(slots.action)) {
