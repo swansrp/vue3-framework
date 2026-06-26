@@ -1891,18 +1891,15 @@ const handleCustomRow = (record: any) => {
     onClick: (event: MouseEvent) => {
       // 如果禁用了行选择，则不处理
       if (hideRowSelection.value) {
-        console.log('🔴 行选择被禁用，不处理点击事件')
         return
       }
       
       // 如果点击的是输入框、按钮等交互元素，不处理行选中
       const target = event.target as HTMLElement
-      const tagName = target?.tagName?.toLowerCase()
-      const isInteractiveElement = ['input', 'button', 'a', 'select', 'textarea'].includes(tagName || '')
+      const isInteractiveElement = target?.closest('input, button, a, select, textarea, .ant-btn')
       const hasEditableParent = target?.closest('.surely-table-cell-edit-wrapper')
       
       if (isInteractiveElement || hasEditableParent) {
-        console.log('🟡 点击了交互元素或可编辑单元格，跳过行选中', { tagName, hasEditableParent })
         return
       }
       
