@@ -2360,7 +2360,7 @@ const initConfig = async () => {
         titleColumn = column
       }
 
-      if (layout.enable === '1') {
+      if (layout.enable === '1' && (!isNotEmpty(props.selectColumnList) || (props.selectColumnList ?? []).includes(layout.property))) {
         // 本地库同步
         syncLocalDb(column, customerColumns, order++)
         columnArray.value.push(column)
@@ -2372,13 +2372,6 @@ const initConfig = async () => {
       columnRaw.set(column.dataIndex, _.cloneDeep(column))
     }
     columnArray.value.sort((a, b) => a.order - b.order)
-
-    // 当 selectColumnList 不为空时，只显示定义的列
-    if (isNotEmpty(props.selectColumnList)) {
-      const allowedSet = new Set(props.selectColumnList)
-      columnArray.value = columnArray.value.filter(col => allowedSet.has(col.dataIndex))
-      columnArray.value.forEach(col => { col.checked = true })
-    }
 
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
