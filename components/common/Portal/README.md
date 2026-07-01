@@ -591,3 +591,72 @@ Portal/
 └── css/
     └── dark.css                   # 深色主题样式
 ```
+
+---
+
+## Statistic Drill Condition | 统计穿透条件
+
+### buildDrillConditionFromStatistic
+
+从 statistic 请求体 + drillMetric 自动构建 Portal Table 的 `advanceCondition`，
+实现通用化的统计穿透条件拼装。
+
+> 函数位置: `Portal/utils.ts`
+
+#### 为什么需要这个函数
+
+仪表盘中用户点击卡片/饼图扇区/柱图柱子时，需要查看该指标的明细数据。
+传统做法是每个模块手动从 statistic body 提取全局条件 + 追加维度条件，
+大量重复代码。此函数统一了该逻辑。
+
+#### 核心原理
+
+```
+原始 statistic body              drillMetric { conditionLabel / metricColumn + metric }
+│                                      │
+├─ condition.conditionList (全局条件)   │
+├─ metricCondition[].condition          │
+│    └─ label='正式客户' ───────── match ┘
+│         └─ { property: 'customerStatus', relation: 1, value: ['4'] }
+│
+└─ 合并 → { conditionList: [全局条件..., customerStatus = '4'], andOr: '0' }
+          → 直接用作 Portal 的 :advance-condition prop
+```
+
+#### 使用方式
+
+```typescript
+import { buildDrillConditionFromStatistic } from '@/framework/components/common/Portal/utils'
+
+// 场景 ①：纯条件穿透（点击卡片/列表项）
+buildDrillConditionFromStatistic(body, { conditionLabel: '正式客户' })
+// → 从 body.metricCondition 匹配 label='正式客户'，提取其 condition
+
+// 场景 ②：纯分组穿透（点击饼图/柱图）
+buildDrillConditionFromStatistic(body, { metricColumn: 'province', metric: '北京' })
+// → 构建 WHERE province = '北京'
+
+// 场景 ③：分组 + 条件穿透（点击趋势子项）
+buildDrillConditionFromStatistic(body, {
+  metricColumn: 'province',
+  metric: '北京',
+  conditionLabel: '2024&&北京'
+})
+// → 全局条件 AND dy = '2024' AND province = '北京'
+```
+
+#### 参数说明
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `body` | `any` | 原始 statistic 请求体（buildXxxBody 返回值） |
+| `drillMetric.conditionLabel` | `string?` | 条件标签，匹配 body.metricCondition[].label |
+| `drillMetric.metricColumn` | `string?` | 分组字段名，构建 WHERE column = 'value' |
+| `drillMetric.metric` | `string?` | 选中的分组值；`'NULL'`/`'__NULL__'` 特判为 IS NULL |
+| 返回值 | `ConditionListType` | Portal 的 `advanceCondition` prop 格式 |
+
+#### 向后兼容
+
+`CustomerDrilling.vue` 优先使用 `body + drillMetric` 路径（通用模式），
+如果配置中没有这两个字段，回退到传统 `globalConditionList + drillConditionList` 模式。
+
