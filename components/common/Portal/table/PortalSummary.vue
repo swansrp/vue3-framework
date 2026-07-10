@@ -39,9 +39,10 @@
 
 <script lang="ts" setup>
 import { formatMoney } from '../../../../utils/formatter'
-import { isEmpty } from '@/framework/utils/common'
 
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
+import { isEmpty } from '@/framework/utils/common'
+
 const props = withDefaults(
   defineProps<{
     config: TableConfigType
