@@ -48,7 +48,9 @@ const _executeLogin = (token: any) => {
     const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
     localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
     const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
-    return router.replace({ path: ssoLoginUrl, query: { redirect_uri: url } as LocationQueryRaw })
+    // 如果当前已经在 login 页面，不需要设置 redirect_uri，否则登录成功后又会跳回 login
+    const redirect_uri = url && url !== 'login' ? url : undefined
+    return router.replace({ path: ssoLoginUrl, query: { redirect_uri } as LocationQueryRaw })
   } else {
     return ssoLogin(userStore.getIdToken)
       .then(res => {

@@ -256,11 +256,16 @@ const handleMsgLogin = (data: any) => {
 
 const afterLogin = (res: any) => {
   const route = router.currentRoute.value
-  const redirect_uri = route.query
+  let redirect_uri = route.query
       ? route.query.redirect_uri
           ? '/' + route.query.redirect_uri
           : undefined
       : undefined
+
+  // 防御性检查：如果 redirect_uri 指向登录页本身，则不跳转（否则会循环回到登录页）
+  if (redirect_uri === '/login') {
+    redirect_uri = undefined
+  }
 
   // 创建现代化成功提示
   const successElement = document.createElement('div')

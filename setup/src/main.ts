@@ -73,7 +73,7 @@ async function bootstrap() {
       await checkLoginState()
       delete to.query.id_token
       if (!commonStore.hasLogin) {
-        next(false)
+        next('/login')
       } else {
         next({ path: to.path, query: to.query })
       }
