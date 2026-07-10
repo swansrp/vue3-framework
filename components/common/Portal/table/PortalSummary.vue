@@ -5,7 +5,7 @@
       :key="index"
       :index="index"
     >
-      <div v-if="index === (1 + isExpanded ? 1 : 0)">
+      <div v-if="index === (isExpanded ? 2 : 1)">
         总计
       </div>
       <div v-else-if="index === columns.length + (hideRowSelection ? 0 : 1)"></div>
@@ -14,7 +14,7 @@
         :style="{textAlign: 'center'}"
       >
         {{
-          _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex] || '--')
+          isEmpty(dataSummary) ? '--' : (dataSummary![columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex] || '--')
         }}
       </div>
       <div
@@ -22,7 +22,7 @@
         :style="{textAlign: 'center'}"
       >
         {{
-          _.$isEmpty(dataSummary) ? '--' : (formatMoney(dataSummary[columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex], Number(columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].referenceDict?.split(',')[0]), Number(columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].referenceDict?.split(',')[1])))
+          isEmpty(dataSummary) ? '--' : (formatMoney(dataSummary![columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex], Number(columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].referenceDict?.split(',')[0]), Number(columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].referenceDict?.split(',')[1])))
         }}
       </div>
       <div
@@ -30,7 +30,7 @@
         :style="{textAlign: 'center'}"
       >
         {{
-          _.$isEmpty(dataSummary) ? '--' : (dataSummary[columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex] || '--')
+          isEmpty(dataSummary) ? '--' : (dataSummary![columns[index - (hideRowSelection ? 0 : 1) - (isExpanded ? 1 : 0)].dataIndex] || '--')
         }}
       </div>
     </s-table-summary-cell>
@@ -39,9 +39,9 @@
 
 <script lang="ts" setup>
 import { formatMoney } from '../../../../utils/formatter'
+import { isEmpty } from '@/framework/utils/common'
 
 import { ColumnType, FIELD_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
-const _ = getInstance()
 const props = withDefaults(
   defineProps<{
     config: TableConfigType
