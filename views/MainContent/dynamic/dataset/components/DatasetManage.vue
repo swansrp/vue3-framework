@@ -62,6 +62,13 @@
             <a-button
               type="link"
               size="small"
+              @click="handleOpenPortal(record)"
+            >
+              Portal
+            </a-button>
+            <a-button
+              type="link"
+              size="small"
               @click="handleColumnConfig(record)"
             >
               列配置
@@ -132,21 +139,18 @@ import DatasetDetail from './DatasetDetail.vue'
 import DatasetSqlModal from './DatasetSqlModal.vue'
 
 import { getConfig } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
-import { sysDatasetColumnGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysDatasetColumnPortalController'
 import { sysDatasetGeneralSelect, sysDatasetDeleteItem } from '@/framework/views/MainContent/dynamic/apis/sysDatasetPortalController'
-import { sysDatasetTableGeneralSelect } from '@/framework/views/MainContent/dynamic/apis/sysDatasetTablePortalController'
 
 const emit = defineEmits<{
   (e: 'select', dataset: DatasetInfo | null): void
+  (e: 'openPortal', dataset: DatasetInfo): void
 }>()
 
 const columns = [
   { title: 'Dataset 名称', dataIndex: 'datasetName', key: 'datasetName', align: 'center' },
   { title: '数据源', dataIndex: 'dataSource', key: 'dataSource', width: 120, align: 'center' },
-  { title: '表数量', key: 'tableCount', width: 100, align: 'center' },
-  { title: '列数量', key: 'columnCount', width: 100, align: 'center' },
   { title: '备注', dataIndex: 'remark', key: 'remark', align: 'center' },
-  { title: '操作', key: 'action', width: 200, fixed: 'right', align: 'center' },
+  { title: '操作', key: 'action', width: 280, fixed: 'right', align: 'center' },
 ]
 
 const dataSource = ref<DatasetInfo[]>([])
@@ -161,8 +165,9 @@ const selectedRowKeys = ref<string[]>([])
 const loadData = async () => {
   loading.value = true
   try {
-    // 查询sys_dataset表
+    // 只查询 sys_dataset 表，按 remark 正序排序
     const res = await sysDatasetGeneralSelect({
+      sortList: [{ property: 'remark', type: 0 }],
       conditionList: searchText.value ? [
         {
           andOr: '1',  // OR条件
@@ -183,71 +188,15 @@ const loadData = async () => {
     }, false, false)
     
     if (res.status?.code === 0) {
-      const datasets = res.payload || []
-      // 为每个dataset加载tables和columns配置
-      dataSource.value = await Promise.all(
-        datasets.map(async (ds: any) => {
-          try {
-            // 加载tables配置
-            const tablesRes = await sysDatasetTableGeneralSelect({
-              conditionList: [{
-                field: 'datasetId',
-                filterType: 'EQUAL',
-                value: [ds.id]
-              }]
-            }, false, false)
-            
-            // 加载columns配置
-            const columnsRes = await sysDatasetColumnGeneralSelect({
-              conditionList: [{
-                field: 'datasetId',
-                filterType: 'EQUAL',
-                value: [ds.id]
-              }]
-            }, false, false)
-            
-            return {
-              id: ds.id,
-              tableId: ds.datasetName || `dataset_${ds.id}`,
-              datasetName: ds.datasetName,
-              dataSource: ds.dataSource,
-              remark: ds.remark,
-              datasets: (tablesRes.payload || []).map((t: any) => ({
-                id: t.id,
-                datasetId: t.datasetId,
-                tableOrder: t.tableOrder,
-                tableSql: t.tableSql,
-                tableAlias: t.tableAlias,
-                joinType: t.joinType,
-                joinCondition: t.joinCondition,
-                remark: t.remark,
-                dataSource: t.dataSource
-              })),
-              columns: (columnsRes.payload || []).map((c: any) => ({
-                id: c.id,
-                datasetId: c.datasetId,
-                columnSql: c.columnSql,
-                columnAlias: c.columnAlias,
-                isAggregate: c.isAggregate,
-                displayOrder: c.displayOrder,
-                isVisible: c.isVisible,
-                remark: c.remark
-              }))
-            }
-          } catch (err) {
-            console.error('加载dataset配置失败:', err)
-            return {
-              id: ds.id,
-              tableId: ds.datasetName || `dataset_${ds.id}`,
-              datasetName: ds.datasetName,
-              dataSource: ds.dataSource,
-              remark: ds.remark,
-              datasets: [],
-              columns: []
-            }
-          }
-        })
-      )
+      dataSource.value = (res.payload || []).map((ds: any) => ({
+        id: ds.id,
+        tableId: ds.datasetName || `dataset_${ds.id}`,
+        datasetName: ds.datasetName,
+        dataSource: ds.dataSource,
+        remark: ds.remark,
+        datasets: [],
+        columns: []
+      }))
     }
   } catch (error) {
     console.error('加载数据失败:', error)
@@ -283,6 +232,10 @@ const handleColumnConfig = (record: DatasetInfo) => {
 }
 
 const handleClickDatasetName = async (record: DatasetInfo) => {
+  // 自动选定当前行
+  selectedRowKeys.value = [record.tableId]
+  emit('select', record)
+
   // 使用getConfig获取完整配置
   try {
     const res = await getConfig({ datasetId: record.id! }, false, false)
@@ -371,16 +324,19 @@ const handleRowClick = (record: DatasetInfo, event: MouseEvent) => {
   }
 }
 
+const handleOpenPortal = (record: DatasetInfo) => {
+  // 选定当前行并通知父组件切换到 Portal tab
+  selectedRowKeys.value = [record.tableId]
+  emit('select', record)
+  emit('openPortal', record)
+}
+
 const getColumnCount = (record: any) => {
-  const id = record?.id
-  if (!id) return (record?.columns || []).length || 0
-  return (record?.columns || []).filter((c: any) => String(c.datasetId) === String(id)).length
+  return (record?.columns || []).length || 0
 }
 
 const getTableCount = (record: any) => {
-  const id = record?.id
-  if (!id) return (record?.datasets || []).length || 0
-  return (record?.datasets || []).filter((t: any) => String(t.datasetId) === String(id)).length
+  return (record?.datasets || []).length || 0
 }
 
 onMounted(() => {

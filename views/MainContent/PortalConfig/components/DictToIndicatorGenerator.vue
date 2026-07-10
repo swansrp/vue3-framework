@@ -296,7 +296,7 @@ import { message } from 'ant-design-vue'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import { getDictItemByName } from '@/framework/apis/dict/dict'
-import { addEntity } from '@/framework/apis/portal'
+import { addEntityList } from '@/framework/apis/portal'
 import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { isNotEmpty } from '@/framework/utils/common'
 
@@ -541,35 +541,32 @@ const handleGenerate = async () => {
   generating.value = true
 
   try {
-    const generatedData = []
-
     // 只为选中的字典项生成指标
     const selectedItems = dictItems.value.filter(item => isSelected(item.dictId))
-    
-    for (const item of selectedItems) {
-      const indicatorData = {
-        itemValue: (valuePrefix.value || '') + item.dictValue,
-        itemName: (namePrefix.value || '') + item.dictLabel + (nameSuffix.value || ''),
-        comment: commonComment.value || `基于字典项 ${ item.dictLabel } 生成的指标`,
-        portalName: props.config?.name || '',
-        groupId: targetGroupId.value,
-        condition: null, // 您可以在这里调用您的生成方法来设置条件
-        dynamicColumn: JSON.stringify({}) // 默认空的动态字段
-      }
 
-      // 这里调用您的生成方法
-      // 您可以根据字典项的信息来生成特定的条件和动态字段
-      const enhancedData = await generateIndicatorData(item, indicatorData)
+    // 先构建所有指标数据
+    const allIndicatorData = await Promise.all(
+      selectedItems.map(item => {
+        const indicatorData = {
+          itemValue: (valuePrefix.value || '') + item.dictValue,
+          itemName: (namePrefix.value || '') + item.dictLabel + (nameSuffix.value || ''),
+          comment: commonComment.value || `基于字典项 ${ item.dictLabel } 生成的指标`,
+          portalName: props.config?.name || '',
+          groupId: targetGroupId.value,
+          condition: null,
+          dynamicColumn: JSON.stringify({})
+        }
+        return generateIndicatorData(item, indicatorData)
+      })
+    )
 
-      // 调用添加指标的API
-      await addEntity('portal/indicator', enhancedData)
-      generatedData.push(enhancedData)
-    }
+    // 批量插入，保证顺序，一次请求完成
+    await addEntityList('portal/indicator', allIndicatorData, undefined, false, false)
 
-    message.success(`成功生成 ${ generatedData.length } 个指标！`)
+    message.success(`成功生成 ${ allIndicatorData.length } 个指标！`)
 
     // 发出生成完成事件
-    emit('generated', generatedData)
+    emit('generated', allIndicatorData)
 
     // 重置表单
     handleReset()
@@ -641,10 +638,10 @@ const handleReset = () => {
   groupErrorMessage.value = ''
 }
 
-// 监听 props 变化
-watch(() => selectedGroupId.value, (newValue) => {
-  if (newValue) {
-    targetGroupId.value = newValue
+// 弹窗打开时快照锁定 groupId，避免切换左侧树导致 groupId 跟着变
+watch(() => show.value, (visible) => {
+  if (visible && selectedGroupId.value) {
+    targetGroupId.value = selectedGroupId.value
   }
 })
 

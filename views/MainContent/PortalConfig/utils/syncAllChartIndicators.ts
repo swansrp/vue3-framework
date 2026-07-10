@@ -24,15 +24,23 @@ export interface DimChange {
   newOrder?: number   // 仅在 reordered 时有
 }
 
+/** mergedItems / visibleItems 中单个项的类型 */
+export interface MergedItem {
+  itemName: string
+  itemValue: string
+  /** 新增项来自指标树节点的查询条件（仅新增项有值） */
+  queryConditions?: { conditionList: any[]; andOr: '0' | '1' }
+}
+
 /** 一个分组的变更摘要（第一维度或第二维度） */
 export interface GroupDiff {
   groupName: string
   groupValue: string
   changes: DimChange[]
   // 合并后的完整 items（给用户预览最终效果）
-  mergedItems: Array<{ itemName: string; itemValue: string }>
+  mergedItems: MergedItem[]
   // 同步后实际可见的 items（考虑用户之前取消的项）
-  visibleItems: Array<{ itemName: string; itemValue: string }>
+  visibleItems: MergedItem[]
 }
 
 /** 单个图表的扫描结果 */
@@ -243,9 +251,14 @@ function computeGroupDiff(
   // 计算合并后的所有 items（与 reconcileDimensionWithTree 逻辑一致）
   const preserved = savedItems
     .filter((item) => treeItemMap.has(String(item.itemValue)))
-  const addedItems = (treeGroup.items || [])
+  const addedItems: MergedItem[] = (treeGroup.items || [])
     .filter((it: any) => !savedItemKeys.has(String(it.key)))
-    .map((it: any) => ({ itemName: it.title, itemValue: String(it.key) }))
+    .map((it: any) => ({
+      itemName: it.title,
+      itemValue: String(it.key),
+      // 新增项携带指标树节点上的查询条件，供保存时写入 queryConditions
+      queryConditions: parseConditionGroup(it.condition)
+    }))
 
   return {
     groupName: savedGroup.groupName,

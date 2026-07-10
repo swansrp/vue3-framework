@@ -8,7 +8,10 @@
         key="dataset"
         tab="Dataset管理"
       >
-        <DatasetManage @select="handleSelectDataset" />
+        <DatasetManage
+          @select="handleSelectDataset"
+          @open-portal="handleOpenPortal"
+        />
       </a-tab-pane>
       <a-tab-pane
         key="portal"
@@ -45,6 +48,12 @@ const handleSelectDataset = (dataset: DatasetInfo | null) => {
   if (!dataset) {
     activeTab.value = 'dataset'
   }
+}
+
+// 打开当前数据集的 Portal 配置 tab
+const handleOpenPortal = (dataset: DatasetInfo) => {
+  currentDataset.value = dataset
+  activeTab.value = 'portal'
 }
 
 // Dataset专用刷新函数

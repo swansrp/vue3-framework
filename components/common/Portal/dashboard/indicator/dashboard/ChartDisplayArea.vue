@@ -76,6 +76,18 @@
     </div>
 
     <div class="chart-container">
+      <!-- 导出按钮 -->
+      <div
+        v-if="chartData.length > 0"
+        class="chart-export-btn"
+      >
+        <a-tooltip title="导出Excel">
+          <DownloadOutlined
+            :class="{ 'action-icon-disabled': loading }"
+            @click="handleExportExcel"
+          />
+        </a-tooltip>
+      </div>
       <!-- 当有数据时显示图表 -->
       <UniversalChart
         v-if="chartData && chartData.length > 0 && receivedData"
@@ -114,7 +126,7 @@
 </template>
 
 <script lang="ts" setup>
-import { AppstoreOutlined, BarChartOutlined, DatabaseOutlined, PieChartOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, BarChartOutlined, DatabaseOutlined, DownloadOutlined, PieChartOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, nextTick, ref, toRefs } from 'vue'
 
@@ -122,6 +134,7 @@ import DimensionControl from './control/DimensionControl.vue'
 import StatisticControl from './control/StatisticControl.vue'
 import DashboardDetailModal from './DashboardDetail.vue'
 import UniversalChart from './UniversalChart.vue'
+import { exportChartToExcel } from './utils/chartExport'
 import type { SelectedBarInfo } from '../../type/ChartTypes'
 
 import { advancedStatisticRequest } from '@/framework/apis'
@@ -138,6 +151,7 @@ import type { ChartDataItem } from '@/framework/components/common/Portal/dashboa
 const props = defineProps<{
   config: any
   receivedData?: DimensionIndicatorsFilter
+  indicatorName?: string
 }>()
 const { config, receivedData } = toRefs(props)
 
@@ -314,7 +328,7 @@ const autoChartType = computed(() => {
 
 // 图表标题
 const chartTitle = computed(() => {
-  return '数据统计图表'
+  return props.indicatorName || '数据统计图表'
 })
 
 // 维度名称到编码的映射，保证颜色等与配置一致
@@ -990,6 +1004,10 @@ const getVisibilityConfig = () => {
     visibleSecondDimensions: [...visibleSecondDimensions.value]
   }
 }
+
+// ==================== 导出 Excel ====================
+const handleExportExcel = () =>
+  exportChartToExcel(filteredChartData.value, receivedData.value as any, chartTitle.value, loading.value)
 
 // 暴露方法供父组件调用
 defineExpose({

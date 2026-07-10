@@ -79,6 +79,7 @@
         :table-id="tableId"
         :edit-data="editData"
         :is-edit-mode="isEditMode"
+        :indicator-name="indicatorName"
         @save="handleSave"
         @reset-config="handleResetConfig"
       />

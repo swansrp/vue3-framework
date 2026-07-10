@@ -2273,7 +2273,7 @@ const initConfig = async () => {
       message.error('尚未配置id字段')
       throw new Error('尚未配置id字段')
     }
-    if (tableConfig.defaultCondition && isEmpty(props.advanceCondition)) {
+    if (tableConfig.defaultCondition) {
       config.defaultCondition = JSON.parse(tableConfig.defaultCondition)
     }
     if (tableConfig.defaultSort && isEmpty(props.defaultSortColumn)) {

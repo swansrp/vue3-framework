@@ -198,6 +198,8 @@ interface DimState {
   nameToValue: Record<string, string>
   /** displayName → originalName 映射，用于带标记的显示名恢复为原名 */
   displayToOriginal: Record<string, string>
+  /** itemName → queryConditions，用于新增项（旧配置中不存在）补充查询条件 */
+  nameToConditions: Record<string, { conditionList: any[]; andOr: '0' | '1' }>
 }
 
 /** 只读视图：已是最新图表展开后展示的维度数据结构 */
@@ -265,7 +267,8 @@ function getChartState(chartId: string): DimState {
       firstVisible: [], firstAll: [],
       secondVisible: [], secondAll: [],
       nameToValue: {},
-      displayToOriginal: {}
+      displayToOriginal: {},
+      nameToConditions: {}
     }
   }
   return chartDimensionStates[chartId]!
@@ -281,13 +284,15 @@ watch(() => props.scanResult, (result) => {
 
   for (const chart of result.charts) {
     const nameToValue: Record<string, string> = {}
+    const nameToConditions: Record<string, { conditionList: any[]; andOr: '0' | '1' }> = {}
     const state: DimState = {
       firstVisible: [],
       firstAll: [],
       secondVisible: [],
       secondAll: [],
       nameToValue,
-      displayToOriginal: {}
+      displayToOriginal: {},
+      nameToConditions
     }
 
     // 解析原始 indicator 获取完整的已保存项（含已删除的 value）
@@ -317,6 +322,10 @@ watch(() => props.scanResult, (result) => {
       }
       for (const item of dimGroup.mergedItems) {
         nameToValue[item.itemName] = item.itemValue
+        // 新增项携带的查询条件存入 map，供保存时写入 queryConditions
+        if (item.queryConditions && item.queryConditions.conditionList.length > 0) {
+          nameToConditions[item.itemName] = item.queryConditions
+        }
       }
 
       // 变更类型映射：label → type
@@ -452,7 +461,16 @@ function buildIndicatorFromState(
       const original = (parsed.firstDimension.indicatorItems || []).find(
         (i: any) => String(i.itemName) === name || String(i.itemValue) === value
       )
-      return original ? { ...original, itemName: name, itemValue: value } : { itemName: name, itemValue: value }
+      return original
+        ? { ...original, itemName: name, itemValue: value }
+        : {
+            itemName: name,
+            itemValue: value,
+            // 新增项：从 nameToConditions 补充来自指标树的查询条件
+            ...(state.nameToConditions[name]
+              ? { queryConditions: state.nameToConditions[name] }
+              : {})
+          }
     })
     parsed.firstDimension = {
       ...parsed.firstDimension,
@@ -473,7 +491,15 @@ function buildIndicatorFromState(
       const original = (parsed.secondDimension.indicatorItems || []).find(
         (i: any) => String(i.itemName) === name || String(i.itemValue) === value
       )
-      return original ? { ...original, itemName: name, itemValue: value } : { itemName: name, itemValue: value }
+      return original
+        ? { ...original, itemName: name, itemValue: value }
+        : {
+            itemName: name,
+            itemValue: value,
+            ...(state.nameToConditions[name]
+              ? { queryConditions: state.nameToConditions[name] }
+              : {})
+          }
     })
     parsed.secondDimension = {
       ...parsed.secondDimension,

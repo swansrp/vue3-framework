@@ -29,6 +29,7 @@
       ref="chartDisplayAreaRef"
       :config="config"
       :received-data="dimensionIndicatorsFilter"
+      :indicator-name="indicatorName"
       class="chart-display-area"
     />
   </div>
@@ -106,6 +107,7 @@ interface DataTypeOption {
 const props = withDefaults(
   defineProps<{
     tableId?: any
+    indicatorName?: string
   }>(),
   {}
 )

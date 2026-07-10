@@ -1,4 +1,5 @@
 import {
+  addListRequest,
   addRequest,
   advancedCountRequest,
   advancedQueryRequest,
@@ -49,6 +50,9 @@ export const getById = (url: string, id: string, baseDomain?: string, showSucces
 
 export const addEntity = (url: string, entity: object, baseDomain?: string, showSuccess = true, showLoading = true) =>
   addRequest('/' + url, entity, baseDomain, showSuccess, showLoading) as Promise<any>
+
+export const addEntityList = (url: string, entityList: Array<any>, baseDomain?: string, showSuccess = true, showLoading = true) =>
+  addListRequest('/' + url, entityList, baseDomain, showSuccess, showLoading) as Promise<any>
 
 export const updateEntity = (url: string, entity: object, baseDomain?: string, showSuccess = true, showLoading = true) =>
   updateRequest('/' + url, { strict: true }, entity, baseDomain, showSuccess, showLoading) as Promise<any>

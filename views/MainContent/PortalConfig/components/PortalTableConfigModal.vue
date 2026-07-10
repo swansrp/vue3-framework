@@ -441,23 +441,36 @@
             :model="fieldCreateForm"
             layout="vertical"
           >
-            <a-form-item label="选择字段">
-              <a-select
-                v-model:value="fieldCreateForm.selectedFieldKey"
-                placeholder="请选择字段"
-                show-search
-                :filter-option="filterFieldOption"
+            <a-form-item label="搜索字段">
+              <a-input
+                v-model:value="fieldSearchKeyword"
+                allow-clear
+                placeholder="输入字段名称或编码搜索"
                 style="width: 100%"
-                @change="handleFieldChange"
-              >
-                <a-select-option
-                  v-for="field in availableFields"
+              />
+            </a-form-item>
+            <a-form-item label="选择字段">
+              <div class="field-pick-grid">
+                <div
+                  v-for="field in filteredAvailableFields"
                   :key="field.key"
-                  :value="field.key"
+                  :class="['field-pick-item', { active: fieldCreateForm.selectedFieldKey === field.key }]"
+                  @click="handleFieldChange(field.key)"
                 >
-                  {{ field.title }}
-                </a-select-option>
-              </a-select>
+                  <div class="field-pick-name">
+                    {{ field.displayName }}
+                  </div>
+                  <div class="field-pick-code">
+                    {{ field.property }}
+                  </div>
+                </div>
+                <a-empty
+                  v-if="filteredAvailableFields.length === 0"
+                  :image="null"
+                  description="无匹配字段"
+                  style="grid-column: 1 / -1;"
+                />
+              </div>
             </a-form-item>
             <a-form-item label="筛选项标签">
               <a-input
@@ -583,6 +596,19 @@ const fieldCreateForm = reactive({
   selectedFieldKey: '',
   code: '',
   label: ''
+})
+
+// 字段搜索关键词
+const fieldSearchKeyword = ref('')
+
+// 过滤后的可选字段
+const filteredAvailableFields = computed(() => {
+  const keyword = fieldSearchKeyword.value.trim().toLowerCase()
+  if (!keyword) return availableFields.value
+  return availableFields.value.filter(f =>
+    f.displayName.toLowerCase().includes(keyword) ||
+    f.property.toLowerCase().includes(keyword)
+  )
 })
 
 // 手动创建表单
@@ -1043,6 +1069,7 @@ const filterFieldOption = (input: string, option: any) => {
 
 // 字段选择变化时自动设置标签
 const handleFieldChange = (value: string) => {
+  fieldCreateForm.selectedFieldKey = value
   const selectedField = availableFields.value.find(f => f.key === value)
   if (selectedField) {
     fieldCreateForm.code = selectedField.property
@@ -1471,6 +1498,8 @@ const handleCancel = () => {
     flex-wrap: wrap;
     gap: 12px;
     border-top: 1px solid var(--border-subtle);
+    max-height: 300px;
+    overflow-y: auto;
 
     .ant-checkbox-wrapper {
       margin: 0;
@@ -1683,6 +1712,54 @@ const handleCancel = () => {
     font-size: 12px;
     color: var(--text-tertiary);
     margin-right: auto;
+  }
+}
+
+.field-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+.field-pick-item {
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-elevated);
+
+  &:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  &.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+
+  .field-pick-name {
+    font-weight: 500;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .field-pick-code {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>

@@ -305,6 +305,33 @@
   height: 0; // 配合flex:1使用，确保能正确计算高度
   min-height: 0; // 允许在父容器变小时继续收缩
   overflow-y: auto; // 图表较高时，外层容器启用滚动，避免弹窗溢出
+  position: relative; // 为导出按钮的绝对定位提供参照
+}
+
+.chart-export-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+
+  .anticon {
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.3s;
+
+    &:hover {
+      background: #f0f0f0;
+      color: #1890ff;
+    }
+  }
+
+  .action-icon-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 }
 
 .chart-placeholder {

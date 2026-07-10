@@ -43,6 +43,7 @@ const requestMethod = {
 const commonUrl = {
   GET_BY_ID: '/id',
   ADD: '/insert',
+  ADD_LIST: '/insert/list',
   GENERAL_QUERY: '/general/query',
   GENERAL_SELECT: '/general/select',
   GENERAL_SUMMARY: '/general/summary',
@@ -213,6 +214,12 @@ const addApi = (
   version = '1.0'
 ) => buildApi(domain, commonUrl.ADD, requestMethod.POST, version, type)
 
+const addListApi = (
+  type: string,
+  domain: string = baseDomain,
+  version = '1.0'
+) => buildApi(domain, commonUrl.ADD_LIST, requestMethod.POST, version, type)
+
 const updateApi = (
   type: string,
   domain: string = baseDomain,
@@ -358,6 +365,14 @@ export const addRequest = (
   showSuccess = true,
   showLoading = true
 ) => request(addApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
+
+export const addListRequest = (
+  type: string,
+  data: Array<any>,
+  domain: string = baseDomain,
+  showSuccess = true,
+  showLoading = true
+) => request(addListApi(type, domain), {}, data, showSuccess, showLoading) as Promise<any>
 
 export const deleteRequest = (
   type: string,
