@@ -1,7 +1,10 @@
 <template>
   <a-modal
     v-model:open="visible"
-    :title="'DarkTable 配置' + (portalConfig?.displayName ? ' - ' + portalConfig.displayName : '')"
+    :title="
+      'DarkTable 配置' +
+      (portalConfig?.displayName ? ' - ' + portalConfig.displayName : '')
+    "
     width="1400px"
     :body-style="{ height: '75vh', overflow: 'hidden' }"
     :footer="null"
@@ -12,11 +15,7 @@
       <div class="table-list-panel">
         <div class="panel-header">
           <span>表格配置列表</span>
-          <a-button
-            type="primary"
-            size="small"
-            @click="handleAddTable"
-          >
+          <a-button type="primary" size="small" @click="handleAddTable">
             <template #icon>
               <PlusOutlined />
             </template>
@@ -32,7 +31,7 @@
           >
             <div class="table-item-content">
               <div class="table-name">
-                {{ table.tableCode || '未命名' }}
+                {{ table.tableCode || "未命名" }}
               </div>
               <div class="table-info">
                 ID: {{ table.id }} | 筛选项: {{ getFilterCount(table.id) }}
@@ -49,10 +48,7 @@
               </a-button>
             </div>
           </div>
-          <a-empty
-            v-if="tableList.length === 0"
-            description="暂无配置"
-          />
+          <a-empty v-if="tableList.length === 0" description="暂无配置" />
         </div>
       </div>
 
@@ -73,10 +69,7 @@
               </a-button>
             </div>
             <div class="section-content">
-              <a-form
-                :model="selectedTable"
-                layout="inline"
-              >
+              <a-form :model="selectedTable" layout="inline">
                 <a-form-item label="表格编码">
                   <a-input
                     v-model:value="selectedTable.tableCode"
@@ -113,44 +106,29 @@
                     v-model:value="selectedTable.downloadAble"
                     style="width: 80px"
                   >
-                    <a-select-option value="1">
-                      允许
-                    </a-select-option>
-                    <a-select-option value="0">
-                      禁用
-                    </a-select-option>
+                    <a-select-option value="1"> 允许 </a-select-option>
+                    <a-select-option value="0"> 禁用 </a-select-option>
                   </a-select>
                 </a-form-item>
                 <a-form-item label="状态">
-                  <a-select
-                    v-model:value="selectedTable.status"
-                    style="width: 80px"
-                  >
-                    <a-select-option value="1">
-                      启用
-                    </a-select-option>
-                    <a-select-option value="0">
-                      禁用
-                    </a-select-option>
+                  <a-select v-model:value="selectedTable.status" style="width: 80px">
+                    <a-select-option value="1"> 启用 </a-select-option>
+                    <a-select-option value="0"> 禁用 </a-select-option>
                   </a-select>
                 </a-form-item>
               </a-form>
-              
+
               <!-- 筛选列配置 -->
               <div class="filter-columns-config">
-                <div
-                  class="filter-columns-header"
-                  @click="toggleFilterColumns"
-                >
+                <div class="filter-columns-header" @click="toggleFilterColumns">
                   <span class="filter-columns-title">筛选列配置</span>
-                  <span class="filter-columns-count">（已排除 {{ excludedColumnCount }} 列）</span>
+                  <span class="filter-columns-count"
+                    >（已排除 {{ excludedColumnCount }} 列）</span
+                  >
                   <CaretDownOutlined v-if="filterColumnsExpanded" />
                   <CaretRightOutlined v-else />
                 </div>
-                <div
-                  v-show="filterColumnsExpanded"
-                  class="filter-columns-list"
-                >
+                <div v-show="filterColumnsExpanded" class="filter-columns-list">
                   <a-checkbox
                     v-for="column in portalConfig?.columns || []"
                     :key="column.property"
@@ -197,7 +175,13 @@
                   <div
                     v-for="(filter, index) in filterList"
                     :key="filter.id || index"
-                    :class="['filter-item', { active: selectedFilter?.id === filter.id, 'drag-over': dragOverIndex === index }]"
+                    :class="[
+                      'filter-item',
+                      {
+                        active: selectedFilter?.id === filter.id,
+                        'drag-over': dragOverIndex === index,
+                      },
+                    ]"
                     draggable="true"
                     @click="handleSelectFilter(filter)"
                     @dragstart="handleDragStart($event, index)"
@@ -221,21 +205,13 @@
                         title="确定删除该筛选项？"
                         @confirm="handleDeleteFilter(filter)"
                       >
-                        <a-button
-                          type="link"
-                          size="small"
-                          danger
-                          @click.stop
-                        >
+                        <a-button type="link" size="small" danger @click.stop>
                           <DeleteOutlined />
                         </a-button>
                       </a-popconfirm>
                     </div>
                   </div>
-                  <a-empty
-                    v-if="filterList.length === 0"
-                    description="暂无筛选项"
-                  />
+                  <a-empty v-if="filterList.length === 0" description="暂无筛选项" />
                 </div>
               </div>
 
@@ -312,7 +288,9 @@
                         <a-col :span="12">
                           <a-form-item label="通用筛选条件">
                             <a-button @click="openDefaultConditionModal">
-                              {{ hasDefaultCondition ? '已配置通用条件' : '配置通用条件' }}
+                              {{
+                                hasDefaultCondition ? "已配置通用条件" : "配置通用条件"
+                              }}
                             </a-button>
                           </a-form-item>
                         </a-col>
@@ -350,7 +328,11 @@
                                     size="small"
                                     @click="openOptionConditionModal(option.value)"
                                   >
-                                    {{ conditionConfig.options[option.value] ? '已配置' : '配置' }}
+                                    {{
+                                      conditionConfig.options[option.value]
+                                        ? "已配置"
+                                        : "配置"
+                                    }}
                                   </a-button>
                                   <a-button
                                     v-if="conditionConfig.options[option.value]"
@@ -367,34 +349,23 @@
                                 v-else-if="selectedFilter.dictCode"
                                 description="点击上方按钮加载字典选项"
                               />
-                              <a-empty
-                                v-else
-                                description="请先选择字典编码"
-                              />
+                              <a-empty v-else description="请先选择字典编码" />
                             </div>
                           </a-form-item>
                         </a-col>
                         <a-col :span="12">
                           <a-form-item label="是否多选">
                             <a-radio-group v-model:value="selectedFilter.multiple">
-                              <a-radio value="1">
-                                是
-                              </a-radio>
-                              <a-radio value="0">
-                                否
-                              </a-radio>
+                              <a-radio value="1"> 是 </a-radio>
+                              <a-radio value="0"> 否 </a-radio>
                             </a-radio-group>
                           </a-form-item>
                         </a-col>
                         <a-col :span="12">
                           <a-form-item label="允许清空">
                             <a-radio-group v-model:value="selectedFilter.allowClear">
-                              <a-radio value="1">
-                                是
-                              </a-radio>
-                              <a-radio value="0">
-                                否
-                              </a-radio>
+                              <a-radio value="1"> 是 </a-radio>
+                              <a-radio value="0"> 否 </a-radio>
                             </a-radio-group>
                           </a-form-item>
                         </a-col>
@@ -402,18 +373,12 @@
                     </a-form>
                   </div>
                 </template>
-                <a-empty
-                  v-else
-                  description="请选择一个筛选项进行配置"
-                />
+                <a-empty v-else description="请选择一个筛选项进行配置" />
               </div>
             </div>
           </div>
         </template>
-        <a-empty
-          v-else
-          description="请选择或新增一个表格配置"
-        />
+        <a-empty v-else description="请选择或新增一个表格配置" />
       </div>
     </div>
 
@@ -433,14 +398,8 @@
     >
       <a-tabs v-model:active-key="addFilterTab">
         <!-- 从字段创建 Tab -->
-        <a-tab-pane
-          key="fromField"
-          tab="从字段创建"
-        >
-          <a-form
-            :model="fieldCreateForm"
-            layout="vertical"
-          >
+        <a-tab-pane key="fromField" tab="从字段创建">
+          <a-form :model="fieldCreateForm" layout="vertical">
             <a-form-item label="搜索字段">
               <a-input
                 v-model:value="fieldSearchKeyword"
@@ -454,7 +413,10 @@
                 <div
                   v-for="field in filteredAvailableFields"
                   :key="field.key"
-                  :class="['field-pick-item', { active: fieldCreateForm.selectedFieldKey === field.key }]"
+                  :class="[
+                    'field-pick-item',
+                    { active: fieldCreateForm.selectedFieldKey === field.key },
+                  ]"
                   @click="handleFieldChange(field.key)"
                 >
                   <div class="field-pick-name">
@@ -468,7 +430,7 @@
                   v-if="filteredAvailableFields.length === 0"
                   :image="null"
                   description="无匹配字段"
-                  style="grid-column: 1 / -1;"
+                  style="grid-column: 1 / -1"
                 />
               </div>
             </a-form-item>
@@ -478,14 +440,12 @@
                 placeholder="自动根据字段生成"
               />
             </a-form-item>
-            <div style="text-align: right; margin-top: 24px;">
-              <a-button @click="showAddFilterModal = false">
-                取消
-              </a-button>
+            <div style="text-align: right; margin-top: 24px">
+              <a-button @click="showAddFilterModal = false"> 取消 </a-button>
               <a-button
                 type="primary"
                 :loading="savingFilter"
-                style="margin-left: 8px;"
+                style="margin-left: 8px"
                 @click="handleCreateFromField"
               >
                 确定创建
@@ -493,30 +453,22 @@
             </div>
           </a-form>
         </a-tab-pane>
-        
+
         <!-- 手动创建 Tab -->
-        <a-tab-pane
-          key="manual"
-          tab="手动创建"
-        >
-          <a-form
-            :model="manualCreateForm"
-            layout="vertical"
-          >
+        <a-tab-pane key="manual" tab="手动创建">
+          <a-form :model="manualCreateForm" layout="vertical">
             <a-form-item label="筛选项标签">
               <a-input
                 v-model:value="manualCreateForm.label"
                 placeholder="请输入筛选项标签"
               />
             </a-form-item>
-            <div style="text-align: right; margin-top: 24px;">
-              <a-button @click="showAddFilterModal = false">
-                取消
-              </a-button>
+            <div style="text-align: right; margin-top: 24px">
+              <a-button @click="showAddFilterModal = false"> 取消 </a-button>
               <a-button
                 type="primary"
                 :loading="savingFilter"
-                style="margin-left: 8px;"
+                style="margin-left: 8px"
                 @click="handleCreateManual"
               >
                 确定创建
@@ -530,9 +482,15 @@
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined, HolderOutlined, PlusOutlined, CaretDownOutlined, CaretRightOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
-import { ref, watch, computed } from 'vue'
+import {
+  DeleteOutlined,
+  HolderOutlined,
+  PlusOutlined,
+  CaretDownOutlined,
+  CaretRightOutlined,
+} from "@ant-design/icons-vue";
+import { message } from "ant-design-vue";
+import { ref, watch, computed } from "vue";
 
 import {
   addPortalTable,
@@ -546,218 +504,235 @@ import {
   getPortalTableList,
   updatePortalTable,
   updatePortalTableFilter,
-  updatePortalTableFilterOrder, IdOrderReqVO
-} from '@/framework/apis/portal/table'
-import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
-import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { buildCondition } from '@/framework/components/common/Portal/utils'
-import { dictStore } from '@/framework/store/common'
+  updatePortalTableFilterOrder,
+  IdOrderReqVO,
+} from "@/framework/apis/portal/table";
+import { ConditionType } from "@/framework/components/common/AdvancedSearch/type";
+import PortalAdvancedSearchModal from "@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue";
+import { FILTER_TYPE } from "@/framework/components/common/Portal/type";
+import { buildCondition } from "@/framework/components/common/Portal/utils";
+import { dictStore } from "@/framework/store/common";
 
 const props = defineProps<{
-  modelValue: boolean
-  portalName?: string
-  portalConfig?: any
-  columns?: any[]
-}>()
+  modelValue: boolean;
+  portalName?: string;
+  portalConfig?: any;
+  columns?: any[];
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-}>()
+  "update:modelValue": [value: boolean];
+}>();
 
-const dict = dictStore()
+const dict = dictStore();
 
-const visible = ref(false)
-const saving = ref(false)
-const savingFilter = ref(false)
-const loadingFilters = ref(false)
-const tableList = ref<PortalTableVO[]>([])
-const selectedTable = ref<PortalTableVO | null>(null)
-const filterList = ref<PortalTableFilterVO[]>([])
-const filterCountMap = ref<Map<number, number>>(new Map())
-const selectedFilter = ref<PortalTableFilterVO | null>(null)
+const visible = ref(false);
+const saving = ref(false);
+const savingFilter = ref(false);
+const loadingFilters = ref(false);
+const tableList = ref<PortalTableVO[]>([]);
+const selectedTable = ref<PortalTableVO | null>(null);
+const filterList = ref<PortalTableFilterVO[]>([]);
+const filterCountMap = ref<Map<number, number>>(new Map());
+const selectedFilter = ref<PortalTableFilterVO | null>(null);
 
 // 筛选列配置展开/收起状态
-const filterColumnsExpanded = ref(false)
+const filterColumnsExpanded = ref(false);
 
 // 字典列表
-const sysDictList = ref<Array<any>>([])
+const sysDictList = ref<Array<any>>([]);
 
 // 拖拽状态
-const draggedIndex = ref<number | null>(null)
-const dragOverIndex = ref<number | null>(null)
+const draggedIndex = ref<number | null>(null);
+const dragOverIndex = ref<number | null>(null);
 
 // 添加筛选项弹窗状态
-const showAddFilterModal = ref(false)
-const addFilterTab = ref('fromField')
+const showAddFilterModal = ref(false);
+const addFilterTab = ref("fromField");
 
 // 从字段创建表单
 const fieldCreateForm = reactive({
-  selectedFieldKey: '',
-  code: '',
-  label: ''
-})
+  selectedFieldKey: "",
+  code: "",
+  label: "",
+});
 
 // 字段搜索关键词
-const fieldSearchKeyword = ref('')
+const fieldSearchKeyword = ref("");
 
 // 过滤后的可选字段
 const filteredAvailableFields = computed(() => {
-  const keyword = fieldSearchKeyword.value.trim().toLowerCase()
-  if (!keyword) return availableFields.value
-  return availableFields.value.filter(f =>
-    f.displayName.toLowerCase().includes(keyword) ||
-    f.property.toLowerCase().includes(keyword)
-  )
-})
+  const keyword = fieldSearchKeyword.value.trim().toLowerCase();
+  if (!keyword) return availableFields.value;
+  return availableFields.value.filter(
+    (f) =>
+      f.displayName.toLowerCase().includes(keyword) ||
+      f.property.toLowerCase().includes(keyword)
+  );
+});
 
 // 手动创建表单
 const manualCreateForm = reactive({
-  label: ''
-})
+  label: "",
+});
 
 // 可选字段列表（用于筛选条件配置）
-const availableFields = ref<Array<{ key: string; title: string; property: string; displayName: string; reference: string }>>([])
+const availableFields = ref<
+  Array<{
+    key: string;
+    title: string;
+    property: string;
+    displayName: string;
+    reference: string;
+  }>
+>([]);
 
 // 筛选条件配置弹窗
 const filterConditionConfig = reactive({
   show: false,
   columnArray: [] as Array<any>,
   condition: {} as ConditionType,
-  okText: '保存条件'
-})
+  okText: "保存条件",
+});
 
 // 条件配置（新格式）
 interface ConditionConfig {
-  default: any[]  // 通用兜底 condition
-  options: Record<string, any[]>  // 按字典值映射的特殊 condition
+  default: any[]; // 通用兜底 condition
+  options: Record<string, any[]>; // 按字典值映射的特殊 condition
 }
 
 // 当前筛选项的条件配置
 const conditionConfig = reactive<ConditionConfig>({
   default: [],
-  options: {}
-})
+  options: {},
+});
 
 // 当前编辑的特殊选项值
-const editingOptionValue = ref<string>('')
+const editingOptionValue = ref<string>("");
 
 // 当前筛选项的字典选项列表
-const filterDictOptions = ref<Array<{ label: string; value: string }>>([])
+const filterDictOptions = ref<Array<{ label: string; value: string }>>([]);
 
 // 判断是否有通用 condition
 const hasDefaultCondition = computed(() => {
-  return conditionConfig.default && conditionConfig.default.length > 0
-})
+  return conditionConfig.default && conditionConfig.default.length > 0;
+});
 
 // 判断是否是新格式的 condition
 const isNewConditionFormat = (condition: any): condition is ConditionConfig => {
-  return condition && typeof condition === 'object' && 'default' in condition
-}
+  return condition && typeof condition === "object" && "default" in condition;
+};
 
 // 解析 condition 字符串到 conditionConfig
 const parseCondition = (conditionStr: string | undefined) => {
   if (!conditionStr) {
-    conditionConfig.default = []
-    conditionConfig.options = {}
-    return
+    conditionConfig.default = [];
+    conditionConfig.options = {};
+    return;
   }
-  
+
   try {
-    const parsed = JSON.parse(conditionStr)
-    
+    const parsed = JSON.parse(conditionStr);
+
     if (isNewConditionFormat(parsed)) {
       // 新格式
-      conditionConfig.default = parsed.default || []
-      conditionConfig.options = parsed.options || {}
+      conditionConfig.default = parsed.default || [];
+      conditionConfig.options = parsed.options || {};
     } else {
       // 老格式，作为通用 condition
       if (Array.isArray(parsed)) {
-        conditionConfig.default = parsed
+        conditionConfig.default = parsed;
       } else if (parsed.conditionList && Array.isArray(parsed.conditionList)) {
-        conditionConfig.default = parsed.conditionList
+        conditionConfig.default = parsed.conditionList;
       } else {
-        conditionConfig.default = []
+        conditionConfig.default = [];
       }
-      conditionConfig.options = {}
+      conditionConfig.options = {};
     }
   } catch (e) {
-    console.warn('解析 condition 失败:', e)
-    conditionConfig.default = []
-    conditionConfig.options = {}
+    console.warn("解析 condition 失败:", e);
+    conditionConfig.default = [];
+    conditionConfig.options = {};
   }
-}
+};
 
 // 序列化 conditionConfig 到字符串
 const serializeCondition = (): string => {
   const config: ConditionConfig = {
     default: conditionConfig.default,
-    options: conditionConfig.options
-  }
-  return JSON.stringify(config)
-}
+    options: conditionConfig.options,
+  };
+  return JSON.stringify(config);
+};
 
 // 加载当前筛选项的字典选项
 const loadFilterDictOptions = async () => {
   if (!selectedFilter.value?.dictCode) {
-    filterDictOptions.value = []
-    return
+    filterDictOptions.value = [];
+    return;
   }
-  
+
   try {
-    const res = await dict.getDict(selectedFilter.value.dictCode)
+    const res = await dict.getDict(selectedFilter.value.dictCode);
     filterDictOptions.value = (res || []).map((item: any) => ({
       label: item.label || item.value,
-      value: String(item.value)
-    }))
+      value: String(item.value),
+    }));
   } catch (error) {
-    console.error('加载字典选项失败:', error)
-    filterDictOptions.value = []
+    console.error("加载字典选项失败:", error);
+    filterDictOptions.value = [];
   }
-}
+};
 
 // 删除特殊选项条件
 const removeOptionCondition = (optionValue: string) => {
-  delete conditionConfig.options[optionValue]
+  delete conditionConfig.options[optionValue];
   // 保存
-  selectedFilter.value!.condition = serializeCondition()
-  handleSaveFilter(selectedFilter.value!)
-}
+  selectedFilter.value!.condition = serializeCondition();
+  handleSaveFilter(selectedFilter.value!);
+};
 
 // 筛选类型选项
-const filterTypeOptions = FILTER_TYPE_OPTIONS
+const filterTypeOptions = FILTER_TYPE_OPTIONS;
 
 // 获取筛选类型标签
 const getFilterTypeLabel = (type: string | undefined) => {
-  const option = filterTypeOptions.find(o => o.value === type)
-  return option?.label || type || '未知'
-}
+  const option = filterTypeOptions.find((o) => o.value === type);
+  return option?.label || type || "未知";
+};
 
 // 监听弹窗显示状态
-watch(() => props.modelValue, (newVal) => {
-  visible.value = newVal
-  if (newVal) {
-    loadTableList()
-    initAvailableFields()
-    loadDictList()
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    visible.value = newVal;
+    if (newVal) {
+      loadTableList();
+      initAvailableFields();
+      loadDictList();
+    }
   }
-})
+);
 
 // 监听 columns 变化
-watch(() => props.columns, (newColumns) => {
-  console.log('columns 变化:', newColumns)
-  if (visible.value) {
-    initAvailableFields()
-  }
-}, { deep: true })
+watch(
+  () => props.columns,
+  (newColumns) => {
+    console.log("columns 变化:", newColumns);
+    if (visible.value) {
+      initAvailableFields();
+    }
+  },
+  { deep: true }
+);
 
 watch(visible, (newVal) => {
-  emit('update:modelValue', newVal)
-})
+  emit("update:modelValue", newVal);
+});
 
 // 初始化可选字段列表
 const initAvailableFields = () => {
-  console.log('初始化字段列表，props.columns:', props.columns)
+  console.log("初始化字段列表，props.columns:", props.columns);
   if (props.columns && props.columns.length > 0) {
     availableFields.value = props.columns.map((col: any) => ({
       key: col.property,
@@ -765,419 +740,448 @@ const initAvailableFields = () => {
       property: col.property,
       displayName: col.displayName,
       reference: col.reference,
-    }))
-    console.log('availableFields 已设置:', availableFields.value)
+    }));
+    console.log("availableFields 已设置:", availableFields.value);
   } else {
-    availableFields.value = []
-    console.log('availableFields 设置为空数组')
+    availableFields.value = [];
+    console.log("availableFields 设置为空数组");
   }
-}
+};
 
 // 初始化筛选列配置
 const initFilterColumnsConfig = () => {
-  if (!props.portalConfig?.columns) return
-  
+  if (!props.portalConfig?.columns) return;
+
   // 获取当前要排除的列名列表
-  const excludedColumns = selectedTable.value?.filterColumns 
-    ? selectedTable.value.filterColumns.split(',').map((s: string) => s.trim())
-    : []
-  
+  const excludedColumns = selectedTable.value?.filterColumns
+    ? selectedTable.value.filterColumns.split(",").map((s: string) => s.trim())
+    : [];
+
   // 默认所有列都 checked = true，排除的列设为 false
   props.portalConfig.columns.forEach((column: any) => {
     if (excludedColumns.includes(column.property)) {
-      column.checked = false
+      column.checked = false;
     } else {
-      column.checked = true
+      column.checked = true;
     }
-  })
-}
+  });
+};
 
 // 计算已排除的列数量
 const excludedColumnCount = computed(() => {
-  if (!props.portalConfig?.columns) return 0
-  return props.portalConfig.columns.filter((col: any) => col.checked === false).length
-})
+  if (!props.portalConfig?.columns) return 0;
+  return props.portalConfig.columns.filter((col: any) => col.checked === false).length;
+});
 
 // 切换筛选列配置的展开/收起状态
 const toggleFilterColumns = () => {
-  filterColumnsExpanded.value = !filterColumnsExpanded.value
-}
+  filterColumnsExpanded.value = !filterColumnsExpanded.value;
+};
 
 // 加载字典列表
 const loadDictList = async () => {
-  const res = await dict.getAllDict('')
+  const res = await dict.getAllDict("");
   sysDictList.value = (res || []).map((item: any) => ({
     label: item.label || item.value,
-    value: item.value
-  }))
-}
+    value: item.value,
+  }));
+};
 
 // 加载表格配置列表
 const loadTableList = async () => {
   if (!props.portalName) {
-    tableList.value = []
-    return
+    tableList.value = [];
+    return;
   }
   try {
-    const res = await getPortalTableList(props.portalName)
+    const res = await getPortalTableList(props.portalName);
     if (res.payload?.records) {
-      tableList.value = res.payload.records
+      tableList.value = res.payload.records;
       // 加载每个 table 的筛选项数量
       for (const table of tableList.value) {
         if (table.id) {
-          const filterRes = await getPortalTableFilterList(table.id)
-          filterCountMap.value.set(table.id, filterRes.payload?.total || 0)
+          const filterRes = await getPortalTableFilterList(table.id);
+          filterCountMap.value.set(table.id, filterRes.payload?.total || 0);
         }
       }
     }
   } catch (error) {
-    console.error('加载表格配置失败:', error)
+    console.error("加载表格配置失败:", error);
   }
-}
+};
 
 // 获取筛选项数量
 const getFilterCount = (tableId: number | undefined) => {
-  if (!tableId) return 0
-  return filterCountMap.value.get(tableId) || 0
-}
+  if (!tableId) return 0;
+  return filterCountMap.value.get(tableId) || 0;
+};
 
 // 选择表格配置
 const handleSelectTable = async (table: PortalTableVO) => {
-  selectedTable.value = table
-  selectedFilter.value = null
-  await loadFilterList(table.id!)
+  selectedTable.value = table;
+  selectedFilter.value = null;
+  await loadFilterList(table.id!);
   // 每次选择表格时重新初始化字段列表
-  initAvailableFields()
+  initAvailableFields();
   // 初始化筛选列配置
-  initFilterColumnsConfig()
-}
+  initFilterColumnsConfig();
+};
 
 // 选择筛选项
 const handleSelectFilter = (filter: PortalTableFilterVO) => {
-  selectedFilter.value = filter
+  selectedFilter.value = filter;
   // 解析 condition 到 conditionConfig
-  parseCondition(filter.condition)
+  parseCondition(filter.condition);
   // 清空字典选项，需要用户手动加载
-  filterDictOptions.value = []
+  filterDictOptions.value = [];
   // 如果有 dictCode，自动加载
   if (filter.dictCode) {
-    loadFilterDictOptions()
+    loadFilterDictOptions();
   }
-}
+};
 
 // 加载筛选项列表
 const loadFilterList = async (tableId: number) => {
-  loadingFilters.value = true
+  loadingFilters.value = true;
   try {
-    const res = await getPortalTableFilterList(tableId)
-    filterList.value = res.payload?.records || []
+    const res = await getPortalTableFilterList(tableId);
+    filterList.value = res.payload?.records || [];
     // 默认选中第一个
     if (filterList.value.length > 0 && !selectedFilter.value) {
-      selectedFilter.value = filterList.value[0]
+      selectedFilter.value = filterList.value[0];
     }
   } catch (error) {
-    console.error('加载筛选项失败:', error)
-    filterList.value = []
+    console.error("加载筛选项失败:", error);
+    filterList.value = [];
   } finally {
-    loadingFilters.value = false
+    loadingFilters.value = false;
   }
-}
+};
 
 // 新增表格配置
 const handleAddTable = async () => {
   if (!props.portalName) {
-    message.warning('请先选择一个表格配置')
-    return
+    message.warning("请先选择一个表格配置");
+    return;
   }
   const newTable: PortalTableVO = {
     portalName: props.portalName,
-    tableCode: '',
+    tableCode: "",
     filterWidth: 260,
     paddingTh: 2,
     paddingTd: 7,
-    status: '1'
-  }
-  saving.value = true
+    status: "1",
+  };
+  saving.value = true;
   try {
-    const res = await addPortalTable(newTable)
+    const res = await addPortalTable(newTable);
     if (res.payload) {
-      message.success('新增成功')
-      await loadTableList()
+      message.success("新增成功");
+      await loadTableList();
       // 选中新创建的配置
-      const newRecord = tableList.value.find(t => t.tableCode === '' && t.portalName === props.portalName)
+      const newRecord = tableList.value.find(
+        (t) => t.tableCode === "" && t.portalName === props.portalName
+      );
       if (newRecord) {
-        handleSelectTable(newRecord)
+        handleSelectTable(newRecord);
       }
     }
   } catch (error) {
-    console.error('新增失败:', error)
+    console.error("新增失败:", error);
   } finally {
-    saving.value = false
+    saving.value = false;
   }
-}
+};
 
 // 保存表格配置
 const handleSaveTable = async () => {
-  if (!selectedTable.value) return
-  saving.value = true
+  if (!selectedTable.value) return;
+  saving.value = true;
   try {
     // 构建 filterColumns：收集所有 checked = false 的列名
     const excludedColumns = (props.portalConfig?.columns || [])
       .filter((col: any) => col.checked === false)
-      .map((col: any) => col.property)
-    
+      .map((col: any) => col.property);
+
     // 如果没有排除的列，设为 null；否则用逗号连接
-    selectedTable.value.filterColumns = excludedColumns.length > 0 
-      ? excludedColumns.join(',')
-      : null
-    
-    await updatePortalTable(selectedTable.value)
-    message.success('保存成功')
-    await loadTableList()
+    selectedTable.value.filterColumns =
+      excludedColumns.length > 0 ? excludedColumns.join(",") : null;
+
+    await updatePortalTable(selectedTable.value);
+    message.success("保存成功");
+    await loadTableList();
   } catch (error) {
-    console.error('保存失败:', error)
+    console.error("保存失败:", error);
   } finally {
-    saving.value = false
+    saving.value = false;
   }
-}
+};
 
 // 删除表格配置
 const handleDeleteTable = async (table: PortalTableVO) => {
   try {
-    await deletePortalTable(table.id!)
-    message.success('删除成功')
+    await deletePortalTable(table.id!);
+    message.success("删除成功");
     if (selectedTable.value?.id === table.id) {
-      selectedTable.value = null
-      filterList.value = []
-      selectedFilter.value = null
+      selectedTable.value = null;
+      filterList.value = [];
+      selectedFilter.value = null;
     }
-    await loadTableList()
+    await loadTableList();
   } catch (error) {
-    console.error('删除失败:', error)
+    console.error("删除失败:", error);
   }
-}
+};
 
 // 保存筛选项
 const handleSaveFilter = async (filter: PortalTableFilterVO) => {
-  savingFilter.value = true
+  savingFilter.value = true;
   try {
     if (filter.id) {
-      await updatePortalTableFilter(filter)
+      await updatePortalTableFilter(filter);
     } else {
-      const res = await addPortalTableFilter(filter)
-      filter.id = res.payload
+      const res = await addPortalTableFilter(filter);
+      filter.id = res.payload;
     }
-    message.success('保存成功')
-    await loadFilterList(selectedTable.value!.id!)
+    message.success("保存成功");
+    await loadFilterList(selectedTable.value!.id!);
   } catch (error) {
-    console.error('保存筛选项失败:', error)
+    console.error("保存筛选项失败:", error);
   } finally {
-    savingFilter.value = false
+    savingFilter.value = false;
   }
-}
+};
 
 // 删除筛选项
 const handleDeleteFilter = async (filter: PortalTableFilterVO) => {
   try {
-    await deletePortalTableFilter(filter.id!)
-    message.success('删除成功')
+    await deletePortalTableFilter(filter.id!);
+    message.success("删除成功");
     // 如果删除的是当前选中的筛选项，清空选中状态
     if (selectedFilter.value?.id === filter.id) {
-      selectedFilter.value = null
+      selectedFilter.value = null;
     }
-    await loadFilterList(selectedTable.value!.id!)
-    filterCountMap.value.set(selectedTable.value!.id!, filterList.value.length)
+    await loadFilterList(selectedTable.value!.id!);
+    filterCountMap.value.set(selectedTable.value!.id!, filterList.value.length);
   } catch (error) {
-    console.error('删除筛选项失败:', error)
+    console.error("删除筛选项失败:", error);
   }
-}
+};
 
 // 拖拽排序结束
 const handleFilterDragEnd = async () => {
   // 更新 displayOrder
-  const orderList: IdOrderReqVO[] = []
+  const orderList: IdOrderReqVO[] = [];
   filterList.value.forEach((filter, index) => {
-    filter.displayOrder = index + 1
+    filter.displayOrder = index + 1;
     if (filter.id) {
-      orderList.push({ id: filter.id, showOrder: index + 1 })
+      orderList.push({ id: filter.id, showOrder: index + 1 });
     }
-  })
+  });
 
   // 调用接口保存排序
   if (orderList.length > 0) {
     try {
-      await updatePortalTableFilterOrder(orderList)
-      message.success('排序已保存')
+      await updatePortalTableFilterOrder(orderList);
+      message.success("排序已保存");
     } catch (error) {
-      console.error('保存排序失败:', error)
+      console.error("保存排序失败:", error);
     }
   }
-}
+};
 
 // 拖拽开始
 const handleDragStart = (e: DragEvent, index: number) => {
-  draggedIndex.value = index
+  draggedIndex.value = index;
   if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', String(index))
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
   }
-}
+};
 
 // 拖拽悬停
 const handleDragOver = (e: DragEvent, index: number) => {
-  e.preventDefault()
+  e.preventDefault();
   if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move'
+    e.dataTransfer.dropEffect = "move";
   }
-  dragOverIndex.value = index
-}
+  dragOverIndex.value = index;
+};
 
 // 拖拽放置
 const handleDrop = (e: DragEvent, targetIndex: number) => {
-  e.preventDefault()
+  e.preventDefault();
   if (draggedIndex.value === null || draggedIndex.value === targetIndex) {
-    return
+    return;
   }
 
   // 重新排序
-  const newList = [...filterList.value]
-  const [movedItem] = newList.splice(draggedIndex.value, 1)
-  newList.splice(targetIndex, 0, movedItem)
-  filterList.value = newList
+  const newList = [...filterList.value];
+  const [movedItem] = newList.splice(draggedIndex.value, 1);
+  newList.splice(targetIndex, 0, movedItem);
+  filterList.value = newList;
 
   // 保存排序
-  handleFilterDragEnd()
-}
+  handleFilterDragEnd();
+};
 
 // 拖拽结束
 const handleDragEnd = () => {
-  draggedIndex.value = null
-  dragOverIndex.value = null
-}
+  draggedIndex.value = null;
+  dragOverIndex.value = null;
+};
 
 // 穿梭框过滤
 const filterOption = (inputValue: string, option: any) => {
-  const label = option.title || option.label || ''
-  return label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1
-}
+  const label = option.title || option.label || "";
+  return label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1;
+};
 
 // 字段选择过滤
 const filterFieldOption = (input: string, option: any) => {
-  const children = option.children?.toString() || ''
-  return children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-}
+  const children = option.children?.toString() || "";
+  return children.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
 
 // 字段选择变化时自动设置标签
 const handleFieldChange = (value: string) => {
-  fieldCreateForm.selectedFieldKey = value
-  const selectedField = availableFields.value.find(f => f.key === value)
+  fieldCreateForm.selectedFieldKey = value;
+  const selectedField = availableFields.value.find((f) => f.key === value);
   if (selectedField) {
-    fieldCreateForm.code = selectedField.property
-    fieldCreateForm.label = selectedField.displayName
+    fieldCreateForm.code = selectedField.property;
+    fieldCreateForm.label = selectedField.displayName;
   }
-}
+};
 
 // 筛选类型变化时自动设置字典编码
 const handleFilterTypeChange = (value: string) => {
   // 如果切换到select/select_multi_in_one类型，且当前选中的字段有reference，则自动填入
-  if ((value === 'select' || value === 'select_multi_in_one') && selectedFilter.value) {
-    console.log('筛选类型变更为下拉选择，尝试自动填充字典编码')
-    
+  if ((value === "select" || value === "select_multi_in_one") && selectedFilter.value) {
+    console.log("筛选类型变更为下拉选择，尝试自动填充字典编码");
+
     // 首先尝试通过label精确匹配
-    let matchedField = availableFields.value.find(f => f.displayName === selectedFilter.value?.label)
-    console.log('通过label匹配结果:', matchedField)
-    
+    let matchedField = availableFields.value.find(
+      (f) => f.displayName === selectedFilter.value?.label
+    );
+    console.log("通过label匹配结果:", matchedField);
+
     // 如果没找到，尝试通过property匹配
     if (!matchedField && selectedFilter.value.label) {
       // 从condition中提取property
       try {
-        const conditionStr = selectedFilter.value.condition
+        const conditionStr = selectedFilter.value.condition;
         if (conditionStr) {
-          const condition = JSON.parse(conditionStr)
-          const conditionList = Array.isArray(condition) ? condition : condition.conditionList || []
+          const condition = JSON.parse(conditionStr);
+          const conditionList = Array.isArray(condition)
+            ? condition
+            : condition.conditionList || [];
           if (conditionList.length > 0 && conditionList[0].property) {
-            matchedField = availableFields.value.find(f => f.property === conditionList[0].property)
-            console.log('通过property匹配结果:', matchedField)
+            matchedField = availableFields.value.find(
+              (f) => f.property === conditionList[0].property
+            );
+            console.log("通过property匹配结果:", matchedField);
           }
         }
       } catch (e) {
-        console.warn('解析condition失败:', e)
+        console.warn("解析condition失败:", e);
       }
     }
-    
+
     // 如果找到了匹配的字段且有reference，则填入字典编码
     if (matchedField?.reference) {
-      selectedFilter.value.dictCode = matchedField.reference
-      message.success(`已自动填入字典编码: ${matchedField.reference}`)
-      console.log(`成功为筛选项 "${selectedFilter.value.label}" 填入字典编码: ${matchedField.reference}`)
+      selectedFilter.value.dictCode = matchedField.reference;
+      message.success(`已自动填入字典编码: ${matchedField.reference}`);
+      console.log(
+        `成功为筛选项 "${selectedFilter.value.label}" 填入字典编码: ${matchedField.reference}`
+      );
     } else {
-      console.log('未找到匹配的字段或字段没有reference')
-      message.info('未找到对应的字典编码，请手动选择')
+      console.log("未找到匹配的字段或字段没有reference");
+      message.info("未找到对应的字典编码，请手动选择");
     }
   }
-}
+};
 
 // 从字段创建筛选项
 const handleCreateFromField = async () => {
   if (!fieldCreateForm.selectedFieldKey) {
-    message.warning('请选择字段')
-    return
+    message.warning("请选择字段");
+    return;
   }
 
   if (!fieldCreateForm.label) {
-    message.warning('标签不能为空')
-    return
+    message.warning("标签不能为空");
+    return;
   }
 
-  const selectedField = availableFields.value.find(f => f.key === fieldCreateForm.selectedFieldKey)
+  const selectedField = availableFields.value.find(
+    (f) => f.key === fieldCreateForm.selectedFieldKey
+  );
   if (!selectedField) {
-    message.error('选择的字段不存在')
-    return
+    message.error("选择的字段不存在");
+    return;
   }
 
-  const maxOrder = Math.max(0, ...filterList.value.map(f => f.displayOrder || 0))
-  
+  const maxOrder = Math.max(0, ...filterList.value.map((f) => f.displayOrder || 0));
+
   // 从portalConfig.columns中找到对应字段的完整配置
-  const fieldConfig = props.portalConfig?.columns?.find((col: any) => col.property === selectedField.key)
-  
+  const fieldConfig = props.portalConfig?.columns?.find(
+    (col: any) => col.property === selectedField.key
+  );
+
   // 根据字段配置判断筛选类型
-  let filterType = 'input'
-  let dictCode = ''
-  
+  let filterType = "input";
+  let dictCode = "";
+
   if (fieldConfig) {
-    console.log(`找到字段配置:`, fieldConfig)
-    
+    console.log(`找到字段配置:`, fieldConfig);
+
     // 根据字段类型判断筛选类型
-    if (fieldConfig.fieldType === '6' || fieldConfig.fieldType === '7') { // Date or DateTime
-      filterType = 'date'
-    } else if (fieldConfig.fieldType === '4' || fieldConfig.fieldType === '18') { // Select or SelectMultiInOne
-      filterType = 'select'
-    } else if (fieldConfig.fieldType === '2') { // Switch
-      filterType = 'switch'
-    } else if (fieldConfig.fieldType === '3') { // Number
-      filterType = 'number'
-    } else if (fieldConfig.property.includes('Status') || fieldConfig.property.includes('Type')) {
+    if (fieldConfig.fieldType === "6" || fieldConfig.fieldType === "7") {
+      // Date or DateTime
+      filterType = "date";
+    } else if (fieldConfig.fieldType === "4" || fieldConfig.fieldType === "18") {
+      // Select or SelectMultiInOne
+      filterType = "select";
+    } else if (fieldConfig.fieldType === "2") {
+      // Switch
+      filterType = "switch";
+    } else if (fieldConfig.fieldType === "3") {
+      // Number
+      filterType = "number";
+    } else if (
+      fieldConfig.property.includes("Status") ||
+      fieldConfig.property.includes("Type")
+    ) {
       // 兜底逻辑：通过属性名判断
-      filterType = 'select'
+      filterType = "select";
     }
-    
+
     // 如果是下拉选择类型且字段有reference，则设置字典编码
-    if ((filterType === 'select' || filterType === 'select_multi_in_one') && fieldConfig.reference) {
-      dictCode = fieldConfig.reference
-      console.log(`为字段 ${selectedField.displayName} 自动设置字典编码: ${dictCode}`)
+    if (
+      (filterType === "select" || filterType === "select_multi_in_one") &&
+      fieldConfig.reference
+    ) {
+      dictCode = fieldConfig.reference;
+      console.log(`为字段 ${selectedField.displayName} 自动设置字典编码: ${dictCode}`);
     }
   } else {
-    console.warn(`未找到字段 ${selectedField.key} 的配置信息`)
+    console.warn(`未找到字段 ${selectedField.key} 的配置信息`);
     // 兜底逻辑：通过属性名判断
-    if (selectedField.property.includes('Time') || selectedField.property.includes('Date')) {
-      filterType = 'date'
-    } else if (selectedField.property.includes('Status') || selectedField.property.includes('Type')) {
-      filterType = 'select'
+    if (
+      selectedField.property.includes("Time") ||
+      selectedField.property.includes("Date")
+    ) {
+      filterType = "date";
+    } else if (
+      selectedField.property.includes("Status") ||
+      selectedField.property.includes("Type")
+    ) {
+      filterType = "select";
     }
   }
 
-  const conditionList = []
-  conditionList.push(buildCondition(selectedField.property, FILTER_TYPE.EQUAL, ['$1']))
+  const conditionList = [];
+  conditionList.push(buildCondition(selectedField.property, FILTER_TYPE.EQUAL, ["$1"]));
 
   const newFilter: PortalTableFilterVO = {
     tableId: selectedTable.value!.id!,
@@ -1186,168 +1190,172 @@ const handleCreateFromField = async () => {
     filterType,
     dictCode,
     placeholder: `请输入${fieldCreateForm.label}`,
-    defaultValue: '',
-    multiple: '1',
-    allowClear: '1',
+    defaultValue: "",
+    multiple: "1",
+    allowClear: "1",
     displayOrder: maxOrder + 1,
-    status: '1',
-    condition: JSON.stringify(conditionList)
-  }
+    status: "1",
+    condition: JSON.stringify(conditionList),
+  };
 
-  savingFilter.value = true
-  showAddFilterModal.value = false
+  savingFilter.value = true;
+  showAddFilterModal.value = false;
   try {
-    const res = await addPortalTableFilter(newFilter)
+    const res = await addPortalTableFilter(newFilter);
     if (res.payload) {
-      message.success('添加成功')
-      await loadFilterList(selectedTable.value!.id!)
+      message.success("添加成功");
+      await loadFilterList(selectedTable.value!.id!);
       // 选中新创建的筛选项
-      const newRecord = filterList.value.find(f => f.label === fieldCreateForm.label)
+      const newRecord = filterList.value.find((f) => f.label === fieldCreateForm.label);
       if (newRecord) {
-        selectedFilter.value = newRecord
+        selectedFilter.value = newRecord;
         // 如果是select类型且有reference，确保字典编码已设置
-        if ((newRecord.filterType === 'select' || newRecord.filterType === 'select_multi_in_one') && 
-            !newRecord.dictCode && fieldConfig?.reference) {
-          newRecord.dictCode = fieldConfig.reference
-          message.success(`已为新筛选项自动填入字典编码: ${fieldConfig.reference}`)
+        if (
+          (newRecord.filterType === "select" ||
+            newRecord.filterType === "select_multi_in_one") &&
+          !newRecord.dictCode &&
+          fieldConfig?.reference
+        ) {
+          newRecord.dictCode = fieldConfig.reference;
+          message.success(`已为新筛选项自动填入字典编码: ${fieldConfig.reference}`);
         }
       }
       // 更新筛选项数量
-      filterCountMap.value.set(selectedTable.value!.id!, filterList.value.length)
+      filterCountMap.value.set(selectedTable.value!.id!, filterList.value.length);
       // 重置表单
-      fieldCreateForm.selectedFieldKey = ''
-      fieldCreateForm.label = ''
+      fieldCreateForm.selectedFieldKey = "";
+      fieldCreateForm.label = "";
     }
   } catch (error) {
-    console.error('添加筛选项失败:', error)
+    console.error("添加筛选项失败:", error);
   } finally {
-    savingFilter.value = false
+    savingFilter.value = false;
   }
-}
+};
 
 // 手动创建筛选项
 const handleCreateManual = async () => {
   if (!manualCreateForm.label) {
-    message.warning('请输入筛选项标签')
-    return
+    message.warning("请输入筛选项标签");
+    return;
   }
 
-  const maxOrder = Math.max(0, ...filterList.value.map(f => f.displayOrder || 0))
-  
+  const maxOrder = Math.max(0, ...filterList.value.map((f) => f.displayOrder || 0));
+
   const newFilter: PortalTableFilterVO = {
     tableId: selectedTable.value!.id!,
     label: manualCreateForm.label,
-    filterType: 'input',
+    filterType: "input",
     placeholder: `请输入${manualCreateForm.label}`,
-    defaultValue: '',
-    multiple: '0',
-    allowClear: '1',
+    defaultValue: "",
+    multiple: "0",
+    allowClear: "1",
     displayOrder: maxOrder + 1,
-    status: '1',
-    condition: ''
-  }
+    status: "1",
+    condition: "",
+  };
 
-  savingFilter.value = true
-  showAddFilterModal.value = false
+  savingFilter.value = true;
+  showAddFilterModal.value = false;
   try {
-    const res = await addPortalTableFilter(newFilter)
+    const res = await addPortalTableFilter(newFilter);
     if (res.payload) {
-      message.success('添加成功')
-      await loadFilterList(selectedTable.value!.id!)
+      message.success("添加成功");
+      await loadFilterList(selectedTable.value!.id!);
       // 选中新创建的筛选项
-      const newRecord = filterList.value.find(f => f.label === manualCreateForm.label)
+      const newRecord = filterList.value.find((f) => f.label === manualCreateForm.label);
       if (newRecord) {
-        selectedFilter.value = newRecord
+        selectedFilter.value = newRecord;
       }
       // 更新筛选项数量
-      filterCountMap.value.set(selectedTable.value!.id!, filterList.value.length)
+      filterCountMap.value.set(selectedTable.value!.id!, filterList.value.length);
       // 重置表单
-      manualCreateForm.label = ''
+      manualCreateForm.label = "";
     }
   } catch (error) {
-    console.error('添加筛选项失败:', error)
+    console.error("添加筛选项失败:", error);
   } finally {
-    savingFilter.value = false
+    savingFilter.value = false;
   }
-}
+};
 
 // 构建字段列表（通用方法）
 const buildColumnArray = () => {
-  filterConditionConfig.columnArray = []
+  filterConditionConfig.columnArray = [];
   if (props.columns && props.columns.length > 0) {
     filterConditionConfig.columnArray = props.columns.map((col: any) => ({
       key: col.property,
       title: col.displayName,
       fieldType: col.fieldType,
-      referenceDictOption: col.referenceDictOption
-    }))
+      referenceDictOption: col.referenceDictOption,
+    }));
   }
-}
+};
 
 // 打开通用条件配置弹窗
 const openDefaultConditionModal = () => {
-  if (!selectedFilter.value) return
+  if (!selectedFilter.value) return;
 
-  buildColumnArray()
-  editingOptionValue.value = '' // 标记为编辑通用条件
+  buildColumnArray();
+  editingOptionValue.value = ""; // 标记为编辑通用条件
 
   // 使用 conditionConfig.default 作为当前条件
   filterConditionConfig.condition = {
-    andOr: '0',
-    conditionList: conditionConfig.default || []
-  }
+    andOr: "0",
+    conditionList: conditionConfig.default || [],
+  };
 
-  filterConditionConfig.show = true
-}
+  filterConditionConfig.show = true;
+};
 
 // 打开特殊选项条件配置弹窗
 const openOptionConditionModal = (optionValue: string) => {
-  if (!selectedFilter.value) return
+  if (!selectedFilter.value) return;
 
-  buildColumnArray()
-  editingOptionValue.value = optionValue // 标记为编辑特殊选项条件
+  buildColumnArray();
+  editingOptionValue.value = optionValue; // 标记为编辑特殊选项条件
 
   // 使用该选项的专属条件
-  const optionCondition = conditionConfig.options[optionValue] || []
+  const optionCondition = conditionConfig.options[optionValue] || [];
   filterConditionConfig.condition = {
-    andOr: '0',
-    conditionList: optionCondition
-  }
+    andOr: "0",
+    conditionList: optionCondition,
+  };
 
-  filterConditionConfig.show = true
-}
+  filterConditionConfig.show = true;
+};
 
 // 保存筛选条件配置
 const saveFilterCondition = (condition: ConditionType) => {
-  if (!selectedFilter.value) return
+  if (!selectedFilter.value) return;
 
-  const conditionList = condition.conditionList || []
+  const conditionList = condition.conditionList || [];
 
   if (editingOptionValue.value) {
     // 保存特殊选项条件
     if (conditionList.length > 0) {
-      conditionConfig.options[editingOptionValue.value] = conditionList
+      conditionConfig.options[editingOptionValue.value] = conditionList;
     } else {
       // 空条件则删除
-      delete conditionConfig.options[editingOptionValue.value]
+      delete conditionConfig.options[editingOptionValue.value];
     }
   } else {
     // 保存通用条件
-    conditionConfig.default = conditionList
+    conditionConfig.default = conditionList;
   }
 
   // 序列化存储
-  selectedFilter.value.condition = serializeCondition()
-  filterConditionConfig.show = false
+  selectedFilter.value.condition = serializeCondition();
+  filterConditionConfig.show = false;
 
   // 自动保存
-  handleSaveFilter(selectedFilter.value)
-}
+  handleSaveFilter(selectedFilter.value);
+};
 
 // 取消
 const handleCancel = () => {
-  visible.value = false
-}
+  visible.value = false;
+};
 </script>
 
 <style scoped lang="less">
