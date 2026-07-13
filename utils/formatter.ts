@@ -18,13 +18,13 @@ export const formatMoney = (money: number, fix = 2, unit = 10000) => {
 export const formatPercent = (src: number, fix = 2, dist = 100) => {
   const percent = src / dist
   if (isEmpty(src) || isNaN(percent) || !Number.isFinite(percent)) {
-    return '--%'
+    return '--'
   } else {
     try {
       const res = (percent * 100).toFixed(fix)
       return Number(res).toLocaleString(undefined, { minimumFractionDigits: fix }) + '%'
     } catch (e) {
-      return '--%'
+      return '--'
     }
   }
 }
