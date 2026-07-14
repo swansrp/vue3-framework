@@ -295,7 +295,7 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, onMounted, ref, watch } from 'vue'
 
-import { getDictItemByName } from '@/framework/apis/dict/dict'
+import { getDictByDictName } from '@/framework/apis/dict/dict'
 import { addEntityList } from '@/framework/apis/portal'
 import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { isNotEmpty } from '@/framework/utils/common'
@@ -419,9 +419,13 @@ watch(
 
 const loadDictItems = async (dictName: string) => {
   try {
-    const response = await getDictItemByName({ dictName })
+    const response = await getDictByDictName({ dictName })
     if (response && response.payload) {
-      dictItems.value = response.payload
+      dictItems.value = response.payload.map((item: any) => ({
+        dictId: item.value,
+        dictValue: item.value,
+        dictLabel: item.label
+      }))
       
       // 自动添加"未知"字典项
       const unknownItem = {

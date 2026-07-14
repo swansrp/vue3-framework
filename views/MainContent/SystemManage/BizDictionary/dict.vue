@@ -17,7 +17,6 @@ import {
 import type { BizDictVO, BizDictRes } from '@/framework/apis/dict/bizDictController'
 import { deleteDict } from '@/framework/apis/dict/dict'
 import DictItemEditModal from '@/framework/components/common/dict/DictItemEditModal.vue'
-import DictItemsList from '@/framework/components/common/dict/DictItemsList.vue'
 
 // 左侧字典列表
 const dictList = ref<BizDictRes[]>([])
@@ -293,10 +292,45 @@ const saveEditItem = async (item: BizDictVO) => {
   }
 }
 
+// 拖拽排序
+const draggedItemIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+const onItemDragStart = (index: number) => {
+  draggedItemIndex.value = index
+}
+
+const onItemDragOver = (index: number) => {
+  dragOverIndex.value = index
+}
+
+const onItemDrop = (targetIndex: number) => {
+  if (draggedItemIndex.value === null || draggedItemIndex.value === targetIndex) {
+    draggedItemIndex.value = null
+    dragOverIndex.value = null
+    return
+  }
+  const items = [...dictItems.value]
+  const [movedItem] = items.splice(draggedItemIndex.value, 1)
+  items.splice(targetIndex, 0, movedItem)
+  draggedItemIndex.value = null
+  dragOverIndex.value = null
+  handleSortChange(items)
+}
+
+const onItemDragEnd = () => {
+  draggedItemIndex.value = null
+  dragOverIndex.value = null
+}
+
+// 获取上级字典项标签
+const getParentValueLabel = (parentDictCode: string, parentValue: string): string => {
+  return parentValueLabelMap.value[`${parentDictCode}_${parentValue}`] || parentValue
+}
+
 // 排序变化
 const handleSortChange = async (items: BizDictVO[]) => {
   dictItems.value = items
-  // 自动保存排序
   try {
     const updatePromises: Promise<any>[] = []
     let sortCounter = 0
@@ -521,18 +555,19 @@ loadDictNameMap()
           <div
             v-for="dict in dictList"
             :key="dict.dictCode"
-            :class="['dict-item', { active: selectedDictCode === dict.dictCode }]"
+            :class="['dict-list-item', { active: selectedDictCode === dict.dictCode }]"
             @click="selectDict(dict)"
           >
-            <div class="dict-info">
-              <span class="dict-name">{{ dict.dictName }}</span>
-              <span class="dict-code">{{ dict.dictCode }}</span>
+            <div class="dict-list-item-info">
+              <span class="dict-list-item-name">{{ dict.dictName }}</span>
+              <span class="dict-list-item-code">{{ dict.dictCode }}</span>
             </div>
             <a-tag
               v-if="dict.dictItemList?.length"
               color="blue"
+              style="margin: 0;"
             >
-              {{ dict.dictItemList.length }} 项
+              {{ dict.dictItemList.length }}项
             </a-tag>
           </div>
           <a-empty
@@ -672,17 +707,58 @@ loadDictNameMap()
               </a-button>
             </div>
             <a-spin :spinning="dictItemsLoading">
-              <DictItemsList
-                :items="dictItems"
-                :is-manage-mode="true"
-                :dict-name-map="dictNameMap"
-                :parent-value-label-map="parentValueLabelMap"
-                sort-mode="buttons"
-                title="字典项列表"
-                @edit="editDictItem"
-                @delete="deleteDictItem"
-                @sort-change="handleSortChange"
-              />
+              <div class="items-grid">
+                <div
+                  v-for="(item, index) in dictItems"
+                  :key="item.id || index"
+                  class="item-card"
+                  :class="{
+                    'item-card-dragging': draggedItemIndex === index,
+                    'item-card-over': dragOverIndex === index && draggedItemIndex !== null && draggedItemIndex !== index
+                  }"
+                  draggable="true"
+                  @dragstart="onItemDragStart(index)"
+                  @dragover.prevent="onItemDragOver(index)"
+                  @drop="onItemDrop(index)"
+                  @dragend="onItemDragEnd"
+                >
+                  <span class="item-card-sort">{{ index + 1 }}</span>
+                  <div class="item-card-body" @click="editDictItem(item)">
+                    <div class="item-card-label">{{ item.label }}</div>
+                    <div class="item-card-value">{{ item.value }}</div>
+                    <div
+                      v-if="item.parentDictCode && item.parentValue"
+                      class="item-card-parent"
+                    >
+                      ← {{ dictNameMap[item.parentDictCode] || item.parentDictCode }} / {{ getParentValueLabel(item.parentDictCode, item.parentValue) }}
+                    </div>
+                    <a-tag
+                      v-if="item.bizId == null"
+                      class="item-card-sys-tag"
+                      color="orange"
+                    >
+                      系统
+                    </a-tag>
+                  </div>
+                  <div class="item-card-actions">
+                    <a-button
+                      size="small"
+                      type="link"
+                      @click="editDictItem(item)"
+                    >
+                      编辑
+                    </a-button>
+                    <a-button
+                      size="small"
+                      type="link"
+                      danger
+                      @click="deleteDictItem(item)"
+                    >
+                      删除
+                    </a-button>
+                  </div>
+                </div>
+              </div>
             </a-spin>
           </template>
           <a-empty
@@ -849,48 +925,45 @@ loadDictNameMap()
   padding: 12px;
 }
 
-.dict-item {
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #e8e8e8;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
+.dict-list-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 4px;
 
   &:hover {
-    border-color: #667eea;
-    background: #f8f9ff;
+    background: #f0f5ff;
   }
 
   &.active {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    background: #e6f4ff;
+    border-left: 3px solid #1677ff;
+    padding-left: 11px;
   }
 
-  .dict-info {
-    flex: 1;
-    min-width: 0;
+  .dict-list-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+  }
 
-    .dict-name {
-      display: block;
-      font-size: 14px;
-      font-weight: 500;
-      color: #333;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+  .dict-list-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-    .dict-code {
-      display: block;
-      font-size: 12px;
-      color: #8c8c8c;
-      margin-top: 4px;
-    }
+  .dict-list-item-code {
+    font-size: 12px;
+    color: #8c8c8c;
   }
 }
 
@@ -948,6 +1021,95 @@ loadDictNameMap()
     margin-bottom: 16px;
     display: flex;
     gap: 12px;
+  }
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.item-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+  cursor: grab;
+  transition: all 0.25s;
+
+  &:hover {
+    border-color: #69b1ff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &.item-card-dragging {
+    opacity: 0.4;
+  }
+
+  &.item-card-over {
+    border-color: #1677ff;
+    border-style: dashed;
+    background: #f0f5ff;
+  }
+
+  .item-card-sort {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 11px;
+    color: #bfbfbf;
+    font-weight: 600;
+  }
+
+  .item-card-body {
+    flex: 1;
+    cursor: pointer;
+  }
+
+  .item-card-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    padding-right: 16px;
+  }
+
+  .item-card-value {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+
+  .item-card-parent {
+    font-size: 11px;
+    color: #8c8c8c;
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+
+  .item-card-sys-tag {
+    margin-top: 4px;
+  }
+
+  .item-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #f5f5f5;
   }
 }
 </style>

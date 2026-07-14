@@ -21,6 +21,12 @@
       >
         <BizDictManage />
       </a-tab-pane>
+      <a-tab-pane
+        key="dynamicDict"
+        tab="动态字典"
+      >
+        <DynamicDict />
+      </a-tab-pane>
     </a-tabs>
   </div>
 </template>
@@ -30,6 +36,7 @@ import { ref } from 'vue'
 
 import type { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import BizDictManage from '@/framework/views/MainContent/SystemManage/BizDictionary/dict.vue'
+import DynamicDict from './DynamicDict.vue'
 
 const activeTab = ref('sysDict')
 
