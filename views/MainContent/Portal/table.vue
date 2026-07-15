@@ -253,7 +253,10 @@ const condition = computed(() => {
   filterConfigList.value.forEach(filter => {
     const value = filterValues.value[filter.code]
     
-    if (value !== undefined && value !== null && value !== '') {
+    // 过滤无效值：undefined / null / '' / 空数组 / 仅包含「全部」选项
+    const isAllSelected = Array.isArray(value) && value.length === 1 && value[0] === '__all__'
+    const isEmptyArray = Array.isArray(value) && value.length === 0
+    if (value !== undefined && value !== null && value !== '' && !isEmptyArray && !isAllSelected) {
       try {
         // 解析 filter 的 condition 配置
         if (filter.condition) {
@@ -299,7 +302,7 @@ const condition = computed(() => {
               const valuesField = cond.values || cond.value
               if (valuesField && Array.isArray(valuesField) && valuesField.includes('$1')) {
                 const newCond = { ...cond }
-                newCond.values = valuesField.map(v => v === '$1' ? value : v)
+                newCond.values = valuesField.flatMap(v => v === '$1' ? (Array.isArray(value) ? value : [value]) : [v])
                 // 如果原始配置用的是 value 字段，保持使用 value
                 if (cond.value && !cond.values) {
                   newCond.value = newCond.values
