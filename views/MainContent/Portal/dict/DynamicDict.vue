@@ -1,7 +1,10 @@
 <template>
   <div class="dynamic-dict">
     <!-- 已保存的配置列表 -->
-    <div class="saved-configs" v-if="configList.length > 0">
+    <div
+      v-if="configList.length > 0"
+      class="saved-configs"
+    >
       <div class="conditions-header">
         <span class="conditions-title">已保存的动态字典配置</span>
       </div>
@@ -21,10 +24,25 @@
             <span class="config-card-code">{{ item.dictCode }}</span>
             <span class="config-card-name">{{ item.dictName }}</span>
           </div>
-          <div class="config-card-body">{{ item.tableName }} · {{ item.valueColumn }}/{{ item.labelColumn }}</div>
+          <div class="config-card-body">
+            {{ item.tableName }} · {{ item.valueColumn }}/{{ item.labelColumn }}
+          </div>
           <div class="config-card-actions">
-            <a-button size="small" type="link" @click="loadConfig(item)">加载</a-button>
-            <a-button size="small" type="link" danger @click="handleDeleteConfig(item.id as number)">删除</a-button>
+            <a-button
+              size="small"
+              type="link"
+              @click="loadConfig(item)"
+            >
+              加载
+            </a-button>
+            <a-button
+              size="small"
+              type="link"
+              danger
+              @click="handleDeleteConfig(item.id as number)"
+            >
+              删除
+            </a-button>
           </div>
         </div>
       </div>
@@ -32,56 +50,72 @@
 
     <!-- 查询表单 + 操作按钮 -->
     <div class="form-row">
-      <a-form layout="inline" class="dynamic-dict-form">
+      <a-form
+        layout="inline"
+        class="dynamic-dict-form"
+      >
         <a-form-item label="数据源">
-        <a-input
-          v-model:value="formState.dataSource"
-          placeholder="留空使用默认"
-          allow-clear
-          style="width: 140px"
-        />
-      </a-form-item>
-      <a-form-item label="数据库">
-        <a-input
-          v-model:value="formState.database"
-          placeholder="可选"
-          allow-clear
-          style="width: 120px"
-        />
-      </a-form-item>
-      <a-form-item label="表名">
-        <a-input
-          v-model:value="formState.tableName"
-          placeholder="如 sys_dict 或 db.table"
-          style="width: 200px"
-        />
-      </a-form-item>
-      <a-form-item label="value列">
-        <a-input
-          v-model:value="formState.valueColumn"
-          placeholder="如 dict_value"
-          style="width: 140px"
-        />
-      </a-form-item>
-      <a-form-item label="label列">
-        <a-input
-          v-model:value="formState.labelColumn"
-          placeholder="如 dict_label"
-          style="width: 140px"
-        />
-      </a-form-item>
-      <a-form-item label="排序">
-        <a-input
-          v-model:value="formState.orderBy"
-          placeholder="如 value ASC"
-          allow-clear
-          style="width: 140px"
-        />
-      </a-form-item>
+          <a-input
+            v-model:value="formState.dataSource"
+            placeholder="留空使用默认"
+            allow-clear
+            style="width: 140px"
+          />
+        </a-form-item>
+        <a-form-item label="数据库">
+          <a-input
+            v-model:value="formState.database"
+            placeholder="可选"
+            allow-clear
+            style="width: 120px"
+          />
+        </a-form-item>
+        <a-form-item label="表名">
+          <a-input
+            v-model:value="formState.tableName"
+            placeholder="如 sys_dict 或 db.table"
+            style="width: 200px"
+          />
+        </a-form-item>
+        <a-form-item label="value列">
+          <a-input
+            v-model:value="formState.valueColumn"
+            placeholder="如 dict_value"
+            style="width: 140px"
+          />
+        </a-form-item>
+        <a-form-item label="label列">
+          <a-input
+            v-model:value="formState.labelColumn"
+            placeholder="如 dict_label"
+            style="width: 140px"
+          />
+        </a-form-item>
+        <a-form-item label="排序">
+          <a-input
+            v-model:value="formState.orderBy"
+            placeholder="如 value ASC"
+            allow-clear
+            style="width: 140px"
+          />
+        </a-form-item>
       </a-form>
       <div class="action-bar">
-        <a-button type="primary" :loading="loading" @click="handleQuery">查询预览</a-button>
-        <a-button type="primary" ghost :loading="saving || checking" @click="openSaveModal">保存配置</a-button>
+        <a-button
+          type="primary"
+          :loading="loading"
+          @click="handleQuery"
+        >
+          查询预览
+        </a-button>
+        <a-button
+          type="primary"
+          ghost
+          :loading="saving || checking"
+          @click="openSaveModal"
+        >
+          保存配置
+        </a-button>
       </div>
     </div>
 
@@ -89,7 +123,13 @@
     <div class="dynamic-dict-conditions">
       <div class="conditions-header">
         <span class="conditions-title">筛选条件（可选，拖拽调整顺序）</span>
-        <a-button size="small" type="dashed" @click="addCondition">+ 添加条件</a-button>
+        <a-button
+          size="small"
+          type="dashed"
+          @click="addCondition"
+        >
+          + 添加条件
+        </a-button>
       </div>
       <div class="condition-grid">
         <div
@@ -119,8 +159,18 @@
             placeholder="值"
             style="width: 140px"
           />
-          <span v-else class="condition-hint">（无需值）</span>
-          <a-button size="small" type="link" danger @click="removeCondition(index)">删除</a-button>
+          <span
+            v-else
+            class="condition-hint"
+          >（无需值）</span>
+          <a-button
+            size="small"
+            type="link"
+            danger
+            @click="removeCondition(index)"
+          >
+            删除
+          </a-button>
         </div>
       </div>
     </div>
@@ -144,13 +194,19 @@
       @ok="handleSaveConfig"
     >
       <a-form layout="vertical">
-        <a-form-item label="字典编码" required>
+        <a-form-item
+          label="字典编码"
+          required
+        >
           <a-input
             v-model:value="saveForm.dictCode"
             placeholder="如 dyn_project_type"
           />
         </a-form-item>
-        <a-form-item label="字典名称" required>
+        <a-form-item
+          label="字典名称"
+          required
+        >
           <a-input
             v-model:value="saveForm.dictName"
             placeholder="如 项目类型字典"
@@ -162,8 +218,10 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
+import { reactive, ref, onMounted } from 'vue'
+
+import { getDictExisted } from '@/framework/apis/dict/bizDictController'
 import {
   getDynamicDict,
   saveDynamicDictConfig,
@@ -171,7 +229,6 @@ import {
   deleteDynamicDictConfig
 } from '@/framework/apis/dict/dict'
 import type { DynamicDictReq, DynamicDictConfig, DynamicDictOperator } from '@/framework/apis/dict/dict'
-import { getDictExisted } from '@/framework/apis/dict/bizDictController'
 
 interface ConditionItem {
   column: string

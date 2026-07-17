@@ -723,9 +723,16 @@ loadDictNameMap()
                   @dragend="onItemDragEnd"
                 >
                   <span class="item-card-sort">{{ index + 1 }}</span>
-                  <div class="item-card-body" @click="editDictItem(item)">
-                    <div class="item-card-label">{{ item.label }}</div>
-                    <div class="item-card-value">{{ item.value }}</div>
+                  <div
+                    class="item-card-body"
+                    @click="editDictItem(item)"
+                  >
+                    <div class="item-card-label">
+                      {{ item.label }}
+                    </div>
+                    <div class="item-card-value">
+                      {{ item.value }}
+                    </div>
                     <div
                       v-if="item.parentDictCode && item.parentValue"
                       class="item-card-parent"

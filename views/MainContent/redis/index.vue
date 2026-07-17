@@ -10,7 +10,9 @@
           allow-clear
           @search="handleSearch"
         />
-        <a-button @click="handleRefreshAll">刷新</a-button>
+        <a-button @click="handleRefreshAll">
+          刷新
+        </a-button>
         <a-popconfirm
           title="确定删除选中的Key吗？此操作不可恢复"
           @confirm="handleBatchDelete"
@@ -31,13 +33,22 @@
       <div class="tree-panel">
         <div class="panel-header">
           <span class="panel-title">Key 目录</span>
-          <a-button type="link" size="small" @click="handleRefreshTree">刷新树</a-button>
+          <a-button
+            type="link"
+            size="small"
+            @click="handleRefreshTree"
+          >
+            刷新树
+          </a-button>
         </div>
-        <a-spin :spinning="treeLoading" class="tree-spin">
+        <a-spin
+          :spinning="treeLoading"
+          class="tree-spin"
+        >
           <a-tree
             v-if="treeData.length > 0"
-            v-model:selectedKeys="selectedTreeKeys"
-            v-model:expandedKeys="expandedTreeKeys"
+            v-model:selected-keys="selectedTreeKeys"
+            v-model:expanded-keys="expandedTreeKeys"
             :tree-data="treeData"
             :field-names="{ title: 'title', key: 'key', children: 'children' }"
             :default-expand-all="false"
@@ -57,7 +68,10 @@
               </span>
             </template>
           </a-tree>
-          <a-empty v-else description="暂无Key数据" />
+          <a-empty
+            v-else
+            description="暂无Key数据"
+          />
         </a-spin>
       </div>
 
@@ -65,10 +79,20 @@
       <div class="table-panel">
         <div class="panel-header">
           <span class="panel-title">Key 列表</span>
-          <a-tag v-if="currentPrefix" color="blue" style="margin-left: 8px">
+          <a-tag
+            v-if="currentPrefix"
+            color="blue"
+            style="margin-left: 8px"
+          >
             前缀: {{ currentPrefix }}:*
           </a-tag>
-          <a-tag v-else color="default" style="margin-left: 8px">全部</a-tag>
+          <a-tag
+            v-else
+            color="default"
+            style="margin-left: 8px"
+          >
+            全部
+          </a-tag>
         </div>
         <a-table
           :columns="columns"
@@ -77,34 +101,64 @@
           :loading="tableLoading"
           :row-key="(record: any) => record.key"
           :row-selection="{ selectedRowKeys, onChange: onSelectChange }"
-          @change="handleTableChange"
           size="small"
           :scroll="{ x: 800, y: 'calc(100vh - 210px)' }"
+          @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <!-- TTL列 -->
             <template v-if="column.dataIndex === 'ttl'">
-              <a-tag v-if="record.ttl === -1" color="green">永不过期</a-tag>
-              <a-tag v-else-if="record.ttl === -2" color="red">已过期</a-tag>
+              <a-tag
+                v-if="record.ttl === -1"
+                color="green"
+              >
+                永不过期
+              </a-tag>
+              <a-tag
+                v-else-if="record.ttl === -2"
+                color="red"
+              >
+                已过期
+              </a-tag>
               <span v-else>{{ formatTTL(record.ttl) }}</span>
             </template>
 
             <!-- 类型列 -->
             <template v-if="column.dataIndex === 'type'">
-              <a-tag :color="getTypeColor(record.type)">{{ record.type }}</a-tag>
+              <a-tag :color="getTypeColor(record.type)">
+                {{ record.type }}
+              </a-tag>
             </template>
 
             <!-- 操作列 -->
             <template v-if="column.dataIndex === 'action'">
               <a-space>
-                <a-button type="link" size="small" @click="handleDetail(record)">查看</a-button>
+                <a-button
+                  type="link"
+                  size="small"
+                  @click="handleDetail(record)"
+                >
+                  查看
+                </a-button>
                 <a-popconfirm
                   title="确定删除此Key吗？"
                   @confirm="handleDelete(record)"
                 >
-                  <a-button type="link" size="small" danger>删除</a-button>
+                  <a-button
+                    type="link"
+                    size="small"
+                    danger
+                  >
+                    删除
+                  </a-button>
                 </a-popconfirm>
-                <a-button type="link" size="small" @click="handleExpire(record)">改TTL</a-button>
+                <a-button
+                  type="link"
+                  size="small"
+                  @click="handleExpire(record)"
+                >
+                  改TTL
+                </a-button>
               </a-space>
             </template>
           </template>
@@ -119,18 +173,31 @@
       width="700px"
       :footer="null"
     >
-      <a-descriptions bordered :column="1" size="small" v-if="detailData">
-        <a-descriptions-item label="Key">{{ detailData.key }}</a-descriptions-item>
+      <a-descriptions
+        v-if="detailData"
+        bordered
+        :column="1"
+        size="small"
+      >
+        <a-descriptions-item label="Key">
+          {{ detailData.key }}
+        </a-descriptions-item>
         <a-descriptions-item label="类型">
-          <a-tag :color="getTypeColor(detailData.type)">{{ detailData.type }}</a-tag>
+          <a-tag :color="getTypeColor(detailData.type)">
+            {{ detailData.type }}
+          </a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="TTL（秒）">
           {{ detailData.ttl === -1 ? '永不过期' : detailData.ttl === -2 ? '已过期' : detailData.ttl }}
         </a-descriptions-item>
-        <a-descriptions-item label="大小">{{ detailData.size }}</a-descriptions-item>
+        <a-descriptions-item label="大小">
+          {{ detailData.size }}
+        </a-descriptions-item>
       </a-descriptions>
       <div style="margin-top: 12px">
-        <div style="margin-bottom: 8px; font-weight: bold">Value:</div>
+        <div style="margin-bottom: 8px; font-weight: bold">
+          Value:
+        </div>
         <pre class="value-pre">{{ formatValue(detailData?.value) }}</pre>
       </div>
     </a-modal>
@@ -144,7 +211,10 @@
     >
       <a-form layout="vertical">
         <a-form-item label="Key">
-          <a-input :value="expireKey" disabled />
+          <a-input
+            :value="expireKey"
+            disabled
+          />
         </a-form-item>
         <a-form-item label="过期时间（秒）">
           <a-input-number
