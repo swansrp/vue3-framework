@@ -3,14 +3,14 @@ import { ArrowLeftOutlined, SwapOutlined } from '@ant-design/icons-vue'
 import { computed, ref } from 'vue'
 
 import { getWideTableConfigDetail, queryWideTableData } from './apis'
+import type { FixedColumn, ProductOption } from './types'
 import { generalQueryRequest } from '../../../apis'
+import { dictStore } from '../../../store/common'
 import { formSchemaAttributeGroupGeneralSelect } from '../../common/DynamicForm/apis/formSchemaAttributeGroupPortalController'
 import { formSchemaAttributeGeneralSelect } from '../../common/DynamicForm/apis/formSchemaAttributePortalController'
 import { formSchemaModuleGeneralSelect } from '../../common/DynamicForm/apis/formSchemaModulePortalController'
 import { formSchemaSectionGeneralSelect } from '../../common/DynamicForm/apis/formSchemaSectionPortalController'
 import { FILTER_TYPE } from '../../common/Portal/type'
-import { dictStore } from '../../../store/common'
-import type { FixedColumn, ProductOption } from './types'
 
 const props = defineProps<{
   /** 产品数据加载函数（业务层注入） */
@@ -367,7 +367,10 @@ const getDictLabel = (dictId: string, val: any): string => {
 
 <template>
   <div class="wide-table-view-page">
-    <div v-if="showBack" class="view-header">
+    <div
+      v-if="showBack"
+      class="view-header"
+    >
       <a-button @click="emit('back')">
         <ArrowLeftOutlined />
         返回
@@ -377,7 +380,10 @@ const getDictLabel = (dictId: string, val: any): string => {
     <div class="view-body">
       <div class="left-panel">
         <!-- 产品选择模式 -->
-        <div v-if="mode === 'product'" class="product-section">
+        <div
+          v-if="mode === 'product'"
+          class="product-section"
+        >
           <div class="panel-header">
             <span>选择产品</span>
           </div>
@@ -393,20 +399,44 @@ const getDictLabel = (dictId: string, val: any): string => {
         <template v-else>
           <div class="product-bar">
             <span class="product-bar-name">{{ selectedProductName }}</span>
-            <a-button type="link" size="small" @click="handleChangeProduct">
+            <a-button
+              type="link"
+              size="small"
+              @click="handleChangeProduct"
+            >
               <SwapOutlined />
               变更
             </a-button>
           </div>
 
-          <div v-if="selectedConfigId" class="field-section">
+          <div
+            v-if="selectedConfigId"
+            class="field-section"
+          >
             <div class="panel-header">
               <span>收集字段</span>
-              <a-tag color="blue" style="margin-left: auto; margin-right: 8px">
+              <a-tag
+                color="blue"
+                style="margin-left: auto; margin-right: 8px"
+              >
                 {{ selectedAttrIds.length }} / {{ configAttrIds.length }}
               </a-tag>
-              <a-button type="link" size="small" style="padding: 0" @click="handleSelectAll">全选</a-button>
-              <a-button type="link" size="small" style="padding: 0; margin-left: 4px" @click="handleInvertSelect">反选</a-button>
+              <a-button
+                type="link"
+                size="small"
+                style="padding: 0"
+                @click="handleSelectAll"
+              >
+                全选
+              </a-button>
+              <a-button
+                type="link"
+                size="small"
+                style="padding: 0; margin-left: 4px"
+                @click="handleInvertSelect"
+              >
+                反选
+              </a-button>
             </div>
             <a-spin :spinning="loadingTree">
               <a-alert
@@ -416,7 +446,10 @@ const getDictLabel = (dictId: string, val: any): string => {
                 show-icon
                 style="margin-bottom: 8px"
               />
-              <a-collapse v-model:active-key="expandedModules" ghost>
+              <a-collapse
+                v-model:active-key="expandedModules"
+                ghost
+              >
                 <a-collapse-panel
                   v-for="mod in formTree"
                   :key="mod.id"
@@ -485,7 +518,10 @@ const getDictLabel = (dictId: string, val: any): string => {
 
       <div class="right-panel">
         <template v-if="!selectedProductId">
-          <a-empty description="请选择产品" style="margin-top: 100px" />
+          <a-empty
+            description="请选择产品"
+            style="margin-top: 100px"
+          />
         </template>
 
         <template v-else>
@@ -504,10 +540,16 @@ const getDictLabel = (dictId: string, val: any): string => {
                 :tab="cfg.title"
               />
             </a-tabs>
-            <span v-else style="color: #999; line-height: 32px">该产品暂无宽表配置</span>
+            <span
+              v-else
+              style="color: #999; line-height: 32px"
+            >该产品暂无宽表配置</span>
           </div>
 
-          <div v-if="selectedConfigId" class="data-section">
+          <div
+            v-if="selectedConfigId"
+            class="data-section"
+          >
             <a-table
               :columns="allColumns"
               :data-source="tableData"
