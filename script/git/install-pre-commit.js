@@ -7,7 +7,8 @@ import fs from 'fs'
 import path from 'path'
 
 const gitHookPath = path.resolve('.git/hooks/pre-commit')
-const runnerPath = path.resolve('src/framework/script/git/hooks-runner.js')
+// 使用相对路径，避免项目移动后绝对路径失效
+const runnerPath = 'src/framework/script/git/hooks-runner.js'
 
 // 预生成的钩子内容
 const hookContent = `#!/bin/sh
