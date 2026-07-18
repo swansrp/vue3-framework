@@ -43,7 +43,12 @@
                 style="flex: 1"
                 @search="onSearchUserGroupCategory"
               />
-              <a-button type="primary" @click="addGroupTypeVisible = true">新增</a-button>
+              <a-button
+                type="primary"
+                @click="addGroupTypeVisible = true"
+              >
+                新增
+              </a-button>
             </div>
           </template>
         </a-list>
@@ -192,14 +197,30 @@
     >
       <a-form layout="vertical">
         <a-form-item label="类型标识（英文，用作唯一id）">
-          <a-input v-model:value="newGroupType.id" placeholder="如 PROJECT_GROUP" />
+          <a-input
+            v-model:value="newGroupType.id"
+            placeholder="如 PROJECT_GROUP"
+          />
         </a-form-item>
         <a-form-item label="类型名称">
-          <a-input v-model:value="newGroupType.name" placeholder="如 项目用户组" />
+          <a-input
+            v-model:value="newGroupType.name"
+            placeholder="如 项目用户组"
+          />
         </a-form-item>
         <div style="text-align: right">
-          <a-button style="margin-right: 10px" @click="addGroupTypeVisible = false">取消</a-button>
-          <a-button type="primary" @click="handleAddGroupType">确定</a-button>
+          <a-button
+            style="margin-right: 10px"
+            @click="addGroupTypeVisible = false"
+          >
+            取消
+          </a-button>
+          <a-button
+            type="primary"
+            @click="handleAddGroupType"
+          >
+            确定
+          </a-button>
         </div>
       </a-form>
     </dialog-box>

@@ -45,9 +45,15 @@
             </a-tooltip>
             <template #overlay>
               <a-menu @click="(info: any) => handleSortMenuClick(String(info.key))">
-                <a-menu-item key="none">默认顺序</a-menu-item>
-                <a-menu-item key="asc">升序（从小到大）</a-menu-item>
-                <a-menu-item key="desc">降序（从大到小）</a-menu-item>
+                <a-menu-item key="none">
+                  默认顺序
+                </a-menu-item>
+                <a-menu-item key="asc">
+                  升序（从小到大）
+                </a-menu-item>
+                <a-menu-item key="desc">
+                  降序（从大到小）
+                </a-menu-item>
               </a-menu>
             </template>
           </a-dropdown>
@@ -253,8 +259,8 @@ import { getPortalConfig } from '@/framework/apis/portal/config'
 import Marquee from '@/framework/components/common/marquee/index.vue'
 import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
 import { exportChartToExcel } from '@/framework/components/common/Portal/dashboard/indicator/dashboard/utils/chartExport'
-import { buildDrillConditionFromStatistic } from '@/framework/components/common/Portal/utils'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
+import { buildDrillConditionFromStatistic } from '@/framework/components/common/Portal/utils'
 
 // 异步导入DashboardDetail组件
 const DashboardDetail = defineAsyncComponent(() =>

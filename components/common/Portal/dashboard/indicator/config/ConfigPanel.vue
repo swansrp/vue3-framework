@@ -43,8 +43,12 @@
           size="small"
           @change="onChartModeChange"
         >
-          <a-radio-button value="dimension">维度图表</a-radio-button>
-          <a-radio-button value="metricsPie">指标饼图</a-radio-button>
+          <a-radio-button value="dimension">
+            维度图表
+          </a-radio-button>
+          <a-radio-button value="metricsPie">
+            指标饼图
+          </a-radio-button>
         </a-radio-group>
       </div>
 
