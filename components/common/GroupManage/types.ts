@@ -1,12 +1,16 @@
 export interface GroupBindProperty {
-    // vue key 用于刷新组件
-    key?: boolean
+    // vue key 用于刷新组件（自增数字）
+    key?: number
     // tab标识
     tabKey: string
     // tab标题显示
     title: string
-    // url前缀
-    baseUrl: string
+    // url前缀（老模式：各业务模块专用绑定接口，如 'group/hr/dept'）
+    // 与 bindType 互斥：配置了 bindType 时走通用接口，baseUrl 被忽略
+    baseUrl?: string
+    // 绑定类型（新模式：走 auth 模块通用接口 /web/group/bind）
+    // 配置后无需后端建专用表/接口，前端用本地字典补全 label
+    bindType?: string
     // 不显示绑定功能 只显示绑定结果
     readOnly?: boolean
     // 树形结构

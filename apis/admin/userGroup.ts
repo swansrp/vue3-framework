@@ -5,6 +5,8 @@ const buildGetApi = (url: string) => buildGetApiByType(url, apiType.userGroup)
 const buildPostApi = (url: string) => buildPostApiByType(url, apiType.userGroup)
 
 export const getUserGroupType = (name='') => request(buildGetApi('/type'), { name }, {}, false, false) as Promise<any>
+export const addUserGroupType = (data: { id: string; name: string }) => request(buildPostApi('/type/add'), {}, data, true) as Promise<any>
+export const deleteUserGroupType = (id: string) => request(buildPostApi('/type/delete'), {}, { id }, true) as Promise<any>
 export const getUserGroupById = (groupType: string) => request(buildGetApi('/tree'), { groupType }, {}, false, false) as Promise<any>
 export const addUserGroupNode = (data: object) => request(buildPostApi('/add'), {}, data, true) as Promise<any>
 export const editUserGroupNode = (data: object) => request(buildPostApi('/update'), {}, data, true) as Promise<any>

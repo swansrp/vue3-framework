@@ -117,6 +117,7 @@
 
   <dialog-box
     v-model:visible="editUserPermissionVisible"
+    width="600px"
     :title="`为${currentUserInfo.name}配置权限`"
   >
     <EditUserPermission

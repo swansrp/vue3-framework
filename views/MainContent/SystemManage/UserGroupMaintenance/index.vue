@@ -17,16 +17,34 @@
               :class="{'activate-item': activateDictItem === index}"
               @click="getCurrentUserGroupCategory(item.id, index)"
             >
-              {{ item.name }}
+              <a-dropdown :trigger="['contextmenu']">
+                <span>{{ item.name }}</span>
+                <template #overlay>
+                  <a-menu @click="({ key: menuKey }) => onGroupTypeContextMenuClick(item, menuKey)">
+                    <a-menu-item key="1">
+                      <a-popconfirm
+                        title="确定要删除该用户组类型吗？"
+                        @confirm="handleDeleteGroupType(item.id)"
+                      >
+                        <span style="color: red">删除用户组类型</span>
+                      </a-popconfirm>
+                    </a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
             </a-list-item>
           </template>
           <template #header>
-            <a-input-search
-              v-model:value="inputUserGroupCategoryName"
-              enter-button
-              placeholder="请输入用户组类别名称"
-              @search="onSearchUserGroupCategory"
-            />
+            <div style="display: flex; gap: 8px;">
+              <a-input-search
+                v-model:value="inputUserGroupCategoryName"
+                enter-button
+                placeholder="请输入用户组类别名称"
+                style="flex: 1"
+                @search="onSearchUserGroupCategory"
+              />
+              <a-button type="primary" @click="addGroupTypeVisible = true">新增</a-button>
+            </div>
           </template>
         </a-list>
       </a-layout-sider>
@@ -151,6 +169,7 @@
     </a-layout>
     <dialog-box
       v-model:visible="addUserGroupNodeVisible"
+      width="600px"
       title="新增用户组"
     >
       <add-and-edit-user-group @callback="handleAddUserGroupTreeNode" />
@@ -164,6 +183,25 @@
         :name="currentUserGroupInfo.name"
         @callback="handleEditUserGroupTreeNode"
       />
+    </dialog-box>
+
+    <dialog-box
+      v-model:visible="addGroupTypeVisible"
+      width="500px"
+      title="新增用户组类型"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="类型标识（英文，用作唯一id）">
+          <a-input v-model:value="newGroupType.id" placeholder="如 PROJECT_GROUP" />
+        </a-form-item>
+        <a-form-item label="类型名称">
+          <a-input v-model:value="newGroupType.name" placeholder="如 项目用户组" />
+        </a-form-item>
+        <div style="text-align: right">
+          <a-button style="margin-right: 10px" @click="addGroupTypeVisible = false">取消</a-button>
+          <a-button type="primary" @click="handleAddGroupType">确定</a-button>
+        </div>
+      </a-form>
     </dialog-box>
 
     <upload-file
@@ -198,7 +236,9 @@ import {
 import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
 import {
   addUserGroupNode,
+  addUserGroupType,
   deleteUserGroupNode,
+  deleteUserGroupType,
   editUserGroupNode,
   getUserGroupById,
   getUserGroupType,
@@ -225,6 +265,8 @@ let inputUserGroupTreeRootNodeName: Ref<string> = ref('')
 
 let addUserGroupNodeVisible: Ref<boolean> = ref(false)
 let editUserGroupNodeVisible: Ref<boolean> = ref(false)
+let addGroupTypeVisible: Ref<boolean> = ref(false)
+let newGroupType: Ref<{ id: string; name: string }> = ref({ id: '', name: '' })
 
 let currentUserGroupInfo: Ref<IdName> = ref({ name: '', id: '' })
 
@@ -250,6 +292,33 @@ let groupPermissionTreeData: Ref<Array<DataNode>> = ref([])
 const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
 
 const onSearchUserGroupCategory = renderUserGroupType
+
+const handleAddGroupType = () => {
+  if (!newGroupType.value.id || !newGroupType.value.name) {
+    return message.error('类型标识和名称不能为空')
+  }
+  addUserGroupType(newGroupType.value).then(() => {
+    addGroupTypeVisible.value = false
+    newGroupType.value = { id: '', name: '' }
+    renderUserGroupType()
+  })
+}
+
+const handleDeleteGroupType = (id: string) => {
+  deleteUserGroupType(id).then(() => {
+    // 删除的是当前选中的类型时，重置选中状态
+    if (currentUserGroupCategoryId.value === id) {
+      currentUserGroupCategoryId.value = ''
+      hasSelectUserGroupCategory.value = false
+      hasSelectUserGroup.value = false
+    }
+    renderUserGroupType()
+  })
+}
+
+const onGroupTypeContextMenuClick = (_item: IdName, _menuKey: string | number) => {
+  // 右键菜单目前仅由 popconfirm 直接处理，预留扩展点
+}
 
 const onContextMenuClick = (data: IdName, menuKey: string | number) => {
   currentUserGroupInfo.value.name = data.name

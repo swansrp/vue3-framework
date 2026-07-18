@@ -2,6 +2,7 @@
   <div class="wrapper">
     <a-layout style="height: 100%;background-color: #fff">
       <a-layout-sider
+        v-if="!hideCategoryList"
         class="user-group-category-list-wrapper"
         theme="light"
         width="280"
@@ -31,7 +32,7 @@
         </a-list>
       </a-layout-sider>
       <a-layout-sider
-        v-if="hasSelectUserGroupCategory"
+        v-if="hasSelectUserGroupCategory && !hideUserGroupTree"
         class="user-group-list-wrapper"
         theme="light"
         width="300"
@@ -276,6 +277,12 @@ import * as _ from 'lodash'
 
 
 import { getUserGroupTree, getUserGroupType } from '@/framework/apis/admin/userGroup'
+import {
+  getGroupBindInfo,
+  getGroupBindList,
+  replaceGroupBind,
+  updateGroupBindInfo
+} from '@/framework/apis/groupBind'
 import { bindReplaceBatchAttachByUrl, getAllBindListByUrl, getBindInfoByUrl, updateBindInfoByUrl } from '@/framework/apis/portal'
 import { GroupBindProperty } from '@/framework/components/common/GroupManage/types'
 import { dictStore, useTreeStore } from '@/framework/store/common'
@@ -293,7 +300,14 @@ const hasSelectUserGroupCategory = ref(false)
 const hasSelectUserGroup = ref(false)
 const currentUserGroupInfo = ref<IdName>({ name: '', id: '' })
 const renderBindUserFlag = ref(0)
-const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => userGroupCategory.value = res.payload)
+const renderUserGroupType = () => getUserGroupType(inputUserGroupCategoryName.value).then(res => {
+  let list: IdName[] = res.payload || []
+  // 指定了用户组类别时，只保留指定的类别
+  if (props.userGroupTypes && props.userGroupTypes.length > 0) {
+    list = list.filter((item: IdName) => props.userGroupTypes!.includes(item.id))
+  }
+  userGroupCategory.value = list
+})
 const renderUserGroupTree = () => getUserGroupTree(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
 const getCurrentUserGroupCategory = (id: string, index: number) => {
   activateDictItem.value = index
@@ -304,6 +318,46 @@ const getCurrentUserGroupCategory = (id: string, index: number) => {
   })
 }
 const onSearchUserGroupCategory = renderUserGroupType
+
+/**
+ * 是否为通用绑定模式（配置了 bindType，走 auth 模块 /web/group/bind）
+ */
+const isGenericMode = (tab: any): boolean => !!tab.bindType
+
+/**
+ * 加载已绑定列表（兼容新老模式）
+ * - 老模式（baseUrl）：后端已返回带 label 的字典项
+ * - 新模式（bindType）：后端只返回 value + extraData，label 用本地 bindTab.data 字典匹配补全
+ */
+const fetchBindList = (tab: any, groupId: any): Promise<any[]> => {
+  if (isGenericMode(tab)) {
+    return getGroupBindList(groupId, tab.bindType!, true, true).then((resp: any) => {
+      const list = resp.payload || []
+      // 用本地已加载的字典数据补全 label
+      const dictData = tab.data || []
+      list.forEach((item: any) => {
+        const dictItem = dictData.find((d: any) => d.value === item.value)
+        if (dictItem) {
+          item.label = dictItem.label
+        }
+      })
+      return list
+    })
+  }
+  return getAllBindListByUrl(tab.baseUrl!, groupId).then((resp: any) => resp.payload || [])
+}
+
+/**
+ * 获取单条绑定信息（兼容新老模式）
+ * 新模式下 list 接口已返回 extraData，但仍提供此方法保持调用一致性
+ */
+const fetchBindInfo = (tab: any, groupId: any, attachId: any): Promise<any> => {
+  if (isGenericMode(tab)) {
+    return getGroupBindInfo(groupId, attachId, tab.bindType!, false, false).then((resp: any) => resp.payload)
+  }
+  return getBindInfoByUrl(tab.baseUrl!, groupId, attachId).then((resp: any) => resp.payload)
+}
+
 const selectUserGroup = (_: Key[], info: any) => {
   const { id, name } = info.node
   currentUserGroupInfo.value = { id, name }
@@ -312,34 +366,35 @@ const selectUserGroup = (_: Key[], info: any) => {
     for (let bindTab of bindTabs) {
       // 自定义插槽模式跳过数据加载，由父组件自行管理
       if (slots['tab_' + bindTab.tabKey]) continue
-      getAllBindListByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
-        bindTab.bindData = resp.payload || []
+      fetchBindList(bindTab, currentUserGroupInfo.value.id).then((bindData: any[]) => {
+        bindTab.bindData = bindData
         bindTab.checked = []
         
         // 如果支持绑定信息，获取每个绑定项的详细信息
         if (bindTab.supportBindInfo && bindTab.bindData.length > 0) {
-          bindTab.bindInfoMap = new Map()
+          // 取局部变量捕获引用，供异步闭包使用（避免 TS “可能为 undefined”报错）
+          const bindInfoMap = bindTab.bindInfoMap = new Map()
           
           // 获取每个已绑定项的绑定信息
           const promises = bindTab.bindData.map((item: any) => {
             const attachId = item[bindTab.bindDataValueField]
-            return getBindInfoByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id, attachId)
-              .then((bindInfoResp: any) => {
-                if (bindInfoResp && bindInfoResp.payload) {
-                  bindTab.bindInfoMap.set(attachId, bindInfoResp.payload)
+            return fetchBindInfo(bindTab, currentUserGroupInfo.value.id, attachId)
+              .then((bindInfo: any) => {
+                if (bindInfo) {
+                  bindInfoMap.set(attachId, bindInfo)
                   // 合并绑定信息到显示数据中
-                  Object.assign(item, bindInfoResp.payload)
+                  Object.assign(item, bindInfo)
                 } else {
                   // 如果没有绑定信息，使用父组件配置的默认值
                   const defaultInfo = bindTab.defaultBindInfo || {}
-                  bindTab.bindInfoMap.set(attachId, defaultInfo)
+                  bindInfoMap.set(attachId, defaultInfo)
                   Object.assign(item, defaultInfo)
                 }
               })
               .catch(() => {
                 // 获取失败时使用父组件配置的默认值
                 const defaultInfo = bindTab.defaultBindInfo || {}
-                bindTab.bindInfoMap.set(attachId, defaultInfo)
+                bindInfoMap.set(attachId, defaultInfo)
                 Object.assign(item, defaultInfo)
               })
           })
@@ -348,13 +403,13 @@ const selectUserGroup = (_: Key[], info: any) => {
             bindTab.bindData.forEach((item: any) => {
               bindTab.checked?.push(item[bindTab.bindDataValueField])
             })
-            bindTab.key = !bindTab.key
+            bindTab.key = (bindTab.key ?? 0) + 1
           })
         } else {
           bindTab.bindData.forEach((item: any) => {
             bindTab.checked?.push(item[bindTab.bindDataValueField])
           })
-          bindTab.key = !bindTab.key
+          bindTab.key = (bindTab.key ?? 0) + 1
         }
       }).catch(() => {
         message.error('加载绑定数据失败')
@@ -362,6 +417,13 @@ const selectUserGroup = (_: Key[], info: any) => {
     }
   }
   renderBindUserFlag.value += 1
+}
+/**
+ * 直接加载指定用户组的绑定数据。
+ * 用于外部通过 currentUserGroup 指定用户组时复用选中逻辑，避免重复实现。
+ */
+const loadUserGroupData = (userGroup: IdName) => {
+  selectUserGroup([], { node: userGroup } as any)
 }
 const currentBindTab = computed(() => {
   if (!activeTabKey.value || activeTabKey.value === USER) {
@@ -391,11 +453,15 @@ const getAllTreeKeys = (nodes: any[]): any[] => {
 const handleChecked = (checkedValue: any, tab: any) => {
   // a-tree 的 @check 返回 { checked, halfChecked }，a-checkbox-group 返回数组
   const values = Array.isArray(checkedValue) ? checkedValue : checkedValue?.checked || []
-  bindReplaceBatchAttachByUrl(tab.baseUrl, currentUserGroupInfo.value.id, values)
+  // 兼容新老模式：通用模式走 replaceGroupBind，老模式走 bindReplaceBatchAttachByUrl
+  const replacePromise = isGenericMode(tab)
+    ? replaceGroupBind(currentUserGroupInfo.value.id, tab.bindType!, values)
+    : bindReplaceBatchAttachByUrl(tab.baseUrl!, currentUserGroupInfo.value.id, values)
+  replacePromise
     .then(() => {
-      getAllBindListByUrl(tab.baseUrl, currentUserGroupInfo.value.id).then((resp: any) => {
-        tab.bindData = resp.payload || []
-        tab.key = !tab.key
+      fetchBindList(tab, currentUserGroupInfo.value.id).then((bindData: any[]) => {
+        tab.bindData = bindData
+        tab.key = (tab.key ?? 0) + 1
       })
     })
     .catch(() => {
@@ -442,11 +508,35 @@ const activeTabKey = ref<string>(USER)
 const props = withDefaults(
     defineProps<{
       bindTabList?: Array<GroupBindProperty>
+      /** 指定要显示的用户组类别 id 列表
+       * - 不传/空数组：显示所有类别（默认行为）
+       * - 传入 1 个：自动选中该类别，并隐藏左侧类别列表
+       * - 传入多个：左侧类别列表只显示这些类别供选择
+       */
+      userGroupTypes?: string[]
+      /** 直接指定的用户组（优先级高于 userGroupTypes）
+       * - 传入后隐藏左侧类别列表与中间用户组树，直接显示右侧内容
+       */
+      currentUserGroup?: IdName
     }>(),
     {
-      bindTabList: undefined
+      bindTabList: undefined,
+      userGroupTypes: undefined,
+      currentUserGroup: undefined
     }
 )
+// 是否隐藏左侧用户组类别列表：
+// 1. 直接指定了用户组(currentUserGroup) 时隐藏
+// 2. 仅指定了 1 个用户组类别(userGroupTypes.length === 1) 时隐藏
+const hideCategoryList = computed(() => {
+  if (props.currentUserGroup && props.currentUserGroup.id) return true
+  if (props.userGroupTypes && props.userGroupTypes.length === 1) return true
+  return false
+})
+// 是否隐藏中间用户组树：直接指定了用户组时隐藏
+const hideUserGroupTree = computed(() => {
+  return !!(props.currentUserGroup && props.currentUserGroup.id)
+})
 const dict = dictStore()
 const treeDict = useTreeStore()
 const bindTabs = reactive(props.bindTabList || [])
@@ -462,12 +552,16 @@ const updateBindInfoData = (tabKey: string, attachId: any, data: any) => {
     return Promise.reject('Tab not found or does not support bind info')
   }
   
-  return updateBindInfoByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id, attachId, data)
+  // 兼容新老模式：通用模式走 updateGroupBindInfo，老模式走 updateBindInfoByUrl
+  const updatePromise = isGenericMode(bindTab)
+    ? updateGroupBindInfo(currentUserGroupInfo.value.id, attachId, bindTab.bindType!, data)
+    : updateBindInfoByUrl(bindTab.baseUrl!, currentUserGroupInfo.value.id, attachId, data)
+  return updatePromise
     .then((resp: any) => {
       // 重新获取绑定信息以确保数据同步
-      return getBindInfoByUrl(bindTab.baseUrl, currentUserGroupInfo.value.id, attachId)
-        .then((bindInfoResp: any) => {
-          const updatedInfo = bindInfoResp?.payload || data
+      return fetchBindInfo(bindTab, currentUserGroupInfo.value.id, attachId)
+        .then((updatedInfo: any) => {
+          updatedInfo = updatedInfo || data
           
           // 更新本地缓存的绑定信息
           if (bindTab.bindInfoMap) {
@@ -481,7 +575,7 @@ const updateBindInfoData = (tabKey: string, attachId: any, data: any) => {
           }
           
           // 刷新视图
-          bindTab.key = !bindTab.key
+          bindTab.key = (bindTab.key ?? 0) + 1
           
           return resp
         })
@@ -490,13 +584,13 @@ const updateBindInfoData = (tabKey: string, attachId: any, data: any) => {
 
 provide('updateBindInfo', updateBindInfoData)
 
-onMounted(() => {
-  renderUserGroupType()
+// 初始化各绑定 tab 的字典数据（与用户组选择无关）
+const initBindTabsDict = () => {
   if (isNotEmpty(bindTabs)) {
     for (let bindTab of bindTabs) {
       // 自定义插槽模式跳过初始化，由父组件自行管理
       if (slots['tab_' + bindTab.tabKey]) continue
-      bindTab.key = true
+      bindTab.key = 0
       bindTab.checked = []
       if (isEmpty(bindTab.data)) {
         if (bindTab.dict) {
@@ -509,7 +603,36 @@ onMounted(() => {
       }
     }
   }
+}
+// 当仅指定一个类别时自动选中（用于隐藏左侧列表后自动加载数据）
+const autoSelectIfSingleType = () => {
+  if (props.userGroupTypes && props.userGroupTypes.length === 1 && userGroupCategory.value.length > 0) {
+    const target = userGroupCategory.value[0]
+    getCurrentUserGroupCategory(target.id, 0)
+  }
+}
+onMounted(() => {
+  initBindTabsDict()
+  // 直接指定了用户组：跳过类别列表与树选择，直接加载该用户组的数据
+  if (props.currentUserGroup && props.currentUserGroup.id) {
+    loadUserGroupData(props.currentUserGroup)
+    return
+  }
+  // 加载用户组类别，若仅指定一个类别则自动选中
+  renderUserGroupType().then(autoSelectIfSingleType)
 })
+// 支持外部动态切换 currentUserGroup
+watch(() => props.currentUserGroup, (newVal) => {
+  if (newVal && newVal.id) {
+    loadUserGroupData(newVal)
+  }
+})
+// 支持外部动态切换 userGroupTypes
+watch(() => props.userGroupTypes, () => {
+  // 已直接指定用户组时，忽略类别变化
+  if (props.currentUserGroup && props.currentUserGroup.id) return
+  renderUserGroupType().then(autoSelectIfSingleType)
+}, { deep: true })
 watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL))
 </script>
 
