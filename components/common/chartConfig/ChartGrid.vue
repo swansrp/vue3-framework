@@ -20,7 +20,7 @@
       }"
     >
       <div
-        v-for="indicator in localIndicators"
+        v-for="indicator in displayIndicators"
         :key="`${indicator.id}-${chartRefreshKey}`"
         class="chart-item"
         :class="{
@@ -50,11 +50,13 @@
           :can-edit="getIndicatorEditPermission(indicator)"
           :can-delete="getIndicatorDeletePermission(indicator)"
           :can-resize="getIndicatorResizePermission(indicator)"
+          :can-drag="props.canDrag"
           :portal-config="props.portalConfig"
           @edit="$emit('edit-indicator', indicator)"
           @delete="$emit('delete-indicator', [indicator.indicatorId || indicator.id])"
           @resize="handleResize"
           @resize-preview="onResizePreview"
+          @move-card="handleMoveCard"
         />
       </div>
 
@@ -77,7 +79,7 @@
 
 <script lang="ts" setup>
 import { BarChartOutlined } from '@ant-design/icons-vue'
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import ChartCard from './ChartCard.vue'
 import type { DashboardItem } from './types'
@@ -160,6 +162,20 @@ const getIndicatorResizePermission = (indicator: DashboardItem): boolean => {
   }
 }
 
+// 拖拽状态(必须在下方 immediate watch 之前声明,否则回调里引用 isDragging 会拿到 undefined)
+const isDragging = ref(false)
+const draggingIndicator = ref<DashboardItem | null>(null)
+const dragPosition = ref<{ col: number; row: number } | null>(null)
+const isDragOverlapping = ref(false) // 兼容模板引用,新逻辑下不再用于阻断
+const gridContainerRef = ref<HTMLDivElement | null>(null)
+const gridUnitWidth = ref(0)
+const gridUnitHeight = ref(120)
+let resizeObserver: ResizeObserver | null = null
+
+// 插入式拖拽:实时重排的预览数据(已带新坐标),松开鼠标时一次性提交
+const previewIndicators = ref<DashboardItem[]>([])
+let dragRafId: number | null = null
+
 // 本地预览用数据
 const localIndicators = ref<DashboardItem[]>([])
 watch(
@@ -170,113 +186,253 @@ watch(
   { immediate: true, deep: true }
 )
 
-// 拖拽状态
-const isDragging = ref(false)
-const draggingIndicator = ref<DashboardItem | null>(null)
-const dragPosition = ref<{ col: number; row: number } | null>(null)
-const isDragOverlapping = ref(false) // 新增：检测是否重叠
-const gridContainerRef = ref<HTMLDivElement | null>(null)
-const gridUnitWidth = ref(0)
-const gridUnitHeight = ref(120)
-let resizeObserver: ResizeObserver | null = null
+// 拖拽中渲染预览数据,非拖拽渲染本地数据
+const displayIndicators = computed(() =>
+  isDragging.value && previewIndicators.value.length > 0
+    ? previewIndicators.value
+    : localIndicators.value
+)
 
-// 检查拖拽位置是否与其他卡片重叠
-const checkDragOverlap = (
-  position: { col: number; row: number },
-  indicator: DashboardItem
-) => {
-  if (!indicator.xGrid || !indicator.yGrid) return false
+// ===== 网格重排工具函数 =====
 
-  const dragLeft = position.col
-  const dragRight = position.col + indicator.xGrid - 1
-  const dragTop = position.row
-  const dragBottom = position.row + indicator.yGrid - 1
+// 读取卡片矩形(1-based, 闭区间)
+const getItemRect = (item: DashboardItem) => ({
+  col: item.xPosition || 1,
+  row: item.yPosition || 1,
+  w: Math.min(item.xGrid || 1, props.gridColumns),
+  h: item.yGrid || 1
+})
 
-  // 检查是否与任何其他卡片重叠
-  for (const item of props.indicators) {
-    // 跳过正在拖拽的卡片本身
-    if (item.id === indicator.id) continue
+// 阅读顺序排序:先按行(上→下),同行按列(左→右)
+const sortByReadingOrder = (a: DashboardItem, b: DashboardItem) => {
+  const ay = a.yPosition || 1
+  const by = b.yPosition || 1
+  if (ay !== by) return ay - by
+  return (a.xPosition || 1) - (b.xPosition || 1)
+}
 
-    if (!item.xPosition || !item.yPosition || !item.xGrid || !item.yGrid) continue
+// 紧凑打包:按给定顺序从左上角 first-fit 分配坐标,返回带新坐标的新数组
+const compactLayout = (items: DashboardItem[]): DashboardItem[] => {
+  const gridColumns = props.gridColumns
+  const occupied = new Set<string>()
+  const result: DashboardItem[] = []
 
-    const itemLeft = item.xPosition
-    const itemRight = item.xPosition + item.xGrid - 1
-    const itemTop = item.yPosition
-    const itemBottom = item.yPosition + item.yGrid - 1
+  const canPlace = (x: number, y: number, w: number, h: number) => {
+    if (x < 1 || y < 1 || x + w - 1 > gridColumns) return false
+    for (let cx = x; cx < x + w; cx++) {
+      for (let cy = y; cy < y + h; cy++) {
+        if (occupied.has(`${cx},${cy}`)) return false
+      }
+    }
+    return true
+  }
 
-    // 检查是否重叠
-    if (
-      dragLeft <= itemRight &&
-      dragRight >= itemLeft &&
-      dragTop <= itemBottom &&
-      dragBottom >= itemTop
-    ) {
-      return true
+  // 搜索上界:当前最大行 + 所有用的高度之和(足够宽松),并设最小值
+  const baseMaxY = items.reduce(
+    (m, it) => Math.max(m, (it.yPosition || 1) + (it.yGrid || 1)),
+    1
+  )
+  const sumH = items.reduce((m, it) => m + (it.yGrid || 1), 0)
+  const maxY = Math.max(50, baseMaxY + sumH)
+
+  for (const item of items) {
+    const w = Math.min(item.xGrid || 1, gridColumns)
+    const h = item.yGrid || 1
+    let placed = false
+    for (let y = 1; y <= maxY && !placed; y++) {
+      for (let x = 1; x <= gridColumns - w + 1; x++) {
+        if (canPlace(x, y, w, h)) {
+          result.push({ ...item, xPosition: x, yPosition: y, xGrid: w, yGrid: h })
+          for (let cx = x; cx < x + w; cx++) {
+            for (let cy = y; cy < y + h; cy++) occupied.add(`${cx},${cy}`)
+          }
+          placed = true
+          break
+        }
+      }
+    }
+    if (!placed) {
+      const fy = result.reduce(
+        (m, it) => Math.max(m, (it.yPosition || 1) + (it.yGrid || 1)),
+        1
+      )
+      result.push({ ...item, xPosition: 1, yPosition: fy, xGrid: w, yGrid: h })
+    }
+  }
+  return result
+}
+
+// 中心线插入重排(纯函数,无状态):基于鼠标位置与其他卡片(原始位置)的中心线比较,确定插入点
+// 同一鼠标位置永远产出同一结果,从根本上杜绝“命中→插入→位移→不再命中→追加”的反馈环振荡
+const reorderByInsert = (
+  snapshot: DashboardItem[],
+  dragItem: DashboardItem,
+  hitCol: number,
+  hitRow: number
+): DashboardItem[] => {
+  // 基于冻结快照取其他卡片(位置稳定),按阅读顺序排序
+  const others = snapshot.filter(it => it.id !== dragItem.id).sort(sortByReadingOrder)
+
+  // 遍历其他卡片,找到第一个中心线在鼠标下方的卡片 → 插到它前面
+  // 若所有卡片中心线都在鼠标上方 → 追加到末尾
+  let insertAt = others.length
+  for (let i = 0; i < others.length; i++) {
+    const r = getItemRect(others[i])
+    const centerY = r.row + (r.h - 1) / 2
+    if (hitRow <= centerY) {
+      insertAt = i
+      break
     }
   }
 
-  return false
+  others.splice(insertAt, 0, dragItem)
+  return compactLayout(others)
 }
 
-// 开始拖拽
+// 置顶/置底重排
+const reorderByMove = (
+  items: DashboardItem[],
+  dragItem: DashboardItem,
+  position: 'top' | 'bottom'
+): DashboardItem[] => {
+  const others = items.filter(it => it.id !== dragItem.id).sort(sortByReadingOrder)
+  const ordered = position === 'top' ? [dragItem, ...others] : [...others, dragItem]
+  return compactLayout(ordered)
+}
+
+// 保持原始数组顺序输出(仅坐标变化),与父组件按索引比较的逻辑兼容,且渲染更稳定
+const preserveOrder = (rearranged: DashboardItem[]): DashboardItem[] => {
+  return props.indicators
+    .map(orig => rearranged.find(it => it.id === orig.id))
+    .filter((x): x is DashboardItem => !!x)
+}
+
+// 比较两组卡片的坐标/尺寸是否完全一致(用于去重,避免无变化时仍赋新数组触发重渲染)
+const layoutsEqual = (a: DashboardItem[], b: DashboardItem[]): boolean => {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i]
+    const y = b[i]
+    if (x.id !== y.id) return false
+    if ((x.xPosition || 1) !== (y.xPosition || 1)) return false
+    if ((x.yPosition || 1) !== (y.yPosition || 1)) return false
+    if ((x.xGrid || 1) !== (y.xGrid || 1)) return false
+    if ((x.yGrid || 1) !== (y.yGrid || 1)) return false
+  }
+  return true
+}
+
+// 视口自动滚动(拖到顶/底边缘时滚动页面,解决"拖不到底")
+const autoScrollIfNeeded = (clientY: number) => {
+  const margin = 60
+  const vh = window.innerHeight
+  let dy = 0
+  if (clientY < margin) dy = -Math.max(6, (margin - clientY) * 0.4)
+  else if (clientY > vh - margin) dy = Math.max(6, (clientY - (vh - margin)) * 0.4)
+  if (dy !== 0) window.scrollBy({ top: dy })
+}
+
+// 开始拖拽(插入式排序:其他卡片自动腾位)
+// 拖拽开始时冻结一份快照,整个拖拽过程中命中检测都基于这份稳定快照,避免反馈环振荡
+let dragSnapshot: DashboardItem[] = []
 const startDrag = (e: MouseEvent, indicator: DashboardItem) => {
-  // 如果禁用拖动，直接返回
   if (!props.canDrag) return
 
   // 只有在点击卡片标题栏时才允许拖拽
   const target = e.target as HTMLElement
   if (!target.closest('.chart-card-header')) return
 
+  e.preventDefault()
   isDragging.value = true
   draggingIndicator.value = indicator
+  // 冻结快照:整个拖拽过程中以此作为命中检测的稳定参照
+  dragSnapshot = props.indicators.map(v => ({ ...v }))
+  // 预览初始化为当前布局副本
+  previewIndicators.value = props.indicators.map(v => ({ ...v }))
 
-  const handleMouseMove = (moveEvent: MouseEvent) => {
-    if (!isDragging.value || !gridContainerRef.value) return
-
-    const containerRect = gridContainerRef.value.getBoundingClientRect()
-    const x = moveEvent.clientX - containerRect.left
-    const y = moveEvent.clientY - containerRect.top
-
-    // 计算网格位置
-    const colWidth = containerRect.width / props.gridColumns
+  const computeGridPos = (clientX: number, clientY: number) => {
+    if (!gridContainerRef.value) return null
+    const rect = gridContainerRef.value.getBoundingClientRect()
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+    const colWidth = rect.width / props.gridColumns
     const rowHeight = gridUnitHeight.value || 120
+    const col = Math.max(1, Math.min(Math.floor(x / colWidth) + 1, props.gridColumns))
+    const row = Math.max(1, Math.floor(y / rowHeight) + 1)
+    return { col, row }
+  }
 
-    const col = Math.floor(x / colWidth) + 1
-    const row = Math.floor(y / rowHeight) + 1
-
-    // 确保位置在有效范围内
-    const validCol = Math.max(1, Math.min(col, props.gridColumns))
-    const validRow = Math.max(1, row)
-
-    // 更新拖拽位置
-    const newPosition = { col: validCol, row: validRow }
-    dragPosition.value = newPosition
-
-    // 检查是否重叠
-    if (draggingIndicator.value) {
-      isDragOverlapping.value = checkDragOverlap(newPosition, draggingIndicator.value)
+  // 用 requestAnimationFrame 节流,避免每次 mousemove 都重排
+  let pending: { col: number; row: number } | null = null
+  const flush = () => {
+    dragRafId = null
+    if (!pending || !draggingIndicator.value) return
+    const { col, row } = pending
+    // 中心线插入算法基于冻结快照计算新布局(纯函数,无状态)
+    const rearranged = preserveOrder(reorderByInsert(
+      dragSnapshot,
+      draggingIndicator.value,
+      col,
+      row
+    ))
+    const changed = !layoutsEqual(previewIndicators.value, rearranged)
+    // 仅在坐标真正变化时才更新,避免无意义重渲染
+    if (changed) {
+      previewIndicators.value = rearranged
+    }
+    // 蓝色虚线框跟随拖动卡片的新位置(去重赋值)
+    const me = rearranged.find(it => it.id === draggingIndicator.value!.id)
+    if (me) {
+      const np = { col: me.xPosition || 1, row: me.yPosition || 1 }
+      if (!dragPosition.value || dragPosition.value.col !== np.col || dragPosition.value.row !== np.row) {
+        dragPosition.value = np
+      }
     }
   }
 
-  const handleMouseUp = () => {
-    if (isDragging.value && dragPosition.value && draggingIndicator.value) {
-      // 只有在没有重叠时才处理拖拽结束逻辑
-      if (!isDragOverlapping.value) {
-        reorderIndicators(draggingIndicator.value.id, dragPosition.value)
-      }
-    }
+  const schedule = (pos: { col: number; row: number }) => {
+    pending = pos
+    if (dragRafId === null) dragRafId = requestAnimationFrame(flush)
+  }
 
-    isDragging.value = false
-    draggingIndicator.value = null
-    dragPosition.value = null
-    isDragOverlapping.value = false // 重置重叠状态
+  const handleMouseMove = (moveEvent: MouseEvent) => {
+    if (!isDragging.value) return
+    autoScrollIfNeeded(moveEvent.clientY)
+    const pos = computeGridPos(moveEvent.clientX, moveEvent.clientY)
+    if (pos) schedule(pos)
+  }
+
+  const handleMouseUp = () => {
+    if (dragRafId !== null) {
+      cancelAnimationFrame(dragRafId)
+      dragRafId = null
+    }
+    flush() // 确保最后一次重排生效
 
     document.removeEventListener('mousemove', handleMouseMove)
     document.removeEventListener('mouseup', handleMouseUp)
+
+    if (isDragging.value && previewIndicators.value.length > 0) {
+      emit('reorder-indicators', previewIndicators.value)
+    }
+    isDragging.value = false
+    draggingIndicator.value = null
+    dragPosition.value = null
+    isDragOverlapping.value = false
+    previewIndicators.value = []
   }
 
   document.addEventListener('mousemove', handleMouseMove)
   document.addEventListener('mouseup', handleMouseUp)
+}
+
+// 处理"移到最前/移到最后"
+const handleMoveCard = (id: string, position: 'top' | 'bottom') => {
+  if (!props.canDrag) return
+  const target = props.indicators.find(it => it.id === id)
+  if (!target) return
+  const rearranged = reorderByMove(props.indicators, target, position)
+  emit('reorder-indicators', preserveOrder(rearranged))
 }
 
 // 检查两个组件是否重叠
@@ -416,25 +572,6 @@ const recalculateLayout = (
   }
 
   return result
-}
-
-// 重新排序指标
-const reorderIndicators = (
-  indicatorId: string,
-  position: { col: number; row: number }
-) => {
-  // 创建当前指标的副本
-  const newOrder = [...props.indicators]
-  const movedIndex = newOrder.findIndex((c) => c.id === indicatorId)
-
-  if (movedIndex > -1) {
-    // 更新被移动元素的位置信息
-    newOrder[movedIndex].xPosition = position.col
-    newOrder[movedIndex].yPosition = position.row
-
-    // 发出重新排序事件，但不改变数组顺序
-    emit('reorder-indicators', newOrder)
-  }
 }
 
 // 处理调整大小
@@ -601,7 +738,8 @@ defineExpose({
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       border: 1px solid #e8e8e8;
       overflow: hidden;
-      transition: all 0.3s ease;
+      // 只过渡视觉属性,不要 all(all 会拖慢 placeholder 的 opacity/transform 变化,让拖拽显得迟钝)
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
 
       &:hover {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -615,9 +753,11 @@ defineExpose({
       }
     }
 
+    // 被拖动的卡片:立即响应,不要任何过渡(否则会“飘”到新位置,与鼠标错位显得迟钝)
     .chart-item-placeholder {
-      opacity: 0.5;
-      transform: scale(0.95);
+      opacity: 0.4;
+      transform: scale(0.96);
+      transition: none;
     }
 
     // 拖拽占位符

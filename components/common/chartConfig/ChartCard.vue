@@ -1,159 +1,244 @@
 <template>
-  <div
-    :class="{ 'chart-card-loading': loading }"
-    class="chart-card"
-    @mousedown="handleMouseDown"
+  <a-dropdown
+    :trigger="['contextmenu']"
+    placement="bottomLeft"
   >
-    <!-- 卡片头部 -->
-    <div class="chart-card-header">
-      <div class="header-title">
-        <h3>{{ indicator.title || '未命名指标' }}</h3>
-        <span
-          v-if="indicator.subTitle"
-          class="subtitle"
-        >{{ indicator.subTitle }}</span>
-      </div>
-      <div class="header-actions">
-        <a-tooltip title="导出Excel">
-          <DownloadOutlined
-            :class="{ 'action-icon-disabled': chartLoading }"
-            @click="handleExportExcel"
-          />
-        </a-tooltip>
-        <template v-if="canEdit">
-          <a-tooltip title="编辑">
-            <EditOutlined @click="$emit('edit')" />
+    <div
+      :class="{ 'chart-card-loading': loading }"
+      class="chart-card"
+      @mousedown="handleMouseDown"
+    >
+      <!-- 卡片头部 -->
+      <div class="chart-card-header">
+        <div class="header-title">
+          <h3>{{ indicator.title || '未命名指标' }}</h3>
+          <span
+            v-if="indicator.subTitle"
+            class="subtitle"
+          >{{ indicator.subTitle }}</span>
+        </div>
+        <div class="header-actions">
+          <a-tooltip title="导出Excel">
+            <DownloadOutlined
+              :class="{ 'action-icon-disabled': chartLoading }"
+              @click="handleExportExcel"
+            />
           </a-tooltip>
+          <!-- 隐藏为 0 的数据 -->
+          <a-tooltip :title="hideZeroData ? '不隐藏为0的数据' : '隐藏为0的数据'">
+            <FilterOutlined
+              :class="['action-icon', { 'action-icon-active': hideZeroData }]"
+              @click="hideZeroData = !hideZeroData"
+            />
+          </a-tooltip>
+          <!-- 按数值升/降序 -->
           <a-dropdown :trigger="['click']">
-            <a-tooltip title="更多操作">
-              <EllipsisOutlined />
+            <a-tooltip :title="sortOrder === 'none' ? '默认顺序' : (sortOrder === 'asc' ? '已升序（点击切换）' : '已降序（点击切换）')">
+              <SortAscendingOutlined
+                v-if="sortOrder !== 'desc'"
+                :class="['action-icon', { 'action-icon-active': sortOrder !== 'none' }]"
+              />
+              <SortDescendingOutlined
+                v-else
+                :class="['action-icon', { 'action-icon-active': true }]"
+              />
             </a-tooltip>
             <template #overlay>
-              <a-menu>
-                <a-menu-item
-                  key="refresh"
-                  @click="refreshChart"
-                >
-                  <ReloadOutlined />
-                  刷新
-                </a-menu-item>
-                <!-- <a-menu-item key="rename" @click="renameChart">
-                  <EditOutlined />
-                  重命名
-                </a-menu-item> -->
-                <a-menu-divider v-if="canDelete" />
-                <a-menu-item
-                  v-if="canDelete"
-                  key="delete"
-                  @click="$emit('delete')"
-                >
-                  <DeleteOutlined />
-                  删除
-                </a-menu-item>
+              <a-menu @click="(info: any) => handleSortMenuClick(String(info.key))">
+                <a-menu-item key="none">默认顺序</a-menu-item>
+                <a-menu-item key="asc">升序（从小到大）</a-menu-item>
+                <a-menu-item key="desc">降序（从大到小）</a-menu-item>
               </a-menu>
             </template>
           </a-dropdown>
-        </template>
-      </div>
-    </div>
-
-    <!-- 卡片内容 -->
-    <div class="chart-card-content">
-      <div
-        v-if="loading"
-        class="chart-loading"
-      >
-        <a-spin />
-      </div>
-      <div
-        v-else-if="hasValidConfig && safeChartData.length > 0"
-        class="chart-container"
-      >
-        <!-- 直接使用 UniversalChart 组件渲染图表 -->
-        <UniversalChart
-          v-if="isInitialized && !isDestroyed"
-          ref="chartRef"
-          :data="safeChartData"
-          :data-metrics="indicatorConfig?.dataMetrics || []"
-          :categories="chartCategories || []"
-          :chart-type="chartType || 'bar'"
-          :dimension-value-map="dimensionValueMap || { first: {}, second: {} }"
-          :loading="chartLoading"
-          :title="''"
-          :subtitle="''"
-          height="100%"
-          @click="handleChartClick"
-        />
-      </div>
-      <div
-        v-else
-        class="chart-empty"
-      >
-        <BarChartOutlined class="empty-icon" />
-        <p>{{ hasValidConfig ? '暂无数据' : '未配置图表' }}</p>
-      </div>
-
-      <!-- 描述信息 -->
-      <div
-        v-if="indicator.description"
-        ref="descriptionRef"
-        class="chart-description"
-      >
-        <InfoCircleOutlined class="description-icon" />
-        <Marquee
-          v-if="descriptionWidth > 0"
-          :content="indicator.description"
-          :width="descriptionWidth"
-          :duration="15"
-          :delay="2"
-          :font-size="1.2"
-          class="description-text"
-        />
-        <span
-          v-else
-          class="description-text-static"
-        >{{ indicator.description }}</span>
-      </div>
-
-      <!-- 蓝色虚线框 - 拖拽放置区域 -->
-      <div
-        :class="{ visible: showDropZone }"
-        class="drop-zone"
-        @dragover.prevent="handleDragOver"
-        @drop.prevent="handleDrop"
-      >
-        <div class="drop-zone-content">
-          <div class="drop-zone-indicator"></div>
-          <!--          <div class="drop-zone-text">拖拽到此处放置</div>-->
+          <template v-if="canEdit">
+            <a-tooltip title="编辑">
+              <EditOutlined @click="$emit('edit')" />
+            </a-tooltip>
+            <a-dropdown :trigger="['click']">
+              <a-tooltip title="更多操作">
+                <EllipsisOutlined />
+              </a-tooltip>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item
+                    key="refresh"
+                    @click="refreshChart"
+                  >
+                    <ReloadOutlined />
+                    刷新
+                  </a-menu-item>
+                  <a-menu-item
+                    v-if="canDrag"
+                    key="moveTop"
+                    @click="moveCard('top')"
+                  >
+                    <VerticalAlignTopOutlined />
+                    移到最前
+                  </a-menu-item>
+                  <a-menu-item
+                    v-if="canDrag"
+                    key="moveBottom"
+                    @click="moveCard('bottom')"
+                  >
+                    <VerticalAlignBottomOutlined />
+                    移到最后
+                  </a-menu-item>
+                  <!-- <a-menu-item key="rename" @click="renameChart">
+                  <EditOutlined />
+                  重命名
+                </a-menu-item> -->
+                  <a-menu-divider v-if="canDelete" />
+                  <a-menu-item
+                    v-if="canDelete"
+                    key="delete"
+                    @click="$emit('delete')"
+                  >
+                    <DeleteOutlined />
+                    删除
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
+          </template>
         </div>
       </div>
+
+      <!-- 卡片内容 -->
+      <div class="chart-card-content">
+        <div
+          v-if="loading"
+          class="chart-loading"
+        >
+          <a-spin />
+        </div>
+        <div
+          v-else-if="hasValidConfig && safeChartData.length > 0"
+          class="chart-container"
+        >
+          <!-- 直接使用 UniversalChart 组件渲染图表 -->
+          <UniversalChart
+            v-if="isInitialized && !isDestroyed"
+            ref="chartRef"
+            :data="safeChartData"
+            :data-metrics="indicatorConfig?.dataMetrics || []"
+            :categories="chartCategories || []"
+            :chart-type="chartType || 'bar'"
+            :dimension-value-map="dimensionValueMap || { first: {}, second: {} }"
+            :loading="chartLoading"
+            :title="''"
+            :subtitle="''"
+            height="100%"
+            @click="handleChartClick"
+          />
+        </div>
+        <div
+          v-else
+          class="chart-empty"
+        >
+          <BarChartOutlined class="empty-icon" />
+          <p>{{ hasValidConfig ? '暂无数据' : '未配置图表' }}</p>
+        </div>
+
+        <!-- 描述信息 -->
+        <div
+          v-if="indicator.description"
+          ref="descriptionRef"
+          class="chart-description"
+        >
+          <InfoCircleOutlined class="description-icon" />
+          <Marquee
+            v-if="descriptionWidth > 0"
+            :content="indicator.description"
+            :width="descriptionWidth"
+            :duration="15"
+            :delay="2"
+            :font-size="1.2"
+            class="description-text"
+          />
+          <span
+            v-else
+            class="description-text-static"
+          >{{ indicator.description }}</span>
+        </div>
+
+        <!-- 蓝色虚线框 - 拖拽放置区域 -->
+        <div
+          :class="{ visible: showDropZone }"
+          class="drop-zone"
+          @dragover.prevent="handleDragOver"
+          @drop.prevent="handleDrop"
+        >
+          <div class="drop-zone-content">
+            <div class="drop-zone-indicator"></div>
+          <!--          <div class="drop-zone-text">拖拽到此处放置</div>-->
+          </div>
+        </div>
+      </div>
+
+      <!-- 调整大小的拖拽手柄 -->
+      <div
+        v-if="canResize"
+        class="resize-handle right"
+        @mousedown="startResize('right', $event)"
+      ></div>
+      <div
+        v-if="canResize"
+        class="resize-handle bottom"
+        @mousedown="startResize('bottom', $event)"
+      ></div>
+      <div
+        v-if="canResize"
+        class="resize-handle corner"
+        @mousedown="startResize('corner', $event)"
+      ></div>
+
+      <!-- 图表详情弹窗 -->
+      <DashboardDetail
+        v-model:open="detailModalVisible"
+        :selected-bar-info="selectedBarInfo"
+        :table-id="tableId"
+        @close="closeDetailModal"
+      />
     </div>
-
-    <!-- 调整大小的拖拽手柄 -->
-    <div
-      v-if="canResize"
-      class="resize-handle right"
-      @mousedown="startResize('right', $event)"
-    ></div>
-    <div
-      v-if="canResize"
-      class="resize-handle bottom"
-      @mousedown="startResize('bottom', $event)"
-    ></div>
-    <div
-      v-if="canResize"
-      class="resize-handle corner"
-      @mousedown="startResize('corner', $event)"
-    ></div>
-
-    <!-- 图表详情弹窗 -->
-    <DashboardDetail
-      v-model:open="detailModalVisible"
-      :selected-bar-info="selectedBarInfo"
-      :table-id="tableId"
-      @close="closeDetailModal"
-    />
-  </div>
+    <template #overlay>
+      <a-menu @click="handleContextMenuClick">
+        <a-menu-item
+          v-if="canDrag"
+          key="moveTop"
+        >
+          <VerticalAlignTopOutlined />
+          移到最前
+        </a-menu-item>
+        <a-menu-item
+          v-if="canDrag"
+          key="moveBottom"
+        >
+          <VerticalAlignBottomOutlined />
+          移到最后
+        </a-menu-item>
+        <a-menu-divider v-if="canDrag" />
+        <a-menu-item key="refresh">
+          <ReloadOutlined />
+          刷新
+        </a-menu-item>
+        <a-menu-item
+          v-if="canEdit"
+          key="edit"
+        >
+          <EditOutlined />
+          编辑
+        </a-menu-item>
+        <a-menu-item
+          v-if="canDelete"
+          key="delete"
+        >
+          <DeleteOutlined />
+          删除
+        </a-menu-item>
+      </a-menu>
+    </template>
+  </a-dropdown>
 </template>
 
 <script lang="ts" setup>
@@ -166,6 +251,7 @@ import { getPortalConfig } from '@/framework/apis/portal/config'
 import Marquee from '@/framework/components/common/marquee/index.vue'
 import UniversalChart from '@/framework/components/common/Portal/dashboard/indicator/dashboard/UniversalChart.vue'
 import { exportChartToExcel } from '@/framework/components/common/Portal/dashboard/indicator/dashboard/utils/chartExport'
+import { buildDrillConditionFromStatistic } from '@/framework/components/common/Portal/utils'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
 // 异步导入DashboardDetail组件
@@ -173,7 +259,7 @@ const DashboardDetail = defineAsyncComponent(() =>
   import('@/framework/components/common/Portal/dashboard/indicator/dashboard/DashboardDetail.vue')
 )
 import { message } from 'ant-design-vue'
-import { BarChartOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, EllipsisOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { BarChartOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, EllipsisOutlined, FilterOutlined, InfoCircleOutlined, ReloadOutlined, SortAscendingOutlined, SortDescendingOutlined, VerticalAlignBottomOutlined, VerticalAlignTopOutlined } from '@ant-design/icons-vue'
 
 
 interface Props {
@@ -185,6 +271,7 @@ interface Props {
   canEdit?: boolean; // 是否可以编辑
   canDelete?: boolean; // 是否可以删除
   canResize?: boolean; // 是否可以调整大小
+  canDrag?: boolean; // 是否可以拖动(含移到最前/移到最后)
   portalConfig?: any; // 外部传入的 Portal 配置，避免重复请求
 }
 
@@ -196,6 +283,8 @@ interface Emits {
   (e: 'resize', indicatorId: string, xGrid: number, yGrid: number): void;
 
   (e: 'resize-preview', indicatorId: string, xGrid: number, yGrid: number): void;
+
+  (e: 'move-card', id: string, position: 'top' | 'bottom'): void;
 
   (e: 'card-drop', event: DragEvent): void;
 }
@@ -211,6 +300,7 @@ const props = withDefaults(defineProps<Props>(), {
   canEdit: true,
   canDelete: true,
   canResize: true,
+  canDrag: true,
   portalConfig: undefined
 })
 
@@ -251,6 +341,12 @@ const showDropZone = ref(false)
 const chartLoading = ref(false)
 const chartData = ref<any[]>([])
 const portalConfigs = ref<any>(null)
+// 缓存最近一次 statistic 请求体，供穿透条件复用
+let lastStatisticBody: any = null
+
+// 数据展示控制开关（本地内存态，不持久化）
+const hideZeroData = ref(false)
+const sortOrder = ref<'none' | 'asc' | 'desc'>('none')
 
 // 弹窗相关状态
 const detailModalVisible = ref(false)
@@ -286,9 +382,46 @@ const tableId = computed(() => {
   return props.indicator.config?.tableId || ''
 })
 
-// 安全的图表数据，确保类型正确
+// 过滤顶层 statistic 为 0 的项；若有 children，仅当所有子项 statistic 均为 0 时才过滤
+const filterZero = (items: any[]): any[] => {
+  return items.filter(item => {
+    if (Array.isArray(item.children) && item.children.length > 0) {
+      // 有 children：只要存在非 0 子项就保留
+      return item.children.some((c: any) => Number(c.statistic) !== 0)
+    }
+    return Number(item.statistic) !== 0
+  })
+}
+
+// 按顶层 statistic 数值升/降序，并同步对 children 内部排序
+const sortItems = (items: any[], order: 'asc' | 'desc'): any[] => {
+  const cmp = (a: any, b: any) => {
+    const va = Number(a.statistic) || 0
+    const vb = Number(b.statistic) || 0
+    return order === 'asc' ? va - vb : vb - va
+  }
+  return items
+    .map(item => {
+      // 深拷贝避免修改原数据
+      const cloned = { ...item }
+      if (Array.isArray(item.children) && item.children.length > 0) {
+        cloned.children = [...item.children].sort(cmp)
+      }
+      return cloned
+    })
+    .sort(cmp)
+}
+
+// 安全的图表数据，确保类型正确，并叠加"隐藏为0"与排序开关
 const safeChartData = computed(() => {
-  return Array.isArray(chartData.value) ? chartData.value : []
+  let result: any[] = Array.isArray(chartData.value) ? chartData.value.map(i => ({ ...i })) : []
+  if (hideZeroData.value) {
+    result = filterZero(result)
+  }
+  if (sortOrder.value === 'asc' || sortOrder.value === 'desc') {
+    result = sortItems(result, sortOrder.value)
+  }
+  return result
 })
 
 // 图表类型
@@ -299,9 +432,9 @@ const chartType = computed(() => {
 
 // 图表分类（x轴）
 const chartCategories = computed(() => {
-  if (!chartData.value.length) return []
-  // 从数据中提取第一维度值作为分类
-  return [...new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
+  // 基于过滤/排序后的 safeChartData 生成分类，确保 x 轴顺序与图表数据一致
+  if (!safeChartData.value.length) return []
+  return [...new Set(safeChartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
 })
 
 // 图表副标题
@@ -467,6 +600,18 @@ const loadChartData = async () => {
       return
     }
 
+    // 缓存 statistic 请求体，供点击穿透时复用 buildDrillConditionFromStatistic
+    lastStatisticBody = {
+      ...requestParams,
+      // metricCondition 中的 label 格式：单维度=itemName，双维度=firstItem&&secondItem
+      metricCondition: requestParams.metricCondition || [],
+      // metricColumn 配置（用于 dictMap 反查），从 indicatorConfig 中补齐
+      metricColumn: indicatorConfig.value?.firstDimension?.indicatorItems?.map((it: any) => ({
+        column: indicatorConfig.value?.firstDimension?.groupValue,
+        dictMap: it.dictMap
+      })) || []
+    }
+
     // 调用统计API获取数据
     const response = await advancedStatisticRequest(
       portalConfigs.value.url,
@@ -517,13 +662,16 @@ const debouncedLoadChartData = debounce(() => {
   }
 }, 300) // 300ms 防抖延迟
 
-// 监听配置变化
+// 仅监听图表配置内容(配置字符串 + tableId)变化才重新加载数据
+// 坐标/尺寸(xPosition/yPosition/xGrid/yGrid)变化不触发,避免拖拽排序时图表不停 loading 导致闪烁
 watch(
-  () => props.indicator,
+  [
+    () => props.indicator.config?.indicator,
+    () => props.indicator.config?.tableId
+  ],
   () => {
     debouncedLoadChartData()
-  },
-  { deep: true }
+  }
 )
 
 // 刷新图表
@@ -537,9 +685,50 @@ const forceRefresh = async () => {
   await loadChartData()
 }
 
-// ================== 导出 Excel 逻辑 ==================
+// 移到最前/移到最后
+const moveCard = (position: 'top' | 'bottom') => {
+  emit('move-card', props.indicator.id, position)
+}
+
+// 排序菜单点击分发
+const handleSortMenuClick = (key: string) => {
+  if (key === 'none' || key === 'asc' || key === 'desc') {
+    sortOrder.value = key
+  }
+}
+
+// 右键菜单点击分发
+const handleContextMenuClick = (info: { key: string | number }) => {
+  switch (String(info.key)) {
+    case 'moveTop':
+      moveCard('top')
+      break
+    case 'moveBottom':
+      moveCard('bottom')
+      break
+    case 'refresh':
+      refreshChart()
+      break
+    case 'edit':
+      emit('edit')
+      break
+    case 'delete':
+      emit('delete')
+      break
+  }
+}
+
+// ================== 导出 Excel 逻辑 ===================
+// 排序开启时传 useDataOrder=true，让导出 Excel 的列顺序与图表显示一致
+// （否则 chartExport 会按 config.indicatorItems 配置顺序重排，覆盖前端排序结果）
 const handleExportExcel = () =>
-  exportChartToExcel(safeChartData.value, indicatorConfig.value, props.indicator.title || '图表数据', chartLoading.value)
+  exportChartToExcel(
+    safeChartData.value,
+    indicatorConfig.value,
+    props.indicator.title || '图表数据',
+    chartLoading.value,
+    sortOrder.value !== 'none'
+  )
 
 // 重命名图表
 // const renameChart = () => {
@@ -592,11 +781,8 @@ const onBarClick = (params: any) => {
     secondDim = '' // 没有第二维度时设为空
   }
 
-  // 获取组合条件
-  const combinedConditions = hasSecondDimension.value
-    ? buildCombinedConditions(firstDim, secondDim)
-    : buildFirstDimensionConditions(firstDim)
-
+  // 复用通用函数构建穿透条件（自动合并全局筛选+维度条件）
+  const combinedConditions = buildDrillCondition(firstDim, secondDim)
 
   if (!combinedConditions) {
     console.warn('无法构建查询条件')
@@ -613,7 +799,7 @@ const onBarClick = (params: any) => {
     statisticData = [firstDim]
   }
 
-  // 设置选中的柱状图信息（合并全局筛选条件）
+  // 设置选中的柱状图信息（combinedConditions 已含全局筛选+维度条件）
   selectedBarInfo.value = {
     firstDimension: firstDim,
     secondDimension: secondDim || null,
@@ -621,7 +807,7 @@ const onBarClick = (params: any) => {
     secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
     statisticType: statType,
     statisticData: statisticData,
-    combinedConditions: mergeWithGlobalFilter(combinedConditions),
+    combinedConditions: combinedConditions,
     title: hasSecondDimension.value
       ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
       : `${firstDimensionName.value}: ${firstDim} (${statType})`,
@@ -660,10 +846,8 @@ const onPieClick = (params: any) => {
     }
   }
 
-  // 获取组合条件
-  const combinedConditions = hasSecondDimension.value && secondDim
-    ? buildCombinedConditions(firstDim, secondDim)
-    : buildFirstDimensionConditions(firstDim)
+  // 复用通用函数构建穿透条件（自动合并全局筛选+维度条件）
+  const combinedConditions = buildDrillCondition(firstDim, secondDim)
 
   if (!combinedConditions) {
     console.warn('饼图点击：无法构建组合条件')
@@ -680,7 +864,7 @@ const onPieClick = (params: any) => {
     statisticData = [firstDim]
   }
 
-  // 设置选中的饼图信息（合并全局筛选条件）
+  // 设置选中的饼图信息（combinedConditions 已含全局筛选+维度条件）
   selectedBarInfo.value = {
     firstDimension: firstDim,
     secondDimension: secondDim || null,
@@ -688,7 +872,7 @@ const onPieClick = (params: any) => {
     secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
     statisticType: statType,
     statisticData: statisticData,
-    combinedConditions: mergeWithGlobalFilter(combinedConditions),
+    combinedConditions: combinedConditions,
     title: hasSecondDimension.value && secondDim
       ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
       : `${firstDimensionName.value}: ${firstDim} (${statType})`,
@@ -700,96 +884,17 @@ const onPieClick = (params: any) => {
 }
 
 /**
- * 构建只有第一维度的查询条件
+ * 构建穿透查询条件，复用 utils.ts 的 buildDrillConditionFromStatistic
+ * 自动从缓存的 lastStatisticBody 提取全局条件(含部门)+维度条件，AND 合并
  */
-const buildFirstDimensionConditions = (firstDim: string) => {
-  if (!indicatorConfig.value) {
-    console.warn('indicatorConfig 未定义')
+const buildDrillCondition = (firstDim: string, secondDim: string): any => {
+  if (!lastStatisticBody) {
+    console.warn('无法构建穿透条件：缓存 statistic 请求体为空')
     return null
   }
-
-  // 查找第一维度条件
-  const firstDimItem = indicatorConfig.value.firstDimension?.indicatorItems.find((item: any) => item.itemName === firstDim)
-
-  if (!firstDimItem) {
-    console.warn('未找到第一维度条件:', { firstDim })
-    return null
-  }
-
-  return {
-    andOr: firstDimItem.queryConditions.andOr || '0',
-    conditionList: [...firstDimItem.queryConditions.conditionList],
-    // 附加信息：原始条件
-    firstDimensionCondition: firstDimItem.queryConditions,
-    secondDimensionCondition: null,
-    // 附加信息：维度标识
-    firstDimensionId: `${indicatorConfig.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
-    secondDimensionId: null
-  }
-}
-
-/**
- * 构建第一维度和第二维度的组合查询条件
- */
-const buildCombinedConditions = (firstDim: string, secondDim: string) => {
-  if (!indicatorConfig.value) {
-    console.warn('indicatorConfig 未定义')
-    return null
-  }
-
-  // 查找第一维度条件
-  const firstDimItem = indicatorConfig.value.firstDimension?.indicatorItems.find((item: any) => item.itemName === firstDim)
-
-  if (!firstDimItem) {
-    console.warn('未找到第一维度条件:', { firstDim })
-    return null
-  }
-
-  // 查找第二维度条件（如果存在第二维度）
-  const secondDimItem = hasSecondDimension.value
-    ? indicatorConfig.value.secondDimension?.indicatorItems.find((item: any) => item.itemName === secondDim)
-    : null
-
-  // 如果有第二维度但找不到对应条件，则报错
-  if (hasSecondDimension.value && !secondDimItem) {
-    console.warn('未找到第二维度条件:', { secondDim })
-    return null
-  }
-
-  // 合并查询条件：如果有第二维度则合并，否则只使用第一维度
-  const combinedConditionList = secondDimItem
-    ? [
-      ...firstDimItem.queryConditions.conditionList,
-      ...secondDimItem.queryConditions.conditionList
-    ]
-    : [...firstDimItem.queryConditions.conditionList]
-
-  return {
-    andOr: '0', // 使用 AND 连接
-    conditionList: combinedConditionList,
-    // 附加信息：原始条件
-    firstDimensionCondition: firstDimItem.queryConditions,
-    secondDimensionCondition: secondDimItem?.queryConditions || null,
-    // 附加信息：维度标识
-    firstDimensionId: `${indicatorConfig.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
-    secondDimensionId: secondDimItem ? `${indicatorConfig.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}` : null
-  }
-}
-
-// 将维度组合条件与全局筛选条件进行 AND 合并（返回组节点）
-const mergeWithGlobalFilter = (base: any) => {
-  const globalFilter = indicatorConfig.value?.filterConditions
-  const baseGroup = {
-    andOr: base?.andOr ?? '0',
-    conditionList: Array.isArray(base?.conditionList) ? base.conditionList : []
-  }
-  if (globalFilter && Array.isArray(globalFilter.conditionList) && globalFilter.conditionList.length > 0) {
-    return {
-      andOr: '0',
-      conditionList: [baseGroup, globalFilter]
-    }
-  }
-  return baseGroup
+  // label 格式：单维度=firstItem.itemName；双维度=firstItem.itemName&&secondItem.itemName
+  const conditionLabel = secondDim ? `${firstDim}&&${secondDim}` : firstDim
+  return buildDrillConditionFromStatistic(lastStatisticBody, { conditionLabel })
 }
 
 // 关闭详情弹窗
@@ -1034,6 +1139,12 @@ defineExpose({
         opacity: 0.4;
         cursor: not-allowed;
         pointer-events: none;
+      }
+
+      // 激活态高亮（隐藏为0/排序开关启用时）
+      .action-icon-active {
+        color: #1890ff;
+        background: #e6f7ff;
       }
     }
   }

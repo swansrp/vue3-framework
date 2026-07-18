@@ -53,16 +53,18 @@ function applySheetStyles(worksheet: ExcelJS.Worksheet) {
 
 /**
  * 将图表数据导出为 Excel 文件
- * @param chartData  图表数据数组（已过滤后的展示数据）
- * @param config     维度配置（含 firstDimension / secondDimension）
- * @param filename   下载文件名（不含 .xlsx 后缀）
- * @param isLoading  是否正在加载（加载中禁止导出）
+ * @param chartData     图表数据数组（已过滤后的展示数据）
+ * @param config        维度配置（含 firstDimension / secondDimension）
+ * @param filename      下载文件名（不含 .xlsx 后缀）
+ * @param isLoading     是否正在加载（加载中禁止导出）
+ * @param useDataOrder  为 true 时跳过配置顺序，直接用传入数据的顺序（用于同步前端排序结果）
  */
 export async function exportChartToExcel(
   chartData: any[],
   config: DimensionConfig | null | undefined,
   filename: string,
-  isLoading = false
+  isLoading = false,
+  useDataOrder = false
 ) {
   if (isLoading) {
     message.warning('数据加载中，请稍后再试')
@@ -91,12 +93,16 @@ export async function exportChartToExcel(
       }
     })
 
-    // 按配置顺序排列维度值
+    // 维度值顺序：开启 useDataOrder 时直接用数据原顺序（同步前端排序），否则按配置顺序
     const rawFirstDimValues = [...new Set(flattenedData.map(d => d.firstDim))]
     const rawSecondDimValues = [...new Set(flattenedData.map(d => d.secondDim))].filter(v => v !== '')
     const statisticTypes = [...new Set(flattenedData.map(d => d.statisticType))]
-    const firstDimValues = getOrderedDimValues(rawFirstDimValues, config?.firstDimension?.indicatorItems)
-    const secondDimValues = getOrderedDimValues(rawSecondDimValues, config?.secondDimension?.indicatorItems)
+    const firstDimValues = useDataOrder
+      ? rawFirstDimValues
+      : getOrderedDimValues(rawFirstDimValues, config?.firstDimension?.indicatorItems)
+    const secondDimValues = useDataOrder
+      ? rawSecondDimValues
+      : getOrderedDimValues(rawSecondDimValues, config?.secondDimension?.indicatorItems)
     const hasSecondDim = secondDimValues.length > 0
     const sanitizeSheetName = (name: string) => name.substring(0, 31).replace(/[\\/*?\[\]:]/g, '')
 
