@@ -37,6 +37,24 @@
       :width="width"
       :categories="categories"
       :dimension-value-map="dimensionValueMap"
+      :sort-order="sortOrder"
+      :hide-zero-data="hideZeroData"
+      @click="handleChartClick"
+    />
+    <PieChart
+      v-else-if="finalChartType === 'metricsPie'"
+      ref="chartComponentRef"
+      :data="data"
+      :data-metrics="dataMetrics"
+      :loading="loading"
+      :title="title"
+      :height="height"
+      :width="width"
+      :categories="categories"
+      :dimension-value-map="dimensionValueMap"
+      :is-metrics-mode="true"
+      :sort-order="sortOrder"
+      :hide-zero-data="hideZeroData"
       @click="handleChartClick"
     />
     <MixedChart
@@ -104,13 +122,23 @@ export default defineComponent({
       default: () => []
     },
     chartType: {
-      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie',
+      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie',
       default: 'bar'
     },
     // 维度名称到编码的映射，用于颜色等与配置对齐
     dimensionValueMap: {
       type: Object as () => { first?: Record<string, string>; second?: Record<string, string> } | undefined,
       default: undefined
+    },
+    // 排序模式：'none' | 'asc' | 'desc'（指标饼图扇区排序用）
+    sortOrder: {
+      type: String as () => 'none' | 'asc' | 'desc',
+      default: 'none'
+    },
+    // 是否隐藏值为0的数据（指标饼图扇区过滤用）
+    hideZeroData: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['click'],
@@ -125,6 +153,11 @@ export default defineComponent({
       // 检查dataMetrics中是否有数据，如果有且只有一个指标且chartType为pie，则使用饼图
       if (props.dataMetrics && props.dataMetrics.length === 1 && props.dataMetrics[0].chartType === 'pie') {
         return 'pie'
+      }
+
+      // 检查是否为指标饼图类型（多数据字段占比）
+      if (props.dataMetrics && props.dataMetrics.some(m => m.chartType === 'metricsPie')) {
+        return 'metricsPie'
       }
 
       // 检查是否有混合图表类型（柱状图 + 折线图）

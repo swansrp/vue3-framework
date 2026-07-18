@@ -128,6 +128,8 @@
             :loading="chartLoading"
             :title="''"
             :subtitle="''"
+            :sort-order="sortOrder"
+            :hide-zero-data="hideZeroData"
             height="100%"
             @click="handleChartClick"
           />
@@ -371,10 +373,17 @@ const indicatorConfig = computed(() => {
 
 // 判断是否有有效配置
 const hasValidConfig = computed(() => {
-  return indicatorConfig.value &&
-    indicatorConfig.value.firstDimension &&
-    indicatorConfig.value.dataMetrics &&
+  if (!indicatorConfig.value) return false
+  const hasMetrics = Array.isArray(indicatorConfig.value.dataMetrics) &&
     indicatorConfig.value.dataMetrics.length > 0
+  if (!hasMetrics) return false
+  // 指标饼图模式无维度，允许 firstDimension 为 null
+  const isMetricsPieMode = indicatorConfig.value.dataMetrics.some(
+    (m: any) => m.chartType === 'metricsPie'
+  )
+  if (isMetricsPieMode) return true
+  // 其他模式必须有 firstDimension
+  return !!indicatorConfig.value.firstDimension
 })
 
 // 获取tableId
@@ -497,6 +506,38 @@ const loadPortalConfig = async () => {
 const convertToRequestParams = (config: any) => {
   if (!config || !portalConfigs.value) return null
 
+  // ===== 指标饼图特殊请求构造 =====
+  // 指标饼图：扇区=数据指标字段，无维度，多统计字段独立 SUM
+  const isMetricsPie = config.dataMetrics?.some((m: any) => m.chartType === 'metricsPie')
+  if (isMetricsPie) {
+    const visibleStatisticTypesMetrics = config.visibleStatisticTypes || []
+    const visibleDataMetricsMetrics = visibleStatisticTypesMetrics.length > 0
+      ? config.dataMetrics.filter((metric: any) =>
+        visibleStatisticTypesMetrics.includes(metric.dataName)
+      )
+      : config.dataMetrics
+
+    return {
+      selectColumnCondition: {},
+      condition: {
+        conditionList: config.filterConditions?.conditionList || [],
+        andOr: config.filterConditions?.andOr || '0'
+      },
+      sort: null,
+      metricColumn: [],
+      // 空条件生成 1=1，使 CASE WHEN 等价于直接 SUM
+      metricCondition: [
+        { value: 'metricsPie', label: '指标饼图', condition: { andOr: '0', conditionList: [] } }
+      ],
+      statisticColumn: visibleDataMetricsMetrics?.map((metric: any) => ({
+        value: metric.dataField,
+        label: metric.dataName
+      })) || [],
+      majorCondition: '1'
+    }
+  }
+
+  // ===== 默认请求构造（有维度） =====
   const metricConditions: any[] = []
 
   // 处理一级维度
@@ -576,7 +617,9 @@ const convertToRequestParams = (config: any) => {
 
 // 加载图表数据
 const loadChartData = async () => {
+  console.log('[ChartCard.loadChartData] 进入, hasValidConfig:', hasValidConfig.value, 'isDestroyed:', isDestroyed.value, 'chartType:', chartType.value, 'dataMetricsCount:', indicatorConfig.value?.dataMetrics?.length || 0)
   if (!hasValidConfig.value || isDestroyed.value) {
+    console.warn('[ChartCard.loadChartData] hasValidConfig 为 false 或组件已销毁，跳过加载')
     chartData.value = []
     return
   }
@@ -758,7 +801,85 @@ const handleChartClick = (params: any) => {
     onBarClick(params)
   } else if (chartType.value === 'pie') {
     onPieClick(params)
+  } else if (chartType.value === 'metricsPie') {
+    onMetricsPieClick(params)
   }
+}
+
+// 点击指标饼图事件处理
+// 扇区=数据指标字段，点击后除全局筛选外，还需限定“该字段值 > 0”作为筛选
+const onMetricsPieClick = (params: any) => {
+  const clickedMetricName = params.name // 扇区名称=数据指标的 dataName
+
+  // 优先从 params.data.dataField 取，取不到则从配置中按 dataName 反查（更可靠，不依赖 ECharts 是否透传 data 属性）
+  let clickedDataField: string | undefined = params?.data?.dataField
+  if (!clickedDataField && clickedMetricName) {
+    const matchedMetric = indicatorConfig.value?.dataMetrics?.find(
+      (m: any) => m.dataName === clickedMetricName
+    )
+    clickedDataField = matchedMetric?.dataField
+  }
+
+  console.log('[onMetricsPieClick] 点击穿透调试', {
+    name: params.name,
+    dataFieldFromParams: params?.data?.dataField,
+    dataFieldResolved: clickedDataField,
+    rawParamsData: params?.data,
+    configDataMetrics: indicatorConfig.value?.dataMetrics,
+    hasLastStatisticBody: !!lastStatisticBody,
+    lastStatisticBodyConditionList: lastStatisticBody?.condition?.conditionList
+  })
+
+  if (!clickedMetricName) {
+    console.warn('指标饼图点击：无法获取扇区名称')
+    return
+  }
+
+  if (!lastStatisticBody) {
+    console.warn('指标饼图点击：缓存 statistic 请求体为空')
+    return
+  }
+
+  // 构建穿透条件：复用全局筛选条件
+  const combinedConditions = buildDrillConditionFromStatistic(lastStatisticBody, {})
+
+  if (!combinedConditions) {
+    console.warn('指标饼图点击：无法构建组合条件')
+    return
+  }
+
+  // 指标饼图特有：追加“当前点击字段值 > 0”的筛选条件，使明细仅包含有该指标值的行
+  // relation 数值定义（见 Portal/type.ts FILTER_TYPE）：
+  //   1=EQUAL, 2=NOT_EQUAL, 3=GREATER(大于), 4=GREATER_EQUAL, 5=LESS(小于), 6=LESS_EQUAL,
+  //   7=NULL, 8=NOT_NULL, 9=LIKE, 10=NOT_LIKE
+  if (clickedDataField) {
+    combinedConditions.conditionList.push({
+      property: clickedDataField,
+      relation: 3, // GREATER (大于)
+      value: [0],
+      conditionList: []
+    } as any)
+  } else {
+    console.warn('[onMetricsPieClick] 未找到点击指标对应的 dataField，跳过追加筛选条件')
+  }
+
+  console.log('[onMetricsPieClick] 最终构建的穿透条件', combinedConditions)
+
+  // 设置选中的指标信息
+  selectedBarInfo.value = {
+    firstDimension: clickedMetricName,
+    secondDimension: null,
+    firstDimensionName: '数据指标',
+    secondDimensionName: null,
+    statisticType: clickedMetricName,
+    statisticData: [clickedMetricName],
+    combinedConditions: combinedConditions,
+    title: `数据指标: ${clickedMetricName}`,
+    color: '#1890ff'
+  }
+
+  // 显示弹窗
+  detailModalVisible.value = true
 }
 
 // 点击柱状图/折线图事件处理

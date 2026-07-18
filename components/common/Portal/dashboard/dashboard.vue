@@ -88,7 +88,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -512,13 +512,61 @@ const generateChart = async (chartData?: {
   const selectedFilterItems = chartData?.selectedFilterItemsArray || selectedFilterItemsArray.value
   const dataMetricsData = chartData?.dataMetrics || dataMetrics.value
 
-  if (!firstDim) {
-    message.error('请先选择一级维度（横坐标）')
+  if (dataMetricsData.length === 0) {
+    message.error('请至少添加一个数据配置')
     return
   }
 
-  if (dataMetricsData.length === 0) {
-    message.error('请至少添加一个数据配置')
+  // 指标饼图分支：走独立校验，跳过维度必填校验
+  const hasMetricsPie = dataMetricsData.some(m => m.chartType === 'metricsPie')
+  if (hasMetricsPie) {
+    // 硬性约束：不允许任何维度
+    if (firstDim || secondDim) {
+      message.error('指标饼图不支持维度配置')
+      return
+    }
+    // 硬性约束：至少 2 个数据字段
+    if (dataMetricsData.length < 2) {
+      message.error('指标饼图至少需要 2 个数据字段')
+      return
+    }
+    // 构造 filterData（无维度）
+    const filterData: DimensionIndicatorsFilter = {
+      firstDimension: null as any,
+      secondDimension: null,
+      filterConditions: convertToConditionGroup(selectedFilterItems, filterDims),
+      dataMetrics: dataMetricsData.map(convertToDataMetric)
+    }
+    dimensionIndicatorsFilter.value = filterData
+
+    // 构建配置快照
+    lastConfigSnapshot.value = {
+      firstDimension: null,
+      secondDimension: null,
+      filterDimensions: (Array.isArray(filterDims) ? filterDims : []).map(dim => dim ? {
+        key: dim.key,
+        title: dim.title,
+        items: dim.items?.map((item: any) => ({ ...item })) || []
+      } : null),
+      selectedFilterItemsArray: selectedFilterItems.map(arr => [...arr]),
+      dataMetrics: dataMetricsData.map(metric => ({ ...metric }))
+    }
+
+    await nextTick()
+    if (chartDisplayAreaRef.value) {
+      try {
+        await chartDisplayAreaRef.value.generateChart(true)
+        message.success('图表生成成功')
+      } catch (error) {
+        console.error('图表生成失败:', error)
+        message.error('图表生成失败，请检查数据配置或网络连接')
+      }
+    }
+    return
+  }
+
+  if (!firstDim) {
+    message.error('请先选择一级维度（横坐标）')
     return
   }
 
@@ -808,6 +856,7 @@ onMounted(async () => {
 
   // 如果在加载期间已经接收到恢复配置，且此时基础配置已就绪，则生成图表
   if (pendingSavedConfig.value && config.value?.url && indicatorTreeData.value?.length) {
+    console.log('[dashboard.onMounted] 发现 pendingSavedConfig，走兑底自动生成分支')
     try {
       // 基于已加载的指标树重建筛选维度与选中项
       tryReconstructFilterFromConditions(pendingSavedConfig.value)
@@ -816,10 +865,11 @@ onMounted(async () => {
       await nextTick()
       if (chartDisplayAreaRef.value) {
         // 恢复配置时，传入true参数表示需要恢复可见性配置
+        console.log('[dashboard.onMounted] 调用 chartDisplayAreaRef.generateChart(true)')
         await chartDisplayAreaRef.value.generateChart(true)
       }
     } catch (e) {
-      console.warn('加载完成后自动生成图表失败:', e)
+      console.warn('[dashboard.onMounted] 加载完成后自动生成图表失败:', e)
     } finally {
       pendingSavedConfig.value = null
     }
@@ -982,18 +1032,24 @@ const tryReconstructFilterFromConditions = (savedConfig: any) => {
 // 恢复配置方法（编辑时回显到配置面板）
 const restoreConfig = async (savedConfig: any) => {
   try {
+    // 指标饼图模式判断（无维度，允许 firstDimension 为 null）
+    const isMetricsPieMode = Array.isArray(savedConfig?.dataMetrics) &&
+      savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
+    console.log('[dashboard.restoreConfig] 进入恢复流程, isMetricsPieMode:', isMetricsPieMode, 'hasFirstDimension:', !!savedConfig?.firstDimension, 'dataMetricsCount:', savedConfig?.dataMetrics?.length || 0)
 
-    if (!savedConfig || !savedConfig.firstDimension) {
-      console.warn('无效的配置数据')
+    if (!savedConfig || (!isMetricsPieMode && !savedConfig.firstDimension)) {
+      console.warn('[dashboard.restoreConfig] 无效的配置数据，提前返回')
       return
     }
 
+    console.log('[dashboard.restoreConfig] 开始回显维度和数据指标')
     // 回显维度
     firstDimension.value = mapSavedGroupToUi(savedConfig.firstDimension)
     secondDimension.value = mapSavedGroupToUi(savedConfig.secondDimension)
 
     // 回显数据配置
     if (Array.isArray(savedConfig.dataMetrics)) {
+      console.log('[dashboard.restoreConfig] 回显数据指标:', savedConfig.dataMetrics.length, '项')
       dataMetrics.value = savedConfig.dataMetrics.map((m: any, idx: number) => ({
         id: `metric_${Date.now()}_${idx}`,
         dataName: m.dataName,
@@ -1033,17 +1089,21 @@ const restoreConfig = async (savedConfig: any) => {
     // 同步给图表展示，并记录待生成
     dimensionIndicatorsFilter.value = savedConfig
     pendingSavedConfig.value = savedConfig
+    console.log('[dashboard.restoreConfig] 配置已同步, 准备生成图表. config.url:', !!config.value?.url, 'indicatorTreeData:', indicatorTreeData.value?.length || 0, 'chartDisplayAreaRef:', !!chartDisplayAreaRef.value)
 
     // 若基础配置已就绪，立即生成图表；否则等待 onMounted 末尾的自动触发
     if (config.value?.url && indicatorTreeData.value?.length && chartDisplayAreaRef.value) {
       await nextTick()
       try {
+        console.log('[dashboard.restoreConfig] 调用 chartDisplayAreaRef.generateChart(true)')
         await chartDisplayAreaRef.value.generateChart(true)
       } catch (error) {
-        console.error('生成图表失败:', error)
+        console.error('[dashboard.restoreConfig] 生成图表失败:', error)
       } finally {
         pendingSavedConfig.value = null
       }
+    } else {
+      console.log('[dashboard.restoreConfig] 基础配置未就绪，等待 onMounted 自动触发')
     }
   } catch (error) {
     console.error('恢复配置失败:', error)
@@ -1061,6 +1121,9 @@ const forceRecalculateLayout = async () => {
 
 // 获取完整配置（包含统计指标可见性配置）
 const getFullConfig = () => {
+  // 指标饼图模式判断（无维度，跳过一级维度校验）
+  const isMetricsPieMode = dataMetrics.value.some(m => m.chartType === 'metricsPie')
+
   // 获取实时的可见性配置
   let visibilityConfig = {
     visibleStatisticTypes: [] as string[],
@@ -1074,7 +1137,11 @@ const getFullConfig = () => {
 
   // 优先使用已经生成的dimensionIndicatorsFilter（包含用户拖拽后的排序）
   // 如果存在，说明已经生成过图表，使用它以保留拖拽排序
-  if (dimensionIndicatorsFilter.value && dimensionIndicatorsFilter.value.firstDimension) {
+  // 指标饼图模式无维度，只校验 dimensionIndicatorsFilter 是否存在
+  const hasExistingConfig = isMetricsPieMode
+    ? !!dimensionIndicatorsFilter.value
+    : (dimensionIndicatorsFilter.value && !!dimensionIndicatorsFilter.value.firstDimension)
+  if (hasExistingConfig) {
     // 使用已有的配置，但更新筛选条件和数据指标（这些可能在图表生成后被修改）
     return {
       ...dimensionIndicatorsFilter.value,
@@ -1090,13 +1157,14 @@ const getFullConfig = () => {
   const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value)
   const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value)
 
-  if (!firstDimensionConverted) {
+  // 指标饼图模式跳过一级维度校验
+  if (!isMetricsPieMode && !firstDimensionConverted) {
     console.warn('一级维度为空，无法生成完整配置')
     return null
   }
 
   const currentConfig: DimensionIndicatorsFilter = {
-    firstDimension: firstDimensionConverted,
+    firstDimension: isMetricsPieMode ? null as any : firstDimensionConverted,
     secondDimension: secondDimensionConverted, // 二级维度可以为null
     filterConditions: convertToConditionGroup(selectedFilterItemsArray.value, filterDimensions.value),
     dataMetrics: dataMetrics.value.map(convertToDataMetric)

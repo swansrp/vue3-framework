@@ -56,6 +56,21 @@ export default defineComponent({
     dimensionValueMap: {
       type: Object as () => { first?: Record<string, string>; second?: Record<string, string> } | undefined,
       default: undefined
+    },
+    // 是否为指标饼图模式（扇区=数据指标字段）
+    isMetricsMode: {
+      type: Boolean,
+      default: false
+    },
+    // 排序模式：'none' | 'asc' | 'desc'（指标饼图扇区排序）
+    sortOrder: {
+      type: String as () => 'none' | 'asc' | 'desc',
+      default: 'none'
+    },
+    // 是否隐藏值为0的数据（指标饼图扇区过滤）
+    hideZeroData: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['click'],
@@ -143,6 +158,183 @@ export default defineComponent({
     // 生成饼图配置
     const generatePieChartOption = (processedData: any): echarts.EChartsOption => {
       const { firstDimensionGroups, flattenedData } = processedData
+
+      // ===== 指标饼图模式：每个扇区=一个数据指标字段 =====
+      if (props.isMetricsMode) {
+        const metrics = props.dataMetrics
+        if (!metrics || metrics.length === 0) {
+          return { series: [] }
+        }
+
+        // 为每个数据指标生成一个扇区
+        const pieData = metrics.map((metric, idx) => {
+          // 在 flattenedData 中查找该指标的统计值
+          // 指标饼图模式下无维度，firstDimension 为空字符串
+          const item = flattenedData.find((d: any) =>
+            d.statisticType === metric.dataName
+          )
+          const originalValue = item ? item.statistic : 0
+          const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
+          const convertedValue = metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
+
+          // 颜色：使用黄角度算法基于索引均匀分布，确保各扇区颜色明显区分
+          // （metric.color 是随机分配的，多个指标可能相同，不适用于指标饼图）
+          const finalColor = `hsl(${(idx * 137.508) % 360}, 65%, 55%)`
+
+          return {
+            name: metric.dataName,
+            value: convertedValue,
+            itemStyle: {
+              color: finalColor
+            },
+            // 传递原始字段，用于点击穿透
+            data: { dataField: metric.dataField, dataName: metric.dataName }
+          }
+        })
+
+        // 过滤值为 0 的扇区（响应用户的“隐藏为 0 ”开关）
+        if (props.hideZeroData) {
+          pieData.splice(0, pieData.length, ...pieData.filter(item => item.value > 0))
+        }
+
+        // 排序扇区（响应用户的升/降序开关）
+        if (props.sortOrder === 'asc') {
+          pieData.sort((a, b) => a.value - b.value)
+        } else if (props.sortOrder === 'desc') {
+          pieData.sort((a, b) => b.value - a.value)
+        }
+
+        const chartTitle = props.title
+
+        // 获取第一个有单位的指标作为默认单位显示（各指标可能单位不同，tooltip 中单独显示）
+        return {
+          title: {
+            text: chartTitle,
+            left: 'center',
+            top: '0%',
+            textStyle: {
+              fontSize: 18,
+              fontWeight: 'bold'
+            }
+          },
+          tooltip: {
+            trigger: 'item',
+            enterable: true,
+            triggerOn: 'mousemove|click',
+            confine: false,
+            appendToBody: true,
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            borderColor: '#ddd',
+            borderWidth: 1,
+            textStyle: {
+              color: '#333',
+              fontSize: 12
+            },
+            extraCssText: 'max-height: 500px; max-width: 500px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
+            formatter: (params: any) => {
+              const idx = pieData.findIndex(d => d.name === params.name)
+              const metric = metrics[idx] || metrics[0]
+              const unit = metric?.unit || ''
+              let result = `<strong>${params.name}</strong><br/>`
+              result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${params.name}</strong><br/>`
+              const formattedValue = (() => {
+                if (metric?.unitConfig) {
+                  const { fix } = parseUnitConfig(metric.unitConfig)
+                  return Number(params.value).toLocaleString(undefined, {
+                    minimumFractionDigits: fix,
+                    maximumFractionDigits: fix
+                  })
+                }
+                return Number(params.value).toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0
+                })
+              })()
+              result += `${params.marker}${params.name}: ${formattedValue}${unit ? unit : ''} (${params.percent}%)<br/>`
+
+              const totalValue = pieData.reduce((sum, d) => sum + (typeof d.value === 'number' ? d.value : 0), 0)
+              const formattedTotal = (() => {
+                if (metric?.unitConfig) {
+                  const { fix } = parseUnitConfig(metric.unitConfig)
+                  return Number(totalValue).toLocaleString(undefined, {
+                    minimumFractionDigits: fix,
+                    maximumFractionDigits: fix
+                  })
+                }
+                return Number(totalValue).toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0
+                })
+              })()
+              result += `<span style="color: var(--text-secondary); font-size: 12px;">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
+              return result
+            }
+          },
+          legend: {
+            type: 'scroll',
+            orient: 'horizontal',
+            left: 'center',
+            top: '5%',
+            width: '80%',
+            itemGap: 15,
+            itemHeight: 14,
+            formatter: (name: string) => {
+              const idx = pieData.findIndex(d => d.name === name)
+              const metric = metrics[idx]
+              if (!metric) return name
+              const unit = metric.unit || ''
+              const value = pieData[idx]?.value || 0
+              const formattedValue = (() => {
+                if (metric?.unitConfig) {
+                  const { fix } = parseUnitConfig(metric.unitConfig)
+                  return Number(value).toLocaleString(undefined, {
+                    minimumFractionDigits: fix,
+                    maximumFractionDigits: fix
+                  })
+                }
+                return Number(value).toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0
+                })
+              })()
+              return `${name}: ${formattedValue}${unit ? unit : ''}`
+            }
+          },
+          series: [
+            {
+              name: '指标占比',
+              type: 'pie',
+              radius: ['30%', '70%'],
+              center: ['50%', '55%'],
+              data: pieData,
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                scale: true,
+                scaleSize: 5
+              },
+              selectedMode: 'single',
+              selectedOffset: 5,
+              label: {
+                show: false,
+                formatter: (params: any) => `${params.name}: ${params.percent}%`,
+                fontSize: 12
+              },
+              labelLine: {
+                show: false
+              },
+              animationType: 'scale',
+              animationEasing: 'elasticOut',
+              animationDelay: () => Math.random() * 200
+            }
+          ] as echarts.SeriesOption[]
+        }
+      }
+
+      // ===== 默认饼图模式：扇区=维度项 =====
 
       // 饼图只显示一个数据指标
       const pieMetric = props.dataMetrics[0]

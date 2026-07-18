@@ -57,7 +57,11 @@
           </div>
 
           <div class="data-item-content">
-            <div class="data-row">
+            <!-- 指标饼图模式下隐藏图表类型/坐标轴/堆叠配置（由顶部模式切换统一控制） -->
+            <div
+              v-if="!isMetricsPieMode"
+              class="data-row"
+            >
               <span class="data-label">图表类型：</span>
               <span class="data-value">
                 <a-select
@@ -78,7 +82,7 @@
               </span>
             </div>
             <div
-              v-if="metric.chartType !== 'pie'"
+              v-if="!isMetricsPieMode && metric.chartType !== 'pie'"
               class="data-row"
             >
               <span class="data-label">坐标轴：</span>
@@ -100,7 +104,7 @@
               </span>
             </div>
             <div
-              v-if="metric.chartType === 'bar'"
+              v-if="!isMetricsPieMode && metric.chartType === 'bar'"
               class="data-row"
             >
               <span class="data-label">堆叠：</span>
@@ -237,6 +241,7 @@
           </a-form-item>
 
           <a-form-item
+            v-if="!isMetricsPieMode"
             label="图表类型"
             required
           >
@@ -261,7 +266,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="editingDataMetric.chartType !== 'pie'"
+            v-if="!isMetricsPieMode && editingDataMetric.chartType !== 'pie' && editingDataMetric.chartType !== 'metricsPie'"
             label="坐标轴位置"
           >
             <a-radio-group v-model:value="editingDataMetric.yAxisPosition">
@@ -275,7 +280,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="editingDataMetric.chartType === 'bar'"
+            v-if="!isMetricsPieMode && editingDataMetric.chartType === 'bar'"
             label="堆叠位置"
           >
             <a-select
@@ -357,7 +362,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -398,12 +403,13 @@ const emit = defineEmits<{
 // 折叠状态
 const collapsed = ref(false)
 
-// 配置选项
+// 配置选项（指标饼图不通过下拉框选择，由顶部模式切换统一控制）
 const chartTypeOptions = ref<ChartTypeOption[]>([
   { label: '柱状图', value: 'bar' },
   { label: '折线图', value: 'line' },
   { label: '占比折线图', value: 'ptLine' },
-  { label: '饼图', value: 'pie' }
+  { label: '饼图', value: 'pie' },
+  { label: '指标饼图', value: 'metricsPie' }
 ])
 
 const axisPositionOptions = ref<{ label: string; value: string }[]>([
@@ -456,9 +462,17 @@ const hasPieChart = computed(() => {
   return props.dataMetrics.some(metric => metric.chartType === 'pie')
 })
 
+// 是否已处于指标饼图模式（当前指标的 chartType 为 metricsPie）
+// 注意：模式切换由父组件 ConfigPanel 顶部控制，这里用于隐藏图表类型/坐标轴/堆叠等配置行
+const isMetricsPieMode = computed(() => {
+  // 只要任一指标是 metricsPie，就认为是指标饼图模式（顶层互斥设计保证全量同步）
+  return props.dataMetrics.some(m => m.chartType === 'metricsPie')
+})
+
 // 判断是否可以添加数据指标
 const canAddDataMetric = computed(() => {
-  // 如果已经有饼图类型，不允许添加新的数据指标
+  // 如果已经有饼图类型，不允许添加新的数据指标（饼图只能 1 个数据指标）
+  // 指标饼图允许多个数据指标，不阻止添加
   return !hasPieChart.value
 })
 
@@ -469,7 +483,10 @@ const availableChartTypeOptions = computed(() => {
   const isFirstMetric = dataFormMode.value === 'add' && props.dataMetrics.length === 0
   const isEditingFirstMetric = dataFormMode.value === 'edit' && props.dataMetrics.length === 1 && props.dataMetrics[0].id === editingDataMetric.value.id
 
-  return chartTypeOptions.value.map(option => {
+  return chartTypeOptions.value
+    // 指标饼图不通过下拉框选择
+    .filter(option => option.value !== 'metricsPie')
+    .map(option => {
     if (option.value === 'pie') {
       // 饼图只允许在第一个数据指标中选择
       const canSelectPie = isFirstMetric || isEditingFirstMetric
@@ -482,6 +499,8 @@ const availableChartTypeOptions = computed(() => {
     return { ...option, disabled: false, disabledReason: '' }
   })
 })
+
+// 注意：指标饼图不通过图表类型下拉框选择，而是通过数据列表底部的切换按钮控制
 
 // 默认颜色配置
 const defaultColors = ref<string[]>([
@@ -550,6 +569,8 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
 const canChangeChartType = (metric: DataMetricUI): boolean => {
   // 如果已经是饼图类型，则可以修改
   if (metric.chartType === 'pie') return true
+  // 如果已经是指标饼图类型，则可以修改
+  if (metric.chartType === 'metricsPie') return true
 
   // 如果已经有其他饼图类型，则不能修改为饼图
   const otherPieCharts = props.dataMetrics.filter(m => m.id !== metric.id && m.chartType === 'pie')
@@ -559,6 +580,8 @@ const canChangeChartType = (metric: DataMetricUI): boolean => {
 // 获取指定数据指标可用的图表类型
 const getAvailableChartTypesForMetric = (metric: DataMetricUI) => {
   return chartTypeOptions.value.filter(option => {
+    // 指标饼图不通过下拉框选择，由顶部模式切换统一控制
+    if (option.value === 'metricsPie') return false
     if (option.value === 'pie') {
       // 饼图只允许在第一个数据指标中选择，或者当前已经是饼图
       const isFirstMetric = props.dataMetrics.length === 1 && props.dataMetrics[0].id === metric.id
@@ -636,7 +659,8 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
       id: `metric_${Date.now()}`,
       dataName: '分布统计',
       dataField: '',
-      chartType: 'bar',
+      // 指标饼图模式下新增的数据指标也需保持 metricsPie，避免删除任一指标后 chartMode 模式误跳回
+      chartType: isMetricsPieMode.value ? 'metricsPie' : 'bar',
       color: getRandomColor(),
       yAxisPosition: defaultYAxisPosition,
       stackGroup: defaultStackGroup,

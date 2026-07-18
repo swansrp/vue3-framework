@@ -24,7 +24,7 @@
           <ReloadOutlined />
         </a-button>
         <a-button
-          :disabled="!firstDimension"
+          :disabled="!canGenerateChart"
           type="primary"
           @click="generateChart"
         >
@@ -34,12 +34,28 @@
     </div>
 
     <div class="config-content">
-      <!-- 维度选择 -->
-      <DimensionSelector
-        v-model:first-dimension="firstDimension"
-        v-model:second-dimension="secondDimension"
-        :filter-dimension="filterDimensions[0]"
-      />
+      <!-- 图表模式切换 -->
+      <div class="chart-mode-switcher">
+        <span class="mode-label">图表模式：</span>
+        <a-radio-group
+          :value="chartMode"
+          button-style="solid"
+          size="small"
+          @change="onChartModeChange"
+        >
+          <a-radio-button value="dimension">维度图表</a-radio-button>
+          <a-radio-button value="metricsPie">指标饼图</a-radio-button>
+        </a-radio-group>
+      </div>
+
+      <!-- 维度选择（指标饼图模式下禁用） -->
+      <div :class="{ 'section-disabled': chartMode === 'metricsPie' }">
+        <DimensionSelector
+          v-model:first-dimension="firstDimension"
+          v-model:second-dimension="secondDimension"
+          :filter-dimension="filterDimensions[0]"
+        />
+      </div>
 
       <!-- 全局筛选条件 -->
       <FilterCondition
@@ -63,7 +79,7 @@
 <script lang="ts" setup>
 import { MenuFoldOutlined, MenuUnfoldOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import DataConfiguration from './DataConfiguration.vue'
 import DimensionSelector from './DimensionSelector.vue'
@@ -91,7 +107,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -142,6 +158,46 @@ const secondDimension = ref(props.secondDimension)
 const filterDimensions = ref<[...(IndicatorGroup | null)[], (IndicatorGroup | null) | null]>([...(props.filterDimensions as any)] as any)
 const selectedFilterItemsArray = ref<string[][]>([...props.selectedFilterItemsArray])
 const dataMetrics = ref([...props.dataMetrics])
+
+// 图表模式：'dimension'（维度图表）| 'metricsPie'（指标饼图）
+// 基于 dataMetrics 推断：任一指标为 metricsPie 即为指标饼图模式
+const chartMode = computed(() => {
+  return dataMetrics.value.some(m => m.chartType === 'metricsPie') ? 'metricsPie' : 'dimension'
+})
+
+// 模式切换处理
+const onChartModeChange = (e: any) => {
+  const mode = e.target.value
+  if (mode === 'metricsPie') {
+    // 切到指标饼图：清空维度 + 所有指标设为 metricsPie
+    firstDimension.value = null
+    secondDimension.value = null
+    emit('update:firstDimension', null)
+    emit('update:secondDimension', null)
+    dataMetrics.value.forEach(m => {
+      m.chartType = 'metricsPie'
+    })
+  } else {
+    // 切回维度图表：所有 metricsPie 恢复为 bar
+    dataMetrics.value.forEach(m => {
+      if (m.chartType === 'metricsPie') {
+        m.chartType = 'bar'
+      }
+    })
+  }
+  emit('update:dataMetrics', dataMetrics.value)
+}
+
+// 生成按钮是否可用
+const canGenerateChart = computed(() => {
+  if (dataMetrics.value.length === 0) return false
+  if (chartMode.value === 'metricsPie') {
+    // 指标饼图模式：不需要维度，但至少 2 个数据字段
+    return dataMetrics.value.length >= 2
+  }
+  // 维度图表模式：需要一级维度
+  return !!firstDimension.value
+})
 
 // 事件处理
 const toggleLeftPanel = () => {
@@ -274,15 +330,31 @@ const updateMetricField = (metricId: string, field: string, value: any) => {
 
 // 生成图表事件处理
 const generateChart = () => {
-  // 校验一级维度是否选择
-  if (!firstDimension.value) {
-    message.error('请先选择一级维度（横坐标）')
-    return
-  }
-
   // 校验数据配置
   if (dataMetrics.value.length === 0) {
     message.error('请至少添加一个数据配置')
+    return
+  }
+
+  // 指标饼图模式：无维度，至少 2 个数据字段
+  if (chartMode.value === 'metricsPie') {
+    if (dataMetrics.value.length < 2) {
+      message.error('指标饼图至少需要 2 个数据字段')
+      return
+    }
+    emit('generateChart', {
+      firstDimension: null,
+      secondDimension: null,
+      filterDimensions: filterDimensions.value,
+      selectedFilterItemsArray: selectedFilterItemsArray.value,
+      dataMetrics: dataMetrics.value
+    })
+    return
+  }
+
+  // 维度图表模式：校验一级维度
+  if (!firstDimension.value) {
+    message.error('请先选择一级维度（横坐标）')
     return
   }
 
@@ -406,4 +478,26 @@ const resetConfiguration = () => {
   }
 }
 
-// 这里是.right-panel的闭合大括号</style>
+// 图表模式切换
+.chart-mode-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+
+  .mode-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+}
+
+// 禁用区域（指标饼图模式下的维度选择）
+.section-disabled {
+  pointer-events: none;
+  opacity: 0.45;
+}
+</style>

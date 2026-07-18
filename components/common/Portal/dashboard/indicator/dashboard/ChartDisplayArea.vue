@@ -789,13 +789,21 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
  * @param shouldRestoreVisibility 是否应该恢复可见性配置（用于编辑回显）
  */
 const fetchChartData = async (shouldRestoreVisibility = false) => {
+  console.log('[ChartDisplayArea.fetchChartData] 进入, shouldRestoreVisibility:', shouldRestoreVisibility, 'hasReceivedData:', !!receivedData.value)
   if (!receivedData.value) {
     message.error('数据配置不完整，请重新配置维度信息')
     throw new Error('数据配置不完整，请重新配置维度信息')
   }
 
-  // 检查一级维度是否存在
-  if (!receivedData.value.firstDimension) {
+  // 检查是否为指标饼图模式（无维度）
+  const isMetricsPieMode = receivedData.value.dataMetrics?.some(
+    (m: any) => m.chartType === 'metricsPie'
+  )
+  console.log('[ChartDisplayArea.fetchChartData] isMetricsPieMode:', isMetricsPieMode, 'hasFirstDimension:', !!receivedData.value.firstDimension, 'dataMetricsCount:', receivedData.value.dataMetrics?.length || 0)
+
+  // 检查一级维度是否存在（指标饼图模式跳过此校验）
+  if (!isMetricsPieMode && !receivedData.value.firstDimension) {
+    console.error('[ChartDisplayArea.fetchChartData] 非 metricsPie 模式但缺少 firstDimension，报错退出')
     message.error('一级维度未配置，请先选择一级维度')
     throw new Error('一级维度未配置，请先选择一级维度')
   }
@@ -815,9 +823,11 @@ const fetchChartData = async (shouldRestoreVisibility = false) => {
     visibleStatisticTypes.value = []
 
     // 调用真实的API获取数据（增加防缓存标识）
+    console.log('[ChartDisplayArea.fetchChartData] 调用 fetchTalentStatisticData 请求接口')
     const result = await fetchTalentStatisticData(receivedData.value, {})
 
     if (result && result.payload) {
+      console.log('[ChartDisplayArea.fetchChartData] 接口返回成功, payloadCount:', result.payload?.length || 0)
       chartData.value = result.payload
 
       // 更新维度数据，如果需要则恢复可见性配置
@@ -826,6 +836,7 @@ const fetchChartData = async (shouldRestoreVisibility = false) => {
       // 触发图表生成事件
       emit('chartGenerated', result.payload)
     } else {
+      console.warn('[ChartDisplayArea.fetchChartData] 接口返回为空')
       message.warning('暂无数据，请检查筛选条件或数据源')
       chartData.value = []
       throw new Error('API返回数据为空或格式不正确')
@@ -869,6 +880,35 @@ const convertDataToCrossMetricConditions = (
   receivedData: DimensionIndicatorsFilter,
   options: ConvertOptions = {}
 ): RequestParams => {
+  // ===== 指标饼图分支：无维度，多统计字段独立 SUM =====
+  const isMetricsPie = receivedData.dataMetrics?.some(
+    (m: any) => m.chartType === 'metricsPie'
+  )
+  if (isMetricsPie) {
+    return {
+      selectColumnCondition: options.selectColumnCondition || {},
+      condition: {
+        conditionList: (receivedData.filterConditions?.conditionList ?? []) as any,
+        andOr: (receivedData.filterConditions?.andOr ?? '0') as '0' | '1'
+      },
+      sort: options.sort ?? null,
+      metricColumn: [],
+      // 空条件生成 1=1，使 CASE WHEN 等价于直接 SUM
+      metricCondition: [
+        { value: 'metricsPie', label: '指标饼图', condition: { andOr: '0', conditionList: [] } }
+      ],
+      statisticColumn:
+        options.statisticColumn ||
+        receivedData.dataMetrics?.map((metric) => ({
+          value: metric.dataField,
+          label: metric.dataName
+        })) ||
+        [],
+      majorCondition: options.majorCondition || '1'
+    }
+  }
+
+  // ===== 默认分支（有维度） =====
   const metricConditions: MetricCondition[] = []
 
   // 检查一级维度是否存在

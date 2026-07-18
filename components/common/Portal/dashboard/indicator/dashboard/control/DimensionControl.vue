@@ -311,6 +311,10 @@ const invertSelection = () => {
         margin: 0;
         flex: 1;
         overflow: hidden;
+        // 修复checkbox方框与文字垂直对齐
+        display: inline-flex;
+        align-items: center;
+        line-height: 16px;
       }
 
       .checkbox-text {
@@ -319,6 +323,9 @@ const invertSelection = () => {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        // 与ant-checkbox的16px方框等高，避免基线错位
+        line-height: 16px;
+        vertical-align: middle;
       }
     }
   }
