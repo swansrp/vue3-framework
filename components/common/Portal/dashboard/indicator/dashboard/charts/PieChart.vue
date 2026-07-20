@@ -423,7 +423,23 @@ export default defineComponent({
 
       // 饼图配置 - 标题处理分布统计
       const chartTitle = props.title === '分布统计' ? '' : props.title
-      
+
+      // 计算总额（基于过滤/排序后的 pieData）
+      const totalValue = pieData.reduce((sum: number, d: any) => sum + (typeof d.value === 'number' ? d.value : 0), 0)
+      const formattedCenterTotal = (() => {
+        if (pieMetric?.unitConfig) {
+          const { fix } = parseUnitConfig(pieMetric.unitConfig)
+          return Number(totalValue).toLocaleString(undefined, {
+            minimumFractionDigits: fix,
+            maximumFractionDigits: fix
+          })
+        }
+        return Number(totalValue).toLocaleString(undefined, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        })
+      })()
+
       return {
         title: {
           text: chartTitle,
@@ -434,6 +450,36 @@ export default defineComponent({
             fontWeight: 'bold'
           }
         },
+        graphic: [
+          {
+            type: 'group',
+            left: 'center',
+            top: '47%',
+            children: [
+              {
+                type: 'text',
+                left: 'center',
+                top: -12,
+                style: {
+                  text: '总额',
+                  fill: '#8c8c8c',
+                  fontSize: 13
+                }
+              },
+              {
+                type: 'text',
+                left: 'center',
+                top: 8,
+                style: {
+                  text: formattedCenterTotal,
+                  fill: '#262626',
+                  fontSize: 16,
+                  fontWeight: 'bold'
+                }
+              }
+            ]
+          }
+        ] as any,
         tooltip: {
           trigger: 'item',
           enterable: true,  // 允许鼠标进入tooltip
