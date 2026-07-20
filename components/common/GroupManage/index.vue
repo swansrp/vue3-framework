@@ -282,7 +282,7 @@ import {
   getGroupBindList,
   replaceGroupBind,
   updateGroupBindInfo
-} from '@/framework/apis/groupBind'
+} from '@/framework/apis/group/groupBind'
 import { bindReplaceBatchAttachByUrl, getAllBindListByUrl, getBindInfoByUrl, updateBindInfoByUrl } from '@/framework/apis/portal'
 import { GroupBindProperty } from '@/framework/components/common/GroupManage/types'
 import { dictStore, useTreeStore } from '@/framework/store/common'
