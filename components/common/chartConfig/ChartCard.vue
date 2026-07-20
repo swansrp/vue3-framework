@@ -623,9 +623,7 @@ const convertToRequestParams = (config: any) => {
 
 // 加载图表数据
 const loadChartData = async () => {
-  console.log('[ChartCard.loadChartData] 进入, hasValidConfig:', hasValidConfig.value, 'isDestroyed:', isDestroyed.value, 'chartType:', chartType.value, 'dataMetricsCount:', indicatorConfig.value?.dataMetrics?.length || 0)
   if (!hasValidConfig.value || isDestroyed.value) {
-    console.warn('[ChartCard.loadChartData] hasValidConfig 为 false 或组件已销毁，跳过加载')
     chartData.value = []
     return
   }
@@ -826,16 +824,6 @@ const onMetricsPieClick = (params: any) => {
     clickedDataField = matchedMetric?.dataField
   }
 
-  console.log('[onMetricsPieClick] 点击穿透调试', {
-    name: params.name,
-    dataFieldFromParams: params?.data?.dataField,
-    dataFieldResolved: clickedDataField,
-    rawParamsData: params?.data,
-    configDataMetrics: indicatorConfig.value?.dataMetrics,
-    hasLastStatisticBody: !!lastStatisticBody,
-    lastStatisticBodyConditionList: lastStatisticBody?.condition?.conditionList
-  })
-
   if (!clickedMetricName) {
     console.warn('指标饼图点击：无法获取扇区名称')
     return
@@ -866,10 +854,8 @@ const onMetricsPieClick = (params: any) => {
       conditionList: []
     } as any)
   } else {
-    console.warn('[onMetricsPieClick] 未找到点击指标对应的 dataField，跳过追加筛选条件')
+    console.warn('指标饼图点击：未找到点击指标对应的 dataField，跳过追加筛选条件')
   }
-
-  console.log('[onMetricsPieClick] 最终构建的穿透条件', combinedConditions)
 
   // 设置选中的指标信息
   selectedBarInfo.value = {

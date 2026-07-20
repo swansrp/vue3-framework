@@ -359,14 +359,6 @@ const restoreConfigToDashboard = async (savedConfig: any) => {
     const isMetricsPieMode =
       Array.isArray(savedConfig?.dataMetrics) &&
       savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
-    console.log(
-      '[restoreConfigToDashboard] 开始恢复配置, isMetricsPieMode:',
-      isMetricsPieMode,
-      'hasFirstDimension:',
-      !!savedConfig?.firstDimension,
-      'hasDashboardRef:',
-      !!dashboardRef.value
-    )
 
     // 校验：指标饼图模式下允许 firstDimension 为 null，其他模式必须有 firstDimension
     const isValidConfig = isMetricsPieMode
@@ -375,7 +367,6 @@ const restoreConfigToDashboard = async (savedConfig: any) => {
     if (isValidConfig && dashboardRef.value) {
       // 调用dashboard组件的恢复配置方法
       if (typeof dashboardRef.value.restoreConfig === 'function') {
-        console.log('[restoreConfigToDashboard] 调用 dashboardRef.restoreConfig')
         await dashboardRef.value.restoreConfig(savedConfig)
       } else {
         console.error('dashboard组件没有restoreConfig方法')
@@ -383,11 +374,7 @@ const restoreConfigToDashboard = async (savedConfig: any) => {
         dashboardRef.value.dimensionIndicatorsFilter = savedConfig
       }
     } else {
-      console.warn('配置数据无效或dashboard组件未准备好', {
-        isMetricsPieMode,
-        hasFirstDimension: !!savedConfig?.firstDimension,
-        hasDashboardRef: !!dashboardRef.value,
-      })
+      console.warn('配置数据无效或dashboard组件未准备好')
     }
   } catch (error) {
     console.error('恢复配置失败:', error)

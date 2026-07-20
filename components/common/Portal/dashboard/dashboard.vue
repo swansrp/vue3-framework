@@ -856,7 +856,6 @@ onMounted(async () => {
 
   // 如果在加载期间已经接收到恢复配置，且此时基础配置已就绪，则生成图表
   if (pendingSavedConfig.value && config.value?.url && indicatorTreeData.value?.length) {
-    console.log('[dashboard.onMounted] 发现 pendingSavedConfig，走兑底自动生成分支')
     try {
       // 基于已加载的指标树重建筛选维度与选中项
       tryReconstructFilterFromConditions(pendingSavedConfig.value)
@@ -865,11 +864,10 @@ onMounted(async () => {
       await nextTick()
       if (chartDisplayAreaRef.value) {
         // 恢复配置时，传入true参数表示需要恢复可见性配置
-        console.log('[dashboard.onMounted] 调用 chartDisplayAreaRef.generateChart(true)')
         await chartDisplayAreaRef.value.generateChart(true)
       }
     } catch (e) {
-      console.warn('[dashboard.onMounted] 加载完成后自动生成图表失败:', e)
+      console.warn('加载完成后自动生成图表失败:', e)
     } finally {
       pendingSavedConfig.value = null
     }
@@ -1035,21 +1033,18 @@ const restoreConfig = async (savedConfig: any) => {
     // 指标饼图模式判断（无维度，允许 firstDimension 为 null）
     const isMetricsPieMode = Array.isArray(savedConfig?.dataMetrics) &&
       savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
-    console.log('[dashboard.restoreConfig] 进入恢复流程, isMetricsPieMode:', isMetricsPieMode, 'hasFirstDimension:', !!savedConfig?.firstDimension, 'dataMetricsCount:', savedConfig?.dataMetrics?.length || 0)
 
     if (!savedConfig || (!isMetricsPieMode && !savedConfig.firstDimension)) {
-      console.warn('[dashboard.restoreConfig] 无效的配置数据，提前返回')
+      console.warn('无效的配置数据')
       return
     }
 
-    console.log('[dashboard.restoreConfig] 开始回显维度和数据指标')
     // 回显维度
     firstDimension.value = mapSavedGroupToUi(savedConfig.firstDimension)
     secondDimension.value = mapSavedGroupToUi(savedConfig.secondDimension)
 
     // 回显数据配置
     if (Array.isArray(savedConfig.dataMetrics)) {
-      console.log('[dashboard.restoreConfig] 回显数据指标:', savedConfig.dataMetrics.length, '项')
       dataMetrics.value = savedConfig.dataMetrics.map((m: any, idx: number) => ({
         id: `metric_${Date.now()}_${idx}`,
         dataName: m.dataName,
@@ -1089,21 +1084,17 @@ const restoreConfig = async (savedConfig: any) => {
     // 同步给图表展示，并记录待生成
     dimensionIndicatorsFilter.value = savedConfig
     pendingSavedConfig.value = savedConfig
-    console.log('[dashboard.restoreConfig] 配置已同步, 准备生成图表. config.url:', !!config.value?.url, 'indicatorTreeData:', indicatorTreeData.value?.length || 0, 'chartDisplayAreaRef:', !!chartDisplayAreaRef.value)
 
     // 若基础配置已就绪，立即生成图表；否则等待 onMounted 末尾的自动触发
     if (config.value?.url && indicatorTreeData.value?.length && chartDisplayAreaRef.value) {
       await nextTick()
       try {
-        console.log('[dashboard.restoreConfig] 调用 chartDisplayAreaRef.generateChart(true)')
         await chartDisplayAreaRef.value.generateChart(true)
       } catch (error) {
-        console.error('[dashboard.restoreConfig] 生成图表失败:', error)
+        console.error('生成图表失败:', error)
       } finally {
         pendingSavedConfig.value = null
       }
-    } else {
-      console.log('[dashboard.restoreConfig] 基础配置未就绪，等待 onMounted 自动触发')
     }
   } catch (error) {
     console.error('恢复配置失败:', error)

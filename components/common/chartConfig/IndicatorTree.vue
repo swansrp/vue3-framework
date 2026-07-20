@@ -500,10 +500,10 @@ const getPermissions = (action: 'edit' | 'delete') => {
 }
 
 // 处理右键菜单点击
-const handleContextMenuClick = ({ key }: { key: string }) => {
+const handleContextMenuClick = ({ key }: { key: any }) => {
   if (!currentContextNode.value) return
 
-  switch (key) {
+  switch (String(key)) {
     case 'add':
       // 添加子节点，传入父节点
       emit('add-indicator', currentContextNode.value)
