@@ -14,7 +14,8 @@ import { get, post } from '@/framework/network/request'
 export const getMyBindValues = async (groupType: string, bindType: string): Promise<string[]> => {
     const api = buildGetApiByType('/group/bind/my')
     const res = await get(api, { groupType, bindType }, {}, false, false)
-    return res.payload || []
+    // 防御：payload 异常（非数组）时返回空数组，避免下游 .map 报错
+    return Array.isArray(res?.payload) ? res.payload : []
 }
 
 /**
