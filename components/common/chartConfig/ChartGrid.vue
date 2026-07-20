@@ -113,7 +113,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   indicators: () => [],
   loading: false,
-  gridColumns: 7,
+  gridColumns: 12,
   canEditCommonIndicators: true,
   canEditPersonalIndicators: true,
   canDeleteCommonIndicators: true,

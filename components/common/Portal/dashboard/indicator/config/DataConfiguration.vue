@@ -129,7 +129,7 @@
               <span class="data-label">单位：</span>
               <span class="data-value">
                 <a-input
-                  :value="metric.unit"
+                  :value="metric.unit || (isMetricUnitDisabled(metric) ? deriveDisplayUnit(metric.unitConfig) : '')"
                   size="small"
                   :placeholder="getMetricUnitPlaceholder(metric)"
                   :disabled="isMetricUnitDisabled(metric)"
@@ -306,10 +306,11 @@
 
           <a-form-item label="单位">
             <a-input
-              v-model:value="editingDataMetric.unit"
+              :value="editingDataMetric.unit || (hasUnitConfig() ? deriveDisplayUnit(editingDataMetric.unitConfig) : '')"
               :placeholder="getUnitPlaceholder()"
               :disabled="hasUnitConfig()"
               allow-clear
+              @change="(e: any) => { if (editingDataMetric) editingDataMetric.unit = e.target.value }"
             />
             <div
               v-if="hasUnitConfig()"
@@ -339,6 +340,8 @@ import { message } from 'ant-design-vue'
 import { ref, computed, watch, nextTick } from 'vue'
 
 import ColorPicker from './ColorPicker.vue'
+
+import { deriveDisplayUnit } from '@/framework/components/common/Portal/dashboard/indicator/dashboard/utils/unitFormat'
 
 // 接口定义
 interface IndicatorItem {

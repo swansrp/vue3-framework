@@ -21,6 +21,7 @@ import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } fro
 
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isNotEmpty } from '@/framework/utils/common'
+import { getEffectiveUnit } from '../utils/unitFormat'
 
 export default defineComponent({
   name: 'LineChart',
@@ -118,10 +119,10 @@ export default defineComponent({
 
       if (metric.unitConfig) {
         const { fix } = parseUnitConfig(metric.unitConfig)
-        return `${formatWithDigits(fix)}${metric.unit || ''}`
+        return `${formatWithDigits(fix)}${getEffectiveUnit(metric)}`
       }
 
-      return `${formatWithDigits()}${metric.unit || ''}`
+      return `${formatWithDigits()}${getEffectiveUnit(metric)}`
     }
 
     const getTooltipRawValue = (param: any): number => {
@@ -459,7 +460,8 @@ export default defineComponent({
               formatter: (value: number) => {
                 const metric = leftNormalMetrics[0]
                 const formatted = metric.unitConfig ? formatYAxisValue(value) : value.toString()
-                return metric.unit ? `${formatted}${metric.unit}` : formatted
+                const effectiveUnit = getEffectiveUnit(metric)
+                return effectiveUnit ? `${formatted}${effectiveUnit}` : formatted
               },
               fontSize: 12
             },
@@ -482,7 +484,7 @@ export default defineComponent({
             position: 'right',
             offset: rightOffset,
             axisLabel: {
-              formatter: (value: number) => formatYAxisValue(value) + (metric.unit || ''),
+              formatter: (value: number) => formatYAxisValue(value) + getEffectiveUnit(metric),
               fontSize: 12
             },
             splitLine: {

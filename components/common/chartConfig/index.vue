@@ -5,19 +5,23 @@
       v-if="showHeader"
       class="dashboard-header"
     >
-      <h1>{{ title || currentRoute.meta.title }}</h1>
+      <h1 v-if="title !== ''">{{ title || currentRoute.meta.title }}</h1>
       <div class="header-actions">
         <slot name="header-actions">
           <a-button
             type="primary"
-            @click="refreshDataOnly"
+            :loading="headerRefreshing"
+            @click="handleRefreshDataOnly"
           >
             <ReloadOutlined />
             刷新数据
           </a-button>
-          <a-button @click="rearrangeChartsOnly">
+          <a-button :loading="headerRearranging" @click="handleRearrangeChartsOnly">
             <AppstoreOutlined />
             重新排列
+          </a-button>
+          <a-button @click="openPermManager">
+            权限配置
           </a-button>
         </slot>
       </div>
@@ -87,6 +91,14 @@
       :is-common-indicator="!showPersonalIndicators"
       @save="handleChartConfigSave"
     />
+
+    <!-- 资源权限配置弹窗 -->
+    <ResourcePermManager
+      v-model:visible="permVisible"
+      :resource-type="permResourceType"
+      :resources="permResources"
+      :field-names="{ id: 'id', name: 'title', children: 'children' }"
+    />
   </div>
 </template>
 
@@ -116,6 +128,8 @@ import { getPortalConfig } from '@/framework/apis/portal/config'
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import IndicatorTree from '@/framework/components/common/chartConfig/IndicatorTree.vue'
+import ResourcePermManager from '@/framework/components/common/ResourcePerm/ResourcePermManager.vue'
+import { useResourcePerm } from '@/framework/components/common/ResourcePerm/useResourcePerm'
 
 
 // 权限接口定义
@@ -164,7 +178,7 @@ const computedTableId = computed(() => {
 })
 
 // 统一的网格列数配置
-const GRID_COLUMNS = 7
+const GRID_COLUMNS = 12
 
 // 页面状态
 const loading = ref(false)
@@ -182,6 +196,9 @@ const chartConfigModalVisible = ref(false)
 const currentEditData = ref<IndicatorNode | null>(null)
 const currentParentNode = ref<IndicatorNode | null>(null) // 父节点（用于添加子节点）
 const isEditMode = ref(false)
+
+// 资源权限弹窗状态
+const { permVisible, permResourceType, permResources, openPerm } = useResourcePerm()
 
 // 数据状态
 const commonIndicators = ref<IndicatorNode[]>([])
@@ -547,6 +564,10 @@ const refreshDashboard = async () => {
   }
 }
 
+// 头部按钮 loading 状态
+const headerRefreshing = ref(false)
+const headerRearranging = ref(false)
+
 // 只刷新数据（不重新排列）
 const refreshDataOnly = async () => {
   try {
@@ -580,6 +601,16 @@ const rearrangeChartsOnly = async () => {
     console.error('重新排列失败:', error)
     message.error('重新排列失败，请重试')
   }
+}
+
+// 头部按钮 handler（带 loading）
+const handleRefreshDataOnly = async () => {
+  headerRefreshing.value = true
+  try { await refreshDataOnly() } finally { headerRefreshing.value = false }
+}
+const handleRearrangeChartsOnly = async () => {
+  headerRearranging.value = true
+  try { await rearrangeChartsOnly() } finally { headerRearranging.value = false }
 }
 
 // 更新侧边栏折叠状态
@@ -666,6 +697,11 @@ const handleCopyIndicator = (indicator: IndicatorNode) => {
 // 处理编辑指标事件
 const handleEditIndicator = (indicator: IndicatorNode) => {
   openIndicatorConfig(indicator, false)
+}
+
+// 打开权限配置弹窗（传入全部通用指标原始数据 + fieldNames）
+const openPermManager = () => {
+  openPerm('sys_portal_dashboard_statistic', commonIndicators.value)
 }
 
 // 打开指标配置（左下角按钮和编辑按钮使用）
@@ -1330,6 +1366,7 @@ defineExpose({
   addDashboard,
   deleteDashboard,
   forceRecalculateLayout,
+  openPermManager,
   dashboardItems: readonly(dashboardItems),
   loading: readonly(loading)
 })
@@ -1361,6 +1398,7 @@ defineExpose({
     .header-actions {
       display: flex;
       gap: 12px;
+      margin-left: auto;
     }
   }
 

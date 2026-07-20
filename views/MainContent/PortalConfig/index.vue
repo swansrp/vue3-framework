@@ -1674,32 +1674,12 @@
       wrap-class-name="fullscreen-modal"
     >
       <template #title>
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <span style="line-height: 1;">通用图表</span>
           <div style="display: flex; gap: 10px; margin-right: 30px;">
-            <a-button
-              type="primary"
-              size="middle"
-              :loading="publicDashboardRefreshing"
-              style="display: flex; align-items: center; justify-content: center;"
-              @click="handlePublicDashboardRefreshDataOnly"
-            >
-              <template #icon>
-                <ReloadOutlined />
-              </template>
-              刷新数据
-            </a-button>
-            <a-button
-              size="middle"
-              :loading="publicDashboardRearranging"
-              style="display: flex; align-items: center; justify-content: center;"
-              @click="handlePublicDashboardRearrange"
-            >
-              <template #icon>
-                <AppstoreOutlined />
-              </template>
-              重新排列
-            </a-button>
+            <a-button type="primary" size="small" @click="publicDashboardRef?.refreshDataOnly()">刷新数据</a-button>
+            <a-button size="small" @click="publicDashboardRef?.rearrangeChartsOnly()">重新排列</a-button>
+            <a-button size="small" @click="publicDashboardRef?.openPermManager()">权限配置</a-button>
           </div>
         </div>
       </template>
@@ -1726,7 +1706,6 @@
 
 <script lang="ts" setup>
 import {
-  AppstoreOutlined,
   ArrowDownOutlined,
   ArrowUpOutlined,
   ConsoleSqlOutlined,
@@ -1737,7 +1716,6 @@ import {
   ForkOutlined,
   MinusCircleOutlined,
   PlusOutlined,
-  ReloadOutlined,
   SortAscendingOutlined,
   UndoOutlined,
   UserOutlined,
@@ -1910,8 +1888,6 @@ const indicatorModalShow: Ref<boolean> = ref(false)
 const showPortalTableConfigModal: Ref<boolean> = ref(false)
 const showDataPreviewDrawer: Ref<boolean> = ref(false)
 const publicDashboardModalShow: Ref<boolean> = ref(false)
-const publicDashboardRefreshing: Ref<boolean> = ref(false)
-const publicDashboardRearranging: Ref<boolean> = ref(false)
 const publicDashboardRef = ref()
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
@@ -1929,42 +1905,6 @@ const copyConfig = () => {
     copyConfigModal.visible = false
     onSearch()
   })
-}
-
-// 处理通用指标刷新（只刷新数据）
-const handlePublicDashboardRefreshDataOnly = async () => {
-  if (!publicDashboardRef.value) {
-    console.warn('publicDashboard组件引用未找到')
-    return
-  }
-
-  try {
-    publicDashboardRefreshing.value = true
-    // 调用publicDashboard组件的refreshDataOnly方法（只刷新数据，不重新排列）
-    await publicDashboardRef.value.refreshDataOnly()
-  } catch (error) {
-    console.error('刷新数据失败:', error)
-  } finally {
-    publicDashboardRefreshing.value = false
-  }
-}
-
-// 处理通用指标重新排列
-const handlePublicDashboardRearrange = async () => {
-  if (!publicDashboardRef.value) {
-    console.warn('publicDashboard组件引用未找到')
-    return
-  }
-
-  try {
-    publicDashboardRearranging.value = true
-    // 调用publicDashboard组件的rearrangeChartsOnly方法（只重新排列，不刷新数据）
-    await publicDashboardRef.value.rearrangeChartsOnly()
-  } catch (error) {
-    console.error('重新排列失败:', error)
-  } finally {
-    publicDashboardRearranging.value = false
-  }
 }
 
 const getEntityConfig = (tableId: string) => {

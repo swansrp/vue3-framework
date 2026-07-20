@@ -133,7 +133,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   pageTitle: '通用仪表盘',
-  gridColumns: 7,
+  gridColumns: 12,
   globalConditions: () => ({ conditionList: [], andOr: '0' }),
   defaultExpandFirst: false
 })

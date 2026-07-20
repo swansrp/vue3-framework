@@ -21,6 +21,7 @@ import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } fro
 
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { getEffectiveUnit } from '../utils/unitFormat'
 
 export default defineComponent({
   name: 'MixedChart',
@@ -114,7 +115,7 @@ export default defineComponent({
     // 根据统计类型获取单位的通用函数
     const getUnitByStatType = (statType: string): string => {
       const metric = props.dataMetrics.find(m => m.dataName === statType)
-      return metric?.unit || ''
+      return getEffectiveUnit(metric)
     }
 
     // 处理数据为 ECharts 格式
@@ -271,7 +272,8 @@ export default defineComponent({
             axisLabel: {
               formatter: (value: number) => {
                 const formatted = metric.unitConfig ? formatYAxisValue(value) : value.toString()
-                return metric.unit ? `${formatted}${metric.unit}` : formatted
+                const effectiveUnit = getEffectiveUnit(metric)
+                return effectiveUnit ? `${formatted}${effectiveUnit}` : formatted
               },
               fontSize: 12
             },
@@ -311,7 +313,8 @@ export default defineComponent({
             axisLabel: {
               formatter: (value: number) => {
                 const formatted = metric.unitConfig ? formatYAxisValue(value) : value.toString()
-                return metric.unit ? `${formatted}${metric.unit}` : formatted
+                const effectiveUnit = getEffectiveUnit(metric)
+                return effectiveUnit ? `${formatted}${effectiveUnit}` : formatted
               },
               fontSize: 12
             },
@@ -766,7 +769,7 @@ export default defineComponent({
                 params.forEach((param: any) => {
                   const statType = param.seriesName
                   const metric = props.dataMetrics.find(m => m.dataName === statType)
-                  const unit = metric?.unit || ''
+                  const unit = getEffectiveUnit(metric)
 
                   const formattedValue = (() => {
                     if (metric?.unitConfig) {

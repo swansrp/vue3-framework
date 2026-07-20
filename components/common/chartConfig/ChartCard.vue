@@ -304,7 +304,7 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
   gridUnitWidth: 0,
   gridUnitHeight: 120,
-  gridColumns: 5,
+  gridColumns: 12,
   canEdit: true,
   canDelete: true,
   canResize: true,

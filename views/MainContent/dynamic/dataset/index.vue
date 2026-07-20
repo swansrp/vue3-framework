@@ -84,7 +84,6 @@ const handleGeneratePortal = (params: { portalName: string, displayName: string,
 
 <style scoped lang="less">
 .dataset-container {
-  padding: 16px;
   height: 100%;
   background: var(--bg-base);
 

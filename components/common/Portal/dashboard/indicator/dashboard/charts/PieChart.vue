@@ -20,6 +20,7 @@ import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
+import { getEffectiveUnit } from '../utils/unitFormat'
 
 export default defineComponent({
   name: 'PieChart',
@@ -206,6 +207,13 @@ export default defineComponent({
 
         const chartTitle = props.title
 
+        // 计算总额（基于过滤/排序后的 pieData）
+        const totalValue = pieData.reduce((sum, d) => sum + (typeof d.value === 'number' ? d.value : 0), 0)
+        const formattedCenterTotal = Number(totalValue).toLocaleString(undefined, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        })
+
         // 获取第一个有单位的指标作为默认单位显示（各指标可能单位不同，tooltip 中单独显示）
         return {
           title: {
@@ -217,6 +225,36 @@ export default defineComponent({
               fontWeight: 'bold'
             }
           },
+          graphic: [
+            {
+              type: 'group',
+              left: 'center',
+              top: '47%',
+              children: [
+                {
+                  type: 'text',
+                  left: 'center',
+                  top: -12,
+                  style: {
+                    text: '总额',
+                    fill: '#8c8c8c',
+                    fontSize: 13
+                  }
+                },
+                {
+                  type: 'text',
+                  left: 'center',
+                  top: 8,
+                  style: {
+                    text: formattedCenterTotal,
+                    fill: '#262626',
+                    fontSize: 16,
+                    fontWeight: 'bold'
+                  }
+                }
+              ]
+            }
+          ] as any,
           tooltip: {
             trigger: 'item',
             enterable: true,
@@ -234,7 +272,7 @@ export default defineComponent({
             formatter: (params: any) => {
               const idx = pieData.findIndex(d => d.name === params.name)
               const metric = metrics[idx] || metrics[0]
-              const unit = metric?.unit || ''
+              const unit = getEffectiveUnit(metric)
               let result = `<strong>${params.name}</strong><br/>`
               result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${params.name}</strong><br/>`
               const formattedValue = (() => {
@@ -282,7 +320,7 @@ export default defineComponent({
               const idx = pieData.findIndex(d => d.name === name)
               const metric = metrics[idx]
               if (!metric) return name
-              const unit = metric.unit || ''
+              const unit = getEffectiveUnit(metric)
               const value = pieData[idx]?.value || 0
               const formattedValue = (() => {
                 if (metric?.unitConfig) {
@@ -430,7 +468,7 @@ export default defineComponent({
           },
           extraCssText: 'max-height: 500px; max-width: 500px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
-            const unit = pieMetric.unit || ''
+            const unit = getEffectiveUnit(pieMetric)
             let result = `<strong>${params.name}</strong><br/>`
             result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${pieMetric.dataName}</strong><br/>`
             // 格式化当前扇区的数值显示
@@ -481,7 +519,7 @@ export default defineComponent({
           itemHeight: 14,
           formatter: (name: string) => {
             const item = pieData.find(d => d.name === name)
-            const unit = pieMetric.unit || ''
+            const unit = getEffectiveUnit(pieMetric)
             // 格式化图例中的数值显示
             const formattedValue = (() => {
               const value = item?.value || 0

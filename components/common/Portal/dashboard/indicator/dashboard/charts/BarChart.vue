@@ -21,6 +21,7 @@ import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } fro
 
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { getEffectiveUnit } from '../utils/unitFormat'
 
 export default defineComponent({
   name: 'BarChart',
@@ -91,7 +92,7 @@ export default defineComponent({
     // 根据统计类型获取单位的通用函数
     const getUnitByStatType = (statType: string): string => {
       const metric = props.dataMetrics.find(m => m.dataName === statType)
-      return metric?.unit || ''
+      return getEffectiveUnit(metric)
     }
 
     // 处理数据为 ECharts 格式
@@ -389,10 +390,21 @@ export default defineComponent({
                   }
                   return value.toString()
                 })()
-                return leftMetrics[0].unit ? `${formatted}${leftMetrics[0].unit}` : formatted
+                const effectiveUnit = getEffectiveUnit(leftMetrics[0])
+                return effectiveUnit ? `${formatted}${effectiveUnit}` : formatted
               },
               fontSize: 12
             },
+            splitLine: {
+              show: true
+            }
+          })
+        } else {
+          // 兜底：没有任何指标配置在左轴时（如回显配置缺少 yAxisPosition），
+          // 保证默认左轴存在，避免 series 引用 yAxisIndex 0 时 echarts 崩溃
+          yAxes.push({
+            type: 'value',
+            position: 'left',
             splitLine: {
               show: true
             }
@@ -421,7 +433,7 @@ export default defineComponent({
               const sameStackMetrics = stackGroups.get(metric.stackGroup)
               if (sameStackMetrics && sameStackMetrics.length > 1) {
                 // 多个相同stackGroup的指标，合并显示
-                const units = [...new Set(sameStackMetrics.map((m: any) => m.unit))]
+                const units = [...new Set(sameStackMetrics.map((m: any) => getEffectiveUnit(m)))]
                 const combinedUnit = units.length === 1 ? units[0] : units.join('/')
                 const namesText = sameStackMetrics.map((m: any) => m.dataName).join('/')
 
@@ -474,7 +486,8 @@ export default defineComponent({
                       }
                       return value.toString()
                     })()
-                    return metric.unit ? `${formatted}${metric.unit}` : formatted
+                    const effectiveUnit = getEffectiveUnit(metric)
+                    return effectiveUnit ? `${formatted}${effectiveUnit}` : formatted
                   },
                   fontSize: 12
                 },
