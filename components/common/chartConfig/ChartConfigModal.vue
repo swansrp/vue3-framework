@@ -330,8 +330,11 @@ const loadEditData = async () => {
       return
     }
 
-    // 验证配置完整性
-    if (!savedConfig.firstDimension) {
+    // 验证配置完整性（指标饼图模式允许 firstDimension 为 null）
+    const isMetricsPieMode =
+      Array.isArray(savedConfig?.dataMetrics) &&
+      savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
+    if (!isMetricsPieMode && !savedConfig.firstDimension) {
       message.warn('配置数据缺少 firstDimension，无法回显完整配置')
       return
     }
