@@ -226,6 +226,36 @@
           }
         }
       }
+
+      // 直连树模式（单表，不包裹折叠面板）
+      .tree-content.direct-tree {
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background: #fafafa;
+
+        :deep(.indicator-tree-panel) {
+          background: transparent;
+          border: none;
+        }
+
+        &::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: #f5f5f5;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: #d9d9d9;
+          border-radius: 3px;
+
+          &:hover {
+            background: #bfbfbf;
+          }
+        }
+      }
     }
 
     // 右侧图表区域

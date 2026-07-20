@@ -1,7 +1,10 @@
 <template>
   <div class="general-dashboard-page">
     <!-- 顶部头部区域 -->
-    <div class="page-header">
+    <div
+      v-if="showHeader"
+      class="page-header"
+    >
       <div class="header-left">
         <h1 class="page-title">
           {{ pageTitle }}
@@ -16,9 +19,11 @@
 
     <!-- 下方左右分栏区域 -->
     <div class="page-content">
-      <!-- 左侧手风琴指标树区域 -->
+      <!-- 左侧指标树区域 -->
       <div class="indicator-tree-wrapper">
+        <!-- 手风琴模式（多表，可开关闭合） -->
         <a-collapse
+          v-if="showCollapse"
           v-model:active-key="activeKeys"
           accordion
           class="indicator-collapse"
@@ -45,6 +50,19 @@
             </div>
           </a-collapse-panel>
         </a-collapse>
+
+        <!-- 直连树模式（单表，不包裹折叠面板） -->
+        <div
+          v-else
+          class="tree-content direct-tree"
+        >
+          <simple-indicator-tree
+            :indicators="getIndicatorsForTable(directTableId)"
+            :selected-node-key="selectedNodeKey"
+            :auto-expand-key="selectedNodeKey"
+            @node-click="handleNodeClick"
+          />
+        </div>
       </div>
 
       <!-- 右侧图表区域 -->
@@ -89,7 +107,7 @@
           >
             <div class="empty-content">
               <BarChartOutlined class="empty-icon" />
-              <p v-if="activeKeys === undefined || activeKeys.length === 0">
+              <p v-if="showCollapse && (activeKeys === undefined || activeKeys.length === 0)">
                 请在左侧展开折叠面板以查看图表
               </p>
               <p v-else>
@@ -129,13 +147,17 @@ interface Props {
   gridColumns?: number
   globalConditions?: ConditionListType // 外部传入的全局筛选条件
   defaultExpandFirst?: boolean // 是否默认展开第一个面板
+  showCollapse?: boolean // 是否显示手风琴折叠面板（单表场景可关闭，直接展示指标树）
+  showHeader?: boolean // 是否显示顶部标题头部（筛选按钮外移到 tab 栏时可关闭）
 }
 
 const props = withDefaults(defineProps<Props>(), {
   pageTitle: '通用仪表盘',
   gridColumns: 12,
   globalConditions: () => ({ conditionList: [], andOr: '0' }),
-  defaultExpandFirst: false
+  defaultExpandFirst: false,
+  showCollapse: true,
+  showHeader: true
 })
 
 // Emits
@@ -146,6 +168,9 @@ const emit = defineEmits<{
 
 // 手风琴当前激活的key
 const activeKeys = ref<string[]>([])
+
+// 直连树模式使用的表ID（取第一个配置的表）
+const directTableId = computed(() => props.tableConfigs[0]?.tableId || '')
 
 // 当前选中的树节点（用于过滤显示的图表）
 const selectedNodeKey = ref<string | null>(null)
@@ -515,34 +540,50 @@ const currentNodeTitle = computed(() => {
   return node?.title || ''
 })
 
+// 自动选中指定表的第一个节点
+const autoSelectFirstNode = (tableId: string) => {
+  const data = tableDataMap.value[tableId]
+  if (data && data.indicators && data.indicators.length > 0) {
+    const firstNode = data.indicators[0]
+    const firstNodeKey = firstNode.key || firstNode.id
+
+    // 自动选中第一个节点
+    selectedNodeKey.value = firstNodeKey
+    selectedTableId.value = tableId
+
+    // 发出节点点击事件
+    emit('node-click', {
+      tableId,
+      nodeKey: firstNodeKey,
+      nodeTitle: firstNode.title || ''
+    })
+  }
+}
+
 // 页面初始化
 onMounted(async () => {
-  // 如果设置了默认展开第一个面板，且有配置
+  // 直连树模式：仅加载指标树数据，不默认选中节点（由用户点击后再渲染图表）
+  if (!props.showCollapse && props.tableConfigs.length > 0) {
+    const firstTableId = props.tableConfigs[0].tableId
+    activeKeys.value = [firstTableId]
+    selectedTableId.value = firstTableId
+    emit('table-change', firstTableId)
+
+    await loadTableData(firstTableId)
+    return
+  }
+
+  // 手风琴模式：如果设置了默认展开第一个面板，且有配置
   if (props.defaultExpandFirst && props.tableConfigs.length > 0) {
     const firstTableId = props.tableConfigs[0].tableId
     activeKeys.value = [firstTableId]
     emit('table-change', firstTableId)
-    
+
     // 加载第一个表的数据
     await loadTableData(firstTableId)
-    
+
     // 数据加载完成后，自动点击第一个节点
-    const data = tableDataMap.value[firstTableId]
-    if (data && data.indicators && data.indicators.length > 0) {
-      const firstNode = data.indicators[0]
-      const firstNodeKey = firstNode.key || firstNode.id
-      
-      // 自动选中第一个节点
-      selectedNodeKey.value = firstNodeKey
-      selectedTableId.value = firstTableId
-      
-      // 发出节点点击事件
-      emit('node-click', {
-        tableId: firstTableId,
-        nodeKey: firstNodeKey,
-        nodeTitle: firstNode.title || ''
-      })
-    }
+    autoSelectFirstNode(firstTableId)
   }
 })
 </script>
