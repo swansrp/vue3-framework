@@ -30,7 +30,9 @@ export const apiType: any = {
   week: '/week',
   auth: '',
   config: '/config',
-  portal: '/portal'
+  portal: '/portal',
+  tree: '/tree',
+  treeAdmin: '/dict/tree/admin'
 }
 
 const requestMethod = {
