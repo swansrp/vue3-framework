@@ -22,6 +22,7 @@ import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } fro
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isNotEmpty } from '@/framework/utils/common'
 import { getEffectiveUnit } from '../utils/unitFormat'
+import { buildFullAxisTooltipHtml } from '../utils/tooltipCommon'
 
 export default defineComponent({
   name: 'LineChart',
@@ -562,74 +563,35 @@ export default defineComponent({
           },
           extraCssText: 'max-height: 600px; max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
-            let result = `<strong>${params[0].axisValue}</strong><br/>`
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
-            if (hasSecondDimension) {
-              const groupedParams = params.reduce((acc: any, param: any) => {
-                const parts = param.seriesName.split('&&')
-                const secondDimension = parts[0]
-                const statType = parts[1]
-                const rawValue = getTooltipRawValue(param)
-                if (!acc[statType]) {
-                  acc[statType] = { params: [], totalRaw: 0 }
-                }
-                acc[statType].params.push({ ...param, secondDimension, rawValue })
-                acc[statType].totalRaw += rawValue
-                return acc
-              }, {})
-              Object.keys(groupedParams).forEach(statType => {
-                const metric = props.dataMetrics.find(m => m.dataName === statType)
-                const entries = groupedParams[statType]
-                const totalRaw = entries.totalRaw
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${statType}</strong><br/>`
-                entries.params.forEach((param: any) => {
-                  const percentage = totalRaw > 0 ? ((param.rawValue / totalRaw) * 100).toFixed(1) : '0.0'
-                  const formattedRaw = formatOriginalValue(metric, param.rawValue)
-                  result += `${param.marker}${param.secondDimension}: ${formattedRaw} (${formatSharePercent(percentage)})<br/>`
-                })
-                const formattedTotal = formatOriginalValue(metric, totalRaw)
-                const grandTotal = globalRawTotalsByStatType[statType] || 0
-                const subtotalPercentage = grandTotal > 0 ? ((totalRaw / grandTotal) * 100).toFixed(2) : '0.00'
-                result += `<span style="color: var(--text-secondary); font-size: 12px;">小计: ${formattedTotal} (${formatSharePercent(subtotalPercentage)})</span><br/>`
-                const formattedGrandTotal = formatOriginalValue(metric, grandTotal)
-                result += `<span style="color: var(--text-secondary); font-size: 12px; font-weight: bold;\">总计: ${formattedGrandTotal}</span></div>`
-              })
-            } else {
-              const categoryName = params[0].axisValue
-              const globalTotalsMap = statisticTypes.reduce((acc: Record<string, number>, statType: string) => {
-                acc[statType] = globalRawTotalsByStatType[statType] || 0
-                return acc
-              }, {})
-              const onlyOneStatType = statisticTypes.length === 1
-              if (onlyOneStatType) {
-                const statType = statisticTypes[0]
-                const metric = props.dataMetrics.find(m => m.dataName === statType)
-                const param = params.find((p: any) => p.seriesName === statType) || params[0]
-                const rawValue = getTooltipRawValue(param)
-                const totalRaw = globalTotalsMap[statType] || 0
-                const percentage = totalRaw > 0 ? ((rawValue / totalRaw) * 100).toFixed(2) : '0.00'
-                const formattedValue = formatOriginalValue(metric, rawValue)
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${metric?.dataName || statType}</strong><br/>`
-                result += `${param.marker}${categoryName}：${formattedValue} (${formatSharePercent(percentage)})<br/>`
-                const formattedTotal = formatOriginalValue(metric, totalRaw)
-                result += `<span style="color: var(--text-secondary); font-size: 12px;">总计：${formattedTotal}</span></div>`
-              } else {
-                params.forEach((param: any) => {
-                  const statType = param.seriesName
-                  const metric = props.dataMetrics.find(m => m.dataName === statType)
-                  const rawValue = getTooltipRawValue(param)
-                  const totalRaw = globalTotalsMap[statType] || 0
-                  const percentage = totalRaw > 0 ? ((rawValue / totalRaw) * 100).toFixed(2) : '0.00'
-                  const formattedValue = formatOriginalValue(metric, rawValue)
-                  result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${metric?.dataName || statType}</strong><br/>`
-                  result += `${param.marker}${metric?.dataName || statType}：${formattedValue} (${formatSharePercent(percentage)})<br/>`
-                  const formattedTotal = formatOriginalValue(metric, totalRaw)
-                  result += `<span style="color: var(--text-secondary); font-size: 12px;">总计：${formattedTotal}</span></div>`
-                })
-              }
-            }
+            const hoveredCategory = params[0].axisValue
 
-            return result
+            // ===== 折线图：复用饼图 tooltip 样式（列出所有数据点，高亮当前 hover 项） =====
+            return buildFullAxisTooltipHtml(
+              series,
+              categories,
+              hoveredCategory,
+              (s: any) => {
+                // 显示名称：有二级维度时格式化为 "维度(统计类型)"，否则为系列名
+                if (hasSecondDimension && s.name && s.name.includes('&&')) {
+                  const parts = s.name.split('&&')
+                  return parts[1] === '分布统计' ? parts[0] : `${parts[0]}(${parts[1]})`
+                }
+                return s.name
+              },
+              (s: any) => {
+                const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                const metric = props.dataMetrics.find(m => m.dataName === statType)
+                // 百分比折线的数值自带 % 后缀，不再追加单位
+                return isPercentLineMetric(metric) ? '' : (getEffectiveUnit(metric) || '')
+              },
+              (value: number, s: any) => {
+                const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                const metric = props.dataMetrics.find(m => m.dataName === statType)
+                return formatValueForMetric(metric, value)
+              },
+              (datum: any, s: any) => datum?.itemStyle?.color || s.itemStyle?.color || s.lineStyle?.color
+            )
           }
         },
         grid: {

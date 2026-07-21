@@ -1674,20 +1674,11 @@
       wrap-class-name="fullscreen-modal"
     >
       <template #title>
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <span style="line-height: 1;">通用图表</span>
-          <div style="display: flex; gap: 10px; margin-right: 30px;">
-            <a-button type="primary" size="small" @click="publicDashboardRef?.refreshDataOnly()">刷新数据</a-button>
-            <a-button size="small" @click="publicDashboardRef?.rearrangeChartsOnly()">重新排列</a-button>
-            <a-button size="small" @click="publicDashboardRef?.openPermManager()">权限配置</a-button>
-          </div>
-        </div>
+        <span style="line-height: 1;">通用图表</span>
       </template>
       <public-dashboard
         v-if="publicDashboardModalShow"
-        ref="publicDashboardRef"
         :table-id="tableConfig.name"
-        :show-header="false"
         :show-personal-indicators="false"
         :use-common-dashboard="true"
         :common-indicator-permissions="{ edit: true, delete: true }"
@@ -1888,7 +1879,6 @@ const indicatorModalShow: Ref<boolean> = ref(false)
 const showPortalTableConfigModal: Ref<boolean> = ref(false)
 const showDataPreviewDrawer: Ref<boolean> = ref(false)
 const publicDashboardModalShow: Ref<boolean> = ref(false)
-const publicDashboardRef = ref()
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
 }

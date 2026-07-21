@@ -23,6 +23,14 @@
           <a-button @click="openPermManager">
             权限配置
           </a-button>
+          <a-button :loading="headerSelectingAll" @click="handleSelectAll">
+            <CheckOutlined />
+            选中所有
+          </a-button>
+          <a-button danger :loading="headerClosingAll" @click="handleCloseAll">
+            <CloseOutlined />
+            关闭所有
+          </a-button>
         </slot>
       </div>
     </div>
@@ -32,6 +40,7 @@
       <!-- 左侧指标树 -->
       <indicator-tree
         v-if="showIndicatorTree"
+        ref="indicatorTreeRef"
         :collapsed="sidebarCollapsed"
         :common-indicators="commonIndicators"
         :expanded-common-keys="expandedCommonKeys"
@@ -103,8 +112,8 @@
 </template>
 
 <script lang="ts" setup>
-import { AppstoreOutlined, ReloadOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+import { AppstoreOutlined, CheckOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, readonly, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -190,6 +199,7 @@ const portalConfig = ref<any>(null)
 
 // 组件引用
 const chartGridRef = ref()
+const indicatorTreeRef = ref()
 
 // 图表配置弹窗状态
 const chartConfigModalVisible = ref(false)
@@ -611,6 +621,61 @@ const handleRefreshDataOnly = async () => {
 const handleRearrangeChartsOnly = async () => {
   headerRearranging.value = true
   try { await rearrangeChartsOnly() } finally { headerRearranging.value = false }
+}
+
+// 关闭所有图表
+const headerClosingAll = ref(false)
+const handleCloseAll = () => {
+  const items = displayedIndicators.value
+  if (!items || items.length === 0) {
+    message.warning('暂无图表可关闭')
+    return
+  }
+  Modal.confirm({
+    title: '确认关闭所有',
+    content: `确定要关闭全部 ${items.length} 个图表吗？`,
+    okText: '确定',
+    cancelText: '取消',
+    okType: 'danger',
+    onOk: async () => {
+      headerClosingAll.value = true
+      try {
+        const indicatorIds = items.map(item => item.indicatorId).filter(Boolean) as string[]
+        await deleteDashboard(indicatorIds)
+      } finally {
+        headerClosingAll.value = false
+      }
+    }
+  })
+}
+
+// 选中所有（左侧树筛选后的全部叶子指标一键打开）
+const headerSelectingAll = ref(false)
+const handleSelectAll = async () => {
+  // 获取左侧树筛选后的所有叶子指标ID
+  const filteredIds: string[] = indicatorTreeRef.value?.getFilteredLeafIndicatorIds?.() ?? []
+  if (filteredIds.length === 0) {
+    message.warning('左侧指标树无可打开的指标')
+    return
+  }
+
+  // 排除已经在仪表盘上显示的指标，避免重复添加
+  const existingIds = new Set(
+    dashboardItems.value.map(item => item.indicatorId).filter(Boolean)
+  )
+  const idsToAdd = filteredIds.filter(id => !existingIds.has(id))
+
+  if (idsToAdd.length === 0) {
+    message.info('所有指标均已在仪表盘中显示')
+    return
+  }
+
+  headerSelectingAll.value = true
+  try {
+    await addDashboardFromTree(idsToAdd)
+  } finally {
+    headerSelectingAll.value = false
+  }
 }
 
 // 更新侧边栏折叠状态

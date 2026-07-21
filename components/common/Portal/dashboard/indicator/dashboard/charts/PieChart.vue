@@ -355,6 +355,7 @@ export default defineComponent({
             width: "80%",
             itemGap: 15,
             itemHeight: 14,
+            data: pieData.map((d) => d.name),
             formatter: (name: string) => {
               const idx = pieData.findIndex((d) => d.name === name);
               const metric = metrics[idx];
@@ -463,8 +464,12 @@ export default defineComponent({
         })
         .filter((item) => item.value > 0); // 过滤掉值为0的项
 
-      // 按值排序
-      pieData.sort((a, b) => b.value - a.value);
+      // 排序：默认保持配置的维度顺序（与图例严格一致）；用户可通过排序开关按值升/降序
+      if (props.sortOrder === "asc") {
+        pieData.sort((a, b) => a.value - b.value);
+      } else if (props.sortOrder === "desc") {
+        pieData.sort((a, b) => b.value - a.value);
+      }
 
       // 饼图配置 - 标题处理分布统计
       const chartTitle = props.title === "分布统计" ? "" : props.title;
@@ -599,6 +604,7 @@ export default defineComponent({
           width: "80%",
           itemGap: 15,
           itemHeight: 14,
+          data: pieData.map((d: any) => d.name),
           formatter: (name: string) => {
             const item = pieData.find((d) => d.name === name);
             const unit = getEffectiveUnit(pieMetric);

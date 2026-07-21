@@ -22,6 +22,7 @@ import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } fro
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { getEffectiveUnit } from '../utils/unitFormat'
+import { buildFullAxisTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
 
 export default defineComponent({
   name: 'BarChart',
@@ -572,10 +573,43 @@ export default defineComponent({
           },
           extraCssText: 'max-height: 600px; max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
-            let result = `<strong>${params[0].axisValue}</strong><br/>`
-
             // 判断是否有第二维度
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
+
+            // ===== 非堆叠图表：复用饼图 tooltip 样式（列出所有类目数据，高亮当前 hover 项） =====
+            if (!hasStackedSeries(series)) {
+              const hoveredCategory = params[0].axisValue
+              return buildFullAxisTooltipHtml(
+                series,
+                categories,
+                hoveredCategory,
+                (s: any) => {
+                  // 显示名称：有二级维度时格式化为 "维度(统计类型)"，否则为系列名
+                  if (hasSecondDimension && s.name && s.name.includes('&&')) {
+                    const parts = s.name.split('&&')
+                    return parts[1] === '分布统计' ? parts[0] : `${parts[0]}(${parts[1]})`
+                  }
+                  return s.name
+                },
+                (s: any) => {
+                  const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                  return getEffectiveUnit(props.dataMetrics.find(m => m.dataName === statType)) || ''
+                },
+                (value: number, s: any) => {
+                  const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                  const metric = props.dataMetrics.find(m => m.dataName === statType)
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
+                  }
+                  return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                },
+                (datum: any) => datum?.itemStyle?.color
+              )
+            }
+
+            // ===== 堆叠图表：保持原有 tooltip 样式 =====
+            let result = `<strong>${params[0].axisValue}</strong><br/>`
 
             if (hasSecondDimension) {
               // 有第二维度时，按统计类型分组
@@ -610,7 +644,7 @@ export default defineComponent({
               Object.keys(groupedParams).forEach(statType => {
                 result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${statType}</strong><br/>`
 
-                const typeParams = groupedParams[statType]
+                const typeParams = groupedParams[statType].filter((p: any) => p.value != null && p.value !== 0)
                 const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
 
                 typeParams.forEach((param: any) => {

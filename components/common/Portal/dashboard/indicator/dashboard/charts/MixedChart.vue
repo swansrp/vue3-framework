@@ -22,6 +22,7 @@ import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } fro
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { getEffectiveUnit } from '../utils/unitFormat'
+import { buildFullAxisTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
 
 export default defineComponent({
   name: 'MixedChart',
@@ -659,9 +660,46 @@ export default defineComponent({
           formatter: (params: any) => {
             const formatSharePercent = (value: number) => `${value}${DEFAULT_PERCENT_UNIT}`
 
-            let result = `<strong>${params[0].axisValue}</strong><br/>`
-
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
+
+            // ===== 非堆叠图表：复用饼图 tooltip 样式（列出所有类目数据，高亮当前 hover 项） =====
+            if (!hasStackedSeries(series)) {
+              const hoveredCategory = params[0].axisValue
+              return buildFullAxisTooltipHtml(
+                series,
+                categories,
+                hoveredCategory,
+                (s: any) => {
+                  // 显示名称：有二级维度时格式化为 "维度(统计类型)"，否则为系列名
+                  if (hasSecondDimension && s.name && s.name.includes('&&')) {
+                    const parts = s.name.split('&&')
+                    return parts[1] === '分布统计' ? parts[0] : `${parts[0]}(${parts[1]})`
+                  }
+                  return s.name
+                },
+                (s: any) => {
+                  const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                  const metric = props.dataMetrics.find(m => m.dataName === statType)
+                  return isPercentLineMetric(metric) ? '' : (getEffectiveUnit(metric) || '')
+                },
+                (value: number, s: any) => {
+                  const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                  const metric = props.dataMetrics.find(m => m.dataName === statType)
+                  if (isPercentLineMetric(metric)) {
+                    return `${value.toFixed(2)}`
+                  }
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
+                  }
+                  return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                },
+                (datum: any, s: any) => datum?.itemStyle?.color || s.itemStyle?.color || s.lineStyle?.color
+              )
+            }
+
+            // ===== 堆叠图表：保持原有 tooltip 样式 =====
+            let result = `<strong>${params[0].axisValue}</strong><br/>`
 
             if (hasSecondDimension) {
               const groupedParams = params.reduce((acc: any, param: any) => {

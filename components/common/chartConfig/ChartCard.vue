@@ -57,6 +57,13 @@
               </a-menu>
             </template>
           </a-dropdown>
+          <!-- 刷新 -->
+          <a-tooltip title="刷新">
+            <ReloadOutlined
+              :class="['action-icon', { 'action-icon-disabled': chartLoading }]"
+              @click="refreshChart"
+            />
+          </a-tooltip>
           <template v-if="canEdit">
             <a-tooltip title="编辑">
               <EditOutlined @click="$emit('edit')" />
@@ -447,9 +454,20 @@ const chartType = computed(() => {
 
 // 图表分类（x轴）
 const chartCategories = computed(() => {
-  // 基于过滤/排序后的 safeChartData 生成分类，确保 x 轴顺序与图表数据一致
   if (!safeChartData.value.length) return []
-  return [...new Set(safeChartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
+  const dataCats = [...new Set(safeChartData.value.map((item: any) => item.metricLabel.split('&&')[0]))]
+
+  // 应用排序时，分类跟随排序后的数据顺序，确保 x 轴与图表数据一致
+  if (sortOrder.value === 'asc' || sortOrder.value === 'desc') {
+    return dataCats
+  }
+
+  // 默认：以配置的第一维度顺序为准，与后端数据做交集（与 ChartDisplayArea 保持一致）
+  const configuredOrder =
+    indicatorConfig.value?.firstDimension?.indicatorItems?.map((i: any) => i.itemName) || []
+  const ordered = configuredOrder.filter((name: string) => dataCats.includes(name))
+  const extras = dataCats.filter((name: string) => !configuredOrder.includes(name))
+  return [...ordered, ...extras]
 })
 
 // 图表副标题

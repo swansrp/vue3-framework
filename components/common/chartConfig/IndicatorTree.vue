@@ -1135,6 +1135,30 @@ const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | nul
   }
   return null
 }
+
+// 获取筛选后的所有叶子节点指标ID（供父组件"选中所有"使用）
+const getFilteredLeafIndicatorIds = (): string[] => {
+  const collectLeafIds = (nodes: IndicatorNode[]): string[] => {
+    const ids: string[] = []
+    for (const node of nodes) {
+      if (!node.children || node.children.length === 0) {
+        if (node.id) ids.push(node.id)
+      } else {
+        ids.push(...collectLeafIds(node.children))
+      }
+    }
+    return ids
+  }
+
+  return [
+    ...collectLeafIds(filteredCommonIndicators.value),
+    ...collectLeafIds(filteredPersonalIndicators.value)
+  ]
+}
+
+defineExpose({
+  getFilteredLeafIndicatorIds
+})
 </script>
 
 <style lang="less" scoped src="./css/IndicatorTree.less"></style>
