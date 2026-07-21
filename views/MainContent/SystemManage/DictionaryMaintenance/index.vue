@@ -203,12 +203,7 @@
         </div>
       </a-tab-pane>
 
-      <a-tab-pane
-        key="tree"
-        tab="树形字典"
-      >
-        <DictTreePanel />
-      </a-tab-pane>
+
     </a-tabs>
 
     <!-- 弹窗 -->
@@ -233,7 +228,6 @@ import { Ref, UnwrapRef } from 'vue'
 
 import AddDictItemModal from './components/AddDictItemModal.vue'
 import AddDictModal from './components/AddDictModal.vue'
-import DictTreePanel from './components/DictTreePanel.vue'
 import { DictDateType, DictConfigItemType, DataItem } from './types'
 
 import { deleteDictItem, getDictItemByName, getDictNameList, updateDictItem, updateDictItemSetDefault,

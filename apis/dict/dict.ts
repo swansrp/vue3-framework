@@ -60,8 +60,6 @@ export interface DynamicDictReq {
   orderBy?: string
   /** 父级ID列名（有值则为树形字典模式） */
   pidColumn?: string
-  /** 主键列名（树形模式下的ID列，默认取valueColumn） */
-  idColumn?: string
   /** 筛选条件（可选，支持多种操作符） */
   conditions?: DynamicDictCondition[]
 }
@@ -72,13 +70,12 @@ export interface DynamicDictConfig {
   dictCode: string
   dictName: string
   dataSource?: string
-  database?: string
+  databaseName?: string
   tableName: string
   valueColumn: string
   labelColumn: string
   orderBy?: string
   pidColumn?: string
-  idColumn?: string
   conditions?: string
   valid?: string
 }
@@ -97,8 +94,8 @@ export const saveDynamicDictConfig = (data: DynamicDictReq, domain = baseDomain)
   request(buildPostApi('/dynamic/config', domain), {}, data, true, true) as Promise<any>
 
 /** 获取动态字典配置列表 */
-export const getDynamicDictConfigList = (domain = baseDomain) =>
-  request(buildGetApi('/dynamic/config', domain), {}, {}, true, true) as Promise<any>
+export const getDynamicDictConfigList = (params?: { keyword?: string }, domain = baseDomain) =>
+  request(buildGetApi('/dynamic/config', domain), params || {}, {}, false, false) as Promise<any>
 
 /** 删除动态字典配置 */
 export const deleteDynamicDictConfig = (id: number, domain = baseDomain) =>
@@ -115,8 +112,8 @@ export const getTreeDict = (params: { dictName: string }, domain = baseDomain) =
   request(buildTreeGetApi('', domain), params, {}, false, false) as Promise<any>
 
 /** 获取所有业务树形字典列表（管理端） */
-export const getBizTreeDictList = (domain = baseDomain) =>
-  request(buildTreeAdminGetApi('/biz/list', domain), {}, {}, false, false) as Promise<any>
+export const getBizTreeDictList = (params?: { keyword?: string }, domain = baseDomain) =>
+  request(buildTreeAdminGetApi('/biz/list', domain), params || {}, {}, false, false) as Promise<any>
 
 /** 获取业务树形字典（管理端，树结构） */
 export const getBizTreeDict = (params: { dictCode: string }, domain = baseDomain) =>
@@ -125,3 +122,27 @@ export const getBizTreeDict = (params: { dictCode: string }, domain = baseDomain
 /** 刷新业务树形字典缓存（管理端） */
 export const refreshBizTreeDict = (params: { dictCode: string }, domain = baseDomain) =>
   request(buildTreeAdminPostApi('/biz/refresh', domain), params, {}, true, false) as Promise<any>
+
+/** 创建树形字典（手动模式） */
+export const createTreeDict = (data: object, domain = baseDomain) =>
+  request(buildTreeAdminPostApi('/biz/tree/create', domain), {}, data, true, false) as Promise<any>
+
+/** 删除整棵树形字典 */
+export const deleteTreeDict = (params: { dictCode: string }, domain = baseDomain) =>
+  request(buildTreeAdminPostApi('/biz/tree/delete', domain), params, {}, true, false) as Promise<any>
+
+/** 添加树形字典节点 */
+export const addTreeDictNode = (data: object, domain = baseDomain) =>
+  request(buildTreeAdminPostApi('/biz/item/add', domain), {}, data, true, false) as Promise<any>
+
+/** 更新树形字典节点 */
+export const updateTreeDictNode = (data: object, domain = baseDomain) =>
+  request(buildTreeAdminPostApi('/biz/item/update', domain), {}, data, true, false) as Promise<any>
+
+/** 删除树形字典节点 */
+export const deleteTreeDictNode = (params: { id: number; dictCode: string }, domain = baseDomain) =>
+  request(buildTreeAdminPostApi('/biz/item/delete', domain), params, {}, true, false) as Promise<any>
+
+/** 移动树形字典节点（拖拽变更父节点/排序） */
+export const moveTreeDictNode = (data: object, domain = baseDomain) =>
+  request(buildTreeAdminPostApi('/biz/item/move', domain), {}, data, true, false) as Promise<any>

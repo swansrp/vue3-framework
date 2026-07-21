@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
 import { ref, watch } from 'vue'
 
@@ -532,20 +532,31 @@ loadDictNameMap()
       <div class="panel-header">
         <div class="header-top">
           <h3>字典列表</h3>
-          <a-button
-            type="primary"
-            size="small"
-            @click="handleAddDict"
-          >
-            <template #icon>
-              <PlusOutlined />
-            </template>
-            新增字典
-          </a-button>
+          <a-space :size="4">
+            <a-button
+              type="primary"
+              size="small"
+              @click="handleAddDict"
+            >
+              <template #icon>
+                <PlusOutlined />
+              </template>
+              新增字典
+            </a-button>
+            <a-button
+              type="text"
+              size="small"
+              @click="loadDictList"
+            >
+              <template #icon>
+                <ReloadOutlined />
+              </template>
+            </a-button>
+          </a-space>
         </div>
         <a-input-search
           v-model:value="dictNameSearch"
-          placeholder="搜索字典名称"
+          placeholder="搜索字典名称/编码"
           :loading="dictListLoading"
           allow-clear
         />

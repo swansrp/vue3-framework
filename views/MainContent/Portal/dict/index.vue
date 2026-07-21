@@ -22,6 +22,12 @@
         <BizDictManage />
       </a-tab-pane>
       <a-tab-pane
+        key="treeDict"
+        tab="树形字典"
+      >
+        <DictTreePanel />
+      </a-tab-pane>
+      <a-tab-pane
         key="dynamicDict"
         tab="动态字典"
       >
@@ -34,6 +40,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
+import DictTreePanel from '@/framework/views/MainContent/SystemManage/DictionaryMaintenance/components/DictTreePanel.vue'
 import DynamicDict from './DynamicDict.vue'
 
 import type { PortalBindType } from '@/framework/components/common/Portal/bind/type'
