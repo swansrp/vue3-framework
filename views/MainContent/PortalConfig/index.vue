@@ -1674,7 +1674,41 @@
       wrap-class-name="fullscreen-modal"
     >
       <template #title>
-        <span style="line-height: 1;">通用图表</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span style="line-height: 1;">通用图表</span>
+          <a-space
+            :size="6"
+            style="margin-right: 32px;"
+          >
+            <a-button
+              size="small"
+              :loading="chartExporting"
+              @click="handleExportChartConfig"
+            >
+              <template #icon>
+                <DownloadOutlined />
+              </template>
+              导出配置
+            </a-button>
+            <input
+              ref="chartFileInputRef"
+              type="file"
+              accept=".json"
+              style="display: none"
+              @change="handleChartFileChange"
+            />
+            <a-button
+              size="small"
+              :loading="chartImporting"
+              @click="chartFileInputRef?.click()"
+            >
+              <template #icon>
+                <UploadOutlined />
+              </template>
+              导入配置
+            </a-button>
+          </a-space>
+        </div>
       </template>
       <public-dashboard
         v-if="publicDashboardModalShow"
@@ -1703,18 +1737,20 @@ import {
   ControlOutlined,
   CopyOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   FileTextOutlined,
   ForkOutlined,
   MinusCircleOutlined,
   PlusOutlined,
   SortAscendingOutlined,
   UndoOutlined,
+  UploadOutlined,
   UserOutlined,
   VerticalAlignBottomOutlined,
   VerticalAlignTopOutlined
 } from '@ant-design/icons-vue'
 import { CellRenderArgs } from '@surely-vue/table'
-import { MenuProps } from 'ant-design-vue'
+import { MenuProps, message, Modal } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import * as _ from 'lodash'
 import { nextTick, onMounted, Ref, watch } from 'vue'
@@ -1727,6 +1763,7 @@ import IndicatorModal from './indicatorModal.vue'
 import SqlDraw from './sqlDraw.vue'
 
 import { getRoleList } from '@/framework/apis/admin/rolePermission'
+import { updateEntitySelective } from '@/framework/apis/portal'
 import {
   bindRole,
   copyPortalConfig,
@@ -1745,6 +1782,7 @@ import {
   updatePortalConfig
 } from '@/framework/apis/portal/config'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { getCommonDashboard, getCommonStatistic, addCommonDashboard, addCommonStatistic, updateCommonStatistic } from '@/framework/components/common/chartConfig/api'
 import PublicDashboard from '@/framework/components/common/chartConfig/index.vue'
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import Portal from '@/framework/components/common/Portal/index.vue'
@@ -1754,6 +1792,7 @@ import { filterOption } from '@/framework/components/common/utils'
 import { getUrlParam } from '@/framework/network/utils'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { isEmpty, isNotEmpty, strLF2HtmlLF, strRemoveLF, updateTableSize } from '@/framework/utils/common'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { AUTO } from '@/framework/utils/constant'
 import { ValueLabel } from '@/framework/utils/type'
 
@@ -1879,6 +1918,10 @@ const indicatorModalShow: Ref<boolean> = ref(false)
 const showPortalTableConfigModal: Ref<boolean> = ref(false)
 const showDataPreviewDrawer: Ref<boolean> = ref(false)
 const publicDashboardModalShow: Ref<boolean> = ref(false)
+// 通用图表导出/导入状态
+const chartExporting = ref(false)
+const chartImporting = ref(false)
+const chartFileInputRef = ref<HTMLInputElement>()
 const checkConfigIdExisted = () => {
   return existedPortalConfig(copyConfigModal.configId, selectedRole.value)
 }
@@ -2103,6 +2146,176 @@ const associateDialogBox = reactive({
 })
 const associateTableConfig = () => {
   associateDialogBox.show = true
+}
+
+// 通用图表导出配置
+const handleExportChartConfig = async () => {
+  const tableId = tableConfig.value?.name
+  if (!tableId) {
+    message.warning('请先选择表格配置')
+    return
+  }
+  chartExporting.value = true
+  try {
+    const [dashRes, statRes] = await Promise.all([
+      getCommonDashboard(tableId),
+      getCommonStatistic(tableId)
+    ])
+    const dashboards = dashRes.payload || []
+    const statistics = statRes.payload || []
+    if (!dashboards.length && !statistics.length) {
+      message.warning('暂无可导出的图表配置')
+      return
+    }
+    downloadJsonConfig(`${tableId}-通用图表配置`, {
+      type: 'dashboard',
+      portalName: tableId,
+      exportTime: new Date().toISOString(),
+      data: {
+        dashboards,
+        statistics
+      }
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    chartExporting.value = false
+  }
+}
+
+// 通用图表导入配置
+const handleChartFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  try {
+    const parsed = await readJsonFile(file)
+    const data = parsed.data || {}
+    const dashboards = data.dashboards || []
+    const statistics = data.statistics || []
+    if (!dashboards.length && !statistics.length) {
+      message.warning('文件中没有可导入的图表配置')
+      return
+    }
+    const tableId = parsed.portalName || tableConfig.value?.name
+    if (!tableId) {
+      message.warning('无法确定目标表格名称')
+      return
+    }
+    const parts = []
+    if (dashboards.length) parts.push(`${dashboards.length} 个图表`)
+    if (statistics.length) parts.push(`${statistics.length} 个指标树`)
+    Modal.confirm({
+      title: '确认导入',
+      content: `将导入 ${parts.join(' + ')} 配置到「${tableId}」，确认继续？`,
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: async () => {
+        chartImporting.value = true
+        try {
+          const counters = { statAdded: 0, statUpdated: 0, dashAdded: 0, dashUpdated: 0 }
+          // ID 映射表：oldId → newId（用于重映射 pid 和 commonStatistic）
+          const idMap = new Map<string, string>()
+
+          // 1. 导入指标树（查重覆盖 + ID 重映射）
+          if (statistics.length) {
+            // 获取已有指标树，构建查重映射: title → existing node
+            const existingStatRes = await getCommonStatistic(tableId)
+            const existingStats: any[] = existingStatRes.payload || []
+            const existingStatMap = new Map<string, any>()
+            const flattenStats = (nodes: any[]) => {
+              for (const n of nodes) {
+                if (n.title) existingStatMap.set(n.title, n)
+                if (n.children?.length) flattenStats(n.children)
+              }
+            }
+            flattenStats(existingStats)
+
+            // 递归导入指标树节点
+            const upsertStats = async (nodes: any[], parentNewId: string | null) => {
+              for (const node of nodes) {
+                const { id: oldId, children, ...statData } = node
+                // 重映射 pid
+                const remappedPid = node.pid ? (idMap.get(String(node.pid)) || null) : parentNewId
+                if (remappedPid !== undefined) statData.pid = remappedPid
+                const existing = node.title ? existingStatMap.get(node.title) : null
+                let newId: string
+                if (existing?.id) {
+                  // 已存在 → 更新
+                  await updateCommonStatistic({ ...statData, id: existing.id, customerNumber: '0' })
+                  newId = String(existing.id)
+                  counters.statUpdated++
+                } else {
+                  // 不存在 → 新增
+                  const res = await addCommonStatistic({ ...statData, customerNumber: '0' })
+                  newId = String(res.payload)
+                  existingStatMap.set(node.title, { id: newId })
+                  counters.statAdded++
+                }
+                if (oldId) idMap.set(String(oldId), newId)
+                // 递归处理子节点
+                if (children?.length) {
+                  await upsertStats(children, newId)
+                }
+              }
+            }
+            await upsertStats(statistics, null)
+          }
+
+          // 2. 导入图表项（查重覆盖）
+          if (dashboards.length) {
+            // 获取已有图表，构建查重映射: title → existing item
+            const existingDashRes = await getCommonDashboard(tableId)
+            const existingDashes: any[] = existingDashRes.payload || []
+            const existingDashMap = new Map<string, any>()
+            existingDashes.forEach(d => {
+              if (d.title) existingDashMap.set(d.title, d)
+            })
+
+            const newDashes: any[] = []
+            for (const d of dashboards) {
+              const { id: _id, ...dashData } = d
+              // 重映射 commonStatistic（指标 ID）
+              if (d.commonStatistic) {
+                dashData.commonStatistic = idMap.get(String(d.commonStatistic)) || d.commonStatistic
+              }
+              const existing = d.title ? existingDashMap.get(d.title) : null
+              if (existing?.id) {
+                // 已存在 → 更新
+                await updateEntitySelective('portal/dashboard', { ...dashData, id: existing.id }, undefined, false, false)
+                counters.dashUpdated++
+              } else {
+                // 不存在 → 收集待批量新增
+                newDashes.push(dashData)
+              }
+            }
+            if (newDashes.length) {
+              await addCommonDashboard(newDashes, tableId)
+              counters.dashAdded += newDashes.length
+            }
+          }
+
+          const parts = []
+          if (counters.statAdded || counters.statUpdated) {
+            parts.push(`指标树新增 ${counters.statAdded}、更新 ${counters.statUpdated}`)
+          }
+          if (counters.dashAdded || counters.dashUpdated) {
+            parts.push(`图表新增 ${counters.dashAdded}、更新 ${counters.dashUpdated}`)
+          }
+          message.success(`导入完成：${parts.join('；')}`)
+        } catch (error: any) {
+          message.error('导入失败: ' + (error?.message || '未知错误'))
+        } finally {
+          chartImporting.value = false
+        }
+      }
+    })
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
+  }
 }
 
 const onSearch = (preserveFolderState = false) => {

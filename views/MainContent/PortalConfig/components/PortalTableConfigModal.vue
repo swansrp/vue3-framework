@@ -66,14 +66,43 @@
           <div class="basic-config-section">
             <div class="section-title">
               <span>基础配置</span>
-              <a-button
-                type="primary"
-                size="small"
-                :loading="saving"
-                @click="handleSaveTable"
-              >
-                保存基础配置
-              </a-button>
+              <a-space :size="4">
+                <a-button
+                  size="small"
+                  :loading="reportExporting"
+                  @click="handleExportReportConfig"
+                >
+                  <template #icon>
+                    <DownloadOutlined />
+                  </template>
+                  导出配置
+                </a-button>
+                <input
+                  ref="reportFileInputRef"
+                  type="file"
+                  accept=".json"
+                  style="display: none"
+                  @change="handleReportFileChange"
+                />
+                <a-button
+                  size="small"
+                  :loading="reportImporting"
+                  @click="reportFileInputRef?.click()"
+                >
+                  <template #icon>
+                    <UploadOutlined />
+                  </template>
+                  导入配置
+                </a-button>
+                <a-button
+                  type="primary"
+                  size="small"
+                  :loading="saving"
+                  @click="handleSaveTable"
+                >
+                  保存基础配置
+                </a-button>
+              </a-space>
             </div>
             <div class="section-content">
               <a-form
@@ -543,14 +572,16 @@
 <script setup lang="ts">
 import {
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   HolderOutlined,
   PlusOutlined,
   CaretDownOutlined,
   CaretRightOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { ref, watch, computed } from 'vue'
 
 import {
@@ -573,6 +604,7 @@ import PortalAdvancedSearchModal from '@/framework/components/common/Portal/moda
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { dictStore } from '@/framework/store/common'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 const props = defineProps<{
   modelValue: boolean;
@@ -596,6 +628,10 @@ const selectedTable = ref<PortalTableVO | null>(null)
 const filterList = ref<PortalTableFilterVO[]>([])
 const filterCountMap = ref<Map<number, number>>(new Map())
 const selectedFilter = ref<PortalTableFilterVO | null>(null)
+// 导出/导入状态
+const reportExporting = ref(false)
+const reportImporting = ref(false)
+const reportFileInputRef = ref<HTMLInputElement>()
 
 // 筛选列配置展开/收起状态
 const filterColumnsExpanded = ref(false)
@@ -975,6 +1011,131 @@ const handleAddTable = async () => {
     console.error('新增失败:', error)
   } finally {
     saving.value = false
+  }
+}
+
+// 导出报表配置
+const handleExportReportConfig = async () => {
+  if (!tableList.value.length) {
+    message.warning('暂无可导出的报表配置')
+    return
+  }
+  reportExporting.value = true
+  try {
+    // 导出所有表格及其筛选器配置
+    const exportData = await Promise.all(
+      tableList.value.map(async (table) => {
+        const filters = await getPortalTableFilterList(table.id!)
+        return {
+          table: { ...table },
+          filters: (filters.payload || []).map((f: any) => f)
+        }
+      })
+    )
+    downloadJsonConfig(`${props.portalName}-报表配置`, {
+      type: 'report',
+      portalName: props.portalName,
+      exportTime: new Date().toISOString(),
+      data: exportData
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    reportExporting.value = false
+  }
+}
+
+// 导入报表配置
+const handleReportFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  try {
+    const parsed = await readJsonFile(file)
+    const importData = parsed.data || []
+    if (!Array.isArray(importData) || importData.length === 0) {
+      message.warning('文件中没有可导入的报表配置')
+      return
+    }
+    const portalName = parsed.portalName || props.portalName
+    if (!portalName) {
+      message.warning('无法确定目标表格名称')
+      return
+    }
+    Modal.confirm({
+      title: '确认导入',
+      content: `将导入 ${importData.length} 个报表配置到「${portalName}」，确认继续？`,
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: async () => {
+        reportImporting.value = true
+        try {
+          let added = 0, updated = 0
+          // 构建已有表查重映射: tableCode → existing table
+          const existingTableMap = new Map<string, PortalTableVO>()
+          tableList.value.forEach(t => {
+            if (t.tableCode) existingTableMap.set(t.tableCode, t)
+          })
+          for (const item of importData) {
+            const tableData = { ...item.table }
+            delete tableData.id
+            delete tableData.filterCount
+            const tableCode = tableData.tableCode
+            const existingTable = tableCode ? existingTableMap.get(tableCode) : null
+            let tableId: number
+            if (existingTable?.id) {
+              // 已存在 → 更新
+              await updatePortalTable({ ...tableData, id: existingTable.id }, false, false, false)
+              tableId = existingTable.id
+              updated++
+            } else {
+              // 不存在 → 新增
+              const newTable = await addPortalTable(tableData, false, false, false)
+              tableId = newTable.payload?.id || newTable.payload
+              added++
+            }
+            // 处理筛选器
+            if (item.filters && item.filters.length > 0) {
+              // 查重：获取已有筛选器
+              const existingFiltersRes = await getPortalTableFilterList(tableId!, false, false, false)
+              const existingFilters: PortalTableFilterVO[] = existingFiltersRes?.payload || []
+              const filterMap = new Map<string, PortalTableFilterVO>()
+              existingFilters.forEach(ef => {
+                if (ef.code) filterMap.set(ef.code, ef)
+              })
+              for (const f of item.filters) {
+                const existingFilter = f.code ? filterMap.get(f.code) : null
+                if (existingFilter?.id) {
+                  // 已存在 → 更新
+                  await updatePortalTableFilter(
+                    { ...f, id: existingFilter.id, tableId },
+                    false, false, false
+                  )
+                } else {
+                  // 不存在 → 新增
+                  await addPortalTableFilter(
+                    { ...f, tableId },
+                    false, false, false
+                  )
+                }
+              }
+            }
+          }
+          message.success(`导入完成：新增 ${added} 个表，更新 ${updated} 个表`)
+          // 刷新列表
+          await loadTableList()
+        } catch (error: any) {
+          message.error('导入失败: ' + (error?.message || '未知错误'))
+        } finally {
+          reportImporting.value = false
+        }
+      }
+    })
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
   }
 }
 

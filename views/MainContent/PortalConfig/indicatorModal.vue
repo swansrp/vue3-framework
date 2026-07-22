@@ -97,11 +97,36 @@
       @close="showDictGenerator = false"
     />
 
-    <!-- 同步图表配置按钮 -->
+    <!-- 同步图表配置 + 导出/导入按钮 -->
     <div
       v-if="config?.name"
-      style="text-align: right; padding: 12px 24px; border-top: 1px solid #f0f0f0;"
+      style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px; border-top: 1px solid #f0f0f0;"
     >
+      <a-button
+        :loading="exporting"
+        @click="handleExportIndicator"
+      >
+        <template #icon>
+          <DownloadOutlined />
+        </template>
+        导出配置
+      </a-button>
+      <input
+        ref="indicatorFileInputRef"
+        type="file"
+        accept=".json"
+        style="display: none"
+        @change="handleIndicatorFileChange"
+      />
+      <a-button
+        :loading="importing"
+        @click="triggerIndicatorFileInput"
+      >
+        <template #icon>
+          <UploadOutlined />
+        </template>
+        导入配置
+      </a-button>
       <a-button
         :loading="syncing"
         type="primary"
@@ -126,8 +151,8 @@
 
 <script lang="ts" setup>
 
-import { ThunderboltOutlined, SyncOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+import { DownloadOutlined, ThunderboltOutlined, SyncOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { message, Modal } from 'ant-design-vue'
 
 import ChartSyncReviewModal from './components/ChartSyncReviewModal.vue'
 import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
@@ -143,6 +168,7 @@ import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 
 
@@ -218,6 +244,10 @@ const showDictGenerator = ref(false)
 
 // 同步图表配置相关状态
 const syncing = ref(false)
+// 导出/导入相关状态
+const exporting = ref(false)
+const importing = ref(false)
+const indicatorFileInputRef = ref<HTMLInputElement>()
 const showSyncReview = ref(false)
 const scanResult = ref<ScanResult | null>(null)
 const indicatorTreeData = ref<any[]>([])
@@ -264,6 +294,178 @@ const onSyncApplied = async (updatedCount: number) => {
     indicatorTreeData.value = treeResp.payload || []
   } catch {
     // 刷新失败不影响已有结果
+  }
+}
+
+// 导出指标配置
+const handleExportIndicator = async () => {
+  const tableId = config.value?.name
+  if (!tableId) {
+    message.warning('未找到表格名称')
+    return
+  }
+  exporting.value = true
+  try {
+    const res = await getIndicatorConfig(tableId)
+    const treeData = res.payload || []
+    if (!treeData.length) {
+      message.warning('暂无可导出的指标配置')
+      return
+    }
+    downloadJsonConfig(`${tableId}-指标配置`, {
+      type: 'indicator',
+      portalName: tableId,
+      exportTime: new Date().toISOString(),
+      data: treeData
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    exporting.value = false
+  }
+}
+
+// 触发文件选择
+const triggerIndicatorFileInput = () => {
+  indicatorFileInputRef.value?.click()
+}
+
+// 展平已有指标树，构建查重映射
+const buildExistingMaps = (tree: any[]): {
+  groupMap: Map<string, any>
+  itemMap: Map<string, boolean>
+} => {
+  const groupMap = new Map<string, any>()
+  const itemMap = new Map<string, boolean>()
+  const traverse = (nodes: any[], _parentGroupId: string | null) => {
+    for (const node of nodes) {
+      const groupId = String(node.id || '')
+      if (node.title) groupMap.set(node.title, node)
+      if (node.items) {
+        for (const item of node.items) {
+          if (item.key) itemMap.set(`${groupId}_${item.key}`, true)
+        }
+      }
+      if (node.children?.length) traverse(node.children, groupId)
+    }
+  }
+  traverse(tree, null)
+  return { groupMap, itemMap }
+}
+
+// 递归导入指标组（查重覆盖）和指标项（查重跳过）
+const upsertIndicatorTree = async (
+  nodes: any[],
+  portalName: string,
+  parentId: any,
+  groupMap: Map<string, any>,
+  itemMap: Map<string, boolean>,
+  counters: { added: number; updated: number; skipped: number }
+): Promise<void> => {
+  for (const node of nodes) {
+    const groupName = node.title
+    const existingGroup = groupMap.get(groupName)
+    let groupId: any
+    if (existingGroup?.id) {
+      // 已存在 → 更新组
+      await updateEntitySelective('portal/indicator/group', {
+        id: existingGroup.id,
+        portalName,
+        name: groupName,
+        displayOrder: node.displayOrder,
+        pid: parentId
+      }, undefined, false, false)
+      groupId = existingGroup.id
+      counters.updated++
+    } else {
+      // 不存在 → 新增组
+      const res = await addEntity('portal/indicator/group', {
+        portalName,
+        name: groupName,
+        displayOrder: node.displayOrder,
+        pid: parentId
+      }, undefined, false, false)
+      groupId = res.payload
+      // 将新组加入映射，供子组查重
+      groupMap.set(groupName, { id: groupId, items: [] })
+      counters.added++
+    }
+    // 处理该组下的指标项
+    if (node.items && node.items.length > 0) {
+      for (const item of node.items) {
+        const itemKey = `${groupId}_${item.key}`
+        if (itemMap.has(itemKey)) {
+          // 已存在 → 跳过（无 id 无法 update）
+          counters.skipped++
+        } else {
+          // 不存在 → 新增
+          await addEntity('portal/indicator', {
+            portalName,
+            groupId,
+            itemValue: item.key,
+            itemName: item.title,
+            condition: item.condition,
+            dynamicColumn: item.dynamicColumns
+          }, undefined, false, false)
+          itemMap.set(itemKey, true)
+        }
+      }
+    }
+    // 递归处理子组
+    if (node.children && node.children.length > 0) {
+      await upsertIndicatorTree(node.children, portalName, groupId, groupMap, itemMap, counters)
+    }
+  }
+}
+
+// 导入指标配置
+const handleIndicatorFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  try {
+    const parsed = await readJsonFile(file)
+    const treeData = parsed.data || parsed
+    if (!Array.isArray(treeData) || treeData.length === 0) {
+      message.warning('文件中没有可导入的指标配置')
+      return
+    }
+    const portalName = parsed.portalName || config.value?.name
+    if (!portalName) {
+      message.warning('无法确定目标表格名称')
+      return
+    }
+    Modal.confirm({
+      title: '确认导入',
+      content: `将导入 ${treeData.length} 个指标组配置到「${portalName}」，确认继续？`,
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: async () => {
+        importing.value = true
+        try {
+          // 获取已有指标树，构建查重映射
+          const existingRes = await getIndicatorConfig(portalName)
+          const existingTree = existingRes.payload || []
+          const { groupMap, itemMap } = buildExistingMaps(existingTree)
+          const counters = { added: 0, updated: 0, skipped: 0 }
+          await upsertIndicatorTree(treeData, portalName, null, groupMap, itemMap, counters)
+          message.success(`导入完成：新增 ${counters.added} 组，更新 ${counters.updated} 组，跳过 ${counters.skipped} 项`)
+          // 刷新指标列表
+          if (indicatorRef.value) {
+            indicatorRef.value.queryData()
+          }
+        } catch (error: any) {
+          message.error('导入失败: ' + (error?.message || '未知错误'))
+        } finally {
+          importing.value = false
+        }
+      }
+    })
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
   }
 }
 
