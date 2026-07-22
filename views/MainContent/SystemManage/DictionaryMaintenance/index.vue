@@ -1,7 +1,7 @@
 <template>
   <div class="dictionary-maintenance">
     <a-tabs
-      v-model:activeKey="activeTab"
+      v-model:active-key="activeTab"
       type="card"
       class="dict-tabs"
     >
@@ -202,8 +202,6 @@
           </div>
         </div>
       </a-tab-pane>
-
-
     </a-tabs>
 
     <!-- 弹窗 -->

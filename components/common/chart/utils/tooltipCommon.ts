@@ -131,3 +131,57 @@ export function hasStackedSeries(series: any[]): boolean {
   })
   return Object.values(stackCount).some(count => count > 1)
 }
+
+/** 堆叠 tooltip 高亮列表的数据项 */
+export interface HighlightTooltipItem {
+  /** 显示名称（如叶子节点名/统计类型名） */
+  name: string
+  /** 数值（已转换单位） */
+  value: number
+  /** 颜色 */
+  color: string
+  /** 单位文本 */
+  unit: string
+  /** 格式化后的数值字符串 */
+  formattedValue: string
+}
+
+const HIGHLIGHT_ACCENT = 'var(--accent, #1890ff)'
+const HIGHLIGHT_ACCENT_SOFT = 'var(--accent-soft, #e6f7ff)'
+
+/**
+ * 构建饼图风格的「列表 + 高亮当前项」行 HTML（不含标题与合计行）
+ * 每行：圆点 + 名称: 值单位 (占比%)，当前项高亮并带「◀ 当前选中」标记
+ */
+export function buildHighlightRowsHtml(items: HighlightTooltipItem[], currentName: string): string {
+  const totalValue = items.reduce((sum, d) => sum + (typeof d.value === 'number' ? d.value : 0), 0)
+  let html = ''
+  items.forEach((d) => {
+    const isCurrent = d.name === currentName
+    const percent = totalValue > 0 ? ((d.value / totalValue) * 100).toFixed(2) : '0.00'
+    const rowStyle = isCurrent
+      ? `background: ${HIGHLIGHT_ACCENT_SOFT}; border-left: 3px solid ${HIGHLIGHT_ACCENT}; font-weight: bold; padding: 3px 6px; margin: 2px 0; border-radius: 3px;`
+      : 'padding: 3px 6px; margin: 2px 0; border-left: 3px solid transparent;'
+    const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${d.color};margin-right:6px;vertical-align:middle;"></span>`
+    const currentTag = isCurrent
+      ? `<span style="color: ${HIGHLIGHT_ACCENT}; font-size: 11px; margin-left: 6px; font-weight: bold; white-space: nowrap;">◀ 当前选中</span>`
+      : ''
+    html += `<div style="${rowStyle}">${marker}<span style="vertical-align:middle;">${d.name}: ${d.formattedValue}${d.unit} (${percent}%)</span>${currentTag}</div>`
+  })
+  return html
+}
+
+/**
+ * 构建饼图风格 tooltip：标题 + 列表（高亮当前项）+ 合计行
+ */
+export function buildHighlightTooltipHtml(
+  headerText: string,
+  items: HighlightTooltipItem[],
+  currentName: string,
+  totalText: string
+): string {
+  let html = `<div style="font-weight: bold; font-size: 13px; margin-bottom: 8px; color: #262626;">${headerText}</div>`
+  html += buildHighlightRowsHtml(items, currentName)
+  html += `<div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #eee; color: var(--text-secondary, #8c8c8c); font-size: 12px;">${totalText}</div>`
+  return html
+}

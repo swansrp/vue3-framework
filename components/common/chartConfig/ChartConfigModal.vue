@@ -330,11 +330,15 @@ const loadEditData = async () => {
       return
     }
 
-    // 验证配置完整性（指标饼图模式允许 firstDimension 为 null）
+    // 验证配置完整性（指标饼图/树形堆叠模式允许 firstDimension 为 null）
     const isMetricsPieMode =
       Array.isArray(savedConfig?.dataMetrics) &&
       savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
-    if (!isMetricsPieMode && !savedConfig.firstDimension) {
+    const isTreeStackedMode =
+      (Array.isArray(savedConfig?.dataMetrics) &&
+        savedConfig.dataMetrics.some((m: any) => m.chartType === 'treeStackedBar')) ||
+      !!savedConfig?.treeDimension
+    if (!isMetricsPieMode && !isTreeStackedMode && !savedConfig.firstDimension) {
       message.warn('配置数据缺少 firstDimension，无法回显完整配置')
       return
     }
@@ -401,9 +405,17 @@ const handleSaveConfig = async () => {
       const hasMetricsPie = (dashboardRef.value?.dataMetrics || []).some(
         (m: any) => m.chartType === 'metricsPie'
       )
+      // 树形堆叠模式：X轴来自树父节点，一级维度非必需，但必须配置树关系
+      const hasTreeStacked = (dashboardRef.value?.dataMetrics || []).some(
+        (m: any) => m.chartType === 'treeStackedBar'
+      )
+      if (hasTreeStacked && !dashboardRef.value?.treeDimension) {
+        message.error('请选择树关系（二级维度）')
+        return
+      }
       // 检查是否配置了一级维度
       const firstDimension = dashboardRef.value?.firstDimension
-      if (!hasMetricsPie && !firstDimension) {
+      if (!hasMetricsPie && !hasTreeStacked && !firstDimension) {
         message.error('请先配置一级维度')
         return
       }

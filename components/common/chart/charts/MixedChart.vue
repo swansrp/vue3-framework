@@ -19,10 +19,11 @@
 import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { buildFullAxisTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
+import { getEffectiveUnit } from '../utils/unitFormat'
+
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
-import { getEffectiveUnit } from '../utils/unitFormat'
-import { buildFullAxisTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
 
 export default defineComponent({
   name: 'MixedChart',

@@ -12,10 +12,12 @@
     <config-panel
       v-model:first-dimension="firstDimension"
       v-model:second-dimension="secondDimension"
+      v-model:tree-dimension="treeDimension"
       v-model:filter-dimensions="filterDimensions"
       v-model:data-metrics="dataMetrics"
       v-model:selected-filter-items-array="selectedFilterItemsArray"
       :available-data-types="availableDataTypes"
+      :tree-dict-options="treeDictOptions"
       :left-panel-collapsed="leftPanelCollapsed"
       :convert-unit="convertUnit"
       @toggle-left-panel="toggleLeftPanel"
@@ -48,10 +50,17 @@ import { getIndicatorConfig } from '@/framework/apis/portal'
 import { getPortalConfig } from '@/framework/apis/portal/config'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import {
+  buildParentFirstDimension,
+  fetchTreeDict,
+  flattenTreeToParentGroups,
+  validateTwoLevelTree
+} from '@/framework/components/common/chart/utils/treeStacked'
+import {
   ConditionGroup,
   DataMetric,
   DimensionIndicatorsFilter,
-  IndicatorGroup as TalentIndicatorGroup
+  IndicatorGroup as TalentIndicatorGroup,
+  TreeDimensionConfig
 } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 
@@ -88,7 +97,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -122,8 +131,12 @@ const indicatorTreeData = ref<IndicatorGroup[]>([])
 // 维度配置
 const firstDimension = ref<IndicatorGroup | null>(null)
 const secondDimension = ref<IndicatorGroup | null>(null)
+const treeDimension = ref<TreeDimensionConfig | null>(null)
 const filterDimensions = ref<(IndicatorGroup | null)[]>([null])
 const selectedFilterItemsArray = ref<string[][]>([[]])
+
+// 树形字典字段选项（供树关系选择器使用，来自 portal 配置的树形字段）
+const treeDictOptions = ref<{ dictName: string; property: string; fieldType: string; displayName: string }[]>([])
 
 // 数据配置
 const dataMetrics = ref<DataMetricUI[]>([
@@ -500,6 +513,7 @@ const compareConfigParts = (
 const generateChart = async (chartData?: {
   firstDimension: IndicatorGroup | null,
   secondDimension: IndicatorGroup | null,
+  treeDimension: TreeDimensionConfig | null,
   filterDimensions: (IndicatorGroup | null)[],
   selectedFilterItemsArray: string[][],
   dataMetrics: DataMetricUI[]
@@ -508,6 +522,7 @@ const generateChart = async (chartData?: {
   // 如果传递了chartData，使用其中的数据
   const firstDim = chartData?.firstDimension || firstDimension.value
   const secondDim = chartData?.secondDimension || secondDimension.value
+  const treeDim = chartData?.treeDimension !== undefined ? chartData.treeDimension : treeDimension.value
   const filterDims = chartData?.filterDimensions || filterDimensions.value || []
   const selectedFilterItems = chartData?.selectedFilterItemsArray || selectedFilterItemsArray.value
   const dataMetricsData = chartData?.dataMetrics || dataMetrics.value
@@ -561,6 +576,59 @@ const generateChart = async (chartData?: {
         console.error('图表生成失败:', error)
         message.error('图表生成失败，请检查数据配置或网络连接')
       }
+    }
+    return
+  }
+
+  // 树形堆叠分支：X轴为树父节点，每根柱子堆叠其直属子节点（非笛卡尔积）
+  const hasTreeStacked = dataMetricsData.some(m => m.chartType === 'treeStackedBar')
+  if (hasTreeStacked) {
+    if (!treeDim) {
+      message.error('请选择树关系（二级维度）')
+      return
+    }
+    try {
+      // 拉取树结构并校验是否为可用的 2 层树
+      const tree = await fetchTreeDict(treeDim.dictName)
+      const validation = validateTwoLevelTree(tree)
+      if (!validation.valid) {
+        message.error(validation.message || '该树形字典不可用于树形堆叠')
+        return
+      }
+      const parentGroups = flattenTreeToParentGroups(tree)
+
+      // 用父节点合成一级维度（X轴），保证渲染管线以父节点为横坐标
+      const parentFirstDimension = buildParentFirstDimension(treeDim, parentGroups)
+
+      const filterData: DimensionIndicatorsFilter = {
+        firstDimension: parentFirstDimension,
+        secondDimension: null,
+        treeDimension: treeDim,
+        filterConditions: convertToConditionGroup(selectedFilterItems, filterDims),
+        dataMetrics: dataMetricsData.map(convertToDataMetric)
+      }
+      dimensionIndicatorsFilter.value = filterData
+
+      lastConfigSnapshot.value = {
+        firstDimension: null,
+        secondDimension: null,
+        filterDimensions: (Array.isArray(filterDims) ? filterDims : []).map(dim => dim ? {
+          key: dim.key,
+          title: dim.title,
+          items: dim.items?.map((item: any) => ({ ...item })) || []
+        } : null),
+        selectedFilterItemsArray: selectedFilterItems.map(arr => [...arr]),
+        dataMetrics: dataMetricsData.map(metric => ({ ...metric }))
+      }
+
+      await nextTick()
+      if (chartDisplayAreaRef.value) {
+        await chartDisplayAreaRef.value.generateChart(true)
+        message.success('图表生成成功')
+      }
+    } catch (error) {
+      console.error('树形堆叠图表生成失败:', error)
+      message.error('树形堆叠图表生成失败，请检查树形字典配置')
     }
     return
   }
@@ -811,6 +879,16 @@ onMounted(async () => {
     config.value.tableId = tableId.value
     config.value.columns.forEach((column: any) => {
       if (column.show === '0') return
+      // 收集树形字典字段，供树形堆叠柱状图的树关系选择器使用
+      if ((column.fieldType === FIELD_TYPE.TREE || column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) &&
+        column.reference && String(column.reference).trim() !== '') {
+        treeDictOptions.value.push({
+          dictName: String(column.reference).trim(),
+          property: column.property,
+          fieldType: column.fieldType,
+          displayName: column.displayName
+        })
+      }
       if (column.fieldType === FIELD_TYPE.MONEY) {
 
         // 只要是金额字段且有 reference 配置，就设置格式化配置
@@ -1033,10 +1111,21 @@ const restoreConfig = async (savedConfig: any) => {
     // 指标饼图模式判断（无维度，允许 firstDimension 为 null）
     const isMetricsPieMode = Array.isArray(savedConfig?.dataMetrics) &&
       savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
+    // 树形堆叠模式判断（X轴来自树父节点，允许 firstDimension 为 null）
+    const isTreeStackedMode = (Array.isArray(savedConfig?.dataMetrics) &&
+      savedConfig.dataMetrics.some((m: any) => m.chartType === 'treeStackedBar')) ||
+      !!savedConfig?.treeDimension
 
-    if (!savedConfig || (!isMetricsPieMode && !savedConfig.firstDimension)) {
+    if (!savedConfig || (!isMetricsPieMode && !isTreeStackedMode && !savedConfig.firstDimension)) {
       console.warn('无效的配置数据')
       return
+    }
+
+    // 回显树关系（树形堆叠模式）
+    if (isTreeStackedMode && savedConfig.treeDimension) {
+      treeDimension.value = { ...savedConfig.treeDimension }
+    } else {
+      treeDimension.value = null
     }
 
     // 回显维度
@@ -1114,6 +1203,8 @@ const forceRecalculateLayout = async () => {
 const getFullConfig = () => {
   // 指标饼图模式判断（无维度，跳过一级维度校验）
   const isMetricsPieMode = dataMetrics.value.some(m => m.chartType === 'metricsPie')
+  // 树形堆叠模式判断（X轴来自树父节点，跳过一级维度校验）
+  const isTreeStackedMode = dataMetrics.value.some(m => m.chartType === 'treeStackedBar')
 
   // 获取实时的可见性配置
   let visibilityConfig = {
@@ -1128,14 +1219,15 @@ const getFullConfig = () => {
 
   // 优先使用已经生成的dimensionIndicatorsFilter（包含用户拖拽后的排序）
   // 如果存在，说明已经生成过图表，使用它以保留拖拽排序
-  // 指标饼图模式无维度，只校验 dimensionIndicatorsFilter 是否存在
-  const hasExistingConfig = isMetricsPieMode
+  // 指标饼图/树形堆叠模式无传统一级维度，只校验 dimensionIndicatorsFilter 是否存在
+  const hasExistingConfig = (isMetricsPieMode || isTreeStackedMode)
     ? !!dimensionIndicatorsFilter.value
     : (dimensionIndicatorsFilter.value && !!dimensionIndicatorsFilter.value.firstDimension)
   if (hasExistingConfig) {
     // 使用已有的配置，但更新筛选条件和数据指标（这些可能在图表生成后被修改）
     return {
       ...dimensionIndicatorsFilter.value,
+      treeDimension: isTreeStackedMode ? (dimensionIndicatorsFilter.value?.treeDimension || treeDimension.value) : null,
       filterConditions: convertToConditionGroup(selectedFilterItemsArray.value, filterDimensions.value),
       dataMetrics: dataMetrics.value.map(convertToDataMetric),
       visibleStatisticTypes: visibilityConfig.visibleStatisticTypes,
@@ -1147,6 +1239,24 @@ const getFullConfig = () => {
   // 如果还没有生成图表，则从配置面板构建配置
   const firstDimensionConverted = convertToTalentIndicatorGroup(firstDimension.value)
   const secondDimensionConverted = convertToTalentIndicatorGroup(secondDimension.value)
+
+  // 树形堆叠模式：只需要树关系，一级维度由树父节点合成
+  if (isTreeStackedMode) {
+    if (!treeDimension.value) {
+      console.warn('树关系为空，无法生成完整配置')
+      return null
+    }
+    return {
+      firstDimension: null as any,
+      secondDimension: null,
+      treeDimension: treeDimension.value,
+      filterConditions: convertToConditionGroup(selectedFilterItemsArray.value, filterDimensions.value),
+      dataMetrics: dataMetrics.value.map(convertToDataMetric),
+      visibleStatisticTypes: visibilityConfig.visibleStatisticTypes,
+      visibleFirstDimensions: visibilityConfig.visibleFirstDimensions,
+      visibleSecondDimensions: visibilityConfig.visibleSecondDimensions
+    }
+  }
 
   // 指标饼图模式跳过一级维度校验
   if (!isMetricsPieMode && !firstDimensionConverted) {
@@ -1175,6 +1285,7 @@ defineExpose({
   dimensionIndicatorsFilter,
   firstDimension,
   secondDimension,
+  treeDimension,
   filterDimensions,
   selectedFilterItemsArray,
   dataMetrics,

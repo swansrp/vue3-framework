@@ -40,7 +40,7 @@
 
           <!-- 字典项预览区域 -->
           <div
-            v-if="dictItems.length > 0"
+            v-if="hasDictData"
             class="dict-preview-section"
           >
             <div class="section-header">
@@ -51,20 +51,27 @@
                   color="blue"
                   style="margin-left: 8px"
                 >
-                  共 {{ dictItems.length }} 项
+                  共 {{ totalCount }} 项
                 </a-tag>
                 <a-tag
-                  v-if="searchKeyword"
+                  v-if="searchKeyword && !isTreeMode"
                   color="orange"
                   style="margin-left: 8px"
                 >
                   筛选 {{ filteredDictItems.length }} 项
                 </a-tag>
                 <a-tag
+                  v-if="isTreeMode"
+                  color="cyan"
+                  style="margin-left: 8px"
+                >
+                  树形字典
+                </a-tag>
+                <a-tag
                   color="green"
                   style="margin-left: 8px"
                 >
-                  已选 {{ selectedDictItems.size }} 项
+                  已选 {{ selectedCount }} 项
                 </a-tag>
               </h4>
               <a-space>
@@ -89,8 +96,11 @@
               </a-space>
             </div>
             
-            <!-- 搜索框 -->
-            <div class="search-section">
+            <!-- 搜索框（仅平铺模式） -->
+            <div
+              v-if="!isTreeMode"
+              class="search-section"
+            >
               <a-input
                 v-model:value="searchKeyword"
                 placeholder="搜索字典项（值或名称）"
@@ -104,44 +114,93 @@
             </div>
             
             <div class="dict-items-container">
-              <a-empty
-                v-if="filteredDictItems.length === 0"
-                description="没有符合条件的字典项"
-              />
-              <a-row
-                v-else
-                :gutter="[8, 8]"
-              >
-                <a-col
-                  v-for="item in filteredDictItems"
-                  :key="item.dictId"
-                  :span="6"
+              <!-- 平铺模式：卡片网格 -->
+              <template v-if="!isTreeMode">
+                <a-empty
+                  v-if="filteredDictItems.length === 0"
+                  description="没有符合条件的字典项"
+                />
+                <a-row
+                  v-else
+                  :gutter="[8, 8]"
                 >
-                  <a-card
-                    :class="['dict-item-card', { 'selected': isSelected(item.dictId) }]"
-                    size="small"
-                    @click="toggleSelection(item.dictId)"
+                  <a-col
+                    v-for="item in filteredDictItems"
+                    :key="item.dictId"
+                    :span="6"
                   >
-                    <div class="dict-item-content">
-                      <div class="dict-item-value">
-                        <strong>{{ item.dictValue }}</strong>
+                    <a-card
+                      :class="['dict-item-card', { 'selected': isSelected(item.dictId) }]"
+                      size="small"
+                      @click="toggleSelection(item.dictId)"
+                    >
+                      <div class="dict-item-content">
+                        <div class="dict-item-value">
+                          <strong>{{ item.dictValue }}</strong>
+                        </div>
+                        <div class="dict-item-label">
+                          {{ item.dictLabel }}
+                        </div>
+                        <div class="dict-item-check">
+                          <CheckOutlined v-if="isSelected(item.dictId)" />
+                        </div>
                       </div>
-                      <div class="dict-item-label">
-                        {{ item.dictLabel }}
-                      </div>
-                      <div class="dict-item-check">
-                        <CheckOutlined v-if="isSelected(item.dictId)" />
-                      </div>
-                    </div>
-                  </a-card>
-                </a-col>
-              </a-row>
+                    </a-card>
+                  </a-col>
+                </a-row>
+              </template>
+
+              <!-- 树形模式：树形结构勾选 -->
+              <template v-else>
+                <div class="tree-toolbar">
+                  <a-space :size="4">
+                    <a-button
+                      size="small"
+                      @click="expandAllTree"
+                    >
+                      全部展开
+                    </a-button>
+                    <a-button
+                      size="small"
+                      @click="collapseAllTree"
+                    >
+                      全部收起
+                    </a-button>
+                  </a-space>
+                  <span class="tree-hint">勾选父节点可批量选中其所有叶子节点，仅叶子节点会生成指标</span>
+                </div>
+                <a-tree
+                  v-model:checked-keys="checkedTreeKeys"
+                  v-model:expanded-keys="treeExpandedKeys"
+                  :tree-data="treeData"
+                  :field-names="{ key: 'key', title: 'label', children: 'children' }"
+                  checkable
+                  block-node
+                  class="dict-tree"
+                >
+                  <template #title="nodeData">
+                    <span class="tree-node-title">
+                      <span class="node-label">{{ nodeData.label }}</span>
+                      <span class="node-value">({{ nodeData.value }})</span>
+                    </span>
+                  </template>
+                </a-tree>
+                <a-empty
+                  v-if="treeData.length === 0"
+                  description="该树形字典暂无数据"
+                />
+                <div class="tree-unknown-option">
+                  <a-checkbox v-model:checked="treeUnknownChecked">
+                    额外生成「未知」（NULL 值）指标
+                  </a-checkbox>
+                </div>
+              </template>
             </div>
           </div>
 
           <!-- 生成配置区域 -->
           <div
-            v-if="dictItems.length > 0"
+            v-if="hasDictData"
             v-show="false"
             class="generation-config-section"
           >
@@ -295,6 +354,7 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, onMounted, ref, watch } from 'vue'
 
+import { getTreeList } from '@/framework/apis/common/common'
 import { getDictByDictName } from '@/framework/apis/dict/dict'
 import { addEntityList } from '@/framework/apis/portal'
 import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
@@ -341,6 +401,13 @@ const selectedDictItems = ref<Set<string | number>>(new Set())
 const searchKeyword = ref<string>('')
 const targetGroupId = ref<string | number>('')
 
+// 树形字典模式状态
+const treeData = ref<Array<any>>([])
+const checkedTreeKeys = ref<Array<string | number>>([])
+const treeExpandedKeys = ref<Array<string | number>>([])
+const treeNodeMap = ref<Map<string, any>>(new Map())
+const treeUnknownChecked = ref<boolean>(false)
+
 // 生成配置
 const namePrefix = ref<string>('')
 const nameSuffix = ref<string>('')
@@ -378,16 +445,70 @@ const filteredDictItems = computed(() => {
   })
 })
 
+// 是否为树形字典模式
+const isTreeMode = computed(() => {
+  if (!selectedDict.value) return false
+  const fieldType = selectedDict.value.split('###')[2]
+  return fieldType === FIELD_TYPE.TREE || fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE
+})
+
+// 是否已加载字典数据（平铺或树形）
+const hasDictData = computed(() => dictItems.value.length > 0 || treeData.value.length > 0)
+
+// 树形模式下被勾选的叶子节点
+const checkedLeafNodes = computed(() => {
+  if (!isTreeMode.value) return [] as Array<any>
+  const checkedSet = new Set(checkedTreeKeys.value.map(k => String(k)))
+  const leaves: Array<any> = []
+  treeNodeMap.value.forEach((node, key) => {
+    if ((node.isLeaf || !node.children?.length) && checkedSet.has(key)) {
+      leaves.push(node)
+    }
+  })
+  return leaves
+})
+
+// 树形模式下所有叶子节点的 key
+const allLeafKeys = computed(() => {
+  const keys: Array<string | number> = []
+  treeNodeMap.value.forEach((node) => {
+    if (node.isLeaf || !node.children?.length) keys.push(node.key ?? node.value)
+  })
+  return keys
+})
+
+// 统一后的“已选字典项”（平铺模式为选中卡片，树形模式为勾选的叶子节点）
+const effectiveSelectedItems = computed(() => {
+  if (isTreeMode.value) {
+    const items = checkedLeafNodes.value.map(node => ({
+      dictId: node.key ?? node.value,
+      dictValue: String(node.value),
+      dictLabel: node.label
+    }))
+    if (treeUnknownChecked.value) {
+      items.push({ dictId: 'UNKNOWN_AUTO_GENERATED', dictValue: 'UNKNOWN', dictLabel: '未知', isAutoGenerated: true } as any)
+    }
+    return items
+  }
+  return dictItems.value.filter(item => isSelected(item.dictId))
+})
+
+const totalCount = computed(() => {
+  return isTreeMode.value ? treeNodeMap.value.size : dictItems.value.length
+})
+
+const selectedCount = computed(() => {
+  return isTreeMode.value
+    ? checkedLeafNodes.value.length + (treeUnknownChecked.value ? 1 : 0)
+    : selectedDictItems.value.size
+})
+
 const canGenerate = computed(() => {
-  return selectedDict.value && targetGroupId.value && selectedDictItems.value.size > 0 && !generating.value
+  return selectedDict.value && targetGroupId.value && effectiveSelectedItems.value.length > 0 && !generating.value
 })
 
 const previewData = computed(() => {
-  if (dictItems.value.length === 0) return []
-
-  return dictItems.value
-    .filter(item => isSelected(item.dictId))
-    .map((item, index) => ({
+  return effectiveSelectedItems.value.map((item, index) => ({
     index: index + 1,
     itemValue: (valuePrefix.value || '') + item.dictValue,
     itemName: (namePrefix.value || '') + item.dictLabel + (nameSuffix.value || ''),
@@ -406,7 +527,10 @@ watch(
       )
     dictList.value.length = 0
     for (let item of columnArray) {
-      if ((item.fieldType === FIELD_TYPE.SELECT || item.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) && isNotEmpty(item.reference)) {
+      if ((item.fieldType === FIELD_TYPE.SELECT ||
+        item.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+        item.fieldType === FIELD_TYPE.TREE ||
+        item.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) && isNotEmpty(item.reference)) {
         dictList.value.push({
           value: item.reference + '###' + item.property + '###' + item.fieldType,
           label: item.displayName
@@ -419,6 +543,8 @@ watch(
 
 const loadDictItems = async (dictName: string) => {
   try {
+    // 切换到平铺模式前清空树形模式状态
+    resetTreeState()
     const response = await getDictByDictName({ dictName })
     if (response && response.payload) {
       dictItems.value = response.payload.map((item: any) => ({
@@ -450,6 +576,60 @@ const loadDictItems = async (dictName: string) => {
   }
 }
 
+// 重置树形模式状态
+const resetTreeState = () => {
+  treeData.value = []
+  checkedTreeKeys.value = []
+  treeExpandedKeys.value = []
+  treeNodeMap.value = new Map()
+  treeUnknownChecked.value = false
+}
+
+// 加载树形字典数据
+const loadTreeDictItems = async (dictName: string) => {
+  try {
+    // 切换到树形模式前清空平铺模式状态
+    dictItems.value = []
+    selectedDictItems.value.clear()
+
+    const response = await getTreeList(dictName)
+    const tree = response?.payload || []
+    treeData.value = tree
+
+    // 构建 key -> 节点 映射
+    const map = new Map<string, any>()
+    const buildMap = (nodes: Array<any>) => {
+      for (const node of nodes) {
+        map.set(String(node.key ?? node.value), node)
+        if (node.children?.length) buildMap(node.children)
+      }
+    }
+    buildMap(tree)
+    treeNodeMap.value = map
+
+    // 默认勾选所有叶子节点并展开整棵树
+    const leafKeys: Array<string | number> = []
+    map.forEach((node) => {
+      if (node.isLeaf || !node.children?.length) leafKeys.push(node.key ?? node.value)
+    })
+    checkedTreeKeys.value = leafKeys
+    treeExpandedKeys.value = Array.from(map.keys())
+    treeUnknownChecked.value = false
+  } catch (error) {
+    console.error('加载树形字典项失败:', error)
+    message.error('加载树形字典项失败')
+    resetTreeState()
+  }
+}
+
+// 树形模式：全部展开 / 全部收起
+const expandAllTree = () => {
+  treeExpandedKeys.value = Array.from(treeNodeMap.value.keys())
+}
+const collapseAllTree = () => {
+  treeExpandedKeys.value = []
+}
+
 const filterDict = (input: string, option: any) => {
   const label = option.label ?? option.children ?? ''
   return String(label).toLowerCase().indexOf(input.toLowerCase()) >= 0
@@ -465,14 +645,25 @@ const onDictChange = async (value: any) => {
   dictErrorMessage.value = ''
 
   if (value) {
-    await loadDictItems(value.split('###')[0])
-    if (dictItems.value.length === 0) {
-      dictValidateStatus.value = 'error'
-      dictErrorMessage.value = '所选字典没有字典项'
+    const dictName = value.split('###')[0]
+    const fieldType = value.split('###')[2]
+    if (fieldType === FIELD_TYPE.TREE || fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+      await loadTreeDictItems(dictName)
+      if (treeData.value.length === 0) {
+        dictValidateStatus.value = 'error'
+        dictErrorMessage.value = '所选树形字典没有字典项'
+      }
+    } else {
+      await loadDictItems(dictName)
+      if (dictItems.value.length === 0) {
+        dictValidateStatus.value = 'error'
+        dictErrorMessage.value = '所选字典没有字典项'
+      }
     }
   } else {
     dictItems.value = []
     selectedDictItems.value.clear()
+    resetTreeState()
   }
 }
 
@@ -491,24 +682,37 @@ const toggleSelection = (dictId: string | number) => {
   selectedDictItems.value = new Set(selectedDictItems.value)
 }
 
-// 全选：针对筛选后的结果
+// 全选：平铺模式针对筛选后的结果，树形模式勾选所有节点
 const handleSelectAll = () => {
+  if (isTreeMode.value) {
+    checkedTreeKeys.value = Array.from(treeNodeMap.value.keys())
+    return
+  }
   filteredDictItems.value.forEach(item => {
     selectedDictItems.value.add(item.dictId)
   })
   selectedDictItems.value = new Set(selectedDictItems.value)
 }
 
-// 清空：针对筛选后的结果
+// 清空：平铺模式针对筛选后的结果，树形模式取消所有勾选
 const handleDeselectAll = () => {
+  if (isTreeMode.value) {
+    checkedTreeKeys.value = []
+    return
+  }
   filteredDictItems.value.forEach(item => {
     selectedDictItems.value.delete(item.dictId)
   })
   selectedDictItems.value = new Set(selectedDictItems.value)
 }
 
-// 反选：针对筛选后的结果
+// 反选：平铺模式针对筛选后的结果，树形模式对叶子节点反选
 const handleInvertSelection = () => {
+  if (isTreeMode.value) {
+    const checkedSet = new Set(checkedTreeKeys.value.map(k => String(k)))
+    checkedTreeKeys.value = allLeafKeys.value.filter(k => !checkedSet.has(String(k)))
+    return
+  }
   filteredDictItems.value.forEach(item => {
     if (selectedDictItems.value.has(item.dictId)) {
       selectedDictItems.value.delete(item.dictId)
@@ -528,7 +732,7 @@ const validateForm = () => {
     isValid = false
   }
 
-  if (selectedDictItems.value.size === 0) {
+  if (effectiveSelectedItems.value.length === 0) {
     dictValidateStatus.value = 'error'
     dictErrorMessage.value = '请至少选择一个字典项'
     isValid = false
@@ -545,8 +749,8 @@ const handleGenerate = async () => {
   generating.value = true
 
   try {
-    // 只为选中的字典项生成指标
-    const selectedItems = dictItems.value.filter(item => isSelected(item.dictId))
+    // 只为选中的字典项生成指标（平铺模式为选中卡片，树形模式为勾选的叶子节点）
+    const selectedItems = effectiveSelectedItems.value
 
     // 先构建所有指标数据
     const allIndicatorData = await Promise.all(
@@ -611,12 +815,14 @@ const generateConditionByDictItem = (dictItem: any) => {
     return JSON.stringify(condition)
   }
   
-  // 普通字典项的条件
+  // 普通字典项的条件（单选类字段用等于，多选类字段用包含）
+  const fieldType = selectedDict.value.split('###')[2]
+  const isSingleSelect = fieldType === FIELD_TYPE.SELECT || fieldType === FIELD_TYPE.TREE
   const condition = {
     conditionList: [
       {
-        property: selectedDict.value.split('###')[1], // 假设有部门ID字段
-        relation: selectedDict.value.split('###')[2] === FIELD_TYPE.SELECT ? FILTER_TYPE.EQUAL : FILTER_TYPE.CONTAIN,
+        property: selectedDict.value.split('###')[1],
+        relation: isSingleSelect ? FILTER_TYPE.EQUAL : FILTER_TYPE.CONTAIN,
         value: [dictItem.dictValue]
       }
     ],
@@ -630,6 +836,7 @@ const handleReset = () => {
   selectedDict.value = ''
   dictItems.value = []
   selectedDictItems.value.clear()
+  resetTreeState()
   searchKeyword.value = ''
   targetGroupId.value = ''
   namePrefix.value = ''
@@ -763,6 +970,53 @@ defineExpose({
           }
         }
       }
+    }
+
+    .tree-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed var(--border-subtle);
+
+      .tree-hint {
+        font-size: 12px;
+        color: #8c8c8c;
+      }
+    }
+
+    .dict-tree {
+      padding: 4px 0;
+
+      :deep(.ant-tree-treenode) {
+        padding: 3px 0;
+      }
+
+      :deep(.ant-tree-node-content-wrapper) {
+        flex: 1;
+      }
+    }
+
+    .tree-node-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      .node-label {
+        font-weight: 500;
+      }
+
+      .node-value {
+        color: #8c8c8c;
+        font-size: 12px;
+      }
+    }
+
+    .tree-unknown-option {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-subtle);
     }
 
     .action-section {

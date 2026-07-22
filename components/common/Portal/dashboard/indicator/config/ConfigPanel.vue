@@ -37,27 +37,33 @@
       <!-- 图表模式切换 -->
       <div class="chart-mode-switcher">
         <span class="mode-label">图表模式：</span>
-        <a-radio-group
+        <a-select
           :value="chartMode"
-          button-style="solid"
           size="small"
+          style="width: 150px"
           @change="onChartModeChange"
         >
-          <a-radio-button value="dimension">
+          <a-select-option value="dimension">
             维度图表
-          </a-radio-button>
-          <a-radio-button value="metricsPie">
+          </a-select-option>
+          <a-select-option value="metricsPie">
             指标饼图
-          </a-radio-button>
-        </a-radio-group>
+          </a-select-option>
+          <a-select-option value="treeStacked">
+            树形堆叠柱状图
+          </a-select-option>
+        </a-select>
       </div>
 
-      <!-- 维度选择（指标饼图模式下禁用） -->
+      <!-- 维度选择（指标饼图模式下禁用；树形堆叠模式下二级维度变为树关系选择） -->
       <div :class="{ 'section-disabled': chartMode === 'metricsPie' }">
         <DimensionSelector
           v-model:first-dimension="firstDimension"
           v-model:second-dimension="secondDimension"
+          v-model:tree-dimension="treeDimension"
           :filter-dimension="filterDimensions[0]"
+          :is-tree-stacked="chartMode === 'treeStacked'"
+          :tree-dict-options="treeDictOptions"
         />
       </div>
 
@@ -89,6 +95,16 @@ import DataConfiguration from './DataConfiguration.vue'
 import DimensionSelector from './DimensionSelector.vue'
 import FilterCondition from './FilterCondition.vue'
 
+import type { TreeDimensionConfig } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
+
+// 树形字典字段选项（供树关系选择器使用）
+export interface TreeDictOption {
+  dictName: string
+  property: string
+  fieldType: string
+  displayName: string
+}
+
 // 接口定义
 interface IndicatorItem {
   key: string
@@ -111,7 +127,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -130,6 +146,8 @@ const props = defineProps<{
   leftPanelCollapsed: boolean
   firstDimension: IndicatorGroup | null
   secondDimension: IndicatorGroup | null
+  treeDimension: TreeDimensionConfig | null
+  treeDictOptions: TreeDictOption[]
   filterDimensions: (IndicatorGroup | null)[]
   selectedFilterItemsArray: string[][]
   dataMetrics: DataMetricUI[]
@@ -142,12 +160,14 @@ const emit = defineEmits<{
   'toggleLeftPanel': [status?: boolean]
   'update:firstDimension': [dimension: IndicatorGroup | null]
   'update:secondDimension': [dimension: IndicatorGroup | null]
+  'update:treeDimension': [dimension: TreeDimensionConfig | null]
   'update:filterDimensions': [dimensions: (IndicatorGroup | null)[]]
   'update:selectedFilterItemsArray': [items: string[][]]
   'update:dataMetrics': [metrics: DataMetricUI[]]
   'generateChart': [chartData: {
     firstDimension: IndicatorGroup | null,
     secondDimension: IndicatorGroup | null,
+    treeDimension: TreeDimensionConfig | null,
     filterDimensions: (IndicatorGroup | null)[],
     selectedFilterItemsArray: string[][],
     dataMetrics: DataMetricUI[]
@@ -159,32 +179,50 @@ const emit = defineEmits<{
 // 本地状态
 const firstDimension = ref(props.firstDimension)
 const secondDimension = ref(props.secondDimension)
+const treeDimension = ref<TreeDimensionConfig | null>(props.treeDimension)
 const filterDimensions = ref<[...(IndicatorGroup | null)[], (IndicatorGroup | null) | null]>([...(props.filterDimensions as any)] as any)
 const selectedFilterItemsArray = ref<string[][]>([...props.selectedFilterItemsArray])
 const dataMetrics = ref([...props.dataMetrics])
 
-// 图表模式：'dimension'（维度图表）| 'metricsPie'（指标饼图）
-// 基于 dataMetrics 推断：任一指标为 metricsPie 即为指标饼图模式
+// 图表模式：'dimension'（维度图表）| 'metricsPie'（指标饼图）| 'treeStacked'（树形堆叠）
+// 基于 dataMetrics 推断：任一指标为 metricsPie 即为指标饼图模式；任一指标为 treeStackedBar 即为树形堆叠模式
 const chartMode = computed(() => {
-  return dataMetrics.value.some(m => m.chartType === 'metricsPie') ? 'metricsPie' : 'dimension'
+  if (dataMetrics.value.some(m => m.chartType === 'metricsPie')) return 'metricsPie'
+  if (dataMetrics.value.some(m => m.chartType === 'treeStackedBar')) return 'treeStacked'
+  return 'dimension'
 })
 
-// 模式切换处理
-const onChartModeChange = (e: any) => {
-  const mode = e.target.value
+// 模式切换处理（a-select 直接传入选中的模式值）
+const onChartModeChange = (mode: any) => {
   if (mode === 'metricsPie') {
     // 切到指标饼图：清空维度 + 所有指标设为 metricsPie
     firstDimension.value = null
     secondDimension.value = null
+    treeDimension.value = null
     emit('update:firstDimension', null)
     emit('update:secondDimension', null)
+    emit('update:treeDimension', null)
     dataMetrics.value.forEach(m => {
       m.chartType = 'metricsPie'
     })
+  } else if (mode === 'treeStacked') {
+    // 切到树形堆叠：二级维度由树关系接管，只保留一个数据指标并强制自堆叠柱状图
+    secondDimension.value = null
+    emit('update:secondDimension', null)
+    const base = dataMetrics.value[0] || {
+      id: `metric_${Date.now()}`,
+      dataName: '分布统计',
+      dataField: '',
+      color: '#1890ff',
+      yAxisPosition: 'left',
+      unit: '',
+      itemColors: {}
+    }
+    dataMetrics.value = [{ ...base, chartType: 'treeStackedBar', stackGroup: 'selfStack' }]
   } else {
-    // 切回维度图表：所有 metricsPie 恢复为 bar
+    // 切回维度图表：所有 metricsPie / treeStackedBar 恢复为 bar
     dataMetrics.value.forEach(m => {
-      if (m.chartType === 'metricsPie') {
+      if (m.chartType === 'metricsPie' || m.chartType === 'treeStackedBar') {
         m.chartType = 'bar'
       }
     })
@@ -198,6 +236,10 @@ const canGenerateChart = computed(() => {
   if (chartMode.value === 'metricsPie') {
     // 指标饼图模式：不需要维度，但至少 2 个数据字段
     return dataMetrics.value.length >= 2
+  }
+  if (chartMode.value === 'treeStacked') {
+    // 树形堆叠模式：必须选择树关系
+    return !!treeDimension.value
   }
   // 维度图表模式：需要一级维度
   return !!firstDimension.value
@@ -310,6 +352,26 @@ watch(
   }
 )
 
+watch(
+  () => props.treeDimension,
+  (newValue) => {
+    if (newValue !== treeDimension.value) {
+      treeDimension.value = newValue
+    }
+  },
+  { immediate: true }
+)
+
+// 当本地treeDimension变化时，通知父组件
+watch(
+  () => treeDimension.value,
+  (newValue) => {
+    if (newValue !== props.treeDimension) {
+      emit('update:treeDimension', newValue)
+    }
+  }
+)
+
 // 数据配置更新事件处理
 const updateMetricField = (metricId: string, field: string, value: any) => {
   const metric = dataMetrics.value.find(m => m.id === metricId)
@@ -349,6 +411,24 @@ const generateChart = () => {
     emit('generateChart', {
       firstDimension: null,
       secondDimension: null,
+      treeDimension: null,
+      filterDimensions: filterDimensions.value,
+      selectedFilterItemsArray: selectedFilterItemsArray.value,
+      dataMetrics: dataMetrics.value
+    })
+    return
+  }
+
+  // 树形堆叠模式：必须选择树关系（二级维度由树关系接管）
+  if (chartMode.value === 'treeStacked') {
+    if (!treeDimension.value) {
+      message.error('请选择树关系（二级维度）')
+      return
+    }
+    emit('generateChart', {
+      firstDimension: firstDimension.value,
+      secondDimension: null,
+      treeDimension: treeDimension.value,
       filterDimensions: filterDimensions.value,
       selectedFilterItemsArray: selectedFilterItemsArray.value,
       dataMetrics: dataMetrics.value
@@ -390,6 +470,7 @@ const generateChart = () => {
   emit('generateChart', {
     firstDimension: firstDimension.value,
     secondDimension: secondDimension.value,
+    treeDimension: null,
     filterDimensions: filterDimensions.value,
     selectedFilterItemsArray: selectedFilterItemsArray.value,
     dataMetrics: dataMetrics.value
@@ -401,6 +482,7 @@ const resetConfiguration = () => {
   // 重置所有配置到初始状态
   firstDimension.value = null
   secondDimension.value = null
+  treeDimension.value = null
   filterDimensions.value = [null]
   selectedFilterItemsArray.value = [[]]
 
@@ -423,6 +505,7 @@ const resetConfiguration = () => {
   // 发出更新事件
   emit('update:firstDimension', firstDimension.value)
   emit('update:secondDimension', secondDimension.value)
+  emit('update:treeDimension', treeDimension.value)
   emit('update:filterDimensions', filterDimensions.value)
   emit('update:selectedFilterItemsArray', selectedFilterItemsArray.value)
   emit('update:dataMetrics', dataMetrics.value)

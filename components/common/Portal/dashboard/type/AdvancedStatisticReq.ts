@@ -19,11 +19,20 @@ export interface IndicatorGroup {
     indicatorItems: Array<IndicatorItem>
 }
 
+// 树形维度配置（树形堆叠柱状图）
+// 仅存储树形字典引用，渲染时通过 getTreeList 实时拉取树结构，字典变更零维护
+export interface TreeDimensionConfig {
+    dictName: string       // 树形字典名，如 "DC_DC_PHASE_DICT"
+    property: string       // 对应实体字段名
+    fieldType: string      // TREE | TREE_MULTI_IN_ONE
+    displayName?: string   // 字段显示名（用于展示）
+}
+
 // 数据配置项
 export interface DataMetric {
     dataName: string        // 数据名称
     dataField: string       // 英文字段名
-    chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie'  // 图表类型
+    chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'  // 图表类型
     color: string           // 数据项整体颜色（用于饼图等）
     yAxisPosition: 'left' | 'right'    // 坐标轴位置（饼图不需要）
     stackGroup?: string     // 堆叠位置标识，相同值的会堆叠在一起
@@ -39,6 +48,7 @@ export interface DimensionIndicatorsFilter {
     secondDimension: IndicatorGroup | null  // 允许为null
     filterConditions: ConditionGroup
     dataMetrics: Array<DataMetric>  // 新增数据配置数组
+    treeDimension?: TreeDimensionConfig | null  // 树形堆叠柱状图的树关系引用
     visibleStatisticTypes?: string[]  // 统计指标的可见性配置，用于编辑回显
     visibleFirstDimensions?: string[]  // 一级维度的可见性配置，用于编辑回显
     visibleSecondDimensions?: string[]  // 二级维度的可见性配置，用于编辑回显

@@ -19,10 +19,11 @@
 import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { buildFullAxisTooltipHtml } from '../utils/tooltipCommon'
+import { getEffectiveUnit } from '../utils/unitFormat'
+
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isNotEmpty } from '@/framework/utils/common'
-import { getEffectiveUnit } from '../utils/unitFormat'
-import { buildFullAxisTooltipHtml } from '../utils/tooltipCommon'
 
 export default defineComponent({
   name: 'LineChart',
@@ -87,8 +88,6 @@ export default defineComponent({
     const isPercentLineMetric = (metric?: DataMetric) => metric?.chartType === 'ptLine'
     const clampPercentValue = (value: number) => Math.max(0, Math.min(100, Number.isNaN(value) ? 0 : value))
 
-    const formatSharePercent = (value: number) => `${value}${DEFAULT_PERCENT_UNIT}`
-
     const convertValueForMetric = (metric: DataMetric | undefined, rawValue: number) => {
       if (!metric) return rawValue
       if (metric.unitConfig) {
@@ -108,32 +107,6 @@ export default defineComponent({
         return Number(value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
       }
       return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-    }
-
-    const formatOriginalValue = (metric: DataMetric | undefined, value: number) => {
-      const formatWithDigits = (digits = 0) => Number(value).toLocaleString(undefined, {
-        minimumFractionDigits: digits,
-        maximumFractionDigits: digits
-      })
-
-      if (!metric) return formatWithDigits()
-
-      if (metric.unitConfig) {
-        const { fix } = parseUnitConfig(metric.unitConfig)
-        return `${formatWithDigits(fix)}${getEffectiveUnit(metric)}`
-      }
-
-      return `${formatWithDigits()}${getEffectiveUnit(metric)}`
-    }
-
-    const getTooltipRawValue = (param: any): number => {
-      if (param?.data && typeof param.data.rawValue === 'number') {
-        return param.data.rawValue
-      }
-      if (typeof param?.value === 'number') {
-        return param.value
-      }
-      return 0
     }
 
     const getRawValueFromDatum = (datum: any): number => {

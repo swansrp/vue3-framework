@@ -82,22 +82,48 @@
       <!-- 二级维度 -->
       <div class="dimension-item">
         <div class="dimension-header">
-          <span>二级维度（数据集）</span>
+          <span>{{ isTreeStacked ? '堆叠关系' : '二级维度（数据集）' }}</span>
           <span
-            v-if="!firstDimension"
+            v-if="!isTreeStacked && !firstDimension"
             class="dimension-tip"
           >需先选择一级维度</span>
           <a-button
-            v-if="secondDimension"
+            v-if="isTreeStacked ? treeDimension : secondDimension"
             class="clear-btn"
             size="small"
             type="text"
-            @click="clearSecondDimension"
+            @click="isTreeStacked ? clearTreeDimension() : clearSecondDimension()"
           >
             清空
           </a-button>
         </div>
+
+        <!-- 树形堆叠模式：树关系选择器 -->
         <div
+          v-if="isTreeStacked"
+          class="tree-relation-zone"
+        >
+          <a-select
+            :value="treeDimension ? treeDimension.dictName + '###' + treeDimension.property : undefined"
+            :options="treeRelationOptions"
+            placeholder="选择树形字典字段（父节点为横坐标，子节点自动堆叠）"
+            size="small"
+            style="width: 100%"
+            allow-clear
+            @change="onTreeRelationChange"
+          />
+          <div
+            v-if="treeDimension"
+            class="tree-relation-info"
+          >
+            <span class="tree-relation-name">{{ treeDimension.displayName || treeDimension.dictName }}</span>
+            <span class="tree-relation-hint">树字典：{{ treeDimension.dictName }} · 仅支持 2 层：父节点作横坐标，子节点堆叠</span>
+          </div>
+        </div>
+
+        <!-- 常规模式：二级维度拖拽区 -->
+        <div
+          v-else
           :class="{
             'has-content': secondDimension,
             'drag-over': dragOverSecond && firstDimension,
@@ -150,9 +176,20 @@
 <script lang="ts" setup>
 import { DownOutlined, RightOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { inject, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 
+import { fetchTreeDict, validateTwoLevelTree } from '@/framework/components/common/chart/utils/treeStacked'
+import type { TreeDimensionConfig } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import { generateDistinctColors, getRandomColor } from '@/framework/utils/colorUtils'
+
+
+// 树形字典字段选项
+interface TreeDictOption {
+  dictName: string
+  property: string
+  fieldType: string
+  displayName: string
+}
 
 // 接口定义
 interface IndicatorItem {
@@ -184,12 +221,16 @@ const props = defineProps<{
   firstDimension: IndicatorGroup | null
   secondDimension: IndicatorGroup | null
   filterDimension: IndicatorGroup | null
+  isTreeStacked?: boolean
+  treeDictOptions?: TreeDictOption[]
+  treeDimension?: TreeDimensionConfig | null
 }>()
 
 // Emits
 const emit = defineEmits<{
   'update:firstDimension': [dimension: IndicatorGroup | null]
   'update:secondDimension': [dimension: IndicatorGroup | null]
+  'update:treeDimension': [dimension: TreeDimensionConfig | null]
   'dimensionChanged': []
 }>()
 
@@ -377,6 +418,58 @@ const clearSecondDimension = () => {
   emit('dimensionChanged')
 }
 
+// ==================== 树关系选择（树形堆叠模式） ====================
+// 树形字典字段 -> 下拉选项
+const treeRelationOptions = computed(() => {
+  return (props.treeDictOptions || []).map(opt => ({
+    value: `${opt.dictName}###${opt.property}`,
+    label: opt.displayName || opt.dictName
+  }))
+})
+
+// 选择树关系
+const onTreeRelationChange = async (value: any) => {
+  if (!value) {
+    clearTreeDimension()
+    return
+  }
+  const [dictName, property] = String(value).split('###')
+  const matched = (props.treeDictOptions || []).find(
+    opt => opt.dictName === dictName && opt.property === property
+  )
+
+  // 先同步设置树关系，保证选中状态与 UI 立即一致（避免异步校验期间状态下拉框显示不同步）
+  emit('update:treeDimension', {
+    dictName,
+    property,
+    fieldType: matched?.fieldType || '',
+    displayName: matched?.displayName || dictName
+  })
+  emit('dimensionChanged')
+
+  // 再异步校验是否为可用的 2 层树，不可用则清空并提示
+  try {
+    const tree = await fetchTreeDict(dictName, true)
+    const validation = validateTwoLevelTree(tree)
+    if (!validation.valid) {
+      message.error(validation.message || '该树形字典不可用于树形堆叠')
+      emit('update:treeDimension', null)
+    } else {
+      message.success(`校验通过：${validation.parentCount} 个父节点 / ${validation.leafCount} 个子节点`)
+    }
+  } catch (e) {
+    console.error('校验树形字典失败:', e)
+    message.error('校验树形字典失败，请稍后重试')
+    emit('update:treeDimension', null)
+  }
+}
+
+// 清空树关系
+const clearTreeDimension = () => {
+  emit('update:treeDimension', null)
+  emit('dimensionChanged')
+}
+
 // 折叠切换
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value
@@ -452,6 +545,39 @@ const toggleCollapse = () => {
       .clear-btn {
         margin-left: auto;
         color: var(--text-primary);
+      }
+    }
+
+    // 树关系选择区（树形堆叠模式）
+    .tree-relation-zone {
+      border: 2px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: var(--bg-hover);
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: var(--accent);
+      }
+
+      .tree-relation-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--border-subtle);
+
+        .tree-relation-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--accent);
+        }
+
+        .tree-relation-hint {
+          font-size: 11px;
+          color: var(--text-tertiary);
+        }
       }
     }
 

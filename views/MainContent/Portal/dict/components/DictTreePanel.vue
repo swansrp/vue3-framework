@@ -257,6 +257,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant
 import { Empty, message, Modal } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
+import { getDictExisted, systemBizDictUpdateDictName } from '@/framework/apis/dict/bizDictController'
 import {
   getBizTreeDict,
   getBizTreeDictList,
@@ -268,7 +269,6 @@ import {
   createTreeDict,
   deleteTreeDict
 } from '@/framework/apis/dict/dict'
-import { getDictExisted, systemBizDictUpdateDictName } from '@/framework/apis/dict/bizDictController'
 
 const simpleImage = Empty.PRESENTED_IMAGE_SIMPLE
 

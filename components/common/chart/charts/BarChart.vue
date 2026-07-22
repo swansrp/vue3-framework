@@ -19,10 +19,12 @@
 import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { buildFullAxisTooltipHtml, buildHighlightRowsHtml, buildHighlightTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
+import type { HighlightTooltipItem } from '../utils/tooltipCommon'
+import { getEffectiveUnit } from '../utils/unitFormat'
+
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
-import { getEffectiveUnit } from '../utils/unitFormat'
-import { buildFullAxisTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
 
 export default defineComponent({
   name: 'BarChart',
@@ -282,8 +284,12 @@ export default defineComponent({
                 d.secondDimension === secondDim &&
                 d.statisticType === statType
               )
+              // 该「类目×二级维度」组合无数据时返回 null（如树形堆叠中不属于当前父节点的子节点）：
+              // null 不参与堆叠、不出现在 tooltip，保证每根柱子只堆叠自己的子节点；
+              // 真实为 0 的数据（有记录但计数为0）仍会保留为 0 正常展示
+              if (!item) return null
               // 对数据值进行单位转换
-              const originalValue = item ? item.statistic : 0
+              const originalValue = item.statistic
               const { unit: unitDivisor } = metric.unitConfig ? parseUnitConfig(metric.unitConfig) : { unit: 1 }
               // 对于非金额指标，确保结果为整数；对于金额指标，保持精度
               return metric.unitConfig ? originalValue / unitDivisor : Math.round(originalValue)
@@ -503,6 +509,9 @@ export default defineComponent({
         return yAxes
       }
 
+      // 堆叠图表使用 item 触发（才能识别悬停的具体段，像饼图一样高亮当前选中项）
+      const isStacked = hasStackedSeries(series)
+
       return {
         title: {
           text: props.title,
@@ -537,7 +546,7 @@ export default defineComponent({
           }
         },
         tooltip: {
-          trigger: 'axis',
+          trigger: isStacked ? 'item' : 'axis',
           axisPointer: {
             type: 'shadow'
           },
@@ -608,185 +617,127 @@ export default defineComponent({
               )
             }
 
-            // ===== 堆叠图表：保持原有 tooltip 样式 =====
-            let result = `<strong>${params[0].axisValue}</strong><br/>`
+            // ===== 堆叠图表：饼图风格 tooltip（trigger: 'item'，params 为单个对象）=====
+            // 列出当前柱子（类目）的所有段，并像饼图一样高亮当前悬停的段
+            const hoveredCategory = params.name
+            const categoryIndex = categories.indexOf(hoveredCategory)
 
-            if (hasSecondDimension) {
-              // 有第二维度时，按统计类型分组
-              const groupedParams = params.reduce((acc: any, param: any) => {
-                const parts = param.seriesName.split('&&')
-                const secondDimension = parts[0]
-                const statType = parts[1]
-
-                if (!acc[statType]) {
-                  acc[statType] = []
-                }
-                acc[statType].push({ ...param, secondDimension })
-                return acc
-              }, {})
-
-              // 计算各统计类型的总计（所有类别的总和）
-              const grandTotalsMap: Record<string, number> = {}
-              Object.keys(groupedParams).forEach(statType => {
-                const seriesForStat = series.filter((s: any) => s.name && s.name.endsWith(`&&${statType}`))
-                grandTotalsMap[statType] = seriesForStat.reduce((sum: number, s: any) => {
-                  if (Array.isArray(s.data)) {
-                    return sum + s.data.reduce((seriesSum: number, item: any) => {
-                      const v = typeof item === 'object' && item?.value != null ? item.value : item
-                      return seriesSum + (typeof v === 'number' ? v : 0)
-                    }, 0)
-                  }
-                  return sum
-                }, 0)
-              })
-
-              // 为每个统计类型显示数据
-              Object.keys(groupedParams).forEach(statType => {
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${statType}</strong><br/>`
-
-                const typeParams = groupedParams[statType].filter((p: any) => p.value != null && p.value !== 0)
-                const total = typeParams.reduce((sum: number, p: any) => sum + p.value, 0)
-
-                typeParams.forEach((param: any) => {
-                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(1) : '0.0'
-                  const unit = getUnitByStatType(statType)
-                  const formattedValue = (() => {
-                    const metric = props.dataMetrics.find(m => m.dataName === statType)
-                    if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig)
-                      return Number(param.value).toLocaleString(undefined, {
-                        minimumFractionDigits: fix,
-                        maximumFractionDigits: fix
-                      })
-                    }
-                    // 非金额指标显示为整数
-                    return Number(param.value).toLocaleString(undefined, {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0
-                    })
-                  })()
-                  result += `${param.marker}${param.secondDimension}: ${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
-                })
-
-                const metric = props.dataMetrics.find(m => m.dataName === statType)
-                const formattedTotal = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(total).toLocaleString(undefined, {
-                      minimumFractionDigits: fix,
-                      maximumFractionDigits: fix
-                    })
-                  }
-                  // 非金额指标显示为整数
-                  return Number(total).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })
-                })()
-                const subtotalUnit = getUnitByStatType(statType)
-                
-                // 添加总计
-                const grandTotal = grandTotalsMap[statType] || 0
-                const subtotalPercentage = grandTotal > 0 ? ((total / grandTotal) * 100).toFixed(2) : '0.00'
-                result += `<span style="color: var(--text-secondary); font-size: 12px;">小计: ${formattedTotal}${subtotalUnit ? subtotalUnit : ''} (${subtotalPercentage}%)</span><br/>`
-
-                const formattedGrandTotal = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(grandTotal).toLocaleString(undefined, {
-                      minimumFractionDigits: fix,
-                      maximumFractionDigits: fix
-                    })
-                  }
-                  return Number(grandTotal).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })
-                })()
-                result += `<span style="color: var(--text-secondary); font-size: 12px; font-weight: bold;">总计: ${formattedGrandTotal}${subtotalUnit ? subtotalUnit : ''}</span></div>`
-              })
-            } else {
-              // 单维度：仅保留“分组 + 数量(百分比) + 总计”，不展示同级分布列表
-              const categoryName = params[0].axisValue
-
-              // 各指标在所有类目下的总和（已转换值）
-              const totalsMap: Record<string, number> = {}
-              series.forEach((s: any) => {
-                if (s && s.name && Array.isArray(s.data)) {
-                  totalsMap[s.name] = s.data.reduce((sum: number, item: any) => {
-                    const v = typeof item === 'object' && item?.value != null ? item.value : item
-                    return sum + (typeof v === 'number' ? v : 0)
-                  }, 0)
-                }
-              })
-
-              const onlyOneStatType = statisticTypes.length === 1
-
-              if (onlyOneStatType) {
-                const statType = statisticTypes[0]
-                const param = params.find((p: any) => p.seriesName === statType) || params[0]
-                const unit = getUnitByStatType(statType)
-                const metric = props.dataMetrics.find(m => m.dataName === statType)
-
-                const formattedValue = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                  }
-                  return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                })()
-
-                const total = totalsMap[statType] || 0
-                const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
-
-                // 区块：显示指标名 -> 蓝色块内显示带圆点的“分类名：值（%）” -> 总计
-                result += `<div style="margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);"><strong>${metric?.dataName || statType}</strong><br/>`
-                result += `${param.marker}${categoryName}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
-
-                const formattedTotal = (() => {
-                  if (metric?.unitConfig) {
-                    const { fix } = parseUnitConfig(metric.unitConfig)
-                    return Number(total).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                  }
-                  return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                })()
-                result += `<span style=\"color: var(--text-secondary); font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
-              } else {
-                // 多指标：每个指标单独成块，块内先显示指标名，再蓝色块显示（圆点 + 指标名：值（%））和总计
-                params.forEach((param: any) => {
-                  const statType = param.seriesName
-                  const metric = props.dataMetrics.find(m => m.dataName === statType)
-                  const unit = metric?.unit || ''
-
-                  const formattedValue = (() => {
-                    if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig)
-                      return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                    }
-                    return Number(param.value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                  })()
-
-                  const total = totalsMap[statType] || 0
-                  const percentage = total > 0 ? ((param.value / total) * 100).toFixed(2) : '0.00'
-
-                  result += `<div style=\"margin: 8px 0; padding: 4px; border-left: 3px solid var(--accent); background: var(--accent-soft);\"><strong>${metric?.dataName || statType}</strong><br/>`
-                  // 多指标场景，值行使用指标名作为标签
-                  result += `${param.marker}${metric?.dataName || statType}：${formattedValue}${unit ? unit : ''} (${percentage}%)<br/>`
-
-                  const formattedTotal = (() => {
-                    if (metric?.unitConfig) {
-                      const { fix } = parseUnitConfig(metric.unitConfig)
-                      return Number(total).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
-                    }
-                    return Number(total).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                  })()
-
-                  result += `<span style=\"color: var(--text-secondary); font-size: 12px;\">总计：${formattedTotal}${unit ? unit : ''}</span></div>`
-                })
+            // 按统计类型的单位配置格式化数值
+            const formatStatValue = (statType: string, value: number) => {
+              const metric = props.dataMetrics.find(m => m.dataName === statType)
+              if (metric?.unitConfig) {
+                const { fix } = parseUnitConfig(metric.unitConfig)
+                return Number(value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
               }
+              return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
             }
 
-            return result
+            // 取某系列在当前类目下的值（已单位转换），无数据返回 null
+            const getSeriesValue = (s: any): number | null => {
+              const rawValue = Array.isArray(s.data) ? s.data[categoryIndex] : null
+              if (rawValue == null) return null
+              if (typeof rawValue === 'object') return rawValue.value != null ? rawValue.value : null
+              return typeof rawValue === 'number' ? rawValue : null
+            }
+
+            // 计算某统计类型在所有类目（全部柱子）下的总和
+            const computeGrandTotal = (statType: string): number => {
+              return series
+                .filter((s: any) => s.name && s.name.endsWith(`&&${statType}`))
+                .reduce((sum: number, s: any) => {
+                  if (!Array.isArray(s.data)) return sum
+                  return sum + s.data.reduce((ss: number, item: any) => {
+                    const v = typeof item === 'object' && item?.value != null ? item.value : item
+                    return ss + (typeof v === 'number' ? v : 0)
+                  }, 0)
+                }, 0)
+            }
+
+            if (hasSecondDimension) {
+              // 有第二维度：列出当前父节点下的所有叶子节点，高亮悬停的叶子
+              const nameParts = String(params.seriesName).split('&&')
+              const hoveredLeaf = nameParts[0]
+              const hoveredStatType = nameParts[1]
+
+              // 按统计类型收集当前父节点下有数据的叶子（无数据的 null 段自动跳过）
+              const seriesByStatType: Record<string, any[]> = {}
+              series.forEach((s: any) => {
+                if (!s.name || !s.name.includes('&&')) return
+                const parts = String(s.name).split('&&')
+                const value = getSeriesValue(s)
+                if (value == null) return
+                if (!seriesByStatType[parts[1]]) seriesByStatType[parts[1]] = []
+                seriesByStatType[parts[1]].push({ name: parts[0], value, color: s.itemStyle?.color || s.color || '#1890ff' })
+              })
+
+              const statTypes = Object.keys(seriesByStatType)
+
+              // 单一统计类型：标题 + 叶子列表（高亮悬停叶子）+ 总计
+              if (statTypes.length === 1) {
+                const statType = statTypes[0]
+                const items = seriesByStatType[statType].map(d => ({
+                  name: d.name,
+                  value: d.value,
+                  color: d.color,
+                  unit: getUnitByStatType(statType) || '',
+                  formattedValue: formatStatValue(statType, d.value)
+                }))
+                const total = items.reduce((sum, d) => sum + d.value, 0)
+                const grandTotal = computeGrandTotal(statType)
+                const subtotalPercentage = grandTotal > 0 ? ((total / grandTotal) * 100).toFixed(2) : '0.00'
+                const unit = getUnitByStatType(statType) || ''
+                const totalText = `小计：${formatStatValue(statType, total)}${unit} (${subtotalPercentage}%)<br/>总计：${formatStatValue(statType, grandTotal)}${unit}`
+                return buildHighlightTooltipHtml(
+                  hoveredCategory,
+                  items,
+                  hoveredLeaf,
+                  totalText
+                )
+              }
+
+              // 多统计类型：标题 + 每个统计类型分块
+              let html = `<div style="font-weight: bold; font-size: 13px; margin-bottom: 8px; color: #262626;">${hoveredCategory}</div>`
+              statTypes.forEach(statType => {
+                const items = seriesByStatType[statType].map(d => ({
+                  name: d.name,
+                  value: d.value,
+                  color: d.color,
+                  unit: getUnitByStatType(statType) || '',
+                  formattedValue: formatStatValue(statType, d.value)
+                }))
+                const total = items.reduce((sum, d) => sum + d.value, 0)
+                const grandTotal = computeGrandTotal(statType)
+                const subtotalPercentage = grandTotal > 0 ? ((total / grandTotal) * 100).toFixed(2) : '0.00'
+                html += `<div style="margin: 6px 0 2px; font-weight: bold; font-size: 12px; color: var(--text-secondary);">${statType}</div>`
+                html += buildHighlightRowsHtml(items, hoveredStatType === statType ? hoveredLeaf : '')
+                html += `<div style="margin: 2px 0 6px; padding-top: 4px; border-top: 1px solid #eee; color: var(--text-secondary, #8c8c8c); font-size: 12px;">小计：${formatStatValue(statType, total)}${getUnitByStatType(statType) || ''} (${subtotalPercentage}%)</div>`
+              })
+              return html
+            } else {
+              // 单维度堆叠：列出各统计类型，高亮悬停的统计类型
+              const hoveredStatType = String(params.seriesName)
+              const items = series
+                .map((s: any) => {
+                  const value = getSeriesValue(s)
+                  if (value == null || !s.name) return null
+                  return {
+                    name: s.name,
+                    value,
+                    color: s.itemStyle?.color || s.color || '#1890ff',
+                    unit: getUnitByStatType(s.name) || '',
+                    formattedValue: formatStatValue(s.name, value)
+                  }
+                })
+                .filter((d): d is HighlightTooltipItem => d != null)
+              const total = items.reduce((sum: number, d: any) => sum + d.value, 0)
+              const firstUnit = items[0]?.unit || ''
+              return buildHighlightTooltipHtml(
+                hoveredCategory,
+                items,
+                hoveredStatType,
+                `总计：${formatStatValue(items[0]?.name || '', total)}${firstUnit}`
+              )
+            }
           }
         },
         grid: {

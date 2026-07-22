@@ -57,9 +57,9 @@
           </div>
 
           <div class="data-item-content">
-            <!-- 指标饼图模式下隐藏图表类型/坐标轴/堆叠配置（由顶部模式切换统一控制） -->
+            <!-- 指标饼图/树形堆叠模式下隐藏图表类型/坐标轴/堆叠配置（由顶部模式切换统一控制） -->
             <div
-              v-if="!isMetricsPieMode"
+              v-if="!isMetricsPieMode && !isTreeStackedMode"
               class="data-row"
             >
               <span class="data-label">图表类型：</span>
@@ -82,7 +82,7 @@
               </span>
             </div>
             <div
-              v-if="!isMetricsPieMode && metric.chartType !== 'pie'"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && metric.chartType !== 'pie'"
               class="data-row"
             >
               <span class="data-label">坐标轴：</span>
@@ -104,7 +104,7 @@
               </span>
             </div>
             <div
-              v-if="!isMetricsPieMode && metric.chartType === 'bar'"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && metric.chartType === 'bar'"
               class="data-row"
             >
               <span class="data-label">堆叠：</span>
@@ -241,7 +241,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode"
+            v-if="!isMetricsPieMode && !isTreeStackedMode"
             label="图表类型"
             required
           >
@@ -266,7 +266,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && editingDataMetric.chartType !== 'pie' && editingDataMetric.chartType !== 'metricsPie'"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && editingDataMetric.chartType !== 'pie' && editingDataMetric.chartType !== 'metricsPie'"
             label="坐标轴位置"
           >
             <a-radio-group v-model:value="editingDataMetric.yAxisPosition">
@@ -280,7 +280,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && editingDataMetric.chartType === 'bar'"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && editingDataMetric.chartType === 'bar'"
             label="堆叠位置"
           >
             <a-select
@@ -341,7 +341,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 
 import ColorPicker from './ColorPicker.vue'
 
-import { deriveDisplayUnit } from '@/framework/components/common/Portal/dashboard/indicator/dashboard/utils/unitFormat'
+import { deriveDisplayUnit } from '@/framework/components/common/chart/utils/unitFormat'
 
 // 接口定义
 interface IndicatorItem {
@@ -365,7 +365,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -472,8 +472,15 @@ const isMetricsPieMode = computed(() => {
   return props.dataMetrics.some(m => m.chartType === 'metricsPie')
 })
 
+// 树形堆叠模式：图表类型/坐标轴/堆叠由模式统一控制（强制自堆叠柱状图）
+const isTreeStackedMode = computed(() => {
+  return props.dataMetrics.some(m => m.chartType === 'treeStackedBar')
+})
+
 // 判断是否可以添加数据指标
 const canAddDataMetric = computed(() => {
+  // 树形堆叠模式只允许一个数据指标
+  if (isTreeStackedMode.value) return false
   // 如果已经有饼图类型，不允许添加新的数据指标（饼图只能 1 个数据指标）
   // 指标饼图允许多个数据指标，不阻止添加
   return !hasPieChart.value

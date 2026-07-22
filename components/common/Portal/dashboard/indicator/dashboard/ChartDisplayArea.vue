@@ -133,17 +133,33 @@ import { computed, nextTick, ref, toRefs } from 'vue'
 import DimensionControl from './control/DimensionControl.vue'
 import StatisticControl from './control/StatisticControl.vue'
 import DashboardDetailModal from './DashboardDetail.vue'
-import UniversalChart from './UniversalChart.vue'
-import { exportChartToExcel } from './utils/chartExport'
 import type { SelectedBarInfo } from '../../type/ChartTypes'
 
-import { advancedStatisticRequest } from '@/framework/apis'
+import UniversalChart from '@/framework/components/common/chart/UniversalChart.vue'
 import {
-  ConvertOptions,
-  DimensionIndicatorsFilter,
-  IndicatorGroup,
-  MetricCondition,
-  RequestParams
+  buildChartCategories,
+  buildDimensionValueMap,
+  buildDrillConditionFromCache,
+  buildSelectedBarInfo,
+  extractDimensionData,
+  fetchStatisticData,
+  filterChartDataByVisibility,
+  getChartType,
+  hasValidChartConfig,
+  parseBarClickParams,
+  parsePieClickParams
+} from '@/framework/components/common/chart/utils/chartDataHelper'
+import { exportChartToExcel } from '@/framework/components/common/chart/utils/chartExport'
+import {
+  assignTreeStackedColors,
+  buildLeafSecondDimension,
+  buildParentFirstDimension,
+  buildTreeStackedData,
+  fetchTreeDict,
+  validateTwoLevelTree
+} from '@/framework/components/common/chart/utils/treeStacked'
+import {
+  DimensionIndicatorsFilter
 } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import type { ChartDataItem } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
@@ -185,6 +201,9 @@ const selectedBarInfo = ref<SelectedBarInfo | null>(null)
 
 // 图表实例引用
 const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
+
+// 缓存最近一次请求参数，供点击穿透条件复用
+let lastRequestParams: any = null
 
 // ==================== 维度顺序变化处理 ====================
 /**
@@ -249,59 +268,19 @@ const handleStatisticOrderChanged = async () => {
 
 // 获取图表分类数据（x轴）
 const chartCategories = computed(() => {
-  if (!chartData.value.length) return []
-  // 以配置的第一维度顺序为准，和后端返回的数据做交集
-  const dataCatsSet = new Set(chartData.value.map((item: any) => item.metricLabel.split('&&')[0]))
   const configuredOrder =
     receivedData.value?.firstDimension?.indicatorItems?.map((i) => i.itemName) || []
-  const ordered = configuredOrder.filter((name) => dataCatsSet.has(name))
-  const extras = Array.from(dataCatsSet).filter((name) => !configuredOrder.includes(name))
-  const allCategories = [...ordered, ...extras]
-
-  // 根据第一维度的可见性过滤，只显示被选中的维度
-  if (visibleFirstDimensions.value.length === 0) {
-    // 如果没有选中任何维度，返回所有类别
-    return allCategories
-  } else {
-    // 只返回被选中的维度
-    return allCategories.filter((cat) => visibleFirstDimensions.value.includes(cat))
-  }
+  return buildChartCategories(chartData.value, configuredOrder, visibleFirstDimensions.value)
 })
 
-// 过滤后的图表数据
+// 过滤后的图表数据（取数后由控制面板过滤）
 const filteredChartData = computed(() => {
-  if (!chartData.value.length) return []
-
-  // 根据维度控制面板的选择过滤数据
-  return chartData.value
-    .filter((item: any) => {
-      const parts = item.metricLabel.split('&&')
-      const firstDim = parts[0]
-      const secondDim = parts[1]
-
-      const firstDimVisible =
-        visibleFirstDimensions.value.length === 0 || visibleFirstDimensions.value.includes(firstDim)
-      const secondDimVisible =
-        visibleSecondDimensions.value.length === 0 ||
-        visibleSecondDimensions.value.includes(secondDim)
-
-      // 只有当两个维度都可见时才包含该项
-      return firstDimVisible && secondDimVisible
-    })
-    .map((item: any) => {
-      // 创建新的对象，避免修改原始数据
-      return {
-        ...item,
-        children: item.children.filter((child: any) => {
-          const statType = child.metric
-          return (
-            visibleStatisticTypes.value.length === 0 ||
-            visibleStatisticTypes.value.includes(statType)
-          )
-        })
-      }
-    })
-    .filter((item: any) => item.children.length > 0) // 只保留有children的项
+  return filterChartDataByVisibility(
+    chartData.value,
+    visibleFirstDimensions.value,
+    visibleSecondDimensions.value,
+    visibleStatisticTypes.value
+  )
 })
 
 // 动态获取维度信息的计算属性
@@ -320,11 +299,7 @@ const hasSecondDimension = computed(() => {
 })
 
 // 动态从 dataMetrics 中获取图表类型
-const autoChartType = computed(() => {
-  // 从 dataMetrics 中获取第一个配置的 chartType
-  const firstMetric = receivedData.value?.dataMetrics?.[0]
-  return firstMetric?.chartType || 'bar'
-})
+const autoChartType = computed(() => getChartType(receivedData.value))
 
 // 图表标题
 const chartTitle = computed(() => {
@@ -332,204 +307,9 @@ const chartTitle = computed(() => {
 })
 
 // 维度名称到编码的映射，保证颜色等与配置一致
-const dimensionValueMap = computed(() => {
-  const first: Record<string, string> = {}
-  const second: Record<string, string> = {}
-  receivedData.value?.firstDimension?.indicatorItems?.forEach((it) => {
-    first[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
-  })
-  receivedData.value?.secondDimension?.indicatorItems?.forEach((it) => {
-    second[it.itemName] = typeof it.itemValue === 'string' ? it.itemValue : String(it.itemValue)
-  })
-  return { first, second }
-})
+const dimensionValueMap = computed(() => buildDimensionValueMap(receivedData.value))
 
 // ==================== 函数定义 ====================
-/**
- * 转换条件列表，将嵌套的条件结构转换为接口要求的扁平化结构
- * 保持条件之间的逻辑关系（AND/OR）
- * @param conditionList 嵌套的条件列表
- * @returns 转换后的条件列表
- */
-const transformConditionList = (conditionList: any[]): any[] => {
-  const result: any[] = []
-
-  const traverse = (conditions: any[], parentAndOr = '0') => {
-    conditions.forEach((condition) => {
-      // 如果是叶子节点条件（有property属性且不为null），直接添加
-      if (condition.property !== undefined && condition.property !== null) {
-        result.push({
-          property: condition.property,
-          relation: condition.relation,
-          value: Array.isArray(condition.value) ? [...condition.value] : condition.value
-        })
-      }
-      // 如果有条件列表且有逻辑关系（andOr），需要保持这个结构
-      else if (
-        condition.conditionList &&
-        Array.isArray(condition.conditionList) &&
-        condition.conditionList.length > 0
-      ) {
-        // 如果是顶层的筛选维度条件组（有andOr属性），保持其结构
-        if (condition.andOr !== undefined) {
-          // 递归处理子条件
-          const transformedSubConditions = transformConditionList(condition.conditionList)
-
-          // 如果子条件只有一个且是叶子节点，直接添加
-          if (
-            transformedSubConditions.length === 1 &&
-            transformedSubConditions[0].property !== undefined &&
-            transformedSubConditions[0].property !== null
-          ) {
-            result.push(transformedSubConditions[0])
-          }
-          // 如果有多个子条件且都是叶子节点，构建嵌套结构
-          else if (
-            transformedSubConditions.length > 0 &&
-            transformedSubConditions.every(
-              (sub) => sub.property !== undefined && sub.property !== null
-            )
-          ) {
-            result.push({
-              property: null,
-              value: null,
-              relation: null,
-              conditionList: transformedSubConditions,
-              andOr: condition.andOr
-            })
-          }
-          // 如果子条件中有嵌套结构，保持原有结构
-          else if (transformedSubConditions.length > 0) {
-            // 只有当子条件不为空时才添加
-            const nonEmptyConditions = transformedSubConditions.filter(
-              (sub) =>
-                sub.property !== null ||
-                (sub.conditionList &&
-                  Array.isArray(sub.conditionList) &&
-                  sub.conditionList.length > 0)
-            )
-
-            if (nonEmptyConditions.length > 0) {
-              result.push({
-                property: null,
-                value: null,
-                relation: null,
-                conditionList: nonEmptyConditions,
-                andOr: condition.andOr
-              })
-            }
-          }
-        }
-        // 如果没有andOr属性，递归处理
-        else {
-          traverse(condition.conditionList, parentAndOr)
-        }
-      }
-    })
-  }
-
-  traverse(conditionList)
-  return result
-}
-
-/**
- * 构建只有第一维度的查询条件
- * @param firstDim 第一维度名称
- * @returns 组合条件对象
- */
-const buildFirstDimensionConditions = (firstDim: string) => {
-  if (!receivedData.value) {
-    return null
-  }
-
-  // 查找第一维度条件
-  const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find(
-    (item: any) => item.itemName === firstDim
-  )
-
-  if (!firstDimItem) {
-    return null
-  }
-
-  // 合并全局筛选条件和第一维度条件
-  const globalConditions = receivedData.value.filterConditions?.conditionList || []
-  const firstDimConditions = firstDimItem.queryConditions.conditionList || []
-
-  // 转换条件列表，保持逻辑关系
-  const transformedConditions = transformConditionList([
-    ...globalConditions,
-    ...firstDimConditions
-  ])
-
-  return {
-    andOr: '0', // 使用 AND 连接全局条件和维度条件
-    conditionList: transformedConditions,
-    // 附加信息：原始条件
-    firstDimensionCondition: firstDimItem.queryConditions,
-    secondDimensionCondition: null,
-    // 附加信息：维度标识
-    firstDimensionId: `${receivedData.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
-    secondDimensionId: null
-  }
-}
-
-/**
- * 构建第一维度和第二维度的组合查询条件
- * @param firstDim 第一维度名称
- * @param secondDim 第二维度名称
- * @returns 组合条件对象
- */
-const buildCombinedConditions = (firstDim: string, secondDim: string) => {
-  if (!receivedData.value) {
-    return null
-  }
-
-  // 查找第一维度条件
-  const firstDimItem = receivedData.value.firstDimension?.indicatorItems.find(
-    (item: any) => item.itemName === firstDim
-  )
-
-  if (!firstDimItem) {
-    return null
-  }
-
-  // 查找第二维度条件（如果存在第二维度）
-  const secondDimItem = hasSecondDimension.value
-    ? receivedData.value.secondDimension?.indicatorItems.find(
-      (item: any) => item.itemName === secondDim
-    )
-    : null
-
-  // 如果有第二维度但找不到对应条件，则报错
-  if (hasSecondDimension.value && !secondDimItem) {
-    return null
-  }
-
-  // 合并查询条件：全局筛选条件 + 第一维度条件 + 第二维度条件
-  const globalConditions = receivedData.value.filterConditions?.conditionList || []
-  const firstDimConditions = firstDimItem.queryConditions.conditionList || []
-  const secondDimConditions = secondDimItem ? secondDimItem.queryConditions.conditionList || [] : []
-
-  // 转换条件列表，保持逻辑关系
-  const transformedConditions = transformConditionList([
-    ...globalConditions,
-    ...firstDimConditions,
-    ...secondDimConditions
-  ])
-
-  return {
-    andOr: '0', // 使用 AND 连接所有条件
-    conditionList: transformedConditions,
-    // 附加信息：原始条件
-    firstDimensionCondition: firstDimItem.queryConditions,
-    secondDimensionCondition: secondDimItem?.queryConditions || null,
-    // 附加信息：维度标识
-    firstDimensionId: `${receivedData.value.firstDimension!.groupValue}&&${firstDimItem.itemValue}`,
-    secondDimensionId: secondDimItem
-      ? `${receivedData.value.secondDimension!.groupValue}&&${secondDimItem.itemValue}`
-      : null
-  }
-}
 
 // 关闭详情弹窗
 const closeDetailModal = () => {
@@ -549,235 +329,99 @@ const handleChartClick = (params: any) => {
 
 // 点击柱状图/折线图事件处理
 const onBarClick = (params: any) => {
-  const seriesName = params.seriesName
-  const firstDim = params.name // x轴的值（第一维度）
+  const { firstDim, secondDim, statType } = parseBarClickParams(params, hasSecondDimension.value)
 
-  let secondDim = ''
-  let statType = ''
-
-  // 判断是否有第二维度
-  if (hasSecondDimension.value && seriesName.includes('&&')) {
-    // 有第二维度：格式是 "第二维度&&统计类型"
-    const parts = seriesName.split('&&')
-    secondDim = parts[0] || ''
-    statType = parts[1] || ''
-  } else {
-    // 没有第二维度：seriesName 直接就是统计类型
-    statType = seriesName
-    secondDim = '' // 没有第二维度时设为空
+  // 从缓存的请求体构建穿透条件
+  const combinedConditions = buildDrillConditionFromCache(lastRequestParams, firstDim, secondDim)
+  if (!combinedConditions) {
+    console.warn('无法构建查询条件')
+    return
   }
 
-  // 获取组合条件
-  const combinedConditions = hasSecondDimension.value
-    ? buildCombinedConditions(firstDim, secondDim)
-    : buildFirstDimensionConditions(firstDim)
+  const statisticData = hasSecondDimension.value && secondDim ? [secondDim] : [firstDim]
 
-  // 获取用户选中的具体指标数据项
-  let statisticData: string[] = []
-  if (hasSecondDimension.value && secondDim) {
-    // 有第二维度时，显示选中的第二维度值
-    statisticData = [secondDim]
-  } else {
-    // 没有第二维度时，显示选中的第一维度值
-    statisticData = [firstDim]
-  }
+  selectedBarInfo.value = buildSelectedBarInfo(
+    firstDim, secondDim, firstDimensionName.value, secondDimensionName.value,
+    statType, statisticData, combinedConditions, hasSecondDimension.value
+  )
 
-  // 设置选中的柱状图信息
-  selectedBarInfo.value = {
-    firstDimension: firstDim,
-    secondDimension: secondDim || null,
-    firstDimensionName: firstDimensionName.value,
-    secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
-    statisticType: statType,
-    statisticData: statisticData,
-    combinedConditions: combinedConditions,
-    title: hasSecondDimension.value
-      ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
-      : `${firstDimensionName.value}: ${firstDim} (${statType})`,
-    color: '#1890ff' // 默认颜色
-  }
-
-  // 显示弹窗
   detailModalVisible.value = true
 }
 
 // 点击饼图事件处理
 const onPieClick = (params: any) => {
-  // 饼图的数据结构包含维度信息
-  const pieSegmentName = params.name // 饼图段的名称
-  let firstDim = ''
-  let secondDim = ''
-  let statType = params.seriesName || '总计'
+  const { firstDim, secondDim, statType } = parsePieClickParams(params, hasSecondDimension.value)
 
-  // 解析维度信息（根据是否有第二维度采用不同策略）
-  if (hasSecondDimension.value && pieSegmentName.includes('&&')) {
-    // 有第二维度时，格式："第一维度&&第二维度"
-    const parts = pieSegmentName.split('&&')
-    firstDim = parts[0] || ''
-    secondDim = parts[1] || ''
-    if (!firstDim || !secondDim) {
-      return
-    }
-  } else {
-    // 没有第二维度时，名称就是第一维度
-    firstDim = pieSegmentName
-    secondDim = ''
-    if (!firstDim) {
-      return
-    }
-  }
-
-  // 获取组合条件
-  const combinedConditions =
-    hasSecondDimension.value && secondDim
-      ? buildCombinedConditions(firstDim, secondDim)
-      : buildFirstDimensionConditions(firstDim)
-
-  if (!combinedConditions) {
+  if (!firstDim || (hasSecondDimension.value && !secondDim)) {
+    console.warn('饼图点击：无法解析维度信息:', { pieSegmentName: params.name })
     return
   }
 
-  // 获取用户选中的具体指标数据项
-  let statisticData: string[] = []
-  if (hasSecondDimension.value && secondDim) {
-    // 有第二维度时，显示选中的第二维度值
-    statisticData = [secondDim]
-  } else {
-    // 没有第二维度时，显示选中的第一维度值
-    statisticData = [firstDim]
+  const combinedConditions = buildDrillConditionFromCache(lastRequestParams, firstDim, secondDim)
+  if (!combinedConditions) {
+    console.warn('饼图点击：无法构建组合条件')
+    return
   }
 
-  // 设置选中的饼图信息
-  selectedBarInfo.value = {
-    firstDimension: firstDim,
-    secondDimension: secondDim || null,
-    firstDimensionName: firstDimensionName.value,
-    secondDimensionName: hasSecondDimension.value ? secondDimensionName.value : null,
-    statisticType: statType,
-    statisticData: statisticData,
-    combinedConditions: combinedConditions,
-    title:
-      hasSecondDimension.value && secondDim
-        ? `${firstDimensionName.value}: ${firstDim} && ${secondDimensionName.value}: ${secondDim} (${statType})`
-        : `${firstDimensionName.value}: ${firstDim} (${statType})`,
-    color: '#1890ff' // 默认颜色
-  }
+  const statisticData = hasSecondDimension.value && secondDim ? [secondDim] : [firstDim]
 
-  // 显示弹窗
+  selectedBarInfo.value = buildSelectedBarInfo(
+    firstDim, secondDim, firstDimensionName.value, secondDimensionName.value,
+    statType, statisticData, combinedConditions, hasSecondDimension.value
+  )
+
   detailModalVisible.value = true
 }
 
 /**
- * 更新维度数据的函数
- * @param data 图表数据
- * @param restoreVisibility 是否从配置中恢复可见性状态
+ * 更新维度数据
+ * 从图表数据中提取维度列表和统计类型，并按需恢复可见性配置
  */
 const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) => {
-  // 以配置顺序为主，回退到数据中的顺序
   const configFirst = receivedData.value?.firstDimension?.indicatorItems?.map((i) => i.itemName) || []
-  const dataFirst = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[0]))]
-  const firstDimensionGroups = configFirst.length ? configFirst : dataFirst
+  const configSecond = receivedData.value?.secondDimension?.indicatorItems?.map((i) => i.itemName) || []
 
-  const configSecond =
-    receivedData.value?.secondDimension?.indicatorItems?.map((i) => i.itemName) || []
-  const dataSecond = [...new Set(data.map((item: any) => item.metricLabel.split('&&')[1]))]
-  const secondDimensionGroups = configSecond.length ? configSecond : dataSecond
+  const { firstDimensions, secondDimensions, statisticTypes } =
+    extractDimensionData(data, configFirst, configSecond)
 
-  // 提取统计类型
-  const statisticTypes = [
-    ...new Set(data.flatMap((item: any) => item.children.map((child: any) => child.metric)))
-  ]
-
-  // 更新所有项列表
-  allFirstDimensions.value = [...firstDimensionGroups]
-  allSecondDimensions.value = [...secondDimensionGroups]
+  allFirstDimensions.value = [...firstDimensions]
+  allSecondDimensions.value = [...secondDimensions]
   allStatisticTypes.value = [...statisticTypes]
 
-  // 如果需要从配置中恢复可见性状态
   if (restoreVisibility && receivedData.value) {
     // 从配置中恢复可见性状态
-    if (
-      receivedData.value.visibleFirstDimensions &&
-      Array.isArray(receivedData.value.visibleFirstDimensions)
-    ) {
-      // 只保留在当前数据中存在的项
-      visibleFirstDimensions.value = receivedData.value.visibleFirstDimensions.filter((item) =>
-        firstDimensionGroups.includes(item)
-      )
-      // 如果过滤后为空，默认全选
-      if (visibleFirstDimensions.value.length === 0 && firstDimensionGroups.length > 0) {
-        visibleFirstDimensions.value = [...firstDimensionGroups]
+    const restoreList = (saved: string[] | undefined, all: string[]): string[] => {
+      if (saved && Array.isArray(saved)) {
+        const filtered = saved.filter(item => all.includes(item))
+        return filtered.length > 0 ? filtered : [...all]
       }
-    } else {
-      // 如果没有配置，默认全选
-      visibleFirstDimensions.value = [...firstDimensionGroups]
+      return [...all]
     }
 
-    if (
-      receivedData.value.visibleSecondDimensions &&
-      Array.isArray(receivedData.value.visibleSecondDimensions)
-    ) {
-      visibleSecondDimensions.value = receivedData.value.visibleSecondDimensions.filter((item) =>
-        secondDimensionGroups.includes(item)
-      )
-      // 如果过滤后为空，默认全选
-      if (visibleSecondDimensions.value.length === 0 && secondDimensionGroups.length > 0) {
-        visibleSecondDimensions.value = [...secondDimensionGroups]
-      }
-    } else {
-      // 如果没有配置，默认全选
-      visibleSecondDimensions.value = [...secondDimensionGroups]
-    }
+    visibleFirstDimensions.value = restoreList(receivedData.value.visibleFirstDimensions, firstDimensions)
+    visibleSecondDimensions.value = restoreList(receivedData.value.visibleSecondDimensions, secondDimensions)
 
-    if (
-      receivedData.value.visibleStatisticTypes &&
-      Array.isArray(receivedData.value.visibleStatisticTypes)
-    ) {
-      const savedVisibleStatisticTypes = receivedData.value.visibleStatisticTypes
-      // 保留在当前数据中存在的项
-      const existingVisibleTypes = savedVisibleStatisticTypes.filter((item) =>
-        statisticTypes.includes(item)
-      )
-      // 找出新的统计指标（在当前统计类型中但不在可见性配置中的）
-      const newStatisticTypes = statisticTypes.filter(
-        (item) => !savedVisibleStatisticTypes.includes(item)
-      )
-      // 合并已有的可见性配置和新的统计指标
-      visibleStatisticTypes.value = [...existingVisibleTypes, ...newStatisticTypes]
-
-      // 如果合并后为空，检查是否是删除二级维度的情况，如果是则默认选中第一个统计指标
+    // 统计指标：保留配置中的可见项 + 新增项
+    if (receivedData.value.visibleStatisticTypes && Array.isArray(receivedData.value.visibleStatisticTypes)) {
+      const existing = receivedData.value.visibleStatisticTypes.filter(item => statisticTypes.includes(item))
+      const newTypes = statisticTypes.filter(item => !receivedData.value!.visibleStatisticTypes!.includes(item))
+      visibleStatisticTypes.value = [...existing, ...newTypes]
       if (visibleStatisticTypes.value.length === 0 && statisticTypes.length > 0) {
-        // 如果没有二级维度，默认选中第一个统计指标；否则默认全选
-        if (secondDimensionGroups.length === 0) {
-          visibleStatisticTypes.value = [statisticTypes[0]]
-        } else {
-          visibleStatisticTypes.value = [...statisticTypes]
-        }
+        visibleStatisticTypes.value = secondDimensions.length === 0 ? [statisticTypes[0]] : [...statisticTypes]
       }
     } else {
-      // 如果没有配置，检查是否是删除二级维度的情况
       if (statisticTypes.length > 0) {
-        // 如果没有二级维度，默认选中第一个统计指标；否则默认全选
-        if (secondDimensionGroups.length === 0) {
-          visibleStatisticTypes.value = [statisticTypes[0]]
-        } else {
-          visibleStatisticTypes.value = [...statisticTypes]
-        }
+        visibleStatisticTypes.value = secondDimensions.length === 0 ? [statisticTypes[0]] : [...statisticTypes]
       } else {
         visibleStatisticTypes.value = []
       }
     }
   } else {
     // 默认全部可见
-    visibleFirstDimensions.value = [...firstDimensionGroups]
-    visibleSecondDimensions.value = [...secondDimensionGroups]
-    // 如果没有二级维度，统计指标默认选中第一个；否则默认全选
+    visibleFirstDimensions.value = [...firstDimensions]
+    visibleSecondDimensions.value = [...secondDimensions]
     if (statisticTypes.length > 0) {
-      if (secondDimensionGroups.length === 0) {
-        visibleStatisticTypes.value = [statisticTypes[0]]
-      } else {
-        visibleStatisticTypes.value = [...statisticTypes]
-      }
+      visibleStatisticTypes.value = secondDimensions.length === 0 ? [statisticTypes[0]] : [...statisticTypes]
     } else {
       visibleStatisticTypes.value = []
     }
@@ -786,6 +430,7 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
 
 /**
  * 获取图表数据
+ * 校验 → 树形回写 → 构建请求参数 → 调用 API → 更新维度数据
  * @param shouldRestoreVisibility 是否应该恢复可见性配置（用于编辑回显）
  */
 const fetchChartData = async (shouldRestoreVisibility = false) => {
@@ -794,15 +439,10 @@ const fetchChartData = async (shouldRestoreVisibility = false) => {
     throw new Error('数据配置不完整，请重新配置维度信息')
   }
 
-  // 检查是否为指标饼图模式（无维度）
-  const isMetricsPieMode = receivedData.value.dataMetrics?.some(
-    (m: any) => m.chartType === 'metricsPie'
-  )
-
-  // 检查一级维度是否存在（指标饼图模式跳过此校验）
-  if (!isMetricsPieMode && !receivedData.value.firstDimension) {
-    message.error('一级维度未配置，请先选择一级维度')
-    throw new Error('一级维度未配置，请先选择一级维度')
+  // 配置校验
+  if (!hasValidChartConfig(receivedData.value)) {
+    message.error('图表配置不完整，请检查维度和数据指标配置')
+    throw new Error('图表配置不完整')
   }
 
   // 标记正在恢复配置
@@ -819,16 +459,37 @@ const fetchChartData = async (shouldRestoreVisibility = false) => {
     visibleSecondDimensions.value = []
     visibleStatisticTypes.value = []
 
-    // 调用真实的API获取数据（增加防缓存标识）
-    const result = await fetchTalentStatisticData(receivedData.value, {})
+    // ===== 树形堆叠：校验 + 回写（仅配置弹窗需要） =====
+    const isTreeStacked = !!receivedData.value.treeDimension &&
+      !!receivedData.value.dataMetrics?.some((m: any) => m.chartType === 'treeStackedBar')
+    if (isTreeStacked && receivedData.value.treeDimension) {
+      const treeDimension = receivedData.value.treeDimension
+      // 校验是否为可用的 2 层树
+      const tree = await fetchTreeDict(treeDimension.dictName)
+      const validation = validateTwoLevelTree(tree)
+      if (!validation.valid) {
+        throw new Error(validation.message || '树形字典不可用于树形堆叠')
+      }
+      // 拍平树结构获取父子分组（复用已缓存的树结构）
+      const { parentGroups } = await buildTreeStackedData(treeDimension)
+      // 用父节点重写一级维度，保证 X 轴分类与可见性控制都以父节点为准
+      receivedData.value.firstDimension = buildParentFirstDimension(treeDimension, parentGroups)
+      // 用全部叶子节点合成二级维度，驱动叶子可见性控制与颜色映射
+      receivedData.value.secondDimension = buildLeafSecondDimension(treeDimension, parentGroups)
+      // 为每个叶子节点分配确定性颜色
+      assignTreeStackedColors(receivedData.value.dataMetrics || [], parentGroups)
+    }
+
+    // ===== 构建请求参数并获取数据 =====
+    // 配置弹窗不传 visibility，取数后由控制面板过滤
+    const { requestParams, response: result } =
+      await fetchStatisticData(config.value.url, receivedData.value)
+    // 缓存请求参数，供点击穿透复用
+    lastRequestParams = requestParams
 
     if (result && result.payload) {
       chartData.value = result.payload
-
-      // 更新维度数据，如果需要则恢复可见性配置
       updateDimensionData(result.payload, shouldRestoreVisibility)
-
-      // 触发图表生成事件
       emit('chartGenerated', result.payload)
     } else {
       message.warning('暂无数据，请检查筛选条件或数据源')
@@ -838,171 +499,14 @@ const fetchChartData = async (shouldRestoreVisibility = false) => {
   } catch (error: any) {
     message.error(`获取图表数据失败: ${error?.message || '未知错误'}`)
     chartData.value = []
-    // 重新抛出错误，让调用者能够捕获
     throw error
   } finally {
     loading.value = false
-    // 清除恢复配置标记
     if (shouldRestoreVisibility) {
       setTimeout(() => {
         isRestoringConfig.value = false
       }, 100)
     }
-  }
-}
-
-/**
- * 将维度组转换为指标条件
- * @param dimension 维度组数据
- * @returns 指标条件数组
- */
-const convertDimensionToMetricCondition = (dimension: IndicatorGroup): MetricCondition[] => {
-  return dimension.indicatorItems.map((item) => ({
-    value: `${dimension.groupValue}&&${item.itemValue}`, // 生成唯一标识
-    label: item.itemName,
-    condition: item.queryConditions
-  }))
-}
-
-/**
- * 将接收到的数据交叉组合两个维度的条件后转换为后端需要的格式（用于柱状图等数据可视化）
- * @param receivedData 接收到的数据
- * @param options 转换配置选项
- * @returns 请求参数
- */
-const convertDataToCrossMetricConditions = (
-  receivedData: DimensionIndicatorsFilter,
-  options: ConvertOptions = {}
-): RequestParams => {
-  // ===== 指标饼图分支：无维度，多统计字段独立 SUM =====
-  const isMetricsPie = receivedData.dataMetrics?.some(
-    (m: any) => m.chartType === 'metricsPie'
-  )
-  if (isMetricsPie) {
-    return {
-      selectColumnCondition: options.selectColumnCondition || {},
-      condition: {
-        conditionList: (receivedData.filterConditions?.conditionList ?? []) as any,
-        andOr: (receivedData.filterConditions?.andOr ?? '0') as '0' | '1'
-      },
-      sort: options.sort ?? null,
-      metricColumn: [],
-      // 空条件生成 1=1，使 CASE WHEN 等价于直接 SUM
-      metricCondition: [
-        { value: 'metricsPie', label: '指标饼图', condition: { andOr: '0', conditionList: [] } }
-      ],
-      statisticColumn:
-        options.statisticColumn ||
-        receivedData.dataMetrics?.map((metric) => ({
-          value: metric.dataField,
-          label: metric.dataName
-        })) ||
-        [],
-      majorCondition: options.majorCondition || '1'
-    }
-  }
-
-  // ===== 默认分支（有维度） =====
-  const metricConditions: MetricCondition[] = []
-
-  // 检查一级维度是否存在
-  if (
-    !receivedData.firstDimension ||
-    !receivedData.firstDimension.indicatorItems ||
-    receivedData.firstDimension.indicatorItems.length === 0
-  ) {
-    throw new Error('一级维度数据不完整，无法生成图表')
-  }
-
-  // 如果两个维度都存在，进行交叉组合
-  if (
-    receivedData.firstDimension &&
-    receivedData.secondDimension &&
-    receivedData.secondDimension.indicatorItems &&
-    receivedData.secondDimension.indicatorItems.length > 0
-  ) {
-    receivedData.firstDimension.indicatorItems.forEach((firstItem) => {
-      receivedData.secondDimension!.indicatorItems.forEach((secondItem) => {
-        // 合并两个维度的查询条件
-        const combinedConditionList = [
-          ...((firstItem.queryConditions?.conditionList ?? []) as any),
-          ...((secondItem.queryConditions?.conditionList ?? []) as any)
-        ]
-
-        // 生成交叉组合的指标条件
-        const crossMetricCondition: MetricCondition = {
-          value: `${receivedData.firstDimension!.groupValue}&&${firstItem.itemValue}&&${receivedData.secondDimension!.groupValue}&&${secondItem.itemValue}`,
-          label: `${firstItem.itemName}&&${secondItem.itemName}`,
-          condition: {
-            andOr: '0', // 两个维度的条件用 AND 连接
-            conditionList: combinedConditionList
-          }
-        }
-
-        metricConditions.push(crossMetricCondition)
-      })
-    })
-  } else {
-    // 如果只有一个维度（一级维度）
-    if (receivedData.firstDimension) {
-      const firstMetrics = convertDimensionToMetricCondition(receivedData.firstDimension)
-      metricConditions.push(...firstMetrics)
-    }
-  }
-
-  // 检查是否有指标条件
-  if (metricConditions.length === 0) {
-    throw new Error('无法生成有效的指标条件，请检查维度配置')
-  }
-
-  // 构造请求参数
-  return {
-    selectColumnCondition: options.selectColumnCondition || {},
-    condition: {
-      conditionList: (receivedData.filterConditions?.conditionList ?? []) as any,
-      andOr: (receivedData.filterConditions?.andOr ?? '0') as '0' | '1'
-    },
-    sort: options.sort ?? null,
-    metricColumn: options.metricColumn || [],
-    metricCondition: metricConditions,
-    statisticColumn:
-        options.statisticColumn ||
-        receivedData.dataMetrics?.map((metric) => ({
-          value: metric.dataField,
-          label: metric.dataName
-        })) ||
-        [],
-    majorCondition: options.majorCondition || ''
-  }
-}
-
-/**
- * 请求后端的人才统计数据
- * @param receivedData 接收到的数据
- * @param options 转换配置选项
- * @returns Promise<any>
- */
-const fetchTalentStatisticData = async (
-  receivedData: DimensionIndicatorsFilter,
-  options: ConvertOptions = {}
-) => {
-  try {
-    // 使用交叉组合转换数据
-    const requestParams = convertDataToCrossMetricConditions(receivedData, options)
-
-    // 调用后端接口
-    return await advancedStatisticRequest(
-        config.value.url,
-        new Map(Object.entries(requestParams.selectColumnCondition || {})),
-        requestParams.condition,
-        requestParams.sort,
-        requestParams.metricColumn,
-        requestParams.metricCondition,
-        requestParams.statisticColumn,
-        requestParams.majorCondition
-    )
-  } catch (error) {
-    throw error
   }
 }
 

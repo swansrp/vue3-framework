@@ -5,7 +5,9 @@
       v-if="showHeader"
       class="dashboard-header"
     >
-      <h1 v-if="title !== ''">{{ title || currentRoute.meta.title }}</h1>
+      <h1 v-if="title !== ''">
+        {{ title || currentRoute.meta.title }}
+      </h1>
       <div class="header-actions">
         <slot name="header-actions">
           <a-button
@@ -16,18 +18,28 @@
             <ReloadOutlined />
             刷新数据
           </a-button>
-          <a-button :loading="headerRearranging" @click="handleRearrangeChartsOnly">
+          <a-button
+            :loading="headerRearranging"
+            @click="handleRearrangeChartsOnly"
+          >
             <AppstoreOutlined />
             重新排列
           </a-button>
           <a-button @click="openPermManager">
             权限配置
           </a-button>
-          <a-button :loading="headerSelectingAll" @click="handleSelectAll">
+          <a-button
+            :loading="headerSelectingAll"
+            @click="handleSelectAll"
+          >
             <CheckOutlined />
             选中所有
           </a-button>
-          <a-button danger :loading="headerClosingAll" @click="handleCloseAll">
+          <a-button
+            danger
+            :loading="headerClosingAll"
+            @click="handleCloseAll"
+          >
             <CloseOutlined />
             关闭所有
           </a-button>

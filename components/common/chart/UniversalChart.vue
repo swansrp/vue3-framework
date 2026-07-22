@@ -122,7 +122,7 @@ export default defineComponent({
       default: () => []
     },
     chartType: {
-      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie',
+      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar',
       default: 'bar'
     },
     // 维度名称到编码的映射，用于颜色等与配置对齐
@@ -146,7 +146,12 @@ export default defineComponent({
     // 响应式数据
     const chartComponentRef = ref<any>()
 
-    const normalizeChartType = (type?: string) => (type === 'ptLine' ? 'line' : type)
+    const normalizeChartType = (type?: string) => {
+      if (type === 'ptLine') return 'line'
+      // 树形堆叠柱状图本质是柱状图（堆叠由 stackGroup=selfStack 驱动）
+      if (type === 'treeStackedBar') return 'bar'
+      return type
+    }
 
     // 直接按照传入的chartType参数选择图表类型
     const finalChartType = computed(() => {
@@ -207,4 +212,4 @@ export default defineComponent({
 })
 </script>
 
-<style lang="less" scoped src="../../styles/universalChart.less"></style>
+<style lang="less" scoped src="./styles/universalChart.less"></style>

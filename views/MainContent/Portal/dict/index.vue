@@ -19,7 +19,7 @@
         key="bizDict"
         tab="业务字典"
       >
-        <BizDictManage />
+        <BizDictPanelManage />
       </a-tab-pane>
       <a-tab-pane
         key="treeDict"
@@ -40,11 +40,11 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import DictTreePanel from '@/framework/views/MainContent/SystemManage/DictionaryMaintenance/components/DictTreePanel.vue'
-import DynamicDict from './DynamicDict.vue'
+import DynamicDict from './components/DynamicDict.vue'
 
 import type { PortalBindType } from '@/framework/components/common/Portal/bind/type'
-import BizDictManage from '@/framework/views/MainContent/SystemManage/BizDictionary/dict.vue'
+import BizDictPanelManage from '@/framework/views/MainContent/Portal/dict/components/DictPanel.vue'
+import DictTreePanel from '@/framework/views/MainContent/Portal/dict/components/DictTreePanel.vue'
 
 const activeTab = ref('sysDict')
 
@@ -62,6 +62,7 @@ const dictBindTabs = ref<Array<PortalBindType>>([
 
 <style scoped>
 .dict-container {
+  padding-left: 4px;
   height: 100%;
   display: flex;
   flex-direction: column;
