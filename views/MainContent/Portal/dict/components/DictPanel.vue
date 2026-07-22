@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
 import { ref, watch } from 'vue'
 
@@ -17,6 +17,7 @@ import {
 import type { BizDictVO, BizDictRes } from '@/framework/apis/dict/bizDictController'
 import { deleteDict } from '@/framework/apis/dict/dict'
 import DictItemEditModal from '@/framework/components/common/dict/DictItemEditModal.vue'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 // 左侧字典列表
 const dictList = ref<BizDictRes[]>([])
@@ -503,6 +504,122 @@ const handleDeleteDict = () => {
   })
 }
 
+// 导出/导入状态
+const dictExporting = ref(false)
+const dictImporting = ref(false)
+const dictFileInputRef = ref<HTMLInputElement>()
+
+// 导出字典配置
+const handleExportDict = async () => {
+  dictExporting.value = true
+  try {
+    const res = await searchByDictName({}, false, false, true)
+    const allDicts = res?.payload || []
+    if (!allDicts.length) {
+      message.warning('暂无可导出的字典配置')
+      return
+    }
+    // 清理内部字段
+    const exportData = allDicts.map((d: BizDictRes) => ({
+      dictCode: d.dictCode,
+      dictName: d.dictName,
+      dictItemList: (d.dictItemList || []).map((item: BizDictVO) => {
+        const { ...rest } = item
+        return rest
+      })
+    }))
+    downloadJsonConfig('业务字典配置', {
+      type: 'bizDict',
+      exportTime: new Date().toISOString(),
+      data: exportData
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    dictExporting.value = false
+  }
+}
+
+// 导入字典配置
+const handleDictFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  try {
+    const parsed = await readJsonFile(file)
+    const importData = parsed.data || []
+    if (!Array.isArray(importData) || importData.length === 0) {
+      message.warning('文件中没有可导入的字典配置')
+      return
+    }
+    let totalItems = 0
+    importData.forEach((d: any) => {
+      totalItems += (d.dictItemList || []).length
+    })
+    Modal.confirm({
+      title: '确认导入',
+      content: `将导入 ${importData.length} 个字典（共 ${totalItems} 个字典项），确认继续？`,
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: async () => {
+        dictImporting.value = true
+        try {
+          let added = 0, updated = 0
+          for (const dict of importData) {
+            const items = dict.dictItemList || []
+            // 查重：获取该字典已有的字典项
+            const existingRes = await getEnterpriseDictByCode(
+              { dictCode: dict.dictCode, bizId: null as any },
+              false, false, false
+            )
+            const existingItems: BizDictVO[] = existingRes?.payload || []
+            const existingMap = new Map<string, BizDictVO>()
+            existingItems.forEach(ei => {
+              if (ei.value) existingMap.set(`${dict.dictCode}_${ei.value}`, ei)
+            })
+            for (const item of items) {
+              const itemData = {
+                ...item,
+                dictCode: dict.dictCode,
+                dictName: dict.dictName,
+                bizId: undefined
+              }
+              const existing = item.value ? existingMap.get(`${dict.dictCode}_${item.value}`) : null
+              if (existing?.id) {
+                // 已存在 → 更新
+                await systemBizDictUpdateEnterpriseDict(
+                  { bizId: null as any },
+                  { ...itemData, id: existing.id },
+                  false, false, false
+                )
+                updated++
+              } else {
+                // 不存在 → 新增
+                await systemBizDictAddDict({ bizId: null as any }, itemData, false, false, false)
+                added++
+              }
+            }
+          }
+          message.success(`导入完成：新增 ${added} 项，更新 ${updated} 项`)
+          await loadDictList()
+          if (selectedDictCode.value) {
+            await loadDictItems()
+          }
+        } catch (error: any) {
+          message.error('导入失败: ' + (error?.message || '未知错误'))
+        } finally {
+          dictImporting.value = false
+        }
+      }
+    })
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
+  }
+}
+
 // 监听字典名称搜索
 let dictNameTimer: ReturnType<typeof setTimeout> | null = null
 watch(dictNameSearch, () => {
@@ -543,6 +660,33 @@ loadDictNameMap()
                 <PlusOutlined />
               </template>
               新增字典
+            </a-button>
+            <a-button
+              size="small"
+              :loading="dictExporting"
+              @click="handleExportDict"
+            >
+              <template #icon>
+                <DownloadOutlined />
+              </template>
+              导出
+            </a-button>
+            <input
+              ref="dictFileInputRef"
+              type="file"
+              accept=".json"
+              style="display: none"
+              @change="handleDictFileChange"
+            />
+            <a-button
+              size="small"
+              :loading="dictImporting"
+              @click="dictFileInputRef?.click()"
+            >
+              <template #icon>
+                <UploadOutlined />
+              </template>
+              导入
             </a-button>
             <a-button
               type="text"

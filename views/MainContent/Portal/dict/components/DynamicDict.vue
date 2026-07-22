@@ -17,6 +17,33 @@
               新建
             </a-button>
             <a-button
+              size="small"
+              :loading="dynDictExporting"
+              @click="handleExportDynDict"
+            >
+              <template #icon>
+                <DownloadOutlined />
+              </template>
+              导出
+            </a-button>
+            <input
+              ref="dynDictFileInputRef"
+              type="file"
+              accept=".json"
+              style="display: none"
+              @change="handleDynDictFileChange"
+            />
+            <a-button
+              size="small"
+              :loading="dynDictImporting"
+              @click="dynDictFileInputRef?.click()"
+            >
+              <template #icon>
+                <UploadOutlined />
+              </template>
+              导入
+            </a-button>
+            <a-button
               type="text"
               size="small"
               @click="loadConfigList"
@@ -270,8 +297,8 @@
 </template>
 
 <script lang="ts" setup>
-import { DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+import { DeleteOutlined, DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import { getDictExisted } from '@/framework/apis/dict/bizDictController'
@@ -282,6 +309,7 @@ import {
   deleteDynamicDictConfig
 } from '@/framework/apis/dict/dict'
 import type { DynamicDictReq, DynamicDictConfig, DynamicDictOperator } from '@/framework/apis/dict/dict'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 interface ConditionItem {
   column: string
@@ -376,6 +404,100 @@ const handleDeleteConfig = async (id: number) => {
     await loadConfigList()
   } catch {
     // ignore
+  }
+}
+
+// ==================== 导出/导入 ====================
+const dynDictExporting = ref(false)
+const dynDictImporting = ref(false)
+const dynDictFileInputRef = ref<HTMLInputElement>()
+
+// 导出动态字典配置
+const handleExportDynDict = async () => {
+  if (!configList.value.length) {
+    message.warning('暂无可导出的动态字典配置')
+    return
+  }
+  dynDictExporting.value = true
+  try {
+    const exportData = configList.value.map((c: DynamicDictConfig) => {
+      const { ...rest } = c
+      return rest
+    })
+    downloadJsonConfig('动态字典配置', {
+      type: 'dynamicDict',
+      exportTime: new Date().toISOString(),
+      data: exportData
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    dynDictExporting.value = false
+  }
+}
+
+// 导入动态字典配置
+const handleDynDictFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  try {
+    const parsed = await readJsonFile(file)
+    const importData = parsed.data || []
+    if (!Array.isArray(importData) || importData.length === 0) {
+      message.warning('文件中没有可导入的动态字典配置')
+      return
+    }
+    Modal.confirm({
+      title: '确认导入',
+      content: `将导入 ${importData.length} 个动态字典配置，确认继续？`,
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: async () => {
+        dynDictImporting.value = true
+        try {
+          for (const config of importData) {
+            // 将 DynamicDictConfig 转为 DynamicDictReq
+            const req: DynamicDictReq = {
+              dictCode: config.dictCode,
+              dictName: config.dictName,
+              dataSource: config.dataSource || '',
+              database: config.databaseName || config.database || '',
+              tableName: config.tableName,
+              valueColumn: config.valueColumn,
+              labelColumn: config.labelColumn,
+              orderBy: config.orderBy || '',
+              pidColumn: config.pidColumn || ''
+            }
+            // 解析 conditions JSON 字符串
+            if (config.conditions) {
+              try {
+                const parsedConditions = typeof config.conditions === 'string'
+                  ? JSON.parse(config.conditions)
+                  : config.conditions
+                if (Array.isArray(parsedConditions)) {
+                  req.conditions = parsedConditions
+                }
+              } catch {
+                // ignore parse error
+              }
+            }
+            await saveDynamicDictConfig(req, undefined)
+          }
+          message.success('导入成功')
+          await loadConfigList()
+        } catch (error: any) {
+          message.error('导入失败: ' + (error?.message || '未知错误'))
+        } finally {
+          dynDictImporting.value = false
+        }
+      }
+    })
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
   }
 }
 

@@ -17,6 +17,33 @@
               新增树
             </a-button>
             <a-button
+              size="small"
+              :loading="treeExporting"
+              @click="handleExportTreeDict"
+            >
+              <template #icon>
+                <DownloadOutlined />
+              </template>
+              导出
+            </a-button>
+            <input
+              ref="treeFileInputRef"
+              type="file"
+              accept=".json"
+              style="display: none"
+              @change="handleTreeFileChange"
+            />
+            <a-button
+              size="small"
+              :loading="treeImporting"
+              @click="treeFileInputRef?.click()"
+            >
+              <template #icon>
+                <UploadOutlined />
+              </template>
+              导入
+            </a-button>
+            <a-button
               type="text"
               size="small"
               @click="loadTreeDictList"
@@ -253,7 +280,7 @@
 </template>
 
 <script lang="ts" setup>
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { Empty, message, Modal } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
@@ -269,6 +296,7 @@ import {
   createTreeDict,
   deleteTreeDict
 } from '@/framework/apis/dict/dict'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 const simpleImage = Empty.PRESENTED_IMAGE_SIMPLE
 
@@ -378,6 +406,170 @@ const confirmDeleteTree = (item: DictListItem) => {
       await loadTreeDictList()
     }
   })
+}
+
+// ==================== 导出/导入 ====================
+const treeExporting = ref(false)
+const treeImporting = ref(false)
+const treeFileInputRef = ref<HTMLInputElement>()
+
+// 清理树节点内部字段，仅保留导入所需字段
+const cleanTreeNode = (node: TreeDictItem): any => {
+  return {
+    value: node.value,
+    label: node.label,
+    sort: node.sort,
+    children: (node.children || []).map(cleanTreeNode)
+  }
+}
+
+// 导出树形字典
+const handleExportTreeDict = async () => {
+  if (!treeDictList.value.length) {
+    message.warning('暂无可导出的树形字典')
+    return
+  }
+  treeExporting.value = true
+  try {
+    const exportData = await Promise.all(
+      treeDictList.value.map(async (d: DictListItem) => {
+        const res = await getBizTreeDict({ dictCode: d.value })
+        const treeNodes = (res.payload || []).map(cleanTreeNode)
+        return {
+          dictCode: d.value,
+          dictName: d.label,
+          treeData: treeNodes
+        }
+      })
+    )
+    downloadJsonConfig('树形字典配置', {
+      type: 'treeDict',
+      exportTime: new Date().toISOString(),
+      data: exportData
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    treeExporting.value = false
+  }
+}
+
+// 展平已有树，构建 value → node 映射
+const flattenTree = (nodes: TreeDictItem[], dictCode: string): Map<string, TreeDictItem> => {
+  const map = new Map<string, TreeDictItem>()
+  const traverse = (list: TreeDictItem[]) => {
+    for (const node of list) {
+      if (node.value) map.set(`${dictCode}_${node.value}`, node)
+      if (node.children?.length) traverse(node.children)
+    }
+  }
+  traverse(nodes)
+  return map
+}
+
+// 递归导入树节点（查重覆盖）
+const upsertTreeNodes = async (
+  nodes: any[],
+  dictCode: string,
+  dictName: string,
+  parentValue: string | null,
+  existingMap: Map<string, TreeDictItem>,
+  counters: { added: number; updated: number }
+): Promise<void> => {
+  for (const node of nodes) {
+    const existing = node.value ? existingMap.get(`${dictCode}_${node.value}`) : null
+    if (existing?.id) {
+      // 已存在 → 更新
+      await updateTreeDictNode({
+        id: existing.id,
+        dictCode,
+        value: node.value,
+        label: node.label
+      })
+      counters.updated++
+    } else {
+      // 不存在 → 新增
+      await addTreeDictNode({
+        dictCode,
+        dictName,
+        value: node.value,
+        label: node.label,
+        parentValue: parentValue
+      })
+      counters.added++
+    }
+    if (node.children && node.children.length > 0) {
+      await upsertTreeNodes(node.children, dictCode, dictName, node.value, existingMap, counters)
+    }
+  }
+}
+
+// 导入树形字典
+const handleTreeFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  try {
+    const parsed = await readJsonFile(file)
+    const importData = parsed.data || []
+    if (!Array.isArray(importData) || importData.length === 0) {
+      message.warning('文件中没有可导入的树形字典配置')
+      return
+    }
+    let totalNodes = 0
+    const countNodes = (nodes: any[]) => {
+      for (const n of nodes) {
+        totalNodes++
+        if (n.children) countNodes(n.children)
+      }
+    }
+    importData.forEach((d: any) => countNodes(d.treeData || []))
+    Modal.confirm({
+      title: '确认导入',
+      content: `将导入 ${importData.length} 个树形字典（共 ${totalNodes} 个节点），确认继续？`,
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: async () => {
+        treeImporting.value = true
+        try {
+          const counters = { added: 0, updated: 0 }
+          for (const dict of importData) {
+            // 检查字典是否已存在
+            const existedRes = await getDictExisted({ code: dict.dictCode }, false, false, false)
+            if (existedRes?.payload !== '1') {
+              await createTreeDict({ dictCode: dict.dictCode, dictName: dict.dictName })
+            }
+            // 获取已有树，构建查重映射
+            const existingRes = await getBizTreeDict({ dictCode: dict.dictCode })
+            const existingTree = (existingRes.payload || []) as TreeDictItem[]
+            const existingMap = flattenTree(existingTree, dict.dictCode)
+            await upsertTreeNodes(
+              dict.treeData || [],
+              dict.dictCode,
+              dict.dictName,
+              null,
+              existingMap,
+              counters
+            )
+          }
+          message.success(`导入完成：新增 ${counters.added} 个节点，更新 ${counters.updated} 个节点`)
+          await loadTreeDictList()
+          if (currentDictCode.value) {
+            await loadTreeData(true)
+          }
+        } catch (error: any) {
+          message.error('导入失败: ' + (error?.message || '未知错误'))
+        } finally {
+          treeImporting.value = false
+        }
+      }
+    })
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
+  }
 }
 
 // ==================== 右键菜单 ====================
