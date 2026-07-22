@@ -106,6 +106,7 @@ export const deleteDynamicDictConfig = (id: number, domain = baseDomain) =>
 const buildTreeGetApi = (url: string, domain: string) => buildGetApiByType(url, apiType.tree, domain)
 const buildTreeAdminGetApi = (url: string, domain: string) => buildGetApiByType(url, apiType.treeAdmin, domain)
 const buildTreeAdminPostApi = (url: string, domain: string) => buildPostApiByType(url, apiType.treeAdmin, domain)
+const buildBizTreeDictPostApi = (url: string, domain: string) => buildPostApiByType(url, apiType.bizTreeDict, domain)
 
 /** 获取树形字典（业务使用，自动fallback到biz树） */
 export const getTreeDict = (params: { dictName: string }, domain = baseDomain) =>
@@ -125,24 +126,24 @@ export const refreshBizTreeDict = (params: { dictCode: string }, domain = baseDo
 
 /** 创建树形字典（手动模式） */
 export const createTreeDict = (data: object, domain = baseDomain) =>
-  request(buildTreeAdminPostApi('/biz/tree/create', domain), {}, data, true, false) as Promise<any>
+  request(buildBizTreeDictPostApi('/tree/create', domain), {}, data, true, false) as Promise<any>
 
 /** 删除整棵树形字典 */
 export const deleteTreeDict = (params: { dictCode: string }, domain = baseDomain) =>
-  request(buildTreeAdminPostApi('/biz/tree/delete', domain), params, {}, true, false) as Promise<any>
+  request(buildBizTreeDictPostApi('/tree/delete', domain), params, {}, true, false) as Promise<any>
 
 /** 添加树形字典节点 */
 export const addTreeDictNode = (data: object, domain = baseDomain) =>
-  request(buildTreeAdminPostApi('/biz/item/add', domain), {}, data, true, false) as Promise<any>
+  request(buildBizTreeDictPostApi('/item/add', domain), {}, data, true, false) as Promise<any>
 
 /** 更新树形字典节点 */
 export const updateTreeDictNode = (data: object, domain = baseDomain) =>
-  request(buildTreeAdminPostApi('/biz/item/update', domain), {}, data, true, false) as Promise<any>
+  request(buildBizTreeDictPostApi('/item/update', domain), {}, data, true, false) as Promise<any>
 
 /** 删除树形字典节点 */
 export const deleteTreeDictNode = (params: { id: number; dictCode: string }, domain = baseDomain) =>
-  request(buildTreeAdminPostApi('/biz/item/delete', domain), params, {}, true, false) as Promise<any>
+  request(buildBizTreeDictPostApi('/item/delete', domain), params, {}, true, false) as Promise<any>
 
 /** 移动树形字典节点（拖拽变更父节点/排序） */
 export const moveTreeDictNode = (data: object, domain = baseDomain) =>
-  request(buildTreeAdminPostApi('/biz/item/move', domain), {}, data, true, false) as Promise<any>
+  request(buildBizTreeDictPostApi('/item/move', domain), {}, data, true, false) as Promise<any>

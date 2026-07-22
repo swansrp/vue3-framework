@@ -32,7 +32,8 @@ export const apiType: any = {
   config: '/config',
   portal: '/portal',
   tree: '/tree',
-  treeAdmin: '/dict/tree/admin'
+  treeAdmin: '/dict/tree/admin',
+  bizTreeDict: '/biz/tree/dict'
 }
 
 const requestMethod = {

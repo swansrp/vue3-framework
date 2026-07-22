@@ -47,10 +47,16 @@
             <span class="sidebar-item-name">{{ item.label }}</span>
             <span class="sidebar-item-code">{{ item.value }}</span>
           </div>
-          <DeleteOutlined
-            class="sidebar-item-delete"
-            @click.stop="confirmDeleteTree(item)"
-          />
+          <div class="sidebar-item-actions">
+            <EditOutlined
+              class="sidebar-item-edit"
+              @click.stop="openRenameModal(item)"
+            />
+            <DeleteOutlined
+              class="sidebar-item-delete"
+              @click.stop="confirmDeleteTree(item)"
+            />
+          </div>
         </div>
         <a-empty
           v-if="treeDictList.length === 0"
@@ -214,6 +220,35 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 重命名树形字典弹窗 -->
+    <a-modal
+      v-model:open="renameModalVisible"
+      title="修改字典名称"
+      :confirm-loading="renameLoading"
+      @ok="handleRename"
+    >
+      <a-form
+        :label-col="{ span: 5 }"
+        :wrapper-col="{ span: 18 }"
+      >
+        <a-form-item label="字典编码">
+          <a-input
+            :value="renameForm.dictCode"
+            disabled
+          />
+        </a-form-item>
+        <a-form-item
+          label="字典名称"
+          required
+        >
+          <a-input
+            v-model:value="renameForm.dictName"
+            placeholder="请输入新的字典名称"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -233,6 +268,7 @@ import {
   createTreeDict,
   deleteTreeDict
 } from '@/framework/apis/dict/dict'
+import { getDictExisted, systemBizDictUpdateDictName } from '@/framework/apis/dict/bizDictController'
 
 const simpleImage = Empty.PRESENTED_IMAGE_SIMPLE
 
@@ -277,11 +313,52 @@ const handleCreateTree = async () => {
   if (!createTreeForm.dictName) { message.warning('请输入字典名称'); return }
   createTreeLoading.value = true
   try {
+    const codeRes = await getDictExisted({ code: createTreeForm.dictCode }, false, false, false)
+    if (codeRes?.payload === '1') {
+      message.warning(`字典编码 "${createTreeForm.dictCode}" 已存在，请使用其他编码`)
+      return
+    }
+    const nameRes = await getDictExisted({ name: createTreeForm.dictName }, false, false, false)
+    if (nameRes?.payload === '1') {
+      message.warning(`字典名称 "${createTreeForm.dictName}" 已存在，请使用其他名称`)
+      return
+    }
     await createTreeDict({ dictCode: createTreeForm.dictCode, dictName: createTreeForm.dictName })
     createTreeModalVisible.value = false
     await loadTreeDictList()
   } finally {
     createTreeLoading.value = false
+  }
+}
+
+// ==================== 重命名树形字典 ====================
+const renameModalVisible = ref(false)
+const renameLoading = ref(false)
+const renameForm = reactive({ dictCode: '', dictName: '' })
+
+const openRenameModal = (item: DictListItem) => {
+  renameForm.dictCode = item.value
+  renameForm.dictName = item.label
+  renameModalVisible.value = true
+}
+
+const handleRename = async () => {
+  if (!renameForm.dictName) { message.warning('请输入字典名称'); return }
+  renameLoading.value = true
+  try {
+    const nameRes = await getDictExisted({ name: renameForm.dictName }, false, false, false)
+    if (nameRes?.payload === '1') {
+      message.warning(`字典名称 "${renameForm.dictName}" 已存在，请使用其他名称`)
+      return
+    }
+    await systemBizDictUpdateDictName({ value: renameForm.dictCode, label: renameForm.dictName })
+    renameModalVisible.value = false
+    if (currentDictCode.value === renameForm.dictCode) {
+      currentDictName.value = renameForm.dictName
+    }
+    await loadTreeDictList()
+  } finally {
+    renameLoading.value = false
   }
 }
 
@@ -387,7 +464,7 @@ const handleModalOk = async () => {
       })
     }
     modalVisible.value = false
-    await loadTreeData()
+    await loadTreeData(true)
   } finally {
     modalLoading.value = false
   }
@@ -401,7 +478,7 @@ const confirmDelete = (node: TreeDictItem) => {
     okType: 'danger',
     onOk: async () => {
       await deleteTreeDictNode({ id: node.id!, dictCode: currentDictCode.value })
-      await loadTreeData()
+      await loadTreeData(true)
     }
   })
 }
@@ -415,8 +492,6 @@ const handleAllowDrop = (_info: any) => {
 const handleDrop = async (info: any) => {
   const dragKey = info.dragNode.key
   const dropKey = info.node.key
-  const dropPos = info.node.pos.split('-')
-  const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1])
 
   // 找到拖拽节点和目标节点
   const dragNode = findNode(treeData.value, dragKey)
@@ -432,13 +507,48 @@ const handleDrop = async (info: any) => {
     newParentValue = dropNode.value
   }
 
+  // 获取目标父节点下的所有子节点（排除被拖拽节点）
+  const siblings = getSiblings(treeData.value, newParentValue)
+    .filter(n => n.key !== dragKey)
+
+  // 确定插入位置
+  let insertIndex: number
+  if (info.dropToGap) {
+    const dropIndex = siblings.findIndex(n => n.key === dropKey)
+    const dropPos = info.node.pos.split('-')
+    const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1])
+    // dropPosition === -1 表示在目标前面，1 表示在后面
+    insertIndex = dropPosition === -1 ? dropIndex : dropIndex + 1
+  } else {
+    // 放到目标节点内部：追加到末尾
+    insertIndex = siblings.length
+  }
+
+  // 插入拖拽节点
+  siblings.splice(Math.max(0, insertIndex), 0, dragNode)
+
+  // 构建所有同级节点的排序数据
+  const sortItems = siblings.map((node, index) => ({
+    id: node.id,
+    sort: index
+  }))
+
   await moveTreeDictNode({
-    id: dragNode.id,
     dictCode: currentDictCode.value,
+    movedId: dragNode.id,
     parentValue: newParentValue,
-    sort: dropPosition
+    siblings: sortItems
   })
-  await loadTreeData()
+  await loadTreeData(true)
+}
+
+// 获取指定父节点下的所有子节点
+const getSiblings = (nodes: TreeDictItem[], parentValue: string | null): TreeDictItem[] => {
+  if (parentValue === null) {
+    return [...nodes]
+  }
+  const parent = findNode(nodes, parentValue)
+  return parent?.children ? [...parent.children] : []
 }
 
 const findNode = (nodes: TreeDictItem[], key: string): TreeDictItem | null => {
@@ -480,13 +590,15 @@ const selectTreeDict = async (item: DictListItem) => {
   await loadTreeData()
 }
 
-const loadTreeData = async () => {
+const loadTreeData = async (preserveExpandState = false) => {
   if (!currentDictCode.value) return
   treeLoading.value = true
   try {
     const res = await getBizTreeDict({ dictCode: currentDictCode.value })
     treeData.value = res.payload || []
-    expandedKeys.value = collectAllKeys(treeData.value)
+    if (!preserveExpandState) {
+      expandedKeys.value = collectAllKeys(treeData.value)
+    }
   } catch (e) {
     console.error('加载树形字典数据失败:', e)
     treeData.value = []
@@ -591,7 +703,7 @@ onUnmounted(() => {
   &:hover {
     background: #f0f5ff;
 
-    .sidebar-item-delete {
+    .sidebar-item-actions {
       opacity: 1;
     }
   }
@@ -618,13 +730,28 @@ onUnmounted(() => {
   color: #8c8c8c;
 }
 
-.sidebar-item-delete {
+.sidebar-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   opacity: 0;
-  color: #ff4d4f;
-  font-size: 12px;
   transition: opacity 0.2s;
   flex-shrink: 0;
   margin-left: 4px;
+}
+
+.sidebar-item-edit {
+  color: #1677ff;
+  font-size: 12px;
+
+  &:hover {
+    color: #4096ff;
+  }
+}
+
+.sidebar-item-delete {
+  color: #ff4d4f;
+  font-size: 12px;
 
   &:hover {
     color: #cf1322;

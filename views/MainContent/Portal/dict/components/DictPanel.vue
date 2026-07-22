@@ -234,7 +234,7 @@ const addNewDictItem = () => {
   editingItem.value = {
     dictCode: selectedDictCode.value,
     dictName: selectedDictName.value,
-    bizId: null,
+    bizId: undefined,
     label: '',
     value: '',
     description: '',
@@ -265,6 +265,7 @@ const deleteDictItem = async (item: BizDictVO) => {
         if (item.id) {
           await deleteEnterpriseDict({ id: item.id, bizId: null as any })
           message.success('删除成功')
+          await loadDictList()
           await loadDictItems()
         }
       } catch (error) {
@@ -394,7 +395,7 @@ const onAddDictFinish = async () => {
         description: addDictForm.value.description,
         isDefault: addDictForm.value.isDefault,
         sort: 1,
-        bizId: null
+        bizId: undefined
       }
     )
     message.success('字典创建成功')

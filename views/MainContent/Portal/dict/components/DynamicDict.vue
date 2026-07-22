@@ -201,39 +201,39 @@
           </div>
         </div>
 
-        <!-- 结果展示：树形模式 -->
-        <div
-          v-if="isTreeMode"
-          class="result-area"
-        >
-          <a-spin :spinning="loading">
-            <a-tree
-              v-if="treePreviewData.length > 0"
-              :tree-data="treePreviewData"
-              :field-names="{ key: 'value', title: 'label', children: 'children' }"
-              default-expand-all
-              :selectable="false"
+        <!-- 结果展示 -->
+        <div class="result-area">
+          <div class="result-toolbar">
+            <span class="result-count">共 {{ tableData.length }} 条数据</span>
+            <a-segmented
+              v-model:value="displayMode"
+              size="small"
+              :options="displayModeOptions"
             />
-            <a-empty
+          </div>
+          <a-spin :spinning="loading">
+            <template v-if="displayMode === 'tree'">
+              <a-tree
+                v-if="treePreviewData.length > 0"
+                :tree-data="treePreviewData"
+                :field-names="{ key: 'value', title: 'label', children: 'children' }"
+                default-expand-all
+                :selectable="false"
+              />
+              <a-empty
+                v-else
+                :description="tableData.length > 0 ? '树形构建失败，请检查父ID列配置' : '暂无数据，点击查询预览'"
+              />
+            </template>
+            <a-table
               v-else
-              description="暂无数据，点击查询预览"
+              :columns="tableColumns"
+              :data-source="tableData"
+              :pagination="{ pageSize: 50, showTotal: (t: number) => `共 ${t} 条` }"
+              size="small"
+              row-key="value"
             />
           </a-spin>
-        </div>
-
-        <!-- 结果展示：平铺模式 -->
-        <div
-          v-else
-          class="result-area"
-        >
-          <a-table
-            :columns="tableColumns"
-            :data-source="tableData"
-            :pagination="{ pageSize: 50, showTotal: (t: number) => `共 ${t} 条` }"
-            size="small"
-            :loading="loading"
-            row-key="value"
-          />
         </div>
       </div>
     </div>
@@ -333,6 +333,7 @@ const selectConfig = (record: DynamicDictConfig) => {
   formState.labelColumn = record.labelColumn || ''
   formState.orderBy = record.orderBy || ''
   formState.pidColumn = record.pidColumn || ''
+  tableData.value = []
 
   conditions.value = []
   if (record.conditions) {
@@ -400,7 +401,16 @@ const saving = ref(false)
 const checking = ref(false)
 const tableData = ref<{ value: string; label: string; pid?: string | null }[]>([])
 
+const displayMode = ref<'table' | 'tree'>('table')
+const displayModeOptions = [
+  { label: '平铺展示', value: 'table' },
+  { label: '树形展示', value: 'tree' }
+]
+
 const isTreeMode = computed(() => !!formState.pidColumn)
+watch(isTreeMode, (val) => {
+  displayMode.value = val ? 'tree' : 'table'
+}, { immediate: true })
 
 const treePreviewData = computed(() => {
   if (!isTreeMode.value || tableData.value.length === 0) return []
@@ -733,5 +743,17 @@ onMounted(() => {
   border-radius: 6px;
   padding: 12px;
   min-height: 200px;
+}
+
+.result-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.result-count {
+  font-size: 13px;
+  color: #8c8c8c;
 }
 </style>
