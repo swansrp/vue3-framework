@@ -36,6 +36,13 @@
             选中所有
           </a-button>
           <a-button
+            :type="batchMode ? 'primary' : 'default'"
+            @click="toggleSelectionMode"
+          >
+            <CopyOutlined />
+            批量操作
+          </a-button>
+          <a-button
             danger
             :loading="headerClosingAll"
             @click="handleCloseAll"
@@ -120,11 +127,31 @@
       :resources="permResources"
       :field-names="{ id: 'id', name: 'title', children: 'children' }"
     />
+
+    <!-- 批量操作浮动栏 -->
+    <BatchActionBar
+      :visible="batchMode"
+      :selected-count="batchSelectedIndicators.length"
+      :copying="batchCopying"
+      :deleting="batchDeleting"
+      @batch-copy="handleBatchCopy"
+      @batch-edit="batchEditModalVisible = true"
+      @batch-delete="handleBatchDelete"
+      @exit-batch="batchMode = false"
+    />
+
+    <!-- 批量编辑弹窗 -->
+    <BatchEditModal
+      v-model:open="batchEditModalVisible"
+      :selected-indicators="batchSelectedIndicators"
+      :is-common-indicator="!showPersonalIndicators"
+      @applied="handleBatchEditApplied"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { AppstoreOutlined, CheckOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, CheckOutlined, CloseOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, readonly, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -132,6 +159,8 @@ import { useRouter } from 'vue-router'
 import {
   addCommonDashboard,
   addPersonalDashboard,
+  addCommonStatistic,
+  addPersonalStatistic,
   deleteCommonStatistic,
   deletePersonalDashboard,
   deletePersonalStatistic,
@@ -146,6 +175,8 @@ import {
 import type { DashboardItem, IndicatorNode } from './types'
 
 import { getPortalConfig } from '@/framework/apis/portal/config'
+import BatchActionBar from '@/framework/components/common/chartConfig/BatchActionBar.vue'
+import BatchEditModal from '@/framework/components/common/chartConfig/BatchEditModal.vue'
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import IndicatorTree from '@/framework/components/common/chartConfig/IndicatorTree.vue'
@@ -221,6 +252,164 @@ const isEditMode = ref(false)
 
 // 资源权限弹窗状态
 const { permVisible, permResourceType, permResources, openPerm } = useResourcePerm()
+
+// 批量操作状态
+const batchMode = ref(false)
+const batchEditModalVisible = ref(false)
+const batchCopying = ref(false)
+const batchDeleting = ref(false)
+
+// 批量选中的指标（基于左侧树勾选状态）
+const batchSelectedIndicators = computed<IndicatorNode[]>(() => {
+  // 合并通用指标和个人指标中勾选的叶子节点
+  const collectLeafNodes = (nodes: IndicatorNode[], selectedIds: string[]): IndicatorNode[] => {
+    const result: IndicatorNode[] = []
+    const walk = (arr: IndicatorNode[]) => {
+      for (const node of arr) {
+        if (selectedIds.includes(node.id)) {
+          // 只收集叶子节点（有indicator配置的）
+          if (!node.children || node.children.length === 0) {
+            result.push(node)
+          }
+        }
+        if (node.children) walk(node.children)
+      }
+    }
+    walk(nodes)
+    return result
+  }
+
+  const commonSelected = collectLeafNodes(commonIndicators.value, selectedCommonIndicators.value)
+  const personalSelected = collectLeafNodes(personalIndicators.value, selectedPersonalIndicators.value)
+  return [...commonSelected, ...personalSelected]
+})
+
+// 切换批量模式
+const toggleSelectionMode = () => {
+  batchMode.value = !batchMode.value
+}
+
+// 批量复制
+const handleBatchCopy = async () => {
+  const selectedNodes = batchSelectedIndicators.value
+  if (selectedNodes.length === 0) {
+    message.warning('请先在左侧树中勾选要复制的指标')
+    return
+  }
+
+  batchCopying.value = true
+  try {
+    let successCount = 0
+
+    for (const indicatorNode of selectedNodes) {
+      // 复制指标配置，创建新指标
+      const isCommon = !props.showPersonalIndicators || props.useCommonDashboard
+      const newIndicatorData: Partial<IndicatorNode> = {
+        title: `${indicatorNode.title} - 副本`,
+        subTitle: indicatorNode.subTitle || '',
+        description: indicatorNode.description || '',
+        tableId: computedTableId.value,
+        pid: indicatorNode.pid || '',
+        order: (indicatorNode.order || 0) + 1,
+        show: true,
+        indicator: indicatorNode.indicator
+          ? (typeof indicatorNode.indicator === 'string'
+            ? indicatorNode.indicator
+            : JSON.stringify(indicatorNode.indicator))
+          : ''
+      }
+
+      // 创建新指标
+      let newIndicatorId: string
+      if (isCommon) {
+        const resp = await addCommonStatistic(newIndicatorData)
+        newIndicatorId = resp?.payload?.id || resp?.payload
+      } else {
+        const resp = await addPersonalStatistic(newIndicatorData)
+        newIndicatorId = resp?.payload?.id || resp?.payload
+      }
+
+      if (newIndicatorId) {
+        // 将新指标添加到dashboard
+        const cardSize = { xGrid: indicatorNode.defaultXGrid || 2, yGrid: indicatorNode.defaultYGrid || 2 }
+        const currentItems = [...dashboardItems.value]
+        const position = calculateNewCardPosition(currentItems, cardSize)
+
+        const dashboardData = [{
+          statisticId: String(newIndicatorId),
+          xGrid: cardSize.xGrid,
+          yGrid: cardSize.yGrid,
+          xPosition: position.xPosition,
+          yPosition: position.yPosition
+        }]
+
+        if (props.useCommonDashboard) {
+          await addCommonDashboard(dashboardData, computedTableId.value!)
+        } else {
+          await addPersonalDashboard(dashboardData, computedTableId.value!)
+        }
+        successCount++
+      }
+    }
+
+    // 刷新数据
+    await loadDashboardData()
+
+    // 自动重新排列
+    try {
+      const itemsToReorganize = displayedIndicators.value
+      if (itemsToReorganize && itemsToReorganize.length > 0) {
+        const reorganized = reorganizeChartsLayout(itemsToReorganize)
+        await saveReorganizedLayout(reorganized)
+        await loadDashboardData(true)
+      }
+    } catch (e) {
+      console.warn('复制后自动布局失败', e)
+    }
+
+    message.success(`成功复制 ${successCount} 个指标`)
+  } catch (error) {
+    console.error('批量复制失败:', error)
+    message.error('批量复制失败，请重试')
+  } finally {
+    batchCopying.value = false
+  }
+}
+
+// 批量删除
+const handleBatchDelete = () => {
+  const selectedNodes = batchSelectedIndicators.value
+  if (selectedNodes.length === 0) {
+    message.warning('请先在左侧树中勾选要删除的指标')
+    return
+  }
+
+  Modal.confirm({
+    title: '确认批量删除',
+    content: `确定要删除勾选的 ${selectedNodes.length} 个指标及其图表吗？`,
+    okText: '确定',
+    cancelText: '取消',
+    okType: 'danger',
+    onOk: async () => {
+      batchDeleting.value = true
+      try {
+        const indicatorIds = selectedNodes.map(node => node.id)
+        await deleteDashboard(indicatorIds)
+      } finally {
+        batchDeleting.value = false
+      }
+    }
+  })
+}
+
+// 批量编辑完成后的回调
+const handleBatchEditApplied = async () => {
+  // 重新加载数据并刷新图表
+  await loadDashboardData(true)
+  if (chartGridRef.value && typeof chartGridRef.value.refreshAllCharts === 'function') {
+    await chartGridRef.value.refreshAllCharts()
+  }
+}
 
 // 数据状态
 const commonIndicators = ref<IndicatorNode[]>([])
