@@ -16,16 +16,18 @@
               </template>
               新建
             </a-button>
-            <a-button
-              size="small"
-              :loading="dynDictExporting"
-              @click="handleExportDynDict"
-            >
-              <template #icon>
-                <DownloadOutlined />
-              </template>
-              导出
-            </a-button>
+            <a-tooltip title="导出">
+              <a-button
+                type="text"
+                size="small"
+                :loading="dynDictExporting"
+                @click="handleExportDynDict"
+              >
+                <template #icon>
+                  <DownloadOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
             <input
               ref="dynDictFileInputRef"
               type="file"
@@ -33,16 +35,18 @@
               style="display: none"
               @change="handleDynDictFileChange"
             />
-            <a-button
-              size="small"
-              :loading="dynDictImporting"
-              @click="dynDictFileInputRef?.click()"
-            >
-              <template #icon>
-                <UploadOutlined />
-              </template>
-              导入
-            </a-button>
+            <a-tooltip title="导入">
+              <a-button
+                type="text"
+                size="small"
+                :loading="dynDictImporting"
+                @click="dynDictFileInputRef?.click()"
+              >
+                <template #icon>
+                  <UploadOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
             <a-button
               type="text"
               size="small"

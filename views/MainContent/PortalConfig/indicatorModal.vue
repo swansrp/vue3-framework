@@ -10,6 +10,7 @@
     >
       <template #side>
         <portal
+          ref="groupTreeRef"
           :advance-condition="groupAdvanceCondition"
           :bind-default-value="defaultValue"
           table-id="SysPortalIndicatorGroup"
@@ -162,7 +163,7 @@ import { scanAllCharts } from './utils/syncAllChartIndicators'
 
 import { ConditionVO } from '@/apis/types'
 import { getIndicatorConfig } from '@/framework/apis/portal'
-import { addEntity, updateEntitySelective } from '@/framework/apis/portal'
+import { addEntity, addEntityList, updateEntitySelective } from '@/framework/apis/portal'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
@@ -203,6 +204,7 @@ const onSelectedData = (data: any) => {
 }
 
 const indicatorRef = ref()
+const groupTreeRef = ref()
 const advanceCondition = computed(() => {
   const conditionList = isNotEmpty(selectedTreeData.value) ? [buildCondition('groupId', FILTER_TYPE.EQUAL, selectedTreeData.value)] : []
   return { conditionList } as ConditionListType
@@ -386,30 +388,32 @@ const upsertIndicatorTree = async (
         displayOrder: node.displayOrder,
         pid: parentId
       }, undefined, false, false)
-      groupId = res.payload
+      groupId = res.payload?.id ?? res.payload
       // 将新组加入映射，供子组查重
       groupMap.set(groupName, { id: groupId, items: [] })
       counters.added++
     }
-    // 处理该组下的指标项
+    // 处理该组下的指标项（批量插入）
     if (node.items && node.items.length > 0) {
+      const newItems: any[] = []
       for (const item of node.items) {
         const itemKey = `${groupId}_${item.key}`
         if (itemMap.has(itemKey)) {
-          // 已存在 → 跳过（无 id 无法 update）
           counters.skipped++
         } else {
-          // 不存在 → 新增
-          await addEntity('portal/indicator', {
+          newItems.push({
             portalName,
             groupId,
             itemValue: item.key,
             itemName: item.title,
             condition: item.condition,
             dynamicColumn: item.dynamicColumns
-          }, undefined, false, false)
+          })
           itemMap.set(itemKey, true)
         }
+      }
+      if (newItems.length > 0) {
+        await addEntityList('portal/indicator', newItems, undefined, false, false)
       }
     }
     // 递归处理子组
@@ -453,7 +457,10 @@ const handleIndicatorFileChange = async (event: Event) => {
           const counters = { added: 0, updated: 0, skipped: 0 }
           await upsertIndicatorTree(treeData, portalName, null, groupMap, itemMap, counters)
           message.success(`导入完成：新增 ${counters.added} 组，更新 ${counters.updated} 组，跳过 ${counters.skipped} 项`)
-          // 刷新指标列表
+          // 刷新左侧指标组树 + 右侧指标列表
+          if (groupTreeRef.value) {
+            groupTreeRef.value.queryData()
+          }
           if (indicatorRef.value) {
             indicatorRef.value.queryData()
           }
@@ -483,10 +490,11 @@ const handleAddSubmit = async (modal: any) => {
     addModal.loading = true
     await addFormRef.value?.validate()
 
+    const rawGroupId = selectedTreeData.value[0]
     const submitData = {
       ...addFormRef.value.getSubmitData(),
       portalName: config.value.name,
-      groupId: selectedTreeData.value[0] || null
+      groupId: rawGroupId && typeof rawGroupId === 'object' ? (rawGroupId.id ?? rawGroupId.key ?? null) : (rawGroupId || null)
     }
 
     await addEntity('portal/indicator', submitData)

@@ -1107,17 +1107,19 @@ const handleReportFileChange = async (event: Event) => {
                 if (ef.code) filterMap.set(ef.code, ef)
               })
               for (const f of item.filters) {
+                // 移除源环境 id，避免跨环境导入时带入旧ID
+                const { id: _srcFilterId, ...filterData } = f
                 const existingFilter = f.code ? filterMap.get(f.code) : null
                 if (existingFilter?.id) {
                   // 已存在 → 更新
                   await updatePortalTableFilter(
-                    { ...f, id: existingFilter.id, tableId },
+                    { ...filterData, id: existingFilter.id, tableId },
                     false, false, false
                   )
                 } else {
                   // 不存在 → 新增
                   await addPortalTableFilter(
-                    { ...f, tableId },
+                    { ...filterData, tableId },
                     false, false, false
                   )
                 }

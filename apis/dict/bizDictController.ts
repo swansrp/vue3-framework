@@ -111,6 +111,22 @@ export const deleteEnterpriseDictBatch = (params?: {
 }
 
 /**
+ * 删除整个业务字典（含所有字典项）
+ * @api POST /biz/dict/delete/dict
+ * @param params - 查询参数
+ * @param showSuccess - 是否显示成功提示（默认: true）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ */
+export const deleteBizDict = (params?: {
+  /** 字典编码 */
+  dictCode: string
+}, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/biz/dict/delete/dict', '')
+  return request(api, params || {}, {}, showSuccess, showLoading, showErr)
+}
+
+/**
  * 添加字典项
  * @api POST /biz/dict/insert
  * @param params - 查询参数

@@ -393,8 +393,21 @@ const handleBatchDelete = () => {
     onOk: async () => {
       batchDeleting.value = true
       try {
-        const indicatorIds = selectedNodes.map(node => node.id)
-        await deleteDashboard(indicatorIds)
+        // 删除指标节点本身（左侧树）
+        for (const node of selectedNodes) {
+          const isCommon = !!findNodeInIndicatorTree(commonIndicators.value, node.id)
+          if (isCommon) {
+            await deleteCommonStatistic(node.id)
+          } else {
+            await deletePersonalStatistic(node.id)
+          }
+        }
+        // 刷新数据（左侧树 + 右侧图表）
+        await loadDashboardData()
+        message.success(`成功删除 ${selectedNodes.length} 个指标`)
+      } catch (error) {
+        console.error('批量删除失败:', error)
+        message.error('批量删除失败，请重试')
       } finally {
         batchDeleting.value = false
       }
@@ -1623,6 +1636,14 @@ const forceRecalculateLayout = () => {
   }
 }
 
+// 配置变更后的完整刷新：重载指标树+仪表盘数据，并强制刷新图表卡片（不重排布局）
+const refreshAfterConfigChange = async () => {
+  await loadDashboardData(true)
+  if (chartGridRef.value && typeof chartGridRef.value.refreshAllCharts === 'function') {
+    await chartGridRef.value.refreshAllCharts()
+  }
+}
+
 // 暴露给父组件的方法
 defineExpose({
   refreshDashboard,
@@ -1632,6 +1653,7 @@ defineExpose({
   addDashboard,
   deleteDashboard,
   forceRecalculateLayout,
+  refreshAfterConfigChange,
   openPermManager,
   dashboardItems: readonly(dashboardItems),
   loading: readonly(loading)

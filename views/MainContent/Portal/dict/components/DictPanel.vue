@@ -12,10 +12,10 @@ import {
   systemBizDictAddDict,
   systemBizDictUpdateEnterpriseDict,
   getDictExisted,
-  systemBizDictUpdateDictName
+  systemBizDictUpdateDictName,
+  deleteBizDict
 } from '@/framework/apis/dict/bizDictController'
 import type { BizDictVO, BizDictRes } from '@/framework/apis/dict/bizDictController'
-import { deleteDict } from '@/framework/apis/dict/dict'
 import DictItemEditModal from '@/framework/components/common/dict/DictItemEditModal.vue'
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
@@ -491,7 +491,7 @@ const handleDeleteDict = () => {
     okType: 'danger',
     onOk: async () => {
       try {
-        await deleteDict({ id: selectedDictCode.value })
+        await deleteBizDict({ dictCode: selectedDictCode.value })
         message.success('删除字典成功')
         selectedDictCode.value = ''
         selectedDictName.value = ''
@@ -581,8 +581,10 @@ const handleDictFileChange = async (event: Event) => {
               if (ei.value) existingMap.set(`${dict.dictCode}_${ei.value}`, ei)
             })
             for (const item of items) {
+              // 剥离源环境 id，避免跨环境导入时带入旧ID（字典项以 value 为唯一标识）
+              const { id: _srcItemId, ...itemRest } = item
               const itemData = {
-                ...item,
+                ...itemRest,
                 dictCode: dict.dictCode,
                 dictName: dict.dictName,
                 bizId: undefined
@@ -661,16 +663,18 @@ loadDictNameMap()
               </template>
               新增字典
             </a-button>
-            <a-button
-              size="small"
-              :loading="dictExporting"
-              @click="handleExportDict"
-            >
-              <template #icon>
-                <DownloadOutlined />
-              </template>
-              导出
-            </a-button>
+            <a-tooltip title="导出">
+              <a-button
+                type="text"
+                size="small"
+                :loading="dictExporting"
+                @click="handleExportDict"
+              >
+                <template #icon>
+                  <DownloadOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
             <input
               ref="dictFileInputRef"
               type="file"
@@ -678,16 +682,18 @@ loadDictNameMap()
               style="display: none"
               @change="handleDictFileChange"
             />
-            <a-button
-              size="small"
-              :loading="dictImporting"
-              @click="dictFileInputRef?.click()"
-            >
-              <template #icon>
-                <UploadOutlined />
-              </template>
-              导入
-            </a-button>
+            <a-tooltip title="导入">
+              <a-button
+                type="text"
+                size="small"
+                :loading="dictImporting"
+                @click="dictFileInputRef?.click()"
+              >
+                <template #icon>
+                  <UploadOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
             <a-button
               type="text"
               size="small"

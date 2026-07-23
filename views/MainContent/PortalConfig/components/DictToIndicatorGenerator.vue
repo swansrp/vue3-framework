@@ -852,7 +852,9 @@ const handleReset = () => {
 // 弹窗打开时快照锁定 groupId，避免切换左侧树导致 groupId 跟着变
 watch(() => show.value, (visible) => {
   if (visible && selectedGroupId.value) {
-    targetGroupId.value = selectedGroupId.value
+    // 防御：确保 groupId 是原始值而非对象
+    const raw = selectedGroupId.value as any
+    targetGroupId.value = raw && typeof raw === 'object' ? (raw.id ?? raw.key ?? '') : raw
   }
 })
 

@@ -16,16 +16,18 @@
               </template>
               新增树
             </a-button>
-            <a-button
-              size="small"
-              :loading="treeExporting"
-              @click="handleExportTreeDict"
-            >
-              <template #icon>
-                <DownloadOutlined />
-              </template>
-              导出
-            </a-button>
+            <a-tooltip title="导出">
+              <a-button
+                type="text"
+                size="small"
+                :loading="treeExporting"
+                @click="handleExportTreeDict"
+              >
+                <template #icon>
+                  <DownloadOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
             <input
               ref="treeFileInputRef"
               type="file"
@@ -33,16 +35,18 @@
               style="display: none"
               @change="handleTreeFileChange"
             />
-            <a-button
-              size="small"
-              :loading="treeImporting"
-              @click="treeFileInputRef?.click()"
-            >
-              <template #icon>
-                <UploadOutlined />
-              </template>
-              导入
-            </a-button>
+            <a-tooltip title="导入">
+              <a-button
+                type="text"
+                size="small"
+                :loading="treeImporting"
+                @click="treeFileInputRef?.click()"
+              >
+                <template #icon>
+                  <UploadOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
             <a-button
               type="text"
               size="small"

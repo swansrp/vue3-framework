@@ -1712,6 +1712,7 @@
       </template>
       <public-dashboard
         v-if="publicDashboardModalShow"
+        ref="publicDashboardRef"
         :table-id="tableConfig.name"
         :show-personal-indicators="false"
         :use-common-dashboard="true"
@@ -1918,6 +1919,7 @@ const indicatorModalShow: Ref<boolean> = ref(false)
 const showPortalTableConfigModal: Ref<boolean> = ref(false)
 const showDataPreviewDrawer: Ref<boolean> = ref(false)
 const publicDashboardModalShow: Ref<boolean> = ref(false)
+const publicDashboardRef = ref()
 // 通用图表导出/导入状态
 const chartExporting = ref(false)
 const chartImporting = ref(false)
@@ -2163,6 +2165,17 @@ const handleExportChartConfig = async () => {
     ])
     const dashboards = dashRes.payload || []
     const statistics = statRes.payload || []
+    // 调试：打印导出的指标树结构（验证是否带 pid 和 children 层级）
+    const dumpTree = (nodes: any[], depth = 0): string => {
+      return nodes.map(n => {
+        const prefix = '  '.repeat(depth)
+        const childCount = n.children?.length || 0
+        const line = `${prefix}- [id=${n.id}, pid=${n.pid}] ${n.title} (children=${childCount})`
+        return childCount > 0 ? `${line}\n${dumpTree(n.children, depth + 1)}` : line
+      }).join('\n')
+    }
+    console.log('[ChartExport] 导出指标树结构:\n' + dumpTree(statistics))
+    console.log('[ChartExport] 原始 statistics 数据:', JSON.parse(JSON.stringify(statistics)))
     if (!dashboards.length && !statistics.length) {
       message.warning('暂无可导出的图表配置')
       return
@@ -2235,12 +2248,13 @@ const handleChartFileChange = async (event: Event) => {
             flattenStats(existingStats)
 
             // 递归导入指标树节点
+            // 跨环境迁移：层级关系完全由导出文件的 children 嵌套结构决定，
+            // pid 使用递归传入的父节点新ID（parentNewId），忽略源环境的 pid 值
             const upsertStats = async (nodes: any[], parentNewId: string | null) => {
               for (const node of nodes) {
                 const { id: oldId, children, ...statData } = node
-                // 重映射 pid
-                const remappedPid = node.pid ? (idMap.get(String(node.pid)) || null) : parentNewId
-                if (remappedPid !== undefined) statData.pid = remappedPid
+                // pid 纯由树形嵌套关系决定（跨环境安全）
+                statData.pid = parentNewId
                 const existing = node.title ? existingStatMap.get(node.title) : null
                 let newId: string
                 if (existing?.id) {
@@ -2248,15 +2262,18 @@ const handleChartFileChange = async (event: Event) => {
                   await updateCommonStatistic({ ...statData, id: existing.id, customerNumber: '0' })
                   newId = String(existing.id)
                   counters.statUpdated++
+                  console.log('[ChartImport] 更新指标:', node.title, 'id=', newId, 'pid=', parentNewId)
                 } else {
-                  // 不存在 → 新增
+                  // 不存在 → 新增（payload 是完整实体对象，需提取 id）
                   const res = await addCommonStatistic({ ...statData, customerNumber: '0' })
-                  newId = String(res.payload)
+                  newId = String(res.payload?.id ?? res.payload)
                   existingStatMap.set(node.title, { id: newId })
                   counters.statAdded++
+                  console.log('[ChartImport] 新增指标:', node.title, 'newId=', newId, 'pid=', parentNewId)
                 }
+                // idMap 仅供后续 dashboard 重映射 commonStatistic 引用使用
                 if (oldId) idMap.set(String(oldId), newId)
-                // 递归处理子节点
+                // 递归处理子节点：子节点的 pid 即为当前节点的新ID
                 if (children?.length) {
                   await upsertStats(children, newId)
                 }
@@ -2306,6 +2323,10 @@ const handleChartFileChange = async (event: Event) => {
             parts.push(`图表新增 ${counters.dashAdded}、更新 ${counters.dashUpdated}`)
           }
           message.success(`导入完成：${parts.join('；')}`)
+          // 刷新通用图表弹窗内的指标树 + 图表卡片
+          if (publicDashboardRef.value && typeof publicDashboardRef.value.refreshAfterConfigChange === 'function') {
+            await publicDashboardRef.value.refreshAfterConfigChange()
+          }
         } catch (error: any) {
           message.error('导入失败: ' + (error?.message || '未知错误'))
         } finally {
