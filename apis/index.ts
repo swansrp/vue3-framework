@@ -585,7 +585,8 @@ export const advancedStatisticRequest = (
   majorCondition = '0',
   domain: string = baseDomain,
   showSuccess = false,
-  showLoading = false
+  showLoading = false,
+  limit: number | null = null
 ) => request(advancedStatisticApi(type, domain), {}, {
   selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
@@ -593,7 +594,8 @@ export const advancedStatisticRequest = (
   metricColumn,
   metricCondition,
   statisticColumn,
-  majorCondition
+  majorCondition,
+  limit
 }, showSuccess, showLoading) as Promise<any>
 
 export const getByIdRequest = (

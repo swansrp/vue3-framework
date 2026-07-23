@@ -57,9 +57,106 @@
           </div>
 
           <div class="data-item-content">
+            <!-- 排行榜(Top-N)专属配置：分组字段 / 统计方式 / 取前 N 名 / 排序方向 -->
+            <template v-if="isRankingMode">
+              <div class="data-row">
+                <span class="data-label">分组字段：</span>
+                <span class="data-value">
+                  <a-select
+                    :value="metric.groupByField || undefined"
+                    size="small"
+                    style="width: 160px"
+                    placeholder="请选择分组字段"
+                    show-search
+                    option-filter-prop="children"
+                    @change="(value) => onGroupByFieldChange(metric.id, value)"
+                  >
+                    <a-select-option
+                      v-for="option in (groupByColumnOptions || [])"
+                      :key="option.column"
+                      :value="option.column"
+                    >
+                      {{ option.label }}
+                    </a-select-option>
+                  </a-select>
+                </span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">统计方式：</span>
+                <span class="data-value">
+                  <a-select
+                    :value="getRankingStatMethod(metric)"
+                    size="small"
+                    style="width: 120px"
+                    @change="(value) => onRankingStatMethodChange(metric.id, value)"
+                  >
+                    <a-select-option value="count">
+                      计数
+                    </a-select-option>
+                    <a-select-option value="sum">
+                      求和
+                    </a-select-option>
+                  </a-select>
+                </span>
+              </div>
+              <div
+                v-if="getRankingStatMethod(metric) === 'sum'"
+                class="data-row"
+              >
+                <span class="data-label">求和字段：</span>
+                <span class="data-value">
+                  <a-select
+                    :value="metric.dataField || undefined"
+                    size="small"
+                    style="width: 160px"
+                    placeholder="请选择求和字段"
+                    @change="(value) => onRankingSumFieldChange(metric.id, value)"
+                  >
+                    <a-select-option
+                      v-for="dataType in availableDataTypes"
+                      :key="dataType.dataField"
+                      :value="dataType.dataField"
+                    >
+                      {{ dataType.dataName }}
+                    </a-select-option>
+                  </a-select>
+                </span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">取前 N 名：</span>
+                <span class="data-value">
+                  <a-input-number
+                    :value="metric.topN ?? 10"
+                    :min="1"
+                    :max="100"
+                    size="small"
+                    style="width: 120px"
+                    @change="(value) => updateMetricField(metric.id, 'topN', value)"
+                  />
+                </span>
+              </div>
+              <div class="data-row">
+                <span class="data-label">排序方向：</span>
+                <span class="data-value">
+                  <a-select
+                    :value="metric.sortOrder ?? 1"
+                    size="small"
+                    style="width: 120px"
+                    @change="(value) => updateMetricField(metric.id, 'sortOrder', value)"
+                  >
+                    <a-select-option :value="1">
+                      倒序（从大到小）
+                    </a-select-option>
+                    <a-select-option :value="0">
+                      正序（从小到大）
+                    </a-select-option>
+                  </a-select>
+                </span>
+              </div>
+            </template>
             <!-- 指标饼图/树形堆叠模式下隐藏图表类型/坐标轴/堆叠配置（由顶部模式切换统一控制） -->
             <div
-              v-if="!isMetricsPieMode && !isTreeStackedMode"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode"
               class="data-row"
             >
               <span class="data-label">图表类型：</span>
@@ -82,7 +179,7 @@
               </span>
             </div>
             <div
-              v-if="!isMetricsPieMode && !isTreeStackedMode && metric.chartType !== 'pie'"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && metric.chartType !== 'pie'"
               class="data-row"
             >
               <span class="data-label">坐标轴：</span>
@@ -104,7 +201,7 @@
               </span>
             </div>
             <div
-              v-if="!isMetricsPieMode && !isTreeStackedMode && metric.chartType === 'bar'"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && metric.chartType === 'bar'"
               class="data-row"
             >
               <span class="data-label">堆叠：</span>
@@ -145,9 +242,9 @@
               </span>
             </div>
 
-            <!-- 二级维度值的颜色设置 -->
+            <!-- 二级维度值的颜色设置（排行榜模式无维度，隐藏） -->
             <div
-              v-if="(secondDimension && secondDimension.items && secondDimension.items.length > 0) || (firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension)"
+              v-if="!isRankingMode && ((secondDimension && secondDimension.items && secondDimension.items.length > 0) || (firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension))"
               class="data-color-config"
             >
               <div class="color-label">
@@ -241,7 +338,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && !isTreeStackedMode"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode"
             label="图表类型"
             required
           >
@@ -266,7 +363,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && !isTreeStackedMode && editingDataMetric.chartType !== 'pie' && editingDataMetric.chartType !== 'metricsPie'"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && editingDataMetric.chartType !== 'pie' && editingDataMetric.chartType !== 'metricsPie'"
             label="坐标轴位置"
           >
             <a-radio-group v-model:value="editingDataMetric.yAxisPosition">
@@ -280,7 +377,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && !isTreeStackedMode && editingDataMetric.chartType === 'bar'"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && editingDataMetric.chartType === 'bar'"
             label="堆叠位置"
           >
             <a-select
@@ -365,13 +462,26 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
   unit?: string
   unitConfig?: string
   itemColors?: Record<string, string>
+  // ===== 排行榜(Top-N)专属字段 =====
+  groupByField?: string
+  groupByLabel?: string
+  topN?: number
+  sortOrder?: 0 | 1
+  groupByDictMap?: Record<string, string>
+}
+
+// 可分组列选项（排行榜分组字段候选）
+interface GroupByColumnOption {
+  column: string
+  label: string
+  dictMap?: Record<string, string>
 }
 
 interface DataTypeOption {
@@ -394,6 +504,8 @@ const props = defineProps<{
   firstDimension: IndicatorGroup | null
   secondDimension: IndicatorGroup | null
   availableDataTypes: DataTypeOption[]
+  chartMode?: string
+  groupByColumnOptions?: GroupByColumnOption[]
   convertUnit?: (unitConfig: string) => string
 }>()
 
@@ -477,10 +589,55 @@ const isTreeStackedMode = computed(() => {
   return props.dataMetrics.some(m => m.chartType === 'treeStackedBar')
 })
 
+// 排行榜(Top-N)模式：隐藏图表类型/坐标轴/堆叠/颜色配置，改为显示排行专属配置
+const isRankingMode = computed(() => {
+  return props.dataMetrics.some(m => m.chartType === 'rankingBar')
+})
+
+// 排行榜统计方式：dataField 为空=计数(count)，非空=对该字段求和(sum)
+const getRankingStatMethod = (metric: DataMetricUI): 'count' | 'sum' => {
+  return metric.dataField ? 'sum' : 'count'
+}
+
+// 分组字段选择变更：同步 groupByField / groupByLabel / groupByDictMap
+const onGroupByFieldChange = (metricId: string, column: any) => {
+  const option = (props.groupByColumnOptions || []).find(o => o.column === column)
+  updateMetricField(metricId, 'groupByField', column || '')
+  updateMetricField(metricId, 'groupByLabel', option?.label || column || '')
+  updateMetricField(metricId, 'groupByDictMap', option?.dictMap || {})
+}
+
+// 排行榜统计方式变更：count 清空 dataField/dataName；sum 保持字段选择
+const onRankingStatMethodChange = (metricId: string, method: any) => {
+  if (method === 'count') {
+    updateMetricField(metricId, 'dataField', '')
+    updateMetricField(metricId, 'dataName', '数量')
+    updateMetricField(metricId, 'unit', '')
+    updateMetricField(metricId, 'unitConfig', '')
+  }
+}
+
+// 排行榜求和字段变更：同步 dataField/dataName/unit
+const onRankingSumFieldChange = (metricId: string, dataField: any) => {
+  const dataType = props.availableDataTypes.find(dt => dt.dataField === dataField)
+  updateMetricField(metricId, 'dataField', dataField || '')
+  if (dataType) {
+    updateMetricField(metricId, 'dataName', dataType.dataName)
+    updateMetricField(metricId, 'unitConfig', dataType.unitConfig || '')
+    if (dataType.unitConfig && props.convertUnit) {
+      updateMetricField(metricId, 'unit', props.convertUnit(dataType.unitConfig))
+    } else {
+      updateMetricField(metricId, 'unit', dataType.unit || '')
+    }
+  }
+}
+
 // 判断是否可以添加数据指标
 const canAddDataMetric = computed(() => {
   // 树形堆叠模式只允许一个数据指标
   if (isTreeStackedMode.value) return false
+  // 排行榜模式只允许一个数据指标
+  if (isRankingMode.value) return false
   // 如果已经有饼图类型，不允许添加新的数据指标（饼图只能 1 个数据指标）
   // 指标饼图允许多个数据指标，不阻止添加
   return !hasPieChart.value

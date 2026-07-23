@@ -18,6 +18,7 @@
       v-model:selected-filter-items-array="selectedFilterItemsArray"
       :available-data-types="availableDataTypes"
       :tree-dict-options="treeDictOptions"
+      :group-by-column-options="groupByColumnOptions"
       :left-panel-collapsed="leftPanelCollapsed"
       :convert-unit="convertUnit"
       @toggle-left-panel="toggleLeftPanel"
@@ -39,7 +40,7 @@
 
 <script lang="ts" setup>
 import { message } from 'ant-design-vue'
-import { onMounted, provide, ref, nextTick } from 'vue'
+import { onMounted, provide, ref, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import ConfigPanel from './indicator/config/ConfigPanel.vue'
@@ -97,13 +98,19 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
   unit?: string
   unitConfig?: string // 原始单位配置，如 "2,10000"
   itemColors?: Record<string, string>
+  // ===== 排行榜(Top-N)专属字段 =====
+  groupByField?: string
+  groupByLabel?: string
+  topN?: number
+  sortOrder?: 0 | 1
+  groupByDictMap?: Record<string, string>
 }
 
 interface DataTypeOption {
@@ -282,7 +289,15 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
     unit: metric.unit,
     unitConfig: metric.chartType === 'ptLine' ? undefined : unitConfig,
     formatConfig: metric.chartType === 'ptLine' ? undefined : { fix, unitDivisor },
-    itemColors: metric.itemColors || {} as Record<string, string>
+    itemColors: metric.itemColors || {} as Record<string, string>,
+    // 排行榜(Top-N)专属字段：随 config 序列化，供请求构建/回显/导入导出
+    ...(metric.chartType === 'rankingBar' ? {
+      groupByField: metric.groupByField,
+      groupByLabel: metric.groupByLabel,
+      topN: metric.topN,
+      sortOrder: metric.sortOrder,
+      groupByDictMap: metric.groupByDictMap
+    } : {})
   }
 }
 
@@ -633,6 +648,47 @@ const generateChart = async (chartData?: {
     return
   }
 
+  // 排行榜(Top-N)分支：无维度，纯分组 + ORDER BY + LIMIT，跳过维度必填校验
+  const hasRanking = dataMetricsData.some(m => m.chartType === 'rankingBar')
+  if (hasRanking) {
+    const rankingMetric = dataMetricsData[0]
+    if (!rankingMetric?.groupByField) {
+      message.error('请选择分组字段')
+      return
+    }
+    const filterData: DimensionIndicatorsFilter = {
+      firstDimension: null as any,
+      secondDimension: null,
+      filterConditions: convertToConditionGroup(selectedFilterItems, filterDims),
+      dataMetrics: dataMetricsData.map(convertToDataMetric)
+    }
+    dimensionIndicatorsFilter.value = filterData
+
+    lastConfigSnapshot.value = {
+      firstDimension: null,
+      secondDimension: null,
+      filterDimensions: (Array.isArray(filterDims) ? filterDims : []).map(dim => dim ? {
+        key: dim.key,
+        title: dim.title,
+        items: dim.items?.map((item: any) => ({ ...item })) || []
+      } : null),
+      selectedFilterItemsArray: selectedFilterItems.map(arr => [...arr]),
+      dataMetrics: dataMetricsData.map(metric => ({ ...metric }))
+    }
+
+    await nextTick()
+    if (chartDisplayAreaRef.value) {
+      try {
+        await chartDisplayAreaRef.value.generateChart(true)
+        message.success('图表生成成功')
+      } catch (error) {
+        console.error('排行榜图表生成失败:', error)
+        message.error('图表生成失败，请检查数据配置或网络连接')
+      }
+    }
+    return
+  }
+
   if (!firstDim) {
     message.error('请先选择一级维度（横坐标）')
     return
@@ -859,6 +915,17 @@ const clearChart = () => {
 const { currentRoute } = useRouter()
 const route = currentRoute.value
 const config = ref({} as any)
+
+// 排行榜可分组列候选：全量 show 的列（不做类型过滤）
+const groupByColumnOptions = computed(() => {
+  const cols: any[] = config.value?.columns || []
+  return cols
+    .filter((c: any) => c.show !== '0' && c.property)
+    .map((c: any) => ({
+      column: c.property,
+      label: c.displayName || c.property
+    }))
+})
 // 组件挂载时加载数据
 onMounted(async () => {
 
@@ -1115,8 +1182,11 @@ const restoreConfig = async (savedConfig: any) => {
     const isTreeStackedMode = (Array.isArray(savedConfig?.dataMetrics) &&
       savedConfig.dataMetrics.some((m: any) => m.chartType === 'treeStackedBar')) ||
       !!savedConfig?.treeDimension
+    // 排行榜(Top-N)模式判断（无维度，允许 firstDimension 为 null）
+    const isRankingMode = Array.isArray(savedConfig?.dataMetrics) &&
+      savedConfig.dataMetrics.some((m: any) => m.chartType === 'rankingBar')
 
-    if (!savedConfig || (!isMetricsPieMode && !isTreeStackedMode && !savedConfig.firstDimension)) {
+    if (!savedConfig || (!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !savedConfig.firstDimension)) {
       console.warn('无效的配置数据')
       return
     }
@@ -1144,7 +1214,15 @@ const restoreConfig = async (savedConfig: any) => {
         stackGroup: m.stackGroup || 'noStack',
         unit: m.unit || '',
         unitConfig: m.unitConfig,
-        itemColors: m.itemColors || {}
+        itemColors: m.itemColors || {},
+        // 排行榜(Top-N)专属字段回显
+        ...(m.chartType === 'rankingBar' ? {
+          groupByField: m.groupByField,
+          groupByLabel: m.groupByLabel,
+          topN: m.topN ?? 10,
+          sortOrder: m.sortOrder ?? 1,
+          groupByDictMap: m.groupByDictMap || {}
+        } : {})
       }))
     }
 

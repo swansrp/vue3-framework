@@ -52,11 +52,14 @@
           <a-select-option value="treeStacked">
             树形堆叠柱状图
           </a-select-option>
+          <a-select-option value="rankingBar">
+            排行榜(Top-N)
+          </a-select-option>
         </a-select>
       </div>
 
-      <!-- 维度选择（指标饼图模式下禁用；树形堆叠模式下二级维度变为树关系选择） -->
-      <div :class="{ 'section-disabled': chartMode === 'metricsPie' }">
+      <!-- 维度选择（指标饼图/排行榜模式下禁用；树形堆叠模式下二级维度变为树关系选择） -->
+      <div :class="{ 'section-disabled': chartMode === 'metricsPie' || chartMode === 'rankingBar' }">
         <DimensionSelector
           v-model:first-dimension="firstDimension"
           v-model:second-dimension="secondDimension"
@@ -79,6 +82,8 @@
         :available-data-types="availableDataTypes"
         :first-dimension="firstDimension"
         :second-dimension="secondDimension"
+        :chart-mode="chartMode"
+        :group-by-column-options="groupByColumnOptions"
         :convert-unit="convertUnit"
         @update-metric-field="updateMetricField"
       />
@@ -127,18 +132,31 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
   unit?: string
   itemColors?: Record<string, string>
+  // ===== 排行榜(Top-N)专属字段 =====
+  groupByField?: string
+  groupByLabel?: string
+  topN?: number
+  sortOrder?: 0 | 1
+  groupByDictMap?: Record<string, string>
 }
 
 interface DataTypeOption {
   dataName: string
   dataField: string
   unit?: string
+}
+
+// 可分组列选项（排行榜分组字段候选）
+export interface GroupByColumnOption {
+  column: string
+  label: string
+  dictMap?: Record<string, string>
 }
 
 // Props
@@ -152,6 +170,7 @@ const props = defineProps<{
   selectedFilterItemsArray: string[][]
   dataMetrics: DataMetricUI[]
   availableDataTypes: DataTypeOption[]
+  groupByColumnOptions?: GroupByColumnOption[]
   convertUnit?: (unitConfig: string) => string
 }>()
 
@@ -184,11 +203,12 @@ const filterDimensions = ref<[...(IndicatorGroup | null)[], (IndicatorGroup | nu
 const selectedFilterItemsArray = ref<string[][]>([...props.selectedFilterItemsArray])
 const dataMetrics = ref([...props.dataMetrics])
 
-// 图表模式：'dimension'（维度图表）| 'metricsPie'（指标饼图）| 'treeStacked'（树形堆叠）
-// 基于 dataMetrics 推断：任一指标为 metricsPie 即为指标饼图模式；任一指标为 treeStackedBar 即为树形堆叠模式
+// 图表模式：'dimension'（维度图表）| 'metricsPie'（指标饼图）| 'treeStacked'（树形堆叠）| 'rankingBar'（排行榜）
+// 基于 dataMetrics 推断：任一指标为对应类型即为该模式
 const chartMode = computed(() => {
   if (dataMetrics.value.some(m => m.chartType === 'metricsPie')) return 'metricsPie'
   if (dataMetrics.value.some(m => m.chartType === 'treeStackedBar')) return 'treeStacked'
+  if (dataMetrics.value.some(m => m.chartType === 'rankingBar')) return 'rankingBar'
   return 'dimension'
 })
 
@@ -219,10 +239,35 @@ const onChartModeChange = (mode: any) => {
       itemColors: {}
     }
     dataMetrics.value = [{ ...base, chartType: 'treeStackedBar', stackGroup: 'selfStack' }]
+  } else if (mode === 'rankingBar') {
+    // 切到排行榜：清空维度，仅保留一个指标并标记为 rankingBar
+    firstDimension.value = null
+    secondDimension.value = null
+    treeDimension.value = null
+    emit('update:firstDimension', null)
+    emit('update:secondDimension', null)
+    emit('update:treeDimension', null)
+    const base = dataMetrics.value[0] || {
+      id: `metric_${Date.now()}`,
+      dataName: '数量',
+      dataField: '',
+      color: '#1890ff',
+      yAxisPosition: 'left',
+      unit: '',
+      itemColors: {}
+    }
+    dataMetrics.value = [{
+      ...base,
+      chartType: 'rankingBar',
+      stackGroup: 'noStack',
+      // 默认取前 10 名、倒序
+      topN: base.topN ?? 10,
+      sortOrder: base.sortOrder ?? 1
+    }]
   } else {
-    // 切回维度图表：所有 metricsPie / treeStackedBar 恢复为 bar
+    // 切回维度图表：所有 metricsPie / treeStackedBar / rankingBar 恢复为 bar
     dataMetrics.value.forEach(m => {
-      if (m.chartType === 'metricsPie' || m.chartType === 'treeStackedBar') {
+      if (m.chartType === 'metricsPie' || m.chartType === 'treeStackedBar' || m.chartType === 'rankingBar') {
         m.chartType = 'bar'
       }
     })
@@ -240,6 +285,10 @@ const canGenerateChart = computed(() => {
   if (chartMode.value === 'treeStacked') {
     // 树形堆叠模式：必须选择树关系
     return !!treeDimension.value
+  }
+  if (chartMode.value === 'rankingBar') {
+    // 排行榜模式：无维度，只需选择分组字段
+    return !!dataMetrics.value[0]?.groupByField
   }
   // 维度图表模式：需要一级维度
   return !!firstDimension.value
@@ -429,6 +478,23 @@ const generateChart = () => {
       firstDimension: firstDimension.value,
       secondDimension: null,
       treeDimension: treeDimension.value,
+      filterDimensions: filterDimensions.value,
+      selectedFilterItemsArray: selectedFilterItemsArray.value,
+      dataMetrics: dataMetrics.value
+    })
+    return
+  }
+
+  // 排行榜(Top-N)模式：无维度，必须选择分组字段
+  if (chartMode.value === 'rankingBar') {
+    if (!dataMetrics.value[0]?.groupByField) {
+      message.error('请选择排行榜的分组字段')
+      return
+    }
+    emit('generateChart', {
+      firstDimension: null,
+      secondDimension: null,
+      treeDimension: null,
       filterDimensions: filterDimensions.value,
       selectedFilterItemsArray: selectedFilterItemsArray.value,
       dataMetrics: dataMetrics.value

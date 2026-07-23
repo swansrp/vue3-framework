@@ -40,8 +40,8 @@
         >
           <div class="preview-item">
             <span class="preview-label">图表类型：</span>
-            <a-tag :color="sourceChartType === 'standard' ? 'blue' : sourceChartType === 'metricsPie' ? 'purple' : 'cyan'">
-              {{ sourceChartType === 'standard' ? '标准图表' : sourceChartType === 'metricsPie' ? '指标饼图' : '树形堆叠图' }}
+            <a-tag :color="sourceChartTypeTagColor">
+              {{ sourceChartTypeLabel }}
             </a-tag>
           </div>
           <div
@@ -70,6 +70,25 @@
               class="preview-count"
             >{{ sourceConfig.secondDimension.indicatorItems.length }} 项</span>
           </div>
+          <div
+            v-if="sourceChartType === 'treeStackedBar'"
+            class="preview-item"
+          >
+            <span class="preview-label">树关系：</span>
+            <a-tag color="cyan">
+              {{ sourceConfig.treeDimension?.displayName || sourceConfig.treeDimension?.dictName || '未配置' }}
+            </a-tag>
+          </div>
+          <div
+            v-if="sourceChartType === 'rankingBar'"
+            class="preview-item"
+          >
+            <span class="preview-label">分组字段：</span>
+            <a-tag color="geekblue">
+              {{ sourceConfig.dataMetrics?.[0]?.groupByLabel || sourceConfig.dataMetrics?.[0]?.groupByField || '未配置' }}
+            </a-tag>
+            <span class="preview-count">Top {{ sourceConfig.dataMetrics?.[0]?.topN ?? 10 }}</span>
+          </div>
           <div class="preview-item">
             <span class="preview-label">筛选条件：</span>
             <a-tag :color="hasFilterConditions ? 'orange' : 'default'">
@@ -87,19 +106,34 @@
         </div>
         <a-checkbox-group v-model:value="applyParts">
           <div class="parts-list">
+            <a-checkbox value="chartType">
+              <span class="part-label">图表类型</span>
+              <span class="part-desc">将目标图表转换为模板的类型（{{ sourceChartTypeLabel }}）</span>
+            </a-checkbox>
             <a-checkbox
               v-if="sourceChartType === 'standard'"
               value="firstDimension"
             >
-              <span class="part-label">维度一（横坐标）</span>
+              <span class="part-label">第一维度（横坐标）</span>
               <span class="part-desc">替换所有选中指标的一级维度</span>
             </a-checkbox>
             <a-checkbox
-              v-if="sourceChartType === 'standard'"
+              v-if="sourceChartType !== 'metricsPie' && sourceChartType !== 'rankingBar'"
               value="secondDimension"
             >
-              <span class="part-label">维度二（数据集）</span>
-              <span class="part-desc">替换所有选中指标的二级维度</span>
+              <span class="part-label">第二维度（含树关系）</span>
+              <span class="part-desc">{{ secondDimensionDesc }}</span>
+            </a-checkbox>
+            <a-checkbox
+              v-if="sourceChartType === 'rankingBar'"
+              value="rankingConfig"
+            >
+              <span class="part-label">排行配置</span>
+              <span class="part-desc">同步模板的分组字段 / 取前 N 名 / 排序方向</span>
+            </a-checkbox>
+            <a-checkbox value="dataMetrics">
+              <span class="part-label">统计字段（数据指标）</span>
+              <span class="part-desc">替换所有选中指标的数据指标配置（字段、单位、格式、颜色等）</span>
             </a-checkbox>
             <a-checkbox value="filterConditions">
               <span class="part-label">筛选条件</span>
@@ -108,13 +142,13 @@
           </div>
         </a-checkbox-group>
         <div
-          v-if="sourceChartType !== 'standard' && sourceIndicatorId"
+          v-if="treeTypeWithoutTree && sourceIndicatorId"
           class="type-hint"
         >
           <a-alert
             type="warning"
             show-icon
-            :message="sourceChartType === 'metricsPie' ? '指标饼图没有维度配置，仅支持批量替换筛选条件' : '树形堆叠图没有标准维度配置，仅支持批量替换筛选条件'"
+            message="模板为树形堆叠图：同步「图表类型」或「统计字段」而不勾选「第二维度（含树关系）」，会导致原本没有树关系的目标图表无法正常渲染。"
             style="margin-top: 8px"
           />
         </div>
@@ -177,6 +211,8 @@ import { computed, ref, watch } from 'vue'
 import { updateCommonStatistic, updatePersonalStatistic } from './api'
 import type { IndicatorNode } from './types'
 
+import { resolveChartMode } from '@/framework/components/common/chart/utils/chartDataHelper'
+
 interface Props {
   open: boolean
   selectedIndicators: IndicatorNode[]
@@ -217,16 +253,10 @@ const parseConfig = (node: IndicatorNode): any | null => {
   }
 }
 
-// 检测图表类型
+// 检测图表类型（空配置返回 unknown，其余归类为 standard/metricsPie/treeStackedBar）
 const getChartType = (config: any): string => {
   if (!config) return 'unknown'
-  if (Array.isArray(config.dataMetrics) && config.dataMetrics.some((m: any) => m.chartType === 'metricsPie')) {
-    return 'metricsPie'
-  }
-  if ((Array.isArray(config.dataMetrics) && config.dataMetrics.some((m: any) => m.chartType === 'treeStackedBar')) || config.treeDimension) {
-    return 'treeStackedBar'
-  }
-  return 'standard'
+  return resolveChartMode(config)
 }
 
 // 指标选项（用于下拉选择）
@@ -265,6 +295,42 @@ const sourceConfig = computed(() => {
 
 // 模板图表类型
 const sourceChartType = computed(() => getChartType(sourceConfig.value))
+
+// 模板图表类型中文标签
+const sourceChartTypeLabel = computed(() => {
+  const map: Record<string, string> = {
+    standard: '标准图表',
+    metricsPie: '指标饼图',
+    treeStackedBar: '树形堆叠图',
+    rankingBar: '排行榜(Top-N)'
+  }
+  return map[sourceChartType.value] || '未知'
+})
+
+// 模板图表类型 Tag 颜色
+const sourceChartTypeTagColor = computed(() => {
+  const map: Record<string, string> = {
+    standard: 'blue',
+    metricsPie: 'purple',
+    treeStackedBar: 'cyan',
+    rankingBar: 'geekblue'
+  }
+  return map[sourceChartType.value] || 'default'
+})
+
+// 第二维度选项描述（随模板类型变化）
+const secondDimensionDesc = computed(() => {
+  return sourceChartType.value === 'treeStackedBar'
+    ? '同步模板的树关系，并将目标图表转为树形堆叠'
+    : '替换所有选中指标的二级维度'
+})
+
+// 风险提示：树形模板同步了类型/统计字段而未同步树关系
+const treeTypeWithoutTree = computed(() => {
+  return sourceChartType.value === 'treeStackedBar' &&
+    (applyParts.value.includes('chartType') || applyParts.value.includes('dataMetrics')) &&
+    !applyParts.value.includes('secondDimension')
+})
 
 // 是否有筛选条件
 const hasFilterConditions = computed(() => {
@@ -311,6 +377,19 @@ watch(sourceIndicatorId, (newVal) => {
   }
 })
 
+// 监听模板图表类型变化，自动调整默认勾选项
+watch(sourceChartType, (newType) => {
+  if (newType === 'treeStackedBar') {
+    applyParts.value = ['chartType', 'secondDimension']
+  } else if (newType === 'metricsPie') {
+    applyParts.value = ['filterConditions']
+  } else if (newType === 'rankingBar') {
+    applyParts.value = ['chartType', 'rankingConfig']
+  } else {
+    applyParts.value = ['firstDimension']
+  }
+})
+
 // 应用批量编辑
 const handleApply = async () => {
   if (!sourceConfig.value) {
@@ -323,6 +402,12 @@ const handleApply = async () => {
     let successCount = 0
     let failCount = 0
 
+    // 深拷贝辅助；按 dataField 或索引匹配模板指标，用于同步类型相关渲染配置（itemColors 等）
+    const clone = (v: any) => (v == null ? v : JSON.parse(JSON.stringify(v)))
+    const templateMetrics: any[] = sourceConfig.value.dataMetrics || []
+    const matchMetric = (target: any, index: number) =>
+      templateMetrics.find((m: any) => m.dataField === target.dataField) || templateMetrics[index]
+
     for (const indicatorId of targetIndicatorIds.value) {
       const node = props.selectedIndicators.find(n => n.id === indicatorId)
       if (!node) continue
@@ -334,18 +419,133 @@ const handleApply = async () => {
         continue
       }
 
-      // 应用选中的部分
+      // 应用选中的部分（勾选项变为模板值，未勾选项保持原样）
       const updatedConfig = { ...targetConfig }
-      if (applyParts.value.includes('firstDimension') && sourceConfig.value.firstDimension) {
-        updatedConfig.firstDimension = JSON.parse(JSON.stringify(sourceConfig.value.firstDimension))
+      const templateMode = sourceChartType.value
+
+      // 1. 同步统计字段：整体替换数据指标配置（字段、单位、格式、颜色、图表类型等）及统计指标可见性
+      if (applyParts.value.includes('dataMetrics')) {
+        if (Array.isArray(sourceConfig.value.dataMetrics)) {
+          updatedConfig.dataMetrics = clone(sourceConfig.value.dataMetrics)
+        }
+        updatedConfig.visibleStatisticTypes = clone(sourceConfig.value.visibleStatisticTypes) ?? []
       }
-      if (applyParts.value.includes('secondDimension')) {
-        updatedConfig.secondDimension = sourceConfig.value.secondDimension
-          ? JSON.parse(JSON.stringify(sourceConfig.value.secondDimension))
+
+      // 2. 同步图表类型：仅转换数据指标的图表模式与类型相关渲染配置（itemColors），不改变字段本身
+      if (applyParts.value.includes('chartType')) {
+        if (Array.isArray(updatedConfig.dataMetrics)) {
+          updatedConfig.dataMetrics = updatedConfig.dataMetrics.map((m: any, index: number) => {
+            const tpl = matchMetric(m, index)
+            const itemColors = tpl?.itemColors ? clone(tpl.itemColors) : {}
+            if (templateMode === 'treeStackedBar') {
+              return { ...m, chartType: 'treeStackedBar', stackGroup: 'selfStack', itemColors }
+            }
+            if (templateMode === 'metricsPie') {
+              return { ...m, chartType: 'metricsPie', itemColors }
+            }
+            if (templateMode === 'rankingBar') {
+              // 排行榜：拷贝模板首指标的图表类型与排行字段
+              const tplFirst = templateMetrics[0] || {}
+              return {
+                ...m,
+                chartType: 'rankingBar',
+                stackGroup: 'noStack',
+                groupByField: tplFirst.groupByField,
+                groupByLabel: tplFirst.groupByLabel,
+                topN: tplFirst.topN ?? 10,
+                sortOrder: tplFirst.sortOrder ?? 1,
+                groupByDictMap: tplFirst.groupByDictMap ? clone(tplFirst.groupByDictMap) : {},
+                itemColors
+              }
+            }
+            // 标准图表：将特殊类型还原为普通柱状图
+            return (m.chartType === 'treeStackedBar' || m.chartType === 'metricsPie' || m.chartType === 'rankingBar')
+              ? { ...m, chartType: 'bar', stackGroup: 'noStack', itemColors }
+              : { ...m, itemColors }
+          })
+        }
+      }
+
+      // 3. 同步第一维度（仅标准图表模板有意义），并同步一级维度可见性
+      if (applyParts.value.includes('firstDimension')) {
+        updatedConfig.firstDimension = sourceConfig.value.firstDimension
+          ? clone(sourceConfig.value.firstDimension)
           : null
+        updatedConfig.visibleFirstDimensions = clone(sourceConfig.value.visibleFirstDimensions) ?? []
       }
+
+      // 4. 同步第二维度（含树关系），并同步二级维度可见性
+      if (applyParts.value.includes('secondDimension')) {
+        if (sourceConfig.value.treeDimension) {
+          // 模板为树形堆叠：同步树关系引用，并确保目标为树形堆叠类型
+          updatedConfig.treeDimension = clone(sourceConfig.value.treeDimension)
+          updatedConfig.secondDimension = null
+          if (Array.isArray(updatedConfig.dataMetrics)) {
+            updatedConfig.dataMetrics = updatedConfig.dataMetrics.map((m: any, index: number) => {
+              const tpl = matchMetric(m, index)
+              return {
+                ...m,
+                chartType: 'treeStackedBar',
+                stackGroup: 'selfStack',
+                itemColors: tpl?.itemColors ? clone(tpl.itemColors) : {}
+              }
+            })
+          }
+          // 树形堆叠的父节点（X轴）与叶子（堆叠段）均由树派生，同步两者可见性（默认全可见，避免残留 [null] 导致空图）
+          updatedConfig.visibleFirstDimensions = clone(sourceConfig.value.visibleFirstDimensions) ?? []
+          updatedConfig.visibleSecondDimensions = clone(sourceConfig.value.visibleSecondDimensions) ?? []
+        } else {
+          // 模板为标准图表：同步普通二级维度，清空树关系
+          updatedConfig.secondDimension = sourceConfig.value.secondDimension
+            ? clone(sourceConfig.value.secondDimension)
+            : null
+          updatedConfig.treeDimension = null
+          updatedConfig.visibleSecondDimensions = clone(sourceConfig.value.visibleSecondDimensions) ?? []
+        }
+      }
+
+      // 5. 同步筛选条件
       if (applyParts.value.includes('filterConditions') && sourceConfig.value.filterConditions) {
-        updatedConfig.filterConditions = JSON.parse(JSON.stringify(sourceConfig.value.filterConditions))
+        updatedConfig.filterConditions = clone(sourceConfig.value.filterConditions)
+      }
+
+      // 5.1 同步排行配置：将模板首指标的分组字段/TopN/排序同步到目标首指标
+      if (applyParts.value.includes('rankingConfig')) {
+        const tplFirst = templateMetrics[0] || {}
+        if (Array.isArray(updatedConfig.dataMetrics) && updatedConfig.dataMetrics.length > 0) {
+          updatedConfig.dataMetrics = updatedConfig.dataMetrics.map((m: any, index: number) => index === 0 ? {
+            ...m,
+            chartType: 'rankingBar',
+            stackGroup: 'noStack',
+            groupByField: tplFirst.groupByField,
+            groupByLabel: tplFirst.groupByLabel,
+            topN: tplFirst.topN ?? 10,
+            sortOrder: tplFirst.sortOrder ?? 1,
+            groupByDictMap: tplFirst.groupByDictMap ? clone(tplFirst.groupByDictMap) : {}
+          } : m)
+        }
+      }
+
+      // 6. 收尾归一化：按最终图表类型清理不兼容的维度字段，保证配置内部自洽
+      //    （无论类型变化由「图表类型」还是「统计字段」同步触发，均能正确归一化）
+      const resultMode = updatedConfig.dataMetrics?.[0]?.chartType || 'bar'
+      if (resultMode === 'treeStackedBar') {
+        // 树形堆叠：一/二级维度由树结构实时派生
+        updatedConfig.firstDimension = null
+        updatedConfig.secondDimension = null
+      } else if (resultMode === 'metricsPie') {
+        // 指标饼图：无任何维度
+        updatedConfig.firstDimension = null
+        updatedConfig.secondDimension = null
+        updatedConfig.treeDimension = null
+      } else if (resultMode === 'rankingBar') {
+        // 排行榜：无任何维度（分组由 groupByField 驱动）
+        updatedConfig.firstDimension = null
+        updatedConfig.secondDimension = null
+        updatedConfig.treeDimension = null
+      } else {
+        // 标准图表：不适用树关系
+        updatedConfig.treeDimension = null
       }
 
       // 调用API更新指标配置

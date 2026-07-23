@@ -1,6 +1,29 @@
 // 接收数据的类型定义
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
+// ===== 图表类型 / 图表模式 常量（单一事实来源，替代散落的魔法字符串）=====
+
+// 具体图表类型（对应 DataMetric.chartType）
+export const CHART_TYPE = {
+    BAR: 'bar',
+    LINE: 'line',
+    PT_LINE: 'ptLine',
+    PIE: 'pie',
+    METRICS_PIE: 'metricsPie',
+    TREE_STACKED_BAR: 'treeStackedBar',
+    RANKING_BAR: 'rankingBar'
+} as const
+export type ChartType = typeof CHART_TYPE[keyof typeof CHART_TYPE]
+
+// 图表配置模式（由 resolveChartMode 将具体 chartType 归类）
+export const CHART_MODE = {
+    STANDARD: 'standard',
+    METRICS_PIE: 'metricsPie',
+    TREE_STACKED_BAR: 'treeStackedBar',
+    RANKING_BAR: 'rankingBar'
+} as const
+export type ChartMode = typeof CHART_MODE[keyof typeof CHART_MODE]
+
 export interface ConditionGroup {
     andOr: '0' | '1'; // 与框架 ConditionType 保持一致
     conditionList: Array<ConditionListType>
@@ -32,7 +55,7 @@ export interface TreeDimensionConfig {
 export interface DataMetric {
     dataName: string        // 数据名称
     dataField: string       // 英文字段名
-    chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'  // 图表类型
+    chartType: ChartType  // 图表类型
     color: string           // 数据项整体颜色（用于饼图等）
     yAxisPosition: 'left' | 'right'    // 坐标轴位置（饼图不需要）
     stackGroup?: string     // 堆叠位置标识，相同值的会堆叠在一起
@@ -41,6 +64,12 @@ export interface DataMetric {
     formatConfig?: { fix: number; unitDivisor: number }  // 格式化配置
     itemColors: Record<string, string>  // 维度项的颜色映射 {itemKey: color}
     isVisibleInChart?: boolean  // 在图表统计指标控制中是否可见，用于编辑回显
+    // ===== 排行榜(Top-N)专属字段（chartType === 'rankingBar' 时生效）=====
+    groupByField?: string   // 分组字段（列属性名，触发 GROUP BY）
+    groupByLabel?: string   // 分组字段显示名
+    topN?: number           // 取前 N 名（LIMIT）
+    sortOrder?: 0 | 1       // 排序方向：0=正序(ASC)，1=倒序(DESC)
+    groupByDictMap?: Record<string, string>  // 分组字段的字典映射（可选）
 }
 
 export interface DimensionIndicatorsFilter {
@@ -83,6 +112,7 @@ export interface RequestParams {
     metricCondition: MetricCondition[]
     statisticColumn: StatisticColumn[]
     majorCondition: string
+    limit?: number | null // Top-N 取数上限（仅纯分组分支生效）
 }
 
 // 指标列定义

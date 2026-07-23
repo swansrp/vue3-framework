@@ -16,6 +16,8 @@ import { buildTreeStackedData } from './treeStacked'
 
 import { advancedStatisticRequest } from '@/framework/apis'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
+import type { ChartType, ChartMode } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
+import { CHART_TYPE, CHART_MODE } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import {
   buildDrillConditionFromStatistic
 } from '@/framework/components/common/Portal/utils'
@@ -36,12 +38,26 @@ export interface RequestParamsResult {
   metricCondition: any[]
   statisticColumn: { value: string; label: string }[]
   majorCondition: string
+  limit?: number | null
 }
 
 // ===== 图表类型 =====
 
-export function getChartType(config: any): 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' {
-  return config?.dataMetrics?.[0]?.chartType || 'bar'
+export function getChartType(config: any): ChartType {
+  return config?.dataMetrics?.[0]?.chartType || CHART_TYPE.BAR
+}
+
+// 解析图表“模式”（将具体 chartType 归类为三种配置模式）
+// - metricsPie：任一指标为指标饼图
+// - treeStackedBar：任一指标为树形堆叠，或存在树关系 treeDimension
+// - standard：其余标准图表
+// 注：metricsPie 优先于 treeStackedBar；与各配置/批量编辑弹窗的模式判定保持 OR 语义一致
+export function resolveChartMode(config: any): ChartMode {
+  const metrics = Array.isArray(config?.dataMetrics) ? config.dataMetrics : []
+  if (metrics.some((m: any) => m.chartType === CHART_TYPE.METRICS_PIE)) return CHART_MODE.METRICS_PIE
+  if (metrics.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)) return CHART_MODE.RANKING_BAR
+  if (metrics.some((m: any) => m.chartType === CHART_TYPE.TREE_STACKED_BAR) || config?.treeDimension) return CHART_MODE.TREE_STACKED_BAR
+  return CHART_MODE.STANDARD
 }
 
 // ===== 配置校验 =====
@@ -51,10 +67,13 @@ export function hasValidChartConfig(config: any): boolean {
   const hasMetrics = Array.isArray(config.dataMetrics) && config.dataMetrics.length > 0
   if (!hasMetrics) return false
   // 指标饼图模式无维度，允许 firstDimension 为 null
-  const isMetricsPieMode = config.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
+  const isMetricsPieMode = config.dataMetrics.some((m: any) => m.chartType === CHART_TYPE.METRICS_PIE)
   if (isMetricsPieMode) return true
+  // 排行榜(Top-N)模式：无维度，只需分组字段
+  const isRankingMode = config.dataMetrics.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)
+  if (isRankingMode) return !!config.dataMetrics[0]?.groupByField
   // 树形堆叠模式：X 轴来自树父节点，只需树关系（treeDimension）
-  const isTreeStackedMode = config.dataMetrics.some((m: any) => m.chartType === 'treeStackedBar')
+  const isTreeStackedMode = config.dataMetrics.some((m: any) => m.chartType === CHART_TYPE.TREE_STACKED_BAR)
   if (isTreeStackedMode) return !!config.treeDimension
   // 其他模式必须有 firstDimension
   return !!config.firstDimension
@@ -249,9 +268,40 @@ export function buildDefaultRequestParams(
 }
 
 /**
+ * 排行榜(Top-N)请求参数
+ * 往 metricColumn 传一个分组字段触发 GROUP BY；metricCondition 保持空以启用后端 limit 分支；
+ * statisticColumn 空=计数 count(1)，填字段=对该字段 sum；sort 控制正/倒序，limit 控制取前 N 名。
+ */
+export function buildRankingRequestParams(config: any, _visibility?: VisibilityConfig): RequestParamsResult {
+  const metric = config.dataMetrics?.[0] || {}
+  const groupByField: string = metric.groupByField || ''
+  const groupByLabel: string = metric.groupByLabel || groupByField
+  const groupByDictMap = metric.groupByDictMap || {}
+  // 统计字段：dataField 非空=对该金额/数值字段求和；空=计数
+  const sumField: string = metric.dataField || ''
+
+  return {
+    selectColumnCondition: {},
+    condition: {
+      conditionList: config.filterConditions?.conditionList || [],
+      andOr: (config.filterConditions?.andOr ?? '0') as '0' | '1'
+    },
+    // sortOrder：UI 1=倒序(从大到小)、0=正序(从小到大)；后端驱动语义 1=ASC、2=DESC
+    sort: (metric.sortOrder ?? 1) === 0 ? 1 : 2,
+    // 非空 column 触发 GROUP BY
+    metricColumn: [{ column: groupByField, label: groupByLabel, dictMap: groupByDictMap }],
+    // 必须为空才能启用后端「纯分组 + limit」分支
+    metricCondition: [],
+    statisticColumn: [{ value: sumField, label: metric.dataName || (sumField ? groupByLabel : '数量') }],
+    majorCondition: '0',
+    limit: metric.topN ?? null
+  }
+}
+
+/**
  * 统一请求参数构建入口
  *
- * 自动判断 metricsPie / treeStacked / 默认三分支。
+ * 自动判断 rankingBar / metricsPie / treeStacked / 默认四分支。
  * @param config    指标配置（DimensionIndicatorsFilter 或已解析的 indicatorConfig）
  * @param visibility 可见性过滤（ChartCard 烤进请求；ChartDisplayArea 不传，取数后过滤）
  */
@@ -259,17 +309,63 @@ export async function buildRequestParams(
   config: any,
   visibility?: VisibilityConfig
 ): Promise<RequestParamsResult> {
+  // 排行榜(Top-N)
+  const isRanking = config.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)
+  if (isRanking) return buildRankingRequestParams(config, visibility)
+
   // 指标饼图
-  const isMetricsPie = config.dataMetrics?.some((m: any) => m.chartType === 'metricsPie')
+  const isMetricsPie = config.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.METRICS_PIE)
   if (isMetricsPie) return buildMetricsPieRequestParams(config, visibility)
 
   // 树形堆叠
   const isTreeStacked = !!config.treeDimension &&
-    config.dataMetrics?.some((m: any) => m.chartType === 'treeStackedBar')
+    config.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.TREE_STACKED_BAR)
   if (isTreeStacked && config.treeDimension) return buildTreeStackedRequestParams(config, visibility)
 
   // 默认（有维度）
   return buildDefaultRequestParams(config, visibility)
+}
+
+// ===== 排行榜(Top-N)响应归一化 =====
+
+/**
+ * 将后端「纯分组」扁平响应归一化为标准嵌套结构，复用现有 BarChart 渲染管道。
+ *
+ * 后端返回：`[{ metricColumn, metric: 分组原值/字典码/'NULL', metricLabel: 字典名/'未知'/'null', statistic }]`
+ * 归一化为：`[{ metricColumn, metric: 分组原值(供穿透), metricLabel: 显示名(X轴), statistic,
+ *              children: [{ metricColumn, metric: 指标名, metricLabel: 指标名, statistic }] }]`
+ *
+ * - `metric` 保留原始分组值（字典码 / 'NULL'），供点击穿透构建等值条件；
+ * - `metricLabel` 为显示名：字典字段用后端反查的字典名，NULL 显示「未填写」，其余用原值；
+ * - children 单项的 `metric` = 指标显示名（与 dataMetrics[0].dataName 一致），驱动 BarChart 单系列。
+ */
+export function normalizeRankingResponse(config: any, payload: any[]): any[] {
+  if (!Array.isArray(payload)) return []
+  const metric = config?.dataMetrics?.[0] || {}
+  const groupByField: string = metric.groupByField || ''
+  const statName: string = metric.dataName || (metric.dataField ? metric.dataName : '数量')
+  return payload.map((item: any) => {
+    const raw = item.metric
+    const isNull = raw === 'NULL' || raw === '__NULL__' || raw === null || raw === undefined
+    let displayName: string
+    if (isNull) {
+      // NULL 分组：后端 metricLabel 为「未知」，前端统一显示「未填写」
+      displayName = '未填写'
+    } else if (item.metricLabel && item.metricLabel !== 'null' && item.metricLabel !== '未知') {
+      // 字典字段：后端已反查为字典显示名（非字典字段 metricLabel 为字面量 'null'，走 else 分支）
+      displayName = item.metricLabel
+    } else {
+      displayName = String(raw)
+    }
+    const statistic = item.statistic
+    return {
+      metricColumn: groupByField,
+      metric: isNull ? 'NULL' : String(raw),
+      metricLabel: displayName,
+      statistic,
+      children: [{ metricColumn: groupByField, metric: statName, metricLabel: statName, statistic }]
+    }
+  })
 }
 
 // ===== API 调用 =====
@@ -296,8 +392,17 @@ export async function fetchStatisticData(
     requestParams.metricColumn,
     requestParams.metricCondition,
     requestParams.statisticColumn,
-    requestParams.majorCondition
+    requestParams.majorCondition,
+    undefined,
+    undefined,
+    undefined,
+    requestParams.limit ?? null
   )
+  // 排行榜(Top-N)：将扁平响应归一化为标准嵌套结构，复用现有渲染/过滤/穿透管道
+  const isRanking = config?.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)
+  if (isRanking && response && Array.isArray(response.payload)) {
+    response.payload = normalizeRankingResponse(config, response.payload)
+  }
   return { requestParams, response }
 }
 
@@ -387,6 +492,21 @@ export function buildDrillConditionFromCache(
   if (!lastStatisticBody) return null
   const conditionLabel = secondDim ? `${firstDim}&&${secondDim}` : firstDim
   return buildDrillConditionFromStatistic(lastStatisticBody, { conditionLabel })
+}
+
+/**
+ * 排行榜(Top-N)穿透：基于被点分组的原始值构建「全局条件 AND groupByField = 值」。
+ * @param lastStatisticBody 最近一次请求体（含 metricColumn，供字典反查）
+ * @param groupByField      分组字段列属性名
+ * @param rawMetric         被点柱子的分组原值（字典码 / 'NULL'）
+ */
+export function buildDrillConditionFromRanking(
+  lastStatisticBody: any,
+  groupByField: string,
+  rawMetric: string
+): any {
+  if (!lastStatisticBody || !groupByField) return null
+  return buildDrillConditionFromStatistic(lastStatisticBody, { metricColumn: groupByField, metric: rawMetric })
 }
 
 // ===== 数据过滤 =====

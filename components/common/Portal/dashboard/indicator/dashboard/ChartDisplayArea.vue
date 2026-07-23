@@ -140,6 +140,7 @@ import {
   buildChartCategories,
   buildDimensionValueMap,
   buildDrillConditionFromCache,
+  buildDrillConditionFromRanking,
   buildSelectedBarInfo,
   extractDimensionData,
   fetchStatisticData,
@@ -320,11 +321,38 @@ const closeDetailModal = () => {
 // 图表点击事件处理
 const handleChartClick = (params: any) => {
   // 根据图表类型处理点击事件
-  if (autoChartType.value === 'bar' || autoChartType.value === 'line' || autoChartType.value === 'ptLine') {
+  if (autoChartType.value === 'rankingBar') {
+    onRankingBarClick(params)
+  } else if (autoChartType.value === 'bar' || autoChartType.value === 'line' || autoChartType.value === 'ptLine') {
     onBarClick(params)
   } else if (autoChartType.value === 'pie') {
     onPieClick(params)
   }
+}
+
+// 点击排行榜柱子事件处理
+const onRankingBarClick = (params: any) => {
+  const displayName = params.name // X 轴分组显示名
+  // 从归一化数据中反查该显示名对应的原始分组值（字典码 / 'NULL'）
+  const item = chartData.value.find((d: any) => d.metricLabel === displayName)
+  const rawMetric = item ? (item as any).metric : displayName
+  const groupByField = receivedData.value?.dataMetrics?.[0]?.groupByField || ''
+
+  const combinedConditions = buildDrillConditionFromRanking(lastRequestParams, groupByField, rawMetric)
+  if (!combinedConditions) {
+    console.warn('无法构建排行榜穿透条件')
+    return
+  }
+
+  const groupName = receivedData.value?.dataMetrics?.[0]?.groupByLabel || '分组'
+  const statType = params.seriesName
+
+  selectedBarInfo.value = buildSelectedBarInfo(
+    displayName, null, groupName, null,
+    statType, [displayName], combinedConditions, false
+  )
+
+  detailModalVisible.value = true
 }
 
 // 点击柱状图/折线图事件处理

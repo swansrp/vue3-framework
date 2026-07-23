@@ -222,6 +222,7 @@ import { message, Modal } from 'ant-design-vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { updateStatisticOrder, updateStatisticPid } from './api'
+import { collectLeafIds, findNodeInTree, isLeafNode, sortNodesByOrder } from './treeUtils'
 import type { IndicatorNode } from './types'
 
 // 权限接口定义
@@ -544,8 +545,8 @@ const deleteIndicator = (indicator: IndicatorNode) => {
   })
 }
 
-// 处理通用指标树的拖拽放下事件
-const onCommonTreeDrop = async (info: any) => {
+// 拖拽放下事件处理器工厂（通用/个人共用）
+const makeTreeDropHandler = (getSource: () => IndicatorNode[]) => async (info: any) => {
   try {
     const dropKey = info.node.key
     const dragKey = info.dragNode.key
@@ -553,9 +554,10 @@ const onCommonTreeDrop = async (info: any) => {
     const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1])
     const dropToGap = info.dropToGap
 
+    const source = getSource()
     // 获取拖拽节点和目标节点
-    const dragNode = findNodeInTree(commonIndicators.value, dragKey)
-    const dropNode = findNodeInTree(commonIndicators.value, dropKey)
+    const dragNode = findNodeInTree(source, dragKey)
+    const dropNode = findNodeInTree(source, dropKey)
 
     if (!dragNode) {
       console.error('找不到拖拽节点:', dragKey)
@@ -581,54 +583,7 @@ const onCommonTreeDrop = async (info: any) => {
     }
 
     // 更新顺序（无论是否改变了父节点都需要更新顺序）
-    await updateCommonSameLevelOrder(dragKey, dropKey, dropPosition, newPid)
-
-    // 重新加载数据以更新界面
-    emit('reload-data')
-  } catch (error) {
-    console.error('通用指标拖拽更新失败:', error)
-    message.error('通用指标拖拽更新失败')
-  }
-}
-
-// 处理个人指标树的拖拽放下事件
-const onPersonalTreeDrop = async (info: any) => {
-  try {
-    const dropKey = info.node.key
-    const dragKey = info.dragNode.key
-    const dropPos = info.node.pos.split('-').map(Number)
-    const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1])
-    const dropToGap = info.dropToGap
-
-    // 获取拖拽节点和目标节点
-    const dragNode = findNodeInTree(personalIndicators.value, dragKey)
-    const dropNode = findNodeInTree(personalIndicators.value, dropKey)
-
-    if (!dragNode) {
-      console.error('找不到拖拽节点:', dragKey)
-      return
-    }
-
-    let newPid: string | null = null
-
-    if (!dropToGap) {
-      // 拖拽到节点内部，设置为目标节点的子节点
-      newPid = dropNode ? dropNode.id : null
-    } else {
-      // 拖拽到节点间隙，设置为目标节点的同级
-      newPid = dropNode ? dropNode.pid : null
-    }
-
-    // 只有在父节点真的改变时才更新pid
-    if (dragNode.pid !== newPid) {
-      await updateStatisticPid({
-        id: dragNode.id,
-        pid: newPid
-      })
-    }
-
-    // 更新顺序（无论是否改变了父节点都需要更新顺序）
-    await updateSameLevelOrder(dragKey, dropKey, dropPosition, newPid)
+    await updateSiblingOrder(source, dragKey, dropKey, dropPosition, newPid)
 
     // 重新加载数据以更新界面
     emit('reload-data')
@@ -638,8 +593,12 @@ const onPersonalTreeDrop = async (info: any) => {
   }
 }
 
-// 更新同级节点的顺序
-const updateSameLevelOrder = async (
+const onCommonTreeDrop = makeTreeDropHandler(() => commonIndicators.value)
+const onPersonalTreeDrop = makeTreeDropHandler(() => personalIndicators.value)
+
+// 更新同级节点的顺序（通用/个人共用，传入对应的树数据源）
+const updateSiblingOrder = async (
+  source: IndicatorNode[],
   dragKey: string,
   dropKey: string,
   dropPosition: number,
@@ -651,13 +610,13 @@ const updateSameLevelOrder = async (
 
     if (parentId) {
       // 如果有父节点，获取父节点的子节点
-      const parentNode = findNodeInTree(personalIndicators.value, parentId)
+      const parentNode = findNodeInTree(source, parentId)
       if (parentNode && parentNode.children) {
         siblingNodes = [...parentNode.children]
       }
     } else {
       // 如果没有父节点，获取所有根节点（pid为null、undefined或空字符串的节点）
-      siblingNodes = [...personalIndicators.value.filter(node => !node.pid || node.pid === '' || node.pid === null)]
+      siblingNodes = [...source.filter(node => !node.pid || node.pid === '' || node.pid === null)]
     }
 
     // 找到拖拽节点和目标节点的原始位置
@@ -725,99 +684,7 @@ const updateSameLevelOrder = async (
     // 调用API更新顺序
     await updateStatisticOrder(orderData)
   } catch (error) {
-    console.error('更新个人指标同级节点顺序失败:', error)
-    throw error
-  }
-}
-
-// 更新通用指标同级节点的顺序
-const updateCommonSameLevelOrder = async (
-  dragKey: string,
-  dropKey: string,
-  dropPosition: number,
-  parentId: string | null
-) => {
-  try {
-    // 获取新父节点下的所有子节点
-    let siblingNodes: IndicatorNode[] = []
-
-    if (parentId) {
-      // 如果有父节点，获取父节点的子节点
-      const parentNode = findNodeInTree(commonIndicators.value, parentId)
-      if (parentNode && parentNode.children) {
-        siblingNodes = [...parentNode.children]
-      }
-    } else {
-      // 如果没有父节点，获取所有根节点（pid为null、undefined或空字符串的节点）
-      siblingNodes = [...commonIndicators.value.filter(node => !node.pid || node.pid === '' || node.pid === null)]
-    }
-
-    // 找到拖拽节点和目标节点的原始位置
-    const dragIndex = siblingNodes.findIndex((node) => node.key === dragKey)
-    const originalDropIndex = siblingNodes.findIndex((node) => node.key === dropKey)
-
-    let draggedNode = null
-    if (dragIndex !== -1) {
-      [draggedNode] = siblingNodes.splice(dragIndex, 1)
-    }
-
-    // 重新找到目标节点的位置（因为数组可能已经改变）
-    let dropIndex = siblingNodes.findIndex((node) => node.key === dropKey)
-
-    // 如果原来的拖拽节点在目标节点前面，那么移除后目标节点的索引不变
-    // 如果原来的拖拽节点在目标节点后面，那么目标节点的索引也不变
-    // 但为了保险起见，我们重新查找
-    if (dropIndex === -1) {
-      // 如果没找到，说明可能有问题，使用原始位置并调整
-      dropIndex = originalDropIndex
-      if (dragIndex < originalDropIndex) {
-        dropIndex = originalDropIndex - 1
-      }
-    }
-
-    // 计算插入位置
-    let insertIndex = 0 // 默认插入到开头
-
-    if (dropIndex !== -1) {
-      if (dropPosition === -1) {
-        // 放在目标节点前面
-        insertIndex = dropIndex
-      } else if (dropPosition === 1) {
-        // 放在目标节点后面
-        insertIndex = dropIndex + 1
-      } else {
-        // dropPosition为0，表示放在目标节点内部，但在同级排序中应该不会出现这种情况
-        insertIndex = dropIndex + 1
-      }
-    } else {
-      // 如果没找到目标节点，说明是拖拽到父节点内部
-      if (dropPosition === 0) {
-        // dropPosition为0表示要插入到父节点的第一个位置
-        insertIndex = 0
-      } else {
-        // 其他情况插入到末尾
-        insertIndex = siblingNodes.length
-      }
-    }
-
-    // 确保插入位置在合理范围内
-    insertIndex = Math.max(0, Math.min(insertIndex, siblingNodes.length))
-
-    // 插入拖拽节点到新位置
-    if (draggedNode) {
-      siblingNodes.splice(insertIndex, 0, draggedNode)
-    }
-
-    // 构造更新顺序的数据
-    const orderData = siblingNodes.map((node, index) => ({
-      id: node.id,
-      showOrder: index + 1
-    }))
-
-    // 调用API更新顺序
-    await updateStatisticOrder(orderData)
-  } catch (error) {
-    console.error('更新通用指标同级节点顺序失败:', error)
+    console.error('更新同级节点顺序失败:', error)
     throw error
   }
 }
@@ -851,24 +718,19 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // 确保在组件卸载时移除所有事件监听器
-  document.removeEventListener('mousemove', null as any)
-  document.removeEventListener('mouseup', null as any)
-  window.removeEventListener('blur', null as any)
+  // resize 相关监听在 startResize/handleMouseUp 内部成对注册与移除，此处无需再处理
 })
 
-// 监听个人指标选中状态变化，触发dashboard事件
-watch(
-  () => selectedPersonalIndicators.value,
-  (newVal, oldVal) => {
+// 选中状态变化处理器工厂（通用/个人共用）：对新增/取消的叶子节点触发 dashboard 增删事件
+const makeCheckWatchHandler = (getSource: () => IndicatorNode[]) =>
+  (newVal: string[], oldVal: string[]) => {
     // 如果是来自props的更新，不触发事件
     if (isUpdatingFromProps.value) {
       return
     }
 
-    // 检测新增的选中项（checked）
+    // 检测新增的选中项（checked）和取消选中的项（unchecked）
     const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
-    // 检测取消选中的项（unchecked）
     const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
 
     // 如果没有变化，不触发事件
@@ -876,68 +738,17 @@ watch(
       return
     }
 
-    // 过滤出叶子节点的变更
-    // 叶子节点判断：优先使用isLeaf属性，其次检查是否有实际指标数据，最后检查children
-    const leafNodesChecked = newlyChecked.filter((key: string) => {
-      const node = findNodeInTree(personalIndicators.value, key)
-      if (!node) return false
+    const source = getSource()
+    // 将 key 列表转换为叶子节点的 id 列表
+    const toLeafIds = (keys: string[]): string[] =>
+      keys
+        .map((key: string) => findNodeInTree(source, key))
+        .filter((node): node is IndicatorNode => !!node && isLeafNode(node))
+        .map((node) => node.id)
+        .filter(Boolean) as string[]
 
-      // 优先使用isLeaf属性
-      if (node.isLeaf !== undefined) {
-        return node.isLeaf
-      }
-
-      // 检查是否有实际的指标数据
-      const hasIndicatorData = (node.items && node.items.length > 0) ||
-        (node.indicator && typeof node.indicator === 'object' && Object.keys(node.indicator).length > 0)
-
-      // 如果有指标数据，则认为是叶子节点
-      if (hasIndicatorData) {
-        return true
-      }
-
-      // 最后检查children：没有children或children为空的，认为是叶子节点
-      // 注意：这里不再检查hasIndicatorData，因为有些叶子节点可能暂时没有配置指标数据
-      return (!node.children || node.children.length === 0)
-    })
-
-    const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
-      const node = findNodeInTree(personalIndicators.value, key)
-      if (!node) return false
-
-      // 优先使用isLeaf属性
-      if (node.isLeaf !== undefined) {
-        return node.isLeaf
-      }
-
-      // 检查是否有实际的指标数据
-      const hasIndicatorData = (node.items && node.items.length > 0) ||
-        (node.indicator && typeof node.indicator === 'object' && Object.keys(node.indicator).length > 0)
-
-      // 如果有指标数据，则认为是叶子节点
-      if (hasIndicatorData) {
-        return true
-      }
-
-      // 最后检查children：没有children或children为空的，认为是叶子节点
-      // 注意：这里不再检查hasIndicatorData，因为有些叶子节点可能暂时没有配置指标数据
-      return (!node.children || node.children.length === 0)
-    })
-
-    // 将key转换为id用于API调用
-    const leafNodeIdsChecked = leafNodesChecked
-      .map((key: string) => {
-        const node = findNodeInTree(personalIndicators.value, key)
-        return node ? node.id : null
-      })
-      .filter(Boolean) as string[]
-
-    const leafNodeIdsUnchecked = leafNodesUnchecked
-      .map((key: string) => {
-        const node = findNodeInTree(personalIndicators.value, key)
-        return node ? node.id : null
-      })
-      .filter(Boolean) as string[]
+    const leafNodeIdsChecked = toLeafIds(newlyChecked)
+    const leafNodeIdsUnchecked = toLeafIds(newlyUnchecked)
 
     // 只对叶子节点触发新增dashboard事件
     if (leafNodeIdsChecked.length > 0) {
@@ -948,102 +759,19 @@ watch(
     if (leafNodeIdsUnchecked.length > 0) {
       emit('delete-dashboard', leafNodeIdsUnchecked)
     }
-  },
+  }
+
+// 监听个人指标选中状态变化，触发dashboard事件
+watch(
+  () => selectedPersonalIndicators.value,
+  makeCheckWatchHandler(() => personalIndicators.value),
   { deep: true }
 )
 
 // 监听通用指标选中状态变化，触发dashboard事件
 watch(
   () => selectedCommonIndicators.value,
-  (newVal, oldVal) => {
-    // 如果是来自props的更新，不触发事件
-    if (isUpdatingFromProps.value) {
-      return
-    }
-
-    // 检测新增的选中项（checked）
-    const newlyChecked = newVal.filter((key: string) => !oldVal.includes(key))
-    // 检测取消选中的项（unchecked）
-    const newlyUnchecked = oldVal.filter((key: string) => !newVal.includes(key))
-
-    // 如果没有变化，不触发事件
-    if (newlyChecked.length === 0 && newlyUnchecked.length === 0) {
-      return
-    }
-
-    // 过滤出叶子节点的变更
-    // 叶子节点判断：优先使用isLeaf属性，其次检查是否有实际指标数据，最后检查children
-    const leafNodesChecked = newlyChecked.filter((key: string) => {
-      const node = findNodeInTree(commonIndicators.value, key)
-      if (!node) return false
-
-      // 优先使用isLeaf属性
-      if (node.isLeaf !== undefined) {
-        return node.isLeaf
-      }
-
-      // 检查是否有实际的指标数据
-      const hasIndicatorData = (node.items && node.items.length > 0) ||
-        (node.indicator && typeof node.indicator === 'object' && Object.keys(node.indicator).length > 0)
-
-      // 如果有指标数据，则认为是叶子节点
-      if (hasIndicatorData) {
-        return true
-      }
-
-      // 最后检查children：没有children或children为空的，认为是叶子节点
-      // 注意：这里不再检查hasIndicatorData，因为有些叶子节点可能暂时没有配置指标数据
-      return (!node.children || node.children.length === 0)
-    })
-
-    const leafNodesUnchecked = newlyUnchecked.filter((key: string) => {
-      const node = findNodeInTree(commonIndicators.value, key)
-      if (!node) return false
-
-      // 优先使用isLeaf属性
-      if (node.isLeaf !== undefined) {
-        return node.isLeaf
-      }
-
-      // 检查是否有实际的指标数据
-      const hasIndicatorData = (node.items && node.items.length > 0) ||
-        (node.indicator && typeof node.indicator === 'object' && Object.keys(node.indicator).length > 0)
-
-      // 如果有指标数据，则认为是叶子节点
-      if (hasIndicatorData) {
-        return true
-      }
-
-      // 最后检查children：没有children或children为空的，认为是叶子节点
-      // 注意：这里不再检查hasIndicatorData，因为有些叶子节点可能暂时没有配置指标数据
-      return (!node.children || node.children.length === 0)
-    })
-
-    // 将key转换为id用于API调用
-    const leafNodeIdsChecked = leafNodesChecked
-      .map((key: string) => {
-        const node = findNodeInTree(commonIndicators.value, key)
-        return node ? node.id : null
-      })
-      .filter(Boolean) as string[]
-
-    const leafNodeIdsUnchecked = leafNodesUnchecked
-      .map((key: string) => {
-        const node = findNodeInTree(commonIndicators.value, key)
-        return node ? node.id : null
-      })
-      .filter(Boolean) as string[]
-
-    // 只对叶子节点触发新增dashboard事件
-    if (leafNodeIdsChecked.length > 0) {
-      emit('add-dashboard', leafNodeIdsChecked)
-    }
-
-    // 只对叶子节点触发删除dashboard事件
-    if (leafNodeIdsUnchecked.length > 0) {
-      emit('delete-dashboard', leafNodeIdsUnchecked)
-    }
-  },
+  makeCheckWatchHandler(() => commonIndicators.value),
   { deep: true }
 )
 
@@ -1106,50 +834,8 @@ watch(
   { deep: true }
 )
 
-// 按order字段排序节点数组
-// 修复排列顺序问题：确保每次刷新（手动刷新、删除、新增）都按顺序排列
-const sortNodesByOrder = (nodes: IndicatorNode[]): IndicatorNode[] => {
-  return [...nodes].sort((a, b) => {
-    // 如果有order字段，按order排序，否则按title排序作为后备方案
-    if (a.order !== undefined && b.order !== undefined) {
-      return a.order - b.order
-    }
-    if (a.order !== undefined) return -1
-    if (b.order !== undefined) return 1
-    return (a.title || '').localeCompare(b.title || '')
-  }).map(node => ({
-    ...node,
-    // 递归排序子节点
-    children: node.children ? sortNodesByOrder(node.children) : undefined
-  }))
-}
-
-// 在树中查找节点
-const findNodeInTree = (tree: IndicatorNode[], key: string): IndicatorNode | null => {
-  for (const node of tree) {
-    if (node.key === key) return node
-    if (node.children) {
-      const found = findNodeInTree(node.children, key)
-      if (found) return found
-    }
-  }
-  return null
-}
-
 // 获取筛选后的所有叶子节点指标ID（供父组件"选中所有"使用）
 const getFilteredLeafIndicatorIds = (): string[] => {
-  const collectLeafIds = (nodes: IndicatorNode[]): string[] => {
-    const ids: string[] = []
-    for (const node of nodes) {
-      if (!node.children || node.children.length === 0) {
-        if (node.id) ids.push(node.id)
-      } else {
-        ids.push(...collectLeafIds(node.children))
-      }
-    }
-    return ids
-  }
-
   return [
     ...collectLeafIds(filteredCommonIndicators.value),
     ...collectLeafIds(filteredPersonalIndicators.value)

@@ -168,8 +168,8 @@ export default defineComponent({
     const generateBarChartOption = (processedData: any): echarts.EChartsOption => {
       const { firstDimensionGroups, secondDimensionGroups, statisticTypes, flattenedData } = processedData
 
-      // 使用props.categories或默认的firstDimensionGroups
-      const categories = props.categories || firstDimensionGroups
+      // 使用props.categories或默认的firstDimensionGroups（空数组时回退，避免渲染空图）
+      const categories = props.categories?.length ? props.categories : firstDimensionGroups
 
       const series: any[] = []
 
@@ -376,6 +376,72 @@ export default defineComponent({
         })
       }
 
+      // ===== 堆叠柱状图顶部总计标签 =====
+      // 按 stack 分组，为每个堆叠组追加一个透明柱系列，在顶部显示该柱的合计值
+      const stackGroupsMap = new Map<string, any[]>()
+      series.forEach(s => {
+        if (s.stack) {
+          if (!stackGroupsMap.has(s.stack)) stackGroupsMap.set(s.stack, [])
+          stackGroupsMap.get(s.stack)!.push(s)
+        }
+      })
+      stackGroupsMap.forEach((groupSeries, stackKey) => {
+        if (groupSeries.length < 2) return // 单系列不堆叠，无需总计
+        // 计算每个类目的合计
+        const totals = categories.map((_: string, catIdx: number) => {
+          let sum = 0
+          let hasValue = false
+          groupSeries.forEach(s => {
+            const val = s.data[catIdx]
+            const num = typeof val === 'object' ? val?.value : val
+            if (num != null && num !== 0) {
+              sum += Number(num)
+              hasValue = true
+            }
+          })
+          return hasValue ? sum : null
+        })
+        // 从该堆叠组的第一个系列推断指标配置（用于格式化总计数字）
+        const firstName = groupSeries[0].name || ''
+        const metricName = firstName.includes('&&') ? firstName.split('&&')[1] : firstName
+        const stackMetric = props.dataMetrics.find(m => m.dataName === metricName)
+        const yAxisIdx = groupSeries[0].yAxisIndex || 0
+
+        series.push({
+          name: `__stack_total__${stackKey}`,
+          type: 'bar',
+          stack: stackKey,
+          yAxisIndex: yAxisIdx,
+          data: totals.map((v: number | null) => v == null ? null : { value: 0 }), // 透明占位，不增加高度
+          itemStyle: { color: 'transparent' },
+          emphasis: { disabled: true },
+          tooltip: { show: false },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: (params: any) => {
+              const total = totals[params.dataIndex]
+              if (total == null) return ''
+              if (stackMetric?.unitConfig) {
+                const { fix } = parseUnitConfig(stackMetric.unitConfig)
+                return Number(total).toLocaleString(undefined, {
+                  minimumFractionDigits: fix,
+                  maximumFractionDigits: fix
+                })
+              }
+              return Number(total).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+              })
+            },
+            fontSize: 11,
+            fontWeight: 'bold',
+            color: '#333'
+          },
+          silent: true // 不响应鼠标事件
+        })
+      })
+
       // 动态生成y轴配置
       const generateYAxes = () => {
         const yAxes: any[] = []
@@ -512,6 +578,11 @@ export default defineComponent({
       // 堆叠图表使用 item 触发（才能识别悬停的具体段，像饼图一样高亮当前选中项）
       const isStacked = hasStackedSeries(series)
 
+      // 图例数据：排除堆叠总计辅助系列
+      const legendData = series
+        .map(s => s.name)
+        .filter(name => !name.startsWith('__stack_total__'))
+
       return {
         title: {
           text: props.title,
@@ -531,6 +602,7 @@ export default defineComponent({
           itemGap: 15,
           itemHeight: 14,
           show: isNotEmpty(secondDimensionGroups),
+          data: legendData,
           formatter: (name: string) => {
             // 将 "维度&&统计类型" 格式化为 "维度(统计类型)"
             // 如果统计类型是"分布统计"，则只显示维度名称
@@ -717,6 +789,7 @@ export default defineComponent({
               // 单维度堆叠：列出各统计类型，高亮悬停的统计类型
               const hoveredStatType = String(params.seriesName)
               const items = series
+                .filter((s: any) => !s.name?.startsWith('__stack_total__'))
                 .map((s: any) => {
                   const value = getSeriesValue(s)
                   if (value == null || !s.name) return null
@@ -756,7 +829,10 @@ export default defineComponent({
           axisLabel: {
             fontSize: 12,
             interval: 0,
-            rotate: categories.length > 6 ? 45 : 0
+            rotate: categories.length > 6 ? 45 : 0,
+            // 分组名过长时截断显示（完整名称仍在坐标轴 tooltip 中展示）
+            formatter: (value: string) =>
+              typeof value === 'string' && value.length > 10 ? value.slice(0, 10) + '…' : value
           }
         },
         yAxis: generateYAxes(),
@@ -923,7 +999,7 @@ export default defineComponent({
 
     // 监听数据变化
     watch(
-      () => [props.data, props.dataMetrics, props.title],
+      () => [props.data, props.dataMetrics, props.title, props.dimensionValueMap],
       () => {
         if (chartInstance) {
           updateChart()

@@ -592,6 +592,74 @@ export default defineComponent({
         })
       }
 
+      // ===== 堆叠柱状图顶部总计标签 =====
+      const stackGroupsMap = new Map<string, any[]>()
+      series.forEach(s => {
+        if (s.stack) {
+          if (!stackGroupsMap.has(s.stack)) stackGroupsMap.set(s.stack, [])
+          stackGroupsMap.get(s.stack)!.push(s)
+        }
+      })
+      stackGroupsMap.forEach((groupSeries, stackKey) => {
+        if (groupSeries.length < 2) return
+        const totals = categories.map((_: string, catIdx: number) => {
+          let sum = 0
+          let hasValue = false
+          groupSeries.forEach(s => {
+            const val = s.data[catIdx]
+            const num = typeof val === 'object' ? val?.value : val
+            if (num != null && num !== 0) {
+              sum += Number(num)
+              hasValue = true
+            }
+          })
+          return hasValue ? sum : null
+        })
+        const firstName = groupSeries[0].name || ''
+        const metricName = firstName.includes('&&') ? firstName.split('&&')[1] : firstName
+        const stackMetric = props.dataMetrics.find(m => m.dataName === metricName)
+        const yAxisIdx = groupSeries[0].yAxisIndex || 0
+
+        series.push({
+          name: `__stack_total__${stackKey}`,
+          type: 'bar',
+          stack: stackKey,
+          yAxisIndex: yAxisIdx,
+          data: totals.map(v => v == null ? null : { value: 0 }),
+          itemStyle: { color: 'transparent' },
+          emphasis: { disabled: true },
+          tooltip: { show: false },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: (params: any) => {
+              const total = totals[params.dataIndex]
+              if (total == null) return ''
+              if (stackMetric?.unitConfig) {
+                const { fix } = parseUnitConfig(stackMetric.unitConfig)
+                return Number(total).toLocaleString(undefined, {
+                  minimumFractionDigits: fix,
+                  maximumFractionDigits: fix
+                })
+              }
+              return Number(total).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+              })
+            },
+            fontSize: 11,
+            fontWeight: 'bold',
+            color: '#333'
+          },
+          silent: true
+        })
+      })
+
+      // 图例数据：排除堆叠总计辅助系列
+      const legendData = series
+        .map(s => s.name)
+        .filter(name => !name.startsWith('__stack_total__'))
+
       return {
         title: {
           text: props.title,
@@ -611,6 +679,7 @@ export default defineComponent({
           itemGap: 15,
           itemHeight: 14,
           itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {},
+          data: legendData,
           formatter: (name: string) => {
             // 将 "维度&&统计类型" 格式化为 "维度(统计类型)"
             // 如果统计类型是"分布统计"，则只显示维度名称
@@ -659,7 +728,12 @@ export default defineComponent({
           },
           extraCssText: 'max-height: 600px; max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
-            const formatSharePercent = (value: number) => `${value}${DEFAULT_PERCENT_UNIT}`
+            // 过滤掉堆叠总计辅助系列
+            if (Array.isArray(params)) {
+              params = params.filter((p: any) => !p.seriesName?.startsWith('__stack_total__'))
+              if (params.length === 0) return ''
+            }
+            const formatSharePercent = (value: number | string) => `${value}${DEFAULT_PERCENT_UNIT}`
 
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
 
@@ -1024,7 +1098,7 @@ export default defineComponent({
 
     // 监听数据变化
     watch(
-      () => [props.data, props.dataMetrics, props.title],
+      () => [props.data, props.dataMetrics, props.title, props.dimensionValueMap],
       () => {
         if (chartInstance) {
           updateChart()

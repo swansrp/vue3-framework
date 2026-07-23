@@ -23,9 +23,12 @@
       <div class="dimension-item">
         <div class="dimension-header">
           <span>一级维度（横坐标）</span>
-          <span class="required">*</span>
+          <span
+            v-if="!isTreeStacked"
+            class="required"
+          >*</span>
           <a-button
-            v-if="firstDimension"
+            v-if="!isTreeStacked && firstDimension"
             class="clear-btn"
             size="small"
             type="text"
@@ -34,7 +37,25 @@
             清空
           </a-button>
         </div>
+        <!-- 树形堆叠模式：一级维度由树父节点自动派生，无需手动配置 -->
         <div
+          v-if="isTreeStacked"
+          class="drop-zone compact"
+          style="background: #f6ffed; border-color: #b7eb8f; cursor: default"
+        >
+          <div class="dimension-content">
+            <div class="dimension-info-line">
+              <span
+                class="dimension-title"
+                style="color: #52c41a"
+              >由树关系自动派生</span>
+              <span class="info-text">父节点作为横坐标，无需手动拖拽</span>
+            </div>
+          </div>
+        </div>
+        <!-- 常规模式：一级维度拖拽区 -->
+        <div
+          v-else
           :class="{
             'has-content': firstDimension,
             'drag-over': dragOverFirst,

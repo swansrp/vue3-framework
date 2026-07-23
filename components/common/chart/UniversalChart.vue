@@ -122,7 +122,7 @@ export default defineComponent({
       default: () => []
     },
     chartType: {
-      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar',
+      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar',
       default: 'bar'
     },
     // 维度名称到编码的映射，用于颜色等与配置对齐
@@ -150,6 +150,8 @@ export default defineComponent({
       if (type === 'ptLine') return 'line'
       // 树形堆叠柱状图本质是柱状图（堆叠由 stackGroup=selfStack 驱动）
       if (type === 'treeStackedBar') return 'bar'
+      // 排行榜(Top-N)本质是单系列柱状图（已由 normalizeRankingResponse 归一化为嵌套结构）
+      if (type === 'rankingBar') return 'bar'
       return type
     }
 

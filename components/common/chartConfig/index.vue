@@ -35,13 +35,40 @@
             <CheckOutlined />
             选中所有
           </a-button>
-          <a-button
-            :type="batchMode ? 'primary' : 'default'"
-            @click="toggleSelectionMode"
-          >
-            <CopyOutlined />
-            批量操作
-          </a-button>
+          <a-dropdown>
+            <a-button>
+              <CopyOutlined />
+              {{ batchSelectedIndicators.length > 0 ? `批量操作(${batchSelectedIndicators.length})` : '批量操作' }}
+              <DownOutlined />
+            </a-button>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item
+                  key="copy"
+                  :disabled="batchSelectedIndicators.length === 0 || batchCopying"
+                  @click="handleBatchCopy"
+                >
+                  <CopyOutlined /> 复制选中
+                </a-menu-item>
+                <a-menu-item
+                  key="edit"
+                  :disabled="batchSelectedIndicators.length === 0"
+                  @click="batchEditModalVisible = true"
+                >
+                  <EditOutlined /> 批量编辑
+                </a-menu-item>
+                <a-menu-divider />
+                <a-menu-item
+                  key="delete"
+                  danger
+                  :disabled="batchSelectedIndicators.length === 0 || batchDeleting"
+                  @click="handleBatchDelete"
+                >
+                  <DeleteOutlined /> 批量删除
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
           <a-button
             danger
             :loading="headerClosingAll"
@@ -128,18 +155,6 @@
       :field-names="{ id: 'id', name: 'title', children: 'children' }"
     />
 
-    <!-- 批量操作浮动栏 -->
-    <BatchActionBar
-      :visible="batchMode"
-      :selected-count="batchSelectedIndicators.length"
-      :copying="batchCopying"
-      :deleting="batchDeleting"
-      @batch-copy="handleBatchCopy"
-      @batch-edit="batchEditModalVisible = true"
-      @batch-delete="handleBatchDelete"
-      @exit-batch="batchMode = false"
-    />
-
     <!-- 批量编辑弹窗 -->
     <BatchEditModal
       v-model:open="batchEditModalVisible"
@@ -151,7 +166,7 @@
 </template>
 
 <script lang="ts" setup>
-import { AppstoreOutlined, CheckOutlined, CloseOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, CheckOutlined, CloseOutlined, CopyOutlined, DeleteOutlined, DownOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, readonly, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -172,10 +187,11 @@ import {
   updatePersonalDashboard,
   updatePersonalStatistic
 } from './api'
+import { debounce } from './debounce'
+import { collectLeaves, findNodeById, findNodeByIdOrKey as findNodeInIndicatorTree, getParentNodeKeys } from './treeUtils'
 import type { DashboardItem, IndicatorNode } from './types'
 
 import { getPortalConfig } from '@/framework/apis/portal/config'
-import BatchActionBar from '@/framework/components/common/chartConfig/BatchActionBar.vue'
 import BatchEditModal from '@/framework/components/common/chartConfig/BatchEditModal.vue'
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
@@ -254,7 +270,6 @@ const isEditMode = ref(false)
 const { permVisible, permResourceType, permResources, openPerm } = useResourcePerm()
 
 // 批量操作状态
-const batchMode = ref(false)
 const batchEditModalVisible = ref(false)
 const batchCopying = ref(false)
 const batchDeleting = ref(false)
@@ -262,32 +277,13 @@ const batchDeleting = ref(false)
 // 批量选中的指标（基于左侧树勾选状态）
 const batchSelectedIndicators = computed<IndicatorNode[]>(() => {
   // 合并通用指标和个人指标中勾选的叶子节点
-  const collectLeafNodes = (nodes: IndicatorNode[], selectedIds: string[]): IndicatorNode[] => {
-    const result: IndicatorNode[] = []
-    const walk = (arr: IndicatorNode[]) => {
-      for (const node of arr) {
-        if (selectedIds.includes(node.id)) {
-          // 只收集叶子节点（有indicator配置的）
-          if (!node.children || node.children.length === 0) {
-            result.push(node)
-          }
-        }
-        if (node.children) walk(node.children)
-      }
-    }
-    walk(nodes)
-    return result
-  }
+  const pickSelectedLeaves = (nodes: IndicatorNode[], selectedIds: string[]): IndicatorNode[] =>
+    collectLeaves(nodes).filter(node => selectedIds.includes(node.id))
 
-  const commonSelected = collectLeafNodes(commonIndicators.value, selectedCommonIndicators.value)
-  const personalSelected = collectLeafNodes(personalIndicators.value, selectedPersonalIndicators.value)
+  const commonSelected = pickSelectedLeaves(commonIndicators.value, selectedCommonIndicators.value)
+  const personalSelected = pickSelectedLeaves(personalIndicators.value, selectedPersonalIndicators.value)
   return [...commonSelected, ...personalSelected]
 })
-
-// 切换批量模式
-const toggleSelectionMode = () => {
-  batchMode.value = !batchMode.value
-}
 
 // 批量复制
 const handleBatchCopy = async () => {
@@ -454,57 +450,7 @@ const canResizeCommonIndicators = computed(() => true) // 通用指标始终可�
 const canResizePersonalIndicators = computed(() => props.personalIndicatorPermissions?.edit ?? true)
 // 注意：删除权限已在IndicatorTree中直接使用新的权限对象结构
 
-// 工具：根据 id 在树中查找节点
-const findNodeInIndicatorTree = (tree: IndicatorNode[], nodeId: string): IndicatorNode | null => {
-  for (const node of tree) {
-    if (node.id === nodeId || node.key === nodeId) {
-      return node
-    }
-    if (node.children) {
-      const found = findNodeInIndicatorTree(node.children, nodeId)
-      if (found) return found
-    }
-  }
-  return null
-}
-
-const findNodeById = (nodes: IndicatorNode[], id: string): IndicatorNode | null => {
-  for (const n of nodes) {
-    if (n.id === id) return n
-    if (n.children) {
-      const found = findNodeById(n.children, id)
-      if (found) return found
-    }
-  }
-  return null
-}
-
-// 工具：获取节点的所有父节点key
-const getParentNodeKeys = (nodes: IndicatorNode[], id: string): string[] => {
-  const result: string[] = []
-
-  const findParents = (
-    nodes: IndicatorNode[],
-    id: string,
-    parents: string[]
-  ): boolean => {
-    for (const node of nodes) {
-      if (node.id === id) {
-        result.push(...parents)
-        return true
-      }
-      if (node.children) {
-        if (findParents(node.children, id, [...parents, node.key])) {
-          return true
-        }
-      }
-    }
-    return false
-  }
-
-  findParents(nodes, id, [])
-  return result
-}
+// 工具函数（findNodeInIndicatorTree/findNodeById/getParentNodeKeys）已提取至 ./treeUtils
 
 // 加载仪表盘数据
 const loadDashboardData = async (skipSelectionUpdate = false) => {
@@ -1214,34 +1160,10 @@ const deleteDashboardFromTree = async (indicatorIds: string[]) => {
   await deleteDashboard(indicatorIds)
 }
 
-// 防抖函数工具（提前定义，供后续使用）
-const debounce = (func: Function, delay: number) => {
-  let timeoutId: NodeJS.Timeout
-  const debounced = (...args: any[]) => {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => func.apply(null, args), delay)
-  }
-  debounced.cancel = () => {
-    clearTimeout(timeoutId)
-  }
-  return debounced
-}
-
 // 从指标树中获取指标的默认尺寸
 const getIndicatorDefaultSize = (indicatorId: string): { xGrid: number; yGrid: number } => {
   // 先在通用指标中查找
-  const findInTree = (nodes: IndicatorNode[]): IndicatorNode | null => {
-    for (const node of nodes) {
-      if (node.id === indicatorId) return node
-      if (node.children) {
-        const found = findInTree(node.children)
-        if (found) return found
-      }
-    }
-    return null
-  }
-
-  const commonNode = findInTree(commonIndicators.value)
+  const commonNode = findNodeById(commonIndicators.value, indicatorId)
   if (commonNode) {
     if (commonNode.defaultXGrid && commonNode.defaultYGrid) {
       return { xGrid: commonNode.defaultXGrid, yGrid: commonNode.defaultYGrid }
@@ -1249,7 +1171,7 @@ const getIndicatorDefaultSize = (indicatorId: string): { xGrid: number; yGrid: n
   }
 
   // 再在个人指标中查找
-  const personalNode = findInTree(personalIndicators.value)
+  const personalNode = findNodeById(personalIndicators.value, indicatorId)
   if (personalNode) {
     if (personalNode.defaultXGrid && personalNode.defaultYGrid) {
       return { xGrid: personalNode.defaultXGrid, yGrid: personalNode.defaultYGrid }
@@ -1264,18 +1186,7 @@ const getIndicatorDefaultSize = (indicatorId: string): { xGrid: number; yGrid: n
 const updateIndicatorDefaultSize = async (indicatorId: string, xGrid: number, yGrid: number) => {
   try {
     // 判断是通用指标还是个人指标
-    const findInTree = (nodes: IndicatorNode[]): IndicatorNode | null => {
-      for (const node of nodes) {
-        if (node.id === indicatorId) return node
-        if (node.children) {
-          const found = findInTree(node.children)
-          if (found) return found
-        }
-      }
-      return null
-    }
-
-    const isCommon = !!findInTree(commonIndicators.value)
+    const isCommon = !!findNodeById(commonIndicators.value, indicatorId)
 
     // 调用对应的更新API保存到服务器
     if (isCommon) {
@@ -1313,6 +1224,8 @@ const addDashboard = async (indicatorIds: string[], isCommon = false) => {
       const newCard: DashboardItem = {
         id: `temp_${indicatorId}_${index}`, // 临时ID，避免重复
         title: '',
+        subTitle: '',
+        description: '',
         displayOrder: 0,
         commonStatistic: isCommon ? '1' : '0', // 根据指标类型设置commonStatistic
         xGrid: cardSize.xGrid,

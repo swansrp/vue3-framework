@@ -124,6 +124,7 @@ import {
 } from './api'
 import type { IndicatorNode } from './types'
 
+import { resolveChartMode } from '@/framework/components/common/chart/utils/chartDataHelper'
 import dashboard from '@/framework/components/common/Portal/dashboard/dashboard.vue'
 
 interface Props {
@@ -331,14 +332,7 @@ const loadEditData = async () => {
     }
 
     // 验证配置完整性（指标饼图/树形堆叠模式允许 firstDimension 为 null）
-    const isMetricsPieMode =
-      Array.isArray(savedConfig?.dataMetrics) &&
-      savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
-    const isTreeStackedMode =
-      (Array.isArray(savedConfig?.dataMetrics) &&
-        savedConfig.dataMetrics.some((m: any) => m.chartType === 'treeStackedBar')) ||
-      !!savedConfig?.treeDimension
-    if (!isMetricsPieMode && !isTreeStackedMode && !savedConfig.firstDimension) {
+    if (resolveChartMode(savedConfig) === 'standard' && !savedConfig.firstDimension) {
       message.warn('配置数据缺少 firstDimension，无法回显完整配置')
       return
     }
@@ -359,13 +353,8 @@ const loadEditData = async () => {
 // 恢复配置到dashboard组件
 const restoreConfigToDashboard = async (savedConfig: any) => {
   try {
-    // 指标饼图模式判断（无维度，允许 firstDimension 为 null）
-    const isMetricsPieMode =
-      Array.isArray(savedConfig?.dataMetrics) &&
-      savedConfig.dataMetrics.some((m: any) => m.chartType === 'metricsPie')
-
-    // 校验：指标饼图模式下允许 firstDimension 为 null，其他模式必须有 firstDimension
-    const isValidConfig = isMetricsPieMode
+    // 校验：指标饼图/树形堆叠模式下允许 firstDimension 为 null，其他模式必须有 firstDimension
+    const isValidConfig = resolveChartMode(savedConfig) !== 'standard'
       ? !!savedConfig
       : !!savedConfig?.firstDimension
     if (isValidConfig && dashboardRef.value) {

@@ -259,6 +259,7 @@
 <script lang="ts" setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch, defineAsyncComponent } from 'vue'
 
+import { debounce } from './debounce'
 import type { DashboardItem } from './types'
 
 import { getPortalConfig } from '@/framework/apis/portal/config'
@@ -267,6 +268,7 @@ import {
   buildChartCategories,
   buildDimensionValueMap,
   buildDrillConditionFromCache,
+  buildDrillConditionFromRanking,
   buildSelectedBarInfo,
   fetchStatisticData,
   filterZeroData,
@@ -277,6 +279,7 @@ import {
   sortChartData
 } from '@/framework/components/common/chart/utils/chartDataHelper'
 import { exportChartToExcel } from '@/framework/components/common/chart/utils/chartExport'
+import { fetchTreeDict, flattenTreeToParentGroups } from '@/framework/components/common/chart/utils/treeStacked'
 import Marquee from '@/framework/components/common/marquee/index.vue'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 
@@ -366,6 +369,9 @@ const showDropZone = ref(false)
 // 图表相关状态
 const chartLoading = ref(false)
 const chartData = ref<any[]>([])
+// 树形堆叠：实时从树结构构建的「父节点名->值」「叶子名->值」映射，用于颜色查找与维度编码
+const treeParentValueMap = ref<Record<string, string>>({})
+const treeLeafValueMap = ref<Record<string, string>>({})
 const portalConfigs = ref<any>(null)
 // 缓存最近一次 statistic 请求体，供穿透条件复用
 let lastStatisticBody: any = null
@@ -426,23 +432,20 @@ const chartCategories = computed(() => {
   return buildChartCategories(safeChartData.value, configuredOrder, undefined, sortApplied)
 })
 
-// 图表副标题
-computed(() => {
-  const config = indicatorConfig.value
-  if (!config) return ''
-
-  const firstDim = config.firstDimension?.groupName || '第一维度'
-  const secondDim = config.secondDimension?.groupName
-
-  return secondDim
-    ? `按${firstDim}、${secondDim}和统计指标分组`
-    : `按${firstDim}和统计指标分组`
-})
-
 // 维度值映射
 const dimensionValueMap = computed(() => {
   if (!indicatorConfig.value) return { first: {}, second: {} }
-  return buildDimensionValueMap(indicatorConfig.value)
+  const base = buildDimensionValueMap(indicatorConfig.value)
+  // 树形堆叠：存储配置中一/二级维度为 null，用实时树结构补充映射，保证颜色按叶子值正确查找
+  const isTreeStacked = !!indicatorConfig.value.treeDimension &&
+    indicatorConfig.value.dataMetrics?.some((m: any) => m.chartType === 'treeStackedBar')
+  if (isTreeStacked) {
+    return {
+      first: { ...base.first, ...treeParentValueMap.value },
+      second: { ...base.second, ...treeLeafValueMap.value }
+    }
+  }
+  return base
 })
 
 // 加载Portal配置
@@ -496,15 +499,41 @@ const loadChartData = async () => {
       indicatorConfig.value
     )
 
+    // 树形堆叠：实时构建父节点/叶子「名->值」映射，供颜色查找与维度编码（存储配置中维度为 null）
+    const cfg = indicatorConfig.value
+    const isTreeStacked = !!cfg?.treeDimension &&
+      cfg.dataMetrics?.some((m: any) => m.chartType === 'treeStackedBar')
+    if (isTreeStacked && cfg?.treeDimension) {
+      try {
+        const tree = await fetchTreeDict(cfg.treeDimension.dictName)
+        const parentGroups = flattenTreeToParentGroups(tree)
+        const parentMap: Record<string, string> = {}
+        const leafMap: Record<string, string> = {}
+        parentGroups.forEach(g => {
+          parentMap[g.parentLabel] = g.parentValue
+          g.children.forEach(c => { leafMap[c.label] = c.value })
+        })
+        treeParentValueMap.value = parentMap
+        treeLeafValueMap.value = leafMap
+      } catch (e) {
+        // 树结构拉取失败时保留旧映射，避免颜色完全失效
+      }
+    }
+
     // 缓存 statistic 请求体，供点击穿透时复用 buildDrillConditionFromCache
+    const isRanking = indicatorConfig.value?.dataMetrics?.some((m: any) => m.chartType === 'rankingBar')
     lastStatisticBody = {
       ...requestParams,
       metricCondition: requestParams.metricCondition || [],
-      // metricColumn 配置（用于 dictMap 反查），从 indicatorConfig 中补齐
-      metricColumn: indicatorConfig.value?.firstDimension?.indicatorItems?.map((it: any) => ({
-        column: indicatorConfig.value?.firstDimension?.groupValue,
-        dictMap: it.dictMap
-      })) || []
+      // metricColumn 配置（用于 dictMap 反查）：
+      // 排行榜直接用 requestParams.metricColumn（已含 groupByField + dictMap）；
+      // 其余模式从 firstDimension 补齐
+      metricColumn: isRanking
+        ? requestParams.metricColumn
+        : (indicatorConfig.value?.firstDimension?.indicatorItems?.map((it: any) => ({
+          column: indicatorConfig.value?.firstDimension?.groupValue,
+          dictMap: it.dictMap
+        })) || [])
     }
 
     if (response && response.payload && !isDestroyed.value) {
@@ -523,19 +552,6 @@ const loadChartData = async () => {
       chartLoading.value = false
     }
   }
-}
-
-// 防抖函数，避免频繁请求
-const debounce = (func: Function, delay: number) => {
-  let timeoutId: NodeJS.Timeout
-  const debounced = (...args: any[]) => {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => func.apply(null, args), delay)
-  }
-  debounced.cancel = () => {
-    clearTimeout(timeoutId)
-  }
-  return debounced
 }
 
 // 防抖后的图表数据加载函数
@@ -636,13 +652,40 @@ const hasSecondDimension = computed(() => {
 
 // 图表点击事件处理
 const handleChartClick = (params: any) => {
-  if (chartType.value === 'bar' || chartType.value === 'line' || chartType.value === 'ptLine') {
+  if (chartType.value === 'rankingBar') {
+    onRankingBarClick(params)
+  } else if (chartType.value === 'bar' || chartType.value === 'line' || chartType.value === 'ptLine') {
     onBarClick(params)
   } else if (chartType.value === 'pie') {
     onPieClick(params)
   } else if (chartType.value === 'metricsPie') {
     onMetricsPieClick(params)
   }
+}
+
+// 点击排行榜柱子事件处理
+const onRankingBarClick = (params: any) => {
+  const displayName = params.name // X 轴分组显示名
+  // 从归一化数据中反查该显示名对应的原始分组值（字典码 / 'NULL'）
+  const item = safeChartData.value.find((d: any) => d.metricLabel === displayName)
+  const rawMetric = item ? (item as any).metric : displayName
+  const groupByField = indicatorConfig.value?.dataMetrics?.[0]?.groupByField || ''
+
+  const combinedConditions = buildDrillConditionFromRanking(lastStatisticBody, groupByField, rawMetric)
+  if (!combinedConditions) {
+    console.warn('无法构建排行榜穿透条件')
+    return
+  }
+
+  const groupName = indicatorConfig.value?.dataMetrics?.[0]?.groupByLabel || '分组'
+  const statType = params.seriesName
+
+  selectedBarInfo.value = buildSelectedBarInfo(
+    displayName, null, groupName, null,
+    statType, [displayName], combinedConditions, false
+  )
+
+  detailModalVisible.value = true
 }
 
 // 点击指标饼图事件处理

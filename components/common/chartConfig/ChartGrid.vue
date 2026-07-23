@@ -648,9 +648,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // 清理事件监听
-  window.removeEventListener('resize', () => {
-  })
+  // 清理事件监听（必须传入 onMounted 注册的同一函数引用，否则无法移除）
+  window.removeEventListener('resize', calcUnits)
   if (resizeObserver && gridContainerRef.value) {
     resizeObserver.unobserve(gridContainerRef.value)
     resizeObserver.disconnect()

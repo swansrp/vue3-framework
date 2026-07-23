@@ -747,7 +747,7 @@ export default defineComponent({
 
     // 监听数据变化
     watch(
-      () => [props.data, props.dataMetrics, props.title],
+      () => [props.data, props.dataMetrics, props.title, props.dimensionValueMap],
       () => {
         if (chartInstance) {
           updateChart()
