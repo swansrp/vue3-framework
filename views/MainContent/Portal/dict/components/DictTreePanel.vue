@@ -83,6 +83,10 @@
               class="sidebar-item-edit"
               @click.stop="openRenameModal(item)"
             />
+            <DownloadOutlined
+              class="sidebar-item-export"
+              @click.stop="handleExportSingleTreeDict(item)"
+            />
             <DeleteOutlined
               class="sidebar-item-delete"
               @click.stop="confirmDeleteTree(item)"
@@ -376,6 +380,12 @@ const openRenameModal = (item: DictListItem) => {
 
 const handleRename = async () => {
   if (!renameForm.dictName) { message.warning('请输入字典名称'); return }
+  // 名称未变更，直接关闭（避免 getDictExisted 把自身误判为重名）
+  const original = treeDictList.value.find(d => d.value === renameForm.dictCode)
+  if (original && renameForm.dictName === original.label) {
+    renameModalVisible.value = false
+    return
+  }
   renameLoading.value = true
   try {
     const nameRes = await getDictExisted({ name: renameForm.dictName }, false, false, false)
@@ -459,6 +469,27 @@ const handleExportTreeDict = async () => {
   }
 }
 
+// 导出单个树形字典
+const handleExportSingleTreeDict = async (item: DictListItem) => {
+  try {
+    const res = await getBizTreeDict({ dictCode: item.value })
+    const treeNodes = (res.payload || []).map(cleanTreeNode)
+    const exportData = [{
+      dictCode: item.value,
+      dictName: item.label,
+      treeData: treeNodes
+    }]
+    downloadJsonConfig(`树形字典-${item.value}`, {
+      type: 'treeDict',
+      exportTime: new Date().toISOString(),
+      data: exportData
+    })
+    message.success(`树形字典「${item.label}」导出成功`)
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  }
+}
+
 // 展平已有树，构建 value → node 映射
 const flattenTree = (nodes: TreeDictItem[], dictCode: string): Map<string, TreeDictItem> => {
   const map = new Map<string, TreeDictItem>()
@@ -533,7 +564,7 @@ const handleTreeFileChange = async (event: Event) => {
     importData.forEach((d: any) => countNodes(d.treeData || []))
     Modal.confirm({
       title: '确认导入',
-      content: `将导入 ${importData.length} 个树形字典（共 ${totalNodes} 个节点），确认继续？`,
+      content: `将导入 ${importData.length} 个树形字典（共 ${totalNodes} 个节点），已存在的节点仅更新名称，不调整层级与排序。确认继续？`,
       okText: '确认导入',
       cancelText: '取消',
       onOk: async () => {
@@ -942,6 +973,15 @@ onUnmounted(() => {
 
   &:hover {
     color: #4096ff;
+  }
+}
+
+.sidebar-item-export {
+  color: #52c41a;
+  font-size: 12px;
+
+  &:hover {
+    color: #73d13d;
   }
 }
 

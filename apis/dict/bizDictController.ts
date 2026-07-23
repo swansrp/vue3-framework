@@ -239,6 +239,23 @@ export const systemBizDictUpdateEnterpriseDict = (params?: {
 }
 
 /**
+ * 批量更新字典项排序
+ * @api POST /biz/dict/order/update
+ * @param data - 请求体数据（字典项 id 与排序号数组）
+ * @param showSuccess - 是否显示成功提示（默认: false，由调用方统一提示，避免多次弹窗）
+ * @param showLoading - 是否显示加载中（默认: false）
+ * @param showErr - 是否显示错误提示（默认: true）
+ *
+ * @remarks
+ * 一次性提交所有字典项的 id 与 showOrder，后端在单个事务中批量更新，
+ * 保证排序调整的原子性，避免逐项并发 update 带来的性能与一致性隐患。
+ */
+export const systemBizDictUpdateOrder = (data?: Array<{ id: number; showOrder: number }>, showSuccess = false, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/biz/dict/order/update', '')
+  return request(api, {}, data || [], showSuccess, showLoading, showErr)
+}
+
+/**
  * 获取字典项详情
  * @api POST /biz/dict/value
  * @param data - 请求体数据（类型: BizDictValueReq）

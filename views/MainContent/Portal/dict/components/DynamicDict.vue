@@ -78,10 +78,16 @@
               <span class="config-list-item-name">{{ item.dictName }}</span>
               <span class="config-list-item-code">{{ item.dictCode }}</span>
             </div>
-            <DeleteOutlined
-              class="config-list-item-delete"
-              @click.stop="handleDeleteConfig(item.id)"
-            />
+            <div class="config-list-item-actions">
+              <DownloadOutlined
+                class="config-list-item-export"
+                @click.stop="handleExportSingleDynDict(item)"
+              />
+              <DeleteOutlined
+                class="config-list-item-delete"
+                @click.stop="handleDeleteConfig(item.id)"
+              />
+            </div>
           </div>
           <a-empty
             v-if="configList.length === 0 && !configListLoading"
@@ -425,7 +431,7 @@ const handleExportDynDict = async () => {
   dynDictExporting.value = true
   try {
     const exportData = configList.value.map((c: DynamicDictConfig) => {
-      const { ...rest } = c
+      const { id: _id, valid: _valid, ...rest } = c
       return rest
     })
     downloadJsonConfig('动态字典配置', {
@@ -438,6 +444,22 @@ const handleExportDynDict = async () => {
     message.error('导出失败: ' + (error?.message || '未知错误'))
   } finally {
     dynDictExporting.value = false
+  }
+}
+
+// 导出单个动态字典配置
+const handleExportSingleDynDict = (item: DynamicDictConfig) => {
+  try {
+    const { id: _id, valid: _valid, ...rest } = item
+    const exportData = [rest]
+    downloadJsonConfig(`动态字典-${item.dictCode}`, {
+      type: 'dynamicDict',
+      exportTime: new Date().toISOString(),
+      data: exportData
+    })
+    message.success(`动态字典「${item.dictName}」导出成功`)
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
   }
 }
 
@@ -546,10 +568,21 @@ const treePreviewData = computed(() => {
   for (const item of items) {
     nodeMap.set(item.value, { ...item, children: [] })
   }
+  // 从 value 向上追溯父链，若经过自身或出现重复则判定为环，防止 pid 成环导致渲染死循环
+  const wouldFormCycle = (value: string, pid: string): boolean => {
+    let cur: string | null | undefined = pid
+    const seen = new Set<string>()
+    while (cur) {
+      if (cur === value || seen.has(cur)) return true
+      seen.add(cur)
+      cur = nodeMap.get(cur)?.pid
+    }
+    return false
+  }
   for (const item of items) {
     const node = nodeMap.get(item.value)!
     const pid = item.pid
-    if (!pid || !nodeMap.has(pid)) {
+    if (!pid || !nodeMap.has(pid) || wouldFormCycle(item.value, pid)) {
       roots.push(node)
     } else {
       nodeMap.get(pid)!.children.push(node)
@@ -762,7 +795,7 @@ onMounted(() => {
   &:hover {
     background: #f0f5ff;
 
-    .config-list-item-delete {
+    .config-list-item-actions {
       opacity: 1;
     }
   }
@@ -795,13 +828,28 @@ onMounted(() => {
   color: #8c8c8c;
 }
 
-.config-list-item-delete {
+.config-list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   opacity: 0;
-  color: #ff4d4f;
-  font-size: 12px;
   transition: opacity 0.2s;
   flex-shrink: 0;
   margin-left: 4px;
+}
+
+.config-list-item-export {
+  color: #52c41a;
+  font-size: 12px;
+
+  &:hover {
+    color: #73d13d;
+  }
+}
+
+.config-list-item-delete {
+  color: #ff4d4f;
+  font-size: 12px;
 
   &:hover {
     color: #cf1322;

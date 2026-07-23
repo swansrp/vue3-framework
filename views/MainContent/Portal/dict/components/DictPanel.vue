@@ -11,6 +11,7 @@ import {
   deleteEnterpriseDict,
   systemBizDictAddDict,
   systemBizDictUpdateEnterpriseDict,
+  systemBizDictUpdateOrder,
   getDictExisted,
   systemBizDictUpdateDictName,
   deleteBizDict
@@ -334,20 +335,20 @@ const getParentValueLabel = (parentDictCode: string, parentValue: string): strin
 const handleSortChange = async (items: BizDictVO[]) => {
   dictItems.value = items
   try {
-    const updatePromises: Promise<any>[] = []
+    const orderList: Array<{ id: number; showOrder: number }> = []
     let sortCounter = 0
 
     items.forEach((item) => {
       if (!item.id) return
       sortCounter++
-      const updatedItem = { ...item, sort: sortCounter }
       item.sort = sortCounter
-      updatePromises.push(
-          systemBizDictUpdateEnterpriseDict({ bizId: null as any }, updatedItem)
-      )
+      orderList.push({ id: item.id, showOrder: sortCounter })
     })
 
-    await Promise.all(updatePromises)
+    if (orderList.length > 0) {
+      // 一次性提交所有 id 与 order，后端在单事务内批量更新，保证原子性
+      await systemBizDictUpdateOrder(orderList)
+    }
     message.success('排序已保存')
     await loadDictItems()
   } catch (error) {
@@ -362,26 +363,22 @@ const handleAddDict = () => {
 }
 
 const onAddDictFinish = async () => {
-  // 校验字典编码是否已存在
+  // 校验字典编码/名称是否已存在（查重失败时阻断提交，避免重复创建）
   try {
     const codeCheckRes = await getDictExisted({ code: addDictForm.value.dictCode }, false, false, false)
     if (codeCheckRes?.payload === '1') {
       message.warning(`字典编码 "${addDictForm.value.dictCode}" 已存在，请使用其他编码`)
       return
     }
-  } catch (error) {
-    console.error('校验字典编码失败:', error)
-  }
-  
-  // 校验字典名称是否已存在
-  try {
     const nameCheckRes = await getDictExisted({ name: addDictForm.value.dictName }, false, false, false)
     if (nameCheckRes?.payload === '1') {
       message.warning(`字典名称 "${addDictForm.value.dictName}" 已存在，请使用其他名称`)
       return
     }
   } catch (error) {
-    console.error('校验字典名称失败:', error)
+    console.error('校验字典失败:', error)
+    message.error('字典查重校验失败，请重试')
+    return
   }
   
   try {
@@ -443,7 +440,7 @@ const saveDictName = async () => {
     return
   }
   
-  // 校验新的字典名称是否已存在
+  // 校验新的字典名称是否已存在（查重失败时阻断）
   try {
     const nameCheckRes = await getDictExisted({ name: editingDictName.value }, false, false, false)
     if (nameCheckRes?.payload === '1') {
@@ -452,6 +449,8 @@ const saveDictName = async () => {
     }
   } catch (error) {
     console.error('校验字典名称失败:', error)
+    message.error('字典名称查重校验失败，请重试')
+    return
   }
   
   try {
@@ -504,6 +503,12 @@ const handleDeleteDict = () => {
   })
 }
 
+// 清理内部/审计字段，仅保留跨环境导入所需的业务字段
+const stripDictItemFields = (item: BizDictVO) => {
+  const { id: _id, bizId: _bizId, createAt: _createAt, createBy: _createBy, updateAt: _updateAt, updateBy: _updateBy, valid: _valid, ...rest } = item
+  return rest
+}
+
 // 导出/导入状态
 const dictExporting = ref(false)
 const dictImporting = ref(false)
@@ -523,10 +528,7 @@ const handleExportDict = async () => {
     const exportData = allDicts.map((d: BizDictRes) => ({
       dictCode: d.dictCode,
       dictName: d.dictName,
-      dictItemList: (d.dictItemList || []).map((item: BizDictVO) => {
-        const { ...rest } = item
-        return rest
-      })
+      dictItemList: (d.dictItemList || []).map(stripDictItemFields)
     }))
     downloadJsonConfig('业务字典配置', {
       type: 'bizDict',
@@ -538,6 +540,25 @@ const handleExportDict = async () => {
     message.error('导出失败: ' + (error?.message || '未知错误'))
   } finally {
     dictExporting.value = false
+  }
+}
+
+// 导出单个字典配置
+const handleExportSingleDict = (dict: BizDictRes) => {
+  try {
+    const exportData = [{
+      dictCode: dict.dictCode,
+      dictName: dict.dictName,
+      dictItemList: (dict.dictItemList || []).map(stripDictItemFields)
+    }]
+    downloadJsonConfig(`业务字典-${dict.dictCode}`, {
+      type: 'bizDict',
+      exportTime: new Date().toISOString(),
+      data: exportData
+    })
+    message.success(`字典「${dict.dictName}」导出成功`)
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
   }
 }
 
@@ -724,13 +745,21 @@ loadDictNameMap()
               <span class="dict-list-item-name">{{ dict.dictName }}</span>
               <span class="dict-list-item-code">{{ dict.dictCode }}</span>
             </div>
-            <a-tag
-              v-if="dict.dictItemList?.length"
-              color="blue"
-              style="margin: 0;"
-            >
-              {{ dict.dictItemList.length }}项
-            </a-tag>
+            <div class="dict-list-item-actions">
+              <a-tooltip title="导出该字典">
+                <DownloadOutlined
+                  class="dict-item-export-icon"
+                  @click.stop="handleExportSingleDict(dict)"
+                />
+              </a-tooltip>
+              <a-tag
+                v-if="dict.dictItemList?.length"
+                color="blue"
+                style="margin: 0;"
+              >
+                {{ dict.dictItemList.length }}项
+              </a-tag>
+            </div>
           </div>
           <a-empty
             v-if="dictList.length === 0 && !dictListLoading"
@@ -1133,6 +1162,28 @@ loadDictNameMap()
   .dict-list-item-code {
     font-size: 12px;
     color: #8c8c8c;
+  }
+
+  .dict-list-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .dict-item-export-icon {
+    color: #8c8c8c;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.2s;
+
+    &:hover {
+      color: #1677ff;
+    }
+  }
+
+  &:hover .dict-item-export-icon {
+    opacity: 1;
   }
 }
 
