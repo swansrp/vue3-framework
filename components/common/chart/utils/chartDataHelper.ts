@@ -15,9 +15,9 @@
 import { buildTreeStackedData } from './treeStacked'
 
 import { advancedStatisticRequest } from '@/framework/apis'
-import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import type { ChartType, ChartMode } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import { CHART_TYPE, CHART_MODE } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
+import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
 import {
   buildDrillConditionFromStatistic
 } from '@/framework/components/common/Portal/utils'
