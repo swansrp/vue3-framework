@@ -398,13 +398,17 @@ const handleSaveConfig = async () => {
       const hasTreeStacked = (dashboardRef.value?.dataMetrics || []).some(
         (m: any) => m.chartType === 'treeStackedBar'
       )
+      // 排行榜(Top-N)模式：通过 groupByField 分组，无需一级维度
+      const hasRankingBar = (dashboardRef.value?.dataMetrics || []).some(
+        (m: any) => m.chartType === 'rankingBar'
+      )
       if (hasTreeStacked && !dashboardRef.value?.treeDimension) {
         message.error('请选择树关系（二级维度）')
         return
       }
       // 检查是否配置了一级维度
       const firstDimension = dashboardRef.value?.firstDimension
-      if (!hasMetricsPie && !hasTreeStacked && !firstDimension) {
+      if (!hasMetricsPie && !hasTreeStacked && !hasRankingBar && !firstDimension) {
         message.error('请先配置一级维度')
         return
       }

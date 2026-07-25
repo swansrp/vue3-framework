@@ -1283,6 +1283,8 @@ const getFullConfig = () => {
   const isMetricsPieMode = dataMetrics.value.some(m => m.chartType === 'metricsPie')
   // 树形堆叠模式判断（X轴来自树父节点，跳过一级维度校验）
   const isTreeStackedMode = dataMetrics.value.some(m => m.chartType === 'treeStackedBar')
+  // 排行榜(Top-N)模式判断（通过 groupByField 分组，跳过一级维度校验）
+  const isRankingBarMode = dataMetrics.value.some(m => m.chartType === 'rankingBar')
 
   // 获取实时的可见性配置
   let visibilityConfig = {
@@ -1298,7 +1300,7 @@ const getFullConfig = () => {
   // 优先使用已经生成的dimensionIndicatorsFilter（包含用户拖拽后的排序）
   // 如果存在，说明已经生成过图表，使用它以保留拖拽排序
   // 指标饼图/树形堆叠模式无传统一级维度，只校验 dimensionIndicatorsFilter 是否存在
-  const hasExistingConfig = (isMetricsPieMode || isTreeStackedMode)
+  const hasExistingConfig = (isMetricsPieMode || isTreeStackedMode || isRankingBarMode)
     ? !!dimensionIndicatorsFilter.value
     : (dimensionIndicatorsFilter.value && !!dimensionIndicatorsFilter.value.firstDimension)
   if (hasExistingConfig) {
@@ -1328,6 +1330,19 @@ const getFullConfig = () => {
       firstDimension: null as any,
       secondDimension: null,
       treeDimension: treeDimension.value,
+      filterConditions: convertToConditionGroup(selectedFilterItemsArray.value, filterDimensions.value),
+      dataMetrics: dataMetrics.value.map(convertToDataMetric),
+      visibleStatisticTypes: visibilityConfig.visibleStatisticTypes,
+      visibleFirstDimensions: visibilityConfig.visibleFirstDimensions,
+      visibleSecondDimensions: visibilityConfig.visibleSecondDimensions
+    }
+  }
+
+  // 排行榜(Top-N)模式：无维度，直接构建配置
+  if (isRankingBarMode) {
+    return {
+      firstDimension: null as any,
+      secondDimension: null,
       filterConditions: convertToConditionGroup(selectedFilterItemsArray.value, filterDimensions.value),
       dataMetrics: dataMetrics.value.map(convertToDataMetric),
       visibleStatisticTypes: visibilityConfig.visibleStatisticTypes,
