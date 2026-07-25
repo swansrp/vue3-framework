@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeftOutlined, SwapOutlined } from '@ant-design/icons-vue'
-import { computed, ref } from 'vue'
+import { computed, h, ref } from 'vue'
 
 import { getWideTableConfigDetail, queryWideTableData } from './apis'
 import type { FixedColumn, ProductOption } from './types'
@@ -216,9 +216,17 @@ const tableData = ref<any[]>([])
 const loadingData = ref(false)
 const configAttrs = ref<any[]>([])
 
+// 表头标题渲染：将字面 \n / 真实换行统一转为真实换行并允许折行显示
+const renderColumnTitle = (label: string) => {
+  if (!label) return ''
+  const text = String(label).replace(/\\n/g, '\n')
+  if (!text.includes('\n')) return text
+  return h('span', { style: { whiteSpace: 'pre-line' } }, text)
+}
+
 const baseColumns = computed(() =>
   props.fixedColumns.map((col) => ({
-    title: col.label,
+    title: renderColumnTitle(col.label),
     dataIndex: col.field,
     width: col.width || 150,
     ellipsis: true,
@@ -227,17 +235,33 @@ const baseColumns = computed(() =>
   })),
 )
 
+// 扁平化表单树字段，构建 attributeId -> fieldType 映射（用于识别开关/是否等类型）
+const attrFieldTypeMap = computed(() => {
+  const map: Record<string, string> = {}
+  for (const mod of formTree.value) {
+    for (const sec of mod.children || []) {
+      for (const grp of sec.children || []) {
+        for (const attr of grp.attributes || []) {
+          map[String(attr.id)] = String(attr.fieldType)
+        }
+      }
+    }
+  }
+  return map
+})
+
 const dynamicColumns = computed(() => {
   return selectedAttrIds.value.map((attrId) => {
     const attr = configAttrs.value.find((a) => a.attributeId === attrId)
     const isDict = attr?.isDict === '1' && attr?.dictId
     return {
-      title: attr?.columnLabel || `字段${attrId}`,
+      title: renderColumnTitle(attr?.columnLabel || `字段${attrId}`),
       dataIndex: attr?.columnName || `field_${attrId}`,
       width: 150,
       ellipsis: true,
       isDict: !!isDict,
       dictId: attr?.dictId || '',
+      fieldType: attrFieldTypeMap.value[String(attrId)] || '',
     }
   })
 })
@@ -351,6 +375,13 @@ const formatDateTime = (val: any): string => {
 const getDictLabel = (dictId: string, val: any): string => {
   if (!val) return ''
   return dict.getLabel(dictId, val) || val
+}
+
+// 开关/是否类型（fieldType='2'）：1/0 → 是/否
+const formatYesNo = (val: any): string => {
+  if (val === '1' || val === 1) return '是'
+  if (val === '0' || val === 0) return '否'
+  return val ?? '-'
 }
 
 // ==================== 初始化 ====================
@@ -565,6 +596,9 @@ const getDictLabel = (dictId: string, val: any): string => {
                 </template>
                 <template v-else-if="(column as any).type === 'dict' && (column as any).dictId">
                   {{ getDictLabel((column as any).dictId, record[column.dataIndex as string]) }}
+                </template>
+                <template v-else-if="(column as any).fieldType === '2'">
+                  {{ formatYesNo(record[column.dataIndex as string]) }}
                 </template>
                 <template v-else-if="(column as any).isDict">
                   {{ (column as any).dictId && dict.getLabel((column as any).dictId, record[column.dataIndex as string]) || record[column.dataIndex as string] || '-' }}
