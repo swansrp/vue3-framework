@@ -15,6 +15,7 @@
     <div
       v-if="showDropdown && options.length > 1"
       class="dropdown-list"
+      :style="dropdownListStyle"
     >
       <div
         v-for="(item, index) in options"
@@ -76,6 +77,8 @@ const props = defineProps({
   selectedBgImage: { type: String, default: selectedBgImage },
   defaultBgImage: { type: String, default: defaultBgImage },
   hoverBgImage: { type: String, default: hoverBgImage },
+  // 下拉列表最大高度，超出时显示滚动条
+  maxDropdownHeight: { type: Number, default: 800 },
 })
 
 const { options, value } = toRefs(props)
@@ -90,6 +93,10 @@ const hoveredIndex = ref<number | null>(null)
 const containerStyle = computed(() => ({
   fontFamily: props.fontFamily,
   color: props.color,
+}))
+
+const dropdownListStyle = computed(() => ({
+  maxHeight: `${props.maxDropdownHeight}px`,
 }))
 
 const selectedBtnStyle = computed(() => {
@@ -184,6 +191,21 @@ const handleSelect = (item: ValueLabel) => {
   background: #092a44;
   border: 2px solid rgb(0, 158, 220);
   z-index: 10000;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dropdown-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-list::-webkit-scrollbar-track {
+  background: #092a44;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb {
+  background: rgb(0, 158, 220);
+  border-radius: 3px;
 }
 
 .dropdown-list div {
