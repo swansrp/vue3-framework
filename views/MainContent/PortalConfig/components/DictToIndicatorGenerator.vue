@@ -359,6 +359,7 @@ import { getDictByDictName } from '@/framework/apis/dict/dict'
 import { addEntityList } from '@/framework/apis/portal'
 import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { isNotEmpty } from '@/framework/utils/common'
+import { getNameHashColor } from '@/framework/utils/colorUtils'
 
 // 组件 Props
 const props = withDefaults(
@@ -755,9 +756,12 @@ const handleGenerate = async () => {
     // 先构建所有指标数据
     const allIndicatorData = await Promise.all(
       selectedItems.map(item => {
+        const itemName = (namePrefix.value || '') + item.dictLabel + (nameSuffix.value || '')
         const indicatorData = {
           itemValue: (valuePrefix.value || '') + item.dictValue,
-          itemName: (namePrefix.value || '') + item.dictLabel + (nameSuffix.value || ''),
+          itemName,
+          // 默认图表颜色按指标名称哈希生成，保证同名指标跨图表同色
+          color: getNameHashColor(itemName),
           comment: commonComment.value || `基于字典项 ${ item.dictLabel } 生成的指标`,
           portalName: props.config?.name || '',
           groupId: targetGroupId.value,

@@ -39,6 +39,31 @@
       </a-col>
     </a-row>
     <a-form-item 
+      label="图表颜色" 
+      name="color"
+      :label-col="{ span: 3 }"
+      :wrapper-col="{ span: 21 }"
+    >
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div
+          class="color-swatch"
+          :style="{ backgroundColor: formData.color || '#d9d9d9' }"
+          @click="colorPickerVisible = true"
+        ></div>
+        <span class="color-value">{{ formData.color || '未设置' }}</span>
+        <a-button
+          size="small"
+          type="link"
+          @click="resetColorToDefault"
+        >
+          恢复默认色
+        </a-button>
+      </div>
+      <div class="color-tip">
+        默认颜色由指标名称哈希生成，同名指标跨图表同色；手动指定后不再随名称变化
+      </div>
+    </a-form-item>
+    <a-form-item 
       label="指标条件" 
       name="condition"
       :label-col="{ span: 3 }"
@@ -147,6 +172,14 @@
     :advanced-condition="entityCondition"
     @confirm="saveEntityCondition"
   />
+
+  <!-- 图表颜色选择弹窗 -->
+  <color-picker
+    v-model:visible="colorPickerVisible"
+    title="选择图表颜色"
+    :initial-color="formData.color"
+    @confirm="onColorConfirm"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -155,10 +188,12 @@ import { FormInstance } from 'ant-design-vue'
 import type { Rule } from 'ant-design-vue/es/form'
 
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import ColorPicker from '@/framework/components/common/Portal/dashboard/indicator/config/ColorPicker.vue'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 import { ColumnType, FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { dictStore } from '@/framework/store/common'
 import { isNotEmpty } from '@/framework/utils/common'
+import { getNameHashColor } from '@/framework/utils/colorUtils'
 
 // 动态字段类型定义
 interface DynamicField {
@@ -170,6 +205,7 @@ interface DynamicField {
 interface IndicatorFormData {
   itemValue: string
   itemName: string
+  color: string
   comment: string
   condition: any
   dynamicColumn: DynamicField[]
@@ -177,7 +213,7 @@ interface IndicatorFormData {
 
 const props = withDefaults(
   defineProps<{
-    initialData?: IndicatorFormData
+    initialData?: Partial<IndicatorFormData> & Record<string, any>
     config: any
   }>(),
   {}
@@ -194,10 +230,36 @@ const formRef = ref<FormInstance>()
 const formData = ref<IndicatorFormData>({
   itemValue: '',
   itemName: '',
+  color: '',
   comment: '',
   condition: null,
   dynamicColumn: [{ key: '', value: '' }]
 })
+
+// 图表颜色：是否已手动指定（手指后不再随指标名称自动哈希）
+const colorManuallySet = ref(false)
+const colorPickerVisible = ref(false)
+
+// 指标名称变化时，未手动指定颜色的自动按名称哈希生成默认色
+watch(() => formData.value.itemName, (name) => {
+  if (!colorManuallySet.value) {
+    formData.value.color = name ? getNameHashColor(name) : ''
+  }
+})
+
+// 手动选色确认
+const onColorConfirm = (color: string) => {
+  formData.value.color = color
+  colorManuallySet.value = true
+  emit('update:data', formData.value)
+}
+
+// 恢复为名称哈希默认色
+const resetColorToDefault = () => {
+  colorManuallySet.value = false
+  formData.value.color = formData.value.itemName ? getNameHashColor(formData.value.itemName) : ''
+  emit('update:data', formData.value)
+}
 
 // 表单验证规则
 const formRules: Record<string, Rule[]> = {
@@ -256,9 +318,12 @@ const conditionText = computed(() => {
 // 初始化表单数据
 const initFormData = (data?: any) => {
   if (data) {
+    // 已有颜色视为手动指定；无颜色时按名称哈希预填默认色
+    colorManuallySet.value = isNotEmpty(data.color)
     formData.value = {
       itemValue: data.itemValue || '',
       itemName: data.itemName || '',
+      color: data.color || (data.itemName ? getNameHashColor(data.itemName) : ''),
       comment: data.comment || '',
       condition: data.condition || null,
       dynamicColumn: data.dynamicColumn ? 
@@ -359,9 +424,11 @@ const validate = () => {
 
 // 重置表单
 const resetForm = () => {
+  colorManuallySet.value = false
   formData.value = {
     itemValue: '',
     itemName: '',
+    color: '',
     comment: '',
     condition: null,
     dynamicColumn: [{ key: '', value: '' }]
@@ -416,6 +483,32 @@ defineExpose({
 </script>
 
 <style lang="less" scoped>
+// 图表颜色字段样式
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+}
+
+.color-value {
+  font-family: monospace;
+  color: var(--text-secondary, #666);
+}
+
+.color-tip {
+  font-size: 12px;
+  color: var(--text-tertiary, #999);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
 // 指标配置表单样式
 .dynamic-fields-container {
   border: 1px solid var(--border-subtle);

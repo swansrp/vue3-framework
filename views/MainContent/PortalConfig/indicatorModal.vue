@@ -29,11 +29,11 @@
           style="margin-top: 10px"
           table-id="SysPortalIndicator"
         >
-          <template
-            v-if="!indicatorData"
-            #left-btns
-          >
-            <a-tooltip placement="top">
+          <template #left-btns>
+            <a-tooltip
+              v-if="!indicatorData"
+              placement="top"
+            >
               <template #title>
                 <span>字典指标</span>
               </template>
@@ -49,6 +49,39 @@
                 </template>
               </a-button>
             </a-tooltip>
+            <a-tooltip
+              v-if="indicatorData"
+              placement="top"
+            >
+              <template #title>
+                <span>恢复默认颜色：当前组全部指标按名称哈希重算颜色</span>
+              </template>
+              <a-button
+                :loading="resettingColors"
+                shape="circle"
+                size="middle"
+                style="margin-left: 3px"
+                @click="handleResetGroupColors"
+              >
+                <template #icon>
+                  <BgColorsOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
+          </template>
+          <template #bodyCell_color="{ record }">
+            <div
+              v-if="record.color"
+              class="table-color-cell"
+            >
+              <span
+                :style="{ backgroundColor: record.color }"
+                :title="record.color"
+                class="table-color-swatch"
+              ></span>
+              <span class="table-color-value">{{ record.color }}</span>
+            </div>
+            <span v-else>-</span>
           </template>
           <template #add="{ modal }">
             <!-- region 指标配置填表页面 -->
@@ -63,6 +96,7 @@
               <indicator-form
                 ref="addFormRef"
                 :config="config"
+                :initial-data="modal.data"
                 @update:data="updateAddFormData"
               />
             </a-modal>
@@ -152,7 +186,7 @@
 
 <script lang="ts" setup>
 
-import { DownloadOutlined, ThunderboltOutlined, SyncOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { DownloadOutlined, ThunderboltOutlined, SyncOutlined, UploadOutlined, BgColorsOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 
 import ChartSyncReviewModal from './components/ChartSyncReviewModal.vue'
@@ -163,12 +197,14 @@ import { scanAllCharts } from './utils/syncAllChartIndicators'
 
 import { ConditionVO } from '@/apis/types'
 import { getIndicatorConfig } from '@/framework/apis/portal'
-import { addEntity, addEntityList, updateEntitySelective } from '@/framework/apis/portal'
+import { addEntity, addEntityList, generalSelect, updateEntityListSelective, updateEntitySelective } from '@/framework/apis/portal'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import type { QueryType } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
+import { getNameHashColor } from '@/framework/utils/colorUtils'
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 
@@ -243,6 +279,51 @@ const modifyFormData = ref<any>({})
 
 // 字典生成器显示状态
 const showDictGenerator = ref(false)
+
+// 恢复默认颜色状态
+const resettingColors = ref(false)
+
+// 一键将当前选中指标组下所有指标的颜色恢复为名称哈希默认色
+const handleResetGroupColors = () => {
+  const rawGroupId = selectedTreeData.value[0]
+  const groupId = rawGroupId && typeof rawGroupId === 'object' ? (rawGroupId.id ?? rawGroupId.key ?? null) : (rawGroupId || null)
+  if (isEmpty(groupId)) {
+    message.warning('请先选择左侧指标组')
+    return
+  }
+  Modal.confirm({
+    title: '确认恢复默认颜色',
+    content: '将把当前指标组下所有指标的颜色恢复为按名称哈希生成的默认色（手动配置的颜色也会被覆盖），是否继续？',
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      resettingColors.value = true
+      try {
+        // 拉取当前组下全部指标（不受列表分页影响）
+        const query = {
+          conditionList: [buildCondition('groupId', FILTER_TYPE.EQUAL, [groupId])]
+        } as QueryType
+        const resp = await generalSelect('portal/indicator', query, undefined, false, true)
+        const rows = resp?.payload || []
+        if (rows.length === 0) {
+          message.info('当前指标组下暂无指标')
+          return
+        }
+        const updates = rows.map((row: any) => ({
+          id: row.id,
+          color: getNameHashColor(row.itemName)
+        }))
+        await updateEntityListSelective('portal/indicator', updates, undefined, false, false)
+        message.success(`已恢复 ${updates.length} 个指标的默认颜色`)
+        indicatorRef.value?.queryData()
+      } catch (error: any) {
+        message.error('恢复默认颜色失败：' + (error?.message || '未知错误'))
+      } finally {
+        resettingColors.value = false
+      }
+    }
+  })
+}
 
 // 同步图表配置相关状态
 const syncing = ref(false)
@@ -406,6 +487,8 @@ const upsertIndicatorTree = async (
             groupId,
             itemValue: item.key,
             itemName: item.title,
+            // 导出文件自带颜色优先，否则按名称哈希生成默认色
+            color: item.color || getNameHashColor(item.title),
             condition: item.condition,
             dynamicColumn: item.dynamicColumns
           })
@@ -635,5 +718,27 @@ onMounted(() => {
     background-color: var(--danger-soft);
     border-color: var(--danger);
   }
+}
+
+// 表格图表颜色列色块
+.table-color-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-color-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.table-color-value {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-color-secondary, #999);
 }
 </style>

@@ -201,7 +201,7 @@ import { computed, inject, ref } from 'vue'
 
 import { fetchTreeDict, validateTwoLevelTree } from '@/framework/components/common/chart/utils/treeStacked'
 import type { TreeDimensionConfig } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
-import { generateDistinctColors, getRandomColor } from '@/framework/utils/colorUtils'
+import { getNameHashColor } from '@/framework/utils/colorUtils'
 
 
 // 树形字典字段选项
@@ -360,16 +360,13 @@ const onDropFirstDimension = (e: DragEvent) => {
   const isDuplicate = isDuplicateDimension(dragData.value.key, 'first')
 
   if (!isDuplicate) {
-    // 为一级维度的所有项生成不同的颜色
-    const itemCount = dragData.value.items?.length || 0
-    const distinctColors = generateDistinctColors(itemCount)
-
+    // 优先使用指标（sys_portal_indicator）配置的颜色，未配置时按名称哈希兜底，保证同名维度项跨图表同色
     const newFirstDimension: IndicatorGroup = {
       key: dragData.value.key,
       title: dragData.value.title,
-      items: dragData.value.items?.map((item, index) => ({
+      items: dragData.value.items?.map((item) => ({
         ...item,
-        color: distinctColors[index] || getRandomColor()
+        color: item.color || getNameHashColor(item.title)
       })) || []
     }
 
@@ -399,10 +396,14 @@ const onDropSecondDimension = (e: DragEvent) => {
   const isDuplicate = isDuplicateDimension(dragData.value.key, 'second')
 
   if (!isDuplicate) {
+    // 二级维度同样携带颜色：指标配置色优先，名称哈希兜底
     const newSecondDimension: IndicatorGroup = {
       key: dragData.value.key,
       title: dragData.value.title,
-      items: dragData.value.items?.map((item) => ({ ...item })) || []
+      items: dragData.value.items?.map((item) => ({
+        ...item,
+        color: item.color || getNameHashColor(item.title)
+      })) || []
     }
 
     emit('update:secondDimension', newSecondDimension)

@@ -439,6 +439,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import ColorPicker from './ColorPicker.vue'
 
 import { deriveDisplayUnit } from '@/framework/components/common/chart/utils/unitFormat'
+import { getNameHashColor } from '@/framework/utils/colorUtils'
 
 // 接口定义
 interface IndicatorItem {
@@ -892,20 +893,14 @@ const confirmDataConfig = () => {
     editingDataMetric.value.itemColors = {}
 
     if (props.secondDimension?.items) {
-      // 如果有二级维度，使用二级维度的项
-      const itemCount = props.secondDimension.items.length
-      const distinctColors = generateDistinctColors(itemCount)
-      props.secondDimension.items.forEach((item, index) => {
-        // 为每个维度项分配不重复的颜色
-        editingDataMetric.value!.itemColors![item.key] = distinctColors[index] || getRandomColor()
+      // 如果有二级维度，优先使用二级维度项配置的颜色（sys_portal_indicator），未配置时按名称哈希兜底
+      props.secondDimension.items.forEach((item) => {
+        editingDataMetric.value!.itemColors![item.key] = item.color || getNameHashColor(item.title)
       })
     } else if (props.firstDimension?.items) {
-      // 如果只有一级维度，使用一级维度的项
-      const itemCount = props.firstDimension.items.length
-      const distinctColors = generateDistinctColors(itemCount)
-      props.firstDimension.items.forEach((item, index) => {
-        // 为每个维度项分配不重复的颜色
-        editingDataMetric.value!.itemColors![item.key] = distinctColors[index] || getRandomColor()
+      // 如果只有一级维度，使用一级维度项配置的颜色，未配置时按名称哈希兜底
+      props.firstDimension.items.forEach((item) => {
+        editingDataMetric.value!.itemColors![item.key] = item.color || getNameHashColor(item.title)
       })
     }
 
@@ -979,145 +974,6 @@ const getRandomColor = () => {
   return colors[randomIndex]
 }
 
-// HSL 转 RGB 函数
-const hslToRgb = (hsl: string) => {
-  // 修改正则表达式，支持小数和更灵活的格式
-  const match = hsl.match(/hsl\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)%\s*,\s*(\d+(?:\.\d+)?)%\s*\)/)
-  if (!match) {
-    return { r: 0, g: 0, b: 0 }
-  }
-
-  // 使用 parseFloat 支持小数，而不是 parseInt
-  const h = parseFloat(match[1])
-  const s = parseFloat(match[2])
-  const l = parseFloat(match[3])
-
-  const hNormalized = h / 360
-  const sNormalized = s / 100
-  const lNormalized = l / 100
-
-  let r, g, b
-
-  if (sNormalized === 0) {
-    r = g = b = lNormalized
-  } else {
-    const hue2rgb = (p: number, q: number, t: number) => {
-      // 确保 t 在 0-1 范围内
-      let adjustedT = t
-      if (adjustedT < 0) adjustedT += 1
-      if (adjustedT > 1) adjustedT -= 1
-
-      // 使用更精确的计算，避免浮点数精度问题
-      if (adjustedT < 1 / 6) {
-        const result = p + (q - p) * 6 * adjustedT
-        return Math.max(0, Math.min(1, result)) // 确保结果在 0-1 范围内
-      }
-      if (adjustedT < 1 / 2) {
-        return q
-      }
-      if (adjustedT < 2 / 3) {
-        const result = p + (q - p) * (2 / 3 - adjustedT) * 6
-        return Math.max(0, Math.min(1, result)) // 确保结果在 0-1 范围内
-      }
-      return p
-    }
-
-    const q = lNormalized < 0.5 ? lNormalized * (1 + sNormalized) : lNormalized + sNormalized - lNormalized * sNormalized
-    const p = 2 * lNormalized - q
-
-    r = hue2rgb(p, q, hNormalized + 1 / 3)
-    g = hue2rgb(p, q, hNormalized)
-    b = hue2rgb(p, q, hNormalized - 1 / 3)
-  }
-
-  // 转换为整数 RGB 值
-  const rInt = Math.round(r * 255)
-  const gInt = Math.round(g * 255)
-  const bInt = Math.round(b * 255)
-
-  return {
-    r: rInt,
-    g: gInt,
-    b: bInt
-  }
-}
-
-// RGB 转 十六进制函数
-const rgbToHex = (r: number, g: number, b: number): string => {
-  // 确保 RGB 值在 0-255 范围内
-  r = Math.max(0, Math.min(255, r))
-  g = Math.max(0, Math.min(255, g))
-  b = Math.max(0, Math.min(255, b))
-
-  // 转换为十六进制并确保两位数格式
-  const toHex = (c: number) => {
-    const hex = c.toString(16)
-    return hex.length === 1 ? '0' + hex : hex
-  }
-
-  return '#' + toHex(r) + toHex(g) + toHex(b)
-}
-
-const generateDistinctColors = (count: number): string[] => {
-  if (count <= 0) return []
-
-  const colors = defaultColors.value.length > 0 ? defaultColors.value : presetColors
-  const currentTime = Date.now()
-
-  if (count === 1) {
-    return [colors[0]]
-  }
-
-  // 基于当前时间计算起始偏移量
-  const timeOffset = Math.floor(currentTime / 1000) % colors.length
-
-  if (count <= colors.length) {
-    // 如果需要的颜色数量小于等于预设颜色数量，均匀选取
-    const step = Math.floor(colors.length / count)
-    const result: string[] = []
-
-    for (let i = 0; i < count; i++) {
-      // 基于时间偏移量计算索引，确保每次生成的起始颜色不同
-      const index = (timeOffset + i * step) % colors.length
-      result.push(colors[index])
-    }
-
-    return result
-  } else {
-    // 如果需要的颜色数量大于预设颜色数量，先生成扩展的颜色数组
-    const extendedColors = [...colors]
-
-    // 使用HSL颜色空间生成更多颜色，然后转换为十六进制格式
-    for (let i = colors.length; i < count * 2; i++) {
-      const hue = (i * 137.508) % 360
-      const saturation = 70 + (i % 3) * 10
-      const lightness = 45 + (i % 4) * 10
-
-      // 先生成HSL格式的颜色
-      const hslColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`
-      // 将HSL转换为RGB，再转换为十六进制
-      const rgbColor = hslToRgb(hslColor)
-      const hexColor = rgbToHex(rgbColor.r, rgbColor.g, rgbColor.b)
-
-      extendedColors.push(hexColor)
-    }
-
-    // 从扩展的颜色数组中均匀选取指定数量的颜色
-    const step = Math.floor(extendedColors.length / count)
-    const result: string[] = []
-
-    for (let i = 0; i < count; i++) {
-      // 基于时间偏移量计算索引
-      const index = (timeOffset + i * step) % extendedColors.length
-      const selectedColor = extendedColors[index]
-
-      result.push(selectedColor)
-    }
-
-    return result
-  }
-}
-
 // 监听维度变化，当维度变化时更新颜色配置
 watch(
   () => [props.firstDimension, props.secondDimension],
@@ -1150,14 +1006,11 @@ const updateDataMetricsWithDimensionColors = (dimensionItems: IndicatorItem[]) =
   const newMetrics = [...props.dataMetrics]
   let updated = false
 
-  // 首先生成维度项的全局颜色映射，确保每个维度项在所有数据指标中使用相同的颜色
-  const itemCount = dimensionItems.length
-  const distinctColors = generateDistinctColors(itemCount)
-
-  // 创建维度项到颜色的映射
+  // 首先生成维度项的全局颜色映射：优先使用指标配置的颜色，未配置时按名称哈希兜底，
+  // 确保每个维度项在所有数据指标中使用相同的颜色
   const dimensionColorMap: Record<string, string> = {}
-  dimensionItems.forEach((item, itemIndex) => {
-    dimensionColorMap[item.key] = distinctColors[itemIndex] || getRandomColor()
+  dimensionItems.forEach((item) => {
+    dimensionColorMap[item.key] = item.color || getNameHashColor(item.title)
   })
 
   // 为每个数据指标更新颜色配置，使用全局颜色映射

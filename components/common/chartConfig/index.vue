@@ -29,6 +29,13 @@
             权限配置
           </a-button>
           <a-button
+            :loading="headerColorNormalizing"
+            @click="handleColorNormalize"
+          >
+            <BgColorsOutlined />
+            颜色规整
+          </a-button>
+          <a-button
             :loading="headerSelectingAll"
             @click="handleSelectAll"
           >
@@ -56,6 +63,13 @@
                   @click="batchEditModalVisible = true"
                 >
                   <EditOutlined /> 批量编辑
+                </a-menu-item>
+                <a-menu-item
+                  key="colorNormalize"
+                  :disabled="batchSelectedIndicators.length === 0 || batchColorNormalizing"
+                  @click="handleBatchColorNormalize"
+                >
+                  <BgColorsOutlined /> 颜色规整选中
                 </a-menu-item>
                 <a-menu-divider />
                 <a-menu-item
@@ -166,7 +180,7 @@
 </template>
 
 <script lang="ts" setup>
-import { AppstoreOutlined, CheckOutlined, CloseOutlined, CopyOutlined, DeleteOutlined, DownOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, BgColorsOutlined, CheckOutlined, CloseOutlined, CopyOutlined, DeleteOutlined, DownOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, readonly, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -192,12 +206,14 @@ import { collectLeaves, findNodeById, findNodeByIdOrKey as findNodeInIndicatorTr
 import type { DashboardItem, IndicatorNode } from './types'
 
 import { getPortalConfig } from '@/framework/apis/portal/config'
+import { getIndicatorConfig, updateEntityListSelective } from '@/framework/apis/portal'
 import BatchEditModal from '@/framework/components/common/chartConfig/BatchEditModal.vue'
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
 import IndicatorTree from '@/framework/components/common/chartConfig/IndicatorTree.vue'
 import ResourcePermManager from '@/framework/components/common/ResourcePerm/ResourcePermManager.vue'
 import { useResourcePerm } from '@/framework/components/common/ResourcePerm/useResourcePerm'
+import { getNameHashColor } from '@/framework/utils/colorUtils'
 
 
 // 权限接口定义
@@ -804,6 +820,168 @@ const handleCloseAll = () => {
         await deleteDashboard(indicatorIds)
       } finally {
         headerClosingAll.value = false
+      }
+    }
+  })
+}
+
+// 一次性颜色初始化规整：为未配色的指标项按名称哈希回写颜色，并用指标颜色重写存量图表的 itemColors
+const headerColorNormalizing = ref(false)
+
+const doColorNormalize = async (scopeNodes?: IndicatorNode[]) => {
+  const tableId = computedTableId.value
+  if (!tableId) {
+    message.warning('tableId为空，无法执行颜色规整')
+    return
+  }
+
+  // 1. 拉取指标组树，递归收集所有带指标项的分组
+  const resp = await getIndicatorConfig(tableId)
+  const groups: any[] = []
+  const walkGroups = (nodes: any[]) => {
+    if (!Array.isArray(nodes)) return
+    nodes.forEach((node: any) => {
+      if (Array.isArray(node?.items) && node.items.length > 0) groups.push(node)
+      if (Array.isArray(node?.children) && node.children.length > 0) walkGroups(node.children)
+    })
+  }
+  walkGroups(resp?.payload || [])
+
+  // 2. 未配置颜色的指标项按名称哈希生成默认色，批量回写 sys_portal_indicator（已手配的保留）
+  const indicatorUpdates: Array<{ id: string; color: string }> = []
+  groups.forEach((group: any) => {
+    group.items.forEach((item: any) => {
+      if (!item.color) {
+        item.color = getNameHashColor(item.title)
+        if (item.id) indicatorUpdates.push({ id: String(item.id), color: item.color })
+      }
+    })
+  })
+  if (indicatorUpdates.length > 0) {
+    await updateEntityListSelective('portal/indicator', indicatorUpdates, undefined, false, false)
+  }
+
+  // 3. 构建 groupValue -> itemValue -> color 映射，供存量图表配置取色
+  const groupColorMap: Record<string, Record<string, string>> = {}
+  groups.forEach((group: any) => {
+    const itemMap: Record<string, string> = groupColorMap[String(group.key)] || {}
+    group.items.forEach((item: any) => {
+      itemMap[String(item.key)] = item.color
+    })
+    groupColorMap[String(group.key)] = itemMap
+  })
+
+  // 4. 遍历存量图表配置，放弃现有颜色，按二级维度优先规则用指标颜色重写 dataMetrics[].itemColors
+  let chartUpdated = 0
+  let chartFailed = 0
+  const normalizeNode = async (node: IndicatorNode, isCommon: boolean) => {
+    if (!node.indicator) return
+    let config: any
+    try {
+      config = typeof node.indicator === 'string' ? JSON.parse(node.indicator) : JSON.parse(JSON.stringify(node.indicator))
+    } catch (e) {
+      console.warn(`指标 ${node.title} 配置解析失败，跳过颜色规整`, e)
+      return
+    }
+
+    // 二级维度优先，其次一级维度；无维度项（如树形堆叠）或无数据指标的跳过
+    const dimension = (config?.secondDimension?.indicatorItems?.length ? config.secondDimension : null) ||
+      (config?.firstDimension?.indicatorItems?.length ? config.firstDimension : null)
+    if (!dimension || !Array.isArray(config?.dataMetrics) || config.dataMetrics.length === 0) return
+
+    const itemMap = groupColorMap[String(dimension.groupValue)] || {}
+    const itemColors: Record<string, string> = {}
+    dimension.indicatorItems.forEach((item: any) => {
+      itemColors[String(item.itemValue)] = itemMap[String(item.itemValue)] || getNameHashColor(item.itemName)
+    })
+    config.dataMetrics.forEach((metric: any) => {
+      metric.itemColors = { ...itemColors }
+    })
+
+    try {
+      const updateData = { id: node.id, indicator: JSON.stringify(config) }
+      if (isCommon) {
+        await updateCommonStatistic(updateData)
+      } else {
+        await updatePersonalStatistic(updateData)
+      }
+      chartUpdated++
+    } catch (err) {
+      console.error(`规整指标 ${node.title} 颜色失败:`, err)
+      chartFailed++
+    }
+  }
+
+  // 规整目标：传入 scopeNodes 时仅规整指定图表（批量操作），否则全量
+  const commonLeafIds = new Set(collectLeaves(commonIndicators.value).map(node => node.id))
+  let targets: Array<{ node: IndicatorNode; isCommon: boolean }>
+  if (scopeNodes && scopeNodes.length > 0) {
+    targets = scopeNodes.map(node => ({ node, isCommon: commonLeafIds.has(node.id) }))
+  } else {
+    targets = collectLeaves(commonIndicators.value).map(node => ({ node, isCommon: true }))
+    if (props.showPersonalIndicators && !props.useCommonDashboard) {
+      targets.push(...collectLeaves(personalIndicators.value).map(node => ({ node, isCommon: false })))
+    }
+  }
+  for (const { node, isCommon } of targets) {
+    await normalizeNode(node, isCommon)
+  }
+
+  // 5. 刷新数据并重新渲染图表
+  await loadDashboardData(true)
+  if (chartGridRef.value && typeof chartGridRef.value.refreshAllCharts === 'function') {
+    await chartGridRef.value.refreshAllCharts()
+  }
+
+  if (chartFailed > 0) {
+    message.warning(`颜色规整完成：回写指标颜色 ${indicatorUpdates.length} 项，规整图表 ${chartUpdated} 个，失败 ${chartFailed} 个`)
+  } else {
+    message.success(`颜色规整完成：回写指标颜色 ${indicatorUpdates.length} 项，规整图表 ${chartUpdated} 个`)
+  }
+}
+
+const handleColorNormalize = () => {
+  Modal.confirm({
+    title: '确认颜色规整',
+    content: '将为未配置颜色的指标项按名称生成默认颜色，并将所有图表的维度颜色统一替换为指标配置的颜色（图表现有颜色将被覆盖），是否继续？',
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      headerColorNormalizing.value = true
+      try {
+        await doColorNormalize()
+      } catch (error) {
+        console.error('颜色规整失败:', error)
+        message.error('颜色规整失败，请重试')
+      } finally {
+        headerColorNormalizing.value = false
+      }
+    }
+  })
+}
+
+// 批量操作：仅规整左侧勾选的图表颜色
+const batchColorNormalizing = ref(false)
+const handleBatchColorNormalize = () => {
+  const selectedNodes = batchSelectedIndicators.value
+  if (selectedNodes.length === 0) {
+    message.warning('请先在左侧树中勾选要规整颜色的指标')
+    return
+  }
+  Modal.confirm({
+    title: '确认颜色规整',
+    content: `将把勾选的 ${selectedNodes.length} 个图表的维度颜色统一替换为指标配置的颜色（图表现有颜色将被覆盖），是否继续？`,
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      batchColorNormalizing.value = true
+      try {
+        await doColorNormalize(selectedNodes)
+      } catch (error) {
+        console.error('颜色规整失败:', error)
+        message.error('颜色规整失败，请重试')
+      } finally {
+        batchColorNormalizing.value = false
       }
     }
   })
