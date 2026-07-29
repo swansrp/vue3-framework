@@ -5,31 +5,32 @@
       <div class="menu-category">
         {{ menuName }}
       </div>
-      <!--如果treeData的length为0，说明没有数据，展示提示信息-->
-      <div
-        v-if="!treeData || !treeData.length"
-        class="no-data"
-      >
-        暂无数据
+      <div class="menu-tree-body">
+        <!--如果treeData的length为0，说明没有数据，展示提示信息-->
+        <div
+          v-if="!treeData || !treeData.length"
+          class="no-data"
+        >
+          暂无数据
+        </div>
+        <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
+        <a-tree
+          :key="treeData"
+          v-model:selected-keys="treeSelectKey"
+          :default-expand-all="true"
+          :show-line="true"
+          :tree-data="treeData"
+          draggable
+          @drop="onDrop"
+          @select="selectTreeNode"
+        >
+          <!--使用title插槽自定义a-tree的图标-->
+          <template #title="{ dataRef }">
+            <Icon :icon="dataRef.icon" />
+            {{ dataRef.title }}
+          </template>
+        </a-tree>
       </div>
-      <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
-      <a-tree
-        :key="treeData"
-        v-model:selected-keys="treeSelectKey"
-        :default-expand-all="true"
-        :show-line="true"
-        :tree-data="treeData"
-        style="overflow: auto; max-height: 550px"
-        draggable
-        @drop="onDrop"
-        @select="selectTreeNode"
-      >
-        <!--使用title插槽自定义a-tree的图标-->
-        <template #title="{ dataRef }">
-          <Icon :icon="dataRef.icon" />
-          {{ dataRef.title }}
-        </template>
-      </a-tree>
       <!--底部按钮列表-->
       <div class="nav-switch-btn-list">
         <a-button
@@ -39,8 +40,27 @@
           <template #icon>
             <file-add-filled />
           </template>
-          新增节点
+          新增
         </a-button>
+        <input
+          ref="menuFileInputRef"
+          type="file"
+          accept=".json"
+          style="display: none"
+          @change="handleMenuFileChange"
+        />
+        <a-tooltip :title="menuNameListIndex === 0 ? '导入顶部菜单（含所有子菜单）' : '导入子菜单（作为当前顶部菜单的一级子菜单）'">
+          <a-button
+            type="primary"
+            :loading="menuImporting"
+            @click="menuFileInputRef?.click()"
+          >
+            <template #icon>
+              <upload-outlined />
+            </template>
+            导入
+          </a-button>
+        </a-tooltip>
         <a-button
           v-show="menuNameListIndex === 1"
           type="primary"
@@ -49,7 +69,7 @@
           <template #icon>
             <left-outlined />
           </template>
-          返回主菜单
+          主菜单
         </a-button>
         <a-button
           v-show="menuNameListIndex === 0"
@@ -60,7 +80,7 @@
           <template #icon>
             <right-outlined />
           </template>
-          进入子菜单
+          子菜单
         </a-button>
       </div>
     </div>
@@ -80,41 +100,20 @@
         type="card"
         @change="tabsChange"
       >
-        <!--导入导出放在Tabs右侧，只有选中节点后才可操作-->
+        <!--导出放在Tabs右侧，针对当前选中节点-->
         <template #rightExtra>
-          <a-space :size="4">
-            <a-tooltip :title="menuNameListIndex === 0 ? '导出选中顶部菜单（含所有子菜单）' : '导出选中子菜单（含下属资源权限）'">
-              <a-button
-                size="small"
-                :loading="menuExporting"
-                @click="handleExportMenu"
-              >
-                <template #icon>
-                  <download-outlined />
-                </template>
-                导出
-              </a-button>
-            </a-tooltip>
-            <input
-              ref="menuFileInputRef"
-              type="file"
-              accept=".json"
-              style="display: none"
-              @change="handleMenuFileChange"
-            />
-            <a-tooltip :title="menuNameListIndex === 0 ? '导入顶部菜单（含所有子菜单）' : '导入子菜单（含下属资源权限）'">
-              <a-button
-                size="small"
-                :loading="menuImporting"
-                @click="menuFileInputRef?.click()"
-              >
-                <template #icon>
-                  <upload-outlined />
-                </template>
-                导入
-              </a-button>
-            </a-tooltip>
-          </a-space>
+          <a-tooltip :title="menuNameListIndex === 0 ? '导出选中顶部菜单（含所有子菜单）' : '导出选中子菜单（含下属资源权限）'">
+            <a-button
+              size="small"
+              :loading="menuExporting"
+              @click="handleExportMenu"
+            >
+              <template #icon>
+                <download-outlined />
+              </template>
+              导出
+            </a-button>
+          </a-tooltip>
         </template>
         <a-tab-pane
           key="editNode"
@@ -742,6 +741,10 @@ const handleMenuFileChange = async (event: Event) => {
 
 .menu-config {
   display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .no-data {
@@ -754,11 +757,21 @@ const handleMenuFileChange = async (event: Event) => {
 }
 
 .menu-tree {
-  width: 280px;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 300px;
+  min-width: 240px;
   height: 700px;
   box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
-  margin: 15px 15px;
-  position: relative;
+  margin: 15px;
+  box-sizing: border-box;
+}
+
+.menu-tree-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 6px;
 }
 
 .menu-category {
@@ -779,18 +792,22 @@ const handleMenuFileChange = async (event: Event) => {
 }
 
 .nav-switch-btn-list {
-  width: 100%;
   display: flex;
-  justify-content: space-evenly;
-  position: absolute;
-  bottom: 20px;
-  right: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  padding: 12px 8px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .menu-config-space {
-  width: 700px;
+  flex: 1 1 480px;
+  min-width: 360px;
+  height: 700px;
   margin: 15px 5px;
   padding: 0 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
   box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
 }
 
@@ -827,10 +844,12 @@ const handleMenuFileChange = async (event: Event) => {
 }
 
 .permit-source-panel {
-  width: 350px;
+  flex: 0 1 340px;
+  min-width: 280px;
   height: 700px;
   margin: 15px 15px 15px 0;
   padding: 15px;
+  box-sizing: border-box;
   box-shadow: 0 4px 10px 0 rgba(69, 89, 120, 0.5);
   overflow-y: auto;
 }
