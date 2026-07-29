@@ -358,8 +358,8 @@ import { getTreeList } from '@/framework/apis/common/common'
 import { getDictByDictName } from '@/framework/apis/dict/dict'
 import { addEntityList } from '@/framework/apis/portal'
 import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { isNotEmpty } from '@/framework/utils/common'
 import { getNameHashColor } from '@/framework/utils/colorUtils'
+import { isNotEmpty } from '@/framework/utils/common'
 
 // 组件 Props
 const props = withDefaults(

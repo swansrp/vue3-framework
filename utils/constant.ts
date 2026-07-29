@@ -18,3 +18,6 @@ export const QUERY_INTERVAL = 350
 export const CHANGE_TAB = 'changeTab'
 export const COMPILE_TIME_FILE_PATH='./compileTime.json'
 
+// 该标题的顶层菜单不在顶部菜单栏显示，改为在用户区齿轮下拉中提供入口（有权限时）
+export const SYSTEM_MANAGE_MENU_TITLE = '系统管理'
+

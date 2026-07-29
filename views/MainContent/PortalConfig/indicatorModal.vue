@@ -203,8 +203,8 @@ import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import type { QueryType } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
-import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { getNameHashColor } from '@/framework/utils/colorUtils'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 

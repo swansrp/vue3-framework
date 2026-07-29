@@ -30,6 +30,9 @@ export const useNavigationStore = defineStore('navigation', {
     // 面包屑路径
     breadcrumbPath: [] as string[],
     
+    // 布局形态：'full' 完整 T 形框架；'subSystem' 子系统形态（极简顶部条 + 作用域左侧菜单）
+    layoutMode: 'full' as 'full' | 'subSystem',
+    
     // UI控制状态
     ui: {
       leftNavCollapsed: false,
@@ -175,6 +178,10 @@ export const useNavigationStore = defineStore('navigation', {
     },
     
     // UI控制方法
+    setLayoutMode(mode: 'full' | 'subSystem') {
+      this.layoutMode = mode
+    },
+    
     setLeftNavCollapsed(collapsed: boolean) {
       this.ui.leftNavCollapsed = collapsed
     },

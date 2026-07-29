@@ -2,6 +2,7 @@
   <top-header
     v-if="isNeedNav"
     class="top"
+    :minimal="isSubSystem"
   >
     <!-- 透传 header-extra 插槽，让业务层可以注入自定义内容 -->
     <template
@@ -57,6 +58,7 @@ import HistoryTab from '@/framework/components/navigationFramework/historyTab/Hi
 import LeftNav from '@/framework/components/navigationFramework/navMenu/leftNav/LeftNav.vue'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
+import { useNavigationStore } from '@/framework/store/navigation'
 import { useWindowStore } from '@/framework/store/window'
 
 const route = useRoute()
@@ -72,6 +74,9 @@ const showDefaultContent = computed(() => {
 })
 const tabStore = useTabStore(pinia)
 const { isNeedNav } = toRefs(tabStore)
+const navigationStore = useNavigationStore(pinia)
+// 是否为子系统形态（极简顶部条 + 作用域左侧菜单）
+const isSubSystem = computed(() => navigationStore.layoutMode === 'subSystem')
 const store = useWindowStore(pinia)
 const getWindowHeight = () => store.updateWindowHeight(window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight)
 const router = useRouter()

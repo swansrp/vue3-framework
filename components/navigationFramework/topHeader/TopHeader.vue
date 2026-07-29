@@ -14,9 +14,17 @@
         src="../../../../../public/icon.png"
         style="margin-right: 5px"
       />
-      <span v-if="!tabStore.leftNavCollapsed">{{ projectName }}</span>
+      <span v-if="!tabStore.leftNavCollapsed">{{ minimal ? subSystemTitle : projectName }}</span>
     </div>
-    <top-nav class="top_nav" />
+    <top-nav
+      v-if="!minimal"
+      class="top_nav"
+    />
+    <!-- 子系统形态无顶部菜单，用占位撑开，将用户区推到最右 -->
+    <div
+      v-else
+      class="top_nav_placeholder"
+    ></div>
     <!-- 业务扩展区域插槽 - 用于业务层注入自定义内容（如企业选择器） -->
     <div
       v-if="$slots['header-extra']"
@@ -187,6 +195,14 @@
               class="user-dropdown-menu"
               @click="handleMenuClick"
             >
+              <!-- 系统管理入口：有该菜单权限且非子系统形态时显示，点击以子系统方式新页签打开 -->
+              <a-menu-item
+                v-if="!minimal && systemManageNode"
+                key="systemManage"
+              >
+                <ToolOutlined />
+                {{ SYSTEM_MANAGE_MENU_TITLE }}
+              </a-menu-item>
               <a-menu-item key="1">
                 <RedoOutlined />
                 重新登录
@@ -348,7 +364,7 @@
 </template>
 
 <script lang="ts" setup>
-import { PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { Md5 } from 'ts-md5'
 
 import { title as projectName } from '../../../../../package.json'
@@ -360,15 +376,47 @@ import { afterLogin } from '@/framework/network/login'
 import pinia from '@/framework/store'
 import { dictStore } from '@/framework/store/common'
 import { useTabStore } from '@/framework/store/nav'
+import { useNavigationStore } from '@/framework/store/navigation'
+import { useRouteStore } from '@/framework/store/route'
 import { LIGHT_THEMES, useThemeStore } from '@/framework/store/theme'
 import { useUserStore } from '@/framework/store/user'
 import { isNotEmpty, localStorageMethods } from '@/framework/utils/common'
-import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
+import { AUTHORIZATION_TOKEN, REFRESH_TOKEN, SYSTEM_MANAGE_MENU_TITLE } from '@/framework/utils/constant'
 import { validatePassword } from '@/framework/utils/passwordValidator'
+
+// minimal: 子系统形态的极简顶部条（隐藏顶部菜单，标题显示当前子系统名）
+defineProps<{ minimal?: boolean }>()
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
 const themeStore = useThemeStore(pinia)
+const navigationStore = useNavigationStore(pinia)
+const routeStore = useRouteStore(pinia)
+
+// 子系统名：取当前激活顶部导航节点的标题，回退到项目名
+const subSystemTitle = computed(() => {
+  const node = routeStore.dynamicRoute.find(n => n.path === navigationStore.activeTopNavPath)
+  return node?.title || node?.meta?.title || projectName
+})
+
+// "系统管理"顶层菜单节点：后端菜单里有它才有权限，齿轮下拉才显示入口
+const systemManageNode = computed(() => {
+  return routeStore.dynamicRoute.find(n => (n.meta?.title || n.title || n.name) === SYSTEM_MANAGE_MENU_TITLE)
+})
+
+// 以子系统方式新页签打开"系统管理"：落地到其第一个叶子子页面
+const openSystemManage = () => {
+  const topNode = systemManageNode.value
+  if (!topNode) return
+  let node = topNode
+  const pathArray = [topNode.path]
+  while (node.children && node.children.length > 0) {
+    node = node.children[0]
+    pathArray.push(node.path)
+  }
+  const routeUrl = router.resolve({ path: `/${ pathArray.join('/') }` })
+  window.open(routeUrl.href, '_blank')
+}
 
 const handleThemeSelect = (e: any) => {
   themeStore.setTheme(e.key)
@@ -404,7 +452,9 @@ const modifyPassword = () => {
   })
 }
 const handleMenuClick = (e: any) => {
-  if (e.key === '1') {
+  if (e.key === 'systemManage') {
+    openSystemManage()
+  } else if (e.key === '1') {
     const refreshToken = localStorageMethods.getLocalStorage(REFRESH_TOKEN)
     reLogin(refreshToken).then(res => {
       localStorageMethods.setLocalStorage(REFRESH_TOKEN, res.payload[REFRESH_TOKEN])
@@ -516,6 +566,12 @@ onMounted(() => {
   position: relative;
   display: flex;
   align-items: center;
+  height: 100%;
+}
+
+/* 子系统形态：无顶部菜单时的弹性占位，将右侧用户区推到最右 */
+.top_nav_placeholder {
+  flex: 1 1 auto;
   height: 100%;
 }
 

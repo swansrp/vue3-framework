@@ -192,8 +192,8 @@ import ColorPicker from '@/framework/components/common/Portal/dashboard/indicato
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 import { ColumnType, FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { dictStore } from '@/framework/store/common'
-import { isNotEmpty } from '@/framework/utils/common'
 import { getNameHashColor } from '@/framework/utils/colorUtils'
+import { isNotEmpty } from '@/framework/utils/common'
 
 // 动态字段类型定义
 interface DynamicField {

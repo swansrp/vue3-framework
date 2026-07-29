@@ -17,6 +17,7 @@ import router from '@/framework/router'
 import pinia from '@/framework/store'
 import { useNavigationStore } from '@/framework/store/navigation'
 import { useRouteStore } from '@/framework/store/route'
+import { SYSTEM_MANAGE_MENU_TITLE } from '@/framework/utils/constant'
 
 const navigationStore = useNavigationStore(pinia)
 const routeStore = useRouteStore(pinia)
@@ -53,8 +54,11 @@ const keys = reactive({
 })
 
 // 转换后的菜单项数据，用于a-menu渲染
+// "系统管理"不在顶部菜单栏显示，入口移至用户区齿轮下拉
 const menuItems = computed(() => {
-  return routeStore.dynamicRoute.map(item => convertToMenuItem(item))
+  return routeStore.dynamicRoute
+    .filter(item => (item.meta?.title || item.title || item.name) !== SYSTEM_MANAGE_MENU_TITLE)
+    .map(item => convertToMenuItem(item))
 })
 
 /**
@@ -90,7 +94,7 @@ const convertToMenuItem = (item: NavListType, parentPaths: string[] = []) => {
     }
   }
 
-  // 处理子菜单
+  // 处理子菜单（顶层外链子系统菜单同样保留下拉，子项点击在新页签直达对应页面）
   if (item.children && item.children.length > 0) {
     menuItem.children = item.children.map(child => convertToMenuItem(child, fullPathArray))
   }
@@ -99,13 +103,32 @@ const convertToMenuItem = (item: NavListType, parentPaths: string[] = []) => {
   return menuItem
 }
 
+// 获取某顶层菜单下第一个叶子节点的完整路径（用于子系统落地页）
+const getFirstLeafPath = (topPath: string): string => {
+  const topNode = routeStore.dynamicRoute.find(node => node.path === topPath)
+  if (!topNode) return topPath
+  let node: NavListType = topNode
+  const pathArray = [topPath]
+  while (node.children && node.children.length > 0) {
+    node = node.children[0]
+    pathArray.push(node.path)
+  }
+  return pathArray.join('/')
+}
+
 const clickNav = (path: any, children: any) => {
   let child = children[0] || {}
   while (isNotEmpty(child.children)) {
     child = child.children[0]
   }
   if (path.split('/').length === 1 && isNotEmpty(child)) {
-    router.push(`/${ child.path }`)
+    if (routeStore.routePathIsFrameMap[path]) {
+      // 顶层外链(子系统)菜单：新页签落地到第一个子页面
+      const routeUrl = router.resolve({ path: `/${ child.path }` })
+      window.open(routeUrl.href, '_blank')
+    } else {
+      router.push(`/${ child.path }`)
+    }
   }
 }
 
@@ -125,10 +148,11 @@ const selectNav = (obj: any) => {
   
   if (isFrame) {
     // 外链菜单：在打开外链前设置导航状态(保持原窗口菜单高亮)
-    // 设置 topNav 高亮
-    navigationStore.setActiveTopNav(selectedKey.split('/')[0])
-    // 设置 leftNav 高亮(如果是子菜单)
+    // 仅叶子外链需要同步高亮；顶层外链(子系统)新开页签，原页签状态保持不动
     if (selectedKey.includes('/')) {
+      // 设置 topNav 高亮
+      navigationStore.setActiveTopNav(selectedKey.split('/')[0])
+      // 设置 leftNav 高亮(如果是子菜单)
       // 查找对应的节点
       const routePath = fullPathForFrame
       const node = routeStore.dynamicRouteMap[routePath]
@@ -143,12 +167,21 @@ const selectNav = (obj: any) => {
       const routeUrl = fullPath.substring(urlArray[0].length)
       window.open(routeUrl, '_blank')
     } else {
-      const routeUrl = router.resolve({ path: fullPath })
+      // 顶层外链(子系统)菜单：新页签落地到其第一个子页面；叶子外链仍打开自身
+      const targetPath = selectedKey.includes('/') ? fullPath : `/${ getFirstLeafPath(fullPathForFrame) }`
+      const routeUrl = router.resolve({ path: targetPath })
       window.open(routeUrl.href, '_blank')
     }
   } else {
-    // 普通导航：只负责跳转，状态由路由守卫同步
-    router.push(fullPath)
+    // 所属顶层菜单为外链(子系统)：其下拉子项在新页签直达对应页面，原页签状态不动
+    const topSegment = selectedKey.split('/')[0]
+    if (routeStore.routePathIsFrameMap[topSegment]) {
+      const routeUrl = router.resolve({ path: fullPath })
+      window.open(routeUrl.href, '_blank')
+    } else {
+      // 普通导航：只负责跳转，状态由路由守卫同步
+      router.push(fullPath)
+    }
   }
 }
 

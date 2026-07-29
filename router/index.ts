@@ -152,6 +152,13 @@ export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocati
   const routePath = to.path.replace('/', '')
   const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
   
+  // 子系统形态：从路由推导（无需 URL / sessionStorage）
+  // 规则：当前路由第一段所属的顶层菜单 isFrame=1 → 本标签页所有子路由都以子系统形态渲染
+  // （顶层 isFrame 菜单通过 window.open 新开标签，其下所有页面天然属于该子系统）
+  const topSegment = routePath.split('/')[0]
+  const isSubSystem = topSegment !== '' && !!routeStore.routePathIsFrameMap[topSegment]
+  navigationStore.setLayoutMode(isSubSystem ? 'subSystem' : 'full')
+  
   // 设置导航显示状态
   navigationStore.setShowNav(!currentPageIsFrame)
   // 保持旧的tabStore兼容
