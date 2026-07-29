@@ -80,6 +80,42 @@
         type="card"
         @change="tabsChange"
       >
+        <!--导入导出放在Tabs右侧，只有选中节点后才可操作-->
+        <template #rightExtra>
+          <a-space :size="4">
+            <a-tooltip :title="menuNameListIndex === 0 ? '导出选中顶部菜单（含所有子菜单）' : '导出选中子菜单（含下属资源权限）'">
+              <a-button
+                size="small"
+                :loading="menuExporting"
+                @click="handleExportMenu"
+              >
+                <template #icon>
+                  <download-outlined />
+                </template>
+                导出
+              </a-button>
+            </a-tooltip>
+            <input
+              ref="menuFileInputRef"
+              type="file"
+              accept=".json"
+              style="display: none"
+              @change="handleMenuFileChange"
+            />
+            <a-tooltip :title="menuNameListIndex === 0 ? '导入顶部菜单（含所有子菜单）' : '导入子菜单（含下属资源权限）'">
+              <a-button
+                size="small"
+                :loading="menuImporting"
+                @click="menuFileInputRef?.click()"
+              >
+                <template #icon>
+                  <upload-outlined />
+                </template>
+                导入
+              </a-button>
+            </a-tooltip>
+          </a-space>
+        </template>
         <a-tab-pane
           key="editNode"
           :tab="isButton()?'编辑按钮':'编辑节点'"
@@ -214,17 +250,18 @@
 </template>
 
 <script lang="ts" setup>
-import { FileAddFilled, LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+import { DownloadOutlined, FileAddFilled, LeftOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { Modal, message } from 'ant-design-vue'
 import { Key } from 'ant-design-vue/es/_util/type'
 import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { Ref } from 'vue'
 
-import { changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMenuOrder, getPermitSource } from '@/framework/apis/admin/navEdit'
+import { addMainMenu, addMenuButton, addMenuContent, addSubMenu, changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMainMenu, updateMenuOrder, updateSubMenu, getPermitSource } from '@/framework/apis/admin/navEdit'
 import TreeEditForm from '@/framework/components/common/treeEditForm/TreeEditForm.vue'
 import { FormState } from '@/framework/components/common/treeEditForm/type'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { getAllParentNodes, getBrotherNodes, setField } from '@/framework/utils/common'
 import { EDIT } from '@/framework/utils/constant'
 
@@ -466,6 +503,237 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
     if (grandId && grandId.value) updateSubTree()
     else updateMainTree()
   })
+}
+
+// ==================== 菜单导入/导出 ====================
+const menuExporting = ref(false)
+const menuImporting = ref(false)
+const menuFileInputRef = ref<HTMLInputElement>()
+
+// 导出时仅保留跨系统迁移所需的业务字段，剥离 menuId/pid/grandId/key 等环境相关字段
+const cleanMenuNode = (node: any): any => ({
+  title: node.title,
+  icon: node.icon,
+  path: node.path,
+  query: node.query,
+  component: node.component,
+  menuType: node.menuType,
+  isCache: node.isCache,
+  isFrame: node.isFrame,
+  children: (node.children || []).map(cleanMenuNode)
+})
+
+// 在树中按 menuId 查找节点
+const findNodeById = (nodes: any[], id: number | undefined): any => {
+  for (const node of nodes || []) {
+    if (node.menuId === id) return node
+    const found = findNodeById(node.children, id)
+    if (found) return found
+  }
+  return null
+}
+
+// 匹配键：同级范围内按 节点类别(按钮/菜单) + 路由路径(按钮为代码标识) 匹配，path 为空时退化为按名称匹配
+const menuNodeKey = (node: any) => `${node.menuType === 3 ? 'btn' : 'menu'}|${node.path || '#' + node.title}`
+
+const countMenuNodes = (nodes: any[]): number =>
+  (nodes || []).reduce((sum: number, n: any) => sum + 1 + countMenuNodes(n.children), 0)
+
+// isCache/isFrame 在表单中为 boolean，树数据中为 0/1，统一归一为数字
+const normFlag = (v: any) => typeof v === 'boolean' ? +v : v
+
+// 导出当前选中节点：主菜单视图导出 顶部菜单+所有子菜单；子菜单视图导出 子菜单+所有下属资源权限
+const handleExportMenu = async () => {
+  const node = findNodeById(treeData.value as any[], menuId.value)
+  if (!node) {
+    message.warning('请先在树中选择要导出的菜单节点')
+    return
+  }
+  menuExporting.value = true
+  try {
+    const isMain = menuNameListIndex.value === 0
+    let data: any
+    if (isMain) {
+      // 顶部菜单：拉取其下完整子菜单树（含按钮资源）一并导出
+      const res = await getSubMenu({ menuId: node.menuId })
+      data = { ...cleanMenuNode(node), children: (res.payload || []).map(cleanMenuNode) }
+    } else {
+      data = cleanMenuNode(node)
+    }
+    downloadJsonConfig(`${isMain ? '顶部菜单' : '子菜单'}-${node.title}`, {
+      type: 'menuTree',
+      scope: isMain ? 'main' : 'sub',
+      exportTime: new Date().toISOString(),
+      data
+    })
+    message.success(`菜单「${node.title}」导出成功`)
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    menuExporting.value = false
+  }
+}
+
+// 新增节点：后端根据接口决定 menuType，新增接口不返回 id，需重拉树按匹配键回查新节点 id
+const addMenuNode = async (fileNode: any, pid: number | null, grandIdVal: number | null, counters: { added: number }): Promise<number | undefined> => {
+  const body: any = {
+    title: fileNode.title,
+    icon: fileNode.icon || 'SettingOutlined',
+    path: fileNode.path,
+    query: fileNode.query,
+    component: fileNode.component,
+    isCache: normFlag(fileNode.isCache) ?? 0,
+    isFrame: normFlag(fileNode.isFrame) ?? 0,
+    pid: pid ?? undefined
+  }
+  if (grandIdVal === null) {
+    await addMainMenu(body, false)
+  } else {
+    body.grandId = grandIdVal
+    if (fileNode.menuType === 3) await addMenuButton(body, false)
+    else if (fileNode.menuType === 2) await addMenuContent(body, false)
+    else await addSubMenu(body, false)
+  }
+  counters.added++
+  // 无子节点的子菜单节点无需回查 id
+  if (grandIdVal !== null && !fileNode.children?.length) return undefined
+  const res = grandIdVal === null ? await getMainMenu() : await getSubMenu({ menuId: grandIdVal })
+  const tree = res.payload || []
+  const siblings = pid === null ? tree : (findNodeById(tree, pid)?.children || [])
+  const matched = siblings.filter((n: any) => menuNodeKey(n) === menuNodeKey(fileNode))
+  return matched.length ? matched[matched.length - 1].menuId : undefined
+}
+
+// 更新节点业务字段（不改动 pid/showOrder，保持目标系统已有层级与排序）
+const updateMenuFields = async (fileNode: any, menuIdVal: number, grandIdVal: number | null) => {
+  const body: any = {
+    title: fileNode.title,
+    icon: fileNode.icon,
+    path: fileNode.path,
+    query: fileNode.query,
+    component: fileNode.component,
+    isCache: normFlag(fileNode.isCache),
+    isFrame: normFlag(fileNode.isFrame),
+    menuId: menuIdVal
+  }
+  if (grandIdVal === null) await updateMainMenu(body, false)
+  else await updateSubMenu(body, false)
+}
+
+// 删除节点及其所有下属节点（后序遍历，先删子后删父）
+const deleteMenuSubtree = async (node: any, counters: { deleted: number }) => {
+  for (const child of node.children || []) {
+    await deleteMenuSubtree(child, counters)
+  }
+  await deleteMainMenu({ id: node.menuId }, false)
+  counters.deleted++
+}
+
+// 同步单个节点：存在则更新并递归同步子级，不存在则新增后整树添加
+const upsertMenuNode = async (fileNode: any, exist: any, pid: number | null, grandIdVal: number, counters: any) => {
+  if (exist) {
+    await updateMenuFields(fileNode, exist.menuId, grandIdVal)
+    counters.updated++
+    await syncMenuChildren(fileNode.children || [], exist.children || [], exist.menuId, grandIdVal, counters)
+  } else {
+    const newId = await addMenuNode(fileNode, pid, grandIdVal, counters)
+    if (fileNode.children?.length) {
+      if (newId === undefined) throw new Error(`无法定位新增节点「${fileNode.title}」，导入中断`)
+      await syncMenuChildren(fileNode.children, [], newId, grandIdVal, counters)
+    }
+  }
+}
+
+// 按匹配键比对文件节点与现有同级节点，模拟人工操作逐个调用新增/更新/删除接口
+const syncMenuChildren = async (fileChildren: any[], existChildren: any[], pid: number | null, grandIdVal: number, counters: any) => {
+  const existMap = new Map<string, any>()
+  for (const node of existChildren || []) {
+    existMap.set(menuNodeKey(node), node)
+  }
+  for (const fileNode of fileChildren || []) {
+    const exist = existMap.get(menuNodeKey(fileNode))
+    if (exist) existMap.delete(menuNodeKey(fileNode))
+    await upsertMenuNode(fileNode, exist || null, pid, grandIdVal, counters)
+  }
+  // 文件中不存在的现有节点 → 连同下属节点一并删除
+  for (const leftover of existMap.values()) {
+    await deleteMenuSubtree(leftover, counters)
+  }
+}
+
+// 顶部菜单导入：按匹配键在主菜单中查找，存在则更新，随后同步其下完整子菜单树
+const importMainMenu = async (rootNode: any, counters: any) => {
+  const mains = (await getMainMenu()).payload || []
+  const exist = mains.find((n: any) => menuNodeKey(n) === menuNodeKey(rootNode))
+  let topId: number | undefined
+  if (exist) {
+    await updateMenuFields(rootNode, exist.menuId, null)
+    counters.updated++
+    topId = exist.menuId
+  } else {
+    topId = await addMenuNode(rootNode, null, null, counters)
+  }
+  if (topId === undefined) throw new Error('无法定位导入的顶部菜单，导入中断')
+  const subRoots = (await getSubMenu({ menuId: topId })).payload || []
+  await syncMenuChildren(rootNode.children || [], subRoots, null, topId, counters)
+}
+
+// 子菜单导入：与当前子菜单树的根层级比对，仅同步导入的这棵子树，不影响其他同级子菜单
+const importSubMenu = async (rootNode: any, counters: any) => {
+  const roots = (await getSubMenu({ menuId: grandId.value })).payload || []
+  const exist = roots.find((n: any) => menuNodeKey(n) === menuNodeKey(rootNode)) || null
+  await upsertMenuNode(rootNode, exist, null, grandId.value!, counters)
+}
+
+// 导入菜单配置文件
+const handleMenuFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  try {
+    const parsed = await readJsonFile(file)
+    if (parsed?.type !== 'menuTree' || !parsed.data) {
+      message.error('文件格式不正确，请选择菜单导出的JSON文件')
+      return
+    }
+    const isMain = menuNameListIndex.value === 0
+    if (parsed.scope !== (isMain ? 'main' : 'sub')) {
+      message.error(parsed.scope === 'main'
+        ? '该文件为顶部菜单导出文件，请返回主菜单后再导入'
+        : '该文件为子菜单导出文件，请进入对应顶部菜单的子菜单后再导入')
+      return
+    }
+    const rootNode = parsed.data
+    const total = 1 + countMenuNodes(rootNode.children)
+    Modal.confirm({
+      title: '确认导入',
+      content: `将按「${rootNode.title}」同步 ${total} 个节点：路径相同的节点更新，不存在的新增，该菜单下文件中没有的节点将被删除。确认继续？`,
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: async () => {
+        menuImporting.value = true
+        try {
+          const counters = { added: 0, updated: 0, deleted: 0 }
+          if (isMain) await importMainMenu(rootNode, counters)
+          else await importSubMenu(rootNode, counters)
+          message.success(`导入完成：新增 ${counters.added}，更新 ${counters.updated}，删除 ${counters.deleted}`)
+          if (isMain) updateMainTree()
+          else updateSubTree()
+        } catch (error: any) {
+          message.error('导入失败: ' + (error?.message || '未知错误'))
+          // 导入中断时也要刷新树，展示已落库的部分
+          if (isMain) updateMainTree()
+          else updateSubTree()
+        } finally {
+          menuImporting.value = false
+        }
+      }
+    })
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
+  }
 }
 
 </script>
