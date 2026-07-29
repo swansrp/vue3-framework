@@ -85,6 +85,7 @@
               </template>
               <template v-else>
                 <a-button 
+                  v-if="!currentBindTab.singleSelect"
                   type="primary" 
                   size="small" 
                   :disabled="isAllSelected(currentBindTab)"
@@ -93,6 +94,7 @@
                   全选
                 </a-button>
                 <a-button
+                  v-if="!currentBindTab.singleSelect"
                   size="small"
                   @click="invertSelect(currentBindTab)"
                 >
@@ -241,8 +243,25 @@
                 </template>
                 <template v-else>
                   <div class="tab-pane-content">
+                    <!-- 单选模式：每个用户组只能绑定一个 -->
+                    <a-radio-group
+                      v-if="bindTab.singleSelect && isNotEmpty(bindTab.data)"
+                      :key="bindTab.key"
+                      :value="bindTab.checked && bindTab.checked[0]"
+                      style="display: grid;"
+                      @change="handleSingleChecked($event.target.value, bindTab)"
+                    >
+                      <a-radio
+                        v-for="(item, index) in bindTab.data"
+                        :key="index"
+                        :value="item.value"
+                        style="margin: 5px 0"
+                      >
+                        <span class="normal">{{ item.label }}</span>
+                      </a-radio>
+                    </a-radio-group>
                     <a-checkbox-group
-                      v-if="isNotEmpty(bindTab.data)"
+                      v-else-if="isNotEmpty(bindTab.data)"
                       v-model:value="bindTab.checked"
                       style="display: grid;"
                       @change="handleChecked($event, bindTab)"
@@ -467,6 +486,11 @@ const handleChecked = (checkedValue: any, tab: any) => {
     .catch(() => {
       message.error('操作失败，请重试')
     })
+}
+/** 单选模式：选中新值时替换掉原有绑定（每个用户组只保留一条） */
+const handleSingleChecked = (value: any, tab: any) => {
+  tab.checked = value == null ? [] : [value]
+  handleChecked(tab.checked, tab)
 }
 const selectAll = (tab: any) => {
   tab.checked = tab.data.map((item: any) => item.value)

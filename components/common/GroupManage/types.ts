@@ -13,6 +13,8 @@ export interface GroupBindProperty {
     bindType?: string
     // 不显示绑定功能 只显示绑定结果
     readOnly?: boolean
+    // 单选模式：每个用户组只能绑定一个（仅非树形模式支持，绑定页渲染为单选框）
+    singleSelect?: boolean
     // 树形结构
     treeMode?: boolean
     // 字典名称
