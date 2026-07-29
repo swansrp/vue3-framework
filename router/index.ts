@@ -149,8 +149,13 @@ function handleRootPath(
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const navigationStore = useNavigationStore(pinia)
   const routeStore = useRouteStore(pinia)
-  const routePath = to.path.replace('/', '')
-  const currentPageIsFrame = routeStore.routePathIsFrameMap[routePath]
+  // 归一化路径：去掉首尾斜杠，保证 /forecast 与 /forecast/ 行为一致
+  const routePath = to.path.replace(/^\/+/, '').replace(/\/+$/, '')
+  // 目录节点（父节点只占层级、无自身组件）
+  const dirNode = routeStore.dynamicRouteMap[routePath]
+  const isDirectory = !!(dirNode && dirNode.children && dirNode.children.length > 0)
+  // 仅"叶子外链页"隐藏整个导航走裸页；子系统父目录不算裸页，照常显示框架
+  const currentPageIsFrame = !!routeStore.routePathIsFrameMap[routePath] && !isDirectory
   
   // 子系统形态：从路由推导（无需 URL / sessionStorage）
   // 规则：当前路由第一段所属的顶层菜单 isFrame=1 → 本标签页所有子路由都以子系统形态渲染
@@ -181,6 +186,23 @@ export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocati
     handleRootPath(navigationStore, routeStore, next)
     return
   } else {
+    // 目录路径处理：父节点无自身页面（只占层级）
+    // - auto 模式：自动下钻进入第一个叶子页面并选中（与根路径 auto 行为一致）
+    // - 非 auto 模式：仅显示框架与左侧菜单、不选中第一个（内容区留空，等用户点击）
+    if (rootPathMode === 'auto' && isDirectory && dirNode) {
+      let node = dirNode
+      const pathArray = [routePath]
+      while (node.children && node.children.length > 0) {
+        node = node.children[0]
+        pathArray.push(node.path)
+      }
+      const leafPath = pathArray.join('/')
+      const queryStr = routeStore.dynamicRouteMap[leafPath] ? routeStore.dynamicRouteMap[leafPath].query : null
+      const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
+      next({ path: `/${ leafPath }`, query, replace: true })
+      return
+    }
+    
     // 非根路径：统一从路由同步导航状态
     navigationStore.setShowLeftNav(true)
     // 保持旧的tabStore兼容
