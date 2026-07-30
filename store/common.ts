@@ -51,15 +51,22 @@ export const dictStore = defineStore('dictStore', {
         const valueMap = new Map()
         const labelMap = new Map()
 
+        // 按 value 去重（保留首条），重复 value 会导致 a-select 虚拟滚动渲染错乱
+        const uniqueData = [] as Array<ValueLabel>
         res.payload.forEach((data: ValueLabel) => {
+          if (valueMap.has(data.value)) {
+            console.warn(`[dictStore] 字典 ${dictName} 存在重复 value: ${data.value}(${data.label})，已忽略`)
+            return
+          }
+          uniqueData.push(data)
           valueMap.set(data.value, data.label)
           // if(!isNaN(Number(data.value))) {
           //     valueMap.set(Number(data.value), data.label)
           // }
           labelMap.set(data.label, data.value)
         })
-        this.map.set(dictName, { data: res.payload, valueMap, labelMap })
-        return res.payload.filter((dict:any) => dict.show !== '0')
+        this.map.set(dictName, { data: uniqueData, valueMap, labelMap })
+        return uniqueData.filter((dict:any) => dict.show !== '0')
       })
     }, async getLabelAsync(dictName: string, value: number | string) {
       const dict = this.map.get(dictName)
