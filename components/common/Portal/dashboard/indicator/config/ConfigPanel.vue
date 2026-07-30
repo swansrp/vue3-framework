@@ -55,11 +55,14 @@
           <a-select-option value="rankingBar">
             排行榜(Top-N)
           </a-select-option>
+          <a-select-option value="comparisonBar">
+            同比环比
+          </a-select-option>
         </a-select>
       </div>
 
-      <!-- 维度选择（指标饼图/排行榜模式下禁用；树形堆叠模式下二级维度变为树关系选择） -->
-      <div :class="{ 'section-disabled': chartMode === 'metricsPie' || chartMode === 'rankingBar' }">
+      <!-- 维度选择（指标饼图/排行榜/同比环比模式下禁用；树形堆叠模式下二级维度变为树关系选择） -->
+      <div :class="{ 'section-disabled': chartMode === 'metricsPie' || chartMode === 'rankingBar' || chartMode === 'comparisonBar' }">
         <DimensionSelector
           v-model:first-dimension="firstDimension"
           v-model:second-dimension="secondDimension"
@@ -84,6 +87,7 @@
         :second-dimension="secondDimension"
         :chart-mode="chartMode"
         :group-by-column-options="groupByColumnOptions"
+        :date-column-options="dateColumnOptions"
         :convert-unit="convertUnit"
         @update-metric-field="updateMetricField"
       />
@@ -132,7 +136,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar' | 'comparisonBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -144,6 +148,10 @@ interface DataMetricUI {
   topN?: number
   sortOrder?: 0 | 1
   groupByDictMap?: Record<string, string>
+  // ===== 同比环比专属字段 =====
+  dateField?: string
+  dateFieldLabel?: string
+  dateFormat?: 'DATETIME' | 'YYYY' | 'YYYY-MM' | 'YYYYMM'
 }
 
 interface DataTypeOption {
@@ -171,6 +179,7 @@ const props = defineProps<{
   dataMetrics: DataMetricUI[]
   availableDataTypes: DataTypeOption[]
   groupByColumnOptions?: GroupByColumnOption[]
+  dateColumnOptions?: GroupByColumnOption[]
   convertUnit?: (unitConfig: string) => string
 }>()
 
@@ -203,12 +212,13 @@ const filterDimensions = ref<[...(IndicatorGroup | null)[], (IndicatorGroup | nu
 const selectedFilterItemsArray = ref<string[][]>([...props.selectedFilterItemsArray])
 const dataMetrics = ref([...props.dataMetrics])
 
-// 图表模式：'dimension'（维度图表）| 'metricsPie'（指标饼图）| 'treeStacked'（树形堆叠）| 'rankingBar'（排行榜）
+// 图表模式：'dimension'（维度图表）| 'metricsPie'（指标饼图）| 'treeStacked'（树形堆叠）| 'rankingBar'（排行榜）| 'comparisonBar'（同比环比）
 // 基于 dataMetrics 推断：任一指标为对应类型即为该模式
 const chartMode = computed(() => {
   if (dataMetrics.value.some(m => m.chartType === 'metricsPie')) return 'metricsPie'
   if (dataMetrics.value.some(m => m.chartType === 'treeStackedBar')) return 'treeStacked'
   if (dataMetrics.value.some(m => m.chartType === 'rankingBar')) return 'rankingBar'
+  if (dataMetrics.value.some(m => m.chartType === 'comparisonBar')) return 'comparisonBar'
   return 'dimension'
 })
 
@@ -264,10 +274,28 @@ const onChartModeChange = (mode: any) => {
       topN: base.topN ?? 10,
       sortOrder: base.sortOrder ?? 1
     }]
+  } else if (mode === 'comparisonBar') {
+    // 切到同比环比：清空维度，仅保留一个指标并标记为 comparisonBar
+    firstDimension.value = null
+    secondDimension.value = null
+    treeDimension.value = null
+    emit('update:firstDimension', null)
+    emit('update:secondDimension', null)
+    emit('update:treeDimension', null)
+    const base = dataMetrics.value[0] || {
+      id: `metric_${Date.now()}`,
+      dataName: '数量',
+      dataField: '',
+      color: '#1890ff',
+      yAxisPosition: 'left',
+      unit: '',
+      itemColors: {}
+    }
+    dataMetrics.value = [{ ...base, chartType: 'comparisonBar', stackGroup: 'noStack' }]
   } else {
-    // 切回维度图表：所有 metricsPie / treeStackedBar / rankingBar 恢复为 bar
+    // 切回维度图表：所有 metricsPie / treeStackedBar / rankingBar / comparisonBar 恢复为 bar
     dataMetrics.value.forEach(m => {
-      if (m.chartType === 'metricsPie' || m.chartType === 'treeStackedBar' || m.chartType === 'rankingBar') {
+      if (m.chartType === 'metricsPie' || m.chartType === 'treeStackedBar' || m.chartType === 'rankingBar' || m.chartType === 'comparisonBar') {
         m.chartType = 'bar'
       }
     })
@@ -289,6 +317,10 @@ const canGenerateChart = computed(() => {
   if (chartMode.value === 'rankingBar') {
     // 排行榜模式：无维度，只需选择分组字段
     return !!dataMetrics.value[0]?.groupByField
+  }
+  if (chartMode.value === 'comparisonBar') {
+    // 同比环比模式：无维度，只需选择时间字段
+    return !!dataMetrics.value[0]?.dateField
   }
   // 维度图表模式：需要一级维度
   return !!firstDimension.value
@@ -489,6 +521,23 @@ const generateChart = () => {
   if (chartMode.value === 'rankingBar') {
     if (!dataMetrics.value[0]?.groupByField) {
       message.error('请选择排行榜的分组字段')
+      return
+    }
+    emit('generateChart', {
+      firstDimension: null,
+      secondDimension: null,
+      treeDimension: null,
+      filterDimensions: filterDimensions.value,
+      selectedFilterItemsArray: selectedFilterItemsArray.value,
+      dataMetrics: dataMetrics.value
+    })
+    return
+  }
+
+  // 同比环比模式：无维度，必须选择时间字段
+  if (chartMode.value === 'comparisonBar') {
+    if (!dataMetrics.value[0]?.dateField) {
+      message.error('请选择同比环比的时间字段')
       return
     }
     emit('generateChart', {

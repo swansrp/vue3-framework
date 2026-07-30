@@ -19,7 +19,7 @@
 import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import { buildFullAxisTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
+import { buildComparisonAxisTooltipHtml, buildFullAxisTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
 import { getEffectiveUnit } from '../utils/unitFormat'
 
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
@@ -85,6 +85,8 @@ export default defineComponent({
     }
 
     const isPercentLineMetric = (metric?: DataMetric) => metric?.chartType === 'ptLine'
+    // 直接百分比折线（同比/环比增长率）：数值已是百分比，原值直出，不做占比换算与 0-100 夹紧
+    const isDirectPercentMetric = (metric?: DataMetric) => isPercentLineMetric(metric) && !!metric?.directPercent
     const clampPercentValue = (value: number) => Math.max(0, Math.min(100, Number.isNaN(value) ? 0 : value))
 
     const convertValueForMetric = (metric: DataMetric | undefined, rawValue: number) => {
@@ -97,6 +99,7 @@ export default defineComponent({
     }
 
     const formatValueForMetric = (metric: DataMetric | undefined, value: number) => {
+      if (value == null || Number.isNaN(value)) return ''
       if (!metric) return value.toString()
       if (isPercentLineMetric(metric)) return `${value.toFixed(2)}%`
       if (metric.unitConfig) {
@@ -287,13 +290,14 @@ export default defineComponent({
         }
 
         if (rightPercentMetrics.length > 0) {
+          // 全部为直接百分比（增长率）时：轴名改为增长率，且不固定 0-100（增长率可为负/超 100）
+          const allDirectPercent = rightPercentMetrics.every(m => isDirectPercentMetric(m))
           addAxis('right_percent', {
             type: 'value',
-            name: '占比(%)',
+            name: allDirectPercent ? '增长率(%)' : '占比(%)',
             position: 'right',
             offset: rightOffset,
-            min: 0,
-            max: 100,
+            ...(allDirectPercent ? { scale: true } : { min: 0, max: 100 }),
             axisLabel: {
               formatter: (value: number) => `${value}%`,
               fontSize: 12
@@ -352,10 +356,16 @@ export default defineComponent({
               d.firstDimension === category &&
               d.statisticType === statType
             )
-            const rawValue = item ? item.statistic : 0
+            const rawStat = item ? item.statistic : null
+            const rawValue = rawStat ?? 0
             const baseValue = convertValueForMetric(metric, rawValue)
             const percentValue = totalForStatType > 0 ? clampPercentValue((baseValue / totalForStatType) * 100) : 0
-            const displayValue = isPercentLineMetric(metric) ? percentValue : baseValue
+            // 直接百分比（增长率）：原值直出，null 保持折线断点
+            const displayValue = isPercentLineMetric(metric)
+              ? (isDirectPercentMetric(metric)
+                ? (rawStat == null ? null : Number(rawStat))
+                : percentValue)
+              : baseValue
             const itemColor = (props.dimensionValueMap
               && metric.itemColors
               && props.dimensionValueMap.first
@@ -395,6 +405,8 @@ export default defineComponent({
               type: 'bar',
               yAxisIndex,
               stack: stackKey,
+              // 系列级颜色：图例/tooltip 取色来源（数据项级 itemStyle 仍按类目覆盖柱色）
+              color: metric.color || undefined,
               data: seriesData,
               label: {
                 show: true,
@@ -427,6 +439,8 @@ export default defineComponent({
               name: statType,
               type: 'line',
               yAxisIndex,
+              // 系列级颜色：图例与折线符号取色来源（与 lineStyle 保持一致）
+              color: metric.color || undefined,
               data: seriesData,
               lineStyle: {
                 color: metric.color || `hsl(${(statIndex * 60) % 360}, 70%, 50%)`,
@@ -678,7 +692,9 @@ export default defineComponent({
           width: '80%',
           itemGap: 15,
           itemHeight: 14,
-          itemStyle: isEmpty(secondDimensionGroups) ? { color: '#1677ff' } : {},
+          // 无第二维度时柱子按类目着色，图例统一蓝色占位；
+          // 同比环比（每系列一色）例外：图例取各系列自身颜色，与柱段/折线保持一致
+          itemStyle: (isEmpty(secondDimensionGroups) && !props.dataMetrics.some(m => isDirectPercentMetric(m))) ? { color: '#1677ff' } : {},
           data: legendData,
           formatter: (name: string) => {
             // 将 "维度&&统计类型" 格式化为 "维度(统计类型)"
@@ -737,6 +753,34 @@ export default defineComponent({
 
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
 
+            // ===== 同比环比（存在增长率系列）：同一周期的柱值/占比与同比/环比合并为一行 =====
+            if (props.dataMetrics.some(m => isDirectPercentMetric(m))) {
+              const hoveredCategory = params[0].axisValue
+              const tooltipSeries = series.filter((s: any) => !s.name?.startsWith('__stack_total__'))
+              const findMetric = (s: any) => props.dataMetrics.find(m => m.dataName === s.name)
+              return buildComparisonAxisTooltipHtml(
+                tooltipSeries,
+                categories,
+                hoveredCategory,
+                (s: any) => isDirectPercentMetric(findMetric(s)),
+                (s: any) => {
+                  const metric = findMetric(s)
+                  return isPercentLineMetric(metric) ? '' : (getEffectiveUnit(metric) || '')
+                },
+                (value: number, s: any) => {
+                  const metric = findMetric(s)
+                  if (isPercentLineMetric(metric)) {
+                    return `${value.toFixed(2)}%`
+                  }
+                  if (metric?.unitConfig) {
+                    const { fix } = parseUnitConfig(metric.unitConfig)
+                    return Number(value).toLocaleString(undefined, { minimumFractionDigits: fix, maximumFractionDigits: fix })
+                  }
+                  return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                }
+              )
+            }
+
             // ===== 非堆叠图表：复用饼图 tooltip 样式（列出所有类目数据，高亮当前 hover 项） =====
             if (!hasStackedSeries(series)) {
               const hoveredCategory = params[0].axisValue
@@ -761,7 +805,7 @@ export default defineComponent({
                   const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
                   const metric = props.dataMetrics.find(m => m.dataName === statType)
                   if (isPercentLineMetric(metric)) {
-                    return `${value.toFixed(2)}`
+                    return `${value.toFixed(2)}%`
                   }
                   if (metric?.unitConfig) {
                     const { fix } = parseUnitConfig(metric.unitConfig)
@@ -769,7 +813,16 @@ export default defineComponent({
                   }
                   return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
                 },
-                (datum: any, s: any) => datum?.itemStyle?.color || s.itemStyle?.color || s.lineStyle?.color
+                (datum: any, s: any) => datum?.itemStyle?.color || s.itemStyle?.color || s.lineStyle?.color,
+                {
+                  // 增长率系列：数值非占比语义，不显示占比
+                  showSharePercent: (s: any) => {
+                    const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                    return !isDirectPercentMetric(props.dataMetrics.find(m => m.dataName === statType))
+                  },
+                  // 存在增长率系列时各系列单位混合，合计无意义，隐藏合计行
+                  showTotal: !props.dataMetrics.some(m => isDirectPercentMetric(m))
+                }
               )
             }
 

@@ -24,6 +24,82 @@
               @click="handleExportExcel"
             />
           </a-tooltip>
+          <!-- 同比环比：年份数量/月份/口径（展示态 echarts UI 配置，不持久化；纯年份列仅年份数量） -->
+          <a-dropdown
+            v-if="isComparisonCard"
+            :trigger="['click']"
+          >
+            <a-tooltip :title="comparisonTooltip">
+              <CalendarOutlined class="action-icon action-icon-active" />
+            </a-tooltip>
+            <template #overlay>
+              <div
+                style="background: var(--component-background, #fff); padding: 12px; border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); display: flex; flex-direction: column; gap: 8px;"
+                @mousedown.stop
+              >
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                  <span style="font-size: 12px;">年份数量</span>
+                  <a-select
+                    v-model:value="comparisonYearCount"
+                    size="small"
+                    style="width: 84px"
+                    @change="onComparisonOptionChange"
+                  >
+                    <a-select-option
+                      v-for="n in comparisonYearCountOptions"
+                      :key="n"
+                      :value="n"
+                    >
+                      {{ n }} 年
+                    </a-select-option>
+                  </a-select>
+                </div>
+                <template v-if="!isYearOnlyComparison">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <span style="font-size: 12px;">月份</span>
+                    <a-select
+                      v-model:value="comparisonMonth"
+                      size="small"
+                      style="width: 84px"
+                      @change="onComparisonOptionChange"
+                    >
+                      <a-select-option
+                        v-for="m in 12"
+                        :key="m"
+                        :value="m"
+                      >
+                        {{ m }} 月
+                      </a-select-option>
+                    </a-select>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <span style="font-size: 12px;">口径</span>
+                    <a-select
+                      v-model:value="comparisonScope"
+                      size="small"
+                      style="width: 84px"
+                      @change="onComparisonOptionChange"
+                    >
+                      <a-select-option value="ytd">
+                        年累计
+                      </a-select-option>
+                      <a-select-option value="single">
+                        单月
+                      </a-select-option>
+                    </a-select>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <span style="font-size: 12px;">环比</span>
+                    <a-switch
+                      v-model:checked="comparisonShowMom"
+                      size="small"
+                      @change="onComparisonOptionChange"
+                    />
+                  </div>
+                </template>
+              </div>
+            </template>
+          </a-dropdown>
           <!-- 隐藏为 0 的数据 -->
           <a-tooltip :title="hideZeroData ? '不隐藏为0的数据' : '隐藏为0的数据'">
             <FilterOutlined
@@ -134,7 +210,7 @@
             v-if="isInitialized && !isDestroyed"
             ref="chartRef"
             :data="safeChartData"
-            :data-metrics="indicatorConfig?.dataMetrics || []"
+            :data-metrics="renderDataMetrics"
             :categories="chartCategories || []"
             :chart-type="chartType || 'bar'"
             :dimension-value-map="dimensionValueMap || { first: {}, second: {} }"
@@ -266,13 +342,17 @@ import { getPortalConfig } from '@/framework/apis/portal/config'
 import UniversalChart from '@/framework/components/common/chart/UniversalChart.vue'
 import {
   buildChartCategories,
+  buildComparisonRenderMetrics,
   buildDimensionValueMap,
   buildDrillConditionFromCache,
   buildDrillConditionFromRanking,
   buildSelectedBarInfo,
+  COMPARISON_SERIES,
   fetchStatisticData,
+  filterChartDataByVisibility,
   filterZeroData,
   getChartType,
+  getDefaultComparisonOptions,
   hasValidChartConfig,
   parseBarClickParams,
   parsePieClickParams,
@@ -288,7 +368,7 @@ const DashboardDetail = defineAsyncComponent(() =>
   import('@/framework/components/common/Portal/dashboard/indicator/dashboard/DashboardDetail.vue')
 )
 import { message } from 'ant-design-vue'
-import { BarChartOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, EllipsisOutlined, FilterOutlined, InfoCircleOutlined, ReloadOutlined, SortAscendingOutlined, SortDescendingOutlined, VerticalAlignBottomOutlined, VerticalAlignTopOutlined } from '@ant-design/icons-vue'
+import { BarChartOutlined, CalendarOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, EllipsisOutlined, FilterOutlined, InfoCircleOutlined, ReloadOutlined, SortAscendingOutlined, SortDescendingOutlined, VerticalAlignBottomOutlined, VerticalAlignTopOutlined } from '@ant-design/icons-vue'
 
 
 interface Props {
@@ -380,6 +460,14 @@ let lastStatisticBody: any = null
 const hideZeroData = ref(false)
 const sortOrder = ref<'none' | 'asc' | 'desc'>('none')
 
+// 同比环比展示态配置（echarts UI 配置，不持久化，默认当前年月+年累计口径，环比默认关闭）
+const defaultComparisonOptions = getDefaultComparisonOptions()
+const comparisonYearCount = ref(defaultComparisonOptions.yearCount)
+const comparisonMonth = ref(defaultComparisonOptions.month)
+const comparisonScope = ref<'single' | 'ytd'>(defaultComparisonOptions.scope)
+const comparisonShowMom = ref(defaultComparisonOptions.showMom)
+const comparisonYearCountOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+
 // 弹窗相关状态
 const detailModalVisible = ref(false)
 const selectedBarInfo = ref<SelectedBarInfo | null>(null)
@@ -404,6 +492,37 @@ const indicatorConfig = computed(() => {
 // 判断是否有有效配置
 const hasValidConfig = computed(() => hasValidChartConfig(indicatorConfig.value))
 
+// 是否为同比环比卡片
+const isComparisonCard = computed(() =>
+  (indicatorConfig.value?.dataMetrics || []).some((m: any) => m.chartType === 'comparisonBar')
+)
+
+// 纯年份列（dateFormat=YYYY）：无月份概念，隐藏月份/口径控件，无环比线
+const isYearOnlyComparison = computed(() =>
+  indicatorConfig.value?.dataMetrics?.[0]?.dateFormat === 'YYYY'
+)
+
+// 同比环比设置图标悬浮提示
+const comparisonTooltip = computed(() => {
+  if (isYearOnlyComparison.value) return `同比环比：近${comparisonYearCount.value}年`
+  const scopeLabel = comparisonScope.value === 'single' ? '单月' : '年累计'
+  const momLabel = comparisonShowMom.value ? ' · 环比' : ''
+  return `同比环比：近${comparisonYearCount.value}年 · ${comparisonMonth.value}月 · ${scopeLabel}${momLabel}`
+})
+
+// 渲染用数据指标：同比环比模式合成「统计值 bar + 同比/环比 ptLine」系列（环比随开关）
+const renderDataMetrics = computed(() => {
+  if (isComparisonCard.value) {
+    return buildComparisonRenderMetrics(indicatorConfig.value, comparisonShowMom.value)
+  }
+  return indicatorConfig.value?.dataMetrics || []
+})
+
+// 同比环比展示态配置变更：重新取数
+const onComparisonOptionChange = () => {
+  loadChartData()
+}
+
 // 获取tableId
 const tableId = computed(() => {
   return props.indicator.config?.tableId || ''
@@ -412,6 +531,15 @@ const tableId = computed(() => {
 // 安全的图表数据，确保类型正确，并叠加"隐藏为0"与排序开关
 const safeChartData = computed(() => {
   let result: any[] = Array.isArray(chartData.value) ? chartData.value.map(i => ({ ...i })) : []
+  // 同比环比：仅按保存的统计系列可见性过滤（周期桶随展示态动态生成，不按保存的一级维度过滤）；
+  // 环比为卡片级开关（不落库），开启时强制并入可见列表，避免被保存的可见性滤掉
+  if (isComparisonCard.value) {
+    let visibleStats: string[] = indicatorConfig.value?.visibleStatisticTypes || []
+    if (comparisonShowMom.value && visibleStats.length > 0 && !visibleStats.includes(COMPARISON_SERIES.MOM)) {
+      visibleStats = [...visibleStats, COMPARISON_SERIES.MOM]
+    }
+    result = filterChartDataByVisibility(result, [], [], visibleStats)
+  }
   if (hideZeroData.value) {
     result = filterZeroData(result)
   }
@@ -492,11 +620,14 @@ const loadChartData = async () => {
       return
     }
 
-    // 调用共享取数逻辑（自动判断 metricsPie / treeStacked / 默认三分支，
+    // 调用共享取数逻辑（自动判断 metricsPie / treeStacked / comparison / 默认分支，
     // 并将可见性烤进请求）
     const { requestParams, response } = await fetchStatisticData(
       portalConfigs.value.url,
-      indicatorConfig.value
+      indicatorConfig.value,
+      isComparisonCard.value
+        ? { comparison: { yearCount: comparisonYearCount.value, month: comparisonMonth.value, scope: comparisonScope.value, showMom: comparisonShowMom.value } }
+        : undefined
     )
 
     // 树形堆叠：实时构建父节点/叶子「名->值」映射，供颜色查找与维度编码（存储配置中维度为 null）
@@ -652,7 +783,9 @@ const hasSecondDimension = computed(() => {
 
 // 图表点击事件处理
 const handleChartClick = (params: any) => {
-  if (chartType.value === 'rankingBar') {
+  if (chartType.value === 'comparisonBar') {
+    onComparisonBarClick(params)
+  } else if (chartType.value === 'rankingBar') {
     onRankingBarClick(params)
   } else if (chartType.value === 'bar' || chartType.value === 'line' || chartType.value === 'ptLine') {
     onBarClick(params)
@@ -661,6 +794,29 @@ const handleChartClick = (params: any) => {
   } else if (chartType.value === 'metricsPie') {
     onMetricsPieClick(params)
   }
+}
+
+// 点击同比环比柱子/折线点事件处理
+// 周期桶 label='YYYY-MM' 与归一化后的 metricLabel 一致，可直接按 conditionLabel 匹配穿透
+const onComparisonBarClick = (params: any) => {
+  const periodLabel = params.name // X 轴周期显示名（YYYY-MM）
+  if (!periodLabel) return
+
+  const combinedConditions = buildDrillConditionFromCache(lastStatisticBody, periodLabel, '')
+  if (!combinedConditions) {
+    console.warn('无法构建同比环比穿透条件')
+    return
+  }
+
+  const groupName = indicatorConfig.value?.dataMetrics?.[0]?.dateFieldLabel || '统计周期'
+  const statType = params.seriesName
+
+  selectedBarInfo.value = buildSelectedBarInfo(
+    periodLabel, null, groupName, null,
+    statType, [periodLabel], combinedConditions, false
+  )
+
+  detailModalVisible.value = true
 }
 
 // 点击排行榜柱子事件处理

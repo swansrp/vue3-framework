@@ -18,16 +18,27 @@ import { advancedStatisticRequest } from '@/framework/apis'
 import type { ChartType, ChartMode } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import { CHART_TYPE, CHART_MODE } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import type { SelectedBarInfo } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import {
   buildDrillConditionFromStatistic
 } from '@/framework/components/common/Portal/utils'
 
 // ===== Types =====
 
+// 同比环比展示态选项（echarts UI 配置，不持久化到后端 JSON）
+export interface ComparisonDisplayOptions {
+  yearCount?: number  // 展示年份数量（2~10）
+  month?: number      // 统计月份（1~12，dateFormat=YYYY 时无效）
+  endYear?: number    // 截止年份（默认当前年）
+  scope?: 'single' | 'ytd'  // 统计口径：single=单月，ytd=年累计(1月~当前月)；dateFormat=YYYY 固定整年
+  showMom?: boolean   // 是否显示环比线（默认关闭；dateFormat=YYYY 无环比）
+}
+
 export interface VisibilityConfig {
   visibleFirstDimensions?: string[]
   visibleSecondDimensions?: string[]
   visibleStatisticTypes?: string[]
+  comparison?: ComparisonDisplayOptions
 }
 
 export interface RequestParamsResult {
@@ -56,6 +67,7 @@ export function resolveChartMode(config: any): ChartMode {
   const metrics = Array.isArray(config?.dataMetrics) ? config.dataMetrics : []
   if (metrics.some((m: any) => m.chartType === CHART_TYPE.METRICS_PIE)) return CHART_MODE.METRICS_PIE
   if (metrics.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)) return CHART_MODE.RANKING_BAR
+  if (metrics.some((m: any) => m.chartType === CHART_TYPE.COMPARISON_BAR)) return CHART_MODE.COMPARISON_BAR
   if (metrics.some((m: any) => m.chartType === CHART_TYPE.TREE_STACKED_BAR) || config?.treeDimension) return CHART_MODE.TREE_STACKED_BAR
   return CHART_MODE.STANDARD
 }
@@ -72,6 +84,9 @@ export function hasValidChartConfig(config: any): boolean {
   // 排行榜(Top-N)模式：无维度，只需分组字段
   const isRankingMode = config.dataMetrics.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)
   if (isRankingMode) return !!config.dataMetrics[0]?.groupByField
+  // 同比环比模式：无维度，只需时间字段
+  const isComparisonMode = config.dataMetrics.some((m: any) => m.chartType === CHART_TYPE.COMPARISON_BAR)
+  if (isComparisonMode) return !!config.dataMetrics[0]?.dateField
   // 树形堆叠模式：X 轴来自树父节点，只需树关系（treeDimension）
   const isTreeStackedMode = config.dataMetrics.some((m: any) => m.chartType === CHART_TYPE.TREE_STACKED_BAR)
   if (isTreeStackedMode) return !!config.treeDimension
@@ -298,10 +313,335 @@ export function buildRankingRequestParams(config: any, _visibility?: VisibilityC
   }
 }
 
+// ===== 同比环比(comparisonBar) =====
+
+// 同比/环比系列固定显示名（children.metric 与合成渲染指标 dataName 保持一致）
+export const COMPARISON_SERIES = { YOY: '同比', MOM: '环比' } as const
+
+// 展示态默认值：当前年 + 当前月，默认展示 5 年，默认年累计口径，环比默认关闭
+export function getDefaultComparisonOptions(): Required<ComparisonDisplayOptions> {
+  const now = new Date()
+  return { yearCount: 5, month: now.getMonth() + 1, endYear: now.getFullYear(), scope: 'ytd', showMom: false }
+}
+
+const clampNumber = (v: any, min: number, max: number, fallback: number): number => {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(max, Math.max(min, Math.round(n)))
+}
+
+// 归并展示态选项（展示态为 UI 配置，不持久化，取值时统一夹紧到合法区间）
+export function resolveComparisonOptions(visibility?: VisibilityConfig): Required<ComparisonDisplayOptions> {
+  const defaults = getDefaultComparisonOptions()
+  const opts = visibility?.comparison || {}
+  return {
+    yearCount: clampNumber(opts.yearCount, 2, 10, defaults.yearCount),
+    month: clampNumber(opts.month, 1, 12, defaults.month),
+    endYear: clampNumber(opts.endYear, 1970, 9999, defaults.endYear),
+    scope: opts.scope === 'single' ? 'single' : defaults.scope,
+    showMom: opts.showMom === true
+  }
+}
+
+// 时间字段格式（与列的实际存储形态对应）：
+// - DATETIME：真日期/日期时间列（区间条件，带 00:00:00）
+// - YYYY-MM-DD / YYYYMMDD：日期文本列（区间条件，字典序即时间序）
+// - YYYY-MM / YYYYMM：年月文本列（相等 / IN 匹配）
+// - YYYY：纯年份列（相等匹配，仅同比）
+export type ComparisonDateFormat = 'DATETIME' | 'YYYY' | 'YYYY-MM' | 'YYYYMM' | 'YYYY-MM-DD' | 'YYYYMMDD'
+const COMPARISON_DATE_FORMATS: ComparisonDateFormat[] = ['DATETIME', 'YYYY', 'YYYY-MM', 'YYYYMM', 'YYYY-MM-DD', 'YYYYMMDD']
+export function resolveComparisonDateFormat(metric: any): ComparisonDateFormat {
+  const f = metric?.dateFormat
+  return COMPARISON_DATE_FORMATS.includes(f) ? f : 'DATETIME'
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const periodKey = (year: number, month: number) => `${year}-${pad2(month)}`
+// ytd 口径下环比专用单月桶标签（避免与年累计当期桶 'YYYY-MM' 冲突，仅内部使用不上 X 轴）
+const momBucketKey = (year: number, month: number) => `${periodKey(year, month)}-MOM`
+// 上一个月（1 月取上年 12 月）
+const prevOfMonth = (year: number, month: number): [number, number] =>
+  month === 1 ? [year - 1, 12] : [year, month - 1]
+// 年月文本列的存储值（YYYY-MM 或 YYYYMM）
+const formatPeriodValue = (format: ComparisonDateFormat, year: number, month: number) =>
+  format === 'YYYYMM' ? `${year}${pad2(month)}` : periodKey(year, month)
+
+// 天粒度区间格式（含 DATETIME）：用 [起, 止) 半开区间过滤，文本列字典序与时间序一致
+const isRangeFormat = (format: ComparisonDateFormat) =>
+  format === 'DATETIME' || format === 'YYYY-MM-DD' || format === 'YYYYMMDD'
+
+// 某年某月 1 日 0 点的边界字面量（按格式生成）
+const monthStartLiteral = (format: ComparisonDateFormat, year: number, month: number) => {
+  if (format === 'YYYYMMDD') return `${year}${pad2(month)}01`
+  if (format === 'YYYY-MM-DD') return `${periodKey(year, month)}-01`
+  return `${periodKey(year, month)}-01 00:00:00`
+}
+
+const singleCondition = (conditionList: any[]) => ({ andOr: '0' as const, conditionList })
+
+// [起月1日, 止月1日) 区间条件
+const buildRangeCondition = (format: ComparisonDateFormat, dateField: string, startY: number, startM: number, endY: number, endM: number) =>
+  singleCondition([
+    { property: dateField, relation: FILTER_TYPE.GREATER_EQUAL, value: [monthStartLiteral(format, startY, startM)], conditionList: [] },
+    { property: dateField, relation: FILTER_TYPE.LESS, value: [monthStartLiteral(format, endY, endM)], conditionList: [] }
+  ])
+
+// 单月条件：区间格式为 [当月1日, 次月1日)；年月文本列为相等匹配
+const buildSingleMonthCondition = (format: ComparisonDateFormat, dateField: string, year: number, month: number) => {
+  if (isRangeFormat(format)) {
+    const [ny, nm] = month === 12 ? [year + 1, 1] : [year, month + 1]
+    return buildRangeCondition(format, dateField, year, month, ny, nm)
+  }
+  return singleCondition([
+    { property: dateField, relation: FILTER_TYPE.EQUAL, value: [formatPeriodValue(format, year, month)], conditionList: [] }
+  ])
+}
+
+// 年累计条件：区间格式为 [当年1月1日, 次月1日)；年月文本列为 IN(1月..当前月)
+const buildYtdCondition = (format: ComparisonDateFormat, dateField: string, year: number, month: number) => {
+  if (isRangeFormat(format)) {
+    const [ny, nm] = month === 12 ? [year + 1, 1] : [year, month + 1]
+    return buildRangeCondition(format, dateField, year, 1, ny, nm)
+  }
+  const values: string[] = []
+  for (let m = 1; m <= month; m++) values.push(formatPeriodValue(format, year, m))
+  return singleCondition([
+    { property: dateField, relation: FILTER_TYPE.IN, value: values, conditionList: [] }
+  ])
+}
+
+// 当期柱条件：按口径取单月或年累计
+const buildMainCondition = (format: ComparisonDateFormat, dateField: string, year: number, month: number, scope: 'single' | 'ytd') =>
+  scope === 'ytd' ? buildYtdCondition(format, dateField, year, month) : buildSingleMonthCondition(format, dateField, year, month)
+
+// 纯年份列条件：field = 'YYYY' 相等匹配
+const buildYearEqualCondition = (dateField: string, year: number) =>
+  singleCondition([
+    { property: dateField, relation: FILTER_TYPE.EQUAL, value: [String(year)], conditionList: [] }
+  ])
+
+/**
+ * 同比环比请求参数
+ * 复用标准模式 CASE WHEN 条件桶，按 dateFormat 分支：
+ * - YYYY（纯年份列）：每年一个整年桶 + 最早年份的上一年（同比基线），无环比；
+ * - 其余（DATETIME/YYYY-MM/YYYYMM）：每年生成「当期柱」桶（单月或年累计口径），
+ *   环比为展示态开关（默认关闭），开启时始终按单月口径取数（当月 vs 上月，1 月取上年 12 月），
+ *   ytd 口径下额外补单月桶；同比基线为最早展示年份的上一年同口径桶。
+ * 一次请求取全数据，同比/环比增长率由前端计算。
+ */
+export function buildComparisonRequestParams(config: any, visibility?: VisibilityConfig): RequestParamsResult {
+  const statMetrics: any[] = config.dataMetrics?.length ? config.dataMetrics : [{}]
+  const metric = statMetrics[0]
+  const dateField: string = metric.dateField || ''
+  const format = resolveComparisonDateFormat(metric)
+  const { yearCount, month, endYear, scope, showMom } = resolveComparisonOptions(visibility)
+
+  // 收集去重后的条件桶：label -> condition
+  const buckets = new Map<string, any>()
+  const addBucket = (label: string, condition: any) => { if (!buckets.has(label)) buckets.set(label, condition) }
+
+  if (format === 'YYYY') {
+    // 纯年份列：展示年份 + 最早年份的上一年（同比基线）
+    for (let year = endYear - yearCount; year <= endYear; year++) {
+      addBucket(String(year), buildYearEqualCondition(dateField, year))
+    }
+  } else {
+    for (let year = endYear - yearCount + 1; year <= endYear; year++) {
+      // 当期柱（X 轴桶，label 供穿透匹配）
+      addBucket(periodKey(year, month), buildMainCondition(format, dateField, year, month, scope))
+      // 环比（开关开启时才取数）：始终单月口径；ytd 下当期/基线用独立单月桶，single 下当期即柱桶
+      if (showMom) {
+        const [py, pm] = prevOfMonth(year, month)
+        if (scope === 'ytd') {
+          addBucket(momBucketKey(year, month), buildSingleMonthCondition(format, dateField, year, month))
+          addBucket(momBucketKey(py, pm), buildSingleMonthCondition(format, dateField, py, pm))
+        } else {
+          addBucket(periodKey(py, pm), buildSingleMonthCondition(format, dateField, py, pm))
+        }
+      }
+    }
+    // 同比基线：最早展示年份的上一年（同口径）
+    addBucket(periodKey(endYear - yearCount, month), buildMainCondition(format, dateField, endYear - yearCount, month, scope))
+  }
+
+  const metricConditions = [...buckets.entries()].map(([label, condition]) => ({
+    value: `${dateField}&&${label}`,
+    label,
+    condition
+  }))
+
+  return {
+    selectColumnCondition: {},
+    condition: {
+      conditionList: config.filterConditions?.conditionList || [],
+      andOr: (config.filterConditions?.andOr ?? '0') as '0' | '1'
+    },
+    sort: null,
+    metricColumn: [],
+    metricCondition: metricConditions,
+    // 多统计字段（同柱堆叠）：每个字段一列独立 SUM；dataField 空=计数
+    statisticColumn: statMetrics.map((m: any) => ({ value: m.dataField || '', label: m.dataName || '数量' })),
+    majorCondition: ''
+  }
+}
+
+/**
+ * 同比环比响应归一化
+ *
+ * 将「周期桶」扁平响应归一化为标准嵌套结构，复用 MixedChart 渲染管道：
+ * `[{ metric/metricLabel: 'YYYY-MM'或'YYYY'(X轴/穿透桶标签), statistic: 当期总值,
+ *     children: [各统计字段(bar,多字段时堆叠), 同比(ptLine,%), 环比(ptLine,%,showMom 开启且非 YYYY 格式才有)] }]`
+ *
+ * - 多统计字段时每个字段一个 bar child（堆叠成一根柱），增长率按各字段合计值计算；
+ * - 增长率 = (当期 - 基期) / |基期| * 100，保留 2 位小数；
+ * - 同比按当期柱同口径（单月/年累计/整年）对比上年；环比始终单月口径（当月 vs 上月）；
+ * - 基期缺失或为 0 时增长率为 null（折线断点，避免除零误导）；
+ * - metricLabel 与请求桶 label 一致，点击穿透可直接用 conditionLabel 匹配。
+ */
+export function normalizeComparisonResponse(config: any, payload: any[], visibility?: VisibilityConfig): any[] {
+  const statMetrics: any[] = config?.dataMetrics?.length ? config.dataMetrics : [{}]
+  const metric = statMetrics[0]
+  const dateField: string = metric.dateField || ''
+  const format = resolveComparisonDateFormat(metric)
+  // 与请求 statisticColumn 的 label 一一对应，用于从响应 children 中按名取值
+  const statNames: string[] = statMetrics.map((m: any) => m.dataName || '数量')
+  const { yearCount, month, endYear, scope, showMom } = resolveComparisonOptions(visibility)
+
+  // 周期标签 -> { 统计字段名 -> 值 }
+  const valueByPeriod: Record<string, Record<string, number | null>> = {}
+  ;(Array.isArray(payload) ? payload : []).forEach((item: any) => {
+    const label = item?.metricLabel
+    if (!label) return
+    const bucket: Record<string, number | null> = {}
+    if (item.children?.length) {
+      item.children.forEach((child: any) => {
+        bucket[child?.metric] = (child?.statistic === null || child?.statistic === undefined) ? null : Number(child.statistic)
+      })
+    } else {
+      bucket[statNames[0]] = (item.statistic === null || item.statistic === undefined) ? null : Number(item.statistic)
+    }
+    valueByPeriod[label] = bucket
+  })
+
+  // 桶内单字段值（桶或字段缺失按 0）
+  const fieldOf = (label: string, name: string): number => valueByPeriod[label]?.[name] ?? 0
+  // 桶内各字段合计（桶缺失返回 undefined，供基期判空）
+  const totalOf = (label: string): number | undefined => {
+    const bucket = valueByPeriod[label]
+    if (!bucket) return undefined
+    return statNames.reduce((sum, name) => sum + (bucket[name] ?? 0), 0)
+  }
+
+  const rate = (current: number, base: number | null | undefined): number | null => {
+    if (base === null || base === undefined || base === 0) return null
+    return Number((((current - base) / Math.abs(base)) * 100).toFixed(2))
+  }
+
+  // 各统计字段的 bar children
+  const buildStatChildren = (label: string) => statNames.map(name => ({
+    metricColumn: dateField, metric: name, metricLabel: name, statistic: fieldOf(label, name)
+  }))
+
+  const result: any[] = []
+  for (let year = endYear - yearCount + 1; year <= endYear; year++) {
+    if (format === 'YYYY') {
+      // 纯年份列：整年对比，仅同比
+      const curKey = String(year)
+      const current = totalOf(curKey) ?? 0
+      const yoyBase = totalOf(String(year - 1))
+      result.push({
+        metricColumn: dateField,
+        metric: curKey,
+        metricLabel: curKey,
+        statistic: current,
+        children: [
+          ...buildStatChildren(curKey),
+          { metricColumn: dateField, metric: COMPARISON_SERIES.YOY, metricLabel: COMPARISON_SERIES.YOY, statistic: rate(current, yoyBase) }
+        ]
+      })
+      continue
+    }
+    const curKey = periodKey(year, month)
+    const current = totalOf(curKey) ?? 0
+    // 同比：同口径对比上年同期
+    const yoyBase = totalOf(periodKey(year - 1, month))
+    const children: any[] = [
+      ...buildStatChildren(curKey),
+      { metricColumn: dateField, metric: COMPARISON_SERIES.YOY, metricLabel: COMPARISON_SERIES.YOY, statistic: rate(current, yoyBase) }
+    ]
+    // 环比（开关开启时才计算）：始终单月口径；ytd 下当期/基线取独立单月桶
+    if (showMom) {
+      const [py, pm] = prevOfMonth(year, month)
+      const momCurrent = scope === 'ytd' ? (totalOf(momBucketKey(year, month)) ?? 0) : current
+      const momBase = totalOf(scope === 'ytd' ? momBucketKey(py, pm) : periodKey(py, pm))
+      children.push({ metricColumn: dateField, metric: COMPARISON_SERIES.MOM, metricLabel: COMPARISON_SERIES.MOM, statistic: rate(momCurrent, momBase) })
+    }
+    result.push({
+      metricColumn: dateField,
+      metric: curKey,
+      metricLabel: curKey,
+      statistic: current,
+      children
+    })
+  }
+  return result
+}
+
+/**
+ * 合成同比环比渲染指标：各统计字段走左轴柱状图（多字段时堆叠成一根柱），
+ * 同比/环比增长率走右轴虚线折线（%）。
+ * dataName 与 normalizeComparisonResponse 的 children.metric 对齐，
+ * bar + ptLine 组合会被 UniversalChart 自动判定为 mixed 双轴混合图。
+ * 环比线由展示态开关控制（showMom，默认关闭）；dateFormat=YYYY（纯年份列）无月份概念，恒不产出环比线。
+ */
+export function buildComparisonRenderMetrics(config: any, showMom = false): any[] {
+  const statMetrics: any[] = config?.dataMetrics?.length ? config.dataMetrics : [{}]
+  const format = resolveComparisonDateFormat(statMetrics[0])
+  const multiStat = statMetrics.length > 1
+  const fallbackColors = ['#5B8FF9', '#61DDAA', '#65789B', '#7262FD', '#78D3F8', '#9661BC']
+  const metrics: any[] = statMetrics.map((m: any, i: number) => ({
+    dataName: m.dataName || '数量',
+    dataField: m.dataField || '',
+    chartType: CHART_TYPE.BAR,
+    color: m.color || fallbackColors[i % fallbackColors.length],
+    yAxisPosition: 'left',
+    // 多字段时堆叠成一根柱（同一堆叠组），单字段保持普通柱
+    stackGroup: multiStat ? 'stack1' : 'noStack',
+    unit: m.unit,
+    unitConfig: m.unitConfig,
+    formatConfig: m.formatConfig,
+    itemColors: {}
+  }))
+  metrics.push({
+    dataName: COMPARISON_SERIES.YOY,
+    dataField: '__yoyRate__',
+    chartType: CHART_TYPE.PT_LINE,
+    color: '#F6BD16',
+    yAxisPosition: 'right',
+    unit: '%',
+    // 数值本身已是增长率百分比：MixedChart 直接展示原值，不做占比换算/0-100 夹紧
+    directPercent: true,
+    itemColors: {}
+  })
+  if (showMom && format !== 'YYYY') {
+    metrics.push({
+      dataName: COMPARISON_SERIES.MOM,
+      dataField: '__momRate__',
+      chartType: CHART_TYPE.PT_LINE,
+      color: '#5AD8A6',
+      yAxisPosition: 'right',
+      unit: '%',
+      directPercent: true,
+      itemColors: {}
+    })
+  }
+  return metrics
+}
+
 /**
  * 统一请求参数构建入口
  *
- * 自动判断 rankingBar / metricsPie / treeStacked / 默认四分支。
+ * 自动判断 rankingBar / comparisonBar / metricsPie / treeStacked / 默认五分支。
  * @param config    指标配置（DimensionIndicatorsFilter 或已解析的 indicatorConfig）
  * @param visibility 可见性过滤（ChartCard 烤进请求；ChartDisplayArea 不传，取数后过滤）
  */
@@ -312,6 +652,10 @@ export async function buildRequestParams(
   // 排行榜(Top-N)
   const isRanking = config.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)
   if (isRanking) return buildRankingRequestParams(config, visibility)
+
+  // 同比环比
+  const isComparison = config.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.COMPARISON_BAR)
+  if (isComparison) return buildComparisonRequestParams(config, visibility)
 
   // 指标饼图
   const isMetricsPie = config.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.METRICS_PIE)
@@ -402,6 +746,11 @@ export async function fetchStatisticData(
   const isRanking = config?.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)
   if (isRanking && response && Array.isArray(response.payload)) {
     response.payload = normalizeRankingResponse(config, response.payload)
+  }
+  // 同比环比：周期桶响应归一化 + 前端计算同比/环比增长率
+  const isComparison = config?.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.COMPARISON_BAR)
+  if (isComparison && response && Array.isArray(response.payload)) {
+    response.payload = normalizeComparisonResponse(config, response.payload, visibility)
   }
   return { requestParams, response }
 }

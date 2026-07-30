@@ -57,6 +57,8 @@ export function buildAxisTooltipHtml(options: BuildAxisTooltipOptions): string {
  * @param getSeriesUnit 系列单位回调
  * @param formatValue   数值格式化回调
  * @param getDatumColor 单个数据点颜色回调（取不到时回退系列颜色）
+ * @param options       可选项：showSharePercent 按系列控制是否显示占比（增长率等无占比语义的系列关闭）；
+ *                      showTotal 是否显示合计行（多系列单位混合时可关闭）
  */
 export function buildFullAxisTooltipHtml(
   series: any[],
@@ -65,7 +67,11 @@ export function buildFullAxisTooltipHtml(
   getSeriesDisplayName: (s: any) => string,
   getSeriesUnit: (s: any) => string,
   formatValue: (value: number, s: any) => string,
-  getDatumColor?: (datum: any, s: any) => string | undefined
+  getDatumColor?: (datum: any, s: any) => string | undefined,
+  options?: {
+    showSharePercent?: (s: any) => boolean
+    showTotal?: boolean
+  }
 ): string {
   const accent = 'var(--accent, #1890ff)'
   const accentSoft = 'var(--accent-soft, #e6f7ff)'
@@ -77,6 +83,7 @@ export function buildFullAxisTooltipHtml(
 
   series.forEach((s) => {
     const unit = getSeriesUnit(s)
+    const showPercent = options?.showSharePercent ? options.showSharePercent(s) : true
     const seriesColor = s.itemStyle?.color || s.color || '#1890ff'
     const dataArr: any[] = Array.isArray(s.data) ? s.data : []
     const total = dataArr.reduce((sum, datum) => {
@@ -86,7 +93,10 @@ export function buildFullAxisTooltipHtml(
 
     categories.forEach((cat, idx) => {
       const datum = dataArr[idx]
-      const value = typeof datum === 'object' && datum?.value != null ? datum.value : (typeof datum === 'number' ? datum : 0)
+      // 数据点为 null（如增长率基期缺失的断点）时显示 "-"
+      const rawValue = typeof datum === 'object' ? datum?.value : datum
+      const isNullValue = rawValue == null
+      const value = typeof rawValue === 'number' ? rawValue : 0
       const isCurrent = cat === hoveredCategory
       const percent = total > 0 ? ((value / total) * 100).toFixed(2) : '0.00'
       const color = (getDatumColor && getDatumColor(datum, s)) || seriesColor
@@ -97,9 +107,15 @@ export function buildFullAxisTooltipHtml(
       const currentTag = isCurrent
         ? `<span style="color: ${accent}; font-size: 11px; margin-left: 6px; font-weight: bold; white-space: nowrap;">◀ 当前选中</span>`
         : ''
-      html += `<div style="${rowStyle}">${marker}<span style="vertical-align:middle;">${cat}: ${formatValue(value, s)}${unit} (${percent}%)</span>${currentTag}</div>`
+      const valueText = isNullValue ? '-' : `${formatValue(value, s)}${unit}`
+      const percentText = (!isNullValue && showPercent) ? ` (${percent}%)` : ''
+      html += `<div style="${rowStyle}">${marker}<span style="vertical-align:middle;">${cat}: ${valueText}${percentText}</span>${currentTag}</div>`
     })
   })
+
+  if (options?.showTotal === false) {
+    return html
+  }
 
   // 合计行（所有系列总和；单系列时即该系列总和）
   const grandTotal = series.reduce((sum, s) => {
@@ -113,6 +129,73 @@ export function buildFullAxisTooltipHtml(
   const allSameUnit = series.every(s => getSeriesUnit(s) === firstUnit)
   html += `<div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #eee; color: var(--text-secondary, #8c8c8c); font-size: 12px;">总计：${formatValue(grandTotal, series[0])}${allSameUnit ? firstUnit : ''}</div>`
 
+  return html
+}
+
+/**
+ * 同比环比 tooltip：每个周期（年份/年月）一行，柱值(占比)与同比/环比增长率横向排布。
+ * - 柱系列：多字段堆叠时逐字段展示，占比 = 该周期柱合计 / 全周期柱合计；
+ * - 增长率系列（同比/环比）：原值直出（已是百分比语义），基期缺失的断点显示 '-'；
+ * - hover 周期行高亮，视觉样式与 buildFullAxisTooltipHtml 保持一致。
+ */
+export function buildComparisonAxisTooltipHtml(
+  series: any[],
+  categories: string[],
+  hoveredCategory: string,
+  isRateSeries: (s: any) => boolean,
+  getSeriesUnit: (s: any) => string,
+  formatValue: (value: number, s: any) => string
+): string {
+  const accent = 'var(--accent, #1890ff)'
+  const accentSoft = 'var(--accent-soft, #e6f7ff)'
+  const barSeries = series.filter(s => !isRateSeries(s))
+  const rateSeries = series.filter(s => isRateSeries(s))
+
+  const valueAt = (s: any, idx: number): number | null => {
+    const datum = Array.isArray(s.data) ? s.data[idx] : null
+    const raw = typeof datum === 'object' && datum !== null ? datum.value : datum
+    return typeof raw === 'number' ? raw : null
+  }
+  const colorOf = (s: any, idx: number): string => {
+    const datum = Array.isArray(s.data) ? s.data[idx] : null
+    return datum?.itemStyle?.color || s.itemStyle?.color || s.lineStyle?.color || s.color || '#1890ff'
+  }
+  const marker = (color: string) =>
+    `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:4px;vertical-align:middle;"></span>`
+
+  // 柱合计：按周期求和，占比分母为全周期总和
+  const catBarTotals = categories.map((_, idx) =>
+    barSeries.reduce((sum, s) => sum + (valueAt(s, idx) ?? 0), 0))
+  const grandBarTotal = catBarTotals.reduce((a, b) => a + b, 0)
+
+  const headerText = [...new Set(series.map(s => s.name))].join(' / ')
+  let html = `<div style="font-weight: bold; font-size: 13px; margin-bottom: 8px; color: #262626;">${headerText}</div>`
+
+  categories.forEach((cat, idx) => {
+    const isCurrent = cat === hoveredCategory
+    const rowStyle = isCurrent
+      ? `background: ${accentSoft}; border-left: 3px solid ${accent}; font-weight: bold; padding: 3px 6px; margin: 2px 0; border-radius: 3px; white-space: nowrap;`
+      : 'padding: 3px 6px; margin: 2px 0; border-left: 3px solid transparent; white-space: nowrap;'
+
+    // 柱值：单字段直接展示数值，多字段按「字段名 值」用 + 连接
+    const barText = barSeries.map((s) => {
+      const v = valueAt(s, idx)
+      const text = v == null ? '-' : `${formatValue(v, s)}${getSeriesUnit(s)}`
+      return `${marker(colorOf(s, idx))}${barSeries.length > 1 ? `${s.name} ` : ''}${text}`
+    }).join('<span style="margin: 0 4px;">+</span>')
+    const percent = grandBarTotal > 0 ? ((catBarTotals[idx] / grandBarTotal) * 100).toFixed(2) : '0.00'
+
+    // 增长率：同比/环比横向排布在同一行
+    const rateText = rateSeries.map((s) => {
+      const v = valueAt(s, idx)
+      return `<span style="margin-left: 10px;">${marker(colorOf(s, idx))}${s.name} ${v == null ? '-' : formatValue(v, s)}</span>`
+    }).join('')
+
+    const currentTag = isCurrent
+      ? `<span style="color: ${accent}; font-size: 11px; margin-left: 6px; font-weight: bold; white-space: nowrap;">◀ 当前选中</span>`
+      : ''
+    html += `<div style="${rowStyle}"><span style="vertical-align:middle;">${cat}: ${barText} (${percent}%)${rateText}</span>${currentTag}</div>`
+  })
   return html
 }
 

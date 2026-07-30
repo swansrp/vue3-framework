@@ -402,13 +402,17 @@ const handleSaveConfig = async () => {
       const hasRankingBar = (dashboardRef.value?.dataMetrics || []).some(
         (m: any) => m.chartType === 'rankingBar'
       )
+      // 同比环比模式：通过 dateField 生成周期桶，无需一级维度
+      const hasComparisonBar = (dashboardRef.value?.dataMetrics || []).some(
+        (m: any) => m.chartType === 'comparisonBar'
+      )
       if (hasTreeStacked && !dashboardRef.value?.treeDimension) {
         message.error('请选择树关系（二级维度）')
         return
       }
       // 检查是否配置了一级维度
       const firstDimension = dashboardRef.value?.firstDimension
-      if (!hasMetricsPie && !hasTreeStacked && !hasRankingBar && !firstDimension) {
+      if (!hasMetricsPie && !hasTreeStacked && !hasRankingBar && !hasComparisonBar && !firstDimension) {
         message.error('请先配置一级维度')
         return
       }

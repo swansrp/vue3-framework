@@ -19,6 +19,7 @@
       :available-data-types="availableDataTypes"
       :tree-dict-options="treeDictOptions"
       :group-by-column-options="groupByColumnOptions"
+      :date-column-options="dateColumnOptions"
       :left-panel-collapsed="leftPanelCollapsed"
       :convert-unit="convertUnit"
       @toggle-left-panel="toggleLeftPanel"
@@ -98,7 +99,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar' | 'comparisonBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -111,6 +112,10 @@ interface DataMetricUI {
   topN?: number
   sortOrder?: 0 | 1
   groupByDictMap?: Record<string, string>
+  // ===== 同比环比专属字段 =====
+  dateField?: string
+  dateFieldLabel?: string
+  dateFormat?: 'DATETIME' | 'YYYY' | 'YYYY-MM' | 'YYYYMM' | 'YYYY-MM-DD' | 'YYYYMMDD'
 }
 
 interface DataTypeOption {
@@ -297,6 +302,12 @@ const convertToDataMetric = (metric: DataMetricUI): DataMetric => {
       topN: metric.topN,
       sortOrder: metric.sortOrder,
       groupByDictMap: metric.groupByDictMap
+    } : {}),
+    // 同比环比专属字段：仅持久化时间字段+日期格式（年份数量/月份/口径为展示态，不落库）
+    ...(metric.chartType === 'comparisonBar' ? {
+      dateField: metric.dateField,
+      dateFieldLabel: metric.dateFieldLabel,
+      dateFormat: metric.dateFormat || 'DATETIME'
     } : {})
   }
 }
@@ -689,6 +700,47 @@ const generateChart = async (chartData?: {
     return
   }
 
+  // 同比环比分支：无维度，按时间字段生成周期桶，跳过维度必填校验
+  const hasComparison = dataMetricsData.some(m => m.chartType === 'comparisonBar')
+  if (hasComparison) {
+    const comparisonMetric = dataMetricsData[0]
+    if (!comparisonMetric?.dateField) {
+      message.error('请选择同比环比的时间字段')
+      return
+    }
+    const filterData: DimensionIndicatorsFilter = {
+      firstDimension: null as any,
+      secondDimension: null,
+      filterConditions: convertToConditionGroup(selectedFilterItems, filterDims),
+      dataMetrics: dataMetricsData.map(convertToDataMetric)
+    }
+    dimensionIndicatorsFilter.value = filterData
+
+    lastConfigSnapshot.value = {
+      firstDimension: null,
+      secondDimension: null,
+      filterDimensions: (Array.isArray(filterDims) ? filterDims : []).map(dim => dim ? {
+        key: dim.key,
+        title: dim.title,
+        items: dim.items?.map((item: any) => ({ ...item })) || []
+      } : null),
+      selectedFilterItemsArray: selectedFilterItems.map(arr => [...arr]),
+      dataMetrics: dataMetricsData.map(metric => ({ ...metric }))
+    }
+
+    await nextTick()
+    if (chartDisplayAreaRef.value) {
+      try {
+        await chartDisplayAreaRef.value.generateChart(true)
+        message.success('图表生成成功')
+      } catch (error) {
+        console.error('同比环比图表生成失败:', error)
+        message.error('图表生成失败，请检查数据配置或网络连接')
+      }
+    }
+    return
+  }
+
   if (!firstDim) {
     message.error('请先选择一级维度（横坐标）')
     return
@@ -921,6 +973,18 @@ const groupByColumnOptions = computed(() => {
   const cols: any[] = config.value?.columns || []
   return cols
     .filter((c: any) => c.show !== '0' && c.property)
+    .map((c: any) => ({
+      column: c.property,
+      label: c.displayName || c.property
+    }))
+})
+
+// 同比环比时间字段候选：仅日期/日期时间类型的列
+const dateColumnOptions = computed(() => {
+  const cols: any[] = config.value?.columns || []
+  return cols
+    .filter((c: any) => c.show !== '0' && c.property &&
+      (c.fieldType === FIELD_TYPE.DATE || c.fieldType === FIELD_TYPE.DATETIME))
     .map((c: any) => ({
       column: c.property,
       label: c.displayName || c.property
@@ -1185,8 +1249,11 @@ const restoreConfig = async (savedConfig: any) => {
     // 排行榜(Top-N)模式判断（无维度，允许 firstDimension 为 null）
     const isRankingMode = Array.isArray(savedConfig?.dataMetrics) &&
       savedConfig.dataMetrics.some((m: any) => m.chartType === 'rankingBar')
+    // 同比环比模式判断（无维度，允许 firstDimension 为 null）
+    const isComparisonMode = Array.isArray(savedConfig?.dataMetrics) &&
+      savedConfig.dataMetrics.some((m: any) => m.chartType === 'comparisonBar')
 
-    if (!savedConfig || (!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !savedConfig.firstDimension)) {
+    if (!savedConfig || (!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !isComparisonMode && !savedConfig.firstDimension)) {
       console.warn('无效的配置数据')
       return
     }
@@ -1222,6 +1289,12 @@ const restoreConfig = async (savedConfig: any) => {
           topN: m.topN ?? 10,
           sortOrder: m.sortOrder ?? 1,
           groupByDictMap: m.groupByDictMap || {}
+        } : {}),
+        // 同比环比专属字段回显
+        ...(m.chartType === 'comparisonBar' ? {
+          dateField: m.dateField,
+          dateFieldLabel: m.dateFieldLabel,
+          dateFormat: m.dateFormat || 'DATETIME'
         } : {})
       }))
     }
@@ -1285,6 +1358,8 @@ const getFullConfig = () => {
   const isTreeStackedMode = dataMetrics.value.some(m => m.chartType === 'treeStackedBar')
   // 排行榜(Top-N)模式判断（通过 groupByField 分组，跳过一级维度校验）
   const isRankingBarMode = dataMetrics.value.some(m => m.chartType === 'rankingBar')
+  // 同比环比模式判断（通过 dateField 生成周期桶，跳过一级维度校验）
+  const isComparisonBarMode = dataMetrics.value.some(m => m.chartType === 'comparisonBar')
 
   // 获取实时的可见性配置
   let visibilityConfig = {
@@ -1300,7 +1375,7 @@ const getFullConfig = () => {
   // 优先使用已经生成的dimensionIndicatorsFilter（包含用户拖拽后的排序）
   // 如果存在，说明已经生成过图表，使用它以保留拖拽排序
   // 指标饼图/树形堆叠模式无传统一级维度，只校验 dimensionIndicatorsFilter 是否存在
-  const hasExistingConfig = (isMetricsPieMode || isTreeStackedMode || isRankingBarMode)
+  const hasExistingConfig = (isMetricsPieMode || isTreeStackedMode || isRankingBarMode || isComparisonBarMode)
     ? !!dimensionIndicatorsFilter.value
     : (dimensionIndicatorsFilter.value && !!dimensionIndicatorsFilter.value.firstDimension)
   if (hasExistingConfig) {
@@ -1338,8 +1413,8 @@ const getFullConfig = () => {
     }
   }
 
-  // 排行榜(Top-N)模式：无维度，直接构建配置
-  if (isRankingBarMode) {
+  // 排行榜(Top-N)/同比环比模式：无维度，直接构建配置
+  if (isRankingBarMode || isComparisonBarMode) {
     return {
       firstDimension: null as any,
       secondDimension: null,

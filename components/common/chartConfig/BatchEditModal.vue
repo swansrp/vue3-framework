@@ -89,6 +89,16 @@
             </a-tag>
             <span class="preview-count">Top {{ sourceConfig.dataMetrics?.[0]?.topN ?? 10 }}</span>
           </div>
+          <div
+            v-if="sourceChartType === 'comparisonBar'"
+            class="preview-item"
+          >
+            <span class="preview-label">时间字段：</span>
+            <a-tag color="gold">
+              {{ sourceConfig.dataMetrics?.[0]?.dateFieldLabel || sourceConfig.dataMetrics?.[0]?.dateField || '未配置' }}
+            </a-tag>
+            <span class="preview-count">{{ sourceConfig.dataMetrics?.[0]?.dataField ? '求和' : '计数' }}</span>
+          </div>
           <div class="preview-item">
             <span class="preview-label">筛选条件：</span>
             <a-tag :color="hasFilterConditions ? 'orange' : 'default'">
@@ -118,7 +128,7 @@
               <span class="part-desc">替换所有选中指标的一级维度</span>
             </a-checkbox>
             <a-checkbox
-              v-if="sourceChartType !== 'metricsPie' && sourceChartType !== 'rankingBar'"
+              v-if="sourceChartType !== 'metricsPie' && sourceChartType !== 'rankingBar' && sourceChartType !== 'comparisonBar'"
               value="secondDimension"
             >
               <span class="part-label">第二维度（含树关系）</span>
@@ -130,6 +140,13 @@
             >
               <span class="part-label">排行配置</span>
               <span class="part-desc">同步模板的分组字段 / 取前 N 名 / 排序方向</span>
+            </a-checkbox>
+            <a-checkbox
+              v-if="sourceChartType === 'comparisonBar'"
+              value="comparisonConfig"
+            >
+              <span class="part-label">同比环比配置</span>
+              <span class="part-desc">同步模板的时间字段</span>
             </a-checkbox>
             <a-checkbox value="dataMetrics">
               <span class="part-label">统计字段（数据指标）</span>
@@ -302,7 +319,8 @@ const sourceChartTypeLabel = computed(() => {
     standard: '标准图表',
     metricsPie: '指标饼图',
     treeStackedBar: '树形堆叠图',
-    rankingBar: '排行榜(Top-N)'
+    rankingBar: '排行榜(Top-N)',
+    comparisonBar: '同比环比'
   }
   return map[sourceChartType.value] || '未知'
 })
@@ -313,7 +331,8 @@ const sourceChartTypeTagColor = computed(() => {
     standard: 'blue',
     metricsPie: 'purple',
     treeStackedBar: 'cyan',
-    rankingBar: 'geekblue'
+    rankingBar: 'geekblue',
+    comparisonBar: 'gold'
   }
   return map[sourceChartType.value] || 'default'
 })
@@ -385,6 +404,8 @@ watch(sourceChartType, (newType) => {
     applyParts.value = ['filterConditions']
   } else if (newType === 'rankingBar') {
     applyParts.value = ['chartType', 'rankingConfig']
+  } else if (newType === 'comparisonBar') {
+    applyParts.value = ['chartType', 'comparisonConfig']
   } else {
     applyParts.value = ['firstDimension']
   }
@@ -458,8 +479,21 @@ const handleApply = async () => {
                 itemColors
               }
             }
+            if (templateMode === 'comparisonBar') {
+              // 同比环比：拷贝模板首指标的图表类型与时间字段（含日期格式）
+              const tplFirst = templateMetrics[0] || {}
+              return {
+                ...m,
+                chartType: 'comparisonBar',
+                stackGroup: 'noStack',
+                dateField: tplFirst.dateField,
+                dateFieldLabel: tplFirst.dateFieldLabel,
+                dateFormat: tplFirst.dateFormat || 'DATETIME',
+                itemColors
+              }
+            }
             // 标准图表：将特殊类型还原为普通柱状图
-            return (m.chartType === 'treeStackedBar' || m.chartType === 'metricsPie' || m.chartType === 'rankingBar')
+            return (m.chartType === 'treeStackedBar' || m.chartType === 'metricsPie' || m.chartType === 'rankingBar' || m.chartType === 'comparisonBar')
               ? { ...m, chartType: 'bar', stackGroup: 'noStack', itemColors }
               : { ...m, itemColors }
           })
@@ -526,6 +560,22 @@ const handleApply = async () => {
         }
       }
 
+      // 5.2 同步同比环比配置：将模板首指标的时间字段（含日期格式）同步到目标全部指标
+      //     （多字段堆叠时拉数只读首指标，但各行统一携带，保证持久化自洽）
+      if (applyParts.value.includes('comparisonConfig')) {
+        const tplFirst = templateMetrics[0] || {}
+        if (Array.isArray(updatedConfig.dataMetrics) && updatedConfig.dataMetrics.length > 0) {
+          updatedConfig.dataMetrics = updatedConfig.dataMetrics.map((m: any) => ({
+            ...m,
+            chartType: 'comparisonBar',
+            stackGroup: 'noStack',
+            dateField: tplFirst.dateField,
+            dateFieldLabel: tplFirst.dateFieldLabel,
+            dateFormat: tplFirst.dateFormat || 'DATETIME'
+          }))
+        }
+      }
+
       // 6. 收尾归一化：按最终图表类型清理不兼容的维度字段，保证配置内部自洽
       //    （无论类型变化由「图表类型」还是「统计字段」同步触发，均能正确归一化）
       const resultMode = updatedConfig.dataMetrics?.[0]?.chartType || 'bar'
@@ -540,6 +590,11 @@ const handleApply = async () => {
         updatedConfig.treeDimension = null
       } else if (resultMode === 'rankingBar') {
         // 排行榜：无任何维度（分组由 groupByField 驱动）
+        updatedConfig.firstDimension = null
+        updatedConfig.secondDimension = null
+        updatedConfig.treeDimension = null
+      } else if (resultMode === 'comparisonBar') {
+        // 同比环比：无任何维度（周期由 dateField 派生）
         updatedConfig.firstDimension = null
         updatedConfig.secondDimension = null
         updatedConfig.treeDimension = null

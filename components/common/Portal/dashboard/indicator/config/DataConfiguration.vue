@@ -154,9 +154,97 @@
                 </span>
               </div>
             </template>
+            <!-- 同比环比专属配置：日期格式 / 时间字段 / 统计方式 / 求和字段（年份数量、月份、口径为展示态控件，不在此配置）
+                 多字段堆叠：仅第一条指标配置日期格式/时间字段/统计方式，追加的指标只选求和字段 -->
+            <template v-if="isComparisonMode">
+              <template v-if="isFirstComparisonMetric(metric)">
+                <div class="data-row">
+                  <span class="data-label">日期格式：</span>
+                  <span class="data-value">
+                    <a-select
+                      :value="metric.dateFormat || 'DATETIME'"
+                      size="small"
+                      style="width: 160px"
+                      @change="(value) => onDateFormatChange(metric.id, value)"
+                    >
+                      <a-select-option
+                        v-for="option in dateFormatOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </a-select-option>
+                    </a-select>
+                  </span>
+                </div>
+                <div class="data-row">
+                  <span class="data-label">时间字段：</span>
+                  <span class="data-value">
+                    <a-select
+                      :value="metric.dateField || undefined"
+                      size="small"
+                      style="width: 160px"
+                      placeholder="请选择时间字段"
+                      show-search
+                      option-filter-prop="children"
+                      @change="(value) => onDateFieldChange(metric.id, value)"
+                    >
+                      <a-select-option
+                        v-for="option in getDateFieldOptions()"
+                        :key="option.column"
+                        :value="option.column"
+                      >
+                        {{ option.label }}
+                      </a-select-option>
+                    </a-select>
+                  </span>
+                </div>
+                <div class="data-row">
+                  <span class="data-label">统计方式：</span>
+                  <span class="data-value">
+                    <a-select
+                      :value="getComparisonStatMethod(metric)"
+                      size="small"
+                      style="width: 120px"
+                      @change="(value) => onComparisonStatMethodChange(metric.id, value)"
+                    >
+                      <a-select-option value="count">
+                        计数
+                      </a-select-option>
+                      <a-select-option value="sum">
+                        求和
+                      </a-select-option>
+                    </a-select>
+                  </span>
+                </div>
+              </template>
+              <div
+                v-if="!isFirstComparisonMetric(metric) || getComparisonStatMethod(metric) === 'sum'"
+                class="data-row"
+              >
+                <span class="data-label">求和字段：</span>
+                <span class="data-value">
+                  <a-select
+                    :value="metric.dataField || undefined"
+                    size="small"
+                    style="width: 160px"
+                    placeholder="请选择求和字段"
+                    @change="(value) => onComparisonSumFieldChange(metric.id, value)"
+                  >
+                    <a-select-option
+                      v-for="dataType in availableDataTypes"
+                      :key="dataType.dataField"
+                      :value="dataType.dataField"
+                    >
+                      {{ dataType.dataName }}
+                    </a-select-option>
+                  </a-select>
+                </span>
+              </div>
+            </template>
             <!-- 指标饼图/树形堆叠模式下隐藏图表类型/坐标轴/堆叠配置（由顶部模式切换统一控制） -->
             <div
-              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !isComparisonMode"
               class="data-row"
             >
               <span class="data-label">图表类型：</span>
@@ -179,7 +267,7 @@
               </span>
             </div>
             <div
-              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && metric.chartType !== 'pie'"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !isComparisonMode && metric.chartType !== 'pie'"
               class="data-row"
             >
               <span class="data-label">坐标轴：</span>
@@ -201,7 +289,7 @@
               </span>
             </div>
             <div
-              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && metric.chartType === 'bar'"
+              v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !isComparisonMode && metric.chartType === 'bar'"
               class="data-row"
             >
               <span class="data-label">堆叠：</span>
@@ -242,9 +330,9 @@
               </span>
             </div>
 
-            <!-- 二级维度值的颜色设置（排行榜模式无维度，隐藏） -->
+            <!-- 二级维度值的颜色设置（排行榜/同比环比模式无维度，隐藏） -->
             <div
-              v-if="!isRankingMode && ((secondDimension && secondDimension.items && secondDimension.items.length > 0) || (firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension))"
+              v-if="!isRankingMode && !isComparisonMode && ((secondDimension && secondDimension.items && secondDimension.items.length > 0) || (firstDimension && firstDimension.items && firstDimension.items.length > 0 && !secondDimension))"
               class="data-color-config"
             >
               <div class="color-label">
@@ -338,7 +426,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !isComparisonMode"
             label="图表类型"
             required
           >
@@ -363,7 +451,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && editingDataMetric.chartType !== 'pie' && editingDataMetric.chartType !== 'metricsPie'"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !isComparisonMode && editingDataMetric.chartType !== 'pie' && editingDataMetric.chartType !== 'metricsPie'"
             label="坐标轴位置"
           >
             <a-radio-group v-model:value="editingDataMetric.yAxisPosition">
@@ -377,7 +465,7 @@
           </a-form-item>
 
           <a-form-item
-            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && editingDataMetric.chartType === 'bar'"
+            v-if="!isMetricsPieMode && !isTreeStackedMode && !isRankingMode && !isComparisonMode && editingDataMetric.chartType === 'bar'"
             label="堆叠位置"
           >
             <a-select
@@ -463,7 +551,7 @@ interface DataMetricUI {
   id: string
   dataName: string
   dataField: string
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar'
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar' | 'comparisonBar'
   color: string
   yAxisPosition: 'left' | 'right'
   stackGroup?: string
@@ -476,6 +564,10 @@ interface DataMetricUI {
   topN?: number
   sortOrder?: 0 | 1
   groupByDictMap?: Record<string, string>
+  // ===== 同比环比专属字段 =====
+  dateField?: string
+  dateFieldLabel?: string
+  dateFormat?: 'DATETIME' | 'YYYY' | 'YYYY-MM' | 'YYYYMM' | 'YYYY-MM-DD' | 'YYYYMMDD'
 }
 
 // 可分组列选项（排行榜分组字段候选）
@@ -507,6 +599,7 @@ const props = defineProps<{
   availableDataTypes: DataTypeOption[]
   chartMode?: string
   groupByColumnOptions?: GroupByColumnOption[]
+  dateColumnOptions?: GroupByColumnOption[]
   convertUnit?: (unitConfig: string) => string
 }>()
 
@@ -595,9 +688,18 @@ const isRankingMode = computed(() => {
   return props.dataMetrics.some(m => m.chartType === 'rankingBar')
 })
 
-// 排行榜统计方式：dataField 为空=计数(count)，非空=对该字段求和(sum)
+// 同比环比模式：隐藏图表类型/坐标轴/堆叠/颜色配置，改为显示同比环比专属配置
+const isComparisonMode = computed(() => {
+  return props.dataMetrics.some(m => m.chartType === 'comparisonBar')
+})
+
+// 统计方式 UI 覆盖态：刚选「求和」时字段尚未选择、按 dataField 派生仍是计数会导致下拉回弹，
+// 需按指标 id 记录用户显式选择，让「求和字段」行先出现（排行榜/同比环比共用）
+const statMethodOverride = ref<Record<string, 'count' | 'sum'>>({})
+
+// 排行榜统计方式：优先取用户显式选择，否则按 dataField 派生（空=计数，非空=求和）
 const getRankingStatMethod = (metric: DataMetricUI): 'count' | 'sum' => {
-  return metric.dataField ? 'sum' : 'count'
+  return statMethodOverride.value[metric.id] || (metric.dataField ? 'sum' : 'count')
 }
 
 // 分组字段选择变更：同步 groupByField / groupByLabel / groupByDictMap
@@ -608,8 +710,9 @@ const onGroupByFieldChange = (metricId: string, column: any) => {
   updateMetricField(metricId, 'groupByDictMap', option?.dictMap || {})
 }
 
-// 排行榜统计方式变更：count 清空 dataField/dataName；sum 保持字段选择
+// 排行榜统计方式变更：记录显式选择；count 清空 dataField/dataName
 const onRankingStatMethodChange = (metricId: string, method: any) => {
+  statMethodOverride.value[metricId] = method === 'sum' ? 'sum' : 'count'
   if (method === 'count') {
     updateMetricField(metricId, 'dataField', '')
     updateMetricField(metricId, 'dataName', '数量')
@@ -633,12 +736,75 @@ const onRankingSumFieldChange = (metricId: string, dataField: any) => {
   }
 }
 
+// 同比环比统计方式：优先取用户显式选择，否则按 dataField 派生（空=计数，非空=求和）
+const getComparisonStatMethod = (metric: DataMetricUI): 'count' | 'sum' => {
+  return statMethodOverride.value[metric.id] || (metric.dataField ? 'sum' : 'count')
+}
+
+// 是否为同比环比模式的第一条指标（日期格式/时间字段/统计方式只在第一条上配置）
+const isFirstComparisonMetric = (metric: DataMetricUI): boolean => {
+  return props.dataMetrics[0]?.id === metric.id
+}
+
+// 同比环比日期格式候选：决定拉数时的条件形态（区间 / 相等 / IN）
+const dateFormatOptions = [
+  { value: 'DATETIME', label: '日期时间列' },
+  { value: 'YYYY-MM-DD', label: '日期文本(YYYY-MM-DD)' },
+  { value: 'YYYYMMDD', label: '日期文本(YYYYMMDD)' },
+  { value: 'YYYY-MM', label: '年月文本(YYYY-MM)' },
+  { value: 'YYYYMM', label: '年月文本(YYYYMM)' },
+  { value: 'YYYY', label: '纯年份(YYYY，仅同比)' }
+]
+
+// 时间字段候选：固定只取日期/日期时间类型列（dateFormat 仅决定条件形态，不放宽候选域）
+const getDateFieldOptions = (): GroupByColumnOption[] => props.dateColumnOptions || []
+
+// 日期格式变更：仅更新格式标识（候选列域固定为日期类型列，无需清空已选字段）
+const onDateFormatChange = (metricId: string, format: any) => {
+  updateMetricField(metricId, 'dateFormat', format || 'DATETIME')
+}
+
+// 时间字段选择变更：同步 dateField / dateFieldLabel
+const onDateFieldChange = (metricId: string, column: any) => {
+  const option = getDateFieldOptions().find(o => o.column === column)
+  updateMetricField(metricId, 'dateField', column || '')
+  updateMetricField(metricId, 'dateFieldLabel', option?.label || column || '')
+}
+
+// 同比环比统计方式变更：记录显式选择；count 清空 dataField/dataName
+const onComparisonStatMethodChange = (metricId: string, method: any) => {
+  statMethodOverride.value[metricId] = method === 'sum' ? 'sum' : 'count'
+  if (method === 'count') {
+    updateMetricField(metricId, 'dataField', '')
+    updateMetricField(metricId, 'dataName', '数量')
+    updateMetricField(metricId, 'unit', '')
+    updateMetricField(metricId, 'unitConfig', '')
+  }
+}
+
+// 同比环比求和字段变更：同步 dataField/dataName/unit
+const onComparisonSumFieldChange = (metricId: string, dataField: any) => {
+  const dataType = props.availableDataTypes.find(dt => dt.dataField === dataField)
+  updateMetricField(metricId, 'dataField', dataField || '')
+  if (dataType) {
+    updateMetricField(metricId, 'dataName', dataType.dataName)
+    updateMetricField(metricId, 'unitConfig', dataType.unitConfig || '')
+    if (dataType.unitConfig && props.convertUnit) {
+      updateMetricField(metricId, 'unit', props.convertUnit(dataType.unitConfig))
+    } else {
+      updateMetricField(metricId, 'unit', dataType.unit || '')
+    }
+  }
+}
+
 // 判断是否可以添加数据指标
 const canAddDataMetric = computed(() => {
   // 树形堆叠模式只允许一个数据指标
   if (isTreeStackedMode.value) return false
   // 排行榜模式只允许一个数据指标
   if (isRankingMode.value) return false
+  // 同比环比模式允许多个求和字段（同一根柱内堆叠），不阻止添加
+  if (isComparisonMode.value) return true
   // 如果已经有饼图类型，不允许添加新的数据指标（饼图只能 1 个数据指标）
   // 指标饼图允许多个数据指标，不阻止添加
   return !hasPieChart.value
@@ -827,14 +993,20 @@ const openDataConfig = (mode: 'add' | 'edit', metric?: DataMetricUI) => {
       id: `metric_${Date.now()}`,
       dataName: '分布统计',
       dataField: '',
-      // 指标饼图模式下新增的数据指标也需保持 metricsPie，避免删除任一指标后 chartMode 模式误跳回
-      chartType: isMetricsPieMode.value ? 'metricsPie' : 'bar',
+      // 指标饼图/同比环比模式下新增的数据指标需保持对应类型，避免删除任一指标后 chartMode 模式误跳回
+      chartType: isComparisonMode.value ? 'comparisonBar' : (isMetricsPieMode.value ? 'metricsPie' : 'bar'),
       color: getRandomColor(),
       yAxisPosition: defaultYAxisPosition,
       stackGroup: defaultStackGroup,
       unit: '',
       unitConfig: '',
-      itemColors: {}
+      itemColors: {},
+      // 同比环比：追加的求和字段继承第一条指标的时间字段配置（拉数只读取第一条，此处保持持久化一致）
+      ...(isComparisonMode.value ? {
+        dateField: props.dataMetrics[0]?.dateField,
+        dateFieldLabel: props.dataMetrics[0]?.dateFieldLabel,
+        dateFormat: props.dataMetrics[0]?.dateFormat || 'DATETIME'
+      } : {})
     }
   } else if (metric) {
     editingDataMetric.value = { ...metric }

@@ -154,6 +154,13 @@ export async function exportChartToExcel(
     const hasSecondDim = secondDimValues.length > 0
     const sanitizeSheetName = (name: string) => name.substring(0, 31).replace(/[\\/*?\[\]:]/g, '')
 
+    // 首列表头：标准模式取一级维度名；排行榜取分组字段名；同比环比取时间字段名
+    const firstMetric = (config as any)?.dataMetrics?.[0] || {}
+    const firstDimHeader = config?.firstDimension?.groupName ||
+      (firstMetric.chartType === 'rankingBar' ? (firstMetric.groupByLabel || '分组') : '') ||
+      (firstMetric.chartType === 'comparisonBar' ? (firstMetric.dateFieldLabel || '统计周期') : '') ||
+      '第一维度'
+
     // 按指标分别创建 sheet
     for (const stat of statisticTypes) {
       const worksheet = workbook.addWorksheet(sanitizeSheetName(stat || '指标数据'))
@@ -169,7 +176,7 @@ export async function exportChartToExcel(
           worksheet.addRow(row)
         }
       } else {
-        worksheet.addRow([config?.firstDimension?.groupName || '第一维度', ...firstDimValues])
+        worksheet.addRow([firstDimHeader, ...firstDimValues])
         const row: (string | number | null)[] = [stat]
         for (const firstVal of firstDimValues) {
           const match = flattenedData.find(d => d.firstDim === firstVal && d.statisticType === stat)

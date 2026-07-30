@@ -10,6 +10,8 @@ export interface DataMetric {
   unitConfig?: string                 // 原始单位配置，如 "2,10000"
   formatConfig?: { fix: number; unitDivisor: number }  // 格式化配置
   itemColors?: Record<string, string> // 维度项的颜色映射 {itemKey: color}
+  // 数值本身已是百分比（如同比/环比增长率）：ptLine 直接展示原值，不做占比换算与 0-100 夹紧
+  directPercent?: boolean
 }
 
 // 图表数据项接口

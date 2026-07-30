@@ -76,6 +76,64 @@
     </div>
 
     <div class="chart-container">
+      <!-- 同比环比展示态控件：年份数量 / 月份 / 口径（echarts UI 配置，不持久化；纯年份列仅年份数量） -->
+      <div
+        v-if="isComparisonMode && chartData.length > 0"
+        class="comparison-controls"
+      >
+        <span class="comparison-label">年份数量：</span>
+        <a-select
+          v-model:value="comparisonYearCount"
+          size="small"
+          style="width: 90px"
+          @change="onComparisonOptionChange"
+        >
+          <a-select-option
+            v-for="n in comparisonYearCountOptions"
+            :key="n"
+            :value="n"
+          >
+            {{ n }} 年
+          </a-select-option>
+        </a-select>
+        <template v-if="!isYearOnlyComparison">
+          <span class="comparison-label">月份：</span>
+          <a-select
+            v-model:value="comparisonMonth"
+            size="small"
+            style="width: 90px"
+            @change="onComparisonOptionChange"
+          >
+            <a-select-option
+              v-for="m in 12"
+              :key="m"
+              :value="m"
+            >
+              {{ m }} 月
+            </a-select-option>
+          </a-select>
+          <span class="comparison-label">口径：</span>
+          <a-select
+            v-model:value="comparisonScope"
+            size="small"
+            style="width: 100px"
+            @change="onComparisonOptionChange"
+          >
+            <a-select-option value="ytd">
+              年累计
+            </a-select-option>
+            <a-select-option value="single">
+              单月
+            </a-select-option>
+          </a-select>
+          <span class="comparison-label">环比：</span>
+          <a-switch
+            v-model:checked="comparisonShowMom"
+            size="small"
+            @change="onComparisonOptionChange"
+          />
+        </template>
+      </div>
       <!-- 导出按钮 -->
       <div
         v-if="chartData.length > 0"
@@ -95,7 +153,7 @@
         :categories="chartCategories"
         :chart-type="autoChartType"
         :data="filteredChartData"
-        :data-metrics="receivedData.dataMetrics || []"
+        :data-metrics="renderDataMetrics"
         :dimension-value-map="dimensionValueMap"
         :loading="loading"
         :title="chartTitle"
@@ -138,6 +196,7 @@ import type { SelectedBarInfo } from '../../type/ChartTypes'
 import UniversalChart from '@/framework/components/common/chart/UniversalChart.vue'
 import {
   buildChartCategories,
+  buildComparisonRenderMetrics,
   buildDimensionValueMap,
   buildDrillConditionFromCache,
   buildDrillConditionFromRanking,
@@ -146,6 +205,7 @@ import {
   fetchStatisticData,
   filterChartDataByVisibility,
   getChartType,
+  getDefaultComparisonOptions,
   hasValidChartConfig,
   parseBarClickParams,
   parsePieClickParams
@@ -205,6 +265,39 @@ const chartRef = ref<InstanceType<typeof UniversalChart> | null>(null)
 
 // 缓存最近一次请求参数，供点击穿透条件复用
 let lastRequestParams: any = null
+
+// ==================== 同比环比展示态（echarts UI 配置，不持久化） ====================
+const defaultComparisonOptions = getDefaultComparisonOptions()
+const comparisonYearCount = ref(defaultComparisonOptions.yearCount)
+const comparisonMonth = ref(defaultComparisonOptions.month)
+const comparisonScope = ref<'single' | 'ytd'>(defaultComparisonOptions.scope)
+const comparisonShowMom = ref(defaultComparisonOptions.showMom)
+const comparisonYearCountOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+// 是否为同比环比模式
+const isComparisonMode = computed(() => {
+  return (receivedData.value?.dataMetrics || []).some((m: any) => m.chartType === 'comparisonBar')
+})
+
+// 纯年份列（dateFormat=YYYY）：无月份概念，隐藏月份/口径控件，无环比线
+const isYearOnlyComparison = computed(() => {
+  return receivedData.value?.dataMetrics?.[0]?.dateFormat === 'YYYY'
+})
+
+// 渲染指标：同比环比模式使用合成指标（bar + ptLine，环比线随开关），其余透传配置指标
+const renderDataMetrics = computed(() => {
+  if (isComparisonMode.value) return buildComparisonRenderMetrics(receivedData.value, comparisonShowMom.value)
+  return receivedData.value?.dataMetrics || []
+})
+
+// 年份数量/月份变更后重新取数
+const onComparisonOptionChange = async () => {
+  try {
+    await fetchChartData(false)
+  } catch (error) {
+    console.error('同比环比重新取数失败:', error)
+  }
+}
 
 // ==================== 维度顺序变化处理 ====================
 /**
@@ -286,6 +379,10 @@ const filteredChartData = computed(() => {
 
 // 动态获取维度信息的计算属性
 const firstDimensionName = computed(() => {
+  // 同比环比模式无一级维度，X 轴为统计周期
+  if (isComparisonMode.value) {
+    return receivedData.value?.dataMetrics?.[0]?.dateFieldLabel || '统计周期'
+  }
   return receivedData.value?.firstDimension?.groupName || '第一维度'
 })
 
@@ -321,13 +418,35 @@ const closeDetailModal = () => {
 // 图表点击事件处理
 const handleChartClick = (params: any) => {
   // 根据图表类型处理点击事件
-  if (autoChartType.value === 'rankingBar') {
+  if (autoChartType.value === 'comparisonBar') {
+    onComparisonBarClick(params)
+  } else if (autoChartType.value === 'rankingBar') {
     onRankingBarClick(params)
   } else if (autoChartType.value === 'bar' || autoChartType.value === 'line' || autoChartType.value === 'ptLine') {
     onBarClick(params)
   } else if (autoChartType.value === 'pie') {
     onPieClick(params)
   }
+}
+
+// 点击同比环比柱子/折线事件处理（X 轴分类 'YYYY-MM' 与请求桶 label 一致，直接按 conditionLabel 匹配）
+const onComparisonBarClick = (params: any) => {
+  const periodLabel = params.name // X 轴周期标签 'YYYY-MM'
+  const combinedConditions = buildDrillConditionFromCache(lastRequestParams, periodLabel, '')
+  if (!combinedConditions) {
+    console.warn('无法构建同比环比穿透条件')
+    return
+  }
+
+  const groupName = receivedData.value?.dataMetrics?.[0]?.dateFieldLabel || '统计周期'
+  const statType = params.seriesName
+
+  selectedBarInfo.value = buildSelectedBarInfo(
+    periodLabel, null, groupName, null,
+    statType, [periodLabel], combinedConditions, false
+  )
+
+  detailModalVisible.value = true
 }
 
 // 点击排行榜柱子事件处理
@@ -435,11 +554,11 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
       const newTypes = statisticTypes.filter(item => !receivedData.value!.visibleStatisticTypes!.includes(item))
       visibleStatisticTypes.value = [...existing, ...newTypes]
       if (visibleStatisticTypes.value.length === 0 && statisticTypes.length > 0) {
-        visibleStatisticTypes.value = secondDimensions.length === 0 ? [statisticTypes[0]] : [...statisticTypes]
+        visibleStatisticTypes.value = (secondDimensions.length === 0 && !isComparisonMode.value) ? [statisticTypes[0]] : [...statisticTypes]
       }
     } else {
       if (statisticTypes.length > 0) {
-        visibleStatisticTypes.value = secondDimensions.length === 0 ? [statisticTypes[0]] : [...statisticTypes]
+        visibleStatisticTypes.value = (secondDimensions.length === 0 && !isComparisonMode.value) ? [statisticTypes[0]] : [...statisticTypes]
       } else {
         visibleStatisticTypes.value = []
       }
@@ -449,7 +568,8 @@ const updateDimensionData = (data: ChartDataItem[], restoreVisibility = false) =
     visibleFirstDimensions.value = [...firstDimensions]
     visibleSecondDimensions.value = [...secondDimensions]
     if (statisticTypes.length > 0) {
-      visibleStatisticTypes.value = secondDimensions.length === 0 ? [statisticTypes[0]] : [...statisticTypes]
+      // 同比环比模式默认展示全部系列（统计值/同比/环比）
+      visibleStatisticTypes.value = (secondDimensions.length === 0 && !isComparisonMode.value) ? [statisticTypes[0]] : [...statisticTypes]
     } else {
       visibleStatisticTypes.value = []
     }
@@ -509,9 +629,13 @@ const fetchChartData = async (shouldRestoreVisibility = false) => {
     }
 
     // ===== 构建请求参数并获取数据 =====
-    // 配置弹窗不传 visibility，取数后由控制面板过滤
+    // 配置弹窗不传 visibility，取数后由控制面板过滤；
+    // 同比环比模式例外：年份数量/月份/口径为展示态取数参数，需随请求下发
+    const comparisonVisibility = isComparisonMode.value
+      ? { comparison: { yearCount: comparisonYearCount.value, month: comparisonMonth.value, scope: comparisonScope.value, showMom: comparisonShowMom.value } }
+      : undefined
     const { requestParams, response: result } =
-      await fetchStatisticData(config.value.url, receivedData.value)
+      await fetchStatisticData(config.value.url, receivedData.value, comparisonVisibility)
     // 缓存请求参数，供点击穿透复用
     lastRequestParams = requestParams
 
@@ -594,3 +718,22 @@ defineExpose({
 </script>
 
 <style lang="less" scoped src="../../styles/talentReview.less"></style>
+
+<style lang="less" scoped>
+// 同比环比展示态控件（年份数量/月份）
+.comparison-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px 0;
+
+  .comparison-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+
+    &:not(:first-child) {
+      margin-left: 12px;
+    }
+  }
+}
+</style>

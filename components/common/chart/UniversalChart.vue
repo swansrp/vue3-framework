@@ -122,7 +122,7 @@ export default defineComponent({
       default: () => []
     },
     chartType: {
-      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar',
+      type: String as () => 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar' | 'comparisonBar',
       default: 'bar'
     },
     // 维度名称到编码的映射，用于颜色等与配置对齐
@@ -152,6 +152,8 @@ export default defineComponent({
       if (type === 'treeStackedBar') return 'bar'
       // 排行榜(Top-N)本质是单系列柱状图（已由 normalizeRankingResponse 归一化为嵌套结构）
       if (type === 'rankingBar') return 'bar'
+      // 同比环比正常走 bar+ptLine 的 mixed 判定，此处为单指标兜底
+      if (type === 'comparisonBar') return 'bar'
       return type
     }
 

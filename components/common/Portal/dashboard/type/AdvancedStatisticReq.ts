@@ -11,7 +11,8 @@ export const CHART_TYPE = {
     PIE: 'pie',
     METRICS_PIE: 'metricsPie',
     TREE_STACKED_BAR: 'treeStackedBar',
-    RANKING_BAR: 'rankingBar'
+    RANKING_BAR: 'rankingBar',
+    COMPARISON_BAR: 'comparisonBar'
 } as const
 export type ChartType = typeof CHART_TYPE[keyof typeof CHART_TYPE]
 
@@ -20,7 +21,8 @@ export const CHART_MODE = {
     STANDARD: 'standard',
     METRICS_PIE: 'metricsPie',
     TREE_STACKED_BAR: 'treeStackedBar',
-    RANKING_BAR: 'rankingBar'
+    RANKING_BAR: 'rankingBar',
+    COMPARISON_BAR: 'comparisonBar'
 } as const
 export type ChartMode = typeof CHART_MODE[keyof typeof CHART_MODE]
 
@@ -70,6 +72,14 @@ export interface DataMetric {
     topN?: number           // 取前 N 名（LIMIT）
     sortOrder?: 0 | 1       // 排序方向：0=正序(ASC)，1=倒序(DESC)
     groupByDictMap?: Record<string, string>  // 分组字段的字典映射（可选）
+    // ===== 同比环比专属字段（chartType === 'comparisonBar' 时生效）=====
+    // 仅持久化"图是什么"：时间字段 + 统计方式（dataField 空=计数、非空=求和）；
+    // 年份数量 / 月份为展示态控制（echarts UI 配置），不写入后端 JSON
+    dateField?: string      // 时间字段（列属性名）
+    dateFieldLabel?: string // 时间字段显示名
+    // 时间字段格式：DATETIME=真日期列(区间条件，默认)；YYYY-MM-DD/YYYYMMDD=日期文本列(区间条件)；
+    // YYYY-MM/YYYYMM=年月文本列(相等/IN 匹配)；YYYY=纯年份列(仅同比，无月份概念)
+    dateFormat?: 'DATETIME' | 'YYYY' | 'YYYY-MM' | 'YYYYMM' | 'YYYY-MM-DD' | 'YYYYMMDD'
 }
 
 export interface DimensionIndicatorsFilter {
