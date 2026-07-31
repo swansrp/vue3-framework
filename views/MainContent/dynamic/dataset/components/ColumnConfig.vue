@@ -128,12 +128,13 @@ const emit = defineEmits<{
 
 const columns = [
   { title: '顺序', key: 'displayOrder', width: 120, align: 'center' },
-  { title: 'SQL表达式', dataIndex: 'columnSql', key: 'columnSql', width: 700 },
-  { title: '别名', dataIndex: 'columnAlias', key: 'columnAlias', width: 200 },
+  // 不设固定宽度自适应剩余空间，超长省略号+悬停查看全文，避免出现横向滚动条
+  { title: 'SQL表达式', dataIndex: 'columnSql', key: 'columnSql', ellipsis: true },
+  { title: '别名', dataIndex: 'columnAlias', key: 'columnAlias', width: 180 },
   { title: '是否聚合', key: 'isAggregate', width: 100, align: 'center' },
   { title: '是否显示', key: 'isVisible', width: 100, align: 'center' },
-  { title: '备注', dataIndex: 'remark', key: 'remark' },
-  { title: '操作', key: 'action', width: 150, fixed: 'right', align: 'center' },
+  { title: '备注', dataIndex: 'remark', key: 'remark', width: 220, ellipsis: true },
+  { title: '操作', key: 'action', width: 150, align: 'center' },
 ]
 
 const dataSource = ref<DatasetColumnInfo[]>([])
