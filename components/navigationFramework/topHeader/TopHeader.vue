@@ -195,9 +195,9 @@
               class="user-dropdown-menu"
               @click="handleMenuClick"
             >
-              <!-- 系统管理入口：有该菜单权限且非子系统形态时显示，点击以子系统方式新页签打开 -->
+              <!-- 系统管理入口：有该菜单权限即显示（不区分是否子系统极简形态），点击以子系统方式新页签打开 -->
               <a-menu-item
-                v-if="!minimal && systemManageNode"
+                v-if="systemManageNode"
                 key="systemManage"
               >
                 <ToolOutlined />

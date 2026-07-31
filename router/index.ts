@@ -8,7 +8,7 @@ import {
 } from 'vue-router'
 
 import { getQueryObject } from '@/framework/network/utils'
-import { enterFirstDynamicRoute } from '@/framework/router/utils'
+import { enterFirstDynamicRoute, getFirstVisibleTopNav } from '@/framework/router/utils'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
 import { useNavigationStore } from '@/framework/store/navigation'
@@ -128,7 +128,8 @@ function handleRootPath(
       navigationStore.setShowLeftNav(true)
       navigationStore.setShowNav(true)
       
-      const topPath = routeStore.dynamicRoute[0]?.path
+      // 顶部选中第一个"顶部菜单栏可见"的菜单（跳过"系统管理"）
+      const topPath = getFirstVisibleTopNav()?.path
       if (topPath) {
         navigationStore.setActiveTopNav(topPath)
       }
