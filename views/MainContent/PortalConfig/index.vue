@@ -789,8 +789,8 @@
                 box-shadow: var(--shadow-md);
               "
             >
-              <!-- 排序操作 -->
-              <div style="margin-bottom: 8px;">
+              <!-- 操作按钮 -->
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
                 <a-button
                   block
                   size="middle"
@@ -811,6 +811,27 @@
                 >
                   <SortAscendingOutlined />
                   <span>字段排序</span>
+                </a-button>
+                <a-button
+                  block
+                  size="middle"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    height: 36px;
+                    border-radius: 6px;
+                  "
+                  @click="
+                    () => {
+                      openBatchConfigModal();
+                      hidePopup();
+                    }
+                  "
+                >
+                  <SettingOutlined />
+                  <span>批量配置</span>
                 </a-button>
               </div>
               
@@ -1720,6 +1741,188 @@
         :personal-indicator-permissions="{ edit: false, delete: false }"
       />
     </a-modal>
+    <!-- 批量字段配置弹窗 -->
+    <a-modal
+      v-model:open="showBatchConfigModal"
+      title="批量字段配置"
+      width="850px"
+      centered
+      :body-style="{ maxHeight: '72vh', overflow: 'auto' }"
+    >
+      <!-- 字段选择 - 卡片网格 -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-weight: 500;">
+            选择目标字段（已选 {{ batchSelectedIds.length }} 个，支持 Shift 多选）
+          </span>
+          <a-space :size="8">
+            <a-button size="small" type="link" @click="batchSelectAll">全选</a-button>
+            <a-button size="small" type="link" @click="batchClearAll">清空</a-button>
+          </a-space>
+        </div>
+        <div class="batch-field-grid">
+          <div
+            v-for="(column, index) in (tableConfig.columns || [])"
+            :key="column.id"
+            class="batch-field-card"
+            :class="{ 'batch-field-selected': batchSelectedIds.includes(column.id) }"
+            @click="batchToggleSelect(column.id, index, $event)"
+          >
+            <div class="batch-field-checkbox">
+              <CheckOutlined v-if="batchSelectedIds.includes(column.id)" />
+            </div>
+            <div class="batch-field-info">
+              <div class="batch-field-name">{{ strRemoveLF(column.displayName) }}</div>
+              <div class="batch-field-property">{{ column.property }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <a-divider style="margin: 8px 0 16px" />
+
+      <!-- 快速配置 -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <a-checkbox v-model:checked="batchForm.quickPreset.enabled" />
+          <span style="width: 120px; flex-shrink: 0; font-weight: 500;">快速配置</span>
+          <a-select
+            v-model:value="batchForm.quickPreset.value"
+            :options="batchQuickPresetOptions"
+            :disabled="!batchForm.quickPreset.enabled"
+            style="width: 200px"
+            placeholder="选择常用配置方案"
+          />
+        </div>
+      </div>
+
+      <a-divider style="margin: 0 0 16px" />
+
+      <!-- 配置项 -->
+      <div style="margin-bottom: 8px; font-weight: 500;">
+        细项配置（仅勾选的会被修改）
+      </div>
+      <div style="display: flex; gap: 24px;">
+        <!-- 左列 -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+          <!-- 字段类型 -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a-checkbox v-model:checked="batchForm.fieldType.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">字段类型</span>
+            <a-select
+              v-model:value="batchForm.fieldType.value"
+              :options="fieldTypeDict"
+              :disabled="!batchForm.fieldType.enabled"
+              style="width: 200px"
+              placeholder="选择字段类型"
+            />
+          </div>
+
+          <!-- 显示格式（金额/百分比时显示） -->
+          <div
+            v-if="batchForm.fieldType.enabled && (batchForm.fieldType.value === FIELD_TYPE.MONEY || batchForm.fieldType.value === FIELD_TYPE.PERCENT)"
+            style="display: flex; align-items: center; gap: 8px;"
+          >
+            <a-checkbox v-model:checked="batchForm.reference.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">显示格式(精度,单位)</span>
+            <a-input
+              v-model:value="batchForm.reference.value"
+              :placeholder="batchForm.fieldType.value === FIELD_TYPE.MONEY ? '如: 2,10000' : '如: 2,100'"
+              style="width: 200px"
+            />
+          </div>
+
+          <!-- 分组名称 -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a-checkbox v-model:checked="batchForm.displayGroupName.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">分组名称</span>
+            <a-input
+              v-model:value="batchForm.displayGroupName.value"
+              :disabled="!batchForm.displayGroupName.enabled"
+              placeholder="输入分组名称"
+              style="width: 200px"
+            />
+          </div>
+
+          <!-- 对齐方式 -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a-checkbox v-model:checked="batchForm.align.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">对齐方式</span>
+            <a-select
+              v-model:value="batchForm.align.value"
+              :options="alignDict"
+              :disabled="!batchForm.align.enabled"
+              style="width: 200px"
+              placeholder="选择对齐方式"
+            />
+          </div>
+
+          <!-- 移动端显示 -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a-checkbox v-model:checked="batchForm.mobileDisplayType.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">移动端显示</span>
+            <a-select
+              v-model:value="batchForm.mobileDisplayType.value"
+              :options="mobileDisplayTypeDict"
+              :disabled="!batchForm.mobileDisplayType.enabled"
+              style="width: 200px"
+              placeholder="选择移动端显示"
+            />
+          </div>
+        </div>
+
+        <!-- 右列 -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+          <!-- 汇总 -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a-checkbox v-model:checked="batchForm.summaryAble.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">汇总</span>
+            <a-switch
+              v-model:checked="batchForm.summaryAble.value"
+              :disabled="!batchForm.summaryAble.enabled"
+              checked-value="1"
+              un-checked-value="0"
+            />
+          </div>
+
+          <!-- 筛选 -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a-checkbox v-model:checked="batchForm.filterAble.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">筛选</span>
+            <a-switch
+              v-model:checked="batchForm.filterAble.value"
+              :disabled="!batchForm.filterAble.enabled"
+              checked-value="1"
+              un-checked-value="0"
+            />
+          </div>
+
+          <!-- 排序 -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a-checkbox v-model:checked="batchForm.sortAble.enabled" />
+            <span style="width: 120px; flex-shrink: 0;">排序</span>
+            <a-switch
+              v-model:checked="batchForm.sortAble.value"
+              :disabled="!batchForm.sortAble.enabled"
+              checked-value="1"
+              un-checked-value="0"
+            />
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <a-button @click="showBatchConfigModal = false">取消</a-button>
+        <a-button
+          type="primary"
+          :loading="batchApplying"
+          :disabled="batchSelectedIds.length === 0"
+          @click="applyBatchConfig"
+        >
+          应用到 {{ batchSelectedIds.length }} 个字段
+        </a-button>
+      </template>
+    </a-modal>
     <!-- DarkTable配置弹窗 -->
     <PortalTableConfigModal
       v-model="showPortalTableConfigModal"
@@ -1734,6 +1937,7 @@
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
+  CheckOutlined,
   ConsoleSqlOutlined,
   ControlOutlined,
   CopyOutlined,
@@ -1743,6 +1947,7 @@ import {
   ForkOutlined,
   MinusCircleOutlined,
   PlusOutlined,
+  SettingOutlined,
   SortAscendingOutlined,
   UndoOutlined,
   UploadOutlined,
@@ -2071,6 +2276,195 @@ const saveTableColumn = (silent = true) => {
     getPortalConfig(tableConfig.value.name, selectedRole.value)
   )
 }
+
+// ===== 批量字段配置 =====
+const showBatchConfigModal = ref(false)
+const batchSelectedIds = ref<string[]>([])
+const batchApplying = ref(false)
+// shift多选: 记录上次点击的索引
+const batchLastClickedIndex = ref<number | null>(null)
+const batchQuickPresetOptions = [
+  { label: '不显示', value: 'displayNone' },
+  { label: '显示/筛选/排序', value: 'displaySearchSort' },
+  { label: '显示/筛选', value: 'displaySearch' },
+  { label: '只显示', value: 'displayNoAction' },
+  { label: '表格显示', value: 'displayTableOnly' },
+  { label: '详情显示', value: 'displayDetailOnly' },
+  { label: '不参与编辑', value: 'displayTableAndDetail' },
+]
+const batchForm = reactive({
+  quickPreset: { enabled: false, value: undefined as any },
+  fieldType: { enabled: false, value: undefined as any },
+  reference: { enabled: false, value: '' as string },
+  displayGroupName: { enabled: false, value: '' as string },
+  align: { enabled: false, value: undefined as any },
+  mobileDisplayType: { enabled: false, value: undefined as any },
+  summaryAble: { enabled: false, value: '1' as string },
+  filterAble: { enabled: false, value: '1' as string },
+  sortAble: { enabled: false, value: '1' as string },
+})
+
+const batchToggleSelect = (id: string, index: number, e: MouseEvent) => {
+  const columns = tableConfig.value.columns || []
+  if (e.shiftKey && batchLastClickedIndex.value !== null) {
+    // shift多选: 从上次点击到当前之间的所有项都选中
+    const start = Math.min(batchLastClickedIndex.value, index)
+    const end = Math.max(batchLastClickedIndex.value, index)
+    const ids = columns.slice(start, end + 1).map((c: any) => c.id)
+    const existing = new Set(batchSelectedIds.value)
+    ids.forEach((id) => existing.add(id))
+    batchSelectedIds.value = [...existing]
+  } else {
+    // 普通点击: 切换选中状态
+    const idx = batchSelectedIds.value.indexOf(id)
+    if (idx >= 0) {
+      batchSelectedIds.value.splice(idx, 1)
+    } else {
+      batchSelectedIds.value.push(id)
+    }
+  }
+  batchLastClickedIndex.value = index
+}
+
+const batchSelectAll = () => {
+  batchSelectedIds.value = (tableConfig.value.columns || []).map((c: any) => c.id)
+  batchLastClickedIndex.value = null
+}
+
+const batchClearAll = () => {
+  batchSelectedIds.value = []
+  batchLastClickedIndex.value = null
+}
+
+const openBatchConfigModal = () => {
+  batchSelectedIds.value = []
+  batchLastClickedIndex.value = null
+  batchForm.quickPreset = { enabled: false, value: undefined }
+  batchForm.fieldType = { enabled: false, value: undefined }
+  batchForm.reference = { enabled: false, value: '' }
+  batchForm.displayGroupName = { enabled: false, value: '' }
+  batchForm.align = { enabled: false, value: undefined }
+  batchForm.mobileDisplayType = { enabled: false, value: undefined }
+  batchForm.summaryAble = { enabled: false, value: '1' }
+  batchForm.filterAble = { enabled: false, value: '1' }
+  batchForm.sortAble = { enabled: false, value: '1' }
+  showBatchConfigModal.value = true
+}
+
+const applyBatchConfig = async () => {
+  if (batchSelectedIds.value.length === 0) {
+    message.warning('请至少选择一个字段')
+    return
+  }
+  const hasEnabled = Object.values(batchForm).some((item: any) => item.enabled)
+  if (!hasEnabled) {
+    message.warning('请至少勾选一个要应用的配置项')
+    return
+  }
+
+  batchApplying.value = true
+  try {
+    const targets = batchSelectedIds.value
+      .map((id) => columnMap.get(id))
+      .filter(Boolean) as any[]
+
+    const promises: Promise<any>[] = []
+    for (const column of targets) {
+      // 快速配置预设
+      if (batchForm.quickPreset.enabled && batchForm.quickPreset.value) {
+        const preset = batchForm.quickPreset.value
+        if (preset === 'displayNone') {
+          column.show = '0'
+          column.detailShow = '0'
+          column.addShow = '0'
+          column.editShow = '0'
+          column.filterAble = '0'
+          column.sortAble = '0'
+        } else if (preset === 'displaySearchSort') {
+          column.show = '1'
+          column.detailShow = '1'
+          column.addShow = '0'
+          column.editShow = '0'
+          column.filterAble = '1'
+          column.sortAble = '1'
+        } else if (preset === 'displaySearch') {
+          column.show = '1'
+          column.detailShow = '1'
+          column.addShow = '0'
+          column.editShow = '0'
+          column.filterAble = '1'
+          column.sortAble = '0'
+        } else if (preset === 'displayTableOnly') {
+          column.show = '1'
+          column.detailShow = '0'
+          column.addShow = '0'
+          column.editShow = '0'
+        } else if (preset === 'displayDetailOnly') {
+          column.show = '0'
+          column.detailShow = '1'
+          column.addShow = '0'
+          column.editShow = '0'
+        } else if (preset === 'displayTableAndDetail') {
+          column.show = '1'
+          column.detailShow = '1'
+          column.addShow = '0'
+          column.editShow = '0'
+        }
+      }
+      // 字段类型变更时同步处理关联字段
+      if (batchForm.fieldType.enabled && batchForm.fieldType.value) {
+        const oldType = column.fieldType
+        column.fieldType = batchForm.fieldType.value
+        if (oldType !== batchForm.fieldType.value) {
+          if (batchForm.fieldType.value === FIELD_TYPE.MONEY) {
+            column.reference =
+              batchForm.reference.enabled && batchForm.reference.value
+                ? batchForm.reference.value
+                : '2,10000'
+          } else {
+            column.reference = null
+          }
+          column.dbField = null
+        }
+      }
+      if (batchForm.reference.enabled && batchForm.reference.value) {
+        column.reference = batchForm.reference.value
+      }
+      if (batchForm.displayGroupName.enabled) {
+        column.displayGroupName = batchForm.displayGroupName.value
+      }
+      if (batchForm.align.enabled && batchForm.align.value !== undefined) {
+        column.align = batchForm.align.value
+      }
+      if (
+        batchForm.mobileDisplayType.enabled &&
+        batchForm.mobileDisplayType.value !== undefined
+      ) {
+        column.mobileDisplayType = batchForm.mobileDisplayType.value
+      }
+      if (batchForm.summaryAble.enabled) {
+        column.summaryAble = batchForm.summaryAble.value
+      }
+      if (batchForm.filterAble.enabled) {
+        column.filterAble = batchForm.filterAble.value
+      }
+      if (batchForm.sortAble.enabled) {
+        column.sortAble = batchForm.sortAble.value
+      }
+      promises.push(updatePortalColumn(column, true))
+    }
+
+    await Promise.all(promises)
+    message.success(`已批量更新 ${targets.length} 个字段`)
+    showBatchConfigModal.value = false
+    getTableConfigByName(tableConfig.value.name)
+  } catch (error: any) {
+    message.error('批量更新失败: ' + (error?.message || '未知错误'))
+  } finally {
+    batchApplying.value = false
+  }
+}
+// ===== 批量字段配置 END =====
 
 const quickConfig = (column: any, type: string) => {
   if (type === 'displayNone') {
