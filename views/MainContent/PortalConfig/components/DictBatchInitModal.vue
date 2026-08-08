@@ -86,7 +86,10 @@
                 </a-tag>
               </template>
               <template v-else-if="column.key === 'count'">
-                <span v-if="record.errorMsg" class="text-danger">{{ record.errorMsg }}</span>
+                <span
+                  v-if="record.errorMsg"
+                  class="text-danger"
+                >{{ record.errorMsg }}</span>
                 <span v-else>{{ record.items.length }}</span>
               </template>
               <template v-else-if="column.key === 'unknown'">

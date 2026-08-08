@@ -1756,8 +1756,20 @@
             选择目标字段（已选 {{ batchSelectedIds.length }} 个，支持 Shift 多选）
           </span>
           <a-space :size="8">
-            <a-button size="small" type="link" @click="batchSelectAll">全选</a-button>
-            <a-button size="small" type="link" @click="batchClearAll">清空</a-button>
+            <a-button
+              size="small"
+              type="link"
+              @click="batchSelectAll"
+            >
+              全选
+            </a-button>
+            <a-button
+              size="small"
+              type="link"
+              @click="batchClearAll"
+            >
+              清空
+            </a-button>
           </a-space>
         </div>
         <div class="batch-field-grid">
@@ -1772,8 +1784,12 @@
               <CheckOutlined v-if="batchSelectedIds.includes(column.id)" />
             </div>
             <div class="batch-field-info">
-              <div class="batch-field-name">{{ strRemoveLF(column.displayName) }}</div>
-              <div class="batch-field-property">{{ column.property }}</div>
+              <div class="batch-field-name">
+                {{ strRemoveLF(column.displayName) }}
+              </div>
+              <div class="batch-field-property">
+                {{ column.property }}
+              </div>
             </div>
           </div>
         </div>
@@ -1912,7 +1928,9 @@
       </div>
 
       <template #footer>
-        <a-button @click="showBatchConfigModal = false">取消</a-button>
+        <a-button @click="showBatchConfigModal = false">
+          取消
+        </a-button>
         <a-button
           type="primary"
           :loading="batchApplying"

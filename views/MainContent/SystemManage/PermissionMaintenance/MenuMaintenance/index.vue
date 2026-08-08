@@ -260,8 +260,8 @@ import { addMainMenu, addMenuButton, addMenuContent, addSubMenu, changePID, dele
 import TreeEditForm from '@/framework/components/common/treeEditForm/TreeEditForm.vue'
 import { FormState } from '@/framework/components/common/treeEditForm/type'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
-import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { getAllParentNodes, getBrotherNodes, setField } from '@/framework/utils/common'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { EDIT } from '@/framework/utils/constant'
 
 const _initFormState: FormState = {
