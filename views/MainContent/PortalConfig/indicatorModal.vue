@@ -17,6 +17,24 @@
           tree-mode
           @selected-data="onSelectedData"
         />
+        <!-- 一键初始化：放在左侧指标组树下方，无指标组时也可用 -->
+        <a-tooltip
+          placement="top"
+        >
+          <template #title>
+            <span>一键初始化字典指标：每个字典类字段生成一个独立指标组，选中组时作为其子组</span>
+          </template>
+          <a-button
+            style="width: 100%; margin-top: 10px"
+            type="primary"
+            @click="handleOpenBatchInit"
+          >
+            <template #icon>
+              <RocketOutlined />
+            </template>
+            一键初始化字典指标
+          </a-button>
+        </a-tooltip>
       </template>
       <template #content>
         <portal
@@ -132,6 +150,15 @@
       @close="showDictGenerator = false"
     />
 
+    <!-- 字典指标一键初始化组件 -->
+    <dict-batch-init-modal
+      v-model:show="showBatchInit"
+      :config="config"
+      :selected-group-id="selectedTreeData[0]"
+      @generated="onBatchInitGenerated"
+      @close="showBatchInit = false"
+    />
+
     <!-- 同步图表配置 + 导出/导入按钮 -->
     <div
       v-if="config?.name"
@@ -186,16 +213,16 @@
 
 <script lang="ts" setup>
 
-import { DownloadOutlined, ThunderboltOutlined, SyncOutlined, UploadOutlined, BgColorsOutlined } from '@ant-design/icons-vue'
+import { BgColorsOutlined, DownloadOutlined, RocketOutlined, SyncOutlined, ThunderboltOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 
 import ChartSyncReviewModal from './components/ChartSyncReviewModal.vue'
+import DictBatchInitModal from './components/DictBatchInitModal.vue'
 import DictToIndicatorGenerator from './components/DictToIndicatorGenerator.vue'
 import IndicatorForm from './components/IndicatorForm.vue'
 import type { ScanResult } from './utils/syncAllChartIndicators'
 import { scanAllCharts } from './utils/syncAllChartIndicators'
 
-import { ConditionVO } from '@/apis/types'
 import { getIndicatorConfig } from '@/framework/apis/portal'
 import { addEntity, addEntityList, generalSelect, updateEntityListSelective, updateEntitySelective } from '@/framework/apis/portal'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
@@ -250,7 +277,7 @@ watch(
   () => defaultValue.portalName = config.value.name
 )
 const groupAdvanceCondition = computed(() => {
-  const conditionList = [buildCondition('portalName', FILTER_TYPE.EQUAL, [config.value.name])] as ConditionVO[]
+  const conditionList = [buildCondition('portalName', FILTER_TYPE.EQUAL, [config.value.name])] as ConditionListType[]
   return { conditionList } as ConditionListType
 })
 
@@ -279,6 +306,28 @@ const modifyFormData = ref<any>({})
 
 // 字典生成器显示状态
 const showDictGenerator = ref(false)
+
+// 一键初始化弹窗显示状态
+const showBatchInit = ref(false)
+
+// 打开一键初始化（不强制选组，弹窗内支持自动建组）
+const handleOpenBatchInit = () => {
+  showBatchInit.value = true
+}
+
+// 一键初始化完成回调（成功提示由弹窗内部发出，此处只负责刷新）
+const onBatchInitGenerated = (_data: any[], _groupId: string | number) => {
+  // 可能新建了指标组，刷新左侧指标组树
+  if (groupTreeRef.value) {
+    groupTreeRef.value.queryData()
+  }
+  // 刷新右侧指标列表（未选组时右侧未渲染，判空保护）
+  if (indicatorRef.value) {
+    indicatorRef.value.queryData()
+  }
+  // 关闭弹窗
+  showBatchInit.value = false
+}
 
 // 恢复默认颜色状态
 const resettingColors = ref(false)
