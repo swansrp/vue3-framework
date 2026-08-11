@@ -577,12 +577,13 @@ onMounted(() => {
   }
 }
 
-// 度量单元格可点击钻取(深色主题下的链接态)
+// 度量单元格可点击钻取(偏白高亮, 悬停回主题强调色)
 .pivot-drill-cell {
   cursor: pointer;
-  color: #69b1ff;
+  color: #eaf9ff;
 
   &:hover {
+    color: #1fc6ff;
     text-decoration: underline;
   }
 }
