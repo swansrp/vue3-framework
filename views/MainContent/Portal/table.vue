@@ -17,6 +17,9 @@ import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
 import { resolveDynamicVariable } from '@/framework/utils/common'
 
+import FilterItems from './FilterItems.vue'
+import PivotTable from './pivot.vue'
+
 interface Props {
   tableId?: string
 }
@@ -142,9 +145,9 @@ const mapUrlParamsToFilterValues = () => {
   const extraConditions: ConditionListType[] = []
   
   filterConfigList.value.forEach(filter => {
-    const urlValue = urlParams[filter.code]
+    const urlValue = urlParams[filter.code!]
     if (urlValue !== undefined && urlValue !== null && urlValue !== '') {
-      filterValues.value[filter.code] = urlValue
+      filterValues.value[filter.code!] = urlValue
     }
   })
   
@@ -166,7 +169,7 @@ const mapUrlParamsToFilterValues = () => {
           property: key,
           value: value
         }
-        extraConditions.push(condition)
+        extraConditions.push(condition as ConditionListType)
       }
     } else {
       console.log(`URL参数 ${key} 不匹配任何列名，忽略`)
@@ -197,7 +200,7 @@ const loadPortalTableConfig = async () => {
       portalTableConfig.value = tableRes.payload[0]
 
       // 获取筛选项配置
-      const filterRes = await getPortalTableFilterList(portalTableConfig.value.id!)
+      const filterRes = await getPortalTableFilterList(portalTableConfig.value!.id!)
       if (filterRes?.payload?.records) {
         filterConfigList.value = filterRes.payload.records
         
@@ -207,7 +210,7 @@ const loadPortalTableConfig = async () => {
             // 解析内置时间变量并返回实际时间值（兜底+专项双模式）
             const resolvedValue = resolveDynamicVariable(filter.defaultValue)
             if (resolvedValue !== undefined) {
-              filterValues.value[filter.code] = resolvedValue
+              filterValues.value[filter.code!] = resolvedValue
             }
           }
           // 预加载下拉选择类型的字典选项
@@ -228,9 +231,9 @@ const loadPortalTableConfig = async () => {
         // 列匹配需要等 DarkTable 加载完成后通过 onConfigLoaded 处理
         const urlParams = parseUrlParams()
         filterConfigList.value.forEach(filter => {
-          const urlValue = urlParams[filter.code]
+          const urlValue = urlParams[filter.code!]
           if (urlValue !== undefined && urlValue !== null && urlValue !== '') {
-            filterValues.value[filter.code] = urlValue
+            filterValues.value[filter.code!] = urlValue
           }
         })
       }
@@ -251,7 +254,7 @@ const condition = computed(() => {
   const conditionList: ConditionListType[] = []
 
   filterConfigList.value.forEach(filter => {
-    const value = filterValues.value[filter.code]
+    const value = filterValues.value[filter.code!]
     
     // 过滤无效值：undefined / null / '' / 空数组 / 仅包含「全部」选项
     const isAllSelected = Array.isArray(value) && value.length === 1 && value[0] === '__all__'
@@ -327,6 +330,9 @@ const condition = computed(() => {
   return conditionList
 })
 
+// 是否透视报表模式
+const isPivotMode = computed(() => portalTableConfig.value?.pivotMode === '1')
+
 // 计算 padding 样式
 const paddingStyle = computed(() => {
   if (!portalTableConfig.value) return {}
@@ -373,8 +379,28 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- 透视报表模式 -->
+  <pivot-table
+    v-if="portalTableConfig?.portalName && isPivotMode"
+    :portal-table-config="portalTableConfig"
+    :condition="condition"
+    :width="portalTableConfig?.filterWidth ?? 260"
+  >
+    <template #side>
+      <filter-items
+        :filter-config-list="filterConfigList"
+        :filter-values="filterValues"
+        :tree-options-cache="treeOptionsCache"
+        :get-select-options="getSelectOptions"
+        :load-dict-options="loadDictOptions"
+        :get-tree-options="getTreeOptions"
+      />
+    </template>
+  </pivot-table>
+
+  <!-- 普通表格模式 -->
   <dark-table
-    v-if="portalTableConfig?.portalName"
+    v-else-if="portalTableConfig?.portalName"
     ref="tableRef"
     :condition="condition"
     :table-id="portalTableConfig?.portalName"
@@ -382,111 +408,19 @@ onMounted(() => {
     :hide-export="portalTableConfig?.downloadAble === '0'"
     advance
     read-only
+    side-plain
     text-area-in-expanded
     @config-loaded="onConfigLoaded"
   >
     <template #side>
-      <template
-        v-for="filter in filterConfigList"
-        :key="filter.id"
-      >
-        <a-descriptions-item :label="filter.label">
-          <template #label>
-            <span>{{ filter.label }}</span>
-            <span
-              v-if="filter.filterType === 'select'"
-              style="color: #ff4d4f; font-size: 12px;"
-            >[{{ filter.dictCode || '无dictCode' }}]</span>
-          </template>
-          <!-- 输入框类型 -->
-          <template v-if="filter.filterType === 'input'">
-            <a-input
-              v-model:value="filterValues[filter.code]"
-              :allow-clear="filter.allowClear === '1'"
-              :placeholder="filter.placeholder || '请输入' + filter.label"
-              style="width: 95%; background-color: rgb(21,76,121);"
-            />
-          </template>
-
-          <!-- 下拉选择类型 -->
-          <template v-else-if="filter.filterType === 'select'">
-            <a-select
-              :key="`select-${filter.id}-${filter.dictCode}`"
-              v-model:value="filterValues[filter.code]"
-              :allow-clear="filter.allowClear === '1'"
-              :mode="filter.multiple === '1' ? 'multiple' : undefined"
-              :placeholder="filter.placeholder || '请选择' + filter.label"
-              style="width: 95%"
-              @focus="() => loadDictOptions(filter.dictCode)"
-            >
-              <a-select-option 
-                v-for="option in getSelectOptions(filter.dictCode)" 
-                :key="option.value" 
-                :value="option.value"
-              >
-                {{ option.label }}
-              </a-select-option>
-            </a-select>
-          </template>
-
-          <!-- 日期范围选择类型 -->
-          <template v-else-if="filter.filterType === 'dateRange'">
-            <a-range-picker
-              v-model:value="filterValues[filter.code]"
-              :allow-clear="filter.allowClear === '1'"
-              :placeholder="filter.placeholder || '请选择日期范围'"
-              style="width: 95%"
-              value-format="YYYY-MM-DD"
-              @change="(dates: any) => {
-                if (dates && dates.length === 2) {
-                  // $1 对应开始日期，$2 对应结束日期
-                  filterValues[filter.code] = dates
-                }
-              }"
-            />
-          </template>
-
-          <!-- 树形下拉列表类型 -->
-          <template v-else-if="filter.filterType === 'treeSelect'">
-            <a-tree-select
-              v-model:value="filterValues[filter.code]"
-              :allow-clear="filter.allowClear === '1'"
-              :placeholder="filter.placeholder || '请选择' + filter.label"
-              :tree-data="treeOptionsCache[filter.dictCode] || []"
-              style="width: 95%"
-              tree-node-filter-prop="label"
-              :show-search="true"
-              @focus="() => getTreeOptions(filter.dictCode)"
-            >
-              <template #title="{ label }">
-                {{ label }}
-              </template>
-            </a-tree-select>
-          </template>
-
-          <!-- 数字输入类型 -->
-          <template v-else-if="filter.filterType === 'number'">
-            <a-input-number
-              v-model:value="filterValues[filter.code]"
-              :allow-clear="filter.allowClear === '1'"
-              :placeholder="filter.placeholder || '请输入' + filter.label"
-              style="width: 95%"
-            />
-          </template>
-
-          <!-- 日期选择类型 -->
-          <template v-else-if="filter.filterType === 'date' || filter.filterType === 'week' || filter.filterType === 'month' || filter.filterType === 'year'">
-            <a-date-picker
-              v-model:value="filterValues[filter.code]"
-              :allow-clear="filter.allowClear === '1'"
-              :placeholder="filter.placeholder || '请选择' + filter.label"
-              style="width: 95%"
-              :picker="filter.filterType"
-              value-format="YYYY-MM-DD"
-            />
-          </template>
-        </a-descriptions-item>
-      </template>
+      <filter-items
+        :filter-config-list="filterConfigList"
+        :filter-values="filterValues"
+        :tree-options-cache="treeOptionsCache"
+        :get-select-options="getSelectOptions"
+        :load-dict-options="loadDictOptions"
+        :get-tree-options="getTreeOptions"
+      />
     </template>
   </dark-table>
 </template>

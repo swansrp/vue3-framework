@@ -5,7 +5,7 @@
       'DarkTable 配置' +
         (portalConfig?.displayName ? ' - ' + portalConfig.displayName : '')
     "
-    width="1400px"
+    width="1500px"
     :body-style="{ height: '75vh', overflow: 'hidden' }"
     :footer="null"
     @cancel="handleCancel"
@@ -62,397 +62,761 @@
       <!-- 右侧：配置详情 -->
       <div class="config-detail-panel">
         <template v-if="selectedTable">
-          <!-- Table 基础配置 -->
-          <div class="basic-config-section">
-            <div class="section-title">
-              <span>基础配置</span>
-              <a-space :size="4">
-                <a-button
-                  size="small"
-                  :loading="reportExporting"
-                  @click="handleExportReportConfig"
-                >
-                  <template #icon>
-                    <DownloadOutlined />
-                  </template>
-                  导出配置
-                </a-button>
-                <input
-                  ref="reportFileInputRef"
-                  type="file"
-                  accept=".json"
-                  style="display: none"
-                  @change="handleReportFileChange"
-                />
-                <a-button
-                  size="small"
-                  :loading="reportImporting"
-                  @click="reportFileInputRef?.click()"
-                >
-                  <template #icon>
-                    <UploadOutlined />
-                  </template>
-                  导入配置
-                </a-button>
-                <a-button
-                  type="primary"
-                  size="small"
-                  :loading="saving"
-                  @click="handleSaveTable"
-                >
-                  保存基础配置
-                </a-button>
-              </a-space>
-            </div>
-            <div class="section-content">
-              <a-form
-                :model="selectedTable"
-                layout="inline"
-              >
-                <a-form-item label="表格编码">
-                  <a-input
-                    v-model:value="selectedTable.tableCode"
-                    placeholder="请输入表格编码"
-                    style="width: 200px"
-                  />
-                </a-form-item>
-                <a-form-item label="筛选栏宽度">
-                  <a-input-number
-                    v-model:value="selectedTable.filterWidth"
-                    :min="100"
-                    :max="500"
-                    style="width: 100px"
-                  />
-                </a-form-item>
-                <a-form-item label="标题间隔">
-                  <a-input-number
-                    v-model:value="selectedTable.paddingTh"
-                    :min="0"
-                    :max="50"
-                    style="width: 40px"
-                  />
-                </a-form-item>
-                <a-form-item label="条目间隔">
-                  <a-input-number
-                    v-model:value="selectedTable.paddingTd"
-                    :min="0"
-                    :max="50"
-                    style="width: 40px"
-                  />
-                </a-form-item>
-                <a-form-item label="下载">
-                  <a-select
-                    v-model:value="selectedTable.downloadAble"
-                    style="width: 80px"
-                  >
-                    <a-select-option value="1">
-                      允许
-                    </a-select-option>
-                    <a-select-option value="0">
-                      禁用
-                    </a-select-option>
-                  </a-select>
-                </a-form-item>
-                <a-form-item label="状态">
-                  <a-select
-                    v-model:value="selectedTable.status"
-                    style="width: 80px"
-                  >
-                    <a-select-option value="1">
-                      启用
-                    </a-select-option>
-                    <a-select-option value="0">
-                      禁用
-                    </a-select-option>
-                  </a-select>
-                </a-form-item>
-              </a-form>
+          <!-- 三个配置域并排 tab，避免纵向滚动 -->
+          <a-tabs
+            v-model:activeKey="configActiveTab"
+            class="config-tabs"
+          >
+            <a-tab-pane
+              key="basic"
+              tab="基础配置"
+            >
+              <div class="tab-scroll">
+                <!-- Table 基础配置 -->
+                <div class="basic-config-section">
+                  <div class="section-title">
+                    <span>基础配置</span>
+                    <a-space :size="4">
+                      <a-button
+                        size="small"
+                        :loading="reportExporting"
+                        @click="handleExportReportConfig"
+                      >
+                        <template #icon>
+                          <DownloadOutlined />
+                        </template>
+                        导出配置
+                      </a-button>
+                      <input
+                        ref="reportFileInputRef"
+                        type="file"
+                        accept=".json"
+                        style="display: none"
+                        @change="handleReportFileChange"
+                      />
+                      <a-button
+                        size="small"
+                        :loading="reportImporting"
+                        @click="reportFileInputRef?.click()"
+                      >
+                        <template #icon>
+                          <UploadOutlined />
+                        </template>
+                        导入配置
+                      </a-button>
+                      <a-button
+                        type="primary"
+                        size="small"
+                        :loading="saving"
+                        @click="handleSaveTable"
+                      >
+                        保存基础配置
+                      </a-button>
+                    </a-space>
+                  </div>
+                  <div class="section-content">
+                    <a-form
+                      :model="selectedTable"
+                      layout="inline"
+                    >
+                      <a-form-item label="表格编码">
+                        <a-input
+                          v-model:value="selectedTable.tableCode"
+                          placeholder="请输入表格编码"
+                          style="width: 150px"
+                        />
+                      </a-form-item>
+                      <a-form-item label="筛选栏宽度">
+                        <a-input-number
+                          v-model:value="selectedTable.filterWidth"
+                          :min="100"
+                          :max="500"
+                          style="width: 80px"
+                        />
+                      </a-form-item>
+                      <a-form-item label="标题间隔">
+                        <a-input-number
+                          v-model:value="selectedTable.paddingTh"
+                          :min="0"
+                          :max="50"
+                          style="width: 40px"
+                        />
+                      </a-form-item>
+                      <a-form-item label="条目间隔">
+                        <a-input-number
+                          v-model:value="selectedTable.paddingTd"
+                          :min="0"
+                          :max="50"
+                          style="width: 40px"
+                        />
+                      </a-form-item>
+                      <a-form-item label="下载">
+                        <a-select
+                          v-model:value="selectedTable.downloadAble"
+                          style="width: 80px"
+                        >
+                          <a-select-option value="1">
+                            允许
+                          </a-select-option>
+                          <a-select-option value="0">
+                            禁用
+                          </a-select-option>
+                        </a-select>
+                      </a-form-item>
+                      <a-form-item label="透视模式">
+                        <a-select
+                          v-model:value="selectedTable.pivotMode"
+                          style="width: 80px"
+                        >
+                          <a-select-option value="1">
+                            开启
+                          </a-select-option>
+                          <a-select-option value="0">
+                            关闭
+                          </a-select-option>
+                        </a-select>
+                      </a-form-item>
+                      <a-form-item label="状态">
+                        <a-select
+                          v-model:value="selectedTable.status"
+                          style="width: 80px"
+                        >
+                          <a-select-option value="1">
+                            启用
+                          </a-select-option>
+                          <a-select-option value="0">
+                            禁用
+                          </a-select-option>
+                        </a-select>
+                      </a-form-item>
+                    </a-form>
 
-              <!-- 筛选列配置 -->
-              <div class="filter-columns-config">
-                <div
-                  class="filter-columns-header"
-                  @click="toggleFilterColumns"
-                >
-                  <span class="filter-columns-title">筛选列配置</span>
-                  <span class="filter-columns-count">（已排除 {{ excludedColumnCount }} 列）</span>
-                  <CaretDownOutlined v-if="filterColumnsExpanded" />
-                  <CaretRightOutlined v-else />
-                </div>
-                <div
-                  v-show="filterColumnsExpanded"
-                  class="filter-columns-list"
-                >
-                  <a-checkbox
-                    v-for="column in portalConfig?.columns || []"
-                    :key="column.property"
-                    v-model:checked="column.checked"
-                  >
-                    {{ column.displayName }} ({{ column.property }})
-                  </a-checkbox>
+                    <!-- 筛选列配置(透视模式下由行维度字段配置取代，隐藏) -->
+                    <div
+                      v-if="selectedTable.pivotMode !== '1'"
+                      class="filter-columns-config"
+                    >
+                      <div class="filter-columns-header">
+                        <span class="filter-columns-title">筛选列配置</span>
+                        <span class="filter-columns-count">（已排除 {{ excludedColumnCount }} 列）</span>
+                      </div>
+                      <div class="filter-columns-list">
+                        <a-checkbox
+                          v-for="column in portalConfig?.columns || []"
+                          :key="column.property"
+                          v-model:checked="column.checked"
+                        >
+                          {{ column.displayName }} ({{ column.property }})
+                        </a-checkbox>
+                      </div>
+                    </div>
+
+                    <!-- 行维度字段配置(透视模式，样式同筛选列配置) -->
+                    <div
+                      v-if="selectedTable.pivotMode === '1'"
+                      class="filter-columns-config"
+                    >
+                      <div class="filter-columns-header">
+                        <span class="filter-columns-title">行维度字段配置</span>
+                        <span class="filter-columns-count">（已勾选 {{ pivotGroupFields.length }} 个字段）</span>
+                      </div>
+                      <div class="filter-columns-list">
+                        <a-checkbox-group v-model:value="pivotGroupFields">
+                          <a-checkbox
+                            v-for="field in availableFields"
+                            :key="field.property"
+                            :value="field.property"
+                          >
+                            {{ field.displayName }} ({{ field.property }})
+                          </a-checkbox>
+                        </a-checkbox-group>
+                      </div>
+                      <!-- 行维度顺序调整(决定 group by 层级) -->
+                      <div
+                        v-if="pivotGroupFields.length > 0"
+                        class="pivot-group-order"
+                      >
+                        <span class="pivot-group-order-title">行维度顺序（自上而下的分组层级，也是排序优先级）：</span>
+                        <div
+                          v-for="(fieldProp, index) in pivotGroupFields"
+                          :key="fieldProp"
+                          class="pivot-group-order-item"
+                        >
+                          <span class="measure-index">{{ index + 1 }}</span>
+                          <span class="pivot-group-order-name">{{ pivotGroupFieldDisplayName(fieldProp) }}</span>
+                          <a-checkbox
+                            :checked="!pivotGroupHiddenFields.includes(fieldProp)"
+                            @change="(e: any) => togglePivotGroupFieldDisplay(fieldProp, e.target.checked)"
+                          >
+                            表格显示
+                          </a-checkbox>
+                          <!-- 聚合结果排序: 0=正序 1=倒序(PORTAL_SORT_DICT), 未配置=不排序 -->
+                          <a-select
+                            :value="pivotGroupSorts[fieldProp]"
+                            size="small"
+                            style="width: 96px"
+                            placeholder="不排序"
+                            allow-clear
+                            @change="(val: any) => setPivotGroupFieldSort(fieldProp, val)"
+                          >
+                            <a-select-option :value="0">正序</a-select-option>
+                            <a-select-option :value="1">倒序</a-select-option>
+                          </a-select>
+                          <!-- 排序优先级: 多个字段配置排序时按行维度顺序生效, 随 ↑↓ 调整自动重算 -->
+                          <a-tag
+                            v-if="pivotGroupSortPriority[fieldProp]"
+                            color="blue"
+                          >
+                            排序优先级 {{ pivotGroupSortPriority[fieldProp] }}
+                          </a-tag>
+                          <a-button
+                            type="text"
+                            size="small"
+                            :disabled="index === 0"
+                            @click="movePivotGroupField(index, -1)"
+                          >
+                            <template #icon>
+                              <ArrowUpOutlined />
+                            </template>
+                          </a-button>
+                          <a-button
+                            type="text"
+                            size="small"
+                            :disabled="index === pivotGroupFields.length - 1"
+                            @click="movePivotGroupField(index, 1)"
+                          >
+                            <template #icon>
+                              <ArrowDownOutlined />
+                            </template>
+                          </a-button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 聚合配置(透视模式，与行维度同存 sys_portal_table，合并到基础配置) -->
+                    <div
+                      v-if="selectedTable.pivotMode === '1'"
+                      class="filter-columns-config measure-config-section"
+                    >
+                      <div class="filter-columns-header">
+                        <span class="filter-columns-title">聚合字段（度量列）</span>
+                        <a-button
+                          type="primary"
+                          size="small"
+                          @click="pivotMeasureRows.push({ field: '', label: '', agg: 'sum' })"
+                        >
+                          <template #icon>
+                            <PlusOutlined />
+                          </template>
+                          添加聚合字段
+                        </a-button>
+                      </div>
+                      <div class="measure-rows">
+                        <a-empty
+                          v-if="pivotMeasureRows.length === 0"
+                          description="暂无聚合字段，点击右上角添加"
+                        />
+                        <div
+                          v-for="(measure, index) in pivotMeasureRows"
+                          :key="index"
+                          class="pivot-measure-row"
+                        >
+                          <span class="measure-index">{{ index + 1 }}</span>
+                          <a-select
+                            v-model:value="measure.field"
+                            :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                            placeholder="聚合字段"
+                            show-search
+                            :filter-option="filterOption"
+                            style="width: 300px"
+                          />
+                          <a-input
+                            v-model:value="measure.label"
+                            placeholder="显示名"
+                            style="width: 180px"
+                          />
+                          <a-select
+                            v-model:value="measure.agg"
+                            style="width: 120px"
+                          >
+                            <a-select-option value="sum">
+                              求和
+                            </a-select-option>
+                            <a-select-option value="count">
+                              计数
+                            </a-select-option>
+                            <a-select-option value="countDistinct">
+                              去重计数
+                            </a-select-option>
+                            <a-select-option value="avg">
+                              平均
+                            </a-select-option>
+                            <a-select-option value="min">
+                              最小
+                            </a-select-option>
+                            <a-select-option value="max">
+                              最大
+                            </a-select-option>
+                          </a-select>
+                          <a-button
+                            type="link"
+                            danger
+                            size="small"
+                            @click="pivotMeasureRows.splice(index, 1)"
+                          >
+                            删除
+                          </a-button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </a-tab-pane>
 
-          <!-- 筛选项配置 - 左右分栏 -->
-          <div class="filter-config-section">
-            <div class="section-title">
-              <span>筛选项配置</span>
-              <a-button
-                v-if="selectedFilter"
-                type="primary"
-                size="small"
-                :loading="savingFilter"
-                @click="handleSaveFilter(selectedFilter)"
-              >
-                保存配置
-              </a-button>
-            </div>
-            <div class="filter-config-content">
-              <!-- 左侧：字段列表 -->
-              <div class="filter-list-panel">
-                <div class="filter-list-header">
-                  <span>字段列表 ({{ filterList.length }})</span>
+            <a-tab-pane
+              key="filter"
+              tab="筛选项配置"
+            >
+              <!-- 筛选项配置 - 左右分栏 -->
+              <div class="filter-config-section tab-fill-section">
+                <div class="section-title">
+                  <span>筛选项配置</span>
                   <a-button
+                    v-if="selectedFilter"
                     type="primary"
                     size="small"
-                    @click="showAddFilterModal = true"
+                    :loading="savingFilter"
+                    @click="handleSaveFilter(selectedFilter)"
                   >
-                    <template #icon>
-                      <EditOutlined />
-                    </template>
-                    编辑
+                    保存配置
                   </a-button>
                 </div>
-                <div class="filter-list-content">
-                  <div
-                    v-for="(filter, index) in filterList"
-                    :key="filter.id || index"
-                    :class="[
-                      'filter-item',
-                      {
-                        active: selectedFilter?.id === filter.id,
-                        'drag-over': dragOverIndex === index,
-                      },
-                    ]"
-                    draggable="true"
-                    @click="handleSelectFilter(filter)"
-                    @dragstart="handleDragStart($event, index)"
-                    @dragover="handleDragOver($event, index)"
-                    @drop="handleDrop($event, index)"
-                    @dragend="handleDragEnd"
-                  >
-                    <div class="drag-handle">
-                      <HolderOutlined />
-                    </div>
-                    <div class="filter-item-content">
-                      <div class="filter-item-label">
-                        {{ filter.label }}
-                      </div>
-                      <div class="filter-item-type">
-                        {{ getFilterTypeLabel(filter.filterType) }}
-                      </div>
-                    </div>
-                    <div class="filter-item-actions">
-                      <a-popconfirm
-                        title="确定删除该筛选项？"
-                        @confirm="handleDeleteFilter(filter)"
+                <div class="filter-config-content">
+                  <!-- 左侧：字段列表 -->
+                  <div class="filter-list-panel">
+                    <div class="filter-list-header">
+                      <span>字段列表 ({{ filterList.length }})</span>
+                      <a-button
+                        type="primary"
+                        size="small"
+                        @click="showAddFilterModal = true"
                       >
-                        <a-button
-                          type="link"
-                          size="small"
-                          danger
-                          @click.stop
-                        >
-                          <DeleteOutlined />
-                        </a-button>
-                      </a-popconfirm>
+                        <template #icon>
+                          <EditOutlined />
+                        </template>
+                        编辑
+                      </a-button>
+                    </div>
+                    <div class="filter-list-content">
+                      <div
+                        v-for="(filter, index) in filterList"
+                        :key="filter.id || index"
+                        :class="[
+                          'filter-item',
+                          {
+                            active: selectedFilter?.id === filter.id,
+                            'drag-over': dragOverIndex === index,
+                          },
+                        ]"
+                        draggable="true"
+                        @click="handleSelectFilter(filter)"
+                        @dragstart="handleDragStart($event, index)"
+                        @dragover="handleDragOver($event, index)"
+                        @drop="handleDrop($event, index)"
+                        @dragend="handleDragEnd"
+                      >
+                        <div class="drag-handle">
+                          <HolderOutlined />
+                        </div>
+                        <div class="filter-item-content">
+                          <div class="filter-item-label">
+                            {{ filter.label }}
+                          </div>
+                          <div class="filter-item-type">
+                            {{ getFilterTypeLabel(filter.filterType) }}
+                          </div>
+                        </div>
+                        <div class="filter-item-actions">
+                          <a-popconfirm
+                            title="确定删除该筛选项？"
+                            @confirm="handleDeleteFilter(filter)"
+                          >
+                            <a-button
+                              type="link"
+                              size="small"
+                              danger
+                              @click.stop
+                            >
+                              <DeleteOutlined />
+                            </a-button>
+                          </a-popconfirm>
+                        </div>
+                      </div>
+                      <a-empty
+                        v-if="filterList.length === 0"
+                        description="暂无筛选项"
+                      />
                     </div>
                   </div>
-                  <a-empty
-                    v-if="filterList.length === 0"
-                    description="暂无筛选项"
-                  />
+
+                  <!-- 右侧：字段配置详情 -->
+                  <div class="filter-detail-panel">
+                    <template v-if="selectedFilter">
+
+                      <div class="filter-detail-header">
+                        <span class="filter-detail-title">
+                          配置项：{{ selectedFilter.label }}
+                        </span>
+                      </div>
+                      <div class="filter-detail-content">
+                        <a-form
+                          :model="selectedFilter"
+                          :label-col="{ span: 6 }"
+                          :wrapper-col="{ span: 18 }"
+                        >
+                          <a-row :gutter="24">
+                            <a-col :span="12">
+                              <a-form-item label="字段编码">
+                                <a-input
+                                  v-model:value="selectedFilter.code"
+                                  placeholder="请输入字段编码"
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="字段标签">
+                                <a-input
+                                  v-model:value="selectedFilter.label"
+                                  placeholder="请输入字段标签"
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="筛选类型">
+                                <a-select
+                                  v-model:value="selectedFilter.filterType"
+                                  :options="filterTypeOptions"
+                                  style="width: 100%"
+                                  @change="handleFilterTypeChange"
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="字典编码">
+                                <a-select
+                                  v-model:value="selectedFilter.dictCode"
+                                  :filter-option="filterOption"
+                                  :options="sysDictList"
+                                  placeholder="下拉选择类型需要填写字典编码"
+                                  show-search
+                                  style="width: 100%"
+                                  allow-clear
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="占位文本">
+                                <a-input
+                                  v-model:value="selectedFilter.placeholder"
+                                  placeholder="请输入占位文本"
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="默认值">
+                                <a-input
+                                  v-model:value="selectedFilter.defaultValue"
+                                  placeholder="请输入默认值"
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="通用筛选条件">
+                                <a-button @click="openDefaultConditionModal">
+                                  {{
+                                    hasDefaultCondition ? "已配置通用条件" : "配置通用条件"
+                                  }}
+                                </a-button>
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="24">
+                              <a-form-item
+                                label="特殊选项条件"
+                                :label-col="{ span: 3 }"
+                                :wrapper-col="{ span: 21 }"
+                              >
+                                <div class="option-condition-section">
+                                  <div class="option-condition-header">
+                                    <span>为字典选项配置专属条件（可选）</span>
+                                    <a-button
+                                      v-if="selectedFilter.dictCode"
+                                      type="link"
+                                      size="small"
+                                      @click="loadFilterDictOptions"
+                                    >
+                                      加载字典选项
+                                    </a-button>
+                                  </div>
+                                  <div
+                                    v-if="filterDictOptions.length > 0"
+                                    class="option-condition-list"
+                                  >
+                                    <div
+                                      v-for="option in filterDictOptions"
+                                      :key="option.value"
+                                      class="option-condition-item"
+                                    >
+                                      <span class="option-label">{{ option.label }}</span>
+                                      <span class="option-value">({{ option.value }})</span>
+                                      <a-button
+                                        type="link"
+                                        size="small"
+                                        @click="openOptionConditionModal(option.value)"
+                                      >
+                                        {{
+                                          conditionConfig.options[option.value]
+                                            ? "已配置"
+                                            : "配置"
+                                        }}
+                                      </a-button>
+                                      <a-button
+                                        v-if="conditionConfig.options[option.value]"
+                                        type="link"
+                                        size="small"
+                                        danger
+                                        @click="removeOptionCondition(option.value)"
+                                      >
+                                        删除
+                                      </a-button>
+                                    </div>
+                                  </div>
+                                  <a-empty
+                                    v-else-if="selectedFilter.dictCode"
+                                    description="点击上方按钮加载字典选项"
+                                  />
+                                  <a-empty
+                                    v-else
+                                    description="请先选择字典编码"
+                                  />
+                                </div>
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="是否多选">
+                                <a-radio-group v-model:value="selectedFilter.multiple">
+                                  <a-radio value="1">
+                                    是
+                                  </a-radio>
+                                  <a-radio value="0">
+                                    否
+                                  </a-radio>
+                                </a-radio-group>
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="允许清空">
+                                <a-radio-group v-model:value="selectedFilter.allowClear">
+                                  <a-radio value="1">
+                                    是
+                                  </a-radio>
+                                  <a-radio value="0">
+                                    否
+                                  </a-radio>
+                                </a-radio-group>
+                              </a-form-item>
+                            </a-col>
+                          </a-row>
+                        </a-form>
+                      </div>
+                    </template>
+                    <a-empty
+                      v-else
+                      description="请选择一个筛选项进行配置"
+                    />
+                  </div>
                 </div>
               </div>
+            </a-tab-pane>
 
-              <!-- 右侧：字段配置详情 -->
-              <div class="filter-detail-panel">
-                <template v-if="selectedFilter">
-                  <div class="filter-detail-header">
-                    <span class="filter-detail-title">
-                      配置项：{{ selectedFilter.label }}
-                    </span>
-                  </div>
-                  <div class="filter-detail-content">
-                    <a-form
-                      :model="selectedFilter"
-                      :label-col="{ span: 6 }"
-                      :wrapper-col="{ span: 18 }"
+            <a-tab-pane
+              key="pivot"
+              tab="透视列配置"
+              :disabled="selectedTable.pivotMode !== '1'"
+            >
+              <!-- 透视列配置(父表头条件列) -->
+              <div class="filter-config-section pivot-config-section tab-fill-section">
+                <div class="section-title">
+                  <span>透视列配置（父表头条件列）</span>
+                  <a-space :size="4">
+                    <a-button
+                      size="small"
+                      @click="openGenPivotModal"
                     >
-                      <a-row :gutter="24">
-                        <a-col :span="12">
-                          <a-form-item label="字段编码">
-                            <a-input
-                              v-model:value="selectedFilter.code"
-                              placeholder="请输入字段编码"
-                            />
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="字段标签">
-                            <a-input
-                              v-model:value="selectedFilter.label"
-                              placeholder="请输入字段标签"
-                            />
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="筛选类型">
-                            <a-select
-                              v-model:value="selectedFilter.filterType"
-                              :options="filterTypeOptions"
-                              style="width: 100%"
-                              @change="handleFilterTypeChange"
-                            />
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="字典编码">
-                            <a-select
-                              v-model:value="selectedFilter.dictCode"
-                              :filter-option="filterOption"
-                              :options="sysDictList"
-                              placeholder="下拉选择类型需要填写字典编码"
-                              show-search
-                              style="width: 100%"
-                              allow-clear
-                            />
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="占位文本">
-                            <a-input
-                              v-model:value="selectedFilter.placeholder"
-                              placeholder="请输入占位文本"
-                            />
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="默认值">
-                            <a-input
-                              v-model:value="selectedFilter.defaultValue"
-                              placeholder="请输入默认值"
-                            />
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="通用筛选条件">
-                            <a-button @click="openDefaultConditionModal">
-                              {{
-                                hasDefaultCondition ? "已配置通用条件" : "配置通用条件"
-                              }}
-                            </a-button>
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="24">
-                          <a-form-item
-                            label="特殊选项条件"
-                            :label-col="{ span: 3 }"
-                            :wrapper-col="{ span: 21 }"
+                      按字典批量生成
+                    </a-button>
+                    <a-button
+                      type="primary"
+                      size="small"
+                      :loading="savingPivotColumn"
+                      @click="handleSavePivotColumn"
+                    >
+                      保存配置
+                    </a-button>
+                  </a-space>
+                </div>
+                <div class="filter-config-content">
+                  <div class="filter-list-panel">
+                    <div class="filter-list-header">
+                      <span>透视列 ({{ pivotColumnList.length }})</span>
+                      <a-button
+                        type="primary"
+                        size="small"
+                        @click="handleAddPivotColumn"
+                      >
+                        <template #icon>
+                          <PlusOutlined />
+                        </template>
+                        新增
+                      </a-button>
+                    </div>
+                    <div class="filter-list-content">
+                      <div
+                        v-for="(column, index) in pivotColumnList"
+                        :key="column.id || 'unsaved'"
+                        :class="[
+                          'filter-item',
+                          {
+                            active: selectedPivotColumn === column,
+                            'drag-over': pivotDragOverIndex === index,
+                          },
+                        ]"
+                        draggable="true"
+                        @click="selectedPivotColumn = column"
+                        @dragstart="handlePivotDragStart($event, index)"
+                        @dragover="handlePivotDragOver($event, index)"
+                        @drop="handlePivotDrop($event, index)"
+                        @dragend="handlePivotDragEndReset"
+                      >
+                        <div class="drag-handle">
+                          <HolderOutlined />
+                        </div>
+                        <div class="filter-item-content">
+                          <div class="filter-item-label">
+                            {{ column.itemName || '未命名' }}
+                          </div>
+                          <div class="filter-item-type">
+                            {{ column.itemValue }}
+                          </div>
+                        </div>
+                        <div class="filter-item-actions">
+                          <a-popconfirm
+                            title="确定删除该透视列？"
+                            @confirm="handleDeletePivotColumn(column)"
                           >
-                            <div class="option-condition-section">
-                              <div class="option-condition-header">
-                                <span>为字典选项配置专属条件（可选）</span>
-                                <a-button
-                                  v-if="selectedFilter.dictCode"
-                                  type="link"
-                                  size="small"
-                                  @click="loadFilterDictOptions"
-                                >
-                                  加载字典选项
-                                </a-button>
-                              </div>
-                              <div
-                                v-if="filterDictOptions.length > 0"
-                                class="option-condition-list"
-                              >
-                                <div
-                                  v-for="option in filterDictOptions"
-                                  :key="option.value"
-                                  class="option-condition-item"
-                                >
-                                  <span class="option-label">{{ option.label }}</span>
-                                  <span class="option-value">({{ option.value }})</span>
-                                  <a-button
-                                    type="link"
-                                    size="small"
-                                    @click="openOptionConditionModal(option.value)"
-                                  >
-                                    {{
-                                      conditionConfig.options[option.value]
-                                        ? "已配置"
-                                        : "配置"
-                                    }}
-                                  </a-button>
-                                  <a-button
-                                    v-if="conditionConfig.options[option.value]"
-                                    type="link"
-                                    size="small"
-                                    danger
-                                    @click="removeOptionCondition(option.value)"
-                                  >
-                                    删除
-                                  </a-button>
-                                </div>
-                              </div>
-                              <a-empty
-                                v-else-if="selectedFilter.dictCode"
-                                description="点击上方按钮加载字典选项"
-                              />
-                              <a-empty
-                                v-else
-                                description="请先选择字典编码"
-                              />
-                            </div>
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="是否多选">
-                            <a-radio-group v-model:value="selectedFilter.multiple">
-                              <a-radio value="1">
-                                是
-                              </a-radio>
-                              <a-radio value="0">
-                                否
-                              </a-radio>
-                            </a-radio-group>
-                          </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                          <a-form-item label="允许清空">
-                            <a-radio-group v-model:value="selectedFilter.allowClear">
-                              <a-radio value="1">
-                                是
-                              </a-radio>
-                              <a-radio value="0">
-                                否
-                              </a-radio>
-                            </a-radio-group>
-                          </a-form-item>
-                        </a-col>
-                      </a-row>
-                    </a-form>
+                            <a-button
+                              type="link"
+                              size="small"
+                              danger
+                              @click.stop
+                            >
+                              <DeleteOutlined />
+                            </a-button>
+                          </a-popconfirm>
+                        </div>
+                      </div>
+                      <a-empty
+                        v-if="pivotColumnList.length === 0"
+                        description="暂无透视列"
+                      />
+                    </div>
                   </div>
-                </template>
-                <a-empty
-                  v-else
-                  description="请选择一个筛选项进行配置"
-                />
+                  <div class="filter-detail-panel">
+                    <template v-if="selectedPivotColumn">
+                      <div class="filter-detail-header">
+                        <span class="filter-detail-title">
+                          透视列：{{ selectedPivotColumn.itemName || '未命名' }}
+                        </span>
+                        <a-button
+                          size="small"
+                          @click="openPivotConditionModal"
+                        >
+                          {{ hasPivotCondition ? '已配置列条件' : '配置列条件' }}
+                        </a-button>
+                      </div>
+                      <div class="filter-detail-content">
+                        <a-form
+                          :model="selectedPivotColumn"
+                          :label-col="{ span: 6 }"
+                          :wrapper-col="{ span: 18 }"
+                        >
+                          <a-row :gutter="24">
+                            <a-col :span="12">
+                              <a-form-item label="列标识">
+                                <a-select
+                                  v-model:value="selectedPivotColumn.itemValue"
+                                  :options="pivotItemValueOptions"
+                                  :placeholder="pivotItemValueOptions.length > 0 ? '请选择列标识' : '请先配置列条件'"
+                                  show-search
+                                  allow-clear
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="表头名称">
+                                <a-input
+                                  v-model:value="selectedPivotColumn.itemName"
+                                  placeholder="父表头显示名称"
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="显示顺序">
+                                <a-input-number
+                                  v-model:value="selectedPivotColumn.displayOrder"
+                                  :min="1"
+                                  style="width: 100%"
+                                />
+                              </a-form-item>
+                            </a-col>
+                            <a-col :span="12">
+                              <a-form-item label="状态">
+                                <a-select v-model:value="selectedPivotColumn.status">
+                                  <a-select-option value="1">
+                                    启用
+                                  </a-select-option>
+                                  <a-select-option value="0">
+                                    禁用
+                                  </a-select-option>
+                                </a-select>
+                              </a-form-item>
+                            </a-col>
+                          </a-row>
+                        </a-form>
+                        <!-- 列条件 JSON 编辑区：可手动修改/粘贴，保存配置时校验应用 -->
+                        <div class="pivot-condition-json">
+                          <div class="pivot-condition-json-header">
+                            <span>列条件 JSON</span>
+                            <span class="pivot-condition-json-tip">可直接编辑/粘贴，点「保存配置」校验后生效</span>
+                          </div>
+                          <a-textarea
+                            v-model:value="conditionJsonDraft"
+                            :rows="10"
+                            class="pivot-condition-json-textarea"
+                            placeholder="{&quot;andOr&quot;:&quot;0&quot;,&quot;conditionList&quot;:[...]}"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                    <a-empty
+                      v-else
+                      description="请选择或新增一个透视列进行配置"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </a-tab-pane>
+          </a-tabs>
         </template>
         <a-empty
           v-else
@@ -566,18 +930,236 @@
         </div>
       </div>
     </a-modal>
+
+    <!-- 按字典批量生成透视列弹窗 -->
+    <a-modal
+      v-model:open="showGenPivotModal"
+      title="按字典批量生成透视列"
+      width="960px"
+      :mask-closable="false"
+      class="gen-pivot-modal"
+      @ok="handleConfirmGenPivot"
+    >
+      <a-form
+        layout="vertical"
+        :colon="false"
+      >
+        <a-form-item label="生成来源">
+          <a-radio-group
+            v-model:value="genSource"
+            button-style="solid"
+            @change="handleGenSourceChange"
+          >
+            <a-radio-button value="indicator">复用图表指标</a-radio-button>
+            <a-radio-button value="dict">按字典生成</a-radio-button>
+            <a-radio-button value="cross">两字典组合</a-radio-button>
+          </a-radio-group>
+        </a-form-item>
+        <template v-if="genSource === 'indicator'">
+          <a-form-item label="指标组（组内每个指标生成一个透视列，条件直接复用指标条件）">
+            <a-select
+              v-model:value="genIndicatorGroup"
+              show-search
+              :loading="genLoading"
+              :filter-option="filterOption"
+              placeholder="选择指标组"
+              :options="genIndicatorGroups.map((g) => ({ label: `${g.groupName}（${g.items.length}个指标）`, value: g.groupId }))"
+              @change="(val: any) => handleGenGroupChange(val)"
+            />
+          </a-form-item>
+        </template>
+        <template v-else-if="genSource === 'cross'">
+          <div class="gen-cross-wrap">
+            <div class="gen-cross-dim">
+              <div class="gen-cross-dim-title">组合维度 A</div>
+              <a-form-item label="条件字段">
+                <a-select
+                  :value="genFieldA"
+                  show-search
+                  :filter-option="filterOption"
+                  placeholder="选择字段"
+                  :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                  @change="(val: any) => { genFieldA = val; handleGenCrossFieldChange('A', val) }"
+                />
+              </a-form-item>
+              <a-form-item label="字典编码">
+                <a-input
+                  v-model:value="genDictCodeA"
+                  placeholder="字典编码"
+                />
+              </a-form-item>
+              <a-form-item label="字典层级">
+                <a-radio-group
+                  v-model:value="genDictModeA"
+                  button-style="solid"
+                  size="small"
+                >
+                  <a-radio-button value="flat">平铺</a-radio-button>
+                  <a-radio-button value="treeParent">树-父层</a-radio-button>
+                  <a-radio-button value="treeLeaf">树-叶子</a-radio-button>
+                </a-radio-group>
+              </a-form-item>
+            </div>
+            <div class="gen-cross-dim">
+              <div class="gen-cross-dim-title">组合维度 B</div>
+              <a-form-item label="条件字段">
+                <a-select
+                  :value="genFieldB"
+                  show-search
+                  :filter-option="filterOption"
+                  placeholder="选择字段"
+                  :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                  @change="(val: any) => { genFieldB = val; handleGenCrossFieldChange('B', val) }"
+                />
+              </a-form-item>
+              <a-form-item label="字典编码">
+                <a-input
+                  v-model:value="genDictCodeB"
+                  placeholder="字典编码"
+                />
+              </a-form-item>
+              <a-form-item label="字典层级">
+                <a-radio-group
+                  v-model:value="genDictModeB"
+                  button-style="solid"
+                  size="small"
+                >
+                  <a-radio-button value="flat">平铺</a-radio-button>
+                  <a-radio-button value="treeParent">树-父层</a-radio-button>
+                  <a-radio-button value="treeLeaf">树-叶子</a-radio-button>
+                </a-radio-group>
+              </a-form-item>
+            </div>
+          </div>
+          <a-form-item label=" ">
+            <a-button
+              type="primary"
+              :loading="genLoading"
+              @click="loadCrossItems"
+            >
+              加载组合预览
+            </a-button>
+            <span class="gen-cross-tip">每个 A×B 组合生成一列，条件为两个等于条件 AND</span>
+          </a-form-item>
+        </template>
+        <template v-else>
+          <a-form-item label="条件字段（统计列按该字段的取值分列）">
+            <a-select
+              :value="genPivotField"
+              show-search
+              :filter-option="filterOption"
+              placeholder="选择字段"
+              :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+              @change="(val: any) => { genPivotField = val; handleGenFieldChange(val) }"
+            />
+          </a-form-item>
+          <a-form-item label="字典编码（默认取自字段的字典引用，可手工修改）">
+            <a-input
+              v-model:value="genDictCode"
+              placeholder="字典编码"
+              @press-enter="loadGenItems"
+            />
+          </a-form-item>
+          <a-form-item label="字典层级">
+            <a-radio-group
+              v-model:value="genDictMode"
+              button-style="solid"
+            >
+              <a-radio-button value="flat">平铺字典</a-radio-button>
+              <a-radio-button value="treeParent">树形-父层</a-radio-button>
+              <a-radio-button value="treeLeaf">树形-叶子层</a-radio-button>
+            </a-radio-group>
+            <a-button
+              type="primary"
+              size="small"
+              :loading="genLoading"
+              style="margin-left: 12px"
+              @click="loadGenItems"
+            >
+              加载预览
+            </a-button>
+          </a-form-item>
+        </template>
+      </a-form>
+      <div
+        v-if="genItems.length > 0"
+        class="gen-pivot-preview"
+      >
+        <div class="gen-pivot-preview-header">
+          <span>将生成 {{ genItems.filter((i) => i.checked).length }} / {{ genItems.length }} 个透视列</span>
+          <a-checkbox
+            :checked="genItems.length > 0 && genItems.every((i) => i.checked)"
+            :indeterminate="genItems.some((i) => i.checked) && !genItems.every((i) => i.checked)"
+            @change="(e: any) => toggleGenAll(e.target.checked)"
+          >
+            全选
+          </a-checkbox>
+        </div>
+        <div class="gen-pivot-preview-list">
+          <div
+            v-for="(item, index) in genItems"
+            :key="item.value"
+            :class="['gen-pivot-preview-item', { 'gen-drag-over': genDragOverIndex === index }]"
+            draggable="true"
+            @dragstart="handleGenDragStart($event, index)"
+            @dragover.prevent="genDragOverIndex = index"
+            @dragleave="genDragOverIndex = -1"
+            @drop="handleGenDrop($event, index)"
+          >
+            <a-checkbox v-model:checked="item.checked">
+              {{ item.label }}（{{ item.value }}）
+            </a-checkbox>
+            <span class="gen-pivot-preview-actions">
+              <a-button
+                type="text"
+                size="small"
+                :disabled="index === 0"
+                title="上移"
+                @click="moveGenItem(index, -1)"
+              >
+                <template #icon>
+                  <ArrowUpOutlined />
+                </template>
+              </a-button>
+              <a-button
+                type="text"
+                size="small"
+                :disabled="index === genItems.length - 1"
+                title="下移"
+                @click="moveGenItem(index, 1)"
+              >
+                <template #icon>
+                  <ArrowDownOutlined />
+                </template>
+              </a-button>
+            </span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <a-button @click="showGenPivotModal = false">取消</a-button>
+        <a-button
+          type="primary"
+          :loading="genSaving"
+          :disabled="genItems.filter((i) => i.checked).length === 0"
+          @click="handleConfirmGenPivot"
+        >
+          确认生成
+        </a-button>
+      </template>
+    </a-modal>
   </a-modal>
 </template>
 
 <script setup lang="ts">
 import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
   HolderOutlined,
   PlusOutlined,
-  CaretDownOutlined,
-  CaretRightOutlined,
   SearchOutlined,
   UploadOutlined,
 } from '@ant-design/icons-vue'
@@ -587,19 +1169,30 @@ import { ref, watch, computed } from 'vue'
 import {
   addPortalTable,
   addPortalTableFilter,
+  addPortalPivotColumn,
+  addPortalPivotColumnList,
   deletePortalTable,
   deletePortalTableFilter,
+  deletePortalTableFilterList,
+  deletePortalPivotColumn,
   FILTER_TYPE_OPTIONS,
+  PivotMeasureVO,
+  PortalPivotColumnVO,
   PortalTableFilterVO,
   PortalTableVO,
   getPortalTableFilterList,
   getPortalTableList,
+  getPortalPivotColumnList,
   updatePortalTable,
   updatePortalTableFilter,
   updatePortalTableFilterOrder,
+  updatePortalPivotColumn,
+  updatePortalPivotColumnOrder,
   IdOrderReqVO,
 } from '@/framework/apis/portal/table'
+import { getIndicatorConfig } from '@/framework/apis/portal'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import { fetchTreeDict, flattenTreeToParentGroups } from '@/framework/components/common/chart/utils/treeStacked'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
@@ -633,8 +1226,655 @@ const reportExporting = ref(false)
 const reportImporting = ref(false)
 const reportFileInputRef = ref<HTMLInputElement>()
 
-// 筛选列配置展开/收起状态
-const filterColumnsExpanded = ref(false)
+// 配置域 tab 当前页(基础配置/筛选项配置/透视列配置)
+const configActiveTab = ref('basic')
+// 关闭透视模式时若停留在透视相关 tab，自动回基础配置
+watch(
+  () => selectedTable.value?.pivotMode,
+  async (mode, oldMode) => {
+    if (mode !== '1' && configActiveTab.value === 'pivot') {
+      configActiveTab.value = 'basic'
+    }
+    // 开启透视模式时补载透视列列表(tab 常挂载，不再依赖重新选表触发)
+    if (mode === '1' && oldMode !== '1' && selectedTable.value?.id) {
+      await loadPivotColumnList(selectedTable.value.id)
+    }
+  }
+)
+
+// ==================== 透视配置 ====================
+// 行维度字段勾选列表(保存时序列化到 selectedTable.groupByFields，数组顺序即分组层级顺序)
+const pivotGroupFields = ref<string[]>([])
+
+// 行维度字段显示名
+const pivotGroupFieldDisplayName = (property: string) => {
+  const field = availableFields.value.find((f) => f.property === property)
+  return field ? `${field.displayName} (${field.property})` : property
+}
+
+// 调整行维度字段顺序(交换相邻项)
+const movePivotGroupField = (index: number, delta: number) => {
+  const target = index + delta
+  if (target < 0 || target >= pivotGroupFields.value.length) return
+  const arr = pivotGroupFields.value.slice()
+  ;[arr[index], arr[target]] = [arr[target], arr[index]]
+  pivotGroupFields.value = arr
+}
+// 隐藏的行维度字段(仍参与 group by，仅不在表格中显示，常用于行粒度细化/筛选目标)
+const pivotGroupHiddenFields = ref<string[]>([])
+// 切换行维度字段是否在表格中显示
+const togglePivotGroupFieldDisplay = (fieldProp: string, display: boolean) => {
+  const idx = pivotGroupHiddenFields.value.indexOf(fieldProp)
+  if (display && idx >= 0) {
+    pivotGroupHiddenFields.value.splice(idx, 1)
+  } else if (!display && idx < 0) {
+    pivotGroupHiddenFields.value.push(fieldProp)
+  }
+}
+// 行维度字段排序配置(作用于 group by 后的聚合行; 0=正序 1=倒序, 无 key=不排序)
+const pivotGroupSorts = ref<Record<string, number>>({})
+// 设置行维度字段排序(清空时移除配置)
+const setPivotGroupFieldSort = (fieldProp: string, sort: number | undefined) => {
+  if (sort === 0 || sort === 1) {
+    pivotGroupSorts.value[fieldProp] = sort
+  } else {
+    delete pivotGroupSorts.value[fieldProp]
+  }
+}
+// 排序优先级: 按行维度顺序给已配置排序的字段编号(1=第一排序维度), 随顺序调整自动重算
+const pivotGroupSortPriority = computed(() => {
+  const map: Record<string, number> = {}
+  let priority = 0
+  for (const fieldProp of pivotGroupFields.value) {
+    if (pivotGroupSorts.value[fieldProp] === 0 || pivotGroupSorts.value[fieldProp] === 1) {
+      map[fieldProp] = ++priority
+    }
+  }
+  return map
+})
+// 度量列编辑行(保存时序列化到 selectedTable.pivotMeasures)
+const pivotMeasureRows = ref<PivotMeasureVO[]>([])
+// 透视列(父表头条件列)列表
+const pivotColumnList = ref<PortalPivotColumnVO[]>([])
+const selectedPivotColumn = ref<PortalPivotColumnVO | null>(null)
+const savingPivotColumn = ref(false)
+// 条件弹窗当前是否处于透视列条件编辑模式
+const editingPivotCondition = ref(false)
+
+// 解析透视列 condition 中的 conditionList
+const parsePivotConditionList = (conditionStr: string | undefined): any[] => {
+  if (!conditionStr) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(conditionStr)
+    if (Array.isArray(parsed)) {
+      return parsed
+    }
+    return parsed.conditionList || []
+  } catch (e) {
+    console.warn('解析透视列 condition 失败:', e)
+    return []
+  }
+}
+
+// 列标识下拉选项：取自当前列条件中的条件值(保证标识与条件一致，排除含 __ 的值)
+const pivotItemValueOptions = computed(() => {
+  const values: string[] = []
+  parsePivotConditionList(selectedPivotColumn.value?.condition).forEach((cond: any) => {
+    const vals = Array.isArray(cond?.value) ? cond.value : cond?.value != null ? [cond.value] : []
+    vals.forEach((v: any) => {
+      const s = String(v)
+      if (s && !s.includes('__') && !values.includes(s)) {
+        values.push(s)
+      }
+    })
+  })
+  return values.map((v) => ({ label: v, value: v }))
+})
+
+// 列条件 JSON 草稿(展示与手动编辑用)
+const conditionJsonDraft = ref('')
+
+// 格式化 condition 为缩进 JSON，非法时原样展示(保存时报错)
+const formatPivotCondition = (condition?: string): string => {
+  if (!condition) return ''
+  try {
+    return JSON.stringify(JSON.parse(condition), null, 2)
+  } catch (e) {
+    return condition
+  }
+}
+
+// 切换列或条件被弹窗外部修改时刷新草稿
+watch(
+  () => selectedPivotColumn.value?.condition,
+  (cond) => {
+    conditionJsonDraft.value = formatPivotCondition(cond)
+  },
+  { immediate: true }
+)
+
+// 当前透视列是否已配置条件
+const hasPivotCondition = computed(() => {
+  return parsePivotConditionList(selectedPivotColumn.value?.condition).length > 0
+})
+
+// 解析 pivotMeasures JSON 到编辑行
+const parsePivotMeasures = (json: string | undefined) => {
+  if (!json) {
+    pivotMeasureRows.value = []
+    return
+  }
+  try {
+    const parsed = JSON.parse(json)
+    pivotMeasureRows.value = Array.isArray(parsed)
+      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', agg: m.agg || 'sum' }))
+      : []
+  } catch (e) {
+    console.warn('解析透视度量配置失败:', e)
+    pivotMeasureRows.value = []
+  }
+}
+
+// 加载透视列列表
+const loadPivotColumnList = async (tableId: number) => {
+  try {
+    const res = await getPortalPivotColumnList(tableId)
+    pivotColumnList.value = res.payload?.records || []
+    selectedPivotColumn.value = pivotColumnList.value.length > 0 ? pivotColumnList.value[0] : null
+  } catch (error) {
+    console.error('加载透视列失败:', error)
+    pivotColumnList.value = []
+    selectedPivotColumn.value = null
+  }
+}
+
+// 新增透视列(本地创建临时行，填写后点保存配置才落库，避免空标识被后端校验拒绝)
+const handleAddPivotColumn = () => {
+  if (!selectedTable.value?.id) return
+  // 已有未保存的新增行时不重复创建
+  if (pivotColumnList.value.some((c) => !c.id)) {
+    message.warning('请先保存或删除未保存的新增透视列')
+    return
+  }
+  const newColumn: PortalPivotColumnVO = {
+    tableId: selectedTable.value.id,
+    itemValue: '',
+    itemName: '',
+    condition: JSON.stringify({ conditionList: [] }),
+    displayOrder: pivotColumnList.value.length + 1,
+    status: '1',
+  }
+  pivotColumnList.value = [...pivotColumnList.value, newColumn]
+  selectedPivotColumn.value = newColumn
+  message.info('请在右侧填写列标识与表头名称，然后点击「保存配置」')
+}
+
+// 保存透视列
+const handleSavePivotColumn = async () => {
+  if (!selectedTable.value?.id) return
+  if (!selectedPivotColumn.value) {
+    message.warning('请先选择或新增一个透视列')
+    return
+  }
+  // 新增保存前校验列标识，避免后端报错
+  if (!selectedPivotColumn.value.id && !selectedPivotColumn.value.itemValue?.trim()) {
+    message.warning('列标识不能为空')
+    return
+  }
+  // 应用列条件 JSON 草稿：非空则解析归一化，非法则报错阻断
+  const draft = conditionJsonDraft.value.trim()
+  if (draft) {
+    const normalized = normalizePivotCondition(draft)
+    if (!normalized) {
+      message.warning('列条件 JSON 格式不合法，请检查后再保存')
+      return
+    }
+    selectedPivotColumn.value.condition = normalized
+  }
+  savingPivotColumn.value = true
+  try {
+    if (selectedPivotColumn.value.id) {
+      await updatePortalPivotColumn(selectedPivotColumn.value)
+    } else {
+      const res = await addPortalPivotColumn(selectedPivotColumn.value)
+      selectedPivotColumn.value.id = res.payload
+    }
+    message.success('保存成功')
+    await loadPivotColumnList(selectedTable.value.id)
+    const keepId = selectedPivotColumn.value?.id
+    selectedPivotColumn.value = pivotColumnList.value.find((c) => c.id === keepId) || null
+  } catch (error) {
+    console.error('保存透视列失败:', error)
+  } finally {
+    savingPivotColumn.value = false
+  }
+}
+
+// 删除透视列(未保存的临时行直接本地移除)
+const handleDeletePivotColumn = async (column: PortalPivotColumnVO) => {
+  if (!column.id) {
+    pivotColumnList.value = pivotColumnList.value.filter((c) => c !== column)
+    if (selectedPivotColumn.value === column) {
+      selectedPivotColumn.value = pivotColumnList.value[0] || null
+    }
+    return
+  }
+  try {
+    await deletePortalPivotColumn(column.id!)
+    message.success('删除成功')
+    if (selectedPivotColumn.value?.id === column.id) {
+      selectedPivotColumn.value = null
+    }
+    await loadPivotColumnList(selectedTable.value!.id!)
+  } catch (error) {
+    console.error('删除透视列失败:', error)
+  }
+}
+
+// 打开透视列条件配置弹窗(复用高级搜索条件弹窗)
+const openPivotConditionModal = () => {
+  if (!selectedPivotColumn.value) return
+  buildColumnArray()
+  editingOptionValue.value = ''
+  editingPivotCondition.value = true
+  filterConditionConfig.condition = {
+    andOr: '0',
+    conditionList: parsePivotConditionList(selectedPivotColumn.value.condition),
+  }
+  filterConditionConfig.show = true
+}
+
+// ==================== 按字典批量生成统计列(参照图表指标生成方式) ====================
+const showGenPivotModal = ref(false)
+const genLoading = ref(false)
+const genSaving = ref(false)
+
+// 打开生成弹窗：重置上次残留状态
+const openGenPivotModal = () => {
+  genPivotFieldReset()
+  showGenPivotModal.value = true
+  // 默认指标模式，预加载指标组
+  loadIndicatorGroups()
+}
+const genPivotFieldReset = () => {
+  genItems.value = []
+  genSource.value = 'indicator'
+  genIndicatorGroups.value = []
+  genIndicatorGroup.value = undefined
+  genPivotField.value = undefined
+  genDictCode.value = undefined
+  genDictMode.value = 'flat'
+  genFieldA.value = undefined
+  genDictCodeA.value = undefined
+  genDictModeA.value = 'flat'
+  genFieldB.value = undefined
+  genDictCodeB.value = undefined
+  genDictModeB.value = 'flat'
+}
+
+// 生成来源: indicator=复用图表指标, dict=按字典生成, cross=两字典笛卡尔组合
+const genSource = ref<'indicator' | 'dict' | 'cross'>('indicator')
+// 指标组树(拉平为 分组名 -> 指标项 列表)
+interface GenIndicatorGroup {
+  groupId: string
+  groupName: string
+  items: Array<{ key: string; title: string; condition: string | null }>
+}
+const genIndicatorGroups = ref<GenIndicatorGroup[]>([])
+const genIndicatorGroup = ref<string | undefined>(undefined)
+
+// 指标树拍平：递归收集所有组及其指标项(兼容嵌套子组)
+const flattenIndicatorTree = (nodes: any[], prefix = ''): GenIndicatorGroup[] => {
+  const groups: GenIndicatorGroup[] = []
+  for (const node of nodes || []) {
+    const groupName = prefix ? `${prefix} / ${node.title}` : node.title
+    const items = (node.items || []).map((item: any) => ({
+      key: String(item.key),
+      title: item.title,
+      condition: item.condition || null,
+    }))
+    if (items.length > 0) {
+      groups.push({ groupId: String(node.id), groupName, items })
+    }
+    groups.push(...flattenIndicatorTree(node.children || [], groupName))
+  }
+  return groups
+}
+
+// 加载指标组列表
+const loadIndicatorGroups = async () => {
+  if (!props.portalName) {
+    message.warning('未找到 Portal 名称，无法加载指标')
+    return
+  }
+  genLoading.value = true
+  try {
+    const res = await getIndicatorConfig(props.portalName)
+    genIndicatorGroups.value = flattenIndicatorTree(res.payload || [])
+    if (genIndicatorGroups.value.length === 0) {
+      message.warning('当前 Portal 暂无指标配置，可在指标管理中配置，或改用按字典生成')
+    }
+  } catch (error) {
+    console.error('加载指标配置失败:', error)
+    genIndicatorGroups.value = []
+  } finally {
+    genLoading.value = false
+  }
+}
+
+// 切换来源时自动加载指标组
+const handleGenSourceChange = () => {
+  genItems.value = []
+  if (genSource.value === 'indicator' && genIndicatorGroups.value.length === 0) {
+    loadIndicatorGroups()
+  }
+}
+
+// 切换指标组时生成预览列表
+const handleGenGroupChange = (groupId: string) => {
+  const group = genIndicatorGroups.value.find((g) => g.groupId === groupId)
+  genItems.value = (group?.items || []).map((item) => ({
+    value: item.key,
+    label: item.title,
+    condition: item.condition || undefined,
+    checked: true,
+  }))
+  if (genItems.value.length === 0) {
+    message.warning('该指标组下暂无指标项')
+  }
+}
+
+// 条件字段(提供列条件的字段)
+const genPivotField = ref<string | undefined>(undefined)
+// 字典编码(默认取自字段的 reference)
+const genDictCode = ref<string | undefined>(undefined)
+// 字典模式: flat=平铺字典, treeParent=树父层, treeLeaf=树叶子层
+const genDictMode = ref<'flat' | 'treeParent' | 'treeLeaf'>('flat')
+// 生成预览项
+interface GenPivotItem {
+  value: string
+  label: string
+  checked: boolean
+  // 指标模式下自带的条件 JSON(透视列直接复用)
+  condition?: string
+}
+const genItems = ref<GenPivotItem[]>([])
+
+// 切换条件字段时自动带出字典编码
+const handleGenFieldChange = (fieldKey: string) => {
+  const field = availableFields.value.find((f) => f.key === fieldKey)
+  genDictCode.value = field?.reference || undefined
+  genItems.value = []
+}
+
+// 按字典模式加载字典项(平铺/树父层/树叶子层)
+const loadDictItemsByMode = async (
+  dictCode: string,
+  mode: 'flat' | 'treeParent' | 'treeLeaf'
+): Promise<Array<{ value: string; label: string }>> => {
+  const items: Array<{ value: string; label: string }> = []
+  if (mode === 'flat') {
+    // 平铺字典：每个字典项一列(与图表指标逐项生成条件同构)
+    const res = await dict.getDict(dictCode)
+    ;(res || []).forEach((item: any) => {
+      items.push({ value: String(item.value), label: item.label || String(item.value) })
+    })
+  } else {
+    // 树形字典：复用树形堆叠图的拍平逻辑，按父层/叶子层生成
+    const tree = await fetchTreeDict(dictCode)
+    const parentGroups = flattenTreeToParentGroups(tree)
+    if (mode === 'treeParent') {
+      parentGroups.forEach((g) => {
+        items.push({ value: g.parentValue, label: g.parentLabel })
+      })
+    } else {
+      parentGroups.forEach((g) => {
+        g.children.forEach((c) => {
+          items.push({ value: c.value, label: c.label })
+        })
+      })
+    }
+  }
+  return items
+}
+
+// 加载字典生成预览列表
+const loadGenItems = async () => {
+  if (!genPivotField.value || !genDictCode.value) {
+    message.warning('请先选择条件字段与字典编码')
+    return
+  }
+  genLoading.value = true
+  try {
+    const items = await loadDictItemsByMode(genDictCode.value, genDictMode.value)
+    genItems.value = items.map((i) => ({ ...i, checked: true }))
+    if (items.length === 0) {
+      message.warning('字典中没有可用项')
+    }
+  } catch (error) {
+    console.error('加载字典失败:', error)
+  } finally {
+    genLoading.value = false
+  }
+}
+
+// ==================== 两字典笛卡尔组合生成 ====================
+// 组合维度 A / B 的字段、字典编码、字典层级
+const genFieldA = ref<string | undefined>(undefined)
+const genDictCodeA = ref<string | undefined>(undefined)
+const genDictModeA = ref<'flat' | 'treeParent' | 'treeLeaf'>('flat')
+const genFieldB = ref<string | undefined>(undefined)
+const genDictCodeB = ref<string | undefined>(undefined)
+const genDictModeB = ref<'flat' | 'treeParent' | 'treeLeaf'>('flat')
+
+// 切换组合维度字段时自动带出字典编码
+const handleGenCrossFieldChange = (side: 'A' | 'B', fieldKey: string) => {
+  const field = availableFields.value.find((f) => f.key === fieldKey)
+  const dictCode = field?.reference || undefined
+  if (side === 'A') {
+    genDictCodeA.value = dictCode
+  } else {
+    genDictCodeB.value = dictCode
+  }
+  genItems.value = []
+}
+
+// 加载笛卡尔组合预览列表
+const loadCrossItems = async () => {
+  if (!genFieldA.value || !genDictCodeA.value || !genFieldB.value || !genDictCodeB.value) {
+    message.warning('请完整选择两个组合维度的字段与字典编码')
+    return
+  }
+  genLoading.value = true
+  try {
+    const [itemsA, itemsB] = await Promise.all([
+      loadDictItemsByMode(genDictCodeA.value, genDictModeA.value),
+      loadDictItemsByMode(genDictCodeB.value, genDictModeB.value),
+    ])
+    // 笛卡尔积：每个组合一列，条件 = 字段A等于值A AND 字段B等于值B
+    // 列标识用 && 连接(避免与透视别名分隔符 __ 冲突)
+    const items: GenPivotItem[] = []
+    for (const a of itemsA) {
+      for (const b of itemsB) {
+        items.push({
+          value: `${a.value}&&${b.value}`,
+          label: `${a.label}-${b.label}`,
+          condition: JSON.stringify({
+            andOr: '0',
+            conditionList: [
+              { property: genFieldA.value, relation: FILTER_TYPE.EQUAL, value: [a.value] },
+              { property: genFieldB.value, relation: FILTER_TYPE.EQUAL, value: [b.value] },
+            ],
+          }),
+          checked: true,
+        })
+      }
+    }
+    genItems.value = items
+    if (items.length === 0) {
+      message.warning('字典中没有可用项')
+    } else {
+      message.info(`已生成 ${items.length} 个组合预览，可勾选后确认生成`)
+    }
+  } catch (error) {
+    console.error('加载组合字典失败:', error)
+  } finally {
+    genLoading.value = false
+  }
+}
+
+// 全选/取消全选
+const toggleGenAll = (checked: boolean) => {
+  genItems.value.forEach((item) => {
+    item.checked = checked
+  })
+}
+
+// 归一化条件为后端要求的 JSON 对象格式 {andOr, conditionList}
+// 指标条件历史数据可能为数组/单条件对象等格式，统一包装避免后端校验失败
+const normalizePivotCondition = (raw: any): string | null => {
+  let parsed: any = raw
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw)
+    } catch (e) {
+      return null
+    }
+  }
+  if (Array.isArray(parsed)) {
+    return JSON.stringify({ andOr: '0', conditionList: parsed })
+  }
+  if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.conditionList)) {
+      return JSON.stringify({ andOr: parsed.andOr || '0', conditionList: parsed.conditionList })
+    }
+    if (parsed.property) {
+      return JSON.stringify({ andOr: '0', conditionList: [parsed] })
+    }
+  }
+  return null
+}
+
+// 兜底校验：必须为 JSON 对象字符串(后端 readJson(Map) 要求)，数组/标量/null 字面量一律拒发
+const isJsonObjectString = (s: string): boolean => {
+  try {
+    const p = JSON.parse(s)
+    return p !== null && typeof p === 'object' && !Array.isArray(p)
+  } catch (e) {
+    return false
+  }
+}
+
+// 预览项上移/下移(调整生成顺序)
+const moveGenItem = (index: number, delta: number) => {
+  const target = index + delta
+  const arr = genItems.value
+  if (target < 0 || target >= arr.length) return
+  const tmp = arr[index]
+  arr[index] = arr[target]
+  arr[target] = tmp
+}
+
+// 生成预览拖拽调序
+const genDraggedIndex = ref(-1)
+const genDragOverIndex = ref(-1)
+const handleGenDragStart = (e: DragEvent, index: number) => {
+  genDraggedIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+  }
+}
+const handleGenDrop = (e: DragEvent, targetIndex: number) => {
+  e.preventDefault()
+  genDragOverIndex.value = -1
+  const from = genDraggedIndex.value
+  genDraggedIndex.value = -1
+  if (from < 0 || from === targetIndex) return
+  const arr = genItems.value.slice()
+  const [moved] = arr.splice(from, 1)
+  arr.splice(targetIndex, 0, moved)
+  genItems.value = arr
+}
+
+// 确认批量生成透视列
+const handleConfirmGenPivot = async () => {
+  if (!selectedTable.value?.id) return
+  if (genSource.value === 'dict' && !genPivotField.value) return
+  // 按预览顺序取勾选项(顺序即生成后的 displayOrder)
+  const selected = genItems.value.filter((item) => item.checked)
+  if (selected.length === 0) {
+    message.warning('请至少勾选一项')
+    return
+  }
+  // 列标识查重：已存在的 itemValue 跳过
+  const existingValues = new Set(pivotColumnList.value.map((c) => c.itemValue))
+  const toAdd = selected.filter((item) => !existingValues.has(item.value))
+  if (toAdd.length === 0) {
+    message.warning('勾选项均已存在对应透视列')
+    return
+  }
+  genSaving.value = true
+  try {
+    let order = pivotColumnList.value.length
+    let skippedNoCondition = 0
+    // 先本地组装全部待新增数据，再单次批量请求(后端 /insert/list 事务提交)，避免 for 循环逐条 insert
+    const toInsert: PortalPivotColumnVO[] = []
+    for (const item of toAdd) {
+      // 指标/组合模式：复用自带条件(归一化为 JSON 对象)；字典模式：字段 等于 字典值
+      let conditionStr: string | null = null
+      if (genSource.value === 'dict') {
+        conditionStr = JSON.stringify({
+          andOr: '0',
+          conditionList: [
+            {
+              property: genPivotField.value,
+              relation: FILTER_TYPE.EQUAL,
+              value: [item.value],
+            },
+          ],
+        })
+      } else {
+        conditionStr = normalizePivotCondition(item.condition)
+        if (!conditionStr) {
+          // 指标未配置条件时跳过，避免生成全量聚合的误导列
+          skippedNoCondition++
+          continue
+        }
+      }
+      // 发送前兜底：非 JSON 对象的条件一律跳过，确保不会触发后端校验报错
+      if (!isJsonObjectString(conditionStr)) {
+        skippedNoCondition++
+        continue
+      }
+      toInsert.push({
+        tableId: selectedTable.value.id,
+        itemValue: item.value,
+        itemName: item.label,
+        condition: conditionStr,
+        displayOrder: ++order,
+        status: '1',
+      })
+    }
+    if (toInsert.length > 0) {
+      await addPortalPivotColumnList(toInsert, false, false, false)
+      message.success(
+        skippedNoCondition > 0
+          ? `已生成 ${toInsert.length} 个透视列，跳过 ${skippedNoCondition} 个未配置条件的指标`
+          : `已生成 ${toInsert.length} 个透视列`
+      )
+      showGenPivotModal.value = false
+      await loadPivotColumnList(selectedTable.value.id)
+    } else {
+      message.warning(`未能生成：${skippedNoCondition} 个指标均未配置条件`)
+    }
+  } catch (error) {
+    console.error('批量生成透视列失败:', error)
+  } finally {
+    genSaving.value = false
+  }
+}
 
 // 字典列表
 const sysDictList = ref<Array<any>>([])
@@ -894,11 +2134,6 @@ const excludedColumnCount = computed(() => {
   return props.portalConfig.columns.filter((col: any) => col.checked === false).length
 })
 
-// 切换筛选列配置的展开/收起状态
-const toggleFilterColumns = () => {
-  filterColumnsExpanded.value = !filterColumnsExpanded.value
-}
-
 // 加载字典列表
 const loadDictList = async () => {
   const res = await dict.getAllDict('')
@@ -946,6 +2181,35 @@ const handleSelectTable = async (table: PortalTableVO) => {
   initAvailableFields()
   // 初始化筛选列配置
   initFilterColumnsConfig()
+  // 初始化透视配置(兼容旧逗号串格式：默认全部显示、不排序)
+  const rawGroupByFields = table.groupByFields || ''
+  pivotGroupSorts.value = {}
+  if (rawGroupByFields.trim().startsWith('[')) {
+    try {
+      const list = JSON.parse(rawGroupByFields) as Array<{ field: string; display?: boolean; sort?: number }>
+      pivotGroupFields.value = list.map((item) => item.field)
+      pivotGroupHiddenFields.value = list.filter((item) => item.display === false).map((item) => item.field)
+      list.forEach((item) => {
+        if (item.sort === 0 || item.sort === 1) {
+          pivotGroupSorts.value[item.field] = item.sort
+        }
+      })
+    } catch (e) {
+      console.warn('解析行维度配置失败，按逗号串兜底:', e)
+      pivotGroupFields.value = rawGroupByFields.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+      pivotGroupHiddenFields.value = []
+    }
+  } else {
+    pivotGroupFields.value = rawGroupByFields.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+    pivotGroupHiddenFields.value = []
+  }
+  parsePivotMeasures(table.pivotMeasures)
+  selectedPivotColumn.value = null
+  if (table.pivotMode === '1') {
+    await loadPivotColumnList(table.id!)
+  } else {
+    pivotColumnList.value = []
+  }
 }
 
 // 选择筛选项
@@ -1022,13 +2286,15 @@ const handleExportReportConfig = async () => {
   }
   reportExporting.value = true
   try {
-    // 导出所有表格及其筛选器配置
+    // 导出所有表格及其筛选器、透视列配置
     const exportData = await Promise.all(
       tableList.value.map(async (table) => {
         const filters = await getPortalTableFilterList(table.id!)
+        const pivotColumnsRes = await getPortalPivotColumnList(table.id!, false, false, false)
         return {
           table: { ...table },
-          filters: (filters.payload || []).map((f: any) => f)
+          filters: (filters.payload || []).map((f: any) => f),
+          pivotColumns: (pivotColumnsRes?.payload?.records || []).map((c: any) => c)
         }
       })
     )
@@ -1055,25 +2321,33 @@ const handleReportFileChange = async (event: Event) => {
 
   try {
     const parsed = await readJsonFile(file)
+    // 校验文件类型, 避免误导入其他类型的配置 JSON(如指标配置)
+    if (parsed?.type !== 'report') {
+      message.warning('不是有效的报表配置文件')
+      return
+    }
     const importData = parsed.data || []
     if (!Array.isArray(importData) || importData.length === 0) {
       message.warning('文件中没有可导入的报表配置')
       return
     }
-    const portalName = parsed.portalName || props.portalName
+    // 目标 portal 优先取当前页面, 支持跨页面/跨环境导入
+    const portalName = props.portalName || parsed.portalName
     if (!portalName) {
       message.warning('无法确定目标表格名称')
       return
     }
     Modal.confirm({
       title: '确认导入',
-      content: `将导入 ${importData.length} 个报表配置到「${portalName}」，确认继续？`,
+      content: `将导入 ${importData.length} 个报表配置到「${portalName}」，文件中未包含的筛选器/透视列将被删除，确认继续？`,
       okText: '确认导入',
       cancelText: '取消',
       onOk: async () => {
         reportImporting.value = true
         try {
           let added = 0, updated = 0
+          const filterStat = { added: 0, updated: 0, deleted: 0 }
+          const pivotStat = { added: 0, updated: 0, deleted: 0 }
           // 构建已有表查重映射: tableCode → existing table
           const existingTableMap = new Map<string, PortalTableVO>()
           tableList.value.forEach(t => {
@@ -1083,6 +2357,8 @@ const handleReportFileChange = async (event: Event) => {
             const tableData = { ...item.table }
             delete tableData.id
             delete tableData.filterCount
+            // 强制归属目标 portal, 避免带入源环境旧值
+            tableData.portalName = portalName
             const tableCode = tableData.tableCode
             const existingTable = tableCode ? existingTableMap.get(tableCode) : null
             let tableId: number
@@ -1097,8 +2373,8 @@ const handleReportFileChange = async (event: Event) => {
               tableId = newTable.payload?.id || newTable.payload
               added++
             }
-            // 处理筛选器
-            if (item.filters && item.filters.length > 0) {
+            // 处理筛选器(全量同步: 以文件为准, 文件外的多余项删除)
+            if (Array.isArray(item.filters)) {
               // 查重：获取已有筛选器
               const existingFiltersRes = await getPortalTableFilterList(tableId!, false, false, false)
               const existingFilters: PortalTableFilterVO[] = existingFiltersRes?.payload || []
@@ -1106,6 +2382,15 @@ const handleReportFileChange = async (event: Event) => {
               existingFilters.forEach(ef => {
                 if (ef.code) filterMap.set(ef.code, ef)
               })
+              // 删除文件中不存在的筛选器(只删有编码可匹配的, 无编码的保守保留)
+              const importFilterCodes = new Set(item.filters.map((f: any) => f.code).filter(Boolean))
+              const staleFilterIds = existingFilters
+                .filter(ef => ef.id && ef.code && !importFilterCodes.has(ef.code))
+                .map(ef => ef.id!)
+              if (staleFilterIds.length) {
+                await deletePortalTableFilterList(staleFilterIds, false, false, false)
+                filterStat.deleted += staleFilterIds.length
+              }
               for (const f of item.filters) {
                 // 移除源环境 id，避免跨环境导入时带入旧ID
                 const { id: _srcFilterId, ...filterData } = f
@@ -1116,17 +2401,55 @@ const handleReportFileChange = async (event: Event) => {
                     { ...filterData, id: existingFilter.id, tableId },
                     false, false, false
                   )
+                  filterStat.updated++
                 } else {
                   // 不存在 → 新增
                   await addPortalTableFilter(
                     { ...filterData, tableId },
                     false, false, false
                   )
+                  filterStat.added++
+                }
+              }
+            }
+            // 处理透视列(全量同步: 以文件为准, 文件外的多余项删除)
+            if (Array.isArray(item.pivotColumns)) {
+              const existingPivotRes = await getPortalPivotColumnList(tableId!, false, false, false)
+              const existingPivots: PortalPivotColumnVO[] = existingPivotRes?.payload?.records || []
+              const pivotMap = new Map<string, PortalPivotColumnVO>()
+              existingPivots.forEach(ep => {
+                if (ep.itemValue) pivotMap.set(ep.itemValue, ep)
+              })
+              // 删除文件中不存在的透视列(只删有列标识可匹配的)
+              const importPivotValues = new Set(item.pivotColumns.map((c: any) => c.itemValue).filter(Boolean))
+              for (const ep of existingPivots) {
+                if (ep.id && ep.itemValue && !importPivotValues.has(ep.itemValue)) {
+                  await deletePortalPivotColumn(ep.id, false, false, false)
+                  pivotStat.deleted++
+                }
+              }
+              for (const c of item.pivotColumns) {
+                const { id: _srcPivotId, ...pivotData } = c
+                const existingPivot = c.itemValue ? pivotMap.get(c.itemValue) : null
+                if (existingPivot?.id) {
+                  await updatePortalPivotColumn(
+                    { ...pivotData, id: existingPivot.id, tableId },
+                    false, false, false
+                  )
+                  pivotStat.updated++
+                } else {
+                  await addPortalPivotColumn(
+                    { ...pivotData, tableId },
+                    false, false, false
+                  )
+                  pivotStat.added++
                 }
               }
             }
           }
-          message.success(`导入完成：新增 ${added} 个表，更新 ${updated} 个表`)
+          message.success(`导入完成：表新增 ${added} / 更新 ${updated}，` +
+            `筛选器新增 ${filterStat.added} / 更新 ${filterStat.updated} / 删除 ${filterStat.deleted}，` +
+            `透视列新增 ${pivotStat.added} / 更新 ${pivotStat.updated} / 删除 ${pivotStat.deleted}`)
           // 刷新列表
           await loadTableList()
         } catch (error: any) {
@@ -1154,6 +2477,37 @@ const handleSaveTable = async () => {
     // 如果没有排除的列，设为 null；否则用逗号连接
     selectedTable.value.filterColumns =
       excludedColumns.length > 0 ? excludedColumns.join(',') : null
+
+    // 透视模式：序列化行维度与度量列配置
+    if (selectedTable.value.pivotMode === '1') {
+      // 行维度：按用户调整的顺序序列化为 JSON(顺序即分组层级，display=false 仅参与 group by 不显示，sort=聚合行排序)
+      const groupConfig = pivotGroupFields.value.map((field) => {
+        const cfg: { field: string; display: boolean; sort?: number } = {
+          field,
+          display: !pivotGroupHiddenFields.value.includes(field),
+        }
+        if (pivotGroupSorts.value[field] === 0 || pivotGroupSorts.value[field] === 1) {
+          cfg.sort = pivotGroupSorts.value[field]
+        }
+        return cfg
+      })
+      selectedTable.value.groupByFields =
+        groupConfig.length > 0 ? JSON.stringify(groupConfig) : undefined
+      // 清理已取消勾选字段在隐藏列表/排序配置中的残留
+      pivotGroupHiddenFields.value = pivotGroupHiddenFields.value.filter((f) => pivotGroupFields.value.includes(f))
+      Object.keys(pivotGroupSorts.value).forEach((f) => {
+        if (!pivotGroupFields.value.includes(f)) {
+          delete pivotGroupSorts.value[f]
+        }
+      })
+
+      // 度量列：过滤掉未选字段的空行
+      const validMeasures = pivotMeasureRows.value.filter((m) => m.field)
+      selectedTable.value.pivotMeasures =
+        validMeasures.length > 0 ? JSON.stringify(validMeasures) : undefined
+      // 保存后同步移除空行，界面与落库数据一致
+      pivotMeasureRows.value = validMeasures
+    }
 
     await updatePortalTable(selectedTable.value)
     message.success('保存成功')
@@ -1277,6 +2631,69 @@ const handleDrop = (e: DragEvent, targetIndex: number) => {
 const handleDragEnd = () => {
   draggedIndex.value = null
   dragOverIndex.value = null
+}
+
+// ==================== 透视列拖拽排序(范式同筛选项) ====================
+const pivotDraggedIndex = ref<number | null>(null)
+const pivotDragOverIndex = ref<number | null>(null)
+
+// 透视列拖拽排序结束: 重算 displayOrder 并批量保存(未保存的新列待「保存配置」后生效)
+const handlePivotDragEnd = async () => {
+  const orderList: IdOrderReqVO[] = []
+  pivotColumnList.value.forEach((column, index) => {
+    column.displayOrder = index + 1
+    if (column.id) {
+      orderList.push({ id: column.id as any, showOrder: index + 1 })
+    }
+  })
+  if (orderList.length > 0) {
+    try {
+      await updatePortalPivotColumnOrder(orderList, false, false, false)
+      message.success('排序已保存')
+    } catch (error) {
+      console.error('保存透视列排序失败:', error)
+    }
+  }
+  if (pivotColumnList.value.some(c => !c.id)) {
+    message.info('存在未保存的透视列，点击「保存配置」后其顺序生效')
+  }
+}
+
+// 透视列拖拽开始
+const handlePivotDragStart = (e: DragEvent, index: number) => {
+  pivotDraggedIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+// 透视列拖拽悬停
+const handlePivotDragOver = (e: DragEvent, index: number) => {
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  pivotDragOverIndex.value = index
+}
+
+// 透视列拖拽放置
+const handlePivotDrop = (e: DragEvent, targetIndex: number) => {
+  e.preventDefault()
+  if (pivotDraggedIndex.value === null || pivotDraggedIndex.value === targetIndex) {
+    return
+  }
+  const newList = [...pivotColumnList.value]
+  const [movedItem] = newList.splice(pivotDraggedIndex.value, 1)
+  newList.splice(targetIndex, 0, movedItem)
+  pivotColumnList.value = newList
+  handlePivotDragEnd()
+}
+
+// 透视列拖拽结束(清理状态)
+const handlePivotDragEndReset = () => {
+  pivotDraggedIndex.value = null
+  pivotDragOverIndex.value = null
 }
 
 // 穿梭框过滤
@@ -1539,6 +2956,7 @@ const openDefaultConditionModal = () => {
 
   buildColumnArray()
   editingOptionValue.value = '' // 标记为编辑通用条件
+  editingPivotCondition.value = false
 
   // 使用 conditionConfig.default 作为当前条件
   filterConditionConfig.condition = {
@@ -1555,6 +2973,7 @@ const openOptionConditionModal = (optionValue: string) => {
 
   buildColumnArray()
   editingOptionValue.value = optionValue // 标记为编辑特殊选项条件
+  editingPivotCondition.value = false
 
   // 使用该选项的专属条件
   const optionCondition = conditionConfig.options[optionValue] || []
@@ -1568,9 +2987,20 @@ const openOptionConditionModal = (optionValue: string) => {
 
 // 保存筛选条件配置
 const saveFilterCondition = (condition: ConditionType) => {
-  if (!selectedFilter.value) return
-
   const conditionList = condition.conditionList || []
+
+  // 透视列条件编辑模式
+  if (editingPivotCondition.value) {
+    if (!selectedPivotColumn.value) return
+    selectedPivotColumn.value.condition = JSON.stringify({ conditionList })
+    filterConditionConfig.show = false
+    editingPivotCondition.value = false
+    // 自动保存
+    handleSavePivotColumn()
+    return
+  }
+
+  if (!selectedFilter.value) return
 
   if (editingOptionValue.value) {
     // 保存特殊选项条件
@@ -1679,7 +3109,64 @@ const handleCancel = () => {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  // tab 布局后各配置域独立擑满高度，无需外层滚动
   overflow: hidden;
+}
+
+// 聚合配置 tab 度量行序号
+.measure-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary-bg, #e6f4ff);
+  color: var(--primary, #1677ff);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+// 配置域三 tab 布局：tab 内容擑满剩余高度
+.config-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  :deep(.ant-tabs-nav) {
+    margin-bottom: 12px;
+  }
+
+  :deep(.ant-tabs-content-holder) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  :deep(.ant-tabs-content) {
+    height: 100%;
+  }
+
+  :deep(.ant-tabs-tabpane) {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+// 基础配置 tab 内容可滚动
+.tab-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// 筛选项/透视列 tab 内容擑满高度
+.tab-fill-section {
+  flex: 1;
+  min-height: 0;
 }
 
 .basic-config-section {
@@ -1715,13 +3202,6 @@ const handleCancel = () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-
-    &:hover {
-      background: var(--bg-active);
-    }
 
     .filter-columns-title {
       font-weight: 500;
@@ -1732,12 +3212,6 @@ const handleCancel = () => {
     .filter-columns-count {
       font-size: 13px;
       color: var(--text-tertiary);
-    }
-
-    .anticon {
-      font-size: 14px;
-      color: var(--text-tertiary);
-      transition: transform 0.2s;
     }
   }
 
@@ -1778,6 +3252,76 @@ const handleCancel = () => {
   }
 }
 
+// 透视列条件 JSON 编辑区
+.pivot-condition-json {
+  margin-top: 12px;
+
+  .pivot-condition-json-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-weight: 500;
+
+    .pivot-condition-json-tip {
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--text-tertiary);
+    }
+  }
+
+  .pivot-condition-json-textarea {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+  }
+}
+
+// 行维度顺序调整栏
+.pivot-group-order {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .pivot-group-order-title {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .pivot-group-order-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .pivot-group-order-name {
+      flex: 1;
+    }
+  }
+}
+
+// 聚合配置(并入基础配置 tab，卡片样式同 filter-columns-config)：度量行纵向排列
+.measure-config-section {
+  .measure-rows {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .pivot-measure-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pivot-measure-row + .pivot-measure-row {
+    margin-top: 10px;
+  }
+}
+
+.pivot-config-section {
+  flex: 0 0 300px;
+}
+
 .filter-config-section {
   flex: 1;
   display: flex;
@@ -1785,7 +3329,8 @@ const handleCancel = () => {
   border: 1px solid #e8e8e8;
   border-radius: 8px;
   overflow: hidden;
-  min-height: 0;
+  // 保证列表/详情面板有可用高度，空间不足时由外层滚动
+  min-height: 320px;
 }
 
 .filter-config-content {
@@ -2155,6 +3700,89 @@ const handleCancel = () => {
     background: var(--bg-hover);
     border-radius: 4px;
     white-space: nowrap;
+  }
+}
+
+// 按字典批量生成透视列弹窗
+.gen-cross-wrap {
+  display: flex;
+  gap: 12px;
+
+  .gen-cross-dim {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+    padding: 8px 12px 0;
+
+    .gen-cross-dim-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    :deep(.ant-form-item) {
+      margin-bottom: 12px;
+    }
+  }
+}
+
+.gen-cross-tip {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-tertiary, #999);
+}
+
+.gen-pivot-preview {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+
+  .gen-pivot-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-hover, #f5f5f5);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .gen-pivot-preview-list {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 0;
+
+    .gen-pivot-preview-item {
+      width: 50%;
+      padding-right: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      cursor: grab;
+      border-radius: 4px;
+
+      &.gen-drag-over {
+        outline: 1px dashed var(--accent, #1677ff);
+        background: var(--accent-soft, #e6f4ff);
+      }
+
+      .gen-pivot-preview-actions {
+        flex-shrink: 0;
+        display: inline-flex;
+
+        .ant-btn {
+          padding: 0 2px;
+          height: 20px;
+        }
+      }
+    }
   }
 }
 </style>

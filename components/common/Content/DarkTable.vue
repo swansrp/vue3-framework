@@ -6,7 +6,13 @@
     >
       <template #side>
         <div class="desc-wrapper">
+          <!-- sidePlain: 插槽内容自带 a-descriptions(如 FilterItems 组件)，不再外包 -->
+          <slot
+            v-if="sidePlain"
+            name="side"
+          ></slot>
           <a-descriptions
+            v-else
             :column="1"
             class="scrollable-descriptions"
             layout="vertical"
@@ -88,6 +94,8 @@ const props = withDefaults(
     showLoading?: boolean
     data?: Array<any>
     computedColumns?: Record<string, (row: any) => any>
+    /** 侧栏插槽自带 a-descriptions 时置 true(组件 vnode 不能被 descriptions 展开) */
+    sidePlain?: boolean
   }>(),
   {
     width: 260,
@@ -100,7 +108,8 @@ const props = withDefaults(
     selectColumnCondition: undefined,
     showLoading: false,
     data: undefined,
-    computedColumns: undefined
+    computedColumns: undefined,
+    sidePlain: false
   }
 )
 const { tableId, width, baseDomain, condition, advance, selectColumnCondition, showLoading, data, computedColumns } = toRefs(props)
@@ -133,16 +142,27 @@ onMounted(() => {
   background: transparent;
 }
 
-.scrollable-descriptions .ant-descriptions-row {
+.scrollable-descriptions :deep(.ant-descriptions-row) {
   display: flex;
   flex: 1;
 }
 
-.scrollable-descriptions .ant-descriptions-item {
+.scrollable-descriptions :deep(.ant-descriptions-item) {
   flex: 1;
   display: flex;
   align-items: center;
   box-sizing: border-box;
+}
+
+// item 为 flex 后, 内部容器默认收缩为内容宽( select 会塌缩), 补宽度链让控件的 95% 生效
+.scrollable-descriptions :deep(.ant-descriptions-item-container) {
+  flex: 1;
+  width: 100%;
+}
+
+.scrollable-descriptions :deep(.ant-descriptions-item-content) {
+  display: block;
+  width: 100%;
 }
 
 /* 确保侧边栏显示 */

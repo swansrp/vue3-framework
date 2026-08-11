@@ -2,7 +2,7 @@
 // DarkTable 配置相关接口
 // ============================================================
 
-import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
+import { baseDomain, buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'
 
 export interface IdOrderReqVO {
@@ -31,6 +31,53 @@ export interface PortalTableVO {
   filterColumns?: string
   /** 是否可以下载 */
   downloadAble?: string
+  /** 是否透视报表模式 */
+  pivotMode?: string
+  /** 透视行维度字段(逗号分隔) */
+  groupByFields?: string
+  /** 透视度量列配置JSON */
+  pivotMeasures?: string
+}
+
+export interface PortalPivotColumnVO {
+  /** 主键 ID */
+  id?: number
+  /** table_id */
+  tableId?: number
+  /** 列标识 */
+  itemValue?: string
+  /** 表头名称 */
+  itemName?: string
+  /** 列条件json */
+  condition?: string
+  /** 显示顺序 */
+  displayOrder?: number
+  /** 状态 */
+  status?: string
+}
+
+/** 透视度量列 */
+export interface PivotMeasureVO {
+  /** 度量字段名 */
+  field: string
+  /** 度量显示名 */
+  label?: string
+  /** 聚合方式 sum/count/countDistinct/avg/min/max */
+  agg?: string
+}
+
+/** 透视聚合查询请求 */
+export interface PivotReqVO {
+  /** 查询条件 */
+  condition?: any
+  /** 聚合后行排序(作用于 group by 后的结果, 区别于 condition 内层数据排序) */
+  sortList?: Array<{ property: string, type: number }>
+  /** 行维度列 */
+  groupColumns: Array<{ value: string, label: string }>
+  /** 父表头列 */
+  pivotColumns: Array<{ value: string, label: string, condition: any }>
+  /** 度量列 */
+  measures: Array<PivotMeasureVO>
 }
 
 export interface PortalTableFilterVO {
@@ -200,6 +247,79 @@ export const deletePortalTableFilterList = (ids: number[], showSuccess = true, s
 export const updatePortalTableFilterOrder = (data: IdOrderReqVO[], showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildPostApiByType('/admin/portal/table/filter/order/update', '')
   return request(api, {}, data, showSuccess, showLoading, showErr)
+}
+
+// ==================== Portal Pivot Column 透视列配置接口 ====================
+
+/**
+ * 根据 tableId 获取透视列配置列表
+ * @api POST /admin/portal/table/pivot/column/advanced/query
+ */
+export const getPortalPivotColumnList = (tableId: number, showSuccess = false, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/admin/portal/table/pivot/column/advanced/query', '')
+  return request(api, {}, {
+    condition: {
+      conditionList: [{ property: 'tableId', relation: 1, value: [tableId] }]
+    }, sortList: [{ property: 'displayOrder', type: 0 }], pageSize: 100
+  }, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 新增透视列配置
+ * @api POST /admin/portal/table/pivot/column/insert
+ */
+export const addPortalPivotColumn = (data: PortalPivotColumnVO, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/admin/portal/table/pivot/column/insert', '')
+  return request(api, {}, data, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 批量新增透视列配置(单请求事务提交)
+ * @api POST /admin/portal/table/pivot/column/insert/list
+ */
+export const addPortalPivotColumnList = (dataList: PortalPivotColumnVO[], showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/admin/portal/table/pivot/column/insert/list', '')
+  return request(api, {}, dataList, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 更新透视列配置
+ * @api POST /admin/portal/table/pivot/column/update
+ */
+export const updatePortalPivotColumn = (data: PortalPivotColumnVO, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/admin/portal/table/pivot/column/update', '')
+  return request(api, {}, data, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 批量更新透视列显示顺序
+ * @api POST /admin/portal/table/pivot/column/order/update
+ */
+export const updatePortalPivotColumnOrder = (data: IdOrderReqVO[], showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/admin/portal/table/pivot/column/order/update', '')
+  return request(api, {}, data, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 删除透视列配置
+ * @api POST /admin/portal/table/pivot/column/delete
+ */
+export const deletePortalPivotColumn = (id: number, showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/admin/portal/table/pivot/column/delete', '')
+  return request(api, {}, { id }, showSuccess, showLoading, showErr)
+}
+
+// ==================== 透视聚合查询接口 ====================
+
+/**
+ * 透视聚合查询
+ * @api POST {portalUrl}/pivot
+ * @param portalUrl Portal 配置的访问地址(即实体域 url)
+ * @param req 透视请求
+ */
+export const pivotQuery = (portalUrl: string, req: PivotReqVO, domain: string = baseDomain, showLoading = true) => {
+  const api = buildPostApiByType('/pivot', portalUrl, domain)
+  return request(api, {}, req, false, showLoading, true) as Promise<any>
 }
 
 // ==================== 类型导出 ====================

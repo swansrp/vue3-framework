@@ -153,7 +153,7 @@ export function buildDrillConditionFromStatistic(
     if (rawMetric === 'NULL' || rawMetric === '__NULL__') {
       drillConditionList.push({
         property: drillMetric.metricColumn,
-        relation: 10, // IS NULL
+        relation: FILTER_TYPE.NULL, // IS NULL(7, 注意不是 10 不包含)
         value: [],
       })
     } else {

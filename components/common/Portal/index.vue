@@ -373,7 +373,20 @@
                   :data-summary="dataSummary"
                   :hide-row-selection="hideRowSelection"
                   :is-expanded="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
-                />
+                >
+                  <!-- 汇总单元格插槽透传(同 bodyCell_ 范式, 按列 dataIndex 命名) -->
+                  <template
+                    v-for="col in summaryForwardColumns"
+                    :key="col.dataIndex"
+                    #[`summaryCell_${col.dataIndex}`]="slotProps"
+                  >
+                    <slot
+                      :column="(slotProps as any)?.column"
+                      :value="(slotProps as any)?.value"
+                      :name="'summaryCell_' + col.dataIndex"
+                    ></slot>
+                  </template>
+                </portal-summary>
               </template>
               <!-- endregion -->
               <!-- region 提示样式 -->
@@ -898,6 +911,12 @@ const props = withDefaults(defineProps<{
     rowAllowSelect?: (record: any) => boolean
     showSearchTags?: boolean
     computedColumns?: Record<string, (row: any) => any>
+    /** 外部动态列(透视报表等, 与 data 数据模式配合使用, 优先于 sys_portal_column 配置) */
+    customColumns?: Array<ColumnType>
+    /** 前端提供的汇总行数据(数据模式下使用) */
+    summaryData?: { [key: string]: any }
+    /** 自定义行主键字段(默认取 Portal 配置的 idColumn) */
+    rowKeyField?: string
   }>(),
   {
     baseDomain: '/' + name,
@@ -953,7 +972,10 @@ const props = withDefaults(defineProps<{
     gridCardWidth: 350,
     rowAllowSelect: undefined,
     showSearchTags: false,
-    computedColumns: undefined
+    computedColumns: undefined,
+    customColumns: undefined,
+    summaryData: undefined,
+    rowKeyField: undefined
   })
 const emit = defineEmits<{
   (e: 'configLoaded', config: any, columnArray: any, columns: any, bindTabs: any): void
@@ -1076,6 +1098,11 @@ const columnRaw = new Map<string, ColumnType>()
 const columns = computed(() => {
   return columnArray.value.filter(item => columnFilter.value(item)).sort((a: ColumnType, b: ColumnType) => a.order - b.order)
 })
+
+/** 外部提供了 summaryCell_{dataIndex} 插槽的列(透传给 PortalSummary, 未提供时保持其默认渲染) */
+const summaryForwardColumns = computed(() =>
+  columns.value.filter(col => slots['summaryCell_' + col.dataIndex])
+)
 const textAreaColumns = computed(() => {
   return columnArray.value.filter(item => item.fieldType === FIELD_TYPE.TEXT_AREA)
 })
@@ -2052,6 +2079,10 @@ const initData = (data: Array<any>) => {
   parsedDataSource.value = []
   config.saveAllButtonShow = false
   for (let index in data) {
+    // 数据模式(前端提供数据)不会经过 queryDataAsync 的 uuid 赋值, 在此补充分配
+    if (config.rowKey === AUTO_UUID_ROW_KEY && isEmpty(data[index][config.rowKey])) {
+      data[index][config.rowKey] = uuid()
+    }
     // 计算衍生字段（computedColumns）
     if (props.computedColumns) {
       for (const [field, formula] of Object.entries(props.computedColumns)) {
@@ -2241,7 +2272,7 @@ const initConfig = async () => {
     config.title = tableConfig.displayName
     config.size = tableConfig.size
     config.loading = false
-    config.rowKey = tableConfig.idColumn
+    config.rowKey = props.rowKeyField || tableConfig.idColumn
     config.nameKey = tableConfig.nameColumn
     config.readOnly = tableConfig.readOnly === '1'
     if (props.readOnly) {
@@ -2252,7 +2283,10 @@ const initConfig = async () => {
       config.readOnly = true
     }
     config.url = tableConfig.url
-    config.summary = tableConfig.summary === '1'
+    config.summary = tableConfig.summary === '1' || isNotEmpty(props.summaryData)
+    if (isNotEmpty(props.summaryData)) {
+      dataSummary.value = props.summaryData!
+    }
     config.advancedSearchAble = tableConfig.advanced === '1' && props.advance
     config.advancedSearchButton = config.advancedSearchAble && props.advanceButton
     config.treeMode = isNotEmpty(tableConfig.pidColumn) && isEmpty(data.value)
@@ -2372,6 +2406,28 @@ const initConfig = async () => {
       columnRaw.set(column.dataIndex, _.cloneDeep(column))
     }
     columnArray.value.sort((a, b) => a.order - b.order)
+
+    // 外部动态列(透视报表等): 整体替换 sys_portal_column 解析出的列
+    if (isNotEmpty(props.customColumns)) {
+      columnArray.value.length = 0
+      columnDisplayMap.value.clear()
+      columnRaw.clear()
+      let customOrder = 2
+      for (let custom of props.customColumns!) {
+        const column = _.merge(_.cloneDeep(defaultColumn), custom) as ColumnType
+        column.tableId = config.tableId
+        column.checked = true
+        column.order = custom.order || customOrder
+        customOrder++
+        columnArray.value.push(column)
+        if (isEmpty(columnDisplayMap.value.get(column.displayGroupName))) {
+          columnDisplayMap.value.set(column.displayGroupName, [])
+        }
+        columnDisplayMap.value.get(column.displayGroupName)?.push(column)
+        columnRaw.set(column.dataIndex, _.cloneDeep(column))
+      }
+      columnArray.value.sort((a, b) => a.order - b.order)
+    }
 
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
       config.readOnly = true
@@ -2501,6 +2557,21 @@ watch(() => props.tableId, value => {
   config.tableId = value
   refresh()
 })
+
+// 数据模式: 外部数据变化(透视聚合查询等)时重新装载表格数据
+watch(() => props.data, (newData) => {
+  if (config.plain && initFinished) {
+    config.total = newData ? newData.length : 0
+    initData(newData || [])
+  }
+})
+
+// 数据模式: 同步更新汇总行数据
+watch(() => props.summaryData, (newSummary) => {
+  if (isNotEmpty(newSummary)) {
+    dataSummary.value = newSummary!
+  }
+}, { deep: true })
 
 // 监听 advanceCondition 变化（左侧点击切换时 PortalBindTab 更新查询条件）
 watch(() => props.advanceCondition, (newVal, oldVal) => {
