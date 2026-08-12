@@ -17,11 +17,10 @@ import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/comm
 import { dictStore, useTreeStore } from '@/framework/store/common'
 
 /**
- * 透视报表组件
+ * 透视报表组件(纯表格, 无外壳)
  * 行维度列(group by) + 动态父表头列(条件聚合列) + 度量子列(sum/count/countDistinct/avg/min/max)
- * 直接复用 Portal 组件的数据模式(data + customColumns + summaryData),
- * 表格渲染/深色样式/导出/汇总行均与 DarkTable 完全一致
- * 左侧筛选栏通过 #side 插槽传入 FilterItems(自包含 a-descriptions)
+ * 直接复用 Portal 组件的数据模式(data + customColumns + summaryData)
+ * 深色外壳/标题/左侧筛选栏由 DarkTable(tableMode="pivot")统一提供
  */
 const props = withDefaults(
   defineProps<{
@@ -29,15 +28,9 @@ const props = withDefaults(
     portalTableConfig: PortalTableVO
     /** 查询条件(来自 table filter) */
     condition?: Array<ConditionListType>
-    /** 左侧筛选栏宽度 */
-    width?: number | string
-    /** 标题，默认取路由 meta.title */
-    title?: string
   }>(),
   {
-    condition: () => [],
-    width: 260,
-    title: ''
+    condition: () => []
   }
 )
 
@@ -342,7 +335,7 @@ const ready = computed(() =>
 )
 
 /** 导出文件名 */
-const getDownloadFileName = () => props.title || router.currentRoute.value.meta.title as string || '透视报表'
+const getDownloadFileName = () => router.currentRoute.value.meta.title as string || '透视报表'
 
 // ==================== 单元格钻取明细 ====================
 const drillOpen = ref(false)
@@ -428,73 +421,55 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="body">
-    <content-layout
-      :width="props.width"
-      class="dark-content-layout"
+  <div class="pivot-body">
+    <portal
+      v-if="ready"
+      :table-id="props.portalTableConfig.portalName || ''"
+      :data="dataSource"
+      :custom-columns="portalColumns"
+      :summary-data="summaryData"
+      :download-file-name="getDownloadFileName"
+      :action-width="0"
+      :index-width="0"
+      :page-size="50"
+      :hide-export="props.portalTableConfig.downloadAble === '0'"
+      :advance="false"
+      :multi-header="measures.length > 1"
+      read-only
+      :row-key-field="AUTO_UUID_ROW_KEY"
+      hide-import
+      hide-refresh
+      hide-row-selection
     >
-      <template #side>
-        <!-- FilterItems 自包含 a-descriptions, 直接透传 -->
-        <slot name="side"></slot>
+      <!-- 度量单元格: 非空数字可点击钻取明细(动态插槽覆盖所有度量列) -->
+      <template
+        v-for="key in measureKeys"
+        :key="key"
+        #[`bodyCell_${key}`]="cellSlot"
+      >
+        <span
+          v-if="cellRecord(cellSlot)?.[key] !== '' && cellRecord(cellSlot)?.[key] != null"
+          class="pivot-drill-cell"
+          @click="openDrill(cellIndex(cellSlot), key)"
+        >{{ cellRecord(cellSlot)?.[key] }}</span>
       </template>
-      <template #content>
-        <div class="dark-dialog">
-          <div class="title">
-            {{ props.title || router.currentRoute.value.meta.title }}
-          </div>
-          <div class="dialog-info">
-            <portal
-              v-if="ready"
-              :table-id="props.portalTableConfig.portalName || ''"
-              :data="dataSource"
-              :custom-columns="portalColumns"
-              :summary-data="summaryData"
-              :download-file-name="getDownloadFileName"
-              :action-width="0"
-              :index-width="0"
-              :page-size="50"
-              :hide-export="props.portalTableConfig.downloadAble === '0'"
-              :advance="false"
-              :multi-header="measures.length > 1"
-              read-only
-              :row-key-field="AUTO_UUID_ROW_KEY"
-              hide-import
-              hide-refresh
-              hide-row-selection
-            >
-              <!-- 度量单元格: 非空数字可点击钻取明细(动态插槽覆盖所有度量列) -->
-              <template
-                v-for="key in measureKeys"
-                :key="key"
-                #[`bodyCell_${key}`]="cellSlot"
-              >
-                <span
-                  v-if="cellRecord(cellSlot)?.[key] !== '' && cellRecord(cellSlot)?.[key] != null"
-                  class="pivot-drill-cell"
-                  @click="openDrill(cellIndex(cellSlot), key)"
-                >{{ cellRecord(cellSlot)?.[key] }}</span>
-              </template>
-              <!-- 汇总行单元格: 点击钻取该透视列全部明细(条件只拼全局筛选+透视列条件);
-                   居中对齐同 PortalSummary 默认渲染 -->
-              <template
-                v-for="key in measureKeys"
-                :key="`summary-${key}`"
-                #[`summaryCell_${key}`]="summarySlot"
-              >
-                <div :style="{ textAlign: 'center' }">
-                  <span
-                    v-if="cellValue(summarySlot) !== '--' && cellValue(summarySlot) != null"
-                    class="pivot-drill-cell"
-                    @click="openSummaryDrill(key)"
-                  >{{ cellValue(summarySlot) }}</span>
-                  <span v-else>--</span>
-                </div>
-              </template>
-            </portal>
-          </div>
+      <!-- 汇总行单元格: 点击钻取该透视列全部明细(条件只拼全局筛选+透视列条件);
+           居中对齐同 PortalSummary 默认渲染 -->
+      <template
+        v-for="key in measureKeys"
+        :key="`summary-${key}`"
+        #[`summaryCell_${key}`]="summarySlot"
+      >
+        <div :style="{ textAlign: 'center' }">
+          <span
+            v-if="cellValue(summarySlot) !== '--' && cellValue(summarySlot) != null"
+            class="pivot-drill-cell"
+            @click="openSummaryDrill(key)"
+          >{{ cellValue(summarySlot) }}</span>
+          <span v-else>--</span>
         </div>
       </template>
-    </content-layout>
+    </portal>
 
     <!-- 钻取明细抽屉: 从下向上弹出, 普通模式 Portal 按底层明细表(portalName)自身列配置渲染 -->
     <a-drawer
@@ -529,52 +504,12 @@ onMounted(() => {
   </div>
 </template>
 
+<!-- dark.css 仅为钻取抽屉(teleport 到 body, 脱离 DarkTable 深色作用域)提供令牌覆盖 -->
 <style lang="less" scoped src="@/framework/components/common/Portal/css/dark.css"></style>
 <style lang="less" scoped>
-.body {
+.pivot-body {
   height: 100%;
   width: 100%;
-  background-size: cover;
-  background-color: #143662;
-  background-image: url("../../../components/common/Content/imgs/dashboard-bg.svg");
-  background-repeat: no-repeat;
-}
-
-:deep(.side-wrapper) {
-  height: 100%;
-  visibility: visible !important;
-  display: block !important;
-}
-
-.dark-dialog {
-  background: url("../../../components/common/Content/imgs/dialog-bg.png") no-repeat center center;
-  width: 100%;
-  height: calc(100vh - 20px);
-  background-size: 100% 100%;
-  margin-left: -3px;
-
-  .title {
-    margin-top: 12px;
-    line-height: 35px;
-    color: #fff;
-    font-size: 35px;
-    font-weight: 700;
-    width: 100%;
-    height: 60px;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-    font-family: 'Noto Sans SC', serif;
-  }
-
-  .dialog-info {
-    position: relative;
-    width: 98%;
-    height: 850px;
-    margin: 5px auto;
-    transform: translateY(-20px);
-    overflow: auto;
-  }
 }
 
 // 度量单元格可点击钻取(偏白高亮, 悬停回主题强调色)

@@ -274,6 +274,34 @@ html body .dark-content-layout .portal-table .surely-table-row {
     background-color: transparent !important;
 }
 
+/* itemRender 将 < > 箭头直接渲染为 li 下的 <a>(替换默认 item-link 按钮),
+   a 受独立链接色规则控制(禁用时 a[disabled] 为近黑色), 不继承外层白色, 需强制覆盖 */
+:deep(.ant-pagination-prev > a),
+:deep(.ant-pagination-next > a) {
+    color: #fff !important;
+    font-family: 'Noto Sans SC', serif;
+    font-weight: 500;
+    /* 自定义 <a> 替换默认 item-link 按钮后失去撑满样式, 补回并 flex 居中箭头 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+}
+
+:deep(.ant-pagination-prev:hover > a),
+:deep(.ant-pagination-next:hover > a) {
+    color: #1FC6FF !important;
+}
+
+/* 禁用态(无数据) a[disabled] 半透明白, 与禁用边框风格一致 */
+:deep(.ant-pagination-prev > a[disabled]),
+:deep(.ant-pagination-next > a[disabled]) {
+    color: rgba(255, 255, 255, 0.4) !important;
+    cursor: not-allowed;
+}
+
 :deep(.ant-pagination-item) {
     margin-right: 5px !important;
     border: 1px solid #1FC6FF !important;

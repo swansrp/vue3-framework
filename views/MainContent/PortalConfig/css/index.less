@@ -318,14 +318,23 @@
 
 .popup {
   width: 100px;
-  height: 20px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  // 外层 popup-container 背景被置为透明, 这里需自带卡片背景与主文字色,
+  // 否则继承主题默认灰色文字, 视觉上像禁用项
+  background-color: var(--bg-elevated);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
 
   .popup-item {
     cursor: pointer;
     padding: 8px;
+    color: var(--text-primary);
 
     &:hover {
       background-color: var(--surely-table-row-hover-bg);
+      color: var(--accent);
     }
 
     &.disabled {

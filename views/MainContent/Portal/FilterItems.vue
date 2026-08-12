@@ -9,14 +9,21 @@ import { PortalTableFilterVO } from '@/framework/apis/portal/table'
  * 因此本组件必须作为 #side 插槽的完整内容直接使用, 外层不能再包 a-descriptions
  * filterValues / treeOptionsCache 为引用对象，内部直接修改即可触发外部响应
  */
-const props = defineProps<{
-  filterConfigList: PortalTableFilterVO[]
-  filterValues: Record<string, any>
-  treeOptionsCache: Record<string, any[]>
-  getSelectOptions: (dictCode: string | undefined) => Array<{ label: string, value: string }>
-  loadDictOptions: (dictCode: string | undefined) => Promise<void>
-  getTreeOptions: (dictCode: string | undefined) => Promise<any[]>
-}>()
+const props = withDefaults(
+  defineProps<{
+    filterConfigList: PortalTableFilterVO[]
+    filterValues: Record<string, any>
+    treeOptionsCache: Record<string, any[]>
+    getSelectOptions: (dictCode: string | undefined) => Array<{ label: string, value: string }>
+    loadDictOptions: (dictCode: string | undefined) => Promise<void>
+    getTreeOptions: (dictCode: string | undefined) => Promise<any[]>
+    /** 深色主题(白字/输入框深蓝底), false 时按浅色主题渲染 */
+    dark?: boolean
+  }>(),
+  {
+    dark: true
+  }
+)
 
 // 模板内通过局部引用修改对象内容(与父组件共享同一对象引用)
 const filterValues = computed(() => props.filterValues)
@@ -24,7 +31,10 @@ const treeOptionsCache = computed(() => props.treeOptionsCache)
 </script>
 
 <template>
-  <div class="desc-wrapper">
+  <div
+    class="desc-wrapper"
+    :class="{ 'desc-wrapper--dark': props.dark }"
+  >
     <a-descriptions
       :column="1"
       class="scrollable-descriptions"
@@ -41,7 +51,7 @@ const treeOptionsCache = computed(() => props.treeOptionsCache)
             v-model:value="filterValues[filter.code!]"
             :allow-clear="filter.allowClear === '1'"
             :placeholder="filter.placeholder || '请输入' + filter.label"
-            style="width: 95%; background-color: rgb(21,76,121);"
+            :style="{ width: '95%', backgroundColor: props.dark ? 'rgb(21,76,121)' : undefined }"
           />
         </template>
 
@@ -134,7 +144,11 @@ const treeOptionsCache = computed(() => props.treeOptionsCache)
   flex-direction: column;
   box-sizing: border-box;
   background: transparent;
-  color: white;
+
+  // 深色主题(DarkTable 深色外壳内)才强制白字
+  &--dark {
+    color: white;
+  }
 }
 
 .scrollable-descriptions {

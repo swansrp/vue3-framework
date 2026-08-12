@@ -28,6 +28,7 @@
           </div>
           <div class="dialog-info">
             <portal
+              v-if="tableMode === 'portal'"
               v-bind="$attrs"
               :action-width="0"
               :advance="advance"
@@ -60,6 +61,12 @@
                 />
               </template>
             </portal>
+            <!-- 透视报表模式: 表格主体为纯表格组件 pivot, 外壳(背景/标题/侧栏)仍由本组件提供 -->
+            <pivot-table
+              v-else-if="portalTableConfig"
+              :portal-table-config="portalTableConfig"
+              :condition="condition"
+            />
           </div>
         </div>
       </template>
@@ -70,12 +77,17 @@
 <script lang="ts" setup>
 import { Ref } from 'vue'
 
+import PivotTable from '@/framework/views/MainContent/Portal/pivot.vue'
+
+import { PortalTableVO } from '@/framework/apis/portal/table'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { QuerySortType } from '@/framework/components/common/Portal/type'
 
 /**
  * 左侧筛选栏只需要写 a-descriptions-item
+ * tableMode 决定表格主体: portal=普通 Portal 表格, pivot=透视报表(pivot 纯表格组件)
  */
+defineOptions({ inheritAttrs: false })
 const router = useRouter()
 const getDownloadFileName = (): string => {
   return props.downloadFileName ? props.downloadFileName : router.currentRoute.value.meta.title as string
@@ -96,6 +108,10 @@ const props = withDefaults(
     computedColumns?: Record<string, (row: any) => any>
     /** 侧栏插槽自带 a-descriptions 时置 true(组件 vnode 不能被 descriptions 展开) */
     sidePlain?: boolean
+    /** 表格主体模式: portal=普通 Portal 表格, pivot=透视报表 */
+    tableMode?: 'portal' | 'pivot'
+    /** 透视报表配置(tableMode=pivot 时必传) */
+    portalTableConfig?: PortalTableVO
   }>(),
   {
     width: 260,
@@ -109,7 +125,9 @@ const props = withDefaults(
     showLoading: false,
     data: undefined,
     computedColumns: undefined,
-    sidePlain: false
+    sidePlain: false,
+    tableMode: 'portal',
+    portalTableConfig: undefined
   }
 )
 const { tableId, width, baseDomain, condition, advance, selectColumnCondition, showLoading, data, computedColumns } = toRefs(props)

@@ -23,9 +23,14 @@ import { resolveDynamicVariable } from '@/framework/utils/common'
 
 interface Props {
   tableId?: string
+  /** 主题: dark=深色外壳(DarkTable), light=浅色(原生 content-layout + Portal) */
+  theme?: 'dark' | 'light'
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  tableId: undefined,
+  theme: 'dark'
+})
 
 const dict = dictStore()
 const treeDict = useTreeStore()
@@ -334,6 +339,14 @@ const condition = computed(() => {
 // 是否透视报表模式
 const isPivotMode = computed(() => portalTableConfig.value?.pivotMode === '1')
 
+// 左侧筛选栏宽度(pivot 模式取表格配置 filterWidth)
+const sideWidth = computed(() =>
+  isPivotMode.value ? (portalTableConfig.value?.filterWidth ?? 260) : 260
+)
+
+// 浅色分支 Portal 的查询条件(DarkTable 内部同款包装)
+const lightAdvanceCondition = computed(() => ({ conditionList: condition.value } as ConditionListType))
+
 // 计算 padding 样式
 const paddingStyle = computed(() => {
   if (!portalTableConfig.value) return {}
@@ -380,33 +393,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- 透视报表模式 -->
-  <pivot-table
-    v-if="portalTableConfig?.portalName && isPivotMode"
-    :portal-table-config="portalTableConfig"
-    :condition="condition"
-    :width="portalTableConfig?.filterWidth ?? 260"
-  >
-    <template #side>
-      <filter-items
-        :filter-config-list="filterConfigList"
-        :filter-values="filterValues"
-        :tree-options-cache="treeOptionsCache"
-        :get-select-options="getSelectOptions"
-        :load-dict-options="loadDictOptions"
-        :get-tree-options="getTreeOptions"
-      />
-    </template>
-  </pivot-table>
-
-  <!-- 普通表格模式 -->
+  <!-- 深色主题: 外壳由 DarkTable 提供, 表格主体由 tableMode 切换(pivot=透视报表, portal=普通表格) -->
   <dark-table
-    v-else-if="portalTableConfig?.portalName"
+    v-if="props.theme === 'dark' && portalTableConfig?.portalName"
     ref="tableRef"
+    :table-mode="isPivotMode ? 'pivot' : 'portal'"
+    :portal-table-config="portalTableConfig || undefined"
     :condition="condition"
     :table-id="portalTableConfig?.portalName"
     :column-filter="columnFilter"
     :hide-export="portalTableConfig?.downloadAble === '0'"
+    :width="sideWidth"
     advance
     read-only
     side-plain
@@ -424,6 +421,48 @@ onMounted(() => {
       />
     </template>
   </dark-table>
+
+  <!-- 浅色主题: 原生 content-layout + Portal/pivot 表格, 不套深色外壳 -->
+  <content-layout
+    v-else-if="props.theme === 'light' && portalTableConfig?.portalName"
+    :width="sideWidth"
+  >
+    <template #side>
+      <filter-items
+        :filter-config-list="filterConfigList"
+        :filter-values="filterValues"
+        :tree-options-cache="treeOptionsCache"
+        :get-select-options="getSelectOptions"
+        :load-dict-options="loadDictOptions"
+        :get-tree-options="getTreeOptions"
+        :dark="false"
+      />
+    </template>
+    <template #content>
+      <pivot-table
+        v-if="isPivotMode"
+        :portal-table-config="portalTableConfig"
+        :condition="condition"
+      />
+      <portal
+        v-else
+        ref="tableRef"
+        :table-id="portalTableConfig.portalName"
+        :advance-condition="lightAdvanceCondition"
+        :column-filter="columnFilter"
+        :hide-export="portalTableConfig.downloadAble === '0'"
+        :action-width="0"
+        :page-size="50"
+        advance
+        read-only
+        multi-header
+        text-area-in-expanded
+        hide-refresh
+        hide-row-selection
+        @config-loaded="onConfigLoaded"
+      />
+    </template>
+  </content-layout>
 </template>
 
 <style lang="less" scoped>
