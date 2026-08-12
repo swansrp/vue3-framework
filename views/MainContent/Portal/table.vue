@@ -3,6 +3,9 @@ import type { Ref } from 'vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import FilterItems from './FilterItems.vue'
+import PivotTable from './pivot.vue'
+
 import {
   getPortalTableByCode,
   getPortalTableFilterList,
@@ -17,8 +20,6 @@ import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
 import { resolveDynamicVariable } from '@/framework/utils/common'
 
-import FilterItems from './FilterItems.vue'
-import PivotTable from './pivot.vue'
 
 interface Props {
   tableId?: string
