@@ -7,9 +7,9 @@
         @change="$emit('update:conditionContentValue', value)"
       />
     </template>
-    <template v-else-if="type === FIELD_TYPE.NUMBER">
+    <template v-else-if="type === FIELD_TYPE.NUMBER || type === FIELD_TYPE.MONEY">
       <a-input-number
-        v-if="+relation !== FILTER_TYPE.BETWEEN && +relation !== FILTER_TYPE.IN"
+        v-if="+(relation ?? 0) !== FILTER_TYPE.BETWEEN && +(relation ?? 0) !== FILTER_TYPE.IN"
         v-model:value="value"
         class="full-width"
         placeholder="请输入属性值"
@@ -17,7 +17,7 @@
         @change="$emit('update:conditionContentValue', value)"
       />
       <a-input-group
-        v-else-if="+relation === FILTER_TYPE.BETWEEN"
+        v-else-if="+(relation ?? 0) === FILTER_TYPE.BETWEEN"
         compact
       >
         <a-input-number
@@ -41,7 +41,7 @@
         />
       </a-input-group>
       <a-input
-        v-else-if="+relation === FILTER_TYPE.IN"
+        v-else-if="+(relation ?? 0) === FILTER_TYPE.IN"
         v-model:value="value"
         placeholder="输入属性值(逗号隔开)"
         @change="$emit('update:conditionContentValue', value.split(','))"
@@ -72,7 +72,7 @@
     </template>
     <template v-else-if="type === FIELD_TYPE.DATE">
       <a-range-picker
-        v-if="+relation === FILTER_TYPE.BETWEEN || +relation === FILTER_TYPE.NOT_BETWEEN"
+        v-if="+(relation ?? 0) === FILTER_TYPE.BETWEEN || +(relation ?? 0) === FILTER_TYPE.NOT_BETWEEN"
         v-model:value="valueArray"
         :locale="locale"
         class="full-width"
@@ -87,7 +87,7 @@
     </template>
     <template v-else-if="type === FIELD_TYPE.DATETIME">
       <a-range-picker
-        v-if="+relation === FILTER_TYPE.BETWEEN || +relation === FILTER_TYPE.NOT_BETWEEN"
+        v-if="+(relation ?? 0) === FILTER_TYPE.BETWEEN || +(relation ?? 0) === FILTER_TYPE.NOT_BETWEEN"
         v-model:value="valueArray"
         :locale="locale"
         :show-time="true"
