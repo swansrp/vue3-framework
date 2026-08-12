@@ -16,8 +16,8 @@
         >
           <a-input
             v-model:value="formData.itemValue"
-            :maxlength="5"
-            placeholder="请输入指标值（最多10个字）"
+            :maxlength="100"
+            placeholder="请输入指标值（最多100个字）"
             show-count
           />
         </a-form-item>
@@ -31,8 +31,8 @@
         >
           <a-input
             v-model:value="formData.itemName"
-            :maxlength="10"
-            placeholder="请输入指标名称（最多10个字）"
+            :maxlength="100"
+            placeholder="请输入指标名称（最多100个字）"
             show-count
           />
         </a-form-item>
@@ -265,11 +265,11 @@ const resetColorToDefault = () => {
 const formRules: Record<string, Rule[]> = {
   itemValue: [
     { required: true, message: '请输入指标值', trigger: 'blur' },
-    { max: 10, message: '指标值最多10个字符', trigger: 'blur' }
+    { max: 100, message: '指标值最多100个字符', trigger: 'blur' }
   ],
   itemName: [
     { required: true, message: '请输入指标名称', trigger: 'blur' },
-    { max: 10, message: '指标名称最多10个字符', trigger: 'blur' }
+    { max: 100, message: '指标名称最多100个字符', trigger: 'blur' }
   ],
   condition: [
     { 

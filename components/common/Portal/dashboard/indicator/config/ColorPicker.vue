@@ -22,6 +22,12 @@
               @mousemove="onHueMove"
               @mouseup="stopHueDrag"
             >
+              <!-- 中心颜色预览（棋盘格底 + 当前色，正确显示透明度） -->
+              <div class="hue-wheel-center-bg"></div>
+              <div
+                class="hue-wheel-center"
+                :style="{ backgroundColor: selectedColor }"
+              ></div>
               <div
                 class="hue-pointer"
                 :style="huePointerStyle"
@@ -80,6 +86,32 @@
               class="color-input"
               @change="onColorInputChange"
             />
+            <!-- 吸色（从屏幕任意位置取色） -->
+            <a-tooltip title="屏幕取色（从屏幕任意位置吸色）">
+              <a-button
+                class="eyedropper-btn"
+                @click="openEyeDropper"
+              >
+                <template #icon>
+                  <AimOutlined />
+                </template>
+              </a-button>
+            </a-tooltip>
+          </div>
+
+          <!-- 常用颜色备选 -->
+          <div class="preset-colors-section">
+            <span class="preset-label">常用颜色</span>
+            <div class="preset-swatches">
+              <div
+                v-for="swatch in presetSwatches"
+                :key="swatch"
+                class="preset-swatch"
+                :style="{ backgroundColor: swatch }"
+                :title="swatch"
+                @click="applyPresetColor(swatch)"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
@@ -88,6 +120,7 @@
 </template>
 
 <script lang="ts" setup>
+import { AimOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { ref, computed, watch } from 'vue'
 
@@ -121,6 +154,14 @@ const svSquareRef = ref<HTMLElement>()
 const alphaSliderRef = ref<HTMLElement>()
 
 const selectedColor = ref(props.initialColor || '#1890ff')
+
+// 常用颜色备选（去重、覆盖全色相 + 中性色）
+const presetSwatches = [
+  '#f5222d', '#fa541c', '#fa8c16', '#faad14', '#fadb14',
+  '#a0d911', '#52c41a', '#13c2c2', '#1890ff', '#2f54eb',
+  '#722ed1', '#eb2f96', '#ff7875', '#ffc069', '#fff566',
+  '#95de64', '#69c0ff', '#8c8c8c', '#262626', '#ffffff'
+]
 
 // 计算属性
 const currentHueColor = computed(() => {
@@ -199,6 +240,15 @@ const hexToHsv = (color: string) => {
   if (color.startsWith('hsl')) {
     const rgb = hslToRgb(color)
     return rgbToHsv(rgb.r, rgb.g, rgb.b)
+  }
+
+  // 如果是 RGB/RGBA 格式，解析出 RGB 分量
+  if (color.startsWith('rgb')) {
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+    if (match) {
+      return rgbToHsv(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]))
+    }
+    return { h: 0, s: 0, v: 0 }
   }
 
   // 如果是十六进制格式，转换为 RGB
@@ -312,7 +362,9 @@ const updateSelectedColor = () => {
   const hex = hsvToHex(hue.value, saturation.value, value.value)
   if (alpha.value < 1) {
     const rgb = hsvToRgb(hue.value, saturation.value, value.value)
-    selectedColor.value = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha.value})`
+    // 透明度保留 2 位小数，避免原始浮点数拼出超长颜色值
+    const alphaStr = String(Math.round(alpha.value * 100) / 100)
+    selectedColor.value = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphaStr})`
   } else {
     selectedColor.value = hex
   }
@@ -441,23 +493,51 @@ const updateAlphaFromEvent = (e: MouseEvent) => {
   alpha.value = x / rect.width
 }
 
+// 根据颜色值（hex / rgb / rgba / hsl）统一回写 HSV 与透明度
+const setColorFromValue = (color: string) => {
+  if (!isValidColor(color)) return
+  selectedColor.value = color
+  const hsv = hexToHsv(color)
+  hue.value = hsv.h
+  saturation.value = hsv.s
+  value.value = hsv.v
+
+  // 处理 rgb/rgba 格式的透明度
+  if (color.startsWith('rgb')) {
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
+    alpha.value = match && match[4] ? parseFloat(match[4]) : 1
+  } else {
+    alpha.value = 1
+  }
+}
+
 // 颜色输入变化处理
 const onColorInputChange = () => {
-  if (isValidColor(selectedColor.value)) {
-    const hsv = hexToHsv(selectedColor.value)
-    hue.value = hsv.h
-    saturation.value = hsv.s
-    value.value = hsv.v
+  setColorFromValue(selectedColor.value)
+}
 
-    // 处理 rgba 格式
-    if (selectedColor.value.startsWith('rgba')) {
-      const match = selectedColor.value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
-      if (match && match[4]) {
-        alpha.value = parseFloat(match[4])
-      }
-    } else {
-      alpha.value = 1
+// 应用常用颜色备选
+const applyPresetColor = (color: string) => {
+  setColorFromValue(color)
+}
+
+// 是否支持浏览器原生吸色（Chrome / Edge 支持）
+const eyeDropperSupported = computed(() => typeof (window as any).EyeDropper === 'function')
+
+// 吸色：从屏幕任意位置取色
+const openEyeDropper = async () => {
+  if (!eyeDropperSupported.value) {
+    message.warning('当前浏览器不支持屏幕取色，请使用 Chrome 或 Edge 浏览器')
+    return
+  }
+  try {
+    const dropper = new (window as any).EyeDropper()
+    const result = await dropper.open()
+    if (result?.sRGBHex) {
+      setColorFromValue(result.sRGBHex)
     }
+  } catch {
+    // 用户取消取色，无需处理
   }
 }
 
@@ -561,6 +641,37 @@ const handleCancel = () => {
           #ff00ff 300deg,
           #ff0000 360deg);
       cursor: crosshair;
+
+      // 中心当前色预览（棋盘格底，正确显示透明度）
+      .hue-wheel-center-bg {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        background-image:
+          linear-gradient(45deg, #ccc 25%, transparent 25%),
+          linear-gradient(-45deg, #ccc 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #ccc 75%),
+          linear-gradient(-45deg, transparent 75%, #ccc 75%);
+        background-size: 8px 8px;
+        background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+        pointer-events: none;
+      }
+
+      .hue-wheel-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+        pointer-events: none;
+      }
 
       .hue-pointer {
         position: absolute;
@@ -700,6 +811,42 @@ const handleCancel = () => {
 
     .color-input {
       flex: 1;
+    }
+
+    .eyedropper-btn {
+      flex-shrink: 0;
+    }
+  }
+
+  // 常用颜色备选
+  .preset-colors-section {
+    margin-top: 16px;
+
+    .preset-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .preset-swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .preset-swatch {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.15));
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+        &:hover {
+          transform: scale(1.2);
+          box-shadow: 0 0 0 2px var(--accent-soft, rgba(24, 144, 255, 0.3));
+        }
+      }
     }
   }
 }
