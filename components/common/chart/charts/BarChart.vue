@@ -19,7 +19,7 @@
 import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import { buildFullAxisTooltipHtml, buildHighlightRowsHtml, buildHighlightTooltipHtml, hasStackedSeries } from '../utils/tooltipCommon'
+import { buildFullAxisTooltipHtml, buildHighlightRowsHtml, buildHighlightTooltipHtml, createTooltipPosition, hasStackedSeries } from '../utils/tooltipCommon'
 import type { HighlightTooltipItem } from '../utils/tooltipCommon'
 import { getEffectiveUnit } from '../utils/unitFormat'
 
@@ -626,25 +626,7 @@ export default defineComponent({
           triggerOn: 'mousemove|click',  // 鼠标移动或点击时触发
           confine: false,    // 不限制在图表容器内
           appendToBody: true, // 添加到body，扩大触发范围
-          position: function (point: any, params: any, dom: any, rect: any, size: any) {
-            // 动态调整tooltip位置，确保不超出屏幕边界
-            let x = point[0]
-            let y = point[1]
-            const boxWidth = size.contentSize[0]
-            const boxHeight = size.contentSize[1]
-
-            // 水平方向调整
-            if (x + boxWidth > size.viewSize[0]) {
-              x = point[0] - boxWidth
-            }
-
-            // 垂直方向调整
-            if (y + boxHeight > size.viewSize[1]) {
-              y = point[1] - boxHeight
-            }
-
-            return [x, y]
-          },
+          position: createTooltipPosition(() => chartRef.value),
           backgroundColor: 'rgba(255, 255, 255, 0.98)',
           borderColor: '#ddd',
           borderWidth: 1,
@@ -652,7 +634,7 @@ export default defineComponent({
             color: '#333',
             fontSize: 12
           },
-          extraCssText: 'max-height: 600px; max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
+          extraCssText: 'max-height: min(600px, calc(100vh - 24px)); max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
             // 判断是否有第二维度
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
@@ -685,7 +667,14 @@ export default defineComponent({
                   }
                   return Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
                 },
-                (datum: any) => datum?.itemStyle?.color
+                (datum: any) => datum?.itemStyle?.color,
+                {
+                  // 排行榜(Top-N)：数值为排名语义（可能含负数），占比无意义，不显示
+                  showSharePercent: (s: any) => {
+                    const statType = hasSecondDimension && s.name && s.name.includes('&&') ? s.name.split('&&')[1] : s.name
+                    return props.dataMetrics.find(m => m.dataName === statType)?.chartType !== 'rankingBar'
+                  }
+                }
               )
             }
 

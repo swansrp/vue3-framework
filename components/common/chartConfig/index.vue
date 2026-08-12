@@ -58,6 +58,13 @@
                   <CopyOutlined /> 复制选中
                 </a-menu-item>
                 <a-menu-item
+                  key="moveOrCopy"
+                  :disabled="batchSelectedIndicators.length === 0 || batchMoving"
+                  @click="openTargetParentModal"
+                >
+                  <FolderOpenOutlined /> 移动/复制到…
+                </a-menu-item>
+                <a-menu-item
                   key="edit"
                   :disabled="batchSelectedIndicators.length === 0"
                   @click="batchEditModalVisible = true"
@@ -176,11 +183,52 @@
       :is-common-indicator="!showPersonalIndicators"
       @applied="handleBatchEditApplied"
     />
+
+    <!-- 批量移动/复制：选择目标父节点弹窗 -->
+    <a-modal
+      v-model:open="targetParentModal.visible"
+      title="移动/复制到指定父节点"
+      :confirm-loading="targetParentModal.loading"
+      ok-text="确定"
+      cancel-text="取消"
+      @ok="confirmTargetParent"
+    >
+      <a-radio-group
+        v-model:value="targetParentModal.mode"
+        style="margin-bottom: 12px"
+      >
+        <a-radio value="move">
+          移动
+        </a-radio>
+        <a-radio value="copyMove">
+          复制并移动（不加副本后缀）
+        </a-radio>
+      </a-radio-group>
+      <a-alert
+        :message="targetParentModal.mode === 'move'
+          ? `将勾选的 ${batchSelectedIndicators.length} 个指标移动到所选父节点下`
+          : `复制勾选的 ${batchSelectedIndicators.length} 个指标（不加副本后缀）并放到所选父节点下`"
+        type="info"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+      <a-tree-select
+        v-model:value="targetParentModal.pid"
+        :tree-data="targetFolderTree"
+        :field-names="{ label: 'title', value: 'id', children: 'children' }"
+        tree-node-filter-prop="title"
+        tree-default-expand-all
+        show-search
+        allow-clear
+        placeholder="请选择目标父节点（默认为根节点）"
+        style="width: 100%"
+      />
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { AppstoreOutlined, BgColorsOutlined, CheckOutlined, CloseOutlined, CopyOutlined, DeleteOutlined, DownOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, BgColorsOutlined, CheckOutlined, CloseOutlined, CopyOutlined, DeleteOutlined, DownOutlined, EditOutlined, FolderOpenOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, onUnmounted, readonly, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -199,7 +247,8 @@ import {
   getPersonalStatistic,
   updateCommonStatistic,
   updatePersonalDashboard,
-  updatePersonalStatistic
+  updatePersonalStatistic,
+  updateStatisticPid
 } from './api'
 import { debounce } from './debounce'
 import { collectLeaves, findNodeById, findNodeByIdOrKey as findNodeInIndicatorTree, getParentNodeKeys } from './treeUtils'
@@ -207,6 +256,7 @@ import type { DashboardItem, IndicatorNode } from './types'
 
 import { getIndicatorConfig, updateEntityListSelective } from '@/framework/apis/portal'
 import { getPortalConfig } from '@/framework/apis/portal/config'
+import { CHART_TYPE } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
 import BatchEditModal from '@/framework/components/common/chartConfig/BatchEditModal.vue'
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
@@ -264,6 +314,29 @@ const computedTableId = computed(() => {
 // 统一的网格列数配置
 const GRID_COLUMNS = 12
 
+// 默认卡片尺寸：饼图(pie/metricsPie) 4×4，其余类型 4×6
+const getDefaultSizeByChartType = (chartType?: string): { xGrid: number; yGrid: number } => {
+  if (chartType === CHART_TYPE.PIE || chartType === CHART_TYPE.METRICS_PIE) {
+    return { xGrid: 4, yGrid: 4 }
+  }
+  return { xGrid: 4, yGrid: 6 }
+}
+
+// 解析指标配置（兼容 JSON 字符串 / 对象两种存储形态）
+const parseIndicatorConfig = (indicator: any): any => {
+  if (!indicator) return null
+  if (typeof indicator === 'object') return indicator
+  try {
+    return JSON.parse(indicator)
+  } catch {
+    return null
+  }
+}
+
+// 取指标配置的图表类型（用于推导默认卡片尺寸）
+const getIndicatorChartType = (indicator: any): string | undefined =>
+  parseIndicatorConfig(indicator)?.dataMetrics?.[0]?.chartType
+
 // 页面状态
 const loading = ref(false)
 const sidebarCollapsed = ref(false)
@@ -289,6 +362,16 @@ const { permVisible, permResourceType, permResources, openPerm } = useResourcePe
 const batchEditModalVisible = ref(false)
 const batchCopying = ref(false)
 const batchDeleting = ref(false)
+const batchMoving = ref(false)
+
+// 批量移动/复制：目标父节点选择弹窗
+const ROOT_PID_SENTINEL = '__root__'
+const targetParentModal = ref<{ visible: boolean; mode: 'move' | 'copyMove'; pid: string | undefined; loading: boolean }>({
+  visible: false,
+  mode: 'move',
+  pid: undefined,
+  loading: false
+})
 
 // 批量选中的指标（基于左侧树勾选状态）
 const batchSelectedIndicators = computed<IndicatorNode[]>(() => {
@@ -342,8 +425,10 @@ const handleBatchCopy = async () => {
       }
 
       if (newIndicatorId) {
-        // 将新指标添加到dashboard
-        const cardSize = { xGrid: indicatorNode.defaultXGrid || 2, yGrid: indicatorNode.defaultYGrid || 2 }
+        // 将新指标添加到dashboard（优先用户自定义尺寸，否则按图表类型：饼图4×4/其余4×6）
+        const cardSize = (indicatorNode.defaultXGrid && indicatorNode.defaultYGrid)
+          ? { xGrid: indicatorNode.defaultXGrid, yGrid: indicatorNode.defaultYGrid }
+          : getDefaultSizeByChartType(getIndicatorChartType(indicatorNode.indicator))
         const currentItems = [...dashboardItems.value]
         const position = calculateNewCardPosition(currentItems, cardSize)
 
@@ -425,6 +510,177 @@ const handleBatchDelete = () => {
       }
     }
   })
+}
+
+// 批量操作时的指标类别（通用/个人）
+const batchIsCommon = computed(() => !props.showPersonalIndicators || props.useCommonDashboard)
+
+// 判断节点是否带有实际图表配置（带配置的节点是图表叶子，不能作为父节点候选）
+// 跳过图表配置保存的节点（indicator 为空）属于纯文件夹，需保留，包括空文件夹
+const hasChartConfig = (node: IndicatorNode): boolean => {
+  const ind = node.indicator
+  if (!ind) return false
+  if (typeof ind === 'object') return Object.keys(ind).length > 0
+  const str = String(ind).trim()
+  return str !== '' && str !== '{}'
+}
+
+// 构建目标父节点候选树（保留所有文件夹节点：含跳过图表配置的节点与空文件夹）
+const buildFolderTree = (nodes: IndicatorNode[]): IndicatorNode[] => {
+  const result: IndicatorNode[] = []
+  for (const node of nodes) {
+    if (hasChartConfig(node)) continue
+    result.push({ ...node, children: node.children ? buildFolderTree(node.children) : [] })
+  }
+  return result
+}
+
+// 目标父节点候选树（虚拟根节点 + 所有文件夹），每次打开弹窗时重新拉取
+const targetFolderTree = ref<IndicatorNode[]>([])
+
+// 构建目标父节点候选树：重新拉取最新指标树，仅保留文件夹节点
+const refreshTargetFolderTree = async () => {
+  const tableId = computedTableId.value
+  if (!tableId) return
+  try {
+    const resp = batchIsCommon.value
+      ? await getCommonStatistic(tableId)
+      : await getPersonalStatistic(tableId)
+    const source = (resp?.payload || []) as IndicatorNode[]
+    targetFolderTree.value = [{
+      id: ROOT_PID_SENTINEL,
+      title: '根节点（顶层）',
+      children: buildFolderTree(source)
+    } as IndicatorNode]
+  } catch (error) {
+    console.error('加载目标父节点候选树失败:', error)
+    message.error('加载目标父节点列表失败，请重试')
+  }
+}
+
+// 打开目标父节点选择弹窗（弹窗内选择移动或复制）
+const openTargetParentModal = async () => {
+  if (batchSelectedIndicators.value.length === 0) {
+    message.warning('请先在左侧树中勾选要操作的指标')
+    return
+  }
+  targetParentModal.value = { visible: true, mode: 'move', pid: ROOT_PID_SENTINEL, loading: false }
+  await refreshTargetFolderTree()
+}
+
+// 批量移动到指定父节点（targetPid 为 null 表示移到根节点）
+const doBatchMove = async (nodes: IndicatorNode[], targetPid: string | null) => {
+  let successCount = 0
+  for (const node of nodes) {
+    // 父节点未变化则跳过
+    if (String(node.pid || '') === String(targetPid || '')) continue
+    await updateStatisticPid({ id: node.id, pid: targetPid })
+    successCount++
+  }
+  // 刷新数据（左侧树 + 右侧图表）
+  await loadDashboardData()
+  message.success(`成功移动 ${successCount} 个指标`)
+}
+
+// 批量复制并移动到指定父节点（不加副本后缀，targetPid 为 null 表示放到根节点）
+const doBatchCopyToParent = async (nodes: IndicatorNode[], targetPid: string | null) => {
+  let successCount = 0
+
+  for (const indicatorNode of nodes) {
+    // 复制指标配置，创建新指标（直接放到目标父节点下）
+    const newIndicatorData: Partial<IndicatorNode> = {
+      title: indicatorNode.title,
+      subTitle: indicatorNode.subTitle || '',
+      description: indicatorNode.description || '',
+      tableId: computedTableId.value,
+      pid: targetPid ?? '',
+      order: (indicatorNode.order || 0) + 1,
+      show: true,
+      indicator: indicatorNode.indicator
+        ? (typeof indicatorNode.indicator === 'string'
+          ? indicatorNode.indicator
+          : JSON.stringify(indicatorNode.indicator))
+        : ''
+    }
+
+    // 创建新指标
+    let newIndicatorId: string
+    if (batchIsCommon.value) {
+      const resp = await addCommonStatistic(newIndicatorData)
+      newIndicatorId = resp?.payload?.id || resp?.payload
+    } else {
+      const resp = await addPersonalStatistic(newIndicatorData)
+      newIndicatorId = resp?.payload?.id || resp?.payload
+    }
+
+    if (newIndicatorId) {
+      // 将新指标添加到dashboard（优先用户自定义尺寸，否则按图表类型：饼图4×4/其余4×6）
+      const cardSize = (indicatorNode.defaultXGrid && indicatorNode.defaultYGrid)
+        ? { xGrid: indicatorNode.defaultXGrid, yGrid: indicatorNode.defaultYGrid }
+        : getDefaultSizeByChartType(getIndicatorChartType(indicatorNode.indicator))
+      const currentItems = [...dashboardItems.value]
+      const position = calculateNewCardPosition(currentItems, cardSize)
+
+      const dashboardData = [{
+        statisticId: String(newIndicatorId),
+        xGrid: cardSize.xGrid,
+        yGrid: cardSize.yGrid,
+        xPosition: position.xPosition,
+        yPosition: position.yPosition
+      }]
+
+      if (props.useCommonDashboard) {
+        await addCommonDashboard(dashboardData, computedTableId.value!)
+      } else {
+        await addPersonalDashboard(dashboardData, computedTableId.value!)
+      }
+      successCount++
+    }
+  }
+
+  // 刷新数据
+  await loadDashboardData()
+
+  // 自动重新排列
+  try {
+    const itemsToReorganize = displayedIndicators.value
+    if (itemsToReorganize && itemsToReorganize.length > 0) {
+      const reorganized = reorganizeChartsLayout(itemsToReorganize)
+      await saveReorganizedLayout(reorganized)
+      await loadDashboardData(true)
+    }
+  } catch (e) {
+    console.warn('复制后自动布局失败', e)
+  }
+
+  message.success(`成功复制 ${successCount} 个指标`)
+}
+
+// 确认目标父节点（按弹窗模式分派移动/复制）
+const confirmTargetParent = async () => {
+  const { mode, pid } = targetParentModal.value
+  const selectedNodes = batchSelectedIndicators.value
+  if (selectedNodes.length === 0) {
+    message.warning('请先在左侧树中勾选要操作的指标')
+    return
+  }
+  const targetPid = (!pid || pid === ROOT_PID_SENTINEL) ? null : pid
+  targetParentModal.value.loading = true
+  batchMoving.value = true
+  try {
+    if (mode === 'move') {
+      await doBatchMove(selectedNodes, targetPid)
+    } else {
+      await doBatchCopyToParent(selectedNodes, targetPid)
+    }
+    targetParentModal.value.visible = false
+  } catch (error) {
+    console.error(mode === 'move' ? '批量移动失败:' : '批量复制并移动失败:', error)
+    message.error(mode === 'move' ? '批量移动失败，请重试' : '批量复制失败，请重试')
+  } finally {
+    targetParentModal.value.loading = false
+    batchMoving.value = false
+  }
 }
 
 // 批量编辑完成后的回调
@@ -531,6 +787,8 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
         const isCommon = String(d.commonStatistic) === '1'
         const orderFromTree = (isCommon ? commonOrderMap : personalOrderMap)[String(d.statisticId)]
         const displayOrder = orderFromTree ?? Number(d.order ?? 0)
+        // 历史数据缺省时按图表类型推导默认尺寸（饼图4×4/其余4×6）
+        const fallbackSize = getDefaultSizeByChartType(getIndicatorChartType(d.indicator))
 
         return {
           id: d.id,
@@ -538,8 +796,8 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
           subTitle: d.subTitle ?? '',
           description: d.description ?? '',
           displayOrder,
-          xGrid: Number(d.xGrid ?? d.xgrid ?? 2),
-          yGrid: Number(d.yGrid ?? d.ygrid ?? 2),
+          xGrid: Number(d.xGrid ?? d.xgrid ?? fallbackSize.xGrid),
+          yGrid: Number(d.yGrid ?? d.ygrid ?? fallbackSize.yGrid),
           xPosition: Number(d.xPosition ?? d.xposition ?? 1),
           yPosition: Number(d.yPosition ?? d.yposition ?? 1),
           show: true, // 默认显示
@@ -681,8 +939,9 @@ const reorganizeChartsLayout = (items: DashboardItem[]): DashboardItem[] => {
 
   // 重新排列每个图表
   for (const item of sortedItems) {
-    const xGrid = item.xGrid || 2
-    const yGrid = item.yGrid || 2
+    const fallbackSize = getDefaultSizeByChartType(getIndicatorChartType(item.config?.indicator))
+    const xGrid = item.xGrid || fallbackSize.xGrid
+    const yGrid = item.yGrid || fallbackSize.yGrid
 
     // 找到最佳位置
     const position = findBestPosition(xGrid, yGrid)
@@ -1216,7 +1475,7 @@ const deleteIndicator = async (indicatorId: string) => {
 // 计算新卡片的位置（确保能容纳指定大小，优先左上角）
 const calculateNewCardPosition = (
   currentItems: DashboardItem[],
-  cardSize: { xGrid: number; yGrid: number } = { xGrid: 2, yGrid: 2 }
+  cardSize: { xGrid: number; yGrid: number } = { xGrid: 4, yGrid: 4 }
 ): { xPosition: number; yPosition: number } => {
   // 默认网格列数
   const gridColumns = GRID_COLUMNS
@@ -1340,24 +1599,17 @@ const deleteDashboardFromTree = async (indicatorIds: string[]) => {
 
 // 从指标树中获取指标的默认尺寸
 const getIndicatorDefaultSize = (indicatorId: string): { xGrid: number; yGrid: number } => {
-  // 先在通用指标中查找
-  const commonNode = findNodeById(commonIndicators.value, indicatorId)
-  if (commonNode) {
-    if (commonNode.defaultXGrid && commonNode.defaultYGrid) {
-      return { xGrid: commonNode.defaultXGrid, yGrid: commonNode.defaultYGrid }
-    }
+  // 先在通用指标中查找，再在个人指标中查找
+  const node = findNodeById(commonIndicators.value, indicatorId) ||
+    findNodeById(personalIndicators.value, indicatorId)
+
+  // 用户自定义的默认尺寸优先
+  if (node?.defaultXGrid && node?.defaultYGrid) {
+    return { xGrid: node.defaultXGrid, yGrid: node.defaultYGrid }
   }
 
-  // 再在个人指标中查找
-  const personalNode = findNodeById(personalIndicators.value, indicatorId)
-  if (personalNode) {
-    if (personalNode.defaultXGrid && personalNode.defaultYGrid) {
-      return { xGrid: personalNode.defaultXGrid, yGrid: personalNode.defaultYGrid }
-    }
-  }
-
-  // 默认返回 2x2
-  return { xGrid: 2, yGrid: 2 }
+  // 否则按图表类型推导：饼图4×4，其余4×6
+  return getDefaultSizeByChartType(getIndicatorChartType(node?.indicator))
 }
 
 // 更新指标的默认尺寸到数据库
@@ -1501,13 +1753,14 @@ const deleteDashboard = async (indicatorIds: string[]) => {
     // 在删除前，将当前尺寸保存到指标的默认尺寸中（用于之后恢复）
     const updatePromises = itemsToDelete
       .filter(item => item.indicatorId)
-      .map(item =>
-        updateIndicatorDefaultSize(
+      .map(item => {
+        const fallbackSize = getDefaultSizeByChartType(getIndicatorChartType(item.config?.indicator))
+        return updateIndicatorDefaultSize(
           item.indicatorId!,
-          item.xGrid || 2,
-          item.yGrid || 2
+          item.xGrid || fallbackSize.xGrid,
+          item.yGrid || fallbackSize.yGrid
         )
-      )
+      })
 
     // 等待所有尺寸更新完成
     await Promise.all(updatePromises)

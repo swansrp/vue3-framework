@@ -19,7 +19,7 @@
 import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import { buildFullAxisTooltipHtml } from '../utils/tooltipCommon'
+import { buildFullAxisTooltipHtml, createTooltipPosition } from '../utils/tooltipCommon'
 import { getEffectiveUnit } from '../utils/unitFormat'
 
 import type { ChartDataItem, DataMetric } from '@/framework/components/common/Portal/dashboard/type/ChartTypes'
@@ -514,19 +514,7 @@ export default defineComponent({
           triggerOn: 'mousemove|click',
           confine: false,
           appendToBody: true,
-          position: function (point: any, params: any, dom: any, rect: any, size: any) {
-            let x = point[0]
-            let y = point[1]
-            const boxWidth = size.contentSize[0]
-            const boxHeight = size.contentSize[1]
-            if (x + boxWidth > size.viewSize[0]) {
-              x = point[0] - boxWidth
-            }
-            if (y + boxHeight > size.viewSize[1]) {
-              y = point[1] - boxHeight
-            }
-            return [x, y]
-          },
+          position: createTooltipPosition(() => chartRef.value),
           backgroundColor: 'rgba(255, 255, 255, 0.98)',
           borderColor: '#ddd',
           borderWidth: 1,
@@ -534,7 +522,7 @@ export default defineComponent({
             color: '#333',
             fontSize: 12
           },
-          extraCssText: 'max-height: 600px; max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
+          extraCssText: 'max-height: min(600px, calc(100vh - 24px)); max-width: 600px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
             const hasSecondDimension = isNotEmpty(secondDimensionGroups)
             const hoveredCategory = params[0].axisValue

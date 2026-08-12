@@ -268,3 +268,39 @@ export function buildHighlightTooltipHtml(
   html += `<div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #eee; color: var(--text-secondary, #8c8c8c); font-size: 12px;">${totalText}</div>`
   return html
 }
+
+/**
+ * 生成 tooltip 定位回调（配合 confine:false + appendToBody:true 使用）
+ * 回调的入参与返回值均相对于图表容器，边界判断时结合容器在页面中的偏移换算到视口坐标系
+ * 策略：水平优先鼠标右侧、垂直优先鼠标下侧，放不下时翻转，最后夹在视口内，
+ * 避免靠上的图表 tooltip 向上溢出屏幕顶部导致显示不全
+ */
+export function createTooltipPosition(getContainer: () => HTMLElement | null | undefined) {
+  return (point: number[], _params: any, _dom: any, _rect: any, size: any): [number, number] => {
+    const [boxWidth, boxHeight] = size.contentSize
+    const containerRect = getContainer()?.getBoundingClientRect()
+    const offsetX = containerRect?.left ?? 0
+    const offsetY = containerRect?.top ?? 0
+    const viewWidth = document.documentElement.clientWidth
+    const viewHeight = document.documentElement.clientHeight
+    const gap = 12
+    const margin = 4
+
+    // 水平方向调整：优先鼠标右侧，放不下翻转到左侧
+    let x = point[0] + gap
+    if (offsetX + x + boxWidth > viewWidth - margin) {
+      x = point[0] - boxWidth - gap
+    }
+
+    // 垂直方向调整：优先鼠标下侧，放不下翻转到上侧
+    let y = point[1] + gap
+    if (offsetY + y + boxHeight > viewHeight - margin) {
+      y = point[1] - boxHeight - gap
+    }
+
+    // 夹在视口内，保证 tooltip 完整可见
+    x = Math.max(margin - offsetX, Math.min(x, viewWidth - margin - boxWidth - offsetX))
+    y = Math.max(margin - offsetY, Math.min(y, viewHeight - margin - boxHeight - offsetY))
+    return [x, y]
+  }
+}

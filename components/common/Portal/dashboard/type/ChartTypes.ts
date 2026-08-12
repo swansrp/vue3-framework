@@ -2,7 +2,7 @@
 export interface DataMetric {
   dataName: string                    // 数据名称
   dataField: string                   // 英文字段名
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'  // 图表类型
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar' | 'comparisonBar'  // 图表类型
   color: string                       // 数据项整体颜色
   yAxisPosition: 'left' | 'right'     // 坐标轴位置（饼图不需要）
   stackGroup?: string                 // 堆叠组标识，相同值的会堆叠在一起
@@ -48,7 +48,7 @@ export interface UniversalChartProps {
   height?: string
   width?: string
   categories?: string[]  // 可选的x轴分类数据
-  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar'  // 直接指定图表类型
+  chartType: 'bar' | 'line' | 'ptLine' | 'pie' | 'metricsPie' | 'treeStackedBar' | 'rankingBar' | 'comparisonBar'  // 直接指定图表类型
 }
 
 // 图表类型枚举

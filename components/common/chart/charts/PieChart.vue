@@ -20,6 +20,7 @@ import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { getEffectiveUnit } from '../utils/unitFormat'
+import { createTooltipPosition } from '../utils/tooltipCommon'
 
 import type {
   ChartDataItem,
@@ -323,7 +324,7 @@ export default defineComponent({
               fontSize: 12,
             },
             extraCssText:
-              'max-height: 500px; max-width: 500px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
+              'max-height: min(500px, calc(100vh - 24px)); max-width: 500px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
             formatter: (params: any) => {
               // 按名称查找指标（pieData 可能已排序/过滤，不能直接按索引对应）
               const getMetricByName = (name: string) =>
@@ -549,25 +550,7 @@ export default defineComponent({
           triggerOn: 'mousemove|click', // 鼠标移动或点击时触发
           confine: false, // 不限制在图表容器内
           appendToBody: true, // 添加到body，扩大触发范围
-          position: function (point: any, params: any, dom: any, rect: any, size: any) {
-            // 动态调整tooltip位置，确保不超出屏幕边界
-            let x = point[0]
-            let y = point[1]
-            const boxWidth = size.contentSize[0]
-            const boxHeight = size.contentSize[1]
-
-            // 水平方向调整
-            if (x + boxWidth > size.viewSize[0]) {
-              x = point[0] - boxWidth
-            }
-
-            // 垂直方向调整
-            if (y + boxHeight > size.viewSize[1]) {
-              y = point[1] - boxHeight
-            }
-
-            return [x, y]
-          },
+          position: createTooltipPosition(() => chartRef.value),
           backgroundColor: 'rgba(255, 255, 255, 0.98)',
           borderColor: '#ddd',
           borderWidth: 1,
@@ -576,7 +559,7 @@ export default defineComponent({
             fontSize: 12,
           },
           extraCssText:
-            'max-height: 500px; max-width: 500px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
+            'max-height: min(500px, calc(100vh - 24px)); max-width: 500px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 6px;',
           formatter: (params: any) => {
             const unit = getEffectiveUnit(pieMetric)
             const fmt = (v: number) => {

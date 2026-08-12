@@ -21,7 +21,7 @@
           <div class="skip-chart-option">
             <a-checkbox
               v-model:checked="skipChartGeneration"
-              :disabled="isEditMode || isNonLeafNode"
+              :disabled="isNonLeafNode || (isEditMode && hasSavedChartConfig)"
             >
               跳过图表配置（仅保存指标名称）
             </a-checkbox>
@@ -177,6 +177,16 @@ const isNonLeafNode = computed(() => {
   return Array.isArray(props.editData.children) && props.editData.children.length > 0
 })
 
+// 判断保存的配置是否带有实际图表配置（indicator 非空）
+// “跳过图表配置”保存的节点 indicator 为空字符串，编辑时需恢复勾选状态
+const hasSavedChartConfig = computed(() => {
+  const ind = props.editData?.indicator
+  if (!ind) return false
+  if (typeof ind === 'object') return Object.keys(ind).length > 0
+  const str = String(ind).trim()
+  return str !== '' && str !== '{}'
+})
+
 // 配置重置状态
 const isConfigReset = ref(false)
 
@@ -207,12 +217,12 @@ watch(
         indicatorSubTitle.value = props.editData.subTitle || ''
         indicatorDescription.value = props.editData.description || ''
 
-        // 如果是非叶子节点，自动跳过图表配置
-        if (isNonLeafNode.value) {
+        // 非叶子节点，或以“跳过图表配置”保存的节点（indicator 为空），恢复跳过勾选状态
+        if (isNonLeafNode.value || !hasSavedChartConfig.value) {
           skipChartGeneration.value = true
         } else {
           skipChartGeneration.value = false
-          // 只有叶子节点才加载配置数据
+          // 只有带图表配置的叶子节点才加载配置数据
           await loadEditData()
         }
       } else if (!props.isEditMode && props.editData) {
