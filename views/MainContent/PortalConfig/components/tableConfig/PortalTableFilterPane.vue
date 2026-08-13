@@ -613,6 +613,25 @@ watch(showAddFilterModal, (newVal) => {
   }
 })
 
+// 加载筛选项列表
+const loadFilterList = async (tableId: number) => {
+  loadingFilters.value = true
+  try {
+    const res = await getPortalTableFilterList(tableId)
+    filterList.value = res.payload?.records || []
+    // 默认选中第一个
+    if (filterList.value.length > 0 && !selectedFilter.value) {
+      selectedFilter.value = filterList.value[0]
+    }
+    emit('count-change', filterList.value.length)
+  } catch (error) {
+    console.error('加载筛选项失败:', error)
+    filterList.value = []
+  } finally {
+    loadingFilters.value = false
+  }
+}
+
 // 切换表格时重置选中并加载筛选项列表
 watch(
   () => props.tableId,
@@ -649,25 +668,6 @@ const handleSelectFilter = (filter: PortalTableFilterVO) => {
   // 如果有 dictCode，自动加载
   if (filter.dictCode) {
     loadFilterDictOptions()
-  }
-}
-
-// 加载筛选项列表
-const loadFilterList = async (tableId: number) => {
-  loadingFilters.value = true
-  try {
-    const res = await getPortalTableFilterList(tableId)
-    filterList.value = res.payload?.records || []
-    // 默认选中第一个
-    if (filterList.value.length > 0 && !selectedFilter.value) {
-      selectedFilter.value = filterList.value[0]
-    }
-    emit('count-change', filterList.value.length)
-  } catch (error) {
-    console.error('加载筛选项失败:', error)
-    filterList.value = []
-  } finally {
-    loadingFilters.value = false
   }
 }
 
