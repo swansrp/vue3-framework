@@ -312,6 +312,10 @@ const condition = computed(() => {
               if (valuesField && Array.isArray(valuesField) && valuesField.includes('$1')) {
                 const newCond = { ...cond }
                 newCond.values = valuesField.flatMap(v => v === '$1' ? (Array.isArray(value) ? value : [value]) : [v])
+                // 多选展开后为多值时 EQUAL 需转为 IN：后端 EQUAL 只取 value[0]，会丢失其余选中值
+                if (String(newCond.relation) === String(FILTER_TYPE.EQUAL) && newCond.values.length > 1) {
+                  newCond.relation = FILTER_TYPE.IN
+                }
                 // 如果原始配置用的是 value 字段，保持使用 value
                 if (cond.value && !cond.values) {
                   newCond.value = newCond.values
