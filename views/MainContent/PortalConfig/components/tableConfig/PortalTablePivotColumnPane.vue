@@ -93,7 +93,7 @@
           </div>
           <a-empty
             v-if="pivotColumnList.length === 0"
-            description="暂无透视列"
+            description="暂无透视列（不配置时按度量直接聚合，不拆分横向列）"
           />
         </div>
       </div>
@@ -479,7 +479,8 @@ const handleSavePivotColumn = async () => {
       await updatePortalPivotColumn(selectedPivotColumn.value)
     } else {
       const res = await addPortalPivotColumn(selectedPivotColumn.value)
-      selectedPivotColumn.value.id = res.payload
+      // /insert 返回的是完整实体(含 id)，兼容纯 id 返回
+      selectedPivotColumn.value.id = res.payload?.id ?? res.payload
     }
     message.success('保存成功')
     // 先记录当前选中 id(loadPivotColumnList 会默认选中第一列，须在其之前取)，刷新后恢复选中

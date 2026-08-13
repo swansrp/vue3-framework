@@ -151,7 +151,7 @@
                  whiteSpace: 'nowrap',
                  overflow: 'hidden',
                  height: '100%'}"
-        v-html="strLF2HtmlLF(displayMap.get(index+column.dataIndex).current || record[column.dataIndex])"
+        v-html="strLF2HtmlLF(displayMap.get(index+column.dataIndex)?.current || record[column.dataIndex])"
       ></div>
     </a-badge-ribbon>
   </template>

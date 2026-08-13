@@ -447,6 +447,7 @@ onMounted(() => {
         v-if="isPivotMode"
         :portal-table-config="portalTableConfig"
         :condition="condition"
+        theme="light"
       />
       <portal
         v-else

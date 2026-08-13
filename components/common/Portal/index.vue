@@ -2225,6 +2225,11 @@ const init = async () => {
   console.debug(props)
   updateTableWidthAndHeight()
   initQueryCondition()
+  // 外部指定行主键时立即生效: 不等 initConfig 完成, 避免窗口期内 s-table 仍按默认 'id' 取 key
+  // (前端聚合数据行无 id, key 全 undefined 会触发 surely-table duplicate key 渲染错位)
+  if (props.rowKeyField) {
+    config.rowKey = props.rowKeyField
+  }
   await initConfig()
   initFinished = true
 
@@ -2616,13 +2621,6 @@ watch(
   }
 )
 
-watch(
-  () => data.value,
-  () => {
-    config.total = data.value?.length || 0
-    initData(data.value || [])
-  }
-)
 watch(
   () => [columnDisplayCustom.value, columnArray.value],
   () => {

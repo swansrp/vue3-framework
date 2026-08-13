@@ -45,78 +45,97 @@
       <div class="section-content">
         <a-form
           :model="tableForm"
-          layout="inline"
         >
-          <a-form-item label="表格编码">
-            <a-input
-              v-model:value="tableForm.tableCode"
-              placeholder="请输入表格编码"
-              style="width: 150px"
-            />
-          </a-form-item>
-          <a-form-item label="筛选栏宽度">
-            <a-input-number
-              v-model:value="tableForm.filterWidth"
-              :min="100"
-              :max="500"
-              style="width: 80px"
-            />
-          </a-form-item>
-          <a-form-item label="标题间隔">
-            <a-input-number
-              v-model:value="tableForm.paddingTh"
-              :min="0"
-              :max="50"
-              style="width: 40px"
-            />
-          </a-form-item>
-          <a-form-item label="条目间隔">
-            <a-input-number
-              v-model:value="tableForm.paddingTd"
-              :min="0"
-              :max="50"
-              style="width: 40px"
-            />
-          </a-form-item>
-          <a-form-item label="下载">
-            <a-select
-              v-model:value="tableForm.downloadAble"
-              style="width: 80px"
+          <!-- 4 列网格排布: 两行、标签与控件逐列对齐, 不随窗口宽度换行错乱 -->
+          <div class="basic-form-grid">
+            <a-form-item label="表格编码">
+              <a-input
+                v-model:value="tableForm.tableCode"
+                placeholder="请输入表格编码"
+              />
+            </a-form-item>
+            <a-form-item label="筛选栏宽度">
+              <a-input-number
+                v-model:value="tableForm.filterWidth"
+                :min="100"
+                :max="500"
+                style="width: 100%"
+              />
+            </a-form-item>
+            <a-form-item label="标题间隔">
+              <a-input-number
+                v-model:value="tableForm.paddingTh"
+                :min="0"
+                :max="50"
+                style="width: 100%"
+              />
+            </a-form-item>
+            <a-form-item label="条目间隔">
+              <a-input-number
+                v-model:value="tableForm.paddingTd"
+                :min="0"
+                :max="50"
+                style="width: 100%"
+              />
+            </a-form-item>
+            <a-form-item label="下载">
+              <a-select
+                v-model:value="tableForm.downloadAble"
+              >
+                <a-select-option value="1">
+                  允许
+                </a-select-option>
+                <a-select-option value="0">
+                  禁用
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="透视模式">
+              <a-select
+                v-model:value="tableForm.pivotMode"
+              >
+                <a-select-option value="1">
+                  开启
+                </a-select-option>
+                <a-select-option value="0">
+                  关闭
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <!-- 锁定方向(仅透视模式): s-table 两边同时锁定会异常, 只能选一边;
+                 左锁→行维度字段逐个勾选左锁定, 右锁→度量列逐个勾选右锁定 -->
+            <a-form-item
+              v-if="tableForm.pivotMode === '1'"
+              label="锁定方向"
             >
-              <a-select-option value="1">
-                允许
-              </a-select-option>
-              <a-select-option value="0">
-                禁用
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="透视模式">
-            <a-select
-              v-model:value="tableForm.pivotMode"
-              style="width: 80px"
-            >
-              <a-select-option value="1">
-                开启
-              </a-select-option>
-              <a-select-option value="0">
-                关闭
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="状态">
-            <a-select
-              v-model:value="tableForm.status"
-              style="width: 80px"
-            >
-              <a-select-option value="1">
-                启用
-              </a-select-option>
-              <a-select-option value="0">
-                禁用
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+              <a-select
+                v-model:value="pivotLockSide"
+                @change="onLockSideChange"
+              >
+                <a-select-option value="">
+                  不锁定
+                </a-select-option>
+                <a-select-option value="left">
+                  左锁
+                </a-select-option>
+                <a-select-option value="right">
+                  右锁
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="状态">
+              <a-select
+                v-model:value="tableForm.status"
+              >
+                <a-select-option value="1">
+                  启用
+                </a-select-option>
+                <a-select-option value="0">
+                  禁用
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </div>
         </a-form>
 
         <!-- 筛选列配置(透视模式下由行维度字段配置取代，隐藏) -->
@@ -171,12 +190,21 @@
               class="pivot-group-order-item"
             >
               <span class="measure-index">{{ index + 1 }}</span>
+              <!-- 字段名靠左: 低维度在左, 右侧控件列固定顺序, 有无排序均对齐 -->
               <span class="pivot-group-order-name">{{ pivotGroupFieldDisplayName(fieldProp) }}</span>
               <a-checkbox
                 :checked="!pivotGroupHiddenFields.includes(fieldProp)"
                 @change="(e: any) => togglePivotGroupFieldDisplay(fieldProp, e.target.checked)"
               >
                 表格显示
+              </a-checkbox>
+              <!-- 左锁定方向下逐字段勾选锁定 -->
+              <a-checkbox
+                v-if="pivotLockSide === 'left'"
+                :checked="pivotGroupFixedFields.includes(fieldProp)"
+                @change="(e: any) => togglePivotGroupFieldFixed(fieldProp, e.target.checked)"
+              >
+                锁定
               </a-checkbox>
               <!-- 聚合结果排序: 0=正序 1=倒序(PORTAL_SORT_DICT), 未配置=不排序 -->
               <a-select
@@ -194,13 +222,8 @@
                   倒序
                 </a-select-option>
               </a-select>
-              <!-- 排序优先级: 多个字段配置排序时按行维度顺序生效, 随 ↑↓ 调整自动重算 -->
-              <a-tag
-                v-if="pivotGroupSortPriority[fieldProp]"
-                color="blue"
-              >
-                排序优先级 {{ pivotGroupSortPriority[fieldProp] }}
-              </a-tag>
+              <!-- 排序优先级占位固定宽度: 无排序的行保持对齐 -->
+              <span class="pivot-sort-priority">{{ pivotGroupSortPriority[fieldProp] || '—' }}</span>
               <a-button
                 type="text"
                 size="small"
@@ -235,7 +258,7 @@
             <a-button
               type="primary"
               size="small"
-              @click="pivotMeasureRows.push({ field: '', label: '', agg: 'sum' })"
+              @click="pivotMeasureRows.push({ field: '', label: '', agg: 'sum', fixed: false })"
             >
               <template #icon>
                 <PlusOutlined />
@@ -290,6 +313,13 @@
                   最大
                 </a-select-option>
               </a-select>
+              <!-- 右锁定方向下逐度量勾选锁定 -->
+              <a-checkbox
+                v-if="pivotLockSide === 'right'"
+                v-model:checked="measure.fixed"
+              >
+                锁定
+              </a-checkbox>
               <a-button
                 type="link"
                 danger
@@ -365,13 +395,45 @@ const movePivotGroupField = (index: number, delta: number) => {
 }
 // 隐藏的行维度字段(仍参与 group by，仅不在表格中显示，常用于行粒度细化/筛选目标)
 const pivotGroupHiddenFields = ref<string[]>([])
-// 切换行维度字段是否在表格中显示
+// 锁定方向: ''=不锁定 left=左锁(行维度逐个勾选) right=右锁(度量逐个勾选);
+// s-table 两边同时锁定会渲染异常, 切换方向时清空对侧勾选
+const pivotLockSide = ref<'' | 'left' | 'right'>('')
+// 左锁定的行维度字段列表(保存时写入 groupByFields JSON 项的 fixed)
+const pivotGroupFixedFields = ref<string[]>([])
+// 切换行维度字段是否在表格中显示(隐藏时同步清除左锁定勾选, 避免残留无 UI 入口的锁定状态)
 const togglePivotGroupFieldDisplay = (fieldProp: string, display: boolean) => {
   const idx = pivotGroupHiddenFields.value.indexOf(fieldProp)
   if (display && idx >= 0) {
     pivotGroupHiddenFields.value.splice(idx, 1)
   } else if (!display && idx < 0) {
     pivotGroupHiddenFields.value.push(fieldProp)
+    const fixedIdx = pivotGroupFixedFields.value.indexOf(fieldProp)
+    if (fixedIdx >= 0) {
+      pivotGroupFixedFields.value.splice(fixedIdx, 1)
+    }
+  }
+}
+// 切换行维度字段左锁定勾选
+const togglePivotGroupFieldFixed = (fieldProp: string, fixed: boolean) => {
+  const idx = pivotGroupFixedFields.value.indexOf(fieldProp)
+  if (fixed && idx < 0) {
+    pivotGroupFixedFields.value.push(fieldProp)
+  } else if (!fixed && idx >= 0) {
+    pivotGroupFixedFields.value.splice(idx, 1)
+  }
+}
+// 锁定方向切换: 切到某方向时默认全选该方向字段(可手动取消), 同时清空对侧勾选(保证只锁一边)
+const onLockSideChange = () => {
+  if (pivotLockSide.value === 'left') {
+    // 只全选可见字段: 隐藏字段无「锁定」勾选入口, 全选会落库无感知的锁定状态
+    pivotGroupFixedFields.value = pivotGroupFields.value.filter(f => !pivotGroupHiddenFields.value.includes(f))
+    pivotMeasureRows.value.forEach((m) => { m.fixed = false })
+  } else if (pivotLockSide.value === 'right') {
+    pivotGroupFixedFields.value = []
+    pivotMeasureRows.value.forEach((m) => { m.fixed = true })
+  } else {
+    pivotGroupFixedFields.value = []
+    pivotMeasureRows.value.forEach((m) => { m.fixed = false })
   }
 }
 // 行维度字段排序配置(作用于 group by 后的聚合行; 0=正序 1=倒序, 无 key=不排序)
@@ -407,7 +469,7 @@ const parsePivotMeasures = (json: string | undefined) => {
   try {
     const parsed = JSON.parse(json)
     pivotMeasureRows.value = Array.isArray(parsed)
-      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', agg: m.agg || 'sum' }))
+      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', agg: m.agg || 'sum', fixed: m.fixed === true }))
       : []
   } catch (e) {
     console.warn('解析透视度量配置失败:', e)
@@ -451,9 +513,10 @@ watch(
     pivotGroupSorts.value = {}
     if (rawGroupByFields.trim().startsWith('[')) {
       try {
-        const list = JSON.parse(rawGroupByFields) as Array<{ field: string; display?: boolean; sort?: number }>
+        const list = JSON.parse(rawGroupByFields) as Array<{ field: string; display?: boolean; sort?: number; fixed?: boolean }>
         pivotGroupFields.value = list.map((item) => item.field)
         pivotGroupHiddenFields.value = list.filter((item) => item.display === false).map((item) => item.field)
+        pivotGroupFixedFields.value = list.filter((item) => item.fixed === true).map((item) => item.field)
         list.forEach((item) => {
           if (item.sort === 0 || item.sort === 1) {
             pivotGroupSorts.value[item.field] = item.sort
@@ -463,12 +526,18 @@ watch(
         console.warn('解析行维度配置失败，按逗号串兜底:', e)
         pivotGroupFields.value = rawGroupByFields.split(',').map((s: string) => s.trim()).filter((s: string) => s)
         pivotGroupHiddenFields.value = []
+        pivotGroupFixedFields.value = []
       }
     } else {
       pivotGroupFields.value = rawGroupByFields.split(',').map((s: string) => s.trim()).filter((s: string) => s)
       pivotGroupHiddenFields.value = []
+      pivotGroupFixedFields.value = []
     }
     parsePivotMeasures(table.pivotMeasures)
+    // 锁定方向由两侧已存配置推导(界面保证只锁一边: 行维度有锁定→左锁, 度量有锁定→右锁)
+    pivotLockSide.value = pivotGroupFixedFields.value.length > 0
+      ? 'left'
+      : (pivotMeasureRows.value.some((m) => m.fixed) ? 'right' : '')
   },
   { immediate: true }
 )
@@ -506,14 +575,17 @@ const handleSaveTable = async () => {
 
     // 透视模式：序列化行维度与度量列配置
     if (table.pivotMode === '1') {
-      // 行维度：按用户调整的顺序序列化为 JSON(顺序即分组层级，display=false 仅参与 group by 不显示，sort=聚合行排序)
+      // 行维度：按用户调整的顺序序列化为 JSON(顺序即分组层级，display=false 仅参与 group by 不显示，sort=聚合行排序，fixed=左锁方向下的锁定勾选)
       const groupConfig = pivotGroupFields.value.map((field) => {
-        const cfg: { field: string; display: boolean; sort?: number } = {
+        const cfg: { field: string; display: boolean; sort?: number; fixed?: boolean } = {
           field,
           display: !pivotGroupHiddenFields.value.includes(field),
         }
         if (pivotGroupSorts.value[field] === 0 || pivotGroupSorts.value[field] === 1) {
           cfg.sort = pivotGroupSorts.value[field]
+        }
+        if (pivotLockSide.value === 'left' && pivotGroupFixedFields.value.includes(field)) {
+          cfg.fixed = true
         }
         return cfg
       })
@@ -527,8 +599,10 @@ const handleSaveTable = async () => {
         }
       })
 
-      // 度量列：过滤掉未选字段的空行
-      const validMeasures = pivotMeasureRows.value.filter((m) => m.field)
+      // 度量列：过滤掉未选字段的空行(非右锁方向时清掉锁定标记, 保证只锁一边)
+      const validMeasures = pivotMeasureRows.value
+        .filter((m) => m.field)
+        .map((m) => ({ ...m, fixed: pivotLockSide.value === 'right' ? m.fixed === true : false }))
       table.pivotMeasures =
         validMeasures.length > 0 ? JSON.stringify(validMeasures) : undefined
       // 保存后同步移除空行，界面与落库数据一致
@@ -559,6 +633,32 @@ const handleSaveTable = async () => {
 
 .section-content {
   padding: 16px;
+}
+
+// 基础配置表单: 4 列网格两行排布, 标签右对齐固定宽、控件擑满格宽, 逐列对齐
+.basic-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 24px;
+
+  :deep(.ant-form-item) {
+    margin: 0;
+  }
+
+  :deep(.ant-form-item-label) {
+    // 84px 容纳五字标签(筛选栏宽度)+冒号, 避免贴住控件
+    flex: 0 0 84px;
+    text-align: right;
+
+    > label {
+      color: var(--text-secondary);
+    }
+  }
+
+  :deep(.ant-form-item-control) {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 // 聚合配置 tab 度量行序号
@@ -636,7 +736,7 @@ const handleSaveTable = async () => {
   }
 }
 
-// 行维度顺序调整栏
+// 行维度顺序调整栏(字段名靠左, 右侧控件列固定宽度保证逐行对齐)
 .pivot-group-order {
   padding: 10px 16px;
   border-top: 1px solid var(--border-subtle);
@@ -652,10 +752,25 @@ const handleSaveTable = async () => {
   .pivot-group-order-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 
     .pivot-group-order-name {
       flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    // 排序优先级固定占位: 无排序的行显示 "—", 保证 ↑↓ 按钮逐行对齐
+    .pivot-sort-priority {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      flex-shrink: 0;
+      font-size: 12px;
+      color: var(--accent, #1677ff);
     }
   }
 }

@@ -679,7 +679,8 @@ const handleSaveFilter = async (filter: PortalTableFilterVO) => {
       await updatePortalTableFilter(filter)
     } else {
       const res = await addPortalTableFilter(filter)
-      filter.id = res.payload
+      // /insert 返回的是完整实体(含 id)，兼容纯 id 返回
+      filter.id = res.payload?.id ?? res.payload
     }
     message.success('保存成功')
     await loadFilterList(props.tableId!)
@@ -856,10 +857,12 @@ const handleFieldToggle = async (
 
       const res = await addPortalTableFilter(newFilter)
       if (res.payload) {
-        newFilter.id = res.payload
+        // /insert 返回的是完整实体(含 id)，兼容纯 id 返回
+        const newId = res.payload?.id ?? res.payload
+        newFilter.id = newId
         const newItem: ModalFilterItem = {
-          uid: `item-${res.payload}`,
-          id: res.payload,
+          uid: `item-${newId}`,
+          id: newId,
           code: field.property,
           label: field.displayName,
           property: field.property,

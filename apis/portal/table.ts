@@ -64,6 +64,8 @@ export interface PivotMeasureVO {
   label?: string
   /** 聚合方式 sum/count/countDistinct/avg/min/max */
   agg?: string
+  /** 是否右锁定(s-table 两边同时锁定会异常, 与行维度左锁定互斥) */
+  fixed?: boolean
 }
 
 /** 透视聚合查询请求 */

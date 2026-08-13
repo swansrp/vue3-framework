@@ -15,6 +15,8 @@ import { ConditionListType } from '@/framework/components/common/AdvancedSearch/
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { dictStore, useTreeStore } from '@/framework/store/common'
+import PivotDrillContent from './PivotDrillContent.vue'
+import PivotDrillContentDark from './PivotDrillContentDark.vue'
 
 /**
  * 透视报表组件(纯表格, 无外壳)
@@ -28,9 +30,12 @@ const props = withDefaults(
     portalTableConfig: PortalTableVO
     /** 查询条件(来自 table filter) */
     condition?: Array<ConditionListType>
+    /** 主题: dark=深色外壳(DarkTable)内, light=浅色外壳内(钻取数字等局部颜色跟随浅色) */
+    theme?: 'dark' | 'light'
   }>(),
   {
-    condition: () => []
+    condition: () => [],
+    theme: 'dark'
   }
 )
 
@@ -42,6 +47,16 @@ const treeDict = useTreeStore()
 const rows = ref<any[]>([])
 const portalUrl = ref('')
 const pivotColumns = ref<PortalPivotColumnVO[]>([])
+/** 透视列配置是否已加载完成(Portal 仅在初始化时读取 customColumns,
+ *  必须等透视列列表就绪后再挂载, 否则可能以 TOTAL 退化列形态锁死表头) */
+const pivotColumnLoaded = ref(false)
+/** 未配置透视列时退化为单个无条件"总计"列(后端 CASE WHEN 1=1 即纯度量聚合) */
+const TOTAL_PIVOT = { itemValue: 'total', itemName: '' } as unknown as PortalPivotColumnVO
+const effectivePivotColumns = computed<PortalPivotColumnVO[]>(() =>
+  pivotColumns.value.length > 0 ? pivotColumns.value : [TOTAL_PIVOT]
+)
+/** 是否配置了透视列(影响表头形态: 无透视列时度量名直接作单层表头) */
+const hasPivotColumns = computed(() => pivotColumns.value.length > 0)
 // Portal 列元数据: property -> layout(displayName/fieldType/reference/width)
 const columnMetaMap = ref<Record<string, any>>({})
 // 行维度字典翻译: field -> { value: label }
@@ -69,14 +84,16 @@ const groupFieldConfigs = computed(() => {
   }
   if (raw.startsWith('[')) {
     try {
-      const list = JSON.parse(raw) as Array<{ field: string; display?: boolean; sort?: number }>
+      const list = JSON.parse(raw) as Array<{ field: string; display?: boolean; sort?: number; fixed?: boolean }>
       return list
         .filter((item) => item.field)
         .map((item) => ({
           field: item.field,
           display: item.display !== false,
           // 聚合行排序: 0=正序 1=倒序(PORTAL_SORT_DICT), 未配置不排序
-          sort: item.sort === 0 || item.sort === 1 ? item.sort : undefined
+          sort: item.sort === 0 || item.sort === 1 ? item.sort : undefined,
+          // 左锁定(逐字段配置, 与度量列右锁定互斥)
+          fixed: item.fixed === true
         }))
     } catch (e) {
       console.error('解析行维度配置失败，按逗号串兜底:', e)
@@ -86,16 +103,17 @@ const groupFieldConfigs = computed(() => {
     .split(',')
     .map((s: string) => s.trim())
     .filter((s: string) => s)
-    .map((f: string) => ({ field: f, display: true, sort: undefined as number | undefined }))
+    .map((f: string) => ({ field: f, display: true, sort: undefined as number | undefined, fixed: false }))
 })
 
 /** 全部行维度字段(含隐藏项，均参与 group by) */
 const groupFields = computed(() => groupFieldConfigs.value.map(c => c.field))
 
-/** 显示的行维度字段(隐藏项仅参与 group by 不渲染列) */
-const visibleGroupFields = computed(() =>
-  groupFieldConfigs.value.filter(c => c.display).map(c => c.field)
-)
+/** 显示的行维度字段配置(隐藏项仅参与 group by 不渲染列) */
+const visibleGroupFieldConfigs = computed(() => groupFieldConfigs.value.filter(c => c.display))
+
+/** 显示的行维度字段(数据翻译/请求组装等处使用) */
+const visibleGroupFields = computed(() => visibleGroupFieldConfigs.value.map(c => c.field))
 
 /** 聚合后行排序(按行维度配置顺序生效, 作用于 group by 后的结果行) */
 const sortList = computed(() =>
@@ -188,15 +206,18 @@ const loadConfig = async () => {
 
     const columnRes = await getPortalPivotColumnList(props.portalTableConfig.id!)
     pivotColumns.value = columnRes?.payload?.records || []
+    pivotColumnLoaded.value = true
     await loadData()
   } catch (e) {
     console.error('加载透视报表配置失败:', e)
+    // 配置加载异常也放行挂载, 避免表格永久空白(退化为 TOTAL 形态)
+    pivotColumnLoaded.value = true
   }
 }
 
-/** 组装请求并查询透视数据 */
+/** 组装请求并查询透视数据(透视列可为空, 空时退化为无条件总计列) */
 const loadData = async () => {
-  if (!portalUrl.value || !groupFields.value.length || !pivotColumns.value.length || !measures.value.length) {
+  if (!portalUrl.value || !groupFields.value.length || !measures.value.length) {
     return
   }
   try {
@@ -207,7 +228,7 @@ const loadData = async () => {
         value: f,
         label: columnMetaMap.value[f]?.displayName || f
       })),
-      pivotColumns: pivotColumns.value.map(p => ({
+      pivotColumns: effectivePivotColumns.value.map(p => ({
         value: p.itemValue!,
         label: p.itemName!,
         condition: p.condition ? JSON.parse(p.condition) : {}
@@ -230,20 +251,23 @@ watch(() => props.condition, () => {
  * Portal 动态列: 行维度列 + 度量子列
  * 多个度量时: 度量子列通过 displayGroupName 由 Portal multiHeader 生成透视父表头(双层)
  * 单个度量时: 不分组, 透视列名直接作为单层表头
+ * 无透视列时: 度量名直接作单层表头(退化的总计列不产生父表头)
  * 数据已预翻译/预格式化, 列按纯文本展示(fieldType 不走 parse 转换)
  */
 const portalColumns = computed(() => {
   const cols: ColumnType[] = []
   const multiMeasure = measures.value.length > 1
+  const hasPivot = hasPivotColumns.value
   let order = 2
   // 行维度只渲染显示字段(隐藏字段仍参与 group by，用于行粒度细化/筛选目标)
-  for (const f of visibleGroupFields.value) {
+  for (const cfg of visibleGroupFieldConfigs.value) {
     cols.push({
-      title: columnMetaMap.value[f]?.displayName || f,
-      dataIndex: f,
-      key: f,
-      width: columnMetaMap.value[f]?.width || 140,
-      fixed: true,
+      title: columnMetaMap.value[cfg.field]?.displayName || cfg.field,
+      dataIndex: cfg.field,
+      key: cfg.field,
+      width: columnMetaMap.value[cfg.field]?.width || 140,
+      // 逐字段左锁定(配置存于 groupByFields JSON 项的 fixed, 与度量列右锁定互斥)
+      fixed: cfg.fixed,
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
       order: order++,
@@ -255,17 +279,19 @@ const portalColumns = computed(() => {
       detailShow: false
     } as ColumnType)
   }
-  for (const pv of pivotColumns.value) {
+  for (const pv of effectivePivotColumns.value) {
     for (const m of measures.value) {
       cols.push({
-        // 单度量: 透视列名即表头; 多度量: 表头为度量名, 父表头为透视列名
-        title: multiMeasure ? m.label || m.field : pv.itemName,
+        // 有透视列: 单度量透视列名作表头, 多度量度量名作表头/透视列名作父表头; 无透视列: 度量名直接作单层表头
+        title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
         dataIndex: `${pv.itemValue}__${m.field}`,
         key: `${pv.itemValue}__${m.field}`,
         width: 120,
+        // 逐度量右锁定(配置存于 pivotMeasures JSON 项的 fixed, 与行维度左锁定互斥)
+        fixed: m.fixed === true ? 'right' : false,
         fieldType: FIELD_TYPE.NUMBER,
         contentAlign: 'right',
-        displayGroupName: multiMeasure ? pv.itemName : undefined,
+        displayGroupName: hasPivot && multiMeasure ? pv.itemName : undefined,
         tooltip: false,
         order: order++,
         editable: false,
@@ -280,13 +306,17 @@ const portalColumns = computed(() => {
   return cols
 })
 
-/** 表格数据: 行维度字典翻译, 度量数字格式化(行主键由 Portal 的 AUTO_UUID_ROW_KEY 机制自动分配) */
+let pivotRowKeySeq = 0
+/** 表格数据: 行维度字典翻译, 度量数字格式化 */
 const dataSource = computed(() => rows.value.map((row) => {
   const item: any = {}
+  // 行主键由 pivot 自行预分配: Portal 在 initConfig 完成前 config.rowKey 仍是 'id'(透视行无 id),
+  // 若依赖 Portal 的 uuid 机制, 存在时序窗口使行 key 全为 undefined, surely-table 因重复 key 渲染错位
+  item[AUTO_UUID_ROW_KEY] = `pivot-row-${++pivotRowKeySeq}`
   for (const f of visibleGroupFields.value) {
     item[f] = translate(f, row[f])
   }
-  for (const pv of pivotColumns.value) {
+  for (const pv of effectivePivotColumns.value) {
     for (const m of measures.value) {
       const key = `${pv.itemValue}__${m.field}`
       item[key] = formatNumber(row[key])
@@ -298,7 +328,7 @@ const dataSource = computed(() => rows.value.map((row) => {
 /** 汇总行数据: 按度量聚合方式汇总——sum/count 求和, min/max 取列极值, avg/countDistinct 无法由聚合值推导留空 */
 const summaryData = computed(() => {
   const summary: Record<string, any> = {}
-  for (const pv of pivotColumns.value) {
+  for (const pv of effectivePivotColumns.value) {
     for (const m of measures.value) {
       const key = `${pv.itemValue}__${m.field}`
       // 排除空值(SQL NULL/空串), 避免 min/max 被 0 污染
@@ -323,14 +353,14 @@ const summaryData = computed(() => {
 
 /** 度量子列 key 列表(${透视列标识}__${度量字段}, 用于动态插槽与钻取定位) */
 const measureKeys = computed(() =>
-  pivotColumns.value.flatMap(pv => measures.value.map(m => `${pv.itemValue}__${m.field}`))
+  effectivePivotColumns.value.flatMap(pv => measures.value.map(m => `${pv.itemValue}__${m.field}`))
 )
 
-/** 动态列必须就绪后才能挂载 Portal(Portal 仅在初始化时读取 customColumns) */
+/** 动态列必须就绪后才能挂载 Portal(Portal 仅在初始化时读取 customColumns; 透视列可为空=退化为总计列) */
 const ready = computed(() =>
   !!portalUrl.value &&
+  pivotColumnLoaded.value &&
   visibleGroupFields.value.length > 0 &&
-  pivotColumns.value.length > 0 &&
   measures.value.length > 0
 )
 
@@ -341,6 +371,11 @@ const getDownloadFileName = () => router.currentRoute.value.meta.title as string
 const drillOpen = ref(false)
 const drillTitle = ref('')
 const drillCondition = ref<ConditionListType>({ conditionList: [] })
+
+// 抽屉外观随主题: 浅色外壳→antd 默认浅色抽屉, 深色外壳→保持原深色
+const drillDrawerBodyStyle = computed(() => (props.theme === 'light' ? { padding: '16px' } : { backgroundColor: '#023955', padding: '16px' }))
+const drillDrawerHeaderStyle = computed(() => (props.theme === 'light' ? {} : { backgroundColor: '#0E3D55', borderBottom: '1px solid #0F7094', color: '#fff' }))
+const drillDrawerRootClass = computed(() => (props.theme === 'light' ? 'pivot-drill-drawer pivot-drill-light' : 'pivot-drill-drawer'))
 
 /** ② 透视列条件(CASE WHEN 的列条件, JSON 存储的 ConditionListType) */
 const parsePivotColumnCondition = (pv: PortalPivotColumnVO): ConditionListType[] => {
@@ -380,17 +415,25 @@ const buildDrillCondition = (index: number, pv: PortalPivotColumnVO): ConditionL
   }
   return list
 }
+/** 钻取标题: 透视列名 · 度量名(无透视列时显示度量名, 避免回退原始字段名) */
+const buildDrillTitle = (pv: PortalPivotColumnVO, itemValue: string, measure: PivotMeasureVO | undefined, measureField: string, suffix: string) => {
+  const pivotLabel = hasPivotColumns.value ? (pv.itemName || itemValue) : ''
+  // 无透视列: 标题必须带度量名(否则只剩原始字段名); 有透视列且单度量: 度量名无区分度可省略
+  const measureLabel = (!hasPivotColumns.value || measures.value.length > 1) && measure ? (measure.label || measure.field) : ''
+  return `${[pivotLabel, measureLabel].filter(Boolean).join(' · ') || measureField} - ${suffix}`
+}
+
 /** 点击度量单元格: 打开底部抽屉展示该单元格对应的明细数据 */
 const openDrill = (index: number, key: string) => {
   const sepIdx = key.indexOf('__')
   const itemValue = key.substring(0, sepIdx)
   const measureField = key.substring(sepIdx + 2)
-  const pv = pivotColumns.value.find(p => p.itemValue === itemValue)
+  const pv = effectivePivotColumns.value.find(p => p.itemValue === itemValue)
   const measure = measures.value.find(m => m.field === measureField)
   if (!pv) {
     return
   }
-  drillTitle.value = `${pv.itemName || itemValue}${measures.value.length > 1 && measure ? ` · ${measure.label || measure.field}` : ''} - 明细数据`
+  drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '明细数据')
   drillCondition.value = { conditionList: buildDrillCondition(index, pv), andOr: '0' }
   drillOpen.value = true
 }
@@ -400,12 +443,12 @@ const openSummaryDrill = (key: string) => {
   const sepIdx = key.indexOf('__')
   const itemValue = key.substring(0, sepIdx)
   const measureField = key.substring(sepIdx + 2)
-  const pv = pivotColumns.value.find(p => p.itemValue === itemValue)
+  const pv = effectivePivotColumns.value.find(p => p.itemValue === itemValue)
   const measure = measures.value.find(m => m.field === measureField)
   if (!pv) {
     return
   }
-  drillTitle.value = `${pv.itemName || itemValue}${measures.value.length > 1 && measure ? ` · ${measure.label || measure.field}` : ''} - 全部明细`
+  drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '全部明细')
   drillCondition.value = { conditionList: [...props.condition, ...parsePivotColumnCondition(pv)], andOr: '0' }
   drillOpen.value = true
 }
@@ -421,7 +464,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="pivot-body">
+  <div :class="['pivot-body', { 'pivot-light': props.theme === 'light' }]">
     <portal
       v-if="ready"
       :table-id="props.portalTableConfig.portalName || ''"
@@ -434,7 +477,7 @@ onMounted(() => {
       :page-size="50"
       :hide-export="props.portalTableConfig.downloadAble === '0'"
       :advance="false"
-      :multi-header="measures.length > 1"
+      :multi-header="pivotColumns.length > 0 && measures.length > 1"
       read-only
       :row-key-field="AUTO_UUID_ROW_KEY"
       hide-import
@@ -477,35 +520,31 @@ onMounted(() => {
       :title="drillTitle"
       placement="bottom"
       :height="700"
-      :body-style="{ backgroundColor: '#023955', padding: '16px' }"
-      :header-style="{ backgroundColor: '#0E3D55', borderBottom: '1px solid #0F7094', color: '#fff' }"
+      :body-style="drillDrawerBodyStyle"
+      :header-style="drillDrawerHeaderStyle"
       destroy-on-close
-      root-class-name="pivot-drill-drawer"
+      :root-class-name="drillDrawerRootClass"
     >
-      <!-- dark-content-layout 包裹层: 模板内元素 teleport 后仍带 scope 属性,
-           复用 dark.css 的令牌覆盖与 :deep 规则, 抽屉内 Portal 自动适配深色 -->
-      <div
-        class="dark-content-layout"
-        style="height: 100%;"
-      >
-        <portal
-          v-if="props.portalTableConfig.portalName"
-          :key="drillTitle"
-          :table-id="props.portalTableConfig.portalName"
-          :advance-condition="drillCondition"
-          :action-width="0"
-          hide-add
-          hide-refresh
-          hide-row-selection
-          mode-lock
-        />
-      </div>
+      <!-- 抽屉内容抽到独立组件: 深色外壳用 Dark 变体(scoped 挂 dark.css),
+           浅色外壳用纯浅色变体, 不残留任何深色覆盖 -->
+      <pivot-drill-content-dark
+        v-if="props.theme !== 'light'"
+        :table-id="props.portalTableConfig.portalName || ''"
+        :condition="drillCondition"
+        :cache-key="drillTitle"
+      />
+      <pivot-drill-content
+        v-else
+        :table-id="props.portalTableConfig.portalName || ''"
+        :condition="drillCondition"
+        :cache-key="drillTitle"
+      />
     </a-drawer>
   </div>
 </template>
 
-<!-- dark.css 仅为钻取抽屉(teleport 到 body, 脱离 DarkTable 深色作用域)提供令牌覆盖 -->
-<style lang="less" scoped src="@/framework/components/common/Portal/css/dark.css"></style>
+<!-- 主表格不挂 dark.css: 深色由 DarkTable 外壳提供, 浅色外壳下跟随浅色主题;
+     抽屉深色样式见 PivotDrillContent.vue -->
 <style lang="less" scoped>
 .pivot-body {
   height: 100%;
@@ -522,75 +561,85 @@ onMounted(() => {
     text-decoration: underline;
   }
 }
+
+// 浅色主题: 近白高亮在浅底上不可见, 钻取数字改用链接蓝
+.pivot-light .pivot-drill-cell {
+  color: #1677ff;
+
+  &:hover {
+    color: #4096ff;
+  }
+}
 </style>
 
-<!-- 钻取抽屉补充样式(非 scoped, 因 a-drawer teleport 到 body;
-     表格主体深色由抽屉内 .dark-content-layout 包裹层复用 dark.css 实现,
-     这里只补 antd 外壳与表头/行等 dark.css 未覆盖的部分, 范式参照 epc BudgetDetailDialog) -->
+<!-- 钻取抽屉补充样式(非 scoped, 因 a-drawer teleport 到 body);
+     深色规则仅在深色外壳下生效, 浅色外壳(.pivot-drill-light)跟随 antd 默认浅色 -->
 <style lang="less">
-.pivot-drill-drawer .ant-drawer-title {
-  color: #fff !important;
-}
+.pivot-drill-drawer:not(.pivot-drill-light) {
+  .ant-drawer-title {
+    color: #fff !important;
+  }
 
-.pivot-drill-drawer .ant-drawer-close {
-  color: #fff !important;
-}
+  .ant-drawer-close {
+    color: #fff !important;
+  }
 
-.pivot-drill-drawer .ant-drawer-close:hover {
-  color: #42F6FF !important;
-}
+  .ant-drawer-close:hover {
+    color: #42F6FF !important;
+  }
 
-/* 表头样式 */
-.pivot-drill-drawer .surely-table-header {
-  background-color: #0E3D55 !important;
-}
+  /* 表头样式 */
+  .surely-table-header {
+    background-color: #0E3D55 !important;
+  }
 
-.pivot-drill-drawer .surely-table-header-cell {
-  padding: 8px 16px !important;
-  background-color: #0E3D55 !important;
-  font-weight: 600 !important;
-}
+  .surely-table-header-cell {
+    padding: 8px 16px !important;
+    background-color: #0E3D55 !important;
+    font-weight: 600 !important;
+  }
 
-.pivot-drill-drawer .surely-table-header-cell .surely-table-cell-content,
-.pivot-drill-drawer .surely-table-header-cell span,
-.pivot-drill-drawer .surely-table-header-cell div {
-  color: #ffffff !important;
-  font-weight: 600 !important;
-}
+  .surely-table-header-cell .surely-table-cell-content,
+  .surely-table-header-cell span,
+  .surely-table-header-cell div {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+  }
 
-.pivot-drill-drawer .portal-table,
-.pivot-drill-drawer .surely-table {
-  background-color: rgb(2, 57, 85) !important;
-}
+  .portal-table,
+  .surely-table {
+    background-color: rgb(2, 57, 85) !important;
+  }
 
-.pivot-drill-drawer .portal-table td,
-.pivot-drill-drawer .surely-table td,
-.pivot-drill-drawer .surely-table .surely-table-cell {
-  border-right: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-  border-top: none !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
-}
+  .portal-table td,
+  .surely-table td,
+  .surely-table .surely-table-cell {
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-top: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
+  }
 
-.pivot-drill-drawer .portal-table tr:last-child td,
-.pivot-drill-drawer .surely-table tr:last-child td,
-.pivot-drill-drawer .surely-table tr:last-child .surely-table-cell {
-  border-bottom: none !important;
-}
+  .portal-table tr:last-child td,
+  .surely-table tr:last-child td,
+  .surely-table tr:last-child .surely-table-cell {
+    border-bottom: none !important;
+  }
 
-.pivot-drill-drawer .surely-table-row-even,
-.pivot-drill-drawer tbody tr.surely-table-row-even {
-  background-color: #1B475D !important;
-  color: #ffffff !important;
-}
+  .surely-table-row-even,
+  tbody tr.surely-table-row-even {
+    background-color: #1B475D !important;
+    color: #ffffff !important;
+  }
 
-.pivot-drill-drawer .surely-table-row-odd,
-.pivot-drill-drawer tbody tr.surely-table-row-odd {
-  background-color: #0E3D55 !important;
-  color: #ffffff !important;
-}
+  .surely-table-row-odd,
+  tbody tr.surely-table-row-odd {
+    background-color: #0E3D55 !important;
+    color: #ffffff !important;
+  }
 
-.pivot-drill-drawer .surely-table-body {
-  background-color: rgb(2, 57, 85) !important;
+  .surely-table-body {
+    background-color: rgb(2, 57, 85) !important;
+  }
 }
 </style>
