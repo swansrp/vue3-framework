@@ -46,6 +46,18 @@ const staticRoutes: Array<RouteRecordRaw> = [
     meta: { public: true }
   },
   {
+    // 智能问数独立页（全宽，query 可携带 tableId 指定数据集；framework 层页面，依赖 insight 后端模块）
+    path: '/insight/chatbi',
+    name: 'InsightChatBi',
+    component: () => import('@/framework/views/Insight/ChatBi/index.vue')
+  },
+  {
+    // 智能问数 Skill 工作台（链路画布/执行轨迹/看板描述三 Tab；framework 层页面，依赖 insight 后端模块）
+    path: '/insight/chatbi/config',
+    name: 'InsightChatBiConfig',
+    component: () => import('@/framework/views/Insight/ChatBi/config.vue')
+  },
+  {
     path: '/',
     name: 'Root',
     component: MainContent
