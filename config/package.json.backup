@@ -39,6 +39,7 @@
     "@tiptap/pm": "^2.10.4",
     "@tiptap/starter-kit": "^2.10.4",
     "@tiptap/vue-3": "^2.10.4",
+	"@vue-flow/core": "^1.48.2",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.15.0",
     "bin-editor-next": "^1.1.0",
