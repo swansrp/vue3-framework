@@ -2,6 +2,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import PivotDrillContent from './PivotDrillContent.vue'
+import PivotDrillContentDark from './PivotDrillContentDark.vue'
+
 import { getPortalConfig } from '@/framework/apis/portal/config'
 import {
   getPortalPivotColumnList,
@@ -15,8 +18,6 @@ import { ConditionListType } from '@/framework/components/common/AdvancedSearch/
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { dictStore, useTreeStore } from '@/framework/store/common'
-import PivotDrillContent from './PivotDrillContent.vue'
-import PivotDrillContentDark from './PivotDrillContentDark.vue'
 
 /**
  * 透视报表组件(纯表格, 无外壳)

@@ -14,8 +14,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import PivotDrillContent from './PivotDrillContent.vue'
+
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 /**
  * 钻取抽屉深色内容包裹层

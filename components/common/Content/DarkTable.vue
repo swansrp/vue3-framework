@@ -77,11 +77,11 @@
 <script lang="ts" setup>
 import { Ref } from 'vue'
 
-import PivotTable from '@/framework/views/MainContent/Portal/pivot.vue'
 
 import { PortalTableVO } from '@/framework/apis/portal/table'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { QuerySortType } from '@/framework/components/common/Portal/type'
+import PivotTable from '@/framework/views/MainContent/Portal/pivot.vue'
 
 /**
  * 左侧筛选栏只需要写 a-descriptions-item

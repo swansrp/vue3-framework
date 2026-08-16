@@ -19,8 +19,8 @@
 import * as echarts from 'echarts'
 import { defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import { getEffectiveUnit } from '../utils/unitFormat'
 import { createTooltipPosition } from '../utils/tooltipCommon'
+import { getEffectiveUnit } from '../utils/unitFormat'
 
 import type {
   ChartDataItem,
