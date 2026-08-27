@@ -1,5 +1,5 @@
 <!--
- * ChatBI Skill 工作台（管理页 #/insight/chatbi/config）——业务薄封装
+ * ChatBI Skill 工作台（DB 菜单 ChatBiWorkbench，component 直达本文件）——业务薄封装
  * （framework 层页面：所有项目共享，后端依赖 insight 模块即可用）
  *
  * 通用底座（framework 层 SkillWorkbench 组件）按 skillCode=chatbi 渲染：
@@ -22,15 +22,24 @@
     :flow-meta="FLOW_META"
     :extra-tabs="EXTRA_TABS"
     :rating-ext-equals="ratingExtEquals"
-    trace-empty-hint="去 #/insight/chatbi 提问后回来刷新"
-    rating-empty-hint="在 #/insight/chatbi 对回答点赞/点踩后回来查询"
+    trace-empty-hint="去「智能问数」菜单提问后回来刷新"
+    rating-empty-hint="在「智能问数」菜单对回答点赞/点踩后回来查询"
     @tab-change="onTabChange"
   >
     <!-- llm 结点 template 字段：占位符速查（变量池业务知识，经字段级插槽注入属性面板） -->
     <template #node-config-extra="{ field, type }">
-      <div v-if="type === 'llm' && field.key === 'template'" class="panel-vars">
-        <div class="panel-row-title">占位符速查（模板可用变量）</div>
-        <div v-for="v in LLM_VARS" :key="v.name" class="var-item">
+      <div
+        v-if="type === 'llm' && field.key === 'template'"
+        class="panel-vars"
+      >
+        <div class="panel-row-title">
+          占位符速查（模板可用变量）
+        </div>
+        <div
+          v-for="v in LLM_VARS"
+          :key="v.name"
+          class="var-item"
+        >
           <code>{{ varRef(v.name) }}</code>
           <span>{{ v.desc }}</span>
         </div>
@@ -45,15 +54,43 @@
             <span>看板目录</span>
             <div class="head-side">
               <span class="reg-count">已注册 {{ registeredCount }}/{{ portalItems.length }}</span>
-              <button class="btn mini" :disabled="descLoading" @click="loadRouteCatalog">{{ descLoading ? '加载中…' : '刷新' }}</button>
+              <button
+                class="btn mini"
+                :disabled="descLoading"
+                @click="loadRouteCatalog"
+              >
+                {{ descLoading ? '加载中…' : '刷新' }}
+              </button>
             </div>
           </div>
           <div class="desc-search">
-            <input class="ipt" v-model="portalSearch" placeholder="搜索看板名称 / 编码" />
+            <input
+              v-model="portalSearch"
+              class="ipt"
+              placeholder="搜索看板名称 / 编码"
+            />
             <div class="seg filter-seg">
-              <button class="seg-btn" :class="{ active: portalFilter === 'all' }" @click="portalFilter = 'all'">全部</button>
-              <button class="seg-btn" :class="{ active: portalFilter === 'registered' }" @click="portalFilter = 'registered'">已注册</button>
-              <button class="seg-btn" :class="{ active: portalFilter === 'unregistered' }" @click="portalFilter = 'unregistered'">未注册</button>
+              <button
+                class="seg-btn"
+                :class="{ active: portalFilter === 'all' }"
+                @click="portalFilter = 'all'"
+              >
+                全部
+              </button>
+              <button
+                class="seg-btn"
+                :class="{ active: portalFilter === 'registered' }"
+                @click="portalFilter = 'registered'"
+              >
+                已注册
+              </button>
+              <button
+                class="seg-btn"
+                :class="{ active: portalFilter === 'unregistered' }"
+                @click="portalFilter = 'unregistered'"
+              >
+                未注册
+              </button>
             </div>
           </div>
           <div class="desc-tree">
@@ -65,25 +102,47 @@
               @click="node.folder ? toggleFolder(node.key) : selectPortal(node.item)"
             >
               <template v-if="node.folder">
-                <span class="folder-caret" :class="{ open: isFolderOpen(node.key) }">▶</span>
-                <span class="folder-name" :title="node.name">{{ node.name }}</span>
+                <span
+                  class="folder-caret"
+                  :class="{ open: isFolderOpen(node.key) }"
+                >▶</span>
+                <span
+                  class="folder-name"
+                  :title="node.name"
+                >{{ node.name }}</span>
                 <span class="folder-count">{{ node.count }}</span>
               </template>
               <template v-else>
-                <span class="item-dot" :class="{ on: node.registered }"></span>
-                <span class="item-label" :title="node.title || node.name">{{ node.name }}</span>
+                <span
+                  class="item-dot"
+                  :class="{ on: node.registered }"
+                ></span>
+                <span
+                  class="item-label"
+                  :title="node.title || node.name"
+                >{{ node.name }}</span>
               </template>
             </div>
-            <div v-if="!descLoading && !portalTreeNodes.length" class="list-empty">无匹配看板</div>
+            <div
+              v-if="!descLoading && !portalTreeNodes.length"
+              class="list-empty"
+            >
+              无匹配看板
+            </div>
           </div>
         </div>
         <div class="desc-editor">
           <template v-if="selectedPortal">
             <div class="editor-head">
-              <div class="editor-title">{{ selectedPortal.title || selectedPortal.portalName }}</div>
+              <div class="editor-title">
+                {{ selectedPortal.title || selectedPortal.portalName }}
+              </div>
               <div class="editor-meta">
                 <code>{{ selectedPortal.tableId }}</code>
-                <span class="reg-tag" :class="{ on: !!selectedPortal.description }">
+                <span
+                  class="reg-tag"
+                  :class="{ on: !!selectedPortal.description }"
+                >
                   {{ selectedPortal.description ? '已注册候选' : '未注册' }}
                 </span>
               </div>
@@ -92,12 +151,16 @@
               候选注册制：写一句业务描述即把该看板注册进全局路由候选（route_catalog），描述供路由大模型判断看板与问题的相关性；清空并保存即注销候选。
             </div>
             <textarea
-              class="ipt area desc-textarea"
               v-model="descDraft[selectedPortal.tableId]"
+              class="ipt area desc-textarea"
               placeholder="一句话描述该看板承载的业务域，如：项目全生命周期状态分布"
             ></textarea>
             <div class="editor-actions">
-              <button class="btn" :disabled="descGenerating" @click="generateDesc">
+              <button
+                class="btn"
+                :disabled="descGenerating"
+                @click="generateDesc"
+              >
                 {{ descGenerating ? '生成中…' : 'AI 生成草稿' }}
               </button>
               <button
@@ -108,14 +171,20 @@
                 {{ descSaving === selectedPortal.tableId ? '保存中…' : selectedPortal.description ? '保存修改' : '注册候选' }}
               </button>
             </div>
-            <div class="editor-hint">AI 草稿按看板元数据（指标卡片 / 筛选组 / 字段）汇总生成，可修改后再保存。</div>
+            <div class="editor-hint">
+              AI 草稿按看板元数据（指标卡片 / 筛选组 / 字段）汇总生成，可修改后再保存。
+            </div>
 
             <!-- 敏感列配置：值不外泄（列定义保留供指名查询，值域清单不下发模型，配对编码列做替身） -->
             <div class="sensitive-block">
               <div class="sensitive-head">
                 <span class="sensitive-title">敏感列配置</span>
                 <span class="sensitive-count">已配 {{ sensitiveCheckedCount }} 列</span>
-                <button class="btn mini" :disabled="sensitiveLoading" @click="loadSensitiveColumns()">
+                <button
+                  class="btn mini"
+                  :disabled="sensitiveLoading"
+                  @click="loadSensitiveColumns()"
+                >
                   {{ sensitiveLoading ? '加载中…' : '刷新' }}
                 </button>
                 <button
@@ -131,50 +200,94 @@
                 配对编码列（如 项目名称 → 项目编号）供模型跨轮/批量子集查询替换引用。保存即整板覆盖，全部取消勾选即恢复。
               </div>
               <div class="sensitive-list">
-                <div v-if="sensitiveLoading" class="list-empty">列清单加载中…</div>
+                <div
+                  v-if="sensitiveLoading"
+                  class="list-empty"
+                >
+                  列清单加载中…
+                </div>
                 <template v-else>
-                  <div v-for="col in sensitiveColumns" :key="col.property" class="sensitive-row">
+                  <div
+                    v-for="col in sensitiveColumns"
+                    :key="col.property"
+                    class="sensitive-row"
+                  >
                     <input
                       type="checkbox"
                       :checked="!!sensitiveDraft[col.property]"
                       @change="toggleSensitiveColumn(col, ($event.target as HTMLInputElement).checked)"
                     />
-                    <span class="sens-label" :title="col.property">{{ col.label || col.property }}</span>
-                    <span v-if="col.fieldType" class="sens-type">{{ col.fieldType }}</span>
+                    <span
+                      class="sens-label"
+                      :title="col.property"
+                    >{{ col.label || col.property }}</span>
+                    <span
+                      v-if="col.fieldType"
+                      class="sens-type"
+                    >{{ col.fieldType }}</span>
                     <select
                       v-if="sensitiveDraft[col.property]"
-                      class="ipt sens-pair"
                       v-model="sensitiveDraft[col.property].replaceProperty"
+                      class="ipt sens-pair"
                     >
-                      <option value="">不配对（无编码替身）</option>
-                      <option v-for="opt in sensitivePairOptions(col)" :key="opt.property" :value="opt.property">
+                      <option value="">
+                        不配对（无编码替身）
+                      </option>
+                      <option
+                        v-for="opt in sensitivePairOptions(col)"
+                        :key="opt.property"
+                        :value="opt.property"
+                      >
                         {{ opt.label || opt.property }}
                       </option>
                     </select>
                   </div>
-                  <div v-if="!sensitiveColumns.length" class="list-empty">该看板无可配置列</div>
+                  <div
+                    v-if="!sensitiveColumns.length"
+                    class="list-empty"
+                  >
+                    该看板无可配置列
+                  </div>
                 </template>
               </div>
             </div>
           </template>
-          <div v-else class="list-empty">左侧选择看板后维护业务描述（绿点 = 已注册候选）</div>
+          <div
+            v-else
+            class="list-empty"
+          >
+            左侧选择看板后维护业务描述（绿点 = 已注册候选）
+          </div>
         </div>
       </div>
     </template>
 
     <!-- 评价筛选：看板下拉（目录复用 desc Tab 数据；改值即触发组件内 reload 查询） -->
     <template #rating-filter-extra="{ reload }">
-      <select class="ipt rating-portal-select" v-model="ratingTableId" @change="reload()">
-        <option value="">全部看板</option>
-        <option v-for="item in ratingPortalOptions" :key="item.tableId" :value="item.tableId">
+      <select
+        v-model="ratingTableId"
+        class="ipt rating-portal-select"
+        @change="reload()"
+      >
+        <option value="">
+          全部看板
+        </option>
+        <option
+          v-for="item in ratingPortalOptions"
+          :key="item.tableId"
+          :value="item.tableId"
+        >
           {{ item.title || item.tableId }}
         </option>
       </select>
     </template>
 
-    <!-- 评价行业务维度：看板名（悬停看 tableId；后端薄封装把 ext 展平到记录顶层） -->
+    <!-- 评价行业务维度：看板名（悬停看 tableId；通用端点回包里看板维度在 record.ext） -->
     <template #rating-meta-extra="{ record }">
-      <span v-if="ratingPortalLabel(record)" :title="ratingPortalTitle(record)">{{ ratingPortalLabel(record) }}</span>
+      <span
+        v-if="ratingPortalLabel(record)"
+        :title="ratingPortalTitle(record)"
+      >{{ ratingPortalLabel(record) }}</span>
     </template>
   </SkillWorkbench>
 </template>
@@ -185,21 +298,14 @@ import { computed, reactive, ref } from 'vue'
 
 import {
   generateChatBiTableDesc,
-  getChatBiFlow,
-  getChatBiFlowRegistry,
-  getChatBiFlowTraceDetail,
-  getChatBiFlowTraces,
   getChatBiPortalDescAll,
-  getChatBiRatingStat,
   getChatBiSensitiveColumns,
-  resetChatBiFlow,
-  saveChatBiFlow,
   saveChatBiSensitiveColumns,
   saveChatBiTableDesc
 } from '@/framework/components/common/chatbi/api'
 import type { ChatBiRouteItem, ChatBiSensitiveColumn } from '@/framework/components/common/chatbi/types'
 import SkillWorkbench from '@/framework/components/common/skill/SkillWorkbench.vue'
-import type { SkillGraph, SkillRatingQuery } from '@/framework/components/common/skill/SkillWorkbench.vue'
+import { createSkillWorkbenchApi } from '@/framework/components/common/skill/workbenchApi'
 
 // ===== 业务注入：链路职责富文案（registry 只给显示名，未维护的链由组件降级显示） =====
 
@@ -230,26 +336,10 @@ const LLM_VARS: Array<{ name: string; desc: string }> = [
 // llm 模板占位符引用形式（模板插值里不能直接拼 }}，故由 script 生成）
 const varRef = (name: string) => `{{${name}}}`
 
-// ===== 业务注入：Skill 工作台 api 适配器（ChatBI 端点薄封装） =====
-// 评价查询把组件通用查询 + extEquals.tableId 业务维度映射为后端 tableId 参数
+// ===== 业务注入：Skill 工作台 api 适配器（通用工厂：skillCode=chatbi → /web/api/agent 端点） =====
+// 评价看板维度经 ratingExtEquals → extEquals.tableId 透传（与后端 ChatBiRatingListener 存的 ext 同键）
 
-const workbenchApi = {
-  getRegistry: (skillCode: string) => getChatBiFlowRegistry(skillCode),
-  getFlow: (flowKey: string) => getChatBiFlow(flowKey),
-  saveFlow: (flowKey: string, graph: SkillGraph) => saveChatBiFlow(flowKey, graph),
-  resetFlow: (flowKey: string) => resetChatBiFlow(flowKey),
-  getTraces: (flowKey: string) => getChatBiFlowTraces(flowKey),
-  getTraceDetail: (traceId: string) => getChatBiFlowTraceDetail(traceId),
-  getRatingStat: (query: SkillRatingQuery) =>
-    getChatBiRatingStat({
-      rating: query.rating,
-      tableId: query.extEquals?.tableId,
-      operator: query.operator,
-      startTime: query.startTime,
-      endTime: query.endTime,
-      keyword: query.keyword
-    })
-}
+const workbenchApi = createSkillWorkbenchApi('chatbi')
 
 // 业务资产 Tab 注册（看板描述 = 候选注册管理 + 敏感列配置）
 const EXTRA_TABS = [{ key: 'desc', label: '看板描述' }]
@@ -500,13 +590,16 @@ const ratingExtEquals = computed<Record<string, string> | undefined>(() =>
   ratingTableId.value ? { tableId: ratingTableId.value } : undefined
 )
 
-// 评价记录业务展平字段读取（后端薄封装把 ext 展平到记录顶层；组件通用 record 经此取看板名）
+// 评价记录看板维度读取（通用端点回包看板维度在 record.ext；组件通用 record 经此取看板名）
 function ratingPortalLabel(record: Record<string, unknown>): string {
-  return ((record.portalName as string | undefined) || (record.tableId as string | undefined) || '')
+  const ext = (record.ext as Record<string, string> | undefined) || {}
+  // 通用端点回包看板维度在 ext；顶层展平字段仅作兼容兑底
+  return ext.portalName || ext.tableId || (record.portalName as string | undefined) || (record.tableId as string | undefined) || ''
 }
 
 function ratingPortalTitle(record: Record<string, unknown>): string {
-  return (record.tableId as string | undefined) || ''
+  const ext = (record.ext as Record<string, string> | undefined) || {}
+  return ext.tableId || (record.tableId as string | undefined) || ''
 }
 
 // ===== 业务 Tab 懒加载（desc 目录同时是评价看板下拉的数据源，首次进入任一即拉取） =====

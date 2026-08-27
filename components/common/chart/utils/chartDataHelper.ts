@@ -90,8 +90,8 @@ export function hasValidChartConfig(config: any): boolean {
   // 树形堆叠模式：X 轴来自树父节点，只需树关系（treeDimension）
   const isTreeStackedMode = config.dataMetrics.some((m: any) => m.chartType === CHART_TYPE.TREE_STACKED_BAR)
   if (isTreeStackedMode) return !!config.treeDimension
-  // 其他模式必须有 firstDimension
-  return !!config.firstDimension
+  // 其他模式必须有 firstDimension；无维度纯合计图（smart-query 下发 allowNoDimension 标记）例外放行
+  return !!config.firstDimension || config.allowNoDimension === true
 }
 
 // ===== 图表分类（X 轴）=====
@@ -720,12 +720,14 @@ export function normalizeRankingResponse(config: any, payload: any[]): any[] {
  * @param url       Portal 配置中的接口 URL
  * @param config    指标配置
  * @param visibility 可见性过滤（可选）
+ * @param queryContext 智能问数查询上下文（可选，smart-query 场景原样带回）
  * @returns { requestParams, response } —— requestParams 供穿透条件复用
  */
 export async function fetchStatisticData(
   url: string,
   config: any,
-  visibility?: VisibilityConfig
+  visibility?: VisibilityConfig,
+  queryContext?: string
 ): Promise<{ requestParams: RequestParamsResult; response: any }> {
   const requestParams = await buildRequestParams(config, visibility)
   const response = await advancedStatisticRequest(
@@ -740,7 +742,8 @@ export async function fetchStatisticData(
     undefined,
     undefined,
     undefined,
-    requestParams.limit ?? null
+    requestParams.limit ?? null,
+    queryContext
   )
   // 排行榜(Top-N)：将扁平响应归一化为标准嵌套结构，复用现有渲染/过滤/穿透管道
   const isRanking = config?.dataMetrics?.some((m: any) => m.chartType === CHART_TYPE.RANKING_BAR)

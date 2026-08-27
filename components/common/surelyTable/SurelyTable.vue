@@ -1,123 +1,135 @@
 <template>
-  <s-table
-    v-if="updatedColumns.length"
-    v-model:pagination="pagination"
-    :bordered="bordered"
-    summary-fixed
-    :stripe="stripe"
-    :columns="updatedColumns"
-    :data-source="dataSource"
-    :animate-rows="false"
-    :row-class-name="rowClassName"
-    :scroll="{x: getTableWidth(), y: getTableHeight()}"
-    :style="{width: String(_tableWidth) === 'auto' ? '100%' : _tableWidth + 'px'}"
-    :custom-row="customRow"
-    :custom-header-cell="customHeaderCell"
-    :row-height="rowHeight"
-    @row-drag-end="rowDragEnd"
-    @expanded-rows-change="expandedRowsChange"
-    @change="change"
-    @column-drag-end="columnDragEnd"
-  >
-    <template
-      v-if="needTitle"
-      #title
+  <!-- 外层类名必须与 s-table 内部根元素的 .surely-table-wrapper 区分开：
+       Vue3 scoped 样式会落到子组件根元素上, 若同名则下方 display:contents 会误伤
+       s-table 内部根元素使其丢失盒模型, 导致 bodyWidth 测量为 0、中心列不渲染 -->
+  <div class="surely-table-wrapper-outer">
+    <!-- 参照 Portal 组件 right-btns 插槽: 表格右上角按钮区, 仅在使用时渲染 -->
+    <div
+      v-if="$slots['right-btns']"
+      class="table-right-btns"
     >
-      <slot name="title"></slot>
-    </template>
-    <template #headerCell="{title}">
-      <span v-if="title.indexOf('/') === -1">{{ title }}</span>
-      <div
-        v-else
-        class="table-title-cell"
+      <slot name="right-btns"></slot>
+    </div>
+    <s-table
+      v-if="updatedColumns.length"
+      v-model:pagination="pagination"
+      :bordered="bordered"
+      summary-fixed
+      :stripe="stripe"
+      :columns="updatedColumns"
+      :data-source="dataSource"
+      :animate-rows="false"
+      :row-class-name="rowClassName"
+      :scroll="{x: getTableWidth(), y: getTableHeight()}"
+      :style="{width: String(_tableWidth) === 'auto' ? '100%' : _tableWidth + 'px'}"
+      :custom-row="customRow"
+      :custom-header-cell="customHeaderCell"
+      :row-height="rowHeight"
+      @row-drag-end="rowDragEnd"
+      @expanded-rows-change="expandedRowsChange"
+      @change="change"
+      @column-drag-end="columnDragEnd"
+    >
+      <template
+        v-if="needTitle"
+        #title
       >
+        <slot name="title"></slot>
+      </template>
+      <template #headerCell="{title}">
+        <span v-if="title.indexOf('/') === -1">{{ title }}</span>
         <div
-          v-for="(item, index) in title.split('/')"
-          :key="index"
+          v-else
+          class="table-title-cell"
         >
-          {{ item }}
-        </div>
-      </div>
-    </template>
-    <template
-      v-if="needExpandedRowRender"
-      #expandedRowRender="{ record }"
-    >
-      <slot
-        :record="record"
-        name="expandedRowRender"
-      ></slot>
-    </template>
-    <template
-      v-if="summaryList"
-      #summary
-    >
-      <s-table-summary-row>
-        <s-table-summary-cell
-          v-for="(item, index) in summaryList"
-          :key="index"
-          :index="index"
-        >
-          <template v-if="item || item === 0">
+          <div
+            v-for="(item, index) in title.split('/')"
+            :key="index"
+          >
             {{ item }}
-          </template>
-          <template v-else></template>
-        </s-table-summary-cell>
-      </s-table-summary-row>
-    </template>
-    <template #bodyCell="{column, record, text}">
-      <slot
-        :column="column"
-        :record="record"
-        :text="text"
-        name="bodyCell"
-      ></slot>
-    </template>
-    <template #customFilterDropdown="{setSelectedKeys, selectedKeys, confirm, clearFilters, column}">
-      <div style="padding: 8px">
-        <a-input
-          v-if="column.filterComponentType === FILTER_COMPONENT_TYPE.INPUT"
-          ref="searchInput"
-          :placeholder="`搜索${column.title}`"
-          :value="selectedKeys[0]"
-          style="width: 188px; margin-bottom: 8px; display: block"
-          @change="e => inputOnChange(column, e, setSelectedKeys)"
-          @press-enter="handleSearch"
-        />
-        <a-button
-          size="small"
-          style="width: 90px;margin-right: 8px"
-          type="primary"
-          @click="handleSearch"
-        >
-          <template #icon>
-            <search-outlined />
-          </template>搜索
-        </a-button>
-        <a-button
-          size="small"
-          style="width: 90px"
-          @click="handleReset(column, clearFilters)"
-        >
-          清空
-        </a-button>
-      </div>
-      <slot
-        name="customFilterDropdown"
-        :set-selected-keys="setSelectedKeys"
-        :selected-keys="selectedKeys"
-        :confirm="confirm"
-        :clear-filters="clearFilters"
-        :column="column"
-      ></slot>
-    </template>
-    <template #customFilterIcon="{ filtered }">
-      <slot
-        :filtered="filtered"
-        name="customFilterIcon"
-      ></slot>
-    </template>
-  </s-table>
+          </div>
+        </div>
+      </template>
+      <template
+        v-if="needExpandedRowRender"
+        #expandedRowRender="{ record }"
+      >
+        <slot
+          :record="record"
+          name="expandedRowRender"
+        ></slot>
+      </template>
+      <template
+        v-if="summaryList"
+        #summary
+      >
+        <s-table-summary-row>
+          <s-table-summary-cell
+            v-for="(item, index) in summaryList"
+            :key="index"
+            :index="index"
+          >
+            <template v-if="item || item === 0">
+              {{ item }}
+            </template>
+            <template v-else></template>
+          </s-table-summary-cell>
+        </s-table-summary-row>
+      </template>
+      <template #bodyCell="{column, record, text}">
+        <slot
+          :column="column"
+          :record="record"
+          :text="text"
+          name="bodyCell"
+        ></slot>
+      </template>
+      <template #customFilterDropdown="{setSelectedKeys, selectedKeys, confirm, clearFilters, column}">
+        <div style="padding: 8px">
+          <a-input
+            v-if="column.filterComponentType === FILTER_COMPONENT_TYPE.INPUT"
+            ref="searchInput"
+            :placeholder="`搜索${column.title}`"
+            :value="selectedKeys[0]"
+            style="width: 188px; margin-bottom: 8px; display: block"
+            @change="e => inputOnChange(column, e, setSelectedKeys)"
+            @press-enter="handleSearch"
+          />
+          <a-button
+            size="small"
+            style="width: 90px;margin-right: 8px"
+            type="primary"
+            @click="handleSearch"
+          >
+            <template #icon>
+              <search-outlined />
+            </template>搜索
+          </a-button>
+          <a-button
+            size="small"
+            style="width: 90px"
+            @click="handleReset(column, clearFilters)"
+          >
+            清空
+          </a-button>
+        </div>
+        <slot
+          name="customFilterDropdown"
+          :set-selected-keys="setSelectedKeys"
+          :selected-keys="selectedKeys"
+          :confirm="confirm"
+          :clear-filters="clearFilters"
+          :column="column"
+        ></slot>
+      </template>
+      <template #customFilterIcon="{ filtered }">
+        <slot
+          :filtered="filtered"
+          name="customFilterIcon"
+        ></slot>
+      </template>
+    </s-table>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -219,12 +231,21 @@ const getTableHeight = () => {
 initPagination()
 updateColumns(updatedColumns, columns, tableId)
 
-watch(() => props.tableWidth, value => value && (_tableWidth.value = value))
+watch(() => props.tableWidth, value => value && (_tableWidth.value = value), { immediate: true })
 watch(() => props.tableHeight, value => value && (_tableHeight.value = value), { immediate: true })
 
 </script>
 
 <style scoped>
+.surely-table-wrapper-outer {
+  /* display: contents 使包装层不产生盒模型, 存量页面布局不受影响 */
+  display: contents;
+}
+.table-right-btns {
+  display: flex;
+  justify-content: flex-end;
+  margin: 3px 20px 3px 15px;
+}
 .table-title-cell {
   display: flex;
   font-weight: bold;

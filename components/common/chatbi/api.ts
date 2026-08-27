@@ -4,9 +4,20 @@
  * 问答走 useChatBiStream 的 SSE fetch（axios 不支持流式），这里只放普通 GET/POST。
  * request() 返回 {status, payload, response} 包装，业务数据在 resp.payload。
  */
-import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
-import { get, post } from '@/framework/network/request'
 import type { ChatBiFlowGraph, ChatBiRateReq, ChatBiRouteReq, ChatBiSensitiveSaveReq } from './types'
+
+import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
+import {
+  getFlowDetail,
+  getFlowRegistry,
+  getFlowTraceDetail,
+  getFlowTraces,
+  getRatingStat,
+  resetFlow,
+  saveFlow,
+  saveRating
+} from '@/framework/apis/agent'
+import { get, post } from '@/framework/network/request'
 
 // 语义目录（指标卡片清单 + 字段元数据）；失败静默，由调用方兜底
 export const getChatBiSemantic = (tableId: string) =>
@@ -41,29 +52,26 @@ export const getChatBiPortalDescAll = () =>
 export const generateChatBiTableDesc = (tableId: string) =>
   get(buildGetApiByType('/insight/chatbi/route/desc/generate'), { tableId }, {}, false, false, false)
 
+// ── flow 编排六端点已上提 llm 通用 /web/api/agent/flow/*（ChatBiController 删原端点），
+// 此处薄委托 apis/agent 保持导出签名不变（config.vue 注入面零改动）──
+
 // skill 注册表（skill 下链清单 + 画布可用结点类型 schema；工作台启动数据源，新结点类型前端零改动）
-export const getChatBiFlowRegistry = (skillCode: string) =>
-  get(buildGetApiByType('/insight/chatbi/flow/registry'), { skillCode }, {}, false, false, false)
+export const getChatBiFlowRegistry = (skillCode: string) => getFlowRegistry(skillCode)
 
 // 流程编排详情（库中无自定义时后端返回内置默认链，builtin=true）
-export const getChatBiFlow = (flowKey: string) =>
-  get(buildGetApiByType('/insight/chatbi/flow/detail'), { flowKey }, {}, false, false, false)
+export const getChatBiFlow = (flowKey: string) => getFlowDetail(flowKey)
 
 // 保存流程编排（后端结构校验后落库，提示词即改即生效）
-export const saveChatBiFlow = (flowKey: string, graph: ChatBiFlowGraph) =>
-  post(buildPostApiByType('/insight/chatbi/flow/save'), {}, { flowKey, graph }, false)
+export const saveChatBiFlow = (flowKey: string, graph: ChatBiFlowGraph) => saveFlow(flowKey, graph)
 
 // 重置流程编排为内置默认链（删库中自定义记录，幂等）
-export const resetChatBiFlow = (flowKey: string) =>
-  post(buildPostApiByType('/insight/chatbi/flow/reset'), { flowKey }, {}, false)
+export const resetChatBiFlow = (flowKey: string) => resetFlow(flowKey)
 
 // 执行轨迹列表（Redis 按访问人保留，天数见系统参数；flowKey 空返回全部链路；列表视图不带结点事件）
-export const getChatBiFlowTraces = (flowKey?: string) =>
-  get(buildGetApiByType('/insight/chatbi/flow/traces'), { flowKey }, {}, false, false, false)
+export const getChatBiFlowTraces = (flowKey?: string) => getFlowTraces(flowKey ? { flowKey } : {})
 
 // 执行轨迹详情（含 llm 渲染后提示词/模型回答、extract 输入/提取结果全文）
-export const getChatBiFlowTraceDetail = (traceId: string) =>
-  get(buildGetApiByType('/insight/chatbi/flow/trace/detail'), { traceId }, {}, false, false, false)
+export const getChatBiFlowTraceDetail = (traceId: string) => getFlowTraceDetail(traceId)
 
 // 历史对话列表（Redis 按访问人保留，天数见系统参数；新→旧，列表视图不带消息明细）
 export const getChatBiConversations = () =>
@@ -77,11 +85,18 @@ export const getChatBiConversationDetail = (conversationId: string) =>
 export const deleteChatBiConversation = (conversationId: string) =>
   post(buildPostApiByType('/insight/chatbi/conversation/delete'), { conversationId }, {}, false)
 
-// 评价助手回复（like/dislike，空=取消；双写对话正文与全局评价索引，仅能评自己的对话）
-export const rateChatBi = (req: ChatBiRateReq) =>
-  post(buildPostApiByType('/insight/chatbi/conversation/rate'), {}, req, false)
+// ── 评价两端点已上提 llm 通用 /web/api/agent/rating/*（ChatBiController 删原端点），
+// 此处薄委托 apis/agent 保持导出签名不变（对话正文双写由后端 ChatBiRatingListener 钩子承接）──
 
-// 评价运营统计（跨访问人聚合；筛选：类型/看板/评价人/时间段/关键词，汇总随筛选联动）
+// 评价助手回复（like/dislike，空=取消；messageId 空=最近一条回答，仅能评自己的对话）
+export const rateChatBi = (req: ChatBiRateReq) =>
+  saveRating({
+    skillCode: 'chatbi',
+    ratingId: `${req.conversationId}:${req.messageId || ''}`,
+    rating: req.rating
+  })
+
+// 评价运营统计（跨访问人聚合；筛选：类型/看板/评价人/时间段/关键词，看板维度经 extEquals 透传）
 export const getChatBiRatingStat = (params: {
   rating?: string
   tableId?: string
@@ -90,4 +105,12 @@ export const getChatBiRatingStat = (params: {
   endTime?: number
   keyword?: string
 }) =>
-  get(buildGetApiByType('/insight/chatbi/rating/stat'), params, {}, false, false, false)
+  getRatingStat({
+    skillCode: 'chatbi',
+    rating: params.rating,
+    operator: params.operator,
+    startTime: params.startTime,
+    endTime: params.endTime,
+    keyword: params.keyword,
+    extEquals: params.tableId ? { tableId: params.tableId } : undefined
+  })

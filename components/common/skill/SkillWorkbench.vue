@@ -19,7 +19,10 @@
     <div class="page-header">
       <ApartmentOutlined class="header-icon" />
       <span class="header-title">{{ title }}</span>
-      <span v-if="subtitle" class="header-sub">{{ subtitle }}</span>
+      <span
+        v-if="subtitle"
+        class="header-sub"
+      >{{ subtitle }}</span>
       <div class="header-actions">
         <div class="seg">
           <button
@@ -28,42 +31,89 @@
             class="seg-btn"
             :class="{ active: flowKey === f.flowKey }"
             @click="switchFlowKey(f.flowKey)"
-          >{{ f.flowKey }} 链</button>
+          >
+            {{ f.flowKey }} 链
+          </button>
         </div>
-        <span v-if="dirty" class="state-tag dirty">未保存</span>
-        <span class="state-tag" :class="builtin ? 'builtin' : 'custom'">{{ builtin ? '内置默认链' : '自定义链' }}</span>
-        <button class="btn primary" :disabled="saving" @click="saveFlow">{{ saving ? '保存中…' : '保存' }}</button>
-        <button class="btn ghost" :disabled="resetting" @click="resetFlow">{{ resetting ? '重置中…' : '重置默认' }}</button>
+        <span
+          v-if="dirty"
+          class="state-tag dirty"
+        >未保存</span>
+        <span
+          class="state-tag"
+          :class="builtin ? 'builtin' : 'custom'"
+        >{{ builtin ? '内置默认链' : '自定义链' }}</span>
+        <button
+          class="btn primary"
+          :disabled="saving"
+          @click="saveFlow"
+        >
+          {{ saving ? '保存中…' : '保存' }}
+        </button>
+        <button
+          class="btn ghost"
+          :disabled="resetting"
+          @click="resetFlow"
+        >
+          {{ resetting ? '重置中…' : '重置默认' }}
+        </button>
       </div>
     </div>
     <div class="page-body">
       <div class="tab-bar">
-        <button class="tab-btn" :class="{ active: activeTab === 'canvas' }" @click="activeTab = 'canvas'">链路画布</button>
-        <button class="tab-btn" :class="{ active: activeTab === 'trace' }" @click="activeTab = 'trace'">执行轨迹</button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'canvas' }"
+          @click="activeTab = 'canvas'"
+        >
+          链路画布
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'trace' }"
+          @click="activeTab = 'trace'"
+        >
+          执行轨迹
+        </button>
         <button
           v-if="api.getRatingStat"
           class="tab-btn"
           :class="{ active: activeTab === 'rating' }"
           @click="activeTab = 'rating'"
-        >评价统计</button>
+        >
+          评价统计
+        </button>
         <button
           v-for="t in extraTabs"
           :key="t.key"
           class="tab-btn"
           :class="{ active: activeTab === t.key }"
           @click="activeTab = t.key"
-        >{{ t.label }}</button>
+        >
+          {{ t.label }}
+        </button>
       </div>
 
       <!-- Tab1 链路画布 -->
-      <div v-show="activeTab === 'canvas'" class="flow-banner">
-        <span class="flow-banner-tag" :style="{ background: flowTagColor }">{{ flowKey }} 链</span>
+      <div
+        v-show="activeTab === 'canvas'"
+        class="flow-banner"
+      >
+        <span
+          class="flow-banner-tag"
+          :style="{ background: flowTagColor }"
+        >{{ flowKey }} 链</span>
         <span class="flow-banner-text">{{ flowBanner.duty }}</span>
         <span class="flow-banner-io">触发：{{ flowBanner.trigger }}｜输出：{{ flowBanner.output }}</span>
       </div>
-      <div v-show="activeTab === 'canvas'" class="canvas-wrap">
+      <div
+        v-show="activeTab === 'canvas'"
+        class="canvas-wrap"
+      >
         <div class="node-palette">
-          <div class="palette-title">结点类型</div>
+          <div class="palette-title">
+            结点类型
+          </div>
           <div
             v-for="meta in NODE_TYPES"
             :key="meta.type"
@@ -71,13 +121,22 @@
             :title="meta.desc"
             @click="addNodeByType(meta.type)"
           >
-            <span class="palette-dot" :style="{ background: meta.color }"></span>
+            <span
+              class="palette-dot"
+              :style="{ background: meta.color }"
+            ></span>
             <div class="palette-text">
-              <div class="palette-name">{{ meta.label }}</div>
-              <div class="palette-desc">{{ meta.desc }}</div>
+              <div class="palette-name">
+                {{ meta.label }}
+              </div>
+              <div class="palette-desc">
+                {{ meta.desc }}
+              </div>
             </div>
           </div>
-          <div class="palette-tip">点击添加到画布；拖动连线；Delete 键删除选中元素</div>
+          <div class="palette-tip">
+            点击添加到画布；拖动连线；Delete 键删除选中元素
+          </div>
         </div>
         <div class="canvas-main">
           <VueFlow
@@ -97,68 +156,169 @@
         <div class="props-panel">
           <template v-if="selectedNodeVM && nodeCfg">
             <div class="panel-title">
-              <span class="panel-tag" :style="{ background: nodeColor(selectedNodeVM.data.type) }">{{ selectedNodeVM.data.type }}</span>
+              <span
+                class="panel-tag"
+                :style="{ background: nodeColor(selectedNodeVM.data.type) }"
+              >{{ selectedNodeVM.data.type }}</span>
               结点属性
             </div>
             <div class="panel-row">
               <label>结点 ID</label>
-              <input class="ipt" :value="selectedNodeVM.id" disabled />
+              <input
+                class="ipt"
+                :value="selectedNodeVM.id"
+                disabled
+              />
             </div>
             <div class="panel-row">
               <label>名称</label>
-              <input class="ipt" v-model="selectedNodeVM.data.name" @input="markDirty" />
+              <input
+                v-model="selectedNodeVM.data.name"
+                class="ipt"
+                @input="markDirty"
+              />
             </div>
             <div class="panel-row">
               <label>启用</label>
               <div class="row-inline">
-                <input type="checkbox" v-model="selectedNodeVM.data.enabled" @change="markDirty" />
+                <input
+                  v-model="selectedNodeVM.data.enabled"
+                  type="checkbox"
+                  @change="markDirty"
+                />
                 <span class="panel-hint">关闭=跳过执行，控制流直通</span>
               </div>
             </div>
 
             <!-- 类型专属配置：registry schema 驱动渲染（元数据即表单，新结点类型前端零改动） -->
-            <template v-for="field in selectedFields" :key="field.key">
+            <template
+              v-for="field in selectedFields"
+              :key="field.key"
+            >
               <template v-if="field.input === 'outputMap'">
-                <div class="panel-row-title">{{ field.label }}</div>
-                <div v-for="(row, i) in outputRows" :key="i" class="output-row">
-                  <input class="ipt" :value="row.field" placeholder="响应字段" @input="renameOutputKey(i, ($event.target as HTMLInputElement).value)" />
-                  <span class="output-arrow">→</span>
-                  <input class="ipt" :value="row.variable" placeholder="变量名" @input="setOutputVar(i, ($event.target as HTMLInputElement).value)" />
-                  <button class="btn mini danger" @click="removeOutputRow(i)">删</button>
+                <div class="panel-row-title">
+                  {{ field.label }}
                 </div>
-                <button class="btn mini" @click="addOutputRow">+ 添加映射</button>
+                <div
+                  v-for="(row, i) in outputRows"
+                  :key="i"
+                  class="output-row"
+                >
+                  <input
+                    class="ipt"
+                    :value="row.field"
+                    placeholder="响应字段"
+                    @input="renameOutputKey(i, ($event.target as HTMLInputElement).value)"
+                  />
+                  <span class="output-arrow">→</span>
+                  <input
+                    class="ipt"
+                    :value="row.variable"
+                    placeholder="变量名"
+                    @input="setOutputVar(i, ($event.target as HTMLInputElement).value)"
+                  />
+                  <button
+                    class="btn mini danger"
+                    @click="removeOutputRow(i)"
+                  >
+                    删
+                  </button>
+                </div>
+                <button
+                  class="btn mini"
+                  @click="addOutputRow"
+                >
+                  + 添加映射
+                </button>
               </template>
-              <div v-else-if="field.input === 'textarea'" class="panel-row">
+              <div
+                v-else-if="field.input === 'textarea'"
+                class="panel-row"
+              >
                 <label>{{ field.label }}</label>
-                <textarea class="ipt area" :rows="field.rows || 4" v-model="nodeCfg[field.key]" :placeholder="field.placeholder" @input="markDirty"></textarea>
+                <textarea
+                  v-model="nodeCfg[field.key]"
+                  class="ipt area"
+                  :rows="field.rows || 4"
+                  :placeholder="field.placeholder"
+                  @input="markDirty"
+                ></textarea>
               </div>
-              <div v-else-if="field.input === 'select'" class="panel-row">
+              <div
+                v-else-if="field.input === 'select'"
+                class="panel-row"
+              >
                 <label>{{ field.label }}</label>
-                <select class="ipt" v-model="nodeCfg[field.key]" @change="markDirty">
-                  <option v-for="opt in field.options || []" :key="opt.value" :value="opt.value">{{ opt.label || opt.value }}</option>
+                <select
+                  v-model="nodeCfg[field.key]"
+                  class="ipt"
+                  @change="markDirty"
+                >
+                  <option
+                    v-for="opt in field.options || []"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
+                    {{ opt.label || opt.value }}
+                  </option>
                 </select>
               </div>
-              <div v-else-if="field.input === 'switch'" class="panel-row">
+              <div
+                v-else-if="field.input === 'switch'"
+                class="panel-row"
+              >
                 <label>{{ field.label }}</label>
                 <div class="row-inline">
-                  <input type="checkbox" v-model="nodeCfg[field.key]" @change="markDirty" />
-                  <span v-if="field.hint" class="panel-hint">{{ field.hint }}</span>
+                  <input
+                    v-model="nodeCfg[field.key]"
+                    type="checkbox"
+                    @change="markDirty"
+                  />
+                  <span
+                    v-if="field.hint"
+                    class="panel-hint"
+                  >{{ field.hint }}</span>
                 </div>
               </div>
-              <div v-else class="panel-row">
+              <div
+                v-else
+                class="panel-row"
+              >
                 <label>{{ field.label }}</label>
-                <input class="ipt" v-model="nodeCfg[field.key]" :placeholder="field.placeholder" @input="markDirty" />
+                <input
+                  v-model="nodeCfg[field.key]"
+                  class="ipt"
+                  :placeholder="field.placeholder"
+                  @input="markDirty"
+                />
               </div>
               <!-- 业务资产插槽：字段级附加说明（如 ChatBI 的 llm 模板占位符速查） -->
-              <slot name="node-config-extra" :field="field" :type="selectedNodeVM.data.type"></slot>
+              <slot
+                name="node-config-extra"
+                :field="field"
+                :type="selectedNodeVM.data.type"
+              ></slot>
             </template>
 
-            <div v-if="!selectedFields.length && selectedMeta" class="panel-hint-block">
+            <div
+              v-if="!selectedFields.length && selectedMeta"
+              class="panel-hint-block"
+            >
               {{ selectedMeta.desc || selectedMeta.type }}。该类型无需额外配置。
             </div>
-            <div v-if="selectedMeta?.hint" class="panel-hint-block">{{ selectedMeta.hint }}</div>
+            <div
+              v-if="selectedMeta?.hint"
+              class="panel-hint-block"
+            >
+              {{ selectedMeta.hint }}
+            </div>
 
-            <button class="btn danger block" @click="removeSelectedNode">删除该结点</button>
+            <button
+              class="btn danger block"
+              @click="removeSelectedNode"
+            >
+              删除该结点
+            </button>
           </template>
 
           <template v-else-if="selectedEdgeVM">
@@ -168,31 +328,54 @@
             </div>
             <div class="panel-row">
               <label>连线</label>
-              <div class="edge-path">{{ selectedEdgeVM.source }} → {{ selectedEdgeVM.target }}</div>
+              <div class="edge-path">
+                {{ selectedEdgeVM.source }} → {{ selectedEdgeVM.target }}
+              </div>
             </div>
             <div class="panel-row">
               <label>条件表达式</label>
-              <input class="ipt" v-model="edgeCondition" placeholder="空=恒真" @input="markDirty" />
+              <input
+                v-model="edgeCondition"
+                class="ipt"
+                placeholder="空=恒真"
+                @input="markDirty"
+              />
             </div>
             <div class="panel-hint-block">
               支持：var == '值' / var != '值' / notEmpty(var)；留空恒真。
               引擎按边顺序取第一条成立的边；无法识别的表达式视为不成立。
             </div>
-            <button class="btn danger block" @click="removeSelectedEdge">删除该连线</button>
+            <button
+              class="btn danger block"
+              @click="removeSelectedEdge"
+            >
+              删除该连线
+            </button>
           </template>
 
           <template v-else>
-            <div class="panel-empty">点击画布中的结点或连线编辑属性</div>
+            <div class="panel-empty">
+              点击画布中的结点或连线编辑属性
+            </div>
           </template>
         </div>
       </div>
 
       <!-- Tab2 执行轨迹 -->
-      <div v-show="activeTab === 'trace'" class="trace-wrap">
+      <div
+        v-show="activeTab === 'trace'"
+        class="trace-wrap"
+      >
         <div class="trace-list">
           <div class="list-head">
             <span>{{ flowKey }} 链 · 最近执行（Redis 按访问人保留，天数见系统参数）</span>
-            <button class="btn mini" :disabled="tracesLoading" @click="loadTraces">{{ tracesLoading ? '加载中…' : '刷新' }}</button>
+            <button
+              class="btn mini"
+              :disabled="tracesLoading"
+              @click="loadTraces"
+            >
+              {{ tracesLoading ? '加载中…' : '刷新' }}
+            </button>
           </div>
           <div class="list-rows">
             <div
@@ -202,16 +385,24 @@
               :class="[t.status, { active: currentTrace && currentTrace.traceId === t.traceId }]"
               @click="openTrace(t)"
             >
-              <div class="trace-q">{{ t.question || '（无问题）' }}</div>
+              <div class="trace-q">
+                {{ t.question || '（无问题）' }}
+              </div>
               <div class="trace-meta">
                 <span class="trace-status">{{ traceStatusText(t.status) }}</span>
                 <span v-if="t.operator">{{ t.operator }}</span>
                 <span>{{ formatTime(t.startTime) }}</span>
                 <span>{{ formatElapsed(t) }}ms</span>
-                <span v-if="t.builtin" class="trace-builtin">默认链</span>
+                <span
+                  v-if="t.builtin"
+                  class="trace-builtin"
+                >默认链</span>
               </div>
             </div>
-            <div v-if="!tracesLoading && !traces.length" class="list-empty">
+            <div
+              v-if="!tracesLoading && !traces.length"
+              class="list-empty"
+            >
               暂无执行记录{{ traceEmptyHint ? `——${traceEmptyHint}` : '' }}
             </div>
           </div>
@@ -219,7 +410,9 @@
         <div class="trace-detail">
           <template v-if="currentTrace">
             <div class="detail-head">
-              <div class="detail-q">{{ currentTrace.question || '（无问题）' }}</div>
+              <div class="detail-q">
+                {{ currentTrace.question || '（无问题）' }}
+              </div>
               <div class="detail-meta">
                 <span>{{ traceStatusText(currentTrace.status) }}</span>
                 <span>访问人 {{ currentTrace.operator || '-' }}</span>
@@ -227,54 +420,154 @@
                 <span>耗时 {{ formatElapsed(currentTrace) }}ms</span>
                 <span>{{ currentTrace.builtin ? '内置默认链' : '自定义链' }}</span>
               </div>
-              <div v-if="currentTrace.error" class="detail-error">{{ currentTrace.error }}</div>
+              <div
+                v-if="currentTrace.error"
+                class="detail-error"
+              >
+                {{ currentTrace.error }}
+              </div>
             </div>
             <div class="detail-timeline">
-              <div v-for="(ev, i) in currentTrace.nodes || []" :key="i" class="tl-item">
-                <span class="tl-dot" :class="ev.status"></span>
+              <div
+                v-for="(ev, i) in currentTrace.nodes || []"
+                :key="i"
+                class="tl-item"
+              >
+                <span
+                  class="tl-dot"
+                  :class="ev.status"
+                ></span>
                 <div class="tl-body">
                   <div class="tl-head">
                     <span class="tl-name">{{ ev.name || ev.nodeId }}</span>
                     <span class="tl-type">{{ ev.type }}</span>
-                    <span class="tl-status" :class="ev.status">{{ ev.status }}</span>
+                    <span
+                      class="tl-status"
+                      :class="ev.status"
+                    >{{ ev.status }}</span>
                     <span class="tl-ms">{{ ev.elapsedMs }}ms</span>
                   </div>
-                  <div v-if="ev.summary" class="tl-summary">{{ ev.summary }}</div>
+                  <div
+                    v-if="ev.summary"
+                    class="tl-summary"
+                  >
+                    {{ ev.summary }}
+                  </div>
                   <template v-if="ev.detail">
-                    <button class="tl-toggle" @click="toggleDetail(i)">{{ expandedDetails.includes(i) ? '收起全文' : '展开全文' }}</button>
-                    <pre v-if="expandedDetails.includes(i)" class="tl-detail">{{ ev.detail }}</pre>
+                    <button
+                      class="tl-toggle"
+                      @click="toggleDetail(i)"
+                    >
+                      {{ expandedDetails.includes(i) ? '收起全文' : '展开全文' }}
+                    </button>
+                    <pre
+                      v-if="expandedDetails.includes(i)"
+                      class="tl-detail"
+                    >{{ ev.detail }}</pre>
                   </template>
                 </div>
               </div>
-              <div v-if="!(currentTrace.nodes || []).length" class="list-empty">该轨迹暂无结点事件</div>
+              <div
+                v-if="!(currentTrace.nodes || []).length"
+                class="list-empty"
+              >
+                该轨迹暂无结点事件
+              </div>
             </div>
           </template>
-          <div v-else class="list-empty">点击左侧记录查看结点执行时间线（llm 提示词/模型回答全文可展开）</div>
+          <div
+            v-else
+            class="list-empty"
+          >
+            点击左侧记录查看结点执行时间线（llm 提示词/模型回答全文可展开）
+          </div>
         </div>
       </div>
 
       <!-- 业务资产 Tab：extraTabs 注册 + 动态具名插槽渲染（内容与懒加载由业务侧自治） -->
-      <div v-for="t in extraTabs" :key="t.key" v-show="activeTab === t.key" class="extra-panel">
+      <div
+        v-for="t in extraTabs"
+        v-show="activeTab === t.key"
+        :key="t.key"
+        class="extra-panel"
+      >
         <slot :name="`tab-${t.key}`"></slot>
       </div>
 
       <!-- Tab 评价统计（运营回路：跨访问人聚合的赞/踩，筛选联动汇总；业务维度走插槽） -->
-      <div v-if="api.getRatingStat" v-show="activeTab === 'rating'" class="rating-wrap">
+      <div
+        v-if="api.getRatingStat"
+        v-show="activeTab === 'rating'"
+        class="rating-wrap"
+      >
         <div class="rating-filter">
           <div class="seg">
-            <button class="seg-btn" :class="{ active: ratingFilter.rating === 'all' }" @click="switchRatingType('all')">全部</button>
-            <button class="seg-btn" :class="{ active: ratingFilter.rating === 'like' }" @click="switchRatingType('like')">点赞</button>
-            <button class="seg-btn" :class="{ active: ratingFilter.rating === 'dislike' }" @click="switchRatingType('dislike')">点踩</button>
+            <button
+              class="seg-btn"
+              :class="{ active: ratingFilter.rating === 'all' }"
+              @click="switchRatingType('all')"
+            >
+              全部
+            </button>
+            <button
+              class="seg-btn"
+              :class="{ active: ratingFilter.rating === 'like' }"
+              @click="switchRatingType('like')"
+            >
+              点赞
+            </button>
+            <button
+              class="seg-btn"
+              :class="{ active: ratingFilter.rating === 'dislike' }"
+              @click="switchRatingType('dislike')"
+            >
+              点踩
+            </button>
           </div>
           <!-- 业务筛选插槽（如 ChatBI 的看板下拉；改值后调 reload 触发查询） -->
-          <slot name="rating-filter-extra" :reload="loadRatings"></slot>
-          <input class="ipt rating-ipt" v-model="ratingFilter.operator" placeholder="评价人" @keyup.enter="loadRatings" />
-          <input class="ipt rating-date" type="datetime-local" v-model="ratingFilter.startAt" title="评价时间起" />
+          <slot
+            name="rating-filter-extra"
+            :reload="loadRatings"
+          ></slot>
+          <input
+            v-model="ratingFilter.operator"
+            class="ipt rating-ipt"
+            placeholder="评价人"
+            @keyup.enter="loadRatings"
+          />
+          <input
+            v-model="ratingFilter.startAt"
+            class="ipt rating-date"
+            type="datetime-local"
+            title="评价时间起"
+          />
           <span class="filter-sep">~</span>
-          <input class="ipt rating-date" type="datetime-local" v-model="ratingFilter.endAt" title="评价时间止" />
-          <input class="ipt rating-ipt" v-model="ratingFilter.keyword" placeholder="问题/回答关键词" @keyup.enter="loadRatings" />
-          <button class="btn primary mini" :disabled="ratingLoading" @click="loadRatings">{{ ratingLoading ? '查询中…' : '查询' }}</button>
-          <button class="btn mini" :disabled="ratingLoading" @click="resetRatingFilter">重置</button>
+          <input
+            v-model="ratingFilter.endAt"
+            class="ipt rating-date"
+            type="datetime-local"
+            title="评价时间止"
+          />
+          <input
+            v-model="ratingFilter.keyword"
+            class="ipt rating-ipt"
+            placeholder="问题/回答关键词"
+            @keyup.enter="loadRatings"
+          />
+          <button
+            class="btn primary mini"
+            :disabled="ratingLoading"
+            @click="loadRatings"
+          >
+            {{ ratingLoading ? '查询中…' : '查询' }}
+          </button>
+          <button
+            class="btn mini"
+            :disabled="ratingLoading"
+            @click="resetRatingFilter"
+          >
+            重置
+          </button>
         </div>
         <div class="rating-summary">
           <div class="sum-item">
@@ -291,21 +584,40 @@
           </div>
         </div>
         <div class="rating-list">
-          <div v-for="r in ratingRecords" :key="r.ratingId" class="rating-row">
+          <div
+            v-for="r in ratingRecords"
+            :key="r.ratingId"
+            class="rating-row"
+          >
             <div class="rating-head">
-              <span class="rating-mark" :class="r.rating">{{ r.rating === 'dislike' ? '点踩' : '点赞' }}</span>
+              <span
+                class="rating-mark"
+                :class="r.rating"
+              >{{ r.rating === 'dislike' ? '点踩' : '点赞' }}</span>
               <span class="rating-q">{{ r.question || '（无问题）' }}</span>
             </div>
-            <div v-if="r.answer" class="rating-answer" :title="r.answer">{{ r.answer }}</div>
+            <div
+              v-if="r.answer"
+              class="rating-answer"
+              :title="r.answer"
+            >
+              {{ r.answer }}
+            </div>
             <div class="rating-meta">
               <!-- 业务维度展示插槽（record 含通用字段 + 业务展平字段/ext） -->
-              <slot name="rating-meta-extra" :record="r"></slot>
+              <slot
+                name="rating-meta-extra"
+                :record="r"
+              ></slot>
               <span v-if="r.operator">{{ r.operator }}</span>
               <span v-if="r.messageTime">消息 {{ formatTime(r.messageTime) }}</span>
               <span v-if="r.ratingTime">评价 {{ formatTime(r.ratingTime) }}</span>
             </div>
           </div>
-          <div v-if="!ratingLoading && !ratingRecords.length" class="list-empty">
+          <div
+            v-if="!ratingLoading && !ratingRecords.length"
+            class="list-empty"
+          >
             暂无评价记录{{ ratingEmptyHint ? `——${ratingEmptyHint}` : '' }}
           </div>
         </div>
@@ -316,10 +628,10 @@
 
 <script lang="ts" setup>
 import { ApartmentOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { VueFlow } from '@vue-flow/core'
 import type { Connection, EdgeMouseEvent, NodeMouseEvent } from '@vue-flow/core'
+import { message } from 'ant-design-vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 
@@ -459,7 +771,7 @@ const props = withDefaults(
     extraTabs?: SkillExtraTab[]
     /** 评价业务筛选维度（extEquals 精确匹配；业务插槽维护值，组件查询时带上） */
     ratingExtEquals?: Record<string, string>
-    /** 空态业务引导文案（如"去 #/insight/chatbi 提问后回来刷新"） */
+    /** 空态业务引导文案（如"去问答页提问后回来刷新"） */
     traceEmptyHint?: string
     ratingEmptyHint?: string
   }>(),

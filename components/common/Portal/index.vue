@@ -853,6 +853,7 @@ let initFinished = false
  * @param gridCardWidth grid模式卡片宽度
  * @param showSearchTags 是否显示搜索条件标签
  * @param computedColumns 单元格公式
+ * @param portalConfig 外部直传的 Portal 配置（smart-query plan 推导等，传了则跳过按 tableId 拉取 sys_portal_table）
  */
 const props = withDefaults(defineProps<{
     baseDomain?: string,
@@ -917,6 +918,8 @@ const props = withDefaults(defineProps<{
     summaryData?: { [key: string]: any }
     /** 自定义行主键字段(默认取 Portal 配置的 idColumn) */
     rowKeyField?: string
+    /** 外部直传的 Portal 配置(smart-query plan 推导等): 跳过按 tableId 拉取 sys_portal_table */
+    portalConfig?: any
   }>(),
   {
     baseDomain: '/' + name,
@@ -975,7 +978,8 @@ const props = withDefaults(defineProps<{
     computedColumns: undefined,
     customColumns: undefined,
     summaryData: undefined,
-    rowKeyField: undefined
+    rowKeyField: undefined,
+    portalConfig: undefined
   })
 const emit = defineEmits<{
   (e: 'configLoaded', config: any, columnArray: any, columns: any, bindTabs: any): void
@@ -2244,7 +2248,11 @@ const init = async () => {
   return await queryDataAsync(condition)
 }
 const initConfig = async () => {
-  return await getPortalConfig(config.tableId).then(async res => {
+  // 外部直传配置优先(smart-query plan 推导产物与 sys_portal_table 记录同构): 无 tableId 记录可拉时跳过查询
+  const loadConfigRes = async () => props.portalConfig
+    ? { payload: props.portalConfig }
+    : await getPortalConfig(config.tableId)
+  return await loadConfigRes().then(async res => {
     // [DEBUG] Portal 初始化诊断
     console.log('[Portal DEBUG] tableId:', config.tableId)
     console.log('[Portal DEBUG] getPortalConfig response:', res)

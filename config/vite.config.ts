@@ -52,10 +52,16 @@ export default defineConfig({
       dts: 'src/auto-import.d.ts'
     }),
     Components({
-      resolvers: [AntDesignVueResolver({
-        importStyle: 'less', // 使用 less 预编译样式，兼容老浏览器
-        resolveIcons: true // 自动按需导入 antd 图标
-      })],
+      resolvers: [
+        // antdv 4.x 缺 es/auto-complete/style 兼容目录，默认 resolver 会注入不存在的样式路径致 vite 解析报错；
+        // AutoComplete 单独解析只导组件（v4 样式运行时 cssinjs 注入，不导 less 无影响）
+        (name: string) => name === 'AAutoComplete'
+          ? { name: 'AutoComplete', from: 'ant-design-vue/es' }
+          : undefined,
+        AntDesignVueResolver({
+          importStyle: 'less', // 使用 less 预编译样式，兼容老浏览器
+          resolveIcons: true // 自动按需导入 antd 图标
+        })],
       dirs: ['src/components', 'src/framework/components'],
       dts: 'src/components.d.ts'
     }),

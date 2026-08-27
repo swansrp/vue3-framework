@@ -515,7 +515,9 @@ export const advancedQueryRequest = (
   showSuccess = false,
   showLoading = false,
   selectColumnList?: string[],
-  distinct?: string
+  distinct?: string,
+  // 智能问数（smart-query）专用：plan 下发的查询上下文，原样带回；普通 portal 查询不传
+  queryContext?: string
 ) => request(advancedQueryApi(type, domain), {}, {
   selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
@@ -523,7 +525,8 @@ export const advancedQueryRequest = (
   pageSize,
   currentPage,
   selectColumnList,
-  distinct
+  distinct,
+  queryContext
 }, showSuccess, showLoading) as Promise<any>
 
 export const advancedSelectRequest = (
@@ -586,7 +589,9 @@ export const advancedStatisticRequest = (
   domain: string = baseDomain,
   showSuccess = false,
   showLoading = false,
-  limit: number | null = null
+  limit: number | null = null,
+  // 智能问数（smart-query）专用：plan 下发的查询上下文，原样带回；普通 portal 查询不传
+  queryContext?: string
 ) => request(advancedStatisticApi(type, domain), {}, {
   selectColumnCondition: Object.fromEntries(selectColumnCondition),
   condition,
@@ -595,7 +600,8 @@ export const advancedStatisticRequest = (
   metricCondition,
   statisticColumn,
   majorCondition,
-  limit
+  limit,
+  queryContext
 }, showSuccess, showLoading) as Promise<any>
 
 export const getByIdRequest = (

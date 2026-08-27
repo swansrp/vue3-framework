@@ -14,12 +14,6 @@
  * visible* 直接写进 config 即可生效：chartDataHelper 构建请求参数时的
  * 回退链 `visibility?.visibleXxx || config.visibleXxx || []` 会读取这些字段。
  */
-import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { getCommonStatistic } from '@/framework/components/common/chartConfig/api'
-import type { DashboardItem, IndicatorNode } from '@/framework/components/common/chartConfig/types'
-import { CHART_TYPE } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
-import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
-
 import { getChatBiSemantic } from './api'
 import type {
   ChartBlueprint,
@@ -30,6 +24,13 @@ import type {
   SemanticValue,
   TableSpec
 } from './types'
+
+import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { getCommonStatistic } from '@/framework/components/common/chartConfig/api'
+import type { DashboardItem, IndicatorNode } from '@/framework/components/common/chartConfig/types'
+import { CHART_TYPE } from '@/framework/components/common/Portal/dashboard/type/AdvancedStatisticReq'
+import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
+
 
 const VALID_CHART_TYPES = Object.values(CHART_TYPE) as string[]
 

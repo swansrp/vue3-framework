@@ -98,7 +98,9 @@ export type UploadModalType = {
   percent: Number,
   failedReason: Array<String>
   startTime: Number,
-  estimatedTime: Number
+  estimatedTime: Number,
+  // 过程日志（可选）：后端异步任务逐条追加，进度窗滚动展示
+  logs?: Array<string>
 }
 
 export type ColumnType = {

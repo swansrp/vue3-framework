@@ -54,6 +54,19 @@
     >
       <template #extra></template>
     </a-result>
+    <!-- 过程日志：后端异步任务（如 LLM 资产生成）逐条上报，滚动展示让用户看见任务在干活 -->
+    <div
+      v-if="['UPLOAD', 'VALIDATE', 'SAVE'].indexOf(config.type) !== -1 && config.logs && config.logs.length > 0"
+      ref="logBox"
+      class="process-log"
+    >
+      <div
+        v-for="(line, idx) in config.logs"
+        :key="idx"
+      >
+        {{ line }}
+      </div>
+    </div>
     <a-result
       v-if="config.type === 'FAILED'"
       status="error"
@@ -135,8 +148,18 @@ const config = reactive({
   percent: 0,
   failedReason: [],
   startTime: 0,
-  estimatedTime: 0
+  estimatedTime: 0,
+  logs: []
 } as UploadModalType)
+// 日志容器：新日志到达时自动滚到底部
+const logBox = ref<HTMLElement>()
+watch(() => (config.logs || []).length, () => {
+  nextTick(() => {
+    if (logBox.value) {
+      logBox.value.scrollTop = logBox.value.scrollHeight
+    }
+  })
+})
 const resetUploadProgress = () => {
   config.type = 'INIT'
   config.percent = 0
@@ -144,13 +167,14 @@ const resetUploadProgress = () => {
   config.file = []
   config.startTime = 0
   config.estimatedTime = 0
+  config.logs = []
   currentTime.value = 0
   progressErrorCount.value = 0
   stopTimer(uploadProgressTimer)
   stopTimer(elapsedTimeTimer)
 }
 const updateProgress = (resp: any) => {
-  const { step, loaded, comments, total } = resp
+  const { step, loaded, comments, total, logs } = resp
   console.debug('updateProgress', step, loaded, comments, total)
   // 重置错误计数器（成功获取到进度数据）
   progressErrorCount.value = 0
@@ -158,6 +182,7 @@ const updateProgress = (resp: any) => {
   config.loaded = loaded
   config.total = total
   config.failedReason = comments || []
+  config.logs = logs || []
   if (total !== 0) {
     config.percent = loaded / total * 100
     // 计算预计剩余时间
@@ -278,5 +303,17 @@ defineExpose({ show, updateProgress })
 </script>
 
 <style scoped>
-
+.process-log {
+  margin-top: 16px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: #f6f8fa;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 12px;
+  line-height: 20px;
+  color: #555;
+}
 </style>

@@ -244,7 +244,7 @@ export interface ChatBiRouteReq {
   history?: ChatBiHistoryItem[]
 }
 
-// ===== 流程编排（DAG 管理页 #/insight/chatbi/config）=====
+// ===== 流程编排（DAG：智能问数工作台菜单）=====
 
 export interface ChatBiFlowNode {
   id: string

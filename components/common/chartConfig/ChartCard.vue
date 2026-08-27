@@ -219,6 +219,7 @@
             :subtitle="''"
             :sort-order="sortOrder"
             :hide-zero-data="hideZeroData"
+            :width="fitWidth"
             height="100%"
             @click="handleChartClick"
           />
@@ -382,6 +383,7 @@ interface Props {
   canResize?: boolean; // 是否可以调整大小
   canDrag?: boolean; // 是否可以拖动(含移到最前/移到最后)
   portalConfig?: any; // 外部传入的 Portal 配置，避免重复请求
+  autoFitWidth?: boolean; // 图表宽度按类目数自适应（问数场景：避免少量柱条拉满整行）
 }
 
 interface Emits {
@@ -410,7 +412,8 @@ const props = withDefaults(defineProps<Props>(), {
   canDelete: true,
   canResize: true,
   canDrag: true,
-  portalConfig: undefined
+  portalConfig: undefined,
+  autoFitWidth: false
 })
 
 // 组件引用
@@ -560,6 +563,19 @@ const chartCategories = computed(() => {
   return buildChartCategories(safeChartData.value, configuredOrder, undefined, sortApplied)
 })
 
+// 图表宽度自适应（autoFitWidth 开启时）：柱形/条形类按类目数定宽（每类目约 88px 含间距），
+// 饼图按扇区数（约 72px），下限 320px；类目数 >8 或折线类（轴需延展）占满容器。
+// 避免 2~3 根柱子拉满整行的稀疏观感
+const fitWidth = computed(() => {
+  if (!props.autoFitWidth) return '100%'
+  const type = chartType.value || 'bar'
+  if (type === 'line' || type === 'ptLine') return '100%'
+  const n = (chartCategories.value || []).length
+  if (n === 0 || n > 8) return '100%'
+  const unit = type === 'pie' || type === 'metricsPie' ? 72 : 88
+  return `min(100%, ${Math.max(n * unit, 320)}px)`
+})
+
 // 维度值映射
 const dimensionValueMap = computed(() => {
   if (!indicatorConfig.value) return { first: {}, second: {} }
@@ -621,13 +637,14 @@ const loadChartData = async () => {
     }
 
     // 调用共享取数逻辑（自动判断 metricsPie / treeStacked / comparison / 默认分支，
-    // 并将可见性烤进请求）
+    // 并将可见性烤进请求）；smart-query 场景额外原样带回 plan 下发的 queryContext
     const { requestParams, response } = await fetchStatisticData(
       portalConfigs.value.url,
       indicatorConfig.value,
       isComparisonCard.value
         ? { comparison: { yearCount: comparisonYearCount.value, month: comparisonMonth.value, scope: comparisonScope.value, showMom: comparisonShowMom.value } }
-        : undefined
+        : undefined,
+      props.indicator.config?.queryContext
     )
 
     // 树形堆叠：实时构建父节点/叶子「名->值」映射，供颜色查找与维度编码（存储配置中维度为 null）
@@ -1289,7 +1306,7 @@ defineExpose({
       display: flex;
       flex-direction: column;
 
-      // 为图表设置适合卡片的样式
+      // 为图表设置适合卡片的样式；宽度自适应时图表容器水平居中（width=100% 时居中无副作用）
       :deep(.universal-chart-container) {
         --chart-min-height: 100%;
         --chart-min-height-sm: 100%;
@@ -1299,6 +1316,7 @@ defineExpose({
         margin: 0;
         padding: 0; // 移除所有内边距，让图表占满整个可用空间
         box-shadow: none; // 移除多余阴影
+        align-items: center;
         border-radius: 0; // 卡片内部不需要圆角
         background: transparent; // 使用卡片背景
 

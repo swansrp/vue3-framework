@@ -1,7 +1,7 @@
 /**
- * 智能问数独立路由页（全宽）——framework 层页面（所有项目共享，后端依赖 insight 模块即可用）
+ * 智能问数页（全宽）——framework 层页面（所有项目共享，后端依赖 insight 模块即可用）
  *
- * 访问：#/insight/chatbi?tableId=PmpProjectlifeCycleDataset
+ * 入口：DB 菜单「智能问数」（ChatBiAsk，component 直达本文件）；
  * query 不带 tableId 时进入全局模式：先经 LLM 路由选出最相关看板再问答。
  */
 <template>

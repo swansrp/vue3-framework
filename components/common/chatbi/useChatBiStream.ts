@@ -4,7 +4,7 @@
  * axios 不支持流式读取响应体，这里用原生 fetch + ReadableStream 手动解析 SSE 帧；
  * 鉴权头与 request.ts 拦截器保持一致（Bearer + localStorage 带前缀取值）。
  *
- * 事件协议（与后端 ChatBiSseSender 对齐）：
+ * 事件协议（与后端 SseEventSender 对齐）：
  * - conv：对话标识（先于 delta 下发；新对话由后端创建，前端续问按它续接）
  * - delta：token 增量片段
  * - spec：chart-spec JSON 全文（done 之前至多一次）
@@ -14,11 +14,11 @@
  */
 import { ref } from 'vue'
 
-import { name } from '@/../package.json'
-import { localStorageMethods } from '@/framework/utils/common'
-import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
-
 import type { ChatBiAskReq, ChatBiSpec } from './types'
+
+import { name } from '@/../package.json'
+import { postSse, readSseStream } from '@/framework/utils/sse'
+
 
 const ASK_URL = import.meta.env.VITE_baseURL + '/' + name + '/web/insight/chatbi/ask'
 
@@ -44,21 +44,12 @@ export function useChatBiStream() {
     controller = new AbortController()
     loading.value = true
     try {
-      const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
-      const resp = await fetch(ASK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: 'Bearer ' + token } : {})
-        },
-        body: JSON.stringify(req),
-        signal: controller.signal
-      })
+      const resp = await postSse(ASK_URL, req, controller.signal)
       if (!resp.ok || !resp.body) {
         handlers.onError?.(resp.status === 401 ? '登录状态已失效，请重新登录' : `请求失败（HTTP ${resp.status}）`)
         return
       }
-      await readSseStream(resp.body, handlers)
+      await readSseStream(resp.body, (event, data) => dispatchSseEvent(event, data, handlers))
     } catch (e) {
       // 用户主动停止（stop 触发 abort）不算错误，由调用方按 stopped 状态收口
       if ((e as Error)?.name !== 'AbortError') {
@@ -77,45 +68,9 @@ export function useChatBiStream() {
   return { loading, ask, stop }
 }
 
-// ===== SSE 帧解析 =====
+// ===== SSE 事件分发（帧解析已上提 framework/utils/sse，此处只管 chatbi 事件语义） =====
 
-async function readSseStream(body: ReadableStream<Uint8Array>, handlers: ChatBiStreamHandlers): Promise<void> {
-  const reader = body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
-  // 事件块以空行分隔，逐块解析分发；流结束后补分发残留（无尾随空行的末块）
-  const pump = () => {
-    let sep = buffer.indexOf('\n\n')
-    while (sep >= 0) {
-      dispatchSseBlock(buffer.slice(0, sep), handlers)
-      buffer = buffer.slice(sep + 2)
-      sep = buffer.indexOf('\n\n')
-    }
-  }
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    pump()
-  }
-  buffer += decoder.decode()
-  pump()
-  if (buffer.trim()) dispatchSseBlock(buffer, handlers)
-}
-
-function dispatchSseBlock(block: string, handlers: ChatBiStreamHandlers): void {
-  let event = 'message'
-  const dataLines: string[] = []
-  for (const rawLine of block.split('\n')) {
-    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
-    if (line.startsWith('event:')) {
-      event = line.slice(6).trim()
-    } else if (line.startsWith('data:')) {
-      // 后端多行内容逐行拆成多条 data 行，客户端按 SSE 规范用 \n 拼回原文
-      dataLines.push(line.slice(5).replace(/^ /, ''))
-    }
-  }
-  const data = dataLines.join('\n')
+function dispatchSseEvent(event: string, data: string, handlers: ChatBiStreamHandlers): void {
   switch (event) {
     case 'conv':
       if (data) handlers.onConversation?.(data)

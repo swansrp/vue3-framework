@@ -37,6 +37,7 @@ export interface DashboardItem {
     url?: string
     columns?: any[]
     indicator?: string | any // 保存的指标配置JSON字符串或对象
+    queryContext?: string // 智能问数（smart-query）：plan 下发的查询上下文，取数时原样带回
   }
   indicatorId?: string
 }

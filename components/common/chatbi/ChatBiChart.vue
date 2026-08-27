@@ -19,6 +19,7 @@
       :can-resize-personal-indicators="false"
       :can-drag="false"
       :portal-config="portalConfig"
+      auto-fit-width
     />
   </div>
 </template>
@@ -32,21 +33,30 @@ import type { DashboardItem } from '@/framework/components/common/chartConfig/ty
 
 interface Props {
   charts: DashboardItem[]
-  tableId: string
+  tableId?: string
   loading?: boolean
   // 面板窄容器默认 4 列（默认卡片 xGrid=4 即整行宽），全宽路由页可传 12
   gridColumns?: number
+  // 外部直传的 Portal 配置（smart-query 场景由 /plan 推导，无 sys_portal_table 记录可拉）；
+  // 传了就跳过按 tableId 拉取
+  portalConfig?: any
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
-  gridColumns: 4
+  gridColumns: 4,
+  portalConfig: undefined
 })
 
 // Portal 配置模块级缓存：多个消息的图表共享，同 tableId 只拉一次
 const portalConfigCache = new Map<string, any>()
 
 const portalConfig = ref<any>(null)
+
+// 外部直传优先（smart-query：plan 产物自带 url/columns，无 tableId 可拉）
+watch(() => props.portalConfig, cfg => {
+  if (cfg) portalConfig.value = cfg
+}, { immediate: true })
 
 // specMerge 产出的图表坐标均为占位值 (1,1)，而 ChartGrid 按 xPosition/yPosition 做 CSS Grid 绝对定位，
 // 多图会全部叠在同一格；这里按 gridColumns 做 first-fit 紧凑布局（先填满行再换行），保证互不重叠。
@@ -90,8 +100,8 @@ const layoutCharts = computed<DashboardItem[]>(() => {
   return result
 })
 
-const loadPortalConfig = async (tableId: string) => {
-  if (!tableId) return
+const loadPortalConfig = async (tableId?: string) => {
+  if (!tableId || props.portalConfig) return
   const cached = portalConfigCache.get(tableId)
   if (cached) {
     portalConfig.value = cached

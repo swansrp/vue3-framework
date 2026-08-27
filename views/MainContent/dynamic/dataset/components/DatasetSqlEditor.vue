@@ -25,10 +25,12 @@
         label="数据源"
         name="dataSource"
       >
-        <a-input
+        <a-select
           v-model:value="formState.dataSource"
+          :options="dsNameOptions"
           placeholder="默认: master"
-          style="width: 140px"
+          style="width: 160px"
+          show-search
         />
       </a-form-item>
       <a-form-item
@@ -242,6 +244,7 @@ import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 
 import type { DatasetInfo, DatasetTableInfo, DatasetColumnInfo } from '../types'
 
+import { listDataSourceNames } from '@/framework/apis/dataSource'
 import { getSql, parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
 
 const props = defineProps<{
@@ -279,6 +282,19 @@ const formState = reactive({
   dataSource: 'master',
   sql: '',
 })
+
+// 可用数据源下拉（yml 静态定义 + 数据源管理配置，后端 /forge/datasource/admin/names）
+const dsNameOptions = ref<Array<{ value: string, label: string }>>([])
+const loadDsNames = async () => {
+  try {
+    const res = await listDataSourceNames()
+    const names: string[] = Array.isArray(res?.payload) ? res.payload : []
+    dsNameOptions.value = names.map((n) => ({ value: n, label: n }))
+  } catch (e) {
+    console.error('加载可用数据源失败:', e)
+  }
+}
+loadDsNames()
 
 // SQL语法自动校验（复用后端 parseSql，与保存/预览同一解析器）
 const syntaxStatus = ref<'idle' | 'checking' | 'valid' | 'invalid'>('idle')
