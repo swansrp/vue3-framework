@@ -353,7 +353,9 @@
               size="small"
               @click="openReviewReport"
             >
-              评审报告<template v-if="openQuestionable > 0">（{{ openQuestionable }} 条商榷待处理）</template>
+              评审报告<template v-if="openQuestionable > 0">
+                （{{ openQuestionable }} 条商榷待处理）
+              </template>
             </a-button>
             <span
               v-if="entActive.certified"
@@ -639,12 +641,20 @@
             button-style="solid"
             class="review-filter"
           >
-            <a-radio-button value="all">全部</a-radio-button>
-            <a-radio-button value="open">待处理商榷</a-radio-button>
-            <a-radio-button value="done">已处理</a-radio-button>
+            <a-radio-button value="all">
+              全部
+            </a-radio-button>
+            <a-radio-button value="open">
+              待处理商榷
+            </a-radio-button>
+            <a-radio-button value="done">
+              已处理
+            </a-radio-button>
           </a-radio-group>
         </div>
-        <div class="review-summary-tip">商榷项请逐条「去修正」→ 改后重认证再重新沉淀模板 → 回报告点「标记已处理」消除待办</div>
+        <div class="review-summary-tip">
+          商榷项请逐条「去修正」→ 改后重认证再重新沉淀模板 → 回报告点「标记已处理」消除待办
+        </div>
         <div
           v-for="item in filteredReviewItems"
           :key="item.__idx"
@@ -658,12 +668,16 @@
             <a-tag
               v-if="item.resolved"
               color="green"
-            >已处理</a-tag>
+            >
+              已处理
+            </a-tag>
             <span class="review-item-table">{{ item.table }}</span>
             <a-tag
               v-if="item.column"
               color="orange"
-            >{{ item.column }}</a-tag>
+            >
+              {{ item.column }}
+            </a-tag>
             <a-button
               v-if="item.verdict === 'questionable' && !item.resolved"
               type="link"
@@ -684,15 +698,21 @@
           <div
             v-if="item.issue"
             class="review-item-line"
-          >疑点：{{ item.issue }}</div>
+          >
+            疑点：{{ item.issue }}
+          </div>
           <div
             v-if="item.evidence"
             class="review-item-line"
-          >证据：{{ item.evidence }}</div>
+          >
+            证据：{{ item.evidence }}
+          </div>
           <div
             v-if="item.suggestion"
             class="review-item-line"
-          >建议：{{ item.suggestion }}</div>
+          >
+            建议：{{ item.suggestion }}
+          </div>
         </div>
       </template>
       <a-empty

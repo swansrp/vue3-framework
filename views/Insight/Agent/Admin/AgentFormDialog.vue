@@ -73,9 +73,15 @@
           v-model:value="agentForm.thinkingBudget"
           placeholder="仅问数链生效；资产生成/评审的思考强度在系统参数配置"
         >
-          <a-select-option :value="0">最强（不限制思考）</a-select-option>
-          <a-select-option :value="8192">均衡（8k token 上限）</a-select-option>
-          <a-select-option :value="2048">轻量（2k token 上限）</a-select-option>
+          <a-select-option :value="0">
+            最强（不限制思考）
+          </a-select-option>
+          <a-select-option :value="8192">
+            均衡（8k token 上限）
+          </a-select-option>
+          <a-select-option :value="2048">
+            轻量（2k token 上限）
+          </a-select-option>
         </a-select>
       </a-form-item>
       <a-form-item

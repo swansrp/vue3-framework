@@ -60,8 +60,18 @@
           <div class="tpl-detail-head">
             <div class="tpl-detail-meta">
               <span class="tpl-detail-table">{{ entity.table }}</span>
-              <a-tag v-if="entity.certified" color="green">已认证</a-tag>
-              <a-tag v-else-if="entity.confirmed" color="blue">已确认</a-tag>
+              <a-tag
+                v-if="entity.certified"
+                color="green"
+              >
+                已认证
+              </a-tag>
+              <a-tag
+                v-else-if="entity.confirmed"
+                color="blue"
+              >
+                已确认
+              </a-tag>
               <span class="tpl-detail-src">来源 Agent：{{ sourceAgent || '-' }} · 更新于 {{ updateTime }}</span>
             </div>
             <div class="tpl-detail-btns">

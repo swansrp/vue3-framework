@@ -360,13 +360,17 @@
               class="confirmation-tag"
               color="success"
               :bordered="false"
-            >已确认</a-tag>
+            >
+              已确认
+            </a-tag>
             <a-tag
               v-else-if="c.status === 'revised'"
               class="confirmation-tag"
               color="processing"
               :bordered="false"
-            >已改口径</a-tag>
+            >
+              已改口径
+            </a-tag>
           </div>
           <div class="confirmation-row">
             <span class="confirmation-label">采纳口径</span>
@@ -389,7 +393,9 @@
           <div
             v-if="c.status === 'revised' && c.resolveNote"
             class="confirmation-note"
-          >新口径：{{ c.resolveNote }}</div>
+          >
+            新口径：{{ c.resolveNote }}
+          </div>
           <div
             v-else-if="c.status === 'pending'"
             class="confirmation-actions"
