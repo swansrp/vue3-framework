@@ -3,7 +3,7 @@
     :mask-closable="false"
     :ok-text="config.modal.type === 'add' ? '保存' : '更新'"
     :open="config.modal.show"
-    :title="config.modal.type === 'add' ? '新增数据' : '编辑数据'"
+    :title="config.modal.title || (config.modal.type === 'add' ? '新增数据' : '编辑数据')"
     :width="config.modal.type === 'add' ? config.addWidth : config.editWidth"
     :wrap-class-name="(config.modal.type === 'add' ? config.addWidth==='100%' : config.editWidth==='100%') ? 'full-modal' : ''"
     :z-index="999"
@@ -16,200 +16,211 @@
       :model="config.modal.data"
       layout="vertical"
     >
-      <a-descriptions
-        v-for="(value, index) in columnDisplayEditMap"
-        :key="index"
-        :column="config.descriptionCount"
-        :size="config.size"
-        :title="value[0] || ''"
-        bordered
-        style="margin-top: 20px"
+      <!-- 业务页可用 #form 作用域插槽复写表单区(data 为表单数据对象, 校验/保存/刷新仍走 Portal 原流程); 未传时走默认配置渲染。
+           form-default-render: label 隐藏规则只作用于默认渲染(label 由 descriptions 单元格提供), 不影响自定义表单的 label 展示 -->
+      <slot
+        :data="config.modal.data"
+        :modal="config.modal"
+        :type="config.modal.type"
+        name="form"
       >
-        <template
-          v-for="column in value[1].filter(item => { return config.modal.type === 'add' ? item.addShow : item.editShow })"
-          :key="column.dataIndex"
-        >
-          <a-descriptions-item
-            :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
-            :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
-            :span="config.modal.type === 'add' ? column.addSize : column.editSize"
+        <div class="form-default-render">
+          <a-descriptions
+            v-for="(value, index) in columnDisplayEditMap"
+            :key="index"
+            :column="config.descriptionCount"
+            :size="config.size"
+            :title="value[0] || ''"
+            bordered
+            style="margin-top: 20px"
           >
-            <template #label>
-              <span
-                v-if="column.required"
-                style="color: var(--danger); margin-right: 4px;"
-              >*</span>
-              <span>{{ strRemoveLF(column.title) }}</span>
-            </template>
-            <a-form-item
-              :name="column.dataIndex"
-              :rules="column.required ? [{ required: true, message: '请输入' + strRemoveLF(column.title) }] : []"
+            <template
+              v-for="column in value[1].filter(item => { return config.modal.type === 'add' ? item.addShow : item.editShow })"
+              :key="column.dataIndex"
             >
-              <a-input
-                v-if="column.fieldType === FIELD_TYPE.INPUT"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :placeholder="column.defaultValue"
-                :value="config.modal.data[column.dataIndex]"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-              <a-input-number
-                v-else-if="column.fieldType === FIELD_TYPE.NUMBER"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :max="column.max"
-                :min="column.min"
-                :value="config.modal.data[column.dataIndex]"
-                string-mode
-                style="width: 100%"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-              <a-radio-group
-                v-else-if="column.fieldType === FIELD_TYPE.SWITCH"
-                v-model:value="config.modal.data[column.dataIndex]"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                style="display: flex; align-items: center; gap: 8px;"
+              <a-descriptions-item
+                :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
+                :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
+                :span="config.modal.type === 'add' ? column.addSize : column.editSize"
               >
-                <a-radio value="1">
-                  是
-                </a-radio>
-                <a-radio value="0">
-                  否
-                </a-radio>
-              </a-radio-group>
-              <a-select
-                v-else-if="column.fieldType === FIELD_TYPE.SELECT"
-                :bordered="false"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :options="column.referenceDictOption || []"
-                :value="config.modal.data[column.dataIndex]"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-              <a-select
-                v-else-if="column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
-                :bordered="false"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :options="column.referenceDictOption || []"
-                :value="getMultiSelectValue(config.modal.data[column.dataIndex])"
-                mode="multiple"
-                @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
-              />
-              <a-tree-select
-                v-else-if="column.fieldType === FIELD_TYPE.TREE"
-                :bordered="false"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :tree-data="column.referenceDictOption || []"
-                :value="config.modal.data[column.dataIndex]"
-                allow-clear
-                tree-default-expand-all
-                tree-node-filter-prop="label"
-                @select="v => config.modal.data[column.dataIndex] = v"
-              />
-              <a-tree-select
-                v-else-if="column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
-                :bordered="false"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :tree-data="column.referenceDictOption || []"
-                :value="getMultiSelectValue(config.modal.data[column.dataIndex])"
-                allow-clear
-                multiple
-                tree-default-expand-all
-                tree-node-filter-prop="label"
-                @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
-              />
-              <a-date-picker
-                v-else-if="column.fieldType === FIELD_TYPE.DATE"
-                :allow-clear="false"
-                :bordered="false"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
-                @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
-              />
-              <a-date-picker
-                v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
-                :allow-clear="false"
-                :bordered="false"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
-                show-time
-                @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
-              />
-              <a-textarea
-                v-else-if="column.fieldType === FIELD_TYPE.HREF
-                  || column.fieldType === FIELD_TYPE.HTML
-                  || column.fieldType === FIELD_TYPE.TEXT_AREA"
-                :auto-size="{ minRows: 3 }"
-                :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                :placeholder="column.defaultValue"
-                :value="config.modal.data[column.dataIndex]"
-                style="width: 100%; margin: 0px 3px"
-                @update:value=" v => config.modal.data[column.dataIndex] = v"
-              />
-              <div
-                v-else-if="column.fieldType === FIELD_TYPE.IMAGE || column.fieldType === FIELD_TYPE.AUDIO || 
-                  column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE"
-                style="display: flex; justify-content: center"
-              >
-                <div
-                  v-if="config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
+                <template #label>
+                  <span
+                    v-if="column.required"
+                    style="color: var(--danger); margin-right: 4px;"
+                  >*</span>
+                  <span>{{ strRemoveLF(column.title) }}</span>
+                </template>
+                <a-form-item
+                  :name="column.dataIndex"
+                  :rules="column.required ? [{ required: true, message: '请输入' + strRemoveLF(column.title) }] : []"
                 >
-                  <multimedia
-                    v-model="config.modal.data[column.dataIndex]"
-                    :delete-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
-                    :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35"
-                    :type="column.fieldType"
-                    :upload-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
-                    :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80"
-                    use-original-file-name
-                    @delete="cleanUpload(column)"
+                  <a-input
+                    v-if="column.fieldType === FIELD_TYPE.INPUT"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :placeholder="column.defaultValue"
+                    :value="config.modal.data[column.dataIndex]"
+                    @update:value=" v => config.modal.data[column.dataIndex] = v"
                   />
-                </div>
-                <a-button
-                  v-else
-                  :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                  :type="'dashed'"
-                  @click="showUploadDialogBox(column)"
-                >
-                  {{ '点击上传' + column.title }}
-                </a-button>
-              </div>
-              <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY_CONDITION">
-                <delete-outlined
-                  v-if="config.modal.data[column.dataIndex] !== null"
-                  :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                  @click="cleanEntityCondition(column)"
-                />
-                <a-button
-                  :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                  :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
-                  @click="showEntityConditionDialogBox(column, config.modal.data[column.dataIndex])"
-                >
-                  设置条件
-                </a-button>
-              </div>
-              <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY">
-                <delete-outlined
-                  v-if="config.modal.data[column.dataIndex] !== null"
-                  :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                  @click="cleanEntity(column)"
-                />
-                <a-button
-                  :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                  :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
-                  @click="showEntityDialogBox(column)"
-                >
-                  {{ strRemoveLF(getEntityDialogBoxLabel(column)) }}
-                </a-button>
-              </div>
-            </a-form-item>
-          </a-descriptions-item>
-          <a-descriptions-item
-            v-if="config.modal.type === 'add' ? column.addPadding !== 0 : column.editPadding !== 0"
-            :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
-            :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
-            :span="config.modal.type === 'add' ? column.addPadding : column.editPadding"
-            label=""
-          />
-        </template>
-      </a-descriptions>
+                  <a-input-number
+                    v-else-if="column.fieldType === FIELD_TYPE.NUMBER"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :max="column.max"
+                    :min="column.min"
+                    :value="config.modal.data[column.dataIndex]"
+                    string-mode
+                    style="width: 100%"
+                    @update:value=" v => config.modal.data[column.dataIndex] = v"
+                  />
+                  <a-radio-group
+                    v-else-if="column.fieldType === FIELD_TYPE.SWITCH"
+                    v-model:value="config.modal.data[column.dataIndex]"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    style="display: flex; align-items: center; gap: 8px;"
+                  >
+                    <a-radio value="1">
+                      是
+                    </a-radio>
+                    <a-radio value="0">
+                      否
+                    </a-radio>
+                  </a-radio-group>
+                  <a-select
+                    v-else-if="column.fieldType === FIELD_TYPE.SELECT"
+                    :bordered="false"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :options="column.referenceDictOption || []"
+                    :value="config.modal.data[column.dataIndex]"
+                    @update:value=" v => config.modal.data[column.dataIndex] = v"
+                  />
+                  <a-select
+                    v-else-if="column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
+                    :bordered="false"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :options="column.referenceDictOption || []"
+                    :value="getMultiSelectValue(config.modal.data[column.dataIndex])"
+                    mode="multiple"
+                    @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
+                  />
+                  <a-tree-select
+                    v-else-if="column.fieldType === FIELD_TYPE.TREE"
+                    :bordered="false"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :tree-data="column.referenceDictOption || []"
+                    :value="config.modal.data[column.dataIndex]"
+                    allow-clear
+                    tree-default-expand-all
+                    tree-node-filter-prop="label"
+                    @select="v => config.modal.data[column.dataIndex] = v"
+                  />
+                  <a-tree-select
+                    v-else-if="column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
+                    :bordered="false"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :tree-data="column.referenceDictOption || []"
+                    :value="getMultiSelectValue(config.modal.data[column.dataIndex])"
+                    allow-clear
+                    multiple
+                    tree-default-expand-all
+                    tree-node-filter-prop="label"
+                    @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
+                  />
+                  <a-date-picker
+                    v-else-if="column.fieldType === FIELD_TYPE.DATE"
+                    :allow-clear="false"
+                    :bordered="false"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
+                    @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
+                  />
+                  <a-date-picker
+                    v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
+                    :allow-clear="false"
+                    :bordered="false"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
+                    show-time
+                    @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
+                  />
+                  <a-textarea
+                    v-else-if="column.fieldType === FIELD_TYPE.HREF
+                      || column.fieldType === FIELD_TYPE.HTML
+                      || column.fieldType === FIELD_TYPE.TEXT_AREA"
+                    :auto-size="{ minRows: 3 }"
+                    :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                    :placeholder="column.defaultValue"
+                    :value="config.modal.data[column.dataIndex]"
+                    style="width: 100%; margin: 0px 3px"
+                    @update:value=" v => config.modal.data[column.dataIndex] = v"
+                  />
+                  <div
+                    v-else-if="column.fieldType === FIELD_TYPE.IMAGE || column.fieldType === FIELD_TYPE.AUDIO || 
+                      column.fieldType === FIELD_TYPE.VIDEO || column.fieldType === FIELD_TYPE.FILE"
+                    style="display: flex; justify-content: center"
+                  >
+                    <div
+                      v-if="config.modal.data[column.dataIndex] && isNotEmpty(config.modal.data[column.dataIndex])"
+                    >
+                      <multimedia
+                        v-model="config.modal.data[column.dataIndex]"
+                        :delete-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
+                        :height="column.fieldType === FIELD_TYPE.IMAGE ? 'auto' : 35"
+                        :type="column.fieldType"
+                        :upload-able="config.modal.type === 'add' ? !column.addDisabled : !column.editDisabled"
+                        :width="column.fieldType === FIELD_TYPE.IMAGE ? 100 : 80"
+                        use-original-file-name
+                        @delete="cleanUpload(column)"
+                      />
+                    </div>
+                    <a-button
+                      v-else
+                      :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                      :type="'dashed'"
+                      @click="showUploadDialogBox(column)"
+                    >
+                      {{ '点击上传' + column.title }}
+                    </a-button>
+                  </div>
+                  <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY_CONDITION">
+                    <delete-outlined
+                      v-if="config.modal.data[column.dataIndex] !== null"
+                      :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                      @click="cleanEntityCondition(column)"
+                    />
+                    <a-button
+                      :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                      :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
+                      @click="showEntityConditionDialogBox(column, config.modal.data[column.dataIndex])"
+                    >
+                      设置条件
+                    </a-button>
+                  </div>
+                  <div v-else-if="column.fieldType === FIELD_TYPE.ENTITY">
+                    <delete-outlined
+                      v-if="config.modal.data[column.dataIndex] !== null"
+                      :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                      @click="cleanEntity(column)"
+                    />
+                    <a-button
+                      :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
+                      :type="config.modal.data[column.dataIndex] !== null ? 'link' : 'dashed'"
+                      @click="showEntityDialogBox(column)"
+                    >
+                      {{ strRemoveLF(getEntityDialogBoxLabel(column)) }}
+                    </a-button>
+                  </div>
+                </a-form-item>
+              </a-descriptions-item>
+              <a-descriptions-item
+                v-if="config.modal.type === 'add' ? column.addPadding !== 0 : column.editPadding !== 0"
+                :content-style="{width: (column.detailSize) / config.descriptionCount * 100 - 1 / config.descriptionCount * 30 + '%'}"
+                :label-style="{width: 1 / config.descriptionCount * 30 + '%'}"
+                :span="config.modal.type === 'add' ? column.addPadding : column.editPadding"
+                label=""
+              />
+            </template>
+          </a-descriptions>
+        </div>
+      </slot>
     </a-form>
   </a-modal>
   <dialog-box
@@ -393,9 +404,11 @@ const cleanUpload = (column: ColumnType) => {
 </script>
 
 <style lang="less" scoped>
-:deep(.ant-form-item-label) {
-  label {
-    display: none;
+:deep(.form-default-render) {
+  .ant-form-item-label {
+    label {
+      display: none;
+    }
   }
 }
 

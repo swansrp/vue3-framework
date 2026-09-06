@@ -680,7 +680,19 @@
         @cancel="handleModalCancel"
         @close="handleModalClose"
         @confirm="handleModalConfirm"
-      />
+      >
+        <template
+          v-if="$slots.modifyForm"
+          #form="slotProps"
+        >
+          <slot
+            :data="slotProps.data"
+            :modal="slotProps.modal"
+            name="modifyForm"
+          >
+          </slot>
+        </template>
+      </portal-edit-modal>
     </slot>
     <slot
       v-else-if="config.modal.type === 'add'"
@@ -694,7 +706,19 @@
         @cancel="handleModalCancel"
         @close="handleModalClose"
         @confirm="handleModalConfirm"
-      />
+      >
+        <template
+          v-if="$slots.addForm"
+          #form="slotProps"
+        >
+          <slot
+            :data="slotProps.data"
+            :modal="slotProps.modal"
+            name="addForm"
+          >
+          </slot>
+        </template>
+      </portal-edit-modal>
     </slot>
     <portal-upload
       ref="portalUploadModal"
