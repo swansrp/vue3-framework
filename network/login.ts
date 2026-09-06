@@ -15,9 +15,24 @@ import { AUTHORIZATION_TOKEN, ID_TOKEN, REFRESH_TOKEN } from '@/framework/utils/
 const userStore = useUserStore(pinia)
 const commonStore = useCommonStore(pinia)
 let afterLoginHandler: Function
+// 宿主注入的 SSO 登录发起器：设置后 _executeLogin 不再请求认证中心 /auth/login，
+// 转由宿主自行发起登录（如 VITE_ssoType=feishu 时跳飞书授权页）。不注入则保持内建认证中心行为
+let ssoEntryHandler: ((token?: string) => any) | null = null
+export const setSsoEntryHandler = (handler: ((token?: string) => any) | null) => {
+  ssoEntryHandler = handler
+}
 localStorageMethods.setLocalStorage('loginRetryTime', '3')
 const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
 export const navigation2Login = (includeRedirectUri = true) => {
+  // 宿主自定义 SSO（如飞书）：任何会话失效（含主动登出触发的 401）一律自动重新发起授权，
+  // 全程不出现登录页——纯 SSO 单身份系统，用户无账号密码、无切换账号需求
+  if (ssoEntryHandler) {
+    // 与内建认证中心分支一致不清本地 token：失效 token 由 verifyLogin 识别后
+    // 经 _executeLogin 重新授权并覆盖写入；仅复位 hasLogin，
+    // 避免 authorize 请求失败滞留页面时守卫放行进入"看似已登录"状态
+    commonStore.hasLogin = false
+    return Promise.resolve(ssoEntryHandler())
+  }
   let redirectUri
   if (isNotEmpty(import.meta.env.VITE_ssoDomain)) {
     redirectUri = import.meta.env.VITE_ssoDomain
@@ -51,6 +66,9 @@ const _executeLogin = (token: any) => {
     // 如果当前已经在 login 页面，不需要设置 redirect_uri，否则登录成功后又会跳回 login
     const redirect_uri = url && url !== 'login' ? url : undefined
     return router.replace({ path: ssoLoginUrl, query: { redirect_uri } as LocationQueryRaw })
+  } else if (ssoEntryHandler) {
+    // 宿主自定义 SSO（如飞书）：由注入器发起登录
+    return Promise.resolve(ssoEntryHandler(token)).then(() => undefined)
   } else {
     return ssoLogin(userStore.getIdToken)
       .then(res => {
