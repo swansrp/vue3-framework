@@ -94,6 +94,18 @@ export const setEnableEnterFirstDynamicRoute = (enable: boolean) => {
 }
 
 /**
+ * 设置默认内容组件: 访问根路径 '/' 时, content-container 内显示该组件
+ * 不占路由、不进菜单树, 各业务系统在 main.ts 中注册自己的默认内容(如工作台内容)
+ * @param component - 组件的动态导入函数, 传 null 可取消注册
+ */
+let defaultContentComponent: (() => Promise<any>) | null = null
+export const setDefaultContentComponent = (component: (() => Promise<any>) | null) => {
+  defaultContentComponent = component
+}
+
+export const getDefaultContentComponent = () => defaultContentComponent
+
+/**
  * 设置根路径访问模式
  * @param mode - 'disabled' | 'auto' | 'showMenuOnly'
  */

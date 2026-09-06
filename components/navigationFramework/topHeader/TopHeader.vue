@@ -7,6 +7,8 @@
         padding: tabStore.leftNavCollapsed ? '0' : '0 20px'
       }"
       class="top_title"
+      title="点击返回工作台"
+      @click="goHome"
     >
       <img
         v-if="tabStore.isNeedLeftNav && !tabStore.leftNavCollapsed"
@@ -366,6 +368,7 @@
 <script lang="ts" setup>
 import { PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { Md5 } from 'ts-md5'
+import { useRouter } from 'vue-router'
 
 import { title as projectName } from '../../../../../package.json'
 
@@ -424,6 +427,8 @@ const handleThemeSelect = (e: any) => {
 
 const genderOptionList = ref<Array<{value: string, label: string}>>([])
 const router = useRouter()
+// 点击左上角标题区返回首页: 交由框架根路径逻辑处理(auto 模式自动进入第一个动态路由), 不硬编码业务路径
+const goHome = () => router.push('/').catch(() => {})
 const localLoginType = import.meta.env.VITE_ssoDomain === 'localhost'
 const modifyPasswordModal = reactive({
   open: false,
@@ -519,6 +524,12 @@ onMounted(() => {
   position: relative;
   z-index: 999;
   transition: all var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    filter: brightness(1.15);
+  }
 }
 
 /* Logo区域右侧柔和分隔 - 用伪元素替代border-right，更精致 */

@@ -13,7 +13,15 @@
         <slot name="header-extra"></slot>
       </template>
       <template #router-view>
-        <router-view v-slot="{ Component }">
+        <!-- 根路径且注册了默认内容组件时, 显示业务层默认内容(不占路由) -->
+        <component
+          :is="defaultContentComp"
+          v-if="isRootView && defaultContentComp"
+        />
+        <router-view
+          v-else
+          v-slot="{ Component }"
+        >
           <keep-alive :include="routeStore.getKeepAliveList()">
             <Component
               :is="Component"
@@ -38,10 +46,18 @@ import NavigationFramework from '@/framework/components/navigationFramework/inde
 
 import { theme } from 'ant-design-vue'
 
+import { getDefaultContentComponent } from '@/framework/router'
 import { useRouteStore } from '@/framework/store/route'
 import { useThemeStore } from '@/framework/store/theme'
 
 const themeStore = useThemeStore()
+
+// 当前是否停留在根路径(Root 无子路由匹配), 此时内容区显示业务层注册的默认内容
+const route = useRoute()
+const isRootView = computed(() => route.path === '/' || route.name === 'Root')
+// 默认内容组件(在 main.ts 挂载前注册): 动态导入函数需包 defineAsyncComponent 才能用于 <component :is>
+const registeredContent = getDefaultContentComponent()
+const defaultContentComp = registeredContent ? defineAsyncComponent(registeredContent) : null
 
 // Ant Design 主题配置 - 随系统 data-theme 自动切换
 const antTheme = computed(() => ({
