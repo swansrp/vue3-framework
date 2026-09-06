@@ -92,11 +92,12 @@ export const useRouteStore = defineStore('routeStore', {
             node.path = node.path.substring(1)
           }
           node.name = node.path
-          // antd menu key 是 string类型
+          // antd menu key 是 string类型;后端契约 key 与 menu_id 一致(ac_menu.key 列),
+          // 正常数据不会为空,此分支仅为脏数据止损(空 key 曾致 toString 抛错中断整树注册)
           if (node.key === null || node.key === undefined) {
-            // key 为空的历史数据问题会让 toString 抛错中断整树遍历,导致全部路由注册失败
-            console.warn(`[RouteDebug] 节点 key 为空(数据问题): title=${node.title} path=${node.path},已用 path 兼容`)
-            node.key = node.path
+            console.warn(`[RouteDebug] 节点 key 为空(数据问题): title=${node.title} path=${node.path},已用 menuId/path 兼容`)
+            // menuId 即 key 的本源且全树唯一;path 仅作最后兜底(单段可能重复,但好过中断注册)
+            node.key = node.menuId ?? node.path
           }
           node.key = node.key.toString()
           // 页面标题
