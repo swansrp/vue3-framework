@@ -9,11 +9,13 @@ import { setField } from '@/framework/utils/common'
 
 export const getComponent = (component: string) => {
   const modules = import.meta.glob('@/**/*.vue')
-  if (component.endsWith('.vue')) {
-    return modules[`/src${component}`]
-  } else {
-    return modules[`/src${component}/index.vue`]
+  const moduleKey = component.endsWith('.vue') ? `/src${component}` : `/src${component}/index.vue`
+  const comp = modules[moduleKey]
+  if (!comp) {
+    // 排查菜单数据问题:component 为空时该路由无法注册,刷新/跳转必落 NotFound
+    console.warn(`[RouteDebug] getComponent 未命中: component=${component} 查找键=${moduleKey}`)
   }
+  return comp
 }
 export const useRouteStore = defineStore('routeStore', {
   state: () => {
@@ -33,12 +35,19 @@ export const useRouteStore = defineStore('routeStore', {
     async getDynamicRouteAction() {
       return getRouteTree().then((res) => {
         const routeTree = res.payload
+        if (!routeTree || !routeTree.length) {
+          console.warn('[RouteDebug] menu/tree 返回空树! 检查角色-菜单绑定与接口数据')
+        } else {
+          console.info(`[RouteDebug] menu/tree 顶层节点 ${routeTree.length} 个: `
+            + routeTree.map((n: any) => `${n.title}(path=${n.path},key=${n.key},type=${n.menuType})`).join(' | '))
+        }
         // this.dynamicRoute = _.cloneDeep(routeTree)
         this.dynamicRoute = res.payload
         this.travelRouteTree(routeTree)
         this.clearButtonNode(routeTree)
         
         // 扁平化注册所有路由，确保路径唯一性
+        let registered = 0
         const registerRoutesFlat = (routes: any[], pathPrefix = '') => {
           for (let i = 0; i < routes.length; ++i) {
             const route = routes[i]
@@ -54,6 +63,8 @@ export const useRouteStore = defineStore('routeStore', {
             }
 
             router.addRoute('Root', flatRoute)
+            registered++
+            console.info(`[RouteDebug] addRoute '${fullPath}' component=${route.component ? 'ok' : '缺失!'}`)
             
             // 递归处理子路由
             if (route.children && route.children.length > 0) {
@@ -62,6 +73,7 @@ export const useRouteStore = defineStore('routeStore', {
           }
         }
         registerRoutesFlat(routeTree)
+        console.info(`[RouteDebug] 动态路由注册完成 共 ${registered} 条`)
       })
     },
     // 遍历后台所给的路由树，需要自己手动转换为vue-router可以识别的route形式
@@ -81,6 +93,11 @@ export const useRouteStore = defineStore('routeStore', {
           }
           node.name = node.path
           // antd menu key 是 string类型
+          if (node.key === null || node.key === undefined) {
+            // key 为空的历史数据问题会让 toString 抛错中断整树遍历,导致全部路由注册失败
+            console.warn(`[RouteDebug] 节点 key 为空(数据问题): title=${node.title} path=${node.path},已用 path 兼容`)
+            node.key = node.path
+          }
           node.key = node.key.toString()
           // 页面标题
           node.meta = { title: node.title }
@@ -92,7 +109,13 @@ export const useRouteStore = defineStore('routeStore', {
             parentTitlePathArray.push(node.title)
             setField(routePath2RouteTitlePathMap, parentPathArray.join('/'), parentTitlePathArray.join('/'))
             setField(routePathIsFrameMap, parentPathArray.join('/'), !!+node.isFrame)
-            node.component = getComponent(node.component)
+            // 目录节点(有 children)与未配组件的节点只占层级,无组件;
+            // 只有配了 component 的叶子才查产物模块表,未命中才告警
+            if (!node.component || (node.children && node.children.length > 0)) {
+              node.component = undefined
+            } else {
+              node.component = getComponent(node.component)
+            }
             if (node.component) {
               node.component().then((module: any) => {
                 if (node.isCache === '1') {
