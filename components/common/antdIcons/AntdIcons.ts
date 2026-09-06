@@ -4,7 +4,9 @@ import { createVNode } from 'vue'
 
 const Icon = (props: {icon: string}) => {
   const { icon } = props
-  return createVNode(Icons[icon as keyof typeof Icons])
+  const comp = Icons[icon as keyof typeof Icons]
+  // 菜单未配置图标(或图标名无效)时用默认图标, 避免 createVNode(undefined) 告警
+  return createVNode(comp || Icons.SettingOutlined)
 }
 
 export function setupAntdIcon(app: App<Element>): void {

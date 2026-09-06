@@ -11,9 +11,9 @@ export const getComponent = (component: string) => {
   const modules = import.meta.glob('@/**/*.vue')
   if (component.endsWith('.vue')) {
     return modules[`/src${component}`]
-  } else {
-    return modules[`/src${component}/index.vue`]
   }
+  // 兼容两类菜单 component 值: 以 /index 结尾的值直接拼 .vue(如 Portal/index → Portal/index.vue), 其余拼 /index.vue(如 Portal/dict → dict/index.vue)
+  return modules[`/src${component}.vue`] || modules[`/src${component}/index.vue`]
 }
 export const useRouteStore = defineStore('routeStore', {
   state: () => {
