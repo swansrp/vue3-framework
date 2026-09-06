@@ -150,23 +150,7 @@ function handleRootPath(
 export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const navigationStore = useNavigationStore(pinia)
   const routeStore = useRouteStore(pinia)
-  console.info(`[RouteDebug] enterDynamicRoute: to=${to.fullPath} name=${String(to.name)} dynamicRoute=${routeStore.dynamicRoute.length}条`)
-  // 整页加载(刷新/直接输入URL)直达动态页面:to 在动态路由注册前已被 vue-router
-  // 解析为 catchAll(NotFound);而守卫里 checkLoginState→afterLogin 已完成动态路由
-  // 注册,vue-router 不会因路由表变化重新解析已锁定的匹配,直接 next() 会放行
-  // NotFound 造成"有权限却显示无权限/申请页"。此处重新解析一次,能命中真实路由
-  // 则 replace 重定向;仍匹配不到(菜单里确实没有)才放行 NotFound,不会死循环
-  if (to.name === 'NotFound' && routeStore.dynamicRoute.length > 0) {
-    const target = router.resolve(to.fullPath)
-    console.info(`[RouteDebug] catchAll兑底: 重解析 ${to.fullPath} → name=${String(target.name)} matched=${target.matched.length}`)
-    if (target.matched.length > 0 && target.name !== 'NotFound') {
-      console.info(`[RouteDebug] catchAll兑底: 命中真实路由,replace 重定向`)
-      next({ path: to.fullPath, replace: true })
-      return
-    }
-    console.warn(`[RouteDebug] catchAll兑底: 重解析仍 NotFound,菜单数据里确无此路由,放行 404 页`)
-  }
-  // 归一化路径:去掉首尾斜杠,保证 /forecast 与 /forecast/ 行为一致
+  // 归一化路径：去掉首尾斜杠，保证 /forecast 与 /forecast/ 行为一致
   const routePath = to.path.replace(/^\/+/, '').replace(/\/+$/, '')
   // 目录节点（父节点只占层级、无自身组件）
   const dirNode = routeStore.dynamicRouteMap[routePath]
