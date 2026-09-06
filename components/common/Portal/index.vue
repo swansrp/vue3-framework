@@ -745,6 +745,7 @@ import {
   importAdd,
   importAddProgress,
   updateEntity,
+  updateEntityList,
   updateEntityListSelective,
   updateEntitySelective,
   updateOrder,
@@ -824,6 +825,8 @@ let initFinished = false
  * @param hideAdd 隐藏添加按钮
  * @param hideEdit 隐藏修改按钮
  * @param hideDelete 隐藏删除按钮
+ * @param hideDetail 隐藏右键查看详情
+ * @param strictUpdate 行内保存(单元格/整行/全部)是否用 strict 模式更新(可写入 null, 默认 false 保持 selective)
  * @param hideImport 隐藏导入按钮
  * @param hideExport 隐藏下载按钮
  * @param hideAssociation 隐藏关联信息
@@ -882,6 +885,8 @@ const props = withDefaults(defineProps<{
     hideAdd?: boolean,
     hideEdit?: boolean,
     hideDelete?: boolean,
+    hideDetail?: boolean,
+    strictUpdate?: boolean,
     hideImport?: boolean,
     hideExport?: boolean,
     hideAssociation?: boolean,
@@ -912,6 +917,8 @@ const props = withDefaults(defineProps<{
     rowAllowSelect?: (record: any) => boolean
     showSearchTags?: boolean
     computedColumns?: Record<string, (row: any) => any>
+        /** 查询结果进入组件前的本地转换钩子(注入计算字段/本地排序/本地过滤等, 服务端无法表达的处理) */
+        dataTransformer?: (list: Array<any>) => Array<any>
     /** 外部动态列(透视报表等, 与 data 数据模式配合使用, 优先于 sys_portal_column 配置) */
     customColumns?: Array<ColumnType>
     /** 前端提供的汇总行数据(数据模式下使用) */
@@ -946,6 +953,8 @@ const props = withDefaults(defineProps<{
     hideAdd: false,
     hideEdit: false,
     hideDelete: false,
+    hideDetail: false,
+    strictUpdate: false,
     hideImport: false,
     hideExport: false,
     hideAssociation: false,
@@ -991,7 +1000,7 @@ const slots = useSlots()
 const {
   data, columnFilter, downloadFileName, rowSelectProps, hideAssociation, hideRowSelection,
   columnDisplayCustom, showLoading, hideImport, hideExport,
-  hideAdd, hideEdit, hideDelete, hideRefresh, hideSizeChange
+  hideAdd, hideEdit, hideDelete, hideDetail, hideRefresh, hideSizeChange, strictUpdate
 } = toRefs(props)
 const isBindTabExisted = computed(() => {
   return !hideAssociation.value && bindTabs.value && bindTabs.value.length > 0
@@ -1068,6 +1077,7 @@ const config: TableConfigType = reactive({
   addModalAble: !hideAdd.value,
   editModalAble: !hideEdit.value,
   deleteAble: !hideDelete.value,
+  detailAble: !hideDetail.value,
   importAble: !hideImport.value,
   exportAble: !hideExport.value,
   defaultCondition: {} as ConditionListType,
@@ -1309,7 +1319,9 @@ const isRowUpdate = (index: number): boolean => {
 const saveCell = (args: any) => {
   const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
   if (modifyCell && modifyCell.needUpdated) {
-    updateEntitySelective(config.url, {
+    // 默认 selective 保持原有逻辑; 传 strict-update 时用 strict 模式, 被清空的单元格能写入 null
+    const save = strictUpdate.value ? updateEntity : updateEntitySelective
+    save(config.url, {
       [modifyCell.dataIndex]: modifyCell.current,
       [config.rowKey]: modifyCell.id
     }, config.baseDomain).then(() => queryData())
@@ -1341,7 +1353,9 @@ const saveRow = (args: any) => {
   if (data.size != 0) {
     data.set(config.rowKey, id)
     log('保存行内容', data)
-    updateEntitySelective(config.url, Object.fromEntries(data), config.baseDomain).then(() => {
+    // 默认 selective 保持原有逻辑; 传 strict-update 时用 strict 模式, 被清空的单元格能写入 null
+    const save = strictUpdate.value ? updateEntity : updateEntitySelective
+    save(config.url, Object.fromEntries(data), config.baseDomain).then(() => {
       queryData()
       args.hidePopup()
     })
@@ -1381,7 +1395,9 @@ const saveAll = () => {
       dataMap.set(index, Object.fromEntries(data))
     }
   }
-  updateEntityListSelective(config.url, [...dataMap.values()], config.baseDomain).then(() => queryData())
+  // 默认 selective 保持原有逻辑; 传 strict-update 时用 strict 模式, 被清空的单元格能写入 null
+  const saveList = strictUpdate.value ? updateEntityList : updateEntityListSelective
+  saveList(config.url, [...dataMap.values()], config.baseDomain).then(() => queryData())
   log('保存所有内容', dataMap)
 }
 const deleteSelected = () => {
@@ -2079,7 +2095,8 @@ const queryData = () => {
 
 }
 const initData = (data: Array<any>) => {
-  dataSource.value = data || []
+  data = props.dataTransformer ? (props.dataTransformer(data || []) || []) : (data || [])
+  dataSource.value = data
   parsedDataSource.value = []
   config.saveAllButtonShow = false
   for (let index in data) {
@@ -2641,11 +2658,12 @@ watch(
   }
 )
 watch(
-  () => [hideAdd.value, hideEdit.value, hideDelete.value, hideRefresh.value, hideImport.value, hideExport.value],
+  () => [hideAdd.value, hideEdit.value, hideDelete.value, hideDetail.value, hideRefresh.value, hideImport.value, hideExport.value],
   () => {
     config.hideRefresh = hideRefresh.value
     config.addModalAble = !hideAdd.value
     config.deleteAble = !hideDelete.value
+    config.detailAble = !hideDetail.value
     config.editModalAble = !hideEdit.value
     config.importAble = !hideImport.value
     config.exportAble = !hideExport.value

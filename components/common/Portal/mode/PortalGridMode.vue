@@ -149,7 +149,10 @@
           }"
           @click="({ key: menuKey }) => handleMenuContext(contextMenuRecord?.value, String(menuKey))"
         >
-          <a-menu-item key="1">
+          <a-menu-item
+            v-if="config.detailAble !== false"
+            key="1"
+          >
             <eye-outlined />
             查看详情
           </a-menu-item>

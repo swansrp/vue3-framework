@@ -60,6 +60,8 @@ export type TableConfigType = {
   addModalAble: boolean,
   // 支持弹框编辑
   editModalAble: boolean,
+  // 支持右键查看详情(默认 true, 传 hide-detail 时为 false)
+  detailAble?: boolean,
   // 支持删除
   deleteAble: boolean,
   // 支持导入

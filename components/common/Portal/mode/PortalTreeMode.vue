@@ -16,7 +16,10 @@
         <span>{{ dataRef.title }}</span>
         <template #overlay>
           <a-menu @click="({ key: menuKey }) => handleMenuContext(dataRef, menuKey)">
-            <a-menu-item key="1">
+            <a-menu-item
+              v-if="config.detailAble !== false"
+              key="1"
+            >
               查看详情
             </a-menu-item>
             <template v-if="!config.readOnly">

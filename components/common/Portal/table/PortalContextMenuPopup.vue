@@ -26,7 +26,7 @@
         保存整行
       </a-menu-item>
       <a-menu-item
-        v-if="!prop.isRowUpdate(args.recordIndexs[0])"
+        v-if="config.detailAble !== false && !prop.isRowUpdate(args.recordIndexs[0])"
         key="detail"
         @click="() => emit('detailRow', args)"
       >

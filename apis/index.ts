@@ -401,7 +401,12 @@ export const updateRequest = (
   domain: string = baseDomain,
   showSuccess = true,
   showLoading = true
-) => request(updateApi(type, domain), params, data, showSuccess, showLoading) as Promise<any>
+) => {
+  // 清空字段(undefined)规范化为显式 null: JSON.stringify 会丢掉 undefined key,
+  // 后端 strict 更新靠 key 存在性判断, 丢了 key 就无法把字段写空
+  const normalized = JSON.parse(JSON.stringify(data, (_k, v) => (v === undefined ? null : v)))
+  return request(updateApi(type, domain), params, normalized, showSuccess, showLoading) as Promise<any>
+}
 
 export const updateListRequest = (
   type: string,
