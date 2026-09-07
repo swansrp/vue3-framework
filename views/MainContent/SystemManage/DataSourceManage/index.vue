@@ -336,8 +336,8 @@ const handleTest = (record: any) =>
   testDataSource(record, baseDomain)
 
 const submitForm = () => {
-  // 主机/端口/库名为表单交互字段，后端只存拼接后的 jdbcUrl
-  const { host, port, dbName, ...rest } = dsForm
+  // 主机/端口/库名为表单交互字段，后端只存拼接后的 jdbcUrl（下划线前缀仅为剔除字段，非弃用）
+  const { host: _host, port: _port, dbName: _dbName, ...rest } = dsForm
   const data: any = { ...rest, jdbcUrl: buildJdbcUrl(), isDefault: isDefaultChecked.value ? '1' : '0' }
   // 编辑时密码留空表示不修改，不提交空串覆盖
   if (!isAdd.value && !data.password) delete data.password
