@@ -215,6 +215,19 @@
         >
           暂无可用配置
         </div>
+
+        <!-- 添加配置按钮（按 Portal 粒度从模板角色复制，不影响已有副本） -->
+        <a-button
+          v-if="selectedRole !== '0' && bindRoleDictList.length > 0"
+          shape="round"
+          style="margin-top: 5px; width: 160px"
+          @click="openAddPortalModal"
+        >
+          添加配置
+          <template #icon>
+            <PlusOutlined />
+          </template>
+        </a-button>
       </div>
     </div>
     <!-- endregion -->
@@ -256,6 +269,46 @@
             v-model:value="generateForm.displayName"
             placeholder="请输入Portal显示名称（中文）"
           />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+    <!-- endregion -->
+    <!-- region 添加Portal配置弹窗（按Portal粒度复制） -->
+    <a-modal
+      v-model:open="showAddPortalModal"
+      title="添加配置（勾选=保留副本，取消=删除副本）"
+      centered
+      :width="640"
+      :confirm-loading="addPortalLoading"
+      @ok="submitAddPortal"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="模板角色">
+          <a-select
+            v-model:value="addPortalTemplateRole"
+            :options="bindRoleDictList"
+            placeholder="请选择模板角色"
+            @change="loadAddPortalOptions"
+          />
+        </a-form-item>
+        <a-form-item label="勾选该角色需要的 Portal（取消勾选将删除对应副本）">
+          <a-spin :spinning="addPortalLoading">
+            <div style="max-height: 380px; overflow-y: auto; padding-right: 4px;">
+              <a-tree
+                v-if="addPortalTreeData.length > 0"
+                checkable
+                default-expand-all
+                :tree-data="addPortalTreeData"
+                v-model:checkedKeys="addPortalChecked"
+              />
+            </div>
+            <div
+              v-if="addPortalTreeData.length === 0 && !addPortalLoading"
+              style="color: #999; font-size: 12px;"
+            >
+              该模板角色下没有可添加的 Portal
+            </div>
+          </a-spin>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -2997,6 +3050,94 @@ const handleMenuClick: MenuProps['onClick'] = async (e) => {
 
 const cleanPortalConfigByRole = async () => {
   await unbindRole(selectedRole.value)
+  await init()
+  onSearch()
+}
+
+// 按 Portal 粒度添加角色配置（勾选=保留副本，取消=删除副本；与左侧列表同款前缀折叠）
+const showAddPortalModal = ref(false)
+const addPortalTemplateRole = ref('0')
+const addPortalTreeData = ref([] as any[])
+const addPortalLeafKeys = ref(new Set<string>())
+const addPortalChecked = ref<string[]>([])
+const addPortalLoading = ref(false)
+
+const buildPortalTreeData = (items: Array<ValueLabel>) => {
+  const root: any[] = []
+  const folderMap = new Map<string, any>()
+  for (const item of items) {
+    const parts = String(item.label).split('-').map(s => s.trim()).filter(Boolean)
+    let parentKey = ''
+    let level = root
+    if (parts.length > 1) {
+      for (let i = 0; i < parts.length - 1; i++) {
+        const folderName = parts[i]
+        const key = parentKey ? `${parentKey}/${folderName}` : folderName
+        let node = folderMap.get(key)
+        if (!node) {
+          node = { title: folderName, key, children: [] }
+          folderMap.set(key, node)
+          level.push(node)
+        }
+        level = node.children
+        parentKey = key
+      }
+    }
+    addPortalLeafKeys.value.add(String(item.value))
+    level.push({ title: item.label, key: String(item.value), isLeaf: true })
+  }
+  return root
+}
+
+const loadAddPortalOptions = async () => {
+  addPortalLoading.value = true
+  try {
+    // 并行取模板全集 + 该角色现有副本（初始勾选 = 现有副本，确定时同步语义）
+    const [templateRes, currentRes] = await Promise.all([
+      getPortalList(
+        '',
+        addPortalTemplateRole.value,
+        props.dataMode || undefined,
+        props.referenceId || undefined
+      ),
+      getPortalList(
+        '',
+        selectedRole.value,
+        props.dataMode || undefined,
+        props.referenceId || undefined
+      )
+    ])
+    const templateItems: Array<ValueLabel> = templateRes.payload || []
+    const checkedSet = new Set((currentRes.payload || []).map((item: ValueLabel) => String(item.value)))
+    addPortalLeafKeys.value = new Set<string>()
+    addPortalTreeData.value = buildPortalTreeData(templateItems)
+    addPortalChecked.value = templateItems
+      .map((item: ValueLabel) => String(item.value))
+      .filter(name => checkedSet.has(name))
+  } finally {
+    addPortalLoading.value = false
+  }
+}
+
+const openAddPortalModal = async () => {
+  addPortalTemplateRole.value = '0'
+  addPortalChecked.value = []
+  addPortalTreeData.value = []
+  showAddPortalModal.value = true
+  await loadAddPortalOptions()
+}
+
+const submitAddPortal = async () => {
+  // a-tree checkedKeys 含父节点（folder），过滤出 portal 叶子（key = portal name）
+  const checked = Array.isArray(addPortalChecked.value) ? addPortalChecked.value : []
+  const portalNames = checked.filter(key => addPortalLeafKeys.value.has(key))
+  if (portalNames.length === 0) {
+    // 全部取消 = 清空该角色全部副本
+    await unbindRole(selectedRole.value)
+  } else {
+    await bindRole(selectedRole.value, addPortalTemplateRole.value, portalNames)
+  }
+  showAddPortalModal.value = false
   await init()
   onSearch()
 }

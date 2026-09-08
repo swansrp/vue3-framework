@@ -53,9 +53,10 @@ export const copyPortalConfig = (sourceConfigId: any, targetName: string, target
 
 export const getBindRole = () => post(buildGetApi('/role'), {}, {}) as Promise<any>
 
-export const bindRole = (roleId: any, templateRoleId: any) => post(buildPostApi('/role/bind'), {}, {
+export const bindRole = (roleId: any, templateRoleId: any, portalNames?: string[]) => post(buildPostApi('/role/bind'), {}, {
   roleId,
-  templateRoleId
+  templateRoleId,
+  portalNames
 }) as Promise<any>
 
 export const unbindRole = (roleId: any) => post(buildPostApi('/role/unbind'), {}, { roleId }) as Promise<any>
