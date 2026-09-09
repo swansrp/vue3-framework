@@ -296,10 +296,10 @@
             <div style="max-height: 380px; overflow-y: auto; padding-right: 4px;">
               <a-tree
                 v-if="addPortalTreeData.length > 0"
+                v-model:checked-keys="addPortalChecked"
                 checkable
                 default-expand-all
                 :tree-data="addPortalTreeData"
-                v-model:checkedKeys="addPortalChecked"
               />
             </div>
             <div

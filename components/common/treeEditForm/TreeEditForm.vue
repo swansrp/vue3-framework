@@ -42,7 +42,7 @@
           @click="selectMenuIcon"
         >
           <template
-            v-if="formState['icon'].length"
+            v-if="formState['icon']?.length"
             #prefix
           >
             <Icon :icon="formState['icon']" />
@@ -102,7 +102,8 @@
     </a-form-item>
   </a-form>
   <icon-modal
-    v-model:icon="formState['icon']"
+    :icon="formState['icon'] || ''"
+    @update:icon="(v: string) => formState['icon'] = v"
     v-model:visible="visible"
   />
   <dialog-box
@@ -215,8 +216,9 @@ const resetForm = () => {
 watch(() => formState.value.icon, () => {
   // 因为js为input赋值的时候，不会触发input的change等方法，所以需要手动定义一个change事件，并在对应的input元素上触发
   // 目的是更新form的验证状态，antd是根据input的change事件，更新的表单验证状态
+  // 注意: id=iconInput 挂在 a-input 根元素(div)上, 验证监听的是其内部真实 <input>, 必须派发到内部元素
   const changeEvent = new Event('change')
-  const iconInput = document.getElementById('iconInput') as HTMLInputElement
+  const iconInput = document.querySelector('#iconInput input') as HTMLInputElement
   iconInput?.dispatchEvent(changeEvent)
 })
 
