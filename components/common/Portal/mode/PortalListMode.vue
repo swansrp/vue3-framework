@@ -18,7 +18,8 @@
       @row-drag-end="handleRowDragEnd"
     >
       <template #bodyCell="{ column, record}">
-        <a-dropdown :trigger="['contextmenu']">
+        <!-- 菜单项全被禁用(只读且无详情)时不挂 contextmenu trigger, 交还浏览器默认右键菜单 -->
+        <a-dropdown :trigger="config.detailAble !== false || !config.readOnly ? ['contextmenu'] : []">
           <div>
             <slot
               name="display"

@@ -102,9 +102,9 @@
     </a-form-item>
   </a-form>
   <icon-modal
+    v-model:visible="visible"
     :icon="formState['icon'] || ''"
     @update:icon="(v: string) => formState['icon'] = v"
-    v-model:visible="visible"
   />
   <dialog-box
     v-model:visible="inputIconBoxVisible"

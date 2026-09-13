@@ -416,6 +416,7 @@
                     @detail-row="detailRow"
                     @edit-row="editRow"
                     @delete-row="deleteRow"
+                    @hide="args?.hidePopup?.()"
                   />
                 </slot>
               </template>
@@ -938,6 +939,8 @@ const props = withDefaults(defineProps<{
     downloadFileName?: (config: TableConfigType) => string
     showLoading?: boolean
     gridCardWidth?: number
+    /** 覆盖新增/编辑弹框宽度(如 '560px'); 不传则沿用后端 sys_portal 配置(默认可能 100% 全宽) */
+    modalWidth?: string
     rowAllowSelect?: (record: any) => boolean
     showSearchTags?: boolean
     computedColumns?: Record<string, (row: any) => any>
@@ -1006,6 +1009,7 @@ const props = withDefaults(defineProps<{
     downloadFileName: (config: TableConfigType) => config.title,
     showLoading: false,
     gridCardWidth: 350,
+    modalWidth: undefined,
     rowAllowSelect: undefined,
     showSearchTags: false,
     computedColumns: undefined,
@@ -2351,6 +2355,11 @@ const initConfig = async () => {
     config.detailWidth = tableConfig.detailWidth + '%'
     config.addWidth = tableConfig.addWidth + '%'
     config.editWidth = tableConfig.editWidth + '%'
+    // 外部显式指定弹框宽度时覆盖后端全宽配置(如项目调整这类字段很少的表单)
+    if (props.modalWidth) {
+      config.addWidth = props.modalWidth
+      config.editWidth = props.modalWidth
+    }
     config.importAble = tableConfig.importAble === '1' && !hideImport.value
     config.exportAble = tableConfig.exportAble === '1' && !hideExport.value
     if (isEmpty(config.url)) {
@@ -2739,7 +2748,10 @@ defineExpose({
   getConfig,
   getData,
   handleMenuContextAdd,
+  handleMenuContextModify,
+  handleMenuContextDelete,
   addRow,
+  openUploadModal,
   clearAllFilters,
   getUserFilterConditions
 })

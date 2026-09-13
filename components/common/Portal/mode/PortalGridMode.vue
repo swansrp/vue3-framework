@@ -54,7 +54,7 @@
         }"
         :draggable="isDragMode"
         @click="handleItemClick(record)"
-        @contextmenu.prevent="handleContextMenu($event, record)"
+        @contextmenu="handleContextMenu($event, record)"
         @dragstart="handleDragStart($event, index)"
         @dragover="handleDragOver($event)"
         @drop="handleDrop($event, index)"
@@ -297,7 +297,10 @@ const handleCheckboxChange = (e: any, record: any) => {
 
 const handleContextMenu = (event: MouseEvent, record: any) => {
   if (isDragMode.value) return // 拖拽模式下不显示右键菜单
-  
+  // 菜单全被禁用(只读且无详情)时不拦截右键, 交还浏览器默认菜单, 避免弹出空白框
+  if (config.value.detailAble === false && config.value.readOnly) return
+
+  event.preventDefault()
   contextMenuPosition.value = { x: event.clientX, y: event.clientY }
   contextMenuRecord.value = record
   contextMenuVisible.value = true

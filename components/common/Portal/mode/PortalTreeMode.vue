@@ -12,7 +12,8 @@
     @select="(selectedKeys: any, event: { selected: boolean, selectedNodes: any, node: any, event: any }) => emit('handleTreeSelected', selectedKeys, event)"
   >
     <template #title="{ dataRef }">
-      <a-dropdown :trigger="['contextmenu']">
+      <!-- 菜单项全被禁用(只读且无详情)时不挂 contextmenu trigger, 交还浏览器默认右键菜单 -->
+      <a-dropdown :trigger="config.detailAble !== false || !config.readOnly ? ['contextmenu'] : []">
         <span>{{ dataRef.title }}</span>
         <template #overlay>
           <a-menu @click="({ key: menuKey }) => handleMenuContext(dataRef, menuKey)">

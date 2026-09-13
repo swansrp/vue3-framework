@@ -75,6 +75,8 @@
 </template>
 
 <script lang="ts" setup>
+/** surely-table 右键菜单: 只要有可见菜单项才展示; 全被禁用(只读页/无详情/无可编辑)时
+ *  emit('hide') 通知父层调 hidePopup() 收起弹层, 避免右键弹空白框。 */
 import {
   CopyOutlined,
   DeleteOutlined,
@@ -87,7 +89,7 @@ import {
 } from '@ant-design/icons-vue'
 
 import { TableConfigType } from '@/framework/components/common/Portal/type'
-import { isNotEmpty } from '@/framework/utils/common'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 
 const prop = defineProps<{
   args: any
@@ -107,8 +109,31 @@ const emit = defineEmits<{
   (e: 'editRow', args: any): void
   (e: 'deleteRow', args: any): void
   (e: 'association', args: any): void
+  (e: 'hide'): void
 }>()
 const { args, config, association } = toRefs(prop)
+
+/** 与模板 v-if 严格一致: 是否至少有一个可见菜单项 */
+const hasAnyItem = computed(() => {
+  if (isEmpty(args.value.column)) return false
+  const a = args.value
+  const cfg = config.value
+  const hasRowItems = isNotEmpty(a.recordIndexs) && (
+    (!cfg.readOnly && a.column.editable && prop.isCellUpdate(a.recordIndexs[0], a.column)) ||
+    (!cfg.readOnly && prop.isRowUpdate(a.recordIndexs[0])) ||
+    (cfg.detailAble !== false && !prop.isRowUpdate(a.recordIndexs[0]))
+  )
+  const hasEditItems = !cfg.readOnly && (
+    (prop.rowAllowEdit(a) && cfg.editModalAble) ||
+    cfg.addModalAble ||
+    (prop.rowAllowDelete(a) && cfg.deleteAble)
+  )
+  return !!association.value || !!hasRowItems || !!hasEditItems
+})
+// 无可见菜单项时立即收起 surely 弹层(右键交还浏览器默认菜单)
+watchEffect(() => {
+  if (!hasAnyItem.value) emit('hide')
+})
 </script>
 
 <style lang="less" scoped>
