@@ -1023,6 +1023,7 @@ const emit = defineEmits<{
   (e: 'update:selectedTreeData', selectedTreeData: Array<any>): void
   (e: 'selectedData', selectedData: Array<any>): void
   (e: 'expand', expanded: boolean, record: any): void
+  (e: 'dataChanged'): void
 }>()
 const slots = useSlots()
 const {
@@ -1385,6 +1386,7 @@ const saveRow = (args: any) => {
     const save = strictUpdate.value ? updateEntity : updateEntitySelective
     save(config.url, Object.fromEntries(data), config.baseDomain).then(() => {
       queryData()
+      emit('dataChanged')
       args.hidePopup()
     })
   }
@@ -1425,7 +1427,7 @@ const saveAll = () => {
   }
   // 默认 selective 保持原有逻辑; 传 strict-update 时用 strict 模式, 被清空的单元格能写入 null
   const saveList = strictUpdate.value ? updateEntityList : updateEntityListSelective
-  saveList(config.url, [...dataMap.values()], config.baseDomain).then(() => queryData())
+  saveList(config.url, [...dataMap.values()], config.baseDomain).then(() => { queryData(); emit('dataChanged') })
   log('保存所有内容', dataMap)
 }
 const deleteSelected = () => {
@@ -1434,7 +1436,7 @@ const deleteSelected = () => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', { style: 'color:red;' }, '即将删除选定' + selectedRowKeys.value.length + '个记录,请确认'),
     onOk() {
-      deleteEntityList(config.url, [...selectedRowKeys.value], config.baseDomain).then(() => queryData())
+      deleteEntityList(config.url, [...selectedRowKeys.value], config.baseDomain).then(() => { queryData(); emit('dataChanged') })
     },
     onCancel() {
 
@@ -1449,7 +1451,7 @@ const deleteRow = (args: any) => {
     onOk() {
       const modifyCell = modifyCellMap.get(args.recordIndexs[0] + args.column.dataIndex)
       if (modifyCell) {
-        deleteEntity(config.url, modifyCell.id, config.baseDomain).then(() => queryData())
+        deleteEntity(config.url, modifyCell.id, config.baseDomain).then(() => { queryData(); emit('dataChanged') })
         log('删除整行内容')
       }
       args.hidePopup()
@@ -1551,7 +1553,7 @@ const handleMenuContextDelete = (recordId: any) => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', { style: 'color:red;' }, '即将删除该记录,请确认'),
     onOk() {
-      deleteEntity(config.url, recordId, config.baseDomain).then(() => queryData())
+      deleteEntity(config.url, recordId, config.baseDomain).then(() => { queryData(); emit('dataChanged') })
     },
     onCancel() {
 
@@ -1646,6 +1648,7 @@ const addRow = () => {
 // 保存添加数据
 const saveAddRow = async () => {
   await addEntity(config.url, config.modal.data, config.baseDomain)
+  emit('dataChanged')
 }
 // 模版下载
 const templateExport = () => {
