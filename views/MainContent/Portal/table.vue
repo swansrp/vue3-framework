@@ -8,13 +8,14 @@ import PivotTable from './pivot.vue'
 
 import {
   getPortalTableByCode,
+  getPortalTableById,
   getPortalTableFilterList,
   PortalTableFilterVO,
   PortalTableVO
 } from '@/framework/apis/portal/table'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import DarkTable from '@/framework/components/common/Content/DarkTable.vue'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { FILTER_TYPE, QuerySortType } from '@/framework/components/common/Portal/type'
 import { parseUrlParams } from '@/framework/network/utils'
 import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
@@ -205,6 +206,13 @@ const loadPortalTableConfig = async () => {
     if(tableRes.payload) {
       portalTableConfig.value = tableRes.payload[0]
 
+      // 多Tab页面: 入口记录配了 tabItems 即宿主, 异步拉成员配置(#table 插槽渲染; 未配置走现状单表)
+      const tabItemList = parseTabItems(portalTableConfig.value!.tabItems)
+      if (tabItemList.length > 0) {
+        isGroupPage.value = true
+        loadTabEntries(tabItemList)
+      }
+
       // 获取筛选项配置
       const filterRes = await getPortalTableFilterList(portalTableConfig.value!.id!)
       if (filterRes?.payload?.records) {
@@ -275,25 +283,22 @@ const condition = computed(() => {
           let conditionArray: any[] = []
           
           if (isNewConditionFormat(parsedCondition)) {
-            // 新格式：按值查找专属 condition
+            // 新格式：通用条件=必备过滤始终拼入；选中值命中专属 condition 时再 AND 追加
             // value 可能是数组（多选）或单值
             const values = Array.isArray(value) ? value : [value]
             
-            // 检查每个选中的值是否有专属 condition
-            let foundSpecialCondition = false
+            // 通用兜底条件：必备条件，始终拼入（与专属条件 AND 合并）
+            if (parsedCondition.default && Array.isArray(parsedCondition.default)) {
+              conditionArray.push(...parsedCondition.default)
+            }
+            
+            // 检查选中的值是否有专属 condition，命中即追加(取第一个命中)
             for (const v of values) {
               const optionCondition = parsedCondition.options?.[v]
               if (optionCondition && Array.isArray(optionCondition) && optionCondition.length > 0) {
-                // 找到专属 condition，使用它
-                conditionArray = optionCondition
-                foundSpecialCondition = true
+                conditionArray.push(...optionCondition)
                 break
               }
-            }
-            
-            // 如果没有找到专属 condition，使用通用兜底 condition
-            if (!foundSpecialCondition && parsedCondition.default && Array.isArray(parsedCondition.default)) {
-              conditionArray = parsedCondition.default
             }
           } else {
             // 老格式：直接是数组 或 包含 conditionList 属性的对象
@@ -343,6 +348,25 @@ const condition = computed(() => {
 // 是否透视报表模式
 const isPivotMode = computed(() => portalTableConfig.value?.pivotMode === '1')
 
+/**
+ * 报表默认排序(sys_portal_table.default_sort): 读到就作为 sortList 下发查询接口
+ * 空/'[]'/解析失败 统一返回 undefined, 保持不下发(此时 Portal 回退到 sys_portal 级默认排序)
+ */
+const parseDefaultSort = (raw?: string): Array<QuerySortType> | undefined => {
+  if (!raw) {
+    return undefined
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    const sortList = (Array.isArray(parsed) ? parsed : []).filter((s: any) => s?.property)
+    return sortList.length > 0 ? sortList : undefined
+  } catch (e) {
+    console.error('解析报表默认排序失败:', e)
+    return undefined
+  }
+}
+const defaultSortColumn = computed(() => parseDefaultSort(portalTableConfig.value?.defaultSort))
+
 // 左侧筛选栏宽度(pivot 模式取表格配置 filterWidth)
 const sideWidth = computed(() =>
   isPivotMode.value ? (portalTableConfig.value?.filterWidth ?? 260) : 260
@@ -382,10 +406,110 @@ const columnFilter = (column: any) => {
   return true
 }
 
+// ==================== 多Tab页面(宿主 tabItems) ====================
+/** tabItems JSON 项 */
+interface PortalTabItem {
+  /** 成员 portalTable 主键 */
+  tableId: number
+  /** tab 显示名 */
+  label?: string
+  /** 显示顺序 */
+  order?: number
+}
+
+/** 渲染用 tab 项(portalName 是表格查询抓手, 提前拽出来保证类型非空) */
+interface PortalTabEntry {
+  key: string
+  label: string
+  portalName: string
+  config: PortalTableVO
+}
+
+// 是否多Tab页面(入口记录配了 tabItems = 宿主; 筛选栏/外观均归属宿主)
+const isGroupPage = ref(false)
+// 各 tab 成员配置(按 tabItems 顺序)
+const tabEntries = ref<PortalTabEntry[]>([])
+const tabLoading = ref(false)
+const activeTab = ref('')
+
+/** 解析宿主 tabItems JSON(非法项过滤, order 缺省用原序补齐后升序) */
+const parseTabItems = (raw?: string): PortalTabItem[] => {
+  if (!raw) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return parsed
+      .map((it: any, idx: number) => ({
+        tableId: Number(it?.tableId),
+        label: it?.label as string | undefined,
+        order: typeof it?.order === 'number' ? it.order : idx
+      }))
+      .filter((it) => Number.isFinite(it.tableId))
+      .sort((a, b) => a.order - b.order)
+  } catch (e) {
+    console.error('解析 tabItems 失败:', e)
+    return []
+  }
+}
+
+/** 并行拉取各 tab 成员配置(单个失败/缺 portalName 跳过, 不阻塞整页) */
+const loadTabEntries = async (items: PortalTabItem[]) => {
+  tabLoading.value = true
+  try {
+    const configs: Array<PortalTableVO | null> = await Promise.all(items.map(async (it) => {
+      try {
+        const res = await getPortalTableById(it.tableId)
+        return (res?.payload || null) as PortalTableVO | null
+      } catch (e) {
+        console.error(`加载 Tab 成员配置失败: tableId=${it.tableId}`, e)
+        return null
+      }
+    }))
+    tabEntries.value = items
+      .map((it, i) => {
+        const config = configs[i]
+        // portal/pivot 都靠 portalName 拉列配置与发查询, 缺了无法渲染
+        if (!config?.portalName) {
+          console.error(`Tab 成员缺少 portalName, 已跳过: tableId=${it.tableId}`)
+          return null
+        }
+        return {
+          key: String(it.tableId),
+          label: it.label || config.tableCode || `Tab${i + 1}`,
+          portalName: config.portalName,
+          config
+        }
+      })
+      .filter((entry): entry is PortalTabEntry => !!entry)
+    activeTab.value = tabEntries.value[0]?.key || ''
+  } finally {
+    tabLoading.value = false
+  }
+}
+
+// 多Tab页面普通表 tab 的查询条件包装(同浅色分支)
+const tabAdvanceCondition = computed(() => ({ conditionList: condition.value } as ConditionListType))
+
+/** 成员各自的列排除过滤(filterColumns 按成员自身配置生效, 与宿主无关) */
+const makeColumnFilter = (config: PortalTableVO) => (column: any) => {
+  if (!config.filterColumns) {
+    return true
+  }
+  const excludedColumns = config.filterColumns.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+  return !excludedColumns.includes(column.dataIndex)
+}
+
 // 监听 tableId 变化
 watch(() => props.tableId, (newId) => {
   if (newId) {
     darkTableId.value = newId
+    // 重置多Tab页状态, 避免残留上一页成员
+    isGroupPage.value = false
+    tabEntries.value = []
     loadPortalTableConfig()
   }
 })
@@ -406,6 +530,7 @@ onMounted(() => {
     :condition="condition"
     :table-id="portalTableConfig?.portalName"
     :column-filter="columnFilter"
+    :default-sort-column="defaultSortColumn"
     :hide-export="portalTableConfig?.downloadAble === '0'"
     :width="sideWidth"
     advance
@@ -423,6 +548,51 @@ onMounted(() => {
         :load-dict-options="loadDictOptions"
         :get-tree-options="getTreeOptions"
       />
+    </template>
+    <!-- 多Tab页面: 右侧表格区由本组件接管(DarkTable 默认二选一渲染被 table 插槽覆盖) -->
+    <template
+      v-if="isGroupPage"
+      #table
+    >
+      <div class="group-tabs-wrap">
+        <a-spin
+          v-if="tabLoading"
+          class="group-tabs-loading"
+        />
+        <a-tabs
+          v-else
+          v-model:active-key="activeTab"
+          class="portal-group-tabs"
+        >
+          <a-tab-pane
+            v-for="entry in tabEntries"
+            :key="entry.key"
+            :tab="entry.label"
+          >
+            <pivot-table
+              v-if="entry.config.pivotMode === '1'"
+              :portal-table-config="entry.config"
+              :condition="condition"
+            />
+            <portal
+              v-else
+              :action-width="0"
+              :advance-condition="tabAdvanceCondition"
+              :column-filter="makeColumnFilter(entry.config)"
+              :default-sort-column="parseDefaultSort(entry.config.defaultSort)"
+              :hide-export="entry.config.downloadAble === '0'"
+              :page-size="50"
+              :table-id="entry.portalName"
+              advance
+              hide-refresh
+              hide-row-selection
+              multi-header
+              read-only
+              text-area-in-expanded
+            />
+          </a-tab-pane>
+        </a-tabs>
+      </div>
     </template>
   </dark-table>
 
@@ -443,8 +613,52 @@ onMounted(() => {
       />
     </template>
     <template #content>
+      <!-- 多Tab页面: 同一套筛选条件驱动全部 tab(pivot 浅色 / portal 同浅色分支参数) -->
+      <div
+        v-if="isGroupPage"
+        class="group-tabs-wrap"
+      >
+        <a-spin
+          v-if="tabLoading"
+          class="group-tabs-loading"
+        />
+        <a-tabs
+          v-else
+          v-model:active-key="activeTab"
+          class="portal-group-tabs"
+        >
+          <a-tab-pane
+            v-for="entry in tabEntries"
+            :key="entry.key"
+            :tab="entry.label"
+          >
+            <pivot-table
+              v-if="entry.config.pivotMode === '1'"
+              :portal-table-config="entry.config"
+              :condition="condition"
+              theme="light"
+            />
+            <portal
+              v-else
+              :action-width="0"
+              :advance-condition="tabAdvanceCondition"
+              :column-filter="makeColumnFilter(entry.config)"
+              :default-sort-column="parseDefaultSort(entry.config.defaultSort)"
+              :hide-export="entry.config.downloadAble === '0'"
+              :page-size="50"
+              :table-id="entry.portalName"
+              advance
+              hide-refresh
+              hide-row-selection
+              multi-header
+              read-only
+              text-area-in-expanded
+            />
+          </a-tab-pane>
+        </a-tabs>
+      </div>
       <pivot-table
-        v-if="isPivotMode"
+        v-else-if="isPivotMode"
         :portal-table-config="portalTableConfig"
         :condition="condition"
         theme="light"
@@ -455,6 +669,7 @@ onMounted(() => {
         :table-id="portalTableConfig.portalName"
         :advance-condition="lightAdvanceCondition"
         :column-filter="columnFilter"
+        :default-sort-column="defaultSortColumn"
         :hide-export="portalTableConfig.downloadAble === '0'"
         :action-width="0"
         :page-size="50"
@@ -477,5 +692,99 @@ onMounted(() => {
 
 :deep(.ant-descriptions .ant-descriptions-row >td) {
   padding-bottom: v-bind('paddingStyle.tdPadding') !important;
+}
+
+// ==================== 多Tab页面(tabItems 宿主) ====================
+// 页签结构/形态只在组件里写一份, 颜色全部取设计令牌:
+// 深色壳(DarkTable 的 .dark-content-layout 在 dark.css 里重映射令牌)与浅色入口(tableLight 走
+// design-tokens.css 的 :root 取值)各自提供色值, 同一套样式两套主题自适应。
+// 带 !important 是因为 dark.css 里已有一批 ant-tabs 的下划线式硬编码覆盖(旧范式), 用更高层级压制
+.group-tabs-wrap {
+  height: 100%;
+  overflow: hidden;
+  padding: 2px 8px 0;
+}
+
+.group-tabs-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.portal-group-tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  // 底部色块 + 渐变托底风格: 平铺页签 + 选中项底托渐变 + 指示条微光
+  // 注意: .ant-tabs 与 .portal-group-tabs 是同一元素, :deep() 内不可重复写 .ant-tabs
+  :deep(> .ant-tabs-nav) {
+    margin: 0 0 0;
+    background: transparent !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+  }
+
+  // 保留 ::before 作为满宽底线轨道
+  :deep(> .ant-tabs-nav::before) {
+    display: none !important;
+  }
+
+  :deep(.ant-tabs-nav-list) {
+    gap: 0;
+  }
+
+  // 未选中: 平铺文字, 无背景无边框
+  :deep(.ant-tabs-nav .ant-tabs-tab) {
+    margin: 0 !important;
+    padding: 10px 24px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    font-size: 14px;
+    line-height: 22px;
+    transition: all 0.25s ease !important;
+  }
+
+  // antd 会把颜色直接写在 tab-btn 上, 强制继承
+  :deep(.ant-tabs-nav .ant-tabs-tab .ant-tabs-tab-btn) {
+    color: inherit !important;
+  }
+
+  :deep(.ant-tabs-nav .ant-tabs-tab:hover) {
+    background: linear-gradient(to top, var(--accent-mid), transparent) !important;
+    color: var(--text-primary) !important;
+  }
+
+  // 选中: 从底部向上的主题色渐变托底
+  :deep(.ant-tabs-nav .ant-tabs-tab.ant-tabs-tab-active) {
+    background: linear-gradient(to top, var(--accent-soft) 0%, var(--accent-mid) 40%, transparent 100%) !important;
+    color: var(--text-primary) !important;
+  }
+
+  :deep(.ant-tabs-nav .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    text-shadow: 0 0 8px var(--accent-glow) !important;
+  }
+
+  // 指示条: 主题色渐变 + 微光
+  :deep(.ant-tabs-nav .ant-tabs-ink-bar) {
+    background: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent)) !important;
+    height: 2px !important;
+    border-radius: 2px !important;
+    box-shadow: 0 0 8px var(--accent-glow), 0 0 16px var(--accent-glow) !important;
+  }
+
+  :deep(> .ant-tabs-content-holder) {
+    flex: 1;
+    overflow: auto;
+  }
+
+  :deep(.ant-tabs-content),
+  :deep(.ant-tabs-tabpane) {
+    height: 100%;
+  }
 }
 </style>

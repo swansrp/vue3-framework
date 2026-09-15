@@ -27,8 +27,13 @@
             {{ props.title || router.currentRoute.value.meta.title }}
           </div>
           <div class="dialog-info">
+            <!-- table 插槽: 外部自定义表格区(如多 Tab 页面), 未传时按 tableMode 走默认渲染 -->
+            <slot
+              v-if="slots.table"
+              name="table"
+            ></slot>
             <portal
-              v-if="tableMode === 'portal'"
+              v-else-if="tableMode === 'portal'"
               v-bind="$attrs"
               :action-width="0"
               :advance="advance"
@@ -49,9 +54,9 @@
               multi-header
               @config-loaded="(...args) => emit('config-loaded', ...args)"
             >
-              <!-- 转发所有具名插槽 -->
+              <!-- 转发所有具名插槽(table 插槽是本组件的扩展点, 不属于 portal) -->
               <template
-                v-for="(slotFn, name) in $slots"
+                v-for="(slotFn, name) in portalPassSlots"
                 :key="name"
                 #[name]="slotProps"
               >
@@ -89,6 +94,17 @@ import PivotTable from '@/framework/views/MainContent/Portal/pivot.vue'
  */
 defineOptions({ inheritAttrs: false })
 const router = useRouter()
+const slots = useSlots()
+/** 转发给内部 portal 的插槽(排除本组件扩展点 table) */
+const portalPassSlots = computed(() => {
+  const passed: Record<string, any> = {}
+  Object.entries(slots).forEach(([name, fn]) => {
+    if (name !== 'table') {
+      passed[name] = fn
+    }
+  })
+  return passed
+})
 const getDownloadFileName = (): string => {
   return props.downloadFileName ? props.downloadFileName : router.currentRoute.value.meta.title as string
 }

@@ -332,6 +332,32 @@ const resolveDynamicVariable = (value: string | undefined): string | undefined =
   return value
 }
 
+// 递归解析条件树中的内置时间变量('${currentYear}' 等, 见 resolveDynamicVariable)
+// 提升自 Portal/index.vue 私有 resolve(), 供通用列表与透视(pivot.vue)共用同一份默认条件变量解析
+const resolveConditionVariables = (condition: any) => {
+  if (!condition) return
+
+  // 处理 ConditionType 类型(递归子条件)
+  if (Array.isArray(condition.conditionList)) {
+    condition.conditionList.forEach((item: any) => resolveConditionVariables(item))
+  }
+
+  // 处理 ConditionListType 数组
+  if (Array.isArray(condition)) {
+    condition.forEach((item: any) => resolveConditionVariables(item))
+  }
+
+  // 处理单个条件节点的 value 数组
+  if (Array.isArray(condition.value)) {
+    condition.value = condition.value.map((v: any) => {
+      if (typeof v === 'string') {
+        return resolveDynamicVariable(v)
+      }
+      return v
+    })
+  }
+}
+
 const getTextWidth = (text: string, split = true, size = 1.6) => {
   const textArray = text?.toString().split(/\n|\\n/g) || []
   let maxWidth = 0
@@ -382,5 +408,6 @@ export {
   parseCssValue,
   scrollToBottom,
   getTextWidth,
-  resolveDynamicVariable
+  resolveDynamicVariable,
+  resolveConditionVariables
 }

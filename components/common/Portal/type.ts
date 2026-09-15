@@ -217,6 +217,11 @@ export type ColumnType = {
   summary: boolean
   // endregion
 
+  // region 多级表头(s-table column group)
+  // 子列: 存在时本列为分组父列(无 dataIndex, 不参与数据/汇总), 叶子列在 children 内
+  children?: Array<ColumnType>
+  // endregion
+
 }
 
 export type ModifyCellType = {

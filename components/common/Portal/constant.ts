@@ -1,6 +1,8 @@
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
 export const AUTO_UUID_ROW_KEY = 'auto_uuid_row_key'
+/** 分组小计列 itemValue 前缀(树形-多层生成: 每个首层分组一条, 条件为 IN 组内叶子值) */
+export const PIVOT_SUBTOTAL_PREFIX = '_gt_'
 export const indexColumn = {
   title: '序号',
   dataIndex: 'index',

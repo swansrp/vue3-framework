@@ -815,7 +815,8 @@ import {
   isEmpty,
   isNotEmpty,
   log,
-  resolveDynamicVariable,
+  // 递归解析条件内置时间变量的工具已提升至 utils/common(透视 pivot.vue 共用), 别名保持原调用点不变
+  resolveConditionVariables as resolve,
   updateTableSize,
   uuid
 } from '@/framework/utils/common'
@@ -2016,30 +2017,6 @@ const advancedCondition = reactive({
 // endregion
 
 //region 常用功能函数
-// 递归解析条件中的动态变量
-const resolve = (condition: ConditionType | ConditionListType | ConditionListType[] | undefined) => {
-  if (!condition) return
-
-  // 处理 ConditionType 类型
-  if ('conditionList' in condition && Array.isArray(condition.conditionList)) {
-    condition.conditionList.forEach(item => resolve(item))
-  }
-
-  // 处理 ConditionListType 数组
-  if (Array.isArray(condition)) {
-    condition.forEach(item => resolve(item))
-  }
-
-  // 处理单个 ConditionListType 的 value 数组
-  if ('value' in condition && Array.isArray(condition.value)) {
-    condition.value = condition.value.map(v => {
-      if (typeof v === 'string') {
-        return resolveDynamicVariable(v)
-      }
-      return v
-    })
-  }
-}
 
 const queryCondition = () => {
   let query: QueryType
@@ -2479,6 +2456,16 @@ const initConfig = async () => {
       columnDisplayMap.value.clear()
       columnRaw.clear()
       let customOrder = 2
+      // 多级表头: 递归注册分组列下的叶子列(壳列无 dataIndex, 不进 columnRaw/displayMap)
+      const registerLeafColumns = (cols: Array<ColumnType>) => {
+        for (const col of cols || []) {
+          if (col.children && col.children.length) {
+            registerLeafColumns(col.children)
+          } else {
+            columnRaw.set(col.dataIndex, _.cloneDeep(col))
+          }
+        }
+      }
       for (let custom of props.customColumns!) {
         const column = _.merge(_.cloneDeep(defaultColumn), custom) as ColumnType
         column.tableId = config.tableId
@@ -2486,11 +2473,15 @@ const initConfig = async () => {
         column.order = custom.order || customOrder
         customOrder++
         columnArray.value.push(column)
-        if (isEmpty(columnDisplayMap.value.get(column.displayGroupName))) {
-          columnDisplayMap.value.set(column.displayGroupName, [])
+        if (column.children && column.children.length) {
+          registerLeafColumns(column.children)
+        } else {
+          if (isEmpty(columnDisplayMap.value.get(column.displayGroupName))) {
+            columnDisplayMap.value.set(column.displayGroupName, [])
+          }
+          columnDisplayMap.value.get(column.displayGroupName)?.push(column)
+          columnRaw.set(column.dataIndex, _.cloneDeep(column))
         }
-        columnDisplayMap.value.get(column.displayGroupName)?.push(column)
-        columnRaw.set(column.dataIndex, _.cloneDeep(column))
       }
       columnArray.value.sort((a, b) => a.order - b.order)
     }
