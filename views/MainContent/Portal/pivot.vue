@@ -15,8 +15,10 @@ import {
   PortalTableVO
 } from '@/framework/apis/portal/table'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
+import { AUTO_UUID_ROW_KEY, PIVOT_SUBTOTAL_PREFIX } from '@/framework/components/common/Portal/constant'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { resolveConditionVariables } from '@/framework/utils/common'
+import { formatMoney } from '@/framework/utils/formatter'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 
 /**
@@ -47,6 +49,8 @@ const treeDict = useTreeStore()
 /** 透视聚合查询返回的原始数据 */
 const rows = ref<any[]>([])
 const portalUrl = ref('')
+/** sys_portal.default_condition 解析出的默认查询条件(AdvancedQuery 形态 {conditionList}) */
+const defaultConditions = ref<ConditionListType[]>([])
 const pivotColumns = ref<PortalPivotColumnVO[]>([])
 /** 透视列配置是否已加载完成(Portal 仅在初始化时读取 customColumns,
  *  必须等透视列列表就绪后再挂载, 否则可能以 TOTAL 退化列形态锁死表头) */
@@ -183,6 +187,133 @@ const formatNumber = (value: any) => {
   return num.toLocaleString('zh-CN', { maximumFractionDigits: 4 })
 }
 
+/**
+ * 度量值格式化: 度量字段在 Portal 列配置为金额(fieldType=MONEY)时按 referenceDict "小数位,除数"换算
+ * (如 2,10000 = 2位小数除以1万即万元), 与 Portal 单元格/汇总行同一 formatMoney;
+ * 其余类型维持千分位通用格式。空值仍返回 ''(不渲染不钻取, 与 formatNumber 约定一致)
+ */
+const formatMeasure = (measure: PivotMeasureVO | undefined, value: any) => {
+  if (value === null || value === undefined || value === '') {
+    return ''
+  }
+  const layout = measure ? columnMetaMap.value[measure.field] : undefined
+  if (layout?.fieldType === FIELD_TYPE.MONEY) {
+    const [fix, unit] = String(layout.referenceDict || '').split(',')
+    return formatMoney(Number(value), Number(fix) || 2, Number(unit) || 10000)
+  }
+  return formatNumber(value)
+}
+
+/** 收集可参与聚合的数值(排除 SQL NULL/空串, 避免 min/max 被 0 污染与 NaN 混入) */
+const collectMeasureNums = (values: any[]): number[] =>
+  values
+    .filter((v) => v !== null && v !== undefined && v !== '' && !isNaN(Number(v)))
+    .map(Number)
+
+/**
+ * 按度量自身聚合方式对一组聚合值做二次聚合
+ * sum/count 跨组可加; min/max 取极值; avg/countDistinct 无法由聚合后的值推导(加权均值/跨组去重), 留空
+ * row/col 两种布局的合计都必须走本函数, 禁止无脑求和(曾因 row 模式混算不同度量 + 对 avg 求和产生过垃圾总计)
+ */
+const aggregateByMeasure = (measure: PivotMeasureVO | undefined, nums: number[]): number | '' => {
+  if (measure?.agg === 'min') {
+    return nums.length ? Math.min(...nums) : ''
+  }
+  if (measure?.agg === 'max') {
+    return nums.length ? Math.max(...nums) : ''
+  }
+  if (measure?.agg === 'avg' || measure?.agg === 'countDistinct') {
+    return ''
+  }
+  return nums.length ? nums.reduce((acc, n) => acc + n, 0) : ''
+}
+
+// ==================== 报表默认排序(sys_portal_table.default_sort) ====================
+/** 排序配置(取 JSON 首项): type 0=正序 1=倒序, 空/'[]'/解析失败=不排序 */
+const defaultSort = computed<{ property: string, type: number } | null>(() => {
+  const raw = (props.portalTableConfig.defaultSort || '').trim()
+  if (!raw) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    const first = Array.isArray(parsed) ? parsed[0] : undefined
+    return first?.property ? { property: first.property, type: first.type === 1 ? 1 : 0 } : null
+  } catch (e) {
+    console.error('解析报表默认排序失败:', e)
+    return null
+  }
+})
+
+/**
+ * 单行排序取值
+ * - 命中行维度字段 → 聚合原值(与后端 ORDER BY 同口径)
+ * - 命中度量字段 → 该度量跨透视列的聚合值(与合计列同口径); 单透视列(含未配透视列的 total 退化列)直接取单元格,
+ *   避开 avg/countDistinct 多列不可二次聚合的问题
+ * - 两者都不是(配置变更后残留的字段) → undefined, 不参与排序
+ */
+const sortValueOf = (row: any, property: string): any => {
+  if (groupFields.value.includes(property)) {
+    return row[property]
+  }
+  const measure = measures.value.find((m) => m.field === property)
+  if (!measure) {
+    return undefined
+  }
+  const cells = effectivePivotColumns.value
+    .filter((pv) => !isSubtotalColumn(pv))
+    .map((pv) => row[`${pv.itemValue}__${measure.field}`])
+  return cells.length === 1 ? cells[0] : aggregateByMeasure(measure, collectMeasureNums(cells))
+}
+
+const isBlankSortValue = (value: any) => value === null || value === undefined || value === ''
+
+/**
+ * 聚合结果行本地排序(透视报表全量返回、无服务端分页)
+ * 不下推后端 sortList: 外层 ORDER BY 只认 group by 列与 ${透视列}__${度量} 别名, 度量跨多个透视列时没有唯一别名可排
+ * 空值恒排末位(不随方向翻转); avg/countDistinct 多透视列不可推导时各项均为空→稳定排序自然回退后端原序
+ * 行维度排序已由 pushDownSortList 下推后端(返回即有序), 本地排序同序重排仅是幂等兼兕底
+ */
+const sortedRows = computed<any[]>(() => {
+  const sort = defaultSort.value
+  if (!sort) {
+    return rows.value
+  }
+  const sign = sort.type === 1 ? -1 : 1
+  return [...rows.value].sort((a, b) => {
+    const va = sortValueOf(a, sort.property)
+    const vb = sortValueOf(b, sort.property)
+    const blankA = isBlankSortValue(va)
+    const blankB = isBlankSortValue(vb)
+    if (blankA && blankB) {
+      return 0
+    }
+    if (blankA) {
+      return 1
+    }
+    if (blankB) {
+      return -1
+    }
+    const numA = Number(va)
+    const numB = Number(vb)
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return sign * (numA - numB)
+    }
+    return sign * String(va).localeCompare(String(vb), 'zh-CN')
+  })
+})
+
+/** 下推后端的排序(聚合后外层 ORDER BY): 行维度配置排序 + 默认排序命中行维度字段时一并下推;
+ *  度量排序不下推(跨透视列的度量聚合值在 SQL 里没有对应列), 仍由 sortedRows 本地排 */
+const pushDownSortList = computed<{ property: string; type: number }[]>(() => {
+  const list = [...sortList.value]
+  const sort = defaultSort.value
+  if (sort && groupFields.value.includes(sort.property) && !list.some((s) => s.property === sort.property)) {
+    list.push({ property: sort.property, type: sort.type })
+  }
+  return list
+})
+
 /** 加载 Portal 配置与透视列配置 */
 const loadConfig = async () => {
   if (!props.portalTableConfig.portalName) {
@@ -195,6 +326,20 @@ const loadConfig = async () => {
       return
     }
     portalUrl.value = configRes.payload.url
+    // 默认查询条件(sys_portal.default_condition): 通用列表由 Portal 组件前端合并下发, 后端不消费;
+    // 透视链路此前完全漏带 → 主请求/钻取在此统一并入, 与列表路径同一配置正源
+    try {
+      const parsed = configRes.payload.defaultCondition ? JSON.parse(configRes.payload.defaultCondition) : null
+      if (Array.isArray(parsed?.conditionList)) {
+        // '${currentYear}' 等内置时间变量与通用列表走同一份解析(见 resolveConditionVariables)
+        resolveConditionVariables(parsed)
+        defaultConditions.value = parsed.conditionList
+      } else {
+        defaultConditions.value = []
+      }
+    } catch (e) {
+      console.error('解析默认查询条件失败:', e)
+    }
     const metaMap: Record<string, any> = {}
     for (const layout of configRes.payload.columns || []) {
       metaMap[layout.property] = layout
@@ -223,8 +368,10 @@ const loadData = async () => {
   }
   try {
     const req: PivotReqVO = {
-      condition: { conditionList: props.condition },
-      sortList: sortList.value.length > 0 ? sortList.value : undefined,
+      // 默认查询条件(sys_portal.default_condition)并入: 与通用列表路径同一配置正源
+      condition: { conditionList: [...defaultConditions.value, ...props.condition] },
+      // 行维度排序下推(聚合后 ORDER BY 行维度列, 两链路均支持); 度量排序后端无别名可排, 不在此列
+      sortList: pushDownSortList.value.length > 0 ? pushDownSortList.value : undefined,
       groupColumns: groupFields.value.map(f => ({
         value: f,
         label: columnMetaMap.value[f]?.displayName || f
@@ -248,12 +395,79 @@ watch(() => props.condition, () => {
   loadData()
 }, { deep: true })
 
+// ==================== 度量布局模式 ====================
+/** 合成列 dataIndex: 度量名称列(仅 row 模式) */
+const MEASURE_NAME_COL = '_measure_name'
+/** 合成列 dataIndex: 横向合计列(仅 row 模式, 同一度量跨透视列聚合) */
+const TOTAL_COL = '_row_total'
+/** 合成字段: 行对象携带的原始聚合行引用(钻取条件取 group by 原值, 与本地排序后的渲染行序解耦) */
+const RAW_ROW_REF_KEY = '_raw_row_ref'
+
+/** 分组小计列识别(树形-多层生成: itemValue 以 _gt_ 前缀, 条件为 IN 组内叶子值) */
+const isSubtotalColumn = (pv: PortalPivotColumnVO): boolean => !!pv.itemValue?.startsWith(PIVOT_SUBTOTAL_PREFIX)
+/** 是否度量转行模式: 布局配置为 row 且度量数 > 1 时生效 */
+const isMeasureInRow = computed(() =>
+  props.portalTableConfig.pivotMeasureLayout === 'row' && measures.value.length > 1
+)
+
+/** 解析透视列父链路径 JSON(自外向内 label 数组), 空/非法返回 [](树形-多层生成时落库) */
+const parseGroupPath = (pv: PortalPivotColumnVO): string[] => {
+  if (!pv.groupPath) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(pv.groupPath)
+    return Array.isArray(parsed) ? parsed.filter((s: any) => typeof s === 'string' && s) : []
+  } catch (e) {
+    return []
+  }
+}
+
+/**
+ * 按父链组装树形多层表头(row 模式无度量层, 列头即纯树)
+ * 每层按组首次出现序聚拢(组间序跟随 displayOrder, 预览拖拽调序仍生效),
+ * 同父叶子包进 {title, children} 分组壳列(无 dataIndex, 不参与汇总), 叶子列原样下沉为末级
+ */
+const buildGroupedColumns = (items: Array<{ path: string[]; col: ColumnType }>): ColumnType[] => {
+  const buildLevel = (list: Array<{ path: string[]; col: ColumnType }>): ColumnType[] => {
+    // 同父叶子必须相邻才能归组: 按组键首次出现序稳定聚拢(组内保持原相对序)
+    const keyOf = (it: { path: string[]; col: ColumnType }) => it.path[0] ?? ''
+    const groupSeq = new Map<string, number>()
+    for (const it of list) {
+      const k = keyOf(it)
+      if (!groupSeq.has(k)) {
+        groupSeq.set(k, groupSeq.size)
+      }
+    }
+    const sorted = [...list].sort((a, b) => (groupSeq.get(keyOf(a)) ?? 0) - (groupSeq.get(keyOf(b)) ?? 0))
+    const res: ColumnType[] = []
+    let i = 0
+    while (i < sorted.length) {
+      const item = sorted[i]
+      if (item.path.length === 0) {
+        res.push(item.col)
+        i++
+        continue
+      }
+      const groupTitle = item.path[0]
+      const groupItems: Array<{ path: string[]; col: ColumnType }> = []
+      let j = i
+      while (j < sorted.length && sorted[j].path[0] === groupTitle) {
+        groupItems.push({ path: sorted[j].path.slice(1), col: sorted[j].col })
+        j++
+      }
+      res.push({ title: groupTitle, children: buildLevel(groupItems) } as unknown as ColumnType)
+      i = j
+    }
+    return res
+  }
+  return buildLevel(items)
+}
+
 /**
  * Portal 动态列: 行维度列 + 度量子列
- * 多个度量时: 度量子列通过 displayGroupName 由 Portal multiHeader 生成透视父表头(双层)
- * 单个度量时: 不分组, 透视列名直接作为单层表头
- * 无透视列时: 度量名直接作单层表头(退化的总计列不产生父表头)
- * 数据已预翻译/预格式化, 列按纯文本展示(fieldType 不走 parse 转换)
+ * col模式: 行维度 + (透视列×度量) 横向平铺
+ * row模式: 行维度 + 指标名称列 + 透视列(每列一个度量值)
  */
 const portalColumns = computed(() => {
   const cols: ColumnType[] = []
@@ -267,7 +481,6 @@ const portalColumns = computed(() => {
       dataIndex: cfg.field,
       key: cfg.field,
       width: columnMetaMap.value[cfg.field]?.width || 140,
-      // 逐字段左锁定(配置存于 groupByFields JSON 项的 fixed, 与度量列右锁定互斥)
       fixed: cfg.fixed,
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
@@ -280,19 +493,37 @@ const portalColumns = computed(() => {
       detailShow: false
     } as ColumnType)
   }
-  for (const pv of effectivePivotColumns.value) {
-    for (const m of measures.value) {
+
+  if (isMeasureInRow.value) {
+    // === row 模式: 行维度 + 指标名称 + 透视列 ===
+    cols.push({
+      title: '指标',
+      dataIndex: MEASURE_NAME_COL,
+      key: MEASURE_NAME_COL,
+      width: 120,
+      fixed: visibleGroupFieldConfigs.value.some(c => c.fixed) ? 'left' : false,
+      fieldType: FIELD_TYPE.INPUT,
+      tooltip: false,
+      order: order++,
+      editable: false,
+      sorter: false,
+      filterAble: false,
+      addShow: false,
+      editShow: false,
+      detailShow: false
+    } as ColumnType)
+    // 合计列: 每行是同一度量在各透视列上的取值(同量纲), 横向聚合安全;
+    // 不右锁定: 与行维度左锁并存会触发 s-table 两侧同时锁定的渲染异常;
+    // 位置可配: first=透视列之前(紧跟指标列, 列多横向滚动时合计更早可见), 缺省 last=透视列之后
+    // order 必须在 push 时赋值(Portal 按值排序, 提前赋会破坏位置)
+    const pushTotalCol = () => {
       cols.push({
-        // 有透视列: 单度量透视列名作表头, 多度量度量名作表头/透视列名作父表头; 无透视列: 度量名直接作单层表头
-        title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
-        dataIndex: `${pv.itemValue}__${m.field}`,
-        key: `${pv.itemValue}__${m.field}`,
+        title: '合计',
+        dataIndex: TOTAL_COL,
+        key: TOTAL_COL,
         width: 120,
-        // 逐度量右锁定(配置存于 pivotMeasures JSON 项的 fixed, 与行维度左锁定互斥)
-        fixed: m.fixed === true ? 'right' : false,
         fieldType: FIELD_TYPE.NUMBER,
         contentAlign: 'right',
-        displayGroupName: hasPivot && multiMeasure ? pv.itemName : undefined,
         tooltip: false,
         order: order++,
         editable: false,
@@ -303,59 +534,166 @@ const portalColumns = computed(() => {
         detailShow: false
       } as ColumnType)
     }
+    // 透视列: 带 groupPath(树形-多层生成)时按父链组装嵌套表头, 否则平铺(原逻辑)
+    const leafItems = effectivePivotColumns.value.map((pv) => ({
+      path: parseGroupPath(pv),
+      col: {
+        title: pv.itemName || pv.itemValue,
+        dataIndex: pv.itemValue,
+        key: pv.itemValue,
+        width: 140,
+        fieldType: FIELD_TYPE.NUMBER,
+        contentAlign: 'right',
+        tooltip: false,
+        order: order++,
+        editable: false,
+        sorter: false,
+        filterAble: false,
+        addShow: false,
+        editShow: false,
+        detailShow: false
+      } as ColumnType
+    }))
+    if (props.portalTableConfig.pivotTotalPos === 'first') {
+      pushTotalCol()
+    }
+    if (leafItems.some((it) => it.path.length > 0)) {
+      cols.push(...buildGroupedColumns(leafItems))
+    } else {
+      for (const it of leafItems) {
+        cols.push(it.col)
+      }
+    }
+    if (props.portalTableConfig.pivotTotalPos !== 'first') {
+      pushTotalCol()
+    }
+    // 统一按最终数组序重编 order(Portal 按值排序): leafItems 的 map 先于 pushTotalCol 执行,
+    // first 时合计若沿用 push 时取号会拿到最大号而跑到末尾; 重编同时给树形壳列补上 order
+    cols.forEach((c, idx) => {
+      c.order = idx + 2
+    })
+  } else {
+    // === col 模式(原逻辑): 行维度 + 透视列×度量 ===
+    for (const pv of effectivePivotColumns.value) {
+      for (const m of measures.value) {
+        cols.push({
+          title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
+          dataIndex: `${pv.itemValue}__${m.field}`,
+          key: `${pv.itemValue}__${m.field}`,
+          width: 120,
+          fixed: m.fixed === true ? 'right' : false,
+          fieldType: FIELD_TYPE.NUMBER,
+          contentAlign: 'right',
+          displayGroupName: hasPivot && multiMeasure ? pv.itemName : undefined,
+          tooltip: false,
+          order: order++,
+          editable: false,
+          sorter: false,
+          filterAble: false,
+          addShow: false,
+          editShow: false,
+          detailShow: false
+        } as ColumnType)
+      }
+    }
   }
   return cols
 })
 
 let pivotRowKeySeq = 0
-/** 表格数据: 行维度字典翻译, 度量数字格式化 */
-const dataSource = computed(() => rows.value.map((row) => {
-  const item: any = {}
-  // 行主键由 pivot 自行预分配: Portal 在 initConfig 完成前 config.rowKey 仍是 'id'(透视行无 id),
-  // 若依赖 Portal 的 uuid 机制, 存在时序窗口使行 key 全为 undefined, surely-table 因重复 key 渲染错位
-  item[AUTO_UUID_ROW_KEY] = `pivot-row-${++pivotRowKeySeq}`
-  for (const f of visibleGroupFields.value) {
-    item[f] = translate(f, row[f])
+/** 表格数据: col模式直接映射; row模式熔接(每行×每度量=一行) + 伪合并(组内首行显示维度值) */
+const dataSource = computed(() => {
+  // 行源统一下移到 sortedRows: 未配默认排序时直接返回 rows, 不产生额外拷贝
+  if (!isMeasureInRow.value) {
+    // === col 模式(原逻辑) ===
+    return sortedRows.value.map((row) => {
+      const item: any = {}
+      item[AUTO_UUID_ROW_KEY] = `pivot-row-${++pivotRowKeySeq}`
+      item[RAW_ROW_REF_KEY] = row
+      for (const f of visibleGroupFields.value) {
+        item[f] = translate(f, row[f])
+      }
+      for (const pv of effectivePivotColumns.value) {
+        for (const m of measures.value) {
+          const key = `${pv.itemValue}__${m.field}`
+          item[key] = formatMeasure(m, row[key])
+        }
+      }
+      return item
+    })
   }
-  for (const pv of effectivePivotColumns.value) {
+
+  // === row 模式: 熔接数据 + 伪合并 ===
+  const melted: any[] = []
+  // 记录每个行维度字段上一次的值, 用于判断是否首行
+  const lastGroupValues: Record<string, any> = {}
+  for (const row of sortedRows.value) {
     for (const m of measures.value) {
-      const key = `${pv.itemValue}__${m.field}`
-      item[key] = formatNumber(row[key])
+      const item: any = {}
+      item[AUTO_UUID_ROW_KEY] = `pivot-row-${++pivotRowKeySeq}`
+      item[RAW_ROW_REF_KEY] = row
+      // 行维度: 伪合并——只在组内第一行显示文字, 后续行留空
+      for (const f of visibleGroupFields.value) {
+        const translated = translate(f, row[f])
+        if (lastGroupValues[f] === translated) {
+          item[f] = ''
+        } else {
+          item[f] = translated
+        }
+        lastGroupValues[f] = translated
+      }
+      // 指标名称列
+      item[MEASURE_NAME_COL] = m.label || m.field
+      // 每个透视列对应的度量值
+      // 小计列(_gt_前缀)参与列输出, 但不并入横向合计(避免叶子+小计重复累加)
+      const totalSourcePvs = effectivePivotColumns.value.filter((pv) => !isSubtotalColumn(pv))
+      for (const pv of effectivePivotColumns.value) {
+        const srcKey = `${pv.itemValue}__${m.field}`
+        item[pv.itemValue!] = formatMeasure(m, row[srcKey])
+      }
+      // 合计列: 同一度量跨透视列的横向聚合(按度量自身 agg 语义, avg/countDistinct 不可推导留空)
+      item[TOTAL_COL] = formatMeasure(
+        m,
+        aggregateByMeasure(m, collectMeasureNums(totalSourcePvs.map((pv) => row[`${pv.itemValue}__${m.field}`])))
+      )
+      melted.push(item)
+    }
+    // 切换原始行时重置合并状态(下一组的第一行重新显示文字)
+    for (const f of visibleGroupFields.value) {
+      lastGroupValues[f] = undefined
     }
   }
-  return item
-}))
+  return melted
+})
 
-/** 汇总行数据: 按度量聚合方式汇总——sum/count 求和, min/max 取列极值, avg/countDistinct 无法由聚合值推导留空 */
+/** 汇总行数据 */
 const summaryData = computed(() => {
   const summary: Record<string, any> = {}
+  if (isMeasureInRow.value) {
+    // row 模式不出总计行: 列容器纵向堆叠多个度量(不同量纲), 单行汇总无论按列还是混算都语义错误;
+    // 跨 group 的总计坐标是 (度量, 透视列), 天然形状为 N 行, summaryData 一行结构装不下;
+    // 横向合计已由合计列(TOTAL_COL)承担
+    return summary
+  }
+  // col 模式: 每个 ${pv}__${measure} 列独立汇总(列内同度量同量纲)
   for (const pv of effectivePivotColumns.value) {
     for (const m of measures.value) {
       const key = `${pv.itemValue}__${m.field}`
-      // 排除空值(SQL NULL/空串), 避免 min/max 被 0 污染
-      const nums = rows.value
-        .map((row) => row[key])
-        .filter((v) => v !== null && v !== undefined && v !== '' && !isNaN(Number(v)))
-        .map(Number)
-      if (m.agg === 'min') {
-        summary[key] = nums.length ? formatNumber(Math.min(...nums)) : ''
-      } else if (m.agg === 'max') {
-        summary[key] = nums.length ? formatNumber(Math.max(...nums)) : ''
-      } else if (m.agg === 'avg' || m.agg === 'countDistinct') {
-        // avg(加权均值)与 countDistinct(跨行可能重复)均无法由聚合后的值推导
-        summary[key] = ''
-      } else {
-        summary[key] = formatNumber(nums.reduce((acc, n) => acc + n, 0))
-      }
+      summary[key] = formatMeasure(m, aggregateByMeasure(m, collectMeasureNums(rows.value.map((row) => row[key]))))
     }
   }
   return summary
 })
 
-/** 度量子列 key 列表(${透视列标识}__${度量字段}, 用于动态插槽与钻取定位) */
-const measureKeys = computed(() =>
-  effectivePivotColumns.value.flatMap(pv => measures.value.map(m => `${pv.itemValue}__${m.field}`))
-)
+/** 度量子列 key 列表(用于动态插槽与钻取定位) */
+const measureKeys = computed<string[]>(() => {
+  if (isMeasureInRow.value) {
+    // row 模式: 插槽按透视列 itemValue 定位; 合计列一并纳入(可钻取)
+    return [...effectivePivotColumns.value.map(pv => pv.itemValue!).filter(Boolean), TOTAL_COL]
+  }
+  // col 模式: ${透视列}__${度量字段}
+  return effectivePivotColumns.value.flatMap(pv => measures.value.map(m => `${pv.itemValue}__${m.field}`))
+})
 
 /** 动态列必须就绪后才能挂载 Portal(Portal 仅在初始化时读取 customColumns; 透视列可为空=退化为总计列) */
 const ready = computed(() =>
@@ -398,21 +736,61 @@ const parsePivotColumnCondition = (pv: PortalPivotColumnVO): ConditionListType[]
 }
 
 /**
- * 数据行钻取条件: ① 全局筛选(props.condition) ② 透视列条件 ③ 行维度原始值
- * 三者 AND 合并, 与透视聚合 SQL 的 WHERE(先于 group by) 语义严格对齐
+ * 单个行维度值的钻取条件
+ * 值条件必须与后端 group by 的原值严格对应, 且要同时满足两条取数路径:
+ * forge(Dataset/Matrix → BaseSqlBuilder 拼参数化 SQL) 与 kernel(MyBatis wrapper → PortalSelectRepo),
+ * 二者对"空值/未实现 relation"的容忍度不同, 下面的类型选择均为两路径交集
  */
-const buildDrillCondition = (index: number, pv: PortalPivotColumnVO): ConditionListType[] => {
-  const list: ConditionListType[] = [...props.condition, ...parsePivotColumnCondition(pv)]
+const buildGroupValueCondition = (field: string, value: any): ConditionListType => {
+  // null/undefined → IS NULL: 透视 group by 的列表达式不包 IFNULL(仅 statistic 路径包), 真 NULL 会原样返回
+  if (value === null || value === undefined) {
+    return { property: field, relation: FILTER_TYPE.NULL, value: [], conditionList: [] }
+  }
+  // 空串 → IN(['']) 而非 EQUAL(['']): 库里存 '' 的维度值 group by 出来是空串行, 发 IS NULL 会匹配不到(钻取 0 条);
+  // 而 kernel 的 EQUAL 分支带"首元素为空则不拼条件"守卫, col = '' 会被静默丢弃退化成全表,
+  // IN 分支只判集合非空 → 两路径均可生成 col IN ('')
+  if (value === '') {
+    return { property: field, relation: FILTER_TYPE.IN, value: [''], conditionList: [] }
+  }
+  // 其余(含多值列的逗号串)一律整串等值: group by 键就是该行原值, 等值是唯一能与聚合数字严格对齐的写法。
+  // 多值列(逗号串存一格)不用 CONTAIN 包含匹配: 钻取的比较值是完整 group key(整串),
+  // 不同于筛选栏拿单个元素去撞(那种场景才必须 FIND_IN_SET, 见 AdvancedSearch/funs.ts 对 18/19 只开放 CONTAIN 系);
+  // 改成"包含全部"会让 'A,B,C' 这类超集行一并命中, 把"偶尔漏"换成"必然多", 反而破坏数字对齐。
+  // 已知残留隐患: 若行维度列的值由 GROUP_CONCAT 现拼且未带 ORDER BY(拼接顺序目下无保证),
+  // 透视与钻取两次查询可能分别得到 'A,B' / 'B,A' 使等值漏行, 根治应在 SQL 侧让拼接确定性
+  return { property: field, relation: FILTER_TYPE.EQUAL, value: [value], conditionList: [] }
+}
+
+/**
+ * 求和度量"隐藏零值明细"的钻取附加条件(不满足条件时返回 null)
+ * 仅 agg=sum 生效: sum 是唯一"去掉 0/NULL 行结果仍恒等"的聚合——
+ * count 每行都计 1、countDistinct 可能少一个去重值、avg 丢分母、min/max 可能丢极值, 过滤即与单元格数字不符
+ * 用 NOT_EQUAL [0]: SQL 三值逻辑下 col <> 0 同时排除 0 与 NULL, 一条条件即可;
+ * 且值为数字 0, kernel 侧 isNotEmpty(0) 判非空不会静默丢条件(空串才会), forge 侧生成参数化 col != :p
+ */
+const buildMeasureZeroCondition = (measure?: PivotMeasureVO): ConditionListType | null => {
+  if (!measure || measure.agg !== 'sum' || measure.hideZero !== true) {
+    return null
+  }
+  return { property: measure.field, relation: FILTER_TYPE.NOT_EQUAL, value: [0], conditionList: [] }
+}
+
+/**
+ * 数据行钻取条件: ① 默认查询条件(sys_portal.default_condition)+全局筛选(props.condition) ② 透视列条件(合计列钻取不带) ③ 行维度原始值 ④ 求和度量的零值过滤(可选)
+ * 前三者 AND 合并, 与透视聚合 SQL 的 WHERE(先于 group by) + CASE WHEN(行内条件) + GROUP BY(行维度) 语义严格对齐;
+ * ④ 只减掉对合计无贡献的行, 所以钻取列表的该列合计仍与单元格一致(但行数不再等于贡献行数)
+ * rawRow 必须取 record 上携带的原始聚合行引用: sortedRows 本地排序后渲染行序 ≠ rows 后端返回序,
+ * 按渲染 index 反查 rows 会张冠李戴(显示 level 1 的行, 钻取却拼出 level 3 的条件)
+ */
+const buildDrillCondition = (rawRow: any, pv: PortalPivotColumnVO | undefined, measure?: PivotMeasureVO): ConditionListType[] => {
+  const list: ConditionListType[] = [...defaultConditions.value, ...props.condition, ...(pv ? parsePivotColumnCondition(pv) : [])]
   // 行维度用原始行值(group by 的原值), 不能用 dataSource 里翻译/格式化后的值
-  const rawRow = rows.value[index] || {}
   for (const f of groupFields.value) {
-    const v = rawRow[f]
-    if (v === null || v === undefined || v === '') {
-      // 空值: IS NULL(FILTER_TYPE.NULL), 注意不是 10(不包含)
-      list.push({ property: f, relation: FILTER_TYPE.NULL, value: [], conditionList: [] })
-    } else {
-      list.push({ property: f, relation: FILTER_TYPE.EQUAL, value: [v], conditionList: [] })
-    }
+    list.push(buildGroupValueCondition(f, rawRow?.[f]))
+  }
+  const zeroCond = buildMeasureZeroCondition(measure)
+  if (zeroCond) {
+    list.push(zeroCond)
   }
   return list
 }
@@ -424,33 +802,82 @@ const buildDrillTitle = (pv: PortalPivotColumnVO, itemValue: string, measure: Pi
   return `${[pivotLabel, measureLabel].filter(Boolean).join(' · ') || measureField} - ${suffix}`
 }
 
+/** 行分组的显示标签(取该组原始行的行维度翻译值拼接, 用于合计列钻取标题) */
+const buildGroupLabel = (rawRow: any) => {
+  return visibleGroupFields.value.map((f) => String(translate(f, rawRow?.[f]) ?? '')).filter(Boolean).join(' / ')
+}
+
 /** 点击度量单元格: 打开底部抽屉展示该单元格对应的明细数据 */
-const openDrill = (index: number, key: string) => {
-  const sepIdx = key.indexOf('__')
-  const itemValue = key.substring(0, sepIdx)
-  const measureField = key.substring(sepIdx + 2)
-  const pv = effectivePivotColumns.value.find(p => p.itemValue === itemValue)
-  const measure = measures.value.find(m => m.field === measureField)
-  if (!pv) {
-    return
+const openDrill = (record: any, index: number, key: string) => {
+  // 原始行必须取 record 携带的引用: sortedRows 本地排序后渲染行序 ≠ rows 后端返回序,
+  // 按渲染 index 反查 rows 会取错行(点 level 1 的单元格, 钻取条件却拼成 level 3)
+  const rawRow = record?.[RAW_ROW_REF_KEY]
+  if (isMeasureInRow.value) {
+    // row 模式: key=pv.itemValue(或合计列), index是熔接后的行号, 仅用于定位当前度量
+    const measureCount = measures.value.length
+    const measureIdx = index % measureCount
+    const measure = measures.value[measureIdx]
+    if (!measure) {
+      return
+    }
+    if (key === TOTAL_COL) {
+      // 合计列: 该组该度量跨全部透视列的明细 → 不带透视列条件(②)
+      drillTitle.value = `${buildGroupLabel(rawRow)} · ${measure.label || measure.field} - 全部分类明细`
+      drillCondition.value = { conditionList: buildDrillCondition(rawRow, undefined, measure), andOr: '0' }
+      drillOpen.value = true
+      return
+    }
+    const pv = effectivePivotColumns.value.find(p => p.itemValue === key)
+    if (!pv) {
+      return
+    }
+    drillTitle.value = `${pv.itemName || key} · ${measure.label || measure.field} - 明细数据`
+    drillCondition.value = { conditionList: buildDrillCondition(rawRow, pv, measure), andOr: '0' }
+  } else {
+    // col 模式: key=${itemValue}__${measureField}
+    const sepIdx = key.indexOf('__')
+    const itemValue = key.substring(0, sepIdx)
+    const measureField = key.substring(sepIdx + 2)
+    const pv = effectivePivotColumns.value.find(p => p.itemValue === itemValue)
+    const measure = measures.value.find(m => m.field === measureField)
+    if (!pv) {
+      return
+    }
+    drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '明细数据')
+    drillCondition.value = { conditionList: buildDrillCondition(rawRow, pv, measure), andOr: '0' }
   }
-  drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '明细数据')
-  drillCondition.value = { conditionList: buildDrillCondition(index, pv), andOr: '0' }
   drillOpen.value = true
 }
 
 /** 点击汇总行单元格: 只拼 ①+②(不带行维度), 即该透视列的全部明细 */
 const openSummaryDrill = (key: string) => {
-  const sepIdx = key.indexOf('__')
-  const itemValue = key.substring(0, sepIdx)
-  const measureField = key.substring(sepIdx + 2)
-  const pv = effectivePivotColumns.value.find(p => p.itemValue === itemValue)
-  const measure = measures.value.find(m => m.field === measureField)
-  if (!pv) {
-    return
+  if (isMeasureInRow.value) {
+    // row 模式: key=pv.itemValue
+    const pv = effectivePivotColumns.value.find(p => p.itemValue === key)
+    if (!pv) {
+      return
+    }
+    drillTitle.value = `${pv.itemName || key} - 全部明细`
+    // row 模式下汇总行单元格不对应单一度量, 无法确定按哪个度量列滤零, 故不附加零值条件
+    drillCondition.value = { conditionList: [...props.condition, ...parsePivotColumnCondition(pv)], andOr: '0' }
+  } else {
+    // col 模式: key=${itemValue}__${measureField}
+    const sepIdx = key.indexOf('__')
+    const itemValue = key.substring(0, sepIdx)
+    const measureField = key.substring(sepIdx + 2)
+    const pv = effectivePivotColumns.value.find(p => p.itemValue === itemValue)
+    const measure = measures.value.find(m => m.field === measureField)
+    if (!pv) {
+      return
+    }
+    drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '全部明细')
+    const summaryConditionList: ConditionListType[] = [...props.condition, ...parsePivotColumnCondition(pv)]
+    const zeroCond = buildMeasureZeroCondition(measure)
+    if (zeroCond) {
+      summaryConditionList.push(zeroCond)
+    }
+    drillCondition.value = { conditionList: summaryConditionList, andOr: '0' }
   }
-  drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '全部明细')
-  drillCondition.value = { conditionList: [...props.condition, ...parsePivotColumnCondition(pv)], andOr: '0' }
   drillOpen.value = true
 }
 
@@ -478,7 +905,7 @@ onMounted(() => {
       :page-size="50"
       :hide-export="props.portalTableConfig.downloadAble === '0'"
       :advance="false"
-      :multi-header="pivotColumns.length > 0 && measures.length > 1"
+      :multi-header="!isMeasureInRow && pivotColumns.length > 0 && measures.length > 1"
       read-only
       :row-key-field="AUTO_UUID_ROW_KEY"
       hide-import
@@ -494,7 +921,7 @@ onMounted(() => {
         <span
           v-if="cellRecord(cellSlot)?.[key] !== '' && cellRecord(cellSlot)?.[key] != null"
           class="pivot-drill-cell"
-          @click="openDrill(cellIndex(cellSlot), key)"
+          @click="openDrill(cellRecord(cellSlot), cellIndex(cellSlot), key)"
         >{{ cellRecord(cellSlot)?.[key] }}</span>
       </template>
       <!-- 汇总行单元格: 点击钻取该透视列全部明细(条件只拼全局筛选+透视列条件);
