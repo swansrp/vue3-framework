@@ -93,6 +93,34 @@ export const flattenTreeToParentGroups = (tree: TreeDictNode[]): TreeParentGroup
   return groups
 }
 
+/** 叶子节点及其祖先 label 链(自外向内, 已剥离虚拟根) */
+export interface TreeLeafPath {
+  value: string
+  label: string
+  /** 从第 2 层(剥根后)到叶子父辈的 label 链; 叶子直接挂在根下时为空数组 */
+  parentPath: string[]
+}
+
+/**
+ * 递归收集所有叶子节点及其完整祖先 label 链(支持任意层父表头)
+ * 与 flattenTreeToParentGroups 一样先剥离虚拟根; 树的每一层父节点都进入 parentPath,
+ * 叶子作为透视列(condition=字段=叶子值), parentPath 作为其上层多层表头
+ */
+export const collectLeafPathGroups = (tree: TreeDictNode[]): TreeLeafPath[] => {
+  const result: TreeLeafPath[] = []
+  const walk = (nodes: TreeDictNode[], path: string[]) => {
+    for (const node of nodes || []) {
+      if (isLeafNode(node)) {
+        result.push({ value: String(node.value), label: node.label, parentPath: [...path] })
+      } else {
+        walk(node.children || [], [...path, node.label])
+      }
+    }
+  }
+  walk(resolveParentLevel(tree), [])
+  return result
+}
+
 /** 树形字典校验结果 */
 export interface TreeValidationResult {
   valid: boolean

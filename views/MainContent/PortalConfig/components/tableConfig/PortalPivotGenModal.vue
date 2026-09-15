@@ -163,6 +163,9 @@
             <a-radio-button value="treeLeaf">
               树形-叶子层
             </a-radio-button>
+            <a-radio-button value="treeMulti">
+              树形-多层
+            </a-radio-button>
           </a-radio-group>
           <a-button
             type="primary"
@@ -200,31 +203,32 @@
           @dragover.prevent="genDragOverIndex = index"
           @dragleave="genDragOverIndex = -1"
           @drop="handleGenDrop($event, index)"
+          @dragend="handleGenDragEnd"
         >
           <a-checkbox v-model:checked="item.checked">
-            {{ item.label }}（{{ item.value }}）
+            <span v-if="item.groupPath && item.groupPath.length" class="gen-path-prefix">{{ item.groupPath.join(' / ') }} / </span>{{ item.label }}（{{ item.value }}）
           </a-checkbox>
           <span class="gen-pivot-preview-actions">
             <a-button
               type="text"
               size="small"
               :disabled="index === 0"
-              title="上移"
-              @click="moveGenItem(index, -1)"
+              title="置顶"
+              @click="moveGenItemToEdge(index, 'top')"
             >
               <template #icon>
-                <ArrowUpOutlined />
+                <VerticalAlignTopOutlined />
               </template>
             </a-button>
             <a-button
               type="text"
               size="small"
               :disabled="index === genItems.length - 1"
-              title="下移"
-              @click="moveGenItem(index, 1)"
+              title="置底"
+              @click="moveGenItemToEdge(index, 'bottom')"
             >
               <template #icon>
-                <ArrowDownOutlined />
+                <VerticalAlignBottomOutlined />
               </template>
             </a-button>
           </span>
@@ -248,13 +252,14 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons-vue'
+import { VerticalAlignBottomOutlined, VerticalAlignTopOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
 import { getIndicatorConfig } from '@/framework/apis/portal'
 import { addPortalPivotColumnList } from '@/framework/apis/portal/table'
-import { fetchTreeDict, flattenTreeToParentGroups } from '@/framework/components/common/chart/utils/treeStacked'
+import { collectLeafPathGroups, fetchTreeDict, flattenTreeToParentGroups } from '@/framework/components/common/chart/utils/treeStacked'
+import { PIVOT_SUBTOTAL_PREFIX } from '@/framework/components/common/Portal/constant'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { dictStore } from '@/framework/store/common'
 
@@ -389,7 +394,7 @@ const genPivotField = ref<string | undefined>(undefined)
 // 字典编码(默认取自字段的 reference)
 const genDictCode = ref<string | undefined>(undefined)
 // 字典模式: flat=平铺字典, treeParent=树父层, treeLeaf=树叶子层
-const genDictMode = ref<'flat' | 'treeParent' | 'treeLeaf'>('flat')
+const genDictMode = ref<'flat' | 'treeParent' | 'treeLeaf' | 'treeMulti'>('flat')
 // 生成预览项
 interface GenPivotItem {
   value: string
@@ -397,6 +402,8 @@ interface GenPivotItem {
   checked: boolean
   // 指标模式下自带的条件 JSON(透视列直接复用)
   condition?: string
+  // 树形-多层: 叶子之上的父链 label 数组(自外向内), 落库到透视列 groupPath
+  groupPath?: string[]
 }
 const genItems = ref<GenPivotItem[]>([])
 
@@ -410,14 +417,20 @@ const handleGenFieldChange = (fieldKey: string) => {
 // 按字典模式加载字典项(平铺/树父层/树叶子层)
 const loadDictItemsByMode = async (
   dictCode: string,
-  mode: 'flat' | 'treeParent' | 'treeLeaf'
-): Promise<Array<{ value: string; label: string }>> => {
-  const items: Array<{ value: string; label: string }> = []
+  mode: 'flat' | 'treeParent' | 'treeLeaf' | 'treeMulti'
+): Promise<Array<{ value: string; label: string; groupPath?: string[] }>> => {
+  const items: Array<{ value: string; label: string; groupPath?: string[] }> = []
   if (mode === 'flat') {
     // 平铺字典：每个字典项一列(与图表指标逐项生成条件同构)
     const res = await dict.getDict(dictCode)
     ;(res || []).forEach((item: any) => {
       items.push({ value: String(item.value), label: item.label || String(item.value) })
+    })
+  } else if (mode === 'treeMulti') {
+    // 树形-多层：每个叶子一列, 携带其祖先 label 链(自外向内)作为多层父表头
+    const tree = await fetchTreeDict(dictCode)
+    collectLeafPathGroups(tree).forEach((l) => {
+      items.push({ value: l.value, label: l.label, groupPath: l.parentPath })
     })
   } else {
     // 树形字典：复用树形堆叠图的拍平逻辑，按父层/叶子层生成
@@ -565,14 +578,13 @@ const isJsonObjectString = (s: string): boolean => {
   }
 }
 
-// 预览项上移/下移(调整生成顺序)
-const moveGenItem = (index: number, delta: number) => {
-  const target = index + delta
+// 预览项置顶/置底(调整生成顺序, 逐位上移下移由拖拽承担)
+const moveGenItemToEdge = (index: number, edge: 'top' | 'bottom') => {
   const arr = genItems.value
-  if (target < 0 || target >= arr.length) return
-  const tmp = arr[index]
-  arr[index] = arr[target]
-  arr[target] = tmp
+  const target = edge === 'top' ? 0 : arr.length - 1
+  if (index === target) return
+  const [moved] = arr.splice(index, 1)
+  arr.splice(target, 0, moved)
 }
 
 // 生成预览拖拽调序
@@ -595,6 +607,11 @@ const handleGenDrop = (e: DragEvent, targetIndex: number) => {
   arr.splice(targetIndex, 0, moved)
   genItems.value = arr
 }
+// 拖拽中断/落到无效区域时重置状态, 避免残留脏索引影响下一次 drop
+const handleGenDragEnd = () => {
+  genDraggedIndex.value = -1
+  genDragOverIndex.value = -1
+}
 
 // 穿梭框过滤
 const filterOption = (inputValue: string, option: any) => {
@@ -612,13 +629,9 @@ const handleConfirmGenPivot = async () => {
     message.warning('请至少勾选一项')
     return
   }
-  // 列标识查重：已存在的 itemValue 跳过
+  // 列标识查重：已存在的 itemValue 跳过(树形-多层的小计列另在下方独立补齐)
   const existingValues = new Set(props.existingPivotValues || [])
   const toAdd = selected.filter((item) => !existingValues.has(item.value))
-  if (toAdd.length === 0) {
-    message.warning('勾选项均已存在对应透视列')
-    return
-  }
   genSaving.value = true
   try {
     let order = (props.existingPivotValues || []).length
@@ -631,6 +644,7 @@ const handleConfirmGenPivot = async () => {
       condition: string;
       displayOrder: number;
       status: string;
+      groupPath: string;
     }> = []
     for (const item of toAdd) {
       // 指标/组合模式：复用自带条件(归一化为 JSON 对象)；字典模式：字段 等于 字典值
@@ -666,7 +680,48 @@ const handleConfirmGenPivot = async () => {
         condition: conditionStr,
         displayOrder: ++order,
         status: '1',
+        groupPath: JSON.stringify(item.groupPath || []),
       })
+    }
+    // 树形-多层: 每个首层分组自动补齐小计列(IN 组内勾选叶子值, 含此前已存在的叶子列),
+    // 独立于叶子查重 —— 叶子已全部存在时也能幂等补出缺失的小计列
+    if (genSource.value === 'dict' && genDictMode.value === 'treeMulti') {
+      const groupLeaves = new Map<string, string[]>()
+      for (const item of selected) {
+        const root = item.groupPath?.[0]
+        if (!root) {
+          continue
+        }
+        if (!groupLeaves.has(root)) {
+          groupLeaves.set(root, [])
+        }
+        groupLeaves.get(root)!.push(item.value)
+      }
+      for (const [rootGroup, leafValues] of groupLeaves) {
+        // 标识已存在(重复生成/手工占用)时跳过, 保持幂等
+        const subtotalValue = `${PIVOT_SUBTOTAL_PREFIX}${rootGroup}`
+        if (existingValues.has(subtotalValue)) {
+          continue
+        }
+        toInsert.push({
+          tableId: props.tableId,
+          itemValue: subtotalValue,
+          itemName: '小计',
+          condition: JSON.stringify({
+            andOr: '0',
+            conditionList: [
+              {
+                property: genPivotField.value,
+                relation: FILTER_TYPE.IN,
+                value: leafValues,
+              },
+            ],
+          }),
+          displayOrder: ++order,
+          status: '1',
+          groupPath: JSON.stringify([rootGroup]),
+        })
+      }
     }
     if (toInsert.length > 0) {
       await addPortalPivotColumnList(toInsert, false, false, false)
@@ -677,6 +732,8 @@ const handleConfirmGenPivot = async () => {
       )
       openState.value = false
       emit('generated')
+    } else if (toAdd.length === 0) {
+      message.warning('勾选项均已存在对应透视列，且小计列无缺失')
     } else {
       message.warning(`未能生成：${skippedNoCondition} 个指标均未配置条件`)
     }
@@ -753,6 +810,8 @@ const handleConfirmGenPivot = async () => {
       gap: 4px;
       cursor: grab;
       border-radius: 4px;
+      // 文本可选会劫持拖拽手势(从勾选区起拖变成选中文字而非拖动元素)
+      user-select: none;
 
       &.gen-drag-over {
         outline: 1px dashed var(--accent, #1677ff);

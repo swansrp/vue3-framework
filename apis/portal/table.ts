@@ -37,6 +37,14 @@ export interface PortalTableVO {
   groupByFields?: string
   /** 透视度量列配置JSON */
   pivotMeasures?: string
+  /** 透视度量布局: col=度量作为列(默认), row=度量作为行 */
+  pivotMeasureLayout?: string
+  /** 透视合计列位置(仅row布局生效): first=靠前 last=靠后(默认) */
+  pivotTotalPos?: string
+  /** Tab成员JSON(仅宿主): [{tableId,label,order}], 非空=多Tab页面(宿主=路由抓手,筛选栏归属) */
+  tabItems?: string
+  /** 默认排序JSON: [{property,type}] type 0=正序 1=倒序, 空数组=不排序(透视模式取行维度/聚合度量) */
+  defaultSort?: string
 }
 
 export interface PortalPivotColumnVO {
@@ -54,6 +62,8 @@ export interface PortalPivotColumnVO {
   displayOrder?: number
   /** 状态 */
   status?: string
+  /** 父链路径JSON(叶子列多层父表头 label 链, 自外向内; 仅 row 树形表头使用) */
+  groupPath?: string
 }
 
 /** 透视度量列 */
@@ -66,6 +76,12 @@ export interface PivotMeasureVO {
   agg?: string
   /** 是否右锁定(s-table 两边同时锁定会异常, 与行维度左锁定互斥) */
   fixed?: boolean
+  /**
+   * 钻取时是否隐藏该度量列为 0/NULL 的明细行(仅 agg=sum 生效)
+   * 用途: dws 型宽表一行一发生额, 无发生额的占位行钻出来是噪音; sum 去掉 0/NULL 行合计仍恒等,
+   * 其余聚合(count/countDistinct/avg/min/max)过滤会破坏与单元格数字的对齐, 配置了也不生效
+   */
+  hideZero?: boolean
 }
 
 /** 透视聚合查询请求 */
@@ -179,12 +195,12 @@ export const deletePortalTable = (id: number, showSuccess = true, showLoading = 
  * 根据 tableId 获取筛选项配置列表
  * @api POST /admin/portal/table/filter/advanced/query
  */
-export const getPortalTableFilterList = (tableId: number, showSuccess = false, showLoading = false, showErr = true) => {
+export const getPortalTableFilterList = (tableId: number, showSuccess = false, showLoading = false, showErr = true, pageSize = 100) => {
   const api = buildPostApiByType('/admin/portal/table/filter/advanced/query', '')
   return request(api, {}, {
     condition: {
       conditionList: [{ property: 'tableId', relation: 1, value: [tableId] }]
-    }, sortList: [{ property: 'displayOrder', type: 0 }], pageSize: 100
+    }, sortList: [{ property: 'displayOrder', type: 0 }], pageSize
   }, showSuccess, showLoading, showErr)
 }
 
@@ -309,6 +325,15 @@ export const updatePortalPivotColumnOrder = (data: IdOrderReqVO[], showSuccess =
 export const deletePortalPivotColumn = (id: number, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildPostApiByType('/admin/portal/table/pivot/column/delete', '')
   return request(api, {}, { id }, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 批量删除透视列配置
+ * @api POST /admin/portal/table/pivot/column/delete/list
+ */
+export const deletePortalPivotColumnList = (ids: number[], showSuccess = true, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/admin/portal/table/pivot/column/delete/list', '')
+  return request(api, {}, ids, showSuccess, showLoading, showErr)
 }
 
 // ==================== 透视聚合查询接口 ====================

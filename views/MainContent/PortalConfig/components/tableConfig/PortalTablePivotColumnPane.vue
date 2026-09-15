@@ -44,6 +44,24 @@
               </template>
               新增
             </a-button>
+            <a-popconfirm
+              :title="`确定删除全部 ${pivotColumnList.length} 条透视列？`"
+              @confirm="handleDeleteAllPivotColumns"
+            >
+              <a-tooltip title="一键删除全部透视列">
+                <a-button
+                  type="link"
+                  danger
+                  size="small"
+                  :disabled="pivotColumnList.length === 0"
+                  :loading="deletingAllPivotColumn"
+                >
+                  <template #icon>
+                    <DeleteOutlined />
+                  </template>
+                </a-button>
+              </a-tooltip>
+            </a-popconfirm>
           </a-space>
         </div>
         <div class="filter-list-content">
@@ -155,6 +173,22 @@
                         禁用
                       </a-select-option>
                     </a-select>
+                  </a-form-item>
+                </a-col>
+                <a-col :span="24">
+                  <a-form-item
+                    label="父表头路径"
+                    :label-col="{ span: 3 }"
+                    :wrapper-col="{ span: 21 }"
+                    extra="每个标签一层父表头(自外向内, 支持/或,分隔快速输入); 留空为平铺列; 需点「保存配置」生效"
+                  >
+                    <a-select
+                      v-model:value="groupPathModel"
+                      mode="tags"
+                      :open="false"
+                      :token-separators="[',', '/']"
+                      placeholder="如: 一级部门 / 二级部门"
+                    />
                   </a-form-item>
                 </a-col>
               </a-row>
@@ -305,6 +339,7 @@ import { normalizePivotCondition, useConditionModal } from './useConditionModal'
 import {
   addPortalPivotColumn,
   deletePortalPivotColumn,
+  deletePortalPivotColumnList,
   getPortalPivotColumnList,
   IdOrderReqVO,
   PortalPivotColumnVO,
@@ -391,6 +426,26 @@ watch(
 // 当前透视列是否已配置条件
 const hasPivotCondition = computed(() => {
   return parsePivotConditionList(selectedPivotColumn.value?.condition).length > 0
+})
+
+// 父表头路径编辑模型: groupPath JSON 字符串 <-> 有序标签数组(第1个=最外层)
+const groupPathModel = computed<string[]>({
+  get: () => {
+    if (!selectedPivotColumn.value?.groupPath) {
+      return []
+    }
+    try {
+      const parsed = JSON.parse(selectedPivotColumn.value.groupPath)
+      return Array.isArray(parsed) ? parsed.filter((s: any) => typeof s === 'string' && s) : []
+    } catch (error) {
+      return []
+    }
+  },
+  set: (vals) => {
+    if (selectedPivotColumn.value) {
+      selectedPivotColumn.value.groupPath = JSON.stringify(vals)
+    }
+  },
 })
 
 // 加载透视列列表
@@ -512,6 +567,28 @@ const handleDeletePivotColumn = async (column: PortalPivotColumnVO) => {
     await loadPivotColumnList(props.tableId!)
   } catch (error) {
     console.error('删除透视列失败:', error)
+  }
+}
+
+// 一键删除全部透视列(已落库的批量删, 未保存的临时行本地移除)
+const deletingAllPivotColumn = ref(false)
+const handleDeleteAllPivotColumns = async () => {
+  if (pivotColumnList.value.length === 0) {
+    return
+  }
+  deletingAllPivotColumn.value = true
+  try {
+    const ids = pivotColumnList.value.filter((c) => c.id).map((c) => c.id as number)
+    if (ids.length > 0) {
+      await deletePortalPivotColumnList(ids)
+    }
+    pivotColumnList.value = []
+    selectedPivotColumn.value = null
+    message.success('透视列已全部删除')
+  } catch (error) {
+    console.error('一键删除透视列失败:', error)
+  } finally {
+    deletingAllPivotColumn.value = false
   }
 }
 

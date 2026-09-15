@@ -13,19 +13,50 @@
     <div class="table-config-container">
       <!-- 左侧：Table 配置列表 -->
       <div class="table-list-panel">
-        <div class="panel-header">
-          <span>表格配置列表</span>
-          <a-button
-            type="primary"
-            size="small"
-            @click="handleAddTable"
-          >
-            <template #icon>
-              <PlusOutlined />
-            </template>
-            新增
-          </a-button>
+        <div class="panel-header panel-header-col">
+          <div class="panel-header-row">
+            <span>表格配置列表</span>
+            <a-button
+              type="primary"
+              size="small"
+              @click="handleAddTable"
+            >
+              <template #icon>
+                <PlusOutlined />
+              </template>
+              新增
+            </a-button>
+          </div>
+          <div class="panel-header-row">
+            <a-button
+              size="small"
+              :loading="reportExporting"
+              @click="handleExportReportConfig"
+            >
+              <template #icon>
+                <DownloadOutlined />
+              </template>
+              导出全部
+            </a-button>
+            <a-button
+              size="small"
+              :loading="reportImporting"
+              @click="allFileInputRef?.click()"
+            >
+              <template #icon>
+                <UploadOutlined />
+              </template>
+              导入全部
+            </a-button>
+          </div>
         </div>
+        <input
+          ref="allFileInputRef"
+          type="file"
+          accept=".json"
+          style="display: none"
+          @change="handleAllFileChange"
+        />
         <div class="panel-content">
           <div
             v-for="table in tableList"
@@ -73,13 +104,14 @@
             >
               <portal-table-basic-pane
                 :table="selectedTable"
+                :table-list="tableList"
                 :portal-config="portalConfig"
                 :available-fields="availableFields"
                 :exporting="reportExporting"
                 :importing="reportImporting"
                 @saved="loadTableList"
-                @export="handleExportReportConfig"
-                @import="handleImportReportConfig"
+                @export="handleExportSingleReportConfig"
+                @import="handleImportSingleReportConfig"
               />
             </a-tab-pane>
 
@@ -121,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
@@ -276,7 +308,36 @@ const handleAddTable = async () => {
   }
 }
 
-// 导出报表配置
+// 组装单个表格的导出数据(基础配置+筛选器+透视列)
+const buildTableExportItem = async (table: PortalTableVO) => {
+  // pageSize 拉大避免筛选器被分页截断; payload 兼容数组与分页对象两种结构
+  const filters = await getPortalTableFilterList(table.id!, false, false, false, 1000)
+  const filterRows: any[] = Array.isArray(filters?.payload)
+    ? filters.payload
+    : (filters?.payload?.records || [])
+  const pivotColumnsRes = await getPortalPivotColumnList(table.id!, false, false, false)
+  return {
+    table: { ...table },
+    filters: filterRows,
+    pivotColumns: (pivotColumnsRes?.payload?.records || []).map((c: any) => c)
+  }
+}
+
+// 下载报表配置文件(scope: all=dataset全量 / single=单个表格)
+const downloadReportFile = (data: any[], scope: 'all' | 'single') => {
+  const suffix = scope === 'single' && selectedTable.value?.tableCode
+    ? `-${selectedTable.value.tableCode}`
+    : ''
+  downloadJsonConfig(`${props.portalName}-报表配置${suffix}`, {
+    type: 'report',
+    portalName: props.portalName,
+    exportTime: new Date().toISOString(),
+    data
+  })
+  message.success('导出成功')
+}
+
+// 导出全部报表配置(dataset 级, 左侧列表入口)
 const handleExportReportConfig = async () => {
   if (!tableList.value.length) {
     message.warning('暂无可导出的报表配置')
@@ -284,25 +345,24 @@ const handleExportReportConfig = async () => {
   }
   reportExporting.value = true
   try {
-    // 导出所有表格及其筛选器、透视列配置
-    const exportData = await Promise.all(
-      tableList.value.map(async (table) => {
-        const filters = await getPortalTableFilterList(table.id!)
-        const pivotColumnsRes = await getPortalPivotColumnList(table.id!, false, false, false)
-        return {
-          table: { ...table },
-          filters: (filters.payload || []).map((f: any) => f),
-          pivotColumns: (pivotColumnsRes?.payload?.records || []).map((c: any) => c)
-        }
-      })
-    )
-    downloadJsonConfig(`${props.portalName}-报表配置`, {
-      type: 'report',
-      portalName: props.portalName,
-      exportTime: new Date().toISOString(),
-      data: exportData
-    })
-    message.success('导出成功')
+    const exportData = await Promise.all(tableList.value.map((t) => buildTableExportItem(t)))
+    downloadReportFile(exportData, 'all')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    reportExporting.value = false
+  }
+}
+
+// 导出当前选中表格(表格级, 右侧入口)
+const handleExportSingleReportConfig = async () => {
+  if (!selectedTable.value?.id) {
+    message.warning('请先选择一个表格配置')
+    return
+  }
+  reportExporting.value = true
+  try {
+    downloadReportFile([await buildTableExportItem(selectedTable.value)], 'single')
   } catch (error: any) {
     message.error('导出失败: ' + (error?.message || '未知错误'))
   } finally {
@@ -366,79 +426,9 @@ const handleImportReportConfig = async (file: File) => {
               tableId = newTable.payload?.id || newTable.payload
               added++
             }
-            // 处理筛选器(全量同步: 以文件为准, 文件外的多余项删除)
-            if (Array.isArray(item.filters)) {
-              // 查重：获取已有筛选器
-              const existingFiltersRes = await getPortalTableFilterList(tableId!, false, false, false)
-              const existingFilters: PortalTableFilterVO[] = existingFiltersRes?.payload || []
-              const filterMap = new Map<string, PortalTableFilterVO>()
-              existingFilters.forEach(ef => {
-                if (ef.code) filterMap.set(ef.code, ef)
-              })
-              // 删除文件中不存在的筛选器(只删有编码可匹配的, 无编码的保守保留)
-              const importFilterCodes = new Set(item.filters.map((f: any) => f.code).filter(Boolean))
-              const staleFilterIds = existingFilters
-                .filter(ef => ef.id && ef.code && !importFilterCodes.has(ef.code))
-                .map(ef => ef.id!)
-              if (staleFilterIds.length) {
-                await deletePortalTableFilterList(staleFilterIds, false, false, false)
-                filterStat.deleted += staleFilterIds.length
-              }
-              for (const f of item.filters) {
-                // 移除源环境 id，避免跨环境导入时带入旧ID
-                const { id: _srcFilterId, ...filterData } = f
-                const existingFilter = f.code ? filterMap.get(f.code) : null
-                if (existingFilter?.id) {
-                  // 已存在 → 更新
-                  await updatePortalTableFilter(
-                    { ...filterData, id: existingFilter.id, tableId },
-                    false, false, false
-                  )
-                  filterStat.updated++
-                } else {
-                  // 不存在 → 新增
-                  await addPortalTableFilter(
-                    { ...filterData, tableId },
-                    false, false, false
-                  )
-                  filterStat.added++
-                }
-              }
-            }
-            // 处理透视列(全量同步: 以文件为准, 文件外的多余项删除)
-            if (Array.isArray(item.pivotColumns)) {
-              const existingPivotRes = await getPortalPivotColumnList(tableId!, false, false, false)
-              const existingPivots: PortalPivotColumnVO[] = existingPivotRes?.payload?.records || []
-              const pivotMap = new Map<string, PortalPivotColumnVO>()
-              existingPivots.forEach(ep => {
-                if (ep.itemValue) pivotMap.set(ep.itemValue, ep)
-              })
-              // 删除文件中不存在的透视列(只删有列标识可匹配的)
-              const importPivotValues = new Set(item.pivotColumns.map((c: any) => c.itemValue).filter(Boolean))
-              for (const ep of existingPivots) {
-                if (ep.id && ep.itemValue && !importPivotValues.has(ep.itemValue)) {
-                  await deletePortalPivotColumn(ep.id, false, false, false)
-                  pivotStat.deleted++
-                }
-              }
-              for (const c of item.pivotColumns) {
-                const { id: _srcPivotId, ...pivotData } = c
-                const existingPivot = c.itemValue ? pivotMap.get(c.itemValue) : null
-                if (existingPivot?.id) {
-                  await updatePortalPivotColumn(
-                    { ...pivotData, id: existingPivot.id, tableId },
-                    false, false, false
-                  )
-                  pivotStat.updated++
-                } else {
-                  await addPortalPivotColumn(
-                    { ...pivotData, tableId },
-                    false, false, false
-                  )
-                  pivotStat.added++
-                }
-              }
-            }
+            // 全量同步筛选器/透视列(以文件为准, 文件外的多余项删除)
+            await syncFiltersToTable(tableId, item.filters, filterStat)
+            await syncPivotColumnsToTable(tableId, item.pivotColumns, pivotStat)
           }
           message.success(`导入完成：表新增 ${added} / 更新 ${updated}，` +
             `筛选器新增 ${filterStat.added} / 更新 ${filterStat.updated} / 删除 ${filterStat.deleted}，` +
@@ -455,6 +445,142 @@ const handleImportReportConfig = async (file: File) => {
   } catch (error: any) {
     message.error('文件解析失败，请确保是有效的JSON文件')
   }
+}
+
+// 全量同步筛选器到指定表格(以传入列表为准, 文件外的多余项删除; 只删有编码可匹配的, 无编码的保守保留)
+const syncFiltersToTable = async (tableId: number, filters: any[] | undefined, stat: { added: number; updated: number; deleted: number }) => {
+  if (!Array.isArray(filters)) return
+  // 查重：获取已有筛选器(pageSize 拉大避免截断导致误删; payload 兼容数组与分页对象)
+  const existingFiltersRes = await getPortalTableFilterList(tableId, false, false, false, 1000)
+  const existingFilters: PortalTableFilterVO[] = Array.isArray(existingFiltersRes?.payload)
+    ? existingFiltersRes.payload
+    : (existingFiltersRes?.payload?.records || [])
+  const filterMap = new Map<string, PortalTableFilterVO>()
+  existingFilters.forEach(ef => {
+    if (ef.code) filterMap.set(ef.code, ef)
+  })
+  const importFilterCodes = new Set(filters.map((f: any) => f.code).filter(Boolean))
+  const staleFilterIds = existingFilters
+    .filter(ef => ef.id && ef.code && !importFilterCodes.has(ef.code))
+    .map(ef => ef.id!)
+  if (staleFilterIds.length) {
+    await deletePortalTableFilterList(staleFilterIds, false, false, false)
+    stat.deleted += staleFilterIds.length
+  }
+  for (const f of filters) {
+    // 移除源环境 id，避免跨环境导入时带入旧ID
+    const { id: _srcFilterId, ...filterData } = f
+    const existingFilter = f.code ? filterMap.get(f.code) : null
+    if (existingFilter?.id) {
+      await updatePortalTableFilter({ ...filterData, id: existingFilter.id, tableId }, false, false, false)
+      stat.updated++
+    } else {
+      await addPortalTableFilter({ ...filterData, tableId }, false, false, false)
+      stat.added++
+    }
+  }
+}
+
+// 全量同步透视列到指定表格(以传入列表为准, 文件外的多余项删除; 只删有列标识可匹配的)
+const syncPivotColumnsToTable = async (tableId: number, pivotColumns: any[] | undefined, stat: { added: number; updated: number; deleted: number }) => {
+  if (!Array.isArray(pivotColumns)) return
+  const existingPivotRes = await getPortalPivotColumnList(tableId, false, false, false)
+  const existingPivots: PortalPivotColumnVO[] = existingPivotRes?.payload?.records || []
+  const pivotMap = new Map<string, PortalPivotColumnVO>()
+  existingPivots.forEach(ep => {
+    if (ep.itemValue) pivotMap.set(ep.itemValue, ep)
+  })
+  const importPivotValues = new Set(pivotColumns.map((c: any) => c.itemValue).filter(Boolean))
+  for (const ep of existingPivots) {
+    if (ep.id && ep.itemValue && !importPivotValues.has(ep.itemValue)) {
+      await deletePortalPivotColumn(ep.id, false, false, false)
+      stat.deleted++
+    }
+  }
+  for (const c of pivotColumns) {
+    const { id: _srcPivotId, ...pivotData } = c
+    const existingPivot = c.itemValue ? pivotMap.get(c.itemValue) : null
+    if (existingPivot?.id) {
+      await updatePortalPivotColumn({ ...pivotData, id: existingPivot.id, tableId }, false, false, false)
+      stat.updated++
+    } else {
+      await addPortalPivotColumn({ ...pivotData, tableId }, false, false, false)
+      stat.added++
+    }
+  }
+}
+
+// 导入到当前选中表格(表格级, 右侧入口): 只覆盖该表格基础配置/筛选器/透视列, 不新增不删除表格
+const handleImportSingleReportConfig = async (file: File) => {
+  if (!selectedTable.value?.id) {
+    message.warning('请先选择一个表格配置')
+    return
+  }
+  let parsed: any
+  try {
+    parsed = await readJsonFile(file)
+  } catch (error: any) {
+    message.error('文件解析失败，请确保是有效的JSON文件')
+    return
+  }
+  // 校验文件类型, 避免误导入其他类型的配置 JSON(如指标配置)
+  if (parsed?.type !== 'report') {
+    message.warning('不是有效的报表配置文件')
+    return
+  }
+  const importData = parsed.data || []
+  if (!Array.isArray(importData) || importData.length === 0) {
+    message.warning('文件中没有可导入的报表配置')
+    return
+  }
+  const first = importData[0]
+  if (importData.length > 1) {
+    message.info(`文件含 ${importData.length} 个表格配置，将只应用第 1 个（${first.table?.tableCode || '未命名'}）`)
+  }
+  const target = selectedTable.value
+  Modal.confirm({
+    title: '确认导入到本表格',
+    content: `将把文件中「${first.table?.tableCode || '未命名'}」的基础配置/筛选器/透视列应用到当前表格「${target.tableCode || '未命名'}」，不影响其它表格配置，确认继续？`,
+    okText: '确认导入',
+    cancelText: '取消',
+    onOk: async () => {
+      reportImporting.value = true
+      try {
+        const tableData = { ...first.table }
+        delete tableData.id
+        delete tableData.filterCount
+        // 身份与页面级字段保留目标表格自身: 归属(portalName)、路由抓手(tableCode)、Tab组关系(tabItems)
+        tableData.portalName = props.portalName || target.portalName
+        tableData.tableCode = target.tableCode
+        tableData.tabItems = target.tabItems
+        await updatePortalTable({ ...tableData, id: target.id }, false, false, false)
+        const filterStat = { added: 0, updated: 0, deleted: 0 }
+        const pivotStat = { added: 0, updated: 0, deleted: 0 }
+        await syncFiltersToTable(target.id!, first.filters, filterStat)
+        await syncPivotColumnsToTable(target.id!, first.pivotColumns, pivotStat)
+        message.success(`导入完成：筛选器新增 ${filterStat.added} / 更新 ${filterStat.updated} / 删除 ${filterStat.deleted}，` +
+          `透视列新增 ${pivotStat.added} / 更新 ${pivotStat.updated} / 删除 ${pivotStat.deleted}`)
+        await loadTableList()
+        // 列表刷新后把选中项指向新对象, 避免面板继续编辑写到旧引用
+        const refreshed = tableList.value.find(t => t.id === target.id)
+        if (refreshed) selectedTable.value = refreshed
+      } catch (error: any) {
+        message.error('导入失败: ' + (error?.message || '未知错误'))
+      } finally {
+        reportImporting.value = false
+      }
+    }
+  })
+}
+
+// 全量导入文件选择(左侧入口, 实现委托 handleImportReportConfig)
+const allFileInputRef = ref<HTMLInputElement | null>(null)
+const handleAllFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+  handleImportReportConfig(file)
 }
 
 // 删除表格配置
@@ -502,6 +628,20 @@ const handleCancel = () => {
   font-weight: 500;
   background: var(--bg-hover);
   border-radius: 8px 8px 0 0;
+}
+
+// 两行头部: 第一行标题+新增, 第二行全量导入/导出
+.panel-header-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+
+  .panel-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .panel-content {
