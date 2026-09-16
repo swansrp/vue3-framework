@@ -246,6 +246,9 @@ import { get } from '@/framework/network/request'
 
 ## Project Initialization | 项目初始化
 
+> **注意（2026-09）**：项目脚手架已迁移到 Qoder `project-setup` skill，模板与 `package.json` 源由该 skill 的 `assets/frontend-template/` 维护；本仓不再提供 `init-project.sh` 与 `setup/`。以下章节仅作历史参考。
+
+
 You can quickly scaffold a new project using the built-in `init-project.sh` script, which copies templates from `src/framework/setup/` and configures the project.
 
 你可以使用内置的 `init-project.sh` 脚本快速搭建新项目，该脚本会从 `src/framework/setup/` 复制模板并完成项目配置。

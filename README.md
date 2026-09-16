@@ -244,6 +244,9 @@ import { get } from '@/framework/network/request'
 
 ## Project Initialization
 
+> **NOTE (2026-09)**: Project scaffolding has moved to the Qoder `project-setup` skill; templates and the `package.json` source now live in that skill's `assets/frontend-template/`. This repo no longer ships `init-project.sh` or `setup/`. The sections below are historical reference only.
+
+
 You can quickly scaffold a new project using the built-in `init-project.sh` script, which copies templates from `src/framework/setup/` and configures the project.
 
 ### 1. How It Works
