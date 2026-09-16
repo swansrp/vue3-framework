@@ -37,7 +37,7 @@ FILES_TO_COPY=(
   "index.html"
   "tsconfig.json"
   "public"
-  "agent.md"
+  "AGENTS.md"
   "src/App.vue"
   "src/main.ts"
   "src/assets"
