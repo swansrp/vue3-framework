@@ -206,7 +206,10 @@
           @dragend="handleGenDragEnd"
         >
           <a-checkbox v-model:checked="item.checked">
-            <span v-if="item.groupPath && item.groupPath.length" class="gen-path-prefix">{{ item.groupPath.join(' / ') }} / </span>{{ item.label }}（{{ item.value }}）
+            <span
+              v-if="item.groupPath && item.groupPath.length"
+              class="gen-path-prefix"
+            >{{ item.groupPath.join(' / ') }} / </span>{{ item.label }}（{{ item.value }}）
           </a-checkbox>
           <span class="gen-pivot-preview-actions">
             <a-button
