@@ -77,12 +77,42 @@ const axiosInstance = axios.create({
     return data
   }]
 })
+
+/**
+ * 业务扩展请求头提供者（如项目空间隔离头 X-Space-Id）。
+ * 由业务在启动时经 setRequestHeaderProvider 注入（通常读 pinia store / localStorage），
+ * 每次请求时调用；返回空值（null/undefined/空串）的键会被跳过。
+ */
+export type RequestHeaderProvider = () => Record<string, string | number | undefined | null> | undefined
+
+let requestHeaderProvider: RequestHeaderProvider | null = null
+
+/**
+ * 注册业务扩展请求头提供者（main.ts 注入；传 null 可注销）。
+ * 框架只做合并与空值剔除，不解释任何业务头语义。
+ */
+export function setRequestHeaderProvider(provider: RequestHeaderProvider | null) {
+  requestHeaderProvider = provider
+}
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const { data, showLoading } = config.data as configDataType
     config.data = data
     const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
     if (token) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+
+    if (requestHeaderProvider) {
+      const extraHeaders = requestHeaderProvider()
+      if (extraHeaders) {
+        Object.keys(extraHeaders).forEach((key) => {
+          const value = extraHeaders[key]
+          if (value !== undefined && value !== null && value !== '') {
+            config.headers[key] = value
+          }
+        })
+      }
+    }
 
     if (showLoading) {
       const record: any = { startAt: Date.now(), shownAt: null }
