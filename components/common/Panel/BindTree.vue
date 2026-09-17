@@ -13,6 +13,18 @@
         >
           子联动
         </a-checkbox>
+        <a-button
+          size="small"
+          @click="expandAll"
+        >
+          一键全开
+        </a-button>
+        <a-button
+          size="small"
+          @click="collapseAll"
+        >
+          一键全关
+        </a-button>
         <a-input-search
           v-model:value="searchText"
           placeholder="搜索(label/key)，逗号分隔多项"
@@ -30,12 +42,13 @@
           :key="treeKey"
           :checked-keys="innerCheckedKeys"
           :half-checked-keys="innerHalfCheckedKeys"
-          :default-expand-all="true"
+          :expanded-keys="expandedKeys"
           :show-line="true"
           checkable
           check-strictly
           :tree-data="filteredTreeData"
           @check="handleCheck"
+          @expand="handleExpand"
         >
           <template #title="{ dataRef }">
             <span>
@@ -110,6 +123,8 @@ const parentMap = ref<Map<string | number, string | number | null>>(new Map())
 const childrenMap = ref<Map<string | number, (string | number)[]>>(new Map())
 const searchText = ref('')
 const treeKey = ref(0)
+// 受控展开状态：勾选触发树重挂载后，仍保持用户手动展开/收起的状态
+const expandedKeys = ref<string[]>([])
 
 // 高亮匹配文本
 const highlightText = (text: string, keywords: string[]): string => {
@@ -207,6 +222,19 @@ const handleSearchChange = (e: Event) => {
   searchText.value = target.value
 }
 
+// 受控展开：记录用户手动展开/收起，勾选导致重挂载后状态不丢失
+const handleExpand = (keys: (string | number)[]) => {
+  expandedKeys.value = keys.map(k => String(k))
+}
+
+// 一键全开 / 一键全关（始终基于完整树，避免搜索过滤后清空时部分节点意外收起）
+const expandAll = () => {
+  expandedKeys.value = collectAllKeys(treeData.value)
+}
+const collapseAll = () => {
+  expandedKeys.value = []
+}
+
 // 内部选中状态 - 统一转换为 string 类型
 const innerCheckedKeys = computed({
   get: () => {
@@ -262,6 +290,21 @@ const getAllChildIds = (nodeId: string | number): (string | number)[] => {
   return result
 }
 
+// 收集树中所有节点的 key
+const collectAllKeys = (nodes: DataNode[]): string[] => {
+  const keys: string[] = []
+  const walk = (list: DataNode[]) => {
+    list.forEach(node => {
+      keys.push(String(node.key))
+      if (node.children && node.children.length > 0) {
+        walk(node.children as DataNode[])
+      }
+    })
+  }
+  walk(nodes)
+  return keys
+}
+
 // 处理勾选事件
 const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
   const attachId = e.node.key
@@ -312,9 +355,9 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
   }
 
   // 更新 UI 状态
-  emit('update:checkedKeys', newCheckedKeys)
+  emit('update:checkedKeys', newCheckedKeys.map(k => String(k)))
   if (!isArray) {
-    emit('update:halfCheckedKeys', newHalfCheckedKeys)
+    emit('update:halfCheckedKeys', newHalfCheckedKeys.map(k => String(k)))
   }
 
   // 触发 check 事件，让父组件可以自定义处理
@@ -356,11 +399,15 @@ const handleCheck = (checked: any, e: { checked: boolean, node: DataNode }) => {
 }
 
 // 监听树数据变化，重新构建映射
-watch(() => treeData.value, (newData) => {
+watch(() => treeData.value, (newData, oldData) => {
   if (newData && newData.length > 0) {
     parentMap.value.clear()
     childrenMap.value.clear()
     buildParentChildMap(newData)
+    // 首次加载（数据从无到有）默认全展开，之后展开状态跟随用户操作
+    if ((oldData?.length ?? 0) === 0) {
+      expandedKeys.value = collectAllKeys(newData)
+    }
   }
 }, { immediate: true, deep: true })
 
