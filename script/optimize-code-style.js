@@ -103,7 +103,7 @@ async function eslintOptimize(targetFilesOrDir, rootDir, stagedOnly = false) {
                 'no-console': 'warn',
                 'no-debugger': 'warn'
             },
-            ignorePatterns: ['src/framework/setup/**/*']
+            ignorePatterns: ['src/framework/setup/**/*', 'src/assets/**/*']
         },
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.vue']
     })
@@ -122,7 +122,20 @@ async function eslintOptimize(targetFilesOrDir, rootDir, stagedOnly = false) {
         console.log(`🚀 ESLint 优化目录: ${targetFilesOrDir}`)
     }
 
-    const results = await eslint.lintFiles(targets)
+    let results
+    try {
+        results = await eslint.lintFiles(targets)
+    } catch (e) {
+        if (e && e.messageTemplate === 'all-files-ignored') {
+            console.log('✅ 目标全部命中忽略规则（如 src/assets 第三方资源），无需 ESLint 处理')
+            return
+        }
+        throw e
+    }
+    // 过滤 ESLint 的“文件被忽略”提示性 message，避免计入统计噪音
+    for (const r of results) {
+        r.messages = r.messages.filter(m => !(m.message || '').includes('matching ignore pattern'))
+    }
     await ESLint.outputFixes(results)
 
     // 如果是 staged 模式，把修复的文件重新 add
