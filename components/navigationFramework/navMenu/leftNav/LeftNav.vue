@@ -425,12 +425,7 @@ onMounted(() => {
   top: -2px;
   bottom: -2px;
   width: var(--nav-selected-indicator-width);
-  background: linear-gradient(180deg,
-    rgba(64, 169, 255, 1) 0%,
-    rgba(24, 144, 255, 1) 20%,
-    rgba(64, 169, 255, 1) 50%,
-    rgba(24, 144, 255, 1) 80%,
-    rgba(64, 169, 255, 1) 100%);
+  background: var(--nav-selected-indicator-bg, linear-gradient(180deg, rgba(64, 169, 255, 1) 0%, rgba(24, 144, 255, 1) 20%, rgba(64, 169, 255, 1) 50%, rgba(24, 144, 255, 1) 80%, rgba(64, 169, 255, 1) 100%));
   border-radius: 0 3px 3px 0;
   pointer-events: none;
   animation: var(--nav-indicator-animation);
@@ -439,8 +434,8 @@ onMounted(() => {
 /* 选中态图标颜色 + 发光 + 放大 */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected .anticon) {
   color: var(--nav-selected-color) !important;
-  filter: drop-shadow(0 0 12px rgba(24, 144, 255, 1)) drop-shadow(0 0 6px rgba(64, 169, 255, 0.8));
-  transform: scale(1.15);
+  filter: var(--nav-selected-icon-filter, drop-shadow(0 0 12px rgba(24, 144, 255, 1)) drop-shadow(0 0 6px rgba(64, 169, 255, 0.8)));
+  transform: var(--nav-selected-icon-transform, scale(1.15));
   transition: all 0.15s ease;
 }
 
@@ -568,12 +563,7 @@ onMounted(() => {
   top: -2px;
   bottom: -2px;
   width: var(--nav-selected-indicator-width);
-  background: linear-gradient(180deg,
-    rgba(64, 169, 255, 1) 0%,
-    rgba(24, 144, 255, 1) 20%,
-    rgba(64, 169, 255, 1) 50%,
-    rgba(24, 144, 255, 1) 80%,
-    rgba(64, 169, 255, 1) 100%);
+  background: var(--nav-selected-indicator-bg, linear-gradient(180deg, rgba(64, 169, 255, 1) 0%, rgba(24, 144, 255, 1) 20%, rgba(64, 169, 255, 1) 50%, rgba(24, 144, 255, 1) 80%, rgba(64, 169, 255, 1) 100%));
   border-radius: 0 3px 3px 0;
   pointer-events: none;
   animation: var(--nav-indicator-animation);

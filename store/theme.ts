@@ -2,9 +2,10 @@ import { defineStore, getActivePinia } from 'pinia'
 
 const THEME_STORAGE_KEY = 'app-theme'
 
-export type ThemeId = 'indigo' | 'ocean' | 'navy' | 'amber' | 'classic' | 'dark'
+export type ThemeId = 'mokShu' | 'indigo' | 'ocean' | 'navy' | 'amber' | 'classic' | 'dark'
 
 export const LIGHT_THEMES: { id: ThemeId; label: string; desc: string; swatch: string }[] = [
+  { id: 'mokShu', label: '墨枢', desc: 'Confluence 复刻风', swatch: '#0049b0' },
   { id: 'indigo', label: '靛蓝现代', desc: '科技现代风', swatch: '#4f6cf7' },
   { id: 'ocean', label: '企业蓝', desc: '经典专业风', swatch: '#2563eb' },
   { id: 'navy', label: '深海军蓝', desc: '高端权威风', swatch: '#1e40af' },

@@ -42,6 +42,7 @@
      dark   — 深色主题
      amber  — 琥珀橙
      classic— 经典蓝（基于原始 git 配色，与旧版一致）
+     mokShu — 墨枢（Confluence 复刻：浅灰侧栏 + 品牌蓝 #0049B0）
 
    ================================================================ */
 
@@ -656,6 +657,112 @@
   --header-setting-hover-shadow: 0 4px 8px rgba(24,144,255,0.15);
   --header-setting-hover-transform: translateY(-1px);
   --header-setting-active-transform: translateY(0);
+}
+
+/* ====================================================================
+   主题：mokShu — 墨枢（Confluence 复刻）
+   浅灰左栏 + 纯白顶栏 + 品牌蓝 #0049B0；无发光/描边/位移动效。
+   结构色全部走令牌，业务组件（--cf-*）引用本主题令牌即可随主题切换。
+   ==================================================================== */
+[data-theme="mokShu"] {
+  --bg-base: #f4f5f7;
+  --bg-elevated: #ffffff;
+  --bg-hover: #ebecf0;
+  --bg-active: #deebff;
+  --bg-overlay: rgba(9, 30, 66, 0.54);
+  --border-subtle: #dfe1e6;
+  --border-hover: #c1c7d0;
+  --border-active: rgba(0, 73, 176, 0.4);
+  --text-primary: #172b4d;
+  --text-secondary: #42526e;
+  --text-tertiary: #6b778c;
+  --accent: #0049b0;
+  --accent-subtle: rgba(0, 73, 176, 0.03);
+  --accent-soft: rgba(0, 73, 176, 0.08);
+  --accent-mid: rgba(0, 73, 176, 0.15);
+  --accent-glow: rgba(0, 73, 176, 0.2);
+  --accent-light: #0055cc;
+  --success: #36b37e;
+  --success-soft: rgba(54, 179, 126, 0.1);
+  --danger: #de350b;
+  --danger-soft: rgba(222, 53, 11, 0.1);
+  --warning: #ff991f;
+  --shadow-sm: 0 1px 1px rgba(9, 30, 66, 0.2), 0 1px 2px rgba(9, 30, 66, 0.08);
+  --shadow-md: 0 4px 8px -2px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-lg: 0 8px 16px -4px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-glow: none;
+  --shadow-elevated: 0 12px 24px -6px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-tab: 0 -1px 0 rgba(9, 30, 66, 0.08);
+  --shadow-nav-divider: 1px 0 0 #dfe1e6;
+  --card-gradient: #ffffff;
+  --card-gradient-header: linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light));
+  --shadow-card: 0 1px 1px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-card-hover: 0 4px 8px -2px rgba(9, 30, 66, 0.25);
+  --left-nav-bg: #f4f5f7;
+  --left-nav-blur: none;
+  --left-nav-border: 1px solid #dfe1e6;
+  --top-header-bg: #ffffff;
+  --top-header-blur: none;
+  --top-header-border: 1px solid #dfe1e6;
+  --header-title-bg: #ffffff;
+  --history-tab-bg: #f4f5f7;
+  --history-tab-shadow: 0 -1px 0 #dfe1e6;
+  --history-tab-active-shadow: 0 -1px 0 #dfe1e6;
+  --loading-mask: rgba(9, 30, 66, 0.54);
+  --header-title-color: #172b4d;
+  --header-user-text: #172b4d;
+  --header-user-text-secondary: #6b778c;
+  --header-icon-color: #42526e;
+  --header-hover-bg: #ebecf0;
+  --header-btn-hover-bg: var(--accent-soft);
+  --header-btn-hover-color: var(--accent);
+  --nav-text: #42526e;
+  --nav-text-hover: #172b4d;
+  --nav-text-tertiary: #6b778c;
+  --nav-bg-hover: #ebecf0;
+  --nav-selected-bg: #deebff;
+  --nav-selected-color: #0049b0;
+  --nav-selected-indicator: transparent;
+  --nav-selected-indicator-bg: none;
+  --nav-selected-icon-filter: none;
+  --nav-selected-icon-transform: none;
+  --nav-selected-glow: transparent;
+  --nav-selected-border: none;
+  --nav-selected-shadow: none;
+  --nav-selected-transform: none;
+  --nav-selected-font-weight: 600;
+  --nav-selected-text-shadow: none;
+  --nav-selected-indicator-width: 3px;
+  --nav-indicator-animation: none;
+  --nav-line: #dfe1e6;
+  --nav-toggle-bg: #ebecf0;
+  --nav-toggle-bg-hover: #dfe1e6;
+  --nav-toggle-arrow: #6b778c;
+  --nav-toggle-arrow-hover: #172b4d;
+  --nav-item-separator: transparent;
+  --topnav-item-bg: transparent;
+  --topnav-selected-shadow: none;
+  --topnav-dropdown-selected-indicator: #0049b0;
+  --topnav-text: #42526e;
+  --header-avatar-border: #dfe1e6;
+  --header-avatar-shadow: none;
+  --header-avatar-hover-shadow: 0 0 0 2px var(--accent-soft);
+  --header-avatar-hover-transform: none;
+  --header-role-bg: var(--accent-soft);
+  --header-role-border: none;
+  --header-role-radius: 3px;
+  --header-role-padding: 2px 6px;
+  --header-user-name-size: 14px;
+  --header-user-name-weight: 600;
+  --header-status-bg: #36b37e;
+  --header-status-animation: none;
+  --header-setting-bg: #ffffff;
+  --header-setting-border: 1px solid #dfe1e6;
+  --header-setting-shadow: none;
+  --header-setting-hover-shadow: 0 0 0 2px var(--accent-soft);
+  --header-setting-hover-transform: none;
+  --header-setting-active-transform: none;
 }
 
 /* ====================================================================
