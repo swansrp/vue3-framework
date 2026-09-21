@@ -262,10 +262,72 @@ const isNewConditionFormat = (condition: any): condition is { default: any[], op
   return condition && typeof condition === 'object' && 'default' in condition
 }
 
+// 可作为单个查询值的标量：空串是合法维度值，null/undefined 与嵌套数组/对象则不是
+const isScalarValue = (value: any): boolean => value !== null && value !== undefined && typeof value !== 'object'
+
+// 各关系类型拼装所需的最少值个数（与后端 PortalConditionDict.requiredValueCount 口径一致）
+const requiredValueCount = (relation: any): number => {
+  const type = Number(relation)
+  if (type === FILTER_TYPE.NULL || type === FILTER_TYPE.NOT_NULL) {
+    return 0
+  }
+  if (type === FILTER_TYPE.BETWEEN || type === FILTER_TYPE.NOT_BETWEEN) {
+    return 2
+  }
+  return 1
+}
+
+/**
+ * 下发前归一单条条件：清洗条件值并按关系类型校验个数
+ * 筛选项配置(sys_portal_table_filter.condition)里的脏值（如 value:[[]]）会让后端拼出
+ * `col = ` 这类残缺 SQL，数据库直接语法报错导致整张报表查询失败，故这类条件在前端就丢弃
+ * @returns 归一后的条件；返回 undefined 表示该条件不可用，应整体跳过
+ */
+const normalizeCondition = (cond: any): any => {
+  if (!cond || typeof cond !== 'object') {
+    return undefined
+  }
+
+  // 组节点：递归归一子条件
+  if (Array.isArray(cond.conditionList) && cond.conditionList.length > 0) {
+    const conditionList = cond.conditionList.map(normalizeCondition).filter((item: any) => item !== undefined)
+    if (conditionList.length === 0) {
+      return undefined
+    }
+    return { ...cond, conditionList }
+  }
+
+  const needCount = requiredValueCount(cond.relation)
+  if (needCount === 0) {
+    // NULL/NOT_NULL 不依赖条件值，原样下发
+    return cond
+  }
+
+  const rawValues = cond.values !== undefined ? cond.values : cond.value
+  if (!Array.isArray(rawValues)) {
+    return isScalarValue(rawValues) ? cond : undefined
+  }
+
+  const scalarValues = rawValues.filter(isScalarValue)
+  if (scalarValues.length < needCount) {
+    console.warn('[Portal] 筛选项条件值不可用，已跳过该条件:', cond)
+    return undefined
+  }
+
+  return cond.values !== undefined ? { ...cond, values: scalarValues } : { ...cond, value: scalarValues }
+}
+
 // 构建查询条件
 const condition = computed(() => {
   
   const conditionList: ConditionListType[] = []
+  // 条件值经归一（清洗脏值 + 校验个数）后才下发，避免后端拼出残缺 SQL
+  const pushCondition = (cond: any) => {
+    const normalized = normalizeCondition(cond)
+    if (normalized !== undefined) {
+      conditionList.push(normalized)
+    }
+  }
 
   filterConfigList.value.forEach(filter => {
     const value = filterValues.value[filter.code!]
@@ -326,9 +388,9 @@ const condition = computed(() => {
                   newCond.value = newCond.values
                   delete newCond.values
                 }
-                conditionList.push(newCond)
+                pushCondition(newCond)
               } else {
-                conditionList.push(cond)
+                pushCondition(cond)
               }
             })
           }
@@ -340,7 +402,7 @@ const condition = computed(() => {
   })
 
   // 添加 URL 参数中匹配列名的额外条件
-  conditionList.push(...urlExtraConditions.value)
+  urlExtraConditions.value.forEach(cond => pushCondition(cond))
 
   return conditionList
 })
