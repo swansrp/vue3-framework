@@ -132,7 +132,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { getMyApplyList, submitPermitApply } from '@/framework/apis/admin/permitApply'
+import { checkPermitPathExists, getMyApplyList, submitPermitApply } from '@/framework/apis/admin/permitApply'
 import img404 from '@/framework/assets/imgs/404_images/404.png'
 import img404Cloud from '@/framework/assets/imgs/404_images/404_cloud.png'
 import { useUserStore } from '@/framework/store/user'
@@ -251,12 +251,29 @@ const goHome = () => {
   router.replace('/')
 }
 
-onMounted(() => {
-  if (hasLogin.value) {
-    fetchApplyStatus()
-  } else {
+// 先判断当前路径在系统中是否存在：不存在直接按"页面不存在"处理，存在才查询/展示申请状态
+const bootstrap = async () => {
+  if (!customerNumber.value) {
+    fetched.value = true
+    return
+  }
+  try {
+    const existsResp = await checkPermitPathExists(targetUrl.value)
+    if (!existsResp?.payload) {
+      applyRecord.value = null
+      fetched.value = true
+      return
+    }
+    await fetchApplyStatus()
+  } catch (error) {
+    console.error('检查页面是否存在失败:', error)
+    applyRecord.value = null
     fetched.value = true
   }
+}
+
+onMounted(() => {
+  bootstrap()
 })
 </script>
 

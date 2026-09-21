@@ -16,6 +16,10 @@ export const submitPermitApply = (url: string, reason: string) =>
 export const getMyApplyList = (customerNumber: string, url: string) =>
   request(buildGetApi(''), { customerNumber, url }, {}, false) as Promise<any>
 
+// 判断指定路径在系统中是否存在（是否为已登记页面）
+export const checkPermitPathExists = (url: string) =>
+  request(buildGetApi('/exists'), { url }, {}, false, false) as Promise<any>
+
 // 通过申请
 export const passApply = (id: string|number) =>
   request(buildPostApi('/approve'), { id }, {}, true) as Promise<any>
