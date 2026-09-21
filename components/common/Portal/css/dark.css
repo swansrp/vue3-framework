@@ -645,7 +645,7 @@ html body .dark-content-layout .portal-table .surely-table-row {
 
 /* DarkTable 侧边栏深色主题样式 */
 :deep(.dark-content-layout .side-wrapper) {
-    background: url("imgs/side-bg.png") no-repeat center center !important;
+    background: url("../../Content/imgs/side-bg.png") no-repeat center center !important;
     background-size: 100% 100% !important;
     background-color: rgba(14, 61, 85, 0.95) !important;
     border: 1px solid rgba(31, 198, 255, 0.3) !important;
@@ -704,7 +704,7 @@ html body .dark-content-layout .portal-table .surely-table-row {
 }
 
 :deep(.ant-layout-sider-children) {
-    background: url("imgs/side-bg.png") no-repeat center center;
+    background: url("../../Content/imgs/side-bg.png") no-repeat center center;
     height: 100%;
     background-size: 100% 100%;
 }
@@ -717,11 +717,11 @@ html body .dark-content-layout .portal-table .surely-table-row {
 }
 
 :deep(.resize-button-left) {
-    background: url("imgs/resize-icon-left.svg") no-repeat center center;
+    background: url("../../Content/imgs/resize-icon-left.svg") no-repeat center center;
 }
 
 :deep(.resize-button-right) {
-    background: url("imgs/resize-icon-right.svg") no-repeat center center;
+    background: url("../../Content/imgs/resize-icon-right.svg") no-repeat center center;
 }
 
 /* 深色主题折叠按钮样式 */

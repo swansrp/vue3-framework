@@ -118,6 +118,10 @@ export default defineConfig({
     preprocessorOptions: {
       less: {
         javascriptEnabled: true
+      },
+      // 采用 modern API，消除 Dart Sass legacy JS API 弃用警告（Vite 5.4+ 支持）
+      scss: {
+        api: 'modern'
       }
     }
   },
