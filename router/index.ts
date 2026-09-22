@@ -228,5 +228,99 @@ export const enterDynamicRoute = (to: RouteLocationNormalized, from: RouteLocati
   }
 }
 
+// ==================== 登录门禁（框架统一持有，业务只声明策略） ====================
+// 为什么在这里注册、而不是让各项目在 main.ts 里自己 router.beforeEach：
+// vue-router 在 app.use(router)（install）时就发起首次导航，并【同步采集】那一刻已有的守卫队列——
+// 晚注册的守卫不参与首屏导航，表现为"会话过期时首屏白屏：既不渲染也不跳登录页"
+// （2026-09-22 实测；InkHub 与脚手架模板当初都是 install 后才注册，同错序）。
+// 守卫在本模块加载（createRouter 之后）即注册 ⇒ 必然参与包括首屏在内的每一次导航，
+// "注册顺序"从此不再是调用方要记住的约束。注册点放在 enterDynamicRoute 之后是刻意的：
+// 模块加载即完成注册（必然早于 install），同时避免引用后置声明。
+//
+// opt-in：未调用 configureLoginGuard 的项目，守卫直接放行——现有项目零变化（向后兼容）。
+
+export interface LoginGuardOptions {
+  /** 同步快判是否已登录（通常读登录 store 的 hasLogin）；true 时不再探活，直接进业务路由 */
+  isLoggedIn: () => boolean
+  /** 探活：确认会话有效性并完成登录副作用（写 hasLogin、拉用户信息/动态路由）。必须幂等；并发导航由守卫去重 */
+  probe: () => Promise<boolean>
+  /** 已登录后的业务副作用（如加载空间列表）。fresh=true 表示本次刚完成新鲜探活（可借此强刷缓存） */
+  onAuthenticated?: (fresh: boolean) => void
+  /** 未登录去向：缺省 next(loginPath)；提供时由它接管跳转（如 SSO 整页跳转），守卫只取消当前导航 */
+  loginEntry?: (to: RouteLocationNormalized) => void
+  /** 登录页路径（默认 '/login'；同时用于缺省公开判定） */
+  loginPath?: string
+  /** 公开路由判定（缺省：to.path === loginPath 或 to.meta.public） */
+  isPublic?: (to: RouteLocationNormalized) => boolean
+  /** 连续探活失败上限（默认 3）：超过后直接去登录页、不再探活（防"守卫↔登录页"紧循环打接口） */
+  maxFailures?: number
+  /** 单次探活超时毫秒（默认 8000）：探活悬挂不能把守卫永久挂住（那也是"白屏且零请求"的成因） */
+  timeoutMs?: number
+}
+
+let loginGuardOptions: LoginGuardOptions | null = null
+let loginProbeInFlight: Promise<boolean> | null = null
+let loginProbeFailures = 0
+
+/** 配置登录门禁（幂等：重复调用只是更新策略，不会重复注册守卫）。
+ *  建议在 app.use(router) 之前调用——守卫虽从模块加载起就存在，早配置能让首次导航即用上策略。 */
+export const configureLoginGuard = (options: LoginGuardOptions) => {
+  loginGuardOptions = options
+}
+
+/** 探活单飞：并发导航共用同一次调用；带超时（悬挂的探活不能卡死守卫） */
+const runLoginProbe = (o: LoginGuardOptions) => {
+  if (!loginProbeInFlight) {
+    const timeout = new Promise<boolean>((_, reject) =>
+      setTimeout(() => reject(new Error('登录探活超时')), o.timeoutMs ?? 8000))
+    loginProbeInFlight = Promise.race([Promise.resolve().then(o.probe), timeout])
+      .catch(err => {
+        console.warn('[router] 登录探活未通过', err)
+        return false
+      })
+      .finally(() => { loginProbeInFlight = null })
+  }
+  return loginProbeInFlight
+}
+
+router.beforeEach(async (to, from, next) => {
+  const o = loginGuardOptions
+  if (!o) {
+    next()
+    return
+  }
+  const loginPath = o.loginPath ?? '/login'
+  if (o.isPublic ? o.isPublic(to) : (to.path === loginPath || !!to.meta.public)) {
+    next()
+    return
+  }
+  if (o.isLoggedIn()) {
+    loginProbeFailures = 0
+    o.onAuthenticated?.(false)
+    enterDynamicRoute(to, from, next)
+    return
+  }
+  if (loginProbeFailures < (o.maxFailures ?? 3)) {
+    const ok = await runLoginProbe(o)
+    if (!ok) {
+      loginProbeFailures += 1
+    }
+  }
+  if (!o.isLoggedIn()) {
+    if (o.loginEntry) {
+      o.loginEntry(to)
+      next(false)
+      return
+    }
+    next(loginPath)
+    return
+  }
+  loginProbeFailures = 0
+  o.onAuthenticated?.(true)
+  const query = { ...to.query }
+  delete query.id_token        // SSO 回跳参数不带入后续地址（框架 SSO 流自己的参数）
+  next({ path: to.path, query })
+})
+
 export default router
 
