@@ -194,6 +194,14 @@
         </p>
       </div>
 
+      <!-- 统一过程树（opt-in）：开启后由 AgentProcessTree 接管过程呈现，
+           与 relay/其他引擎共用同一 AssistantView 视图模型；默认关闭=下方旧分组逐字节不变 -->
+      <AgentProcessTree
+        v-if="processTree && processView"
+        :view="processView"
+      />
+
+      <template v-if="!processTree">
       <template
         v-for="(group, gi) in thinkGroups"
         :key="`g-${group.id}`"
@@ -281,6 +289,7 @@
         >
           {{ statusText2(ev) }}
         </div>
+      </template>
       </template>
 
       <!-- 尾随状态条（最后一组之后） -->
@@ -593,6 +602,8 @@ import {
 } from '@/framework/apis/agent'
 import AgentStages from '@/framework/components/common/agentStages/index.vue'
 import type { AgentStageItem } from '@/framework/components/common/agentStages/types'
+import AgentProcessTree from './AgentProcessTree.vue'
+import { agentEventsToView } from './agentEventsToView'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化自动重置轮询） */
@@ -600,6 +611,8 @@ interface Props {
   title?: string
   /** 消息体渲染器注册表：事件 type→业务组件（props: event/payload）；不注册走通用摘要行 */
   renderers?: Record<string, Component>
+  /** 统一过程树（缺省 false=沿用按轮分组渲染；开启后过程块由 AgentProcessTree 接管） */
+  processTree?: boolean
 }
 
 const props = defineProps<Props>()
@@ -617,6 +630,11 @@ const { status, events } = useAgentSession(computed(() => props.sessionId))
 
 const sessionStatus = computed(() => status.value?.status || 'RUNNING')
 const isTerminal = computed(() => isTerminalStatus(sessionStatus.value))
+
+/** 统一视图模型（仅在开启过程树时归约，避免默认路径多算） */
+const processView = computed(() =>
+  props.processTree ? agentEventsToView(events.value, status.value) : null
+)
 
 const statusText = computed(() => {
   if (waitingQuestion.value) return '待回答'

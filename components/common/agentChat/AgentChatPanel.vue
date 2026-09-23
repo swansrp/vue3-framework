@@ -3,6 +3,8 @@
  *
  * 消息透明穿透：messages 元素须满足 ChatMsgBase（业务壳自由扩展引擎产物/过程态字段），
  * 面板按契约字段自动渲染「LLM 过程」块，业务产物经 #message-body 插槽注入：
+ *   - msg.process     → AgentProcessTree 过程树（结构化工具步/思考/子 Agent 递归折叠；
+ *                       设置后内置 steps/liveText 过程块不再触发——树形引擎唯一过程出口）
  *   - msg.plan       → AskPlanChecklist 计划待办清单（执行中跳动、终态回看）
  *   - status=loading → AskThinking 思考卡（steps/live/耗时/停止）+ AskClarifyCard 歧义卡；
  *                      仅在消息带 steps 或 liveText 时渲染——SSE 流式正文类引擎（如 chatbi）
@@ -96,7 +98,11 @@
               v-if="(msg as any).plan && (msg as any).plan.length"
               :items="(msg as any).plan"
             />
-            <template v-if="msg.status === 'loading' && ((msg as any).steps || (msg as any).liveText)">
+            <AgentProcessTree
+              v-if="(msg as any).process"
+              :view="(msg as any).process"
+            />
+            <template v-if="!(msg as any).process && msg.status === 'loading' && ((msg as any).steps || (msg as any).liveText)">
               <AskThinking
                 :steps="(msg as any).steps || []"
                 :elapsed-ms="elapsedOf(msg)"
@@ -112,7 +118,7 @@
             </template>
             <!-- 终态：思考过程收起可回看（步骤计数 + 耗时） -->
             <details
-              v-else-if="((msg as any).steps || []).length"
+              v-else-if="!(msg as any).process && ((msg as any).steps || []).length"
               class="think-done"
             >
               <summary>思考过程（{{ (msg as any).steps.length }} 步{{ elapsedDoneText(msg) }}）</summary>
@@ -255,6 +261,7 @@ import { message } from 'ant-design-vue'
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 
 
+import AgentProcessTree from './AgentProcessTree.vue'
 import AskClarifyCard from './AskClarifyCard.vue'
 import AskPlanChecklist from './AskPlanChecklist.vue'
 import AskSteps from './AskSteps.vue'
@@ -280,6 +287,14 @@ const props = withDefaults(defineProps<{
   historyScope?: 'mine' | 'all'
   /** 复制全体摘要格式化（按消息返回展示文本；未提供则不显示复制按钮） */
   digestMessage?: (msg: ChatMsgBase) => string
+  /** 历史清单注入（自有实现如 relay 会话；缺省走通用 /api/agent/conversations） */
+  listConversations?: (agentCode?: string, scope?: string) => Promise<any>
+  /** 历史详情注入（恢复对话；缺省走通用端点） */
+  getConversation?: (conversationId: string | number) => Promise<any>
+  /** 历史删除注入（缺省走通用端点） */
+  deleteConversation?: (conversationId: string | number) => Promise<any>
+  /** Agent 注册表注入（历史列表解析显示名；缺省走通用 /api/agent/registry） */
+  getAgentRegistry?: () => Promise<any>
 }>(), {
   title: '智能对话',
   inputPlaceholder: '输入问题，Enter 发送（Shift+Enter 换行）',
@@ -455,10 +470,11 @@ const agentNames = ref<Record<string, string>>({})
 
 const loadAgentNames = () => {
   if (Object.keys(agentNames.value).length) return
-  getAgentRegistry().then((res: any) => {
+  const registry = props.getAgentRegistry ?? getAgentRegistry
+  registry().then((res: any) => {
     const map: Record<string, string> = {}
     ;(res?.payload || []).forEach((a: any) => {
-      if (a?.agentCode) map[a.agentCode] = a.displayName || a.agentCode
+      if (a?.agentCode) map[a.agentCode] = a.displayName || a.agentName || a.agentCode
     })
     agentNames.value = map
   }).catch(() => {})
@@ -466,7 +482,8 @@ const loadAgentNames = () => {
 
 const loadHistory = () => {
   historyLoading.value = true
-  listConversations(props.agentCode, props.historyScope === 'all' ? 'all' : undefined).then((res: any) => {
+  const list = props.listConversations ?? listConversations
+  list(props.agentCode, props.historyScope === 'all' ? 'all' : undefined).then((res: any) => {
     conversations.value = res?.payload || []
   }).catch(() => {
     conversations.value = []
@@ -491,7 +508,8 @@ const canDelete = (c: any) => props.historyScope !== 'all' || isMine(c.operator)
 
 // 恢复：详情全量透传业务壳（ext.payload 重放口径各引擎自定）；恢复后关闭抽屉并刷新列表
 const restoreConversation = (c: any) => {
-  getConversation(c.conversationId).then((res: any) => {
+  const get = props.getConversation ?? getConversation
+  get(c.conversationId).then((res: any) => {
     const detail = res?.payload
     if (!detail) {
       message.warning('对话不存在或已过期')
@@ -506,7 +524,8 @@ const restoreConversation = (c: any) => {
 }
 
 const removeConversation = (c: any) => {
-  deleteConversation(c.conversationId).then(() => {
+  const del = props.deleteConversation ?? deleteConversation
+  del(c.conversationId).then(() => {
     loadHistory()
   }).catch(() => {
     message.error('删除失败，请重试')

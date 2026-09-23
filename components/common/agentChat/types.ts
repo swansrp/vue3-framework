@@ -1,6 +1,7 @@
 /**
  * agent 会话类型（后端 com.bidr.llm.agent.session 对应结构）
  */
+import type { AssistantView } from './processTree'
 
 /** 会话过程事件（seq 会话内单调递增，增量轮询依据） */
 export interface AgentEventX {
@@ -134,6 +135,9 @@ export interface ChatMsgBase {
   messageId?: string
   /** 消息内嵌评价（like/dislike，历史恢复携带） */
   rating?: string
+  /** 过程树（结构化视图 AssistantView；设置后面板用它渲染执行过程，内置 steps/liveText 过程块不再触发；
+   *  不设置则行为与旧版完全一致——向后兼容的增量约定字段） */
+  process?: AssistantView
 }
 
 /** 计划待办条目（问数票据链 / 自主会话 plan 同构：submit_plan 提交、start_plan_item 执行中、done_plan_item 挑勾；stopped=终态收口打断） */
