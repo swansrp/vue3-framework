@@ -20,6 +20,7 @@ import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/comm
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { resolveConditionVariables } from '@/framework/utils/common'
 import { formatMoney } from '@/framework/utils/formatter'
+import { columnToken, measureToken, pivotToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN, RESOURCE_TYPE_PORTAL_PIVOT } from '@/framework/utils/portalColumnPerm'
 
 /**
  * 透视报表组件(纯表格, 无外壳)
@@ -52,14 +53,20 @@ const portalUrl = ref('')
 /** sys_portal.default_condition 解析出的默认查询条件(AdvancedQuery 形态 {conditionList}) */
 const defaultConditions = ref<ConditionListType[]>([])
 const pivotColumns = ref<PortalPivotColumnVO[]>([])
+/** 当前用户命中的隐藏 token（后端已数据剔离，此处仅隐表头/列/行）：c: 行维度、p: 透视父列、m: 度量 */
+const hiddenC = ref<Set<string>>(new Set())
+const hiddenPM = ref<Set<string>>(new Set())
 /** 透视列配置是否已加载完成(Portal 仅在初始化时读取 customColumns,
  *  必须等透视列列表就绪后再挂载, 否则可能以 TOTAL 退化列形态锁死表头) */
 const pivotColumnLoaded = ref(false)
 /** 未配置透视列时退化为单个无条件"总计"列(后端 CASE WHEN 1=1 即纯度量聚合) */
 const TOTAL_PIVOT = { itemValue: 'total', itemName: '' } as unknown as PortalPivotColumnVO
-const effectivePivotColumns = computed<PortalPivotColumnVO[]>(() =>
-  pivotColumns.value.length > 0 ? pivotColumns.value : [TOTAL_PIVOT]
-)
+const effectivePivotColumns = computed<PortalPivotColumnVO[]>(() => {
+  if (pivotColumns.value.length === 0) {
+    return [TOTAL_PIVOT]
+  }
+  return pivotColumns.value.filter(p => !hiddenPM.value.has(pivotToken(p.itemValue || '')))
+})
 /** 是否配置了透视列(影响表头形态: 无透视列时度量名直接作单层表头) */
 const hasPivotColumns = computed(() => pivotColumns.value.length > 0)
 // Portal 列元数据: property -> layout(displayName/fieldType/reference/width)
@@ -74,7 +81,9 @@ const measures = computed<PivotMeasureVO[]>(() => {
   }
   try {
     const parsed = JSON.parse(props.portalTableConfig.pivotMeasures)
-    return Array.isArray(parsed) ? parsed : []
+    const list = Array.isArray(parsed) ? parsed : []
+    // 列级权限（m:）：隐藏度量从唯一驱动源剔除，col/row 两布局与钻取序自动跟随
+    return list.filter((m: any) => m?.field && !hiddenPM.value.has(measureToken(m.field)))
   } catch (e) {
     console.error('解析透视度量配置失败:', e)
     return []
@@ -115,7 +124,7 @@ const groupFieldConfigs = computed(() => {
 const groupFields = computed(() => groupFieldConfigs.value.map(c => c.field))
 
 /** 显示的行维度字段配置(隐藏项仅参与 group by 不渲染列) */
-const visibleGroupFieldConfigs = computed(() => groupFieldConfigs.value.filter(c => c.display))
+const visibleGroupFieldConfigs = computed(() => groupFieldConfigs.value.filter(c => c.display && !hiddenC.value.has(columnToken(c.field))))
 
 /** 显示的行维度字段(数据翻译/请求组装等处使用) */
 const visibleGroupFields = computed(() => visibleGroupFieldConfigs.value.map(c => c.field))
@@ -326,6 +335,13 @@ const loadConfig = async () => {
       return
     }
     portalUrl.value = configRes.payload.url
+    // 运行态列权限：一次性拉当前用户命中的隐藏 token（原表列 c: + 透视列 p:/m:），后续渲染/拼请求均据此过滤
+    const [cSet, pmSet] = await Promise.all([
+      resolveMyHiddenTokens(RESOURCE_TYPE_PORTAL_COLUMN, props.portalTableConfig.portalName),
+      resolveMyHiddenTokens(RESOURCE_TYPE_PORTAL_PIVOT, props.portalTableConfig.portalName)
+    ])
+    hiddenC.value = cSet
+    hiddenPM.value = pmSet
     // 默认查询条件(sys_portal.default_condition): 通用列表由 Portal 组件前端合并下发, 后端不消费;
     // 透视链路此前完全漏带 → 主请求/钻取在此统一并入, 与列表路径同一配置正源
     try {
@@ -372,7 +388,7 @@ const loadData = async () => {
       condition: { conditionList: [...defaultConditions.value, ...props.condition] },
       // 行维度排序下推(聚合后 ORDER BY 行维度列, 两链路均支持); 度量排序后端无别名可排, 不在此列
       sortList: pushDownSortList.value.length > 0 ? pushDownSortList.value : undefined,
-      groupColumns: groupFields.value.map(f => ({
+      groupColumns: groupFields.value.filter(f => !hiddenC.value.has(columnToken(f))).map(f => ({
         value: f,
         label: columnMetaMap.value[f]?.displayName || f
       })),

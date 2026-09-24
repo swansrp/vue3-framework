@@ -255,7 +255,7 @@ import { collectLeaves, findNodeById, findNodeByIdOrKey as findNodeInIndicatorTr
 import type { DashboardItem, IndicatorNode } from './types'
 
 import { getIndicatorConfig, updateEntityListSelective } from '@/framework/apis/portal'
-import { getPortalConfig } from '@/framework/apis/portal/config'
+import { getPortalFullConfig } from '@/framework/apis/portal/config'
 import BatchEditModal from '@/framework/components/common/chartConfig/BatchEditModal.vue'
 import ChartConfigModal from '@/framework/components/common/chartConfig/ChartConfigModal.vue'
 import ChartGrid from '@/framework/components/common/chartConfig/ChartGrid.vue'
@@ -740,7 +740,7 @@ const loadDashboardData = async (skipSelectionUpdate = false) => {
       getCommonStatistic(tableId),
       getPersonalStatistic(tableId),
       props.useCommonDashboard ? getCommonDashboard(tableId) : getPersonalDashboard(tableId),
-      getPortalConfig(tableId).catch(err => {
+      getPortalFullConfig(tableId).catch(err => {
         console.error(`加载 Portal 配置失败:`, err)
         return null
       })

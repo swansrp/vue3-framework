@@ -8,6 +8,14 @@
           :tab="`已配置(${permSummaryList.length})`"
         >
           <div class="perm-tab-content">
+            <a-button
+              v-if="extraDataEditor && selectedPerms.length > 0"
+              size="small"
+              style="margin-bottom: 10px"
+              @click="openBatchExtraData"
+            >
+              批量设置{{ label }}（应用到全部 {{ selectedPerms.length }} 项）
+            </a-button>
             <template v-if="permSummaryList.length === 0">
               <a-empty description="未配置权限（所有人可见）" />
             </template>
@@ -24,6 +32,14 @@
                   {{ item.typeName }}
                 </a-tag>
                 <span class="perm-configured-name">{{ item.name }}</span>
+                <a-button
+                  v-if="extraDataEditor"
+                  size="small"
+                  :type="item.hasExtraData ? 'primary' : 'default'"
+                  @click="openExtraData(item)"
+                >
+                  {{ item.hasExtraData ? '已设' + label : label }}
+                </a-button>
               </div>
             </div>
           </div>
@@ -41,6 +57,28 @@
               style="margin-bottom: 12px"
               allow-clear
             />
+            <div style="margin-bottom: 8px; display: flex; gap: 8px">
+              <a-button
+                size="small"
+                @click="selectAllRoles"
+              >
+                全选
+              </a-button>
+              <a-button
+                size="small"
+                @click="invertRoles"
+              >
+                反选
+              </a-button>
+              <a-button
+                v-if="extraDataEditor && selectedPerms.length > 0"
+                size="small"
+                type="primary"
+                @click="openBatchExtraData"
+              >
+                批量设置{{ label }}（全部 {{ selectedPerms.length }} 项）
+              </a-button>
+            </div>
             <div class="perm-check-list">
               <a-checkbox
                 v-for="item in filteredRoles"
@@ -64,6 +102,15 @@
           tab="用户"
         >
           <div class="perm-tab-content">
+            <a-button
+              v-if="extraDataEditor && selectedPerms.length > 0"
+              size="small"
+              type="primary"
+              style="margin-bottom: 10px"
+              @click="openBatchExtraData"
+            >
+              批量设置{{ label }}（全部 {{ selectedPerms.length }} 项）
+            </a-button>
             <DepartmentAndStaffSelect
               v-model:staff-list-value="permStaffList"
               v-model:department-list-value="permDeptList"
@@ -93,6 +140,14 @@
                   @click="toggleAllGroupTrees(false)"
                 >
                   一键收起
+                </a-button>
+                <a-button
+                  v-if="extraDataEditor && selectedPerms.length > 0"
+                  size="small"
+                  type="primary"
+                  @click="openBatchExtraData"
+                >
+                  批量设置{{ label }}（全部 {{ selectedPerms.length }} 项）
                 </a-button>
               </div>
               <a-collapse
@@ -135,6 +190,15 @@
           tab="部门"
         >
           <div class="perm-tab-content">
+            <a-button
+              v-if="extraDataEditor && selectedPerms.length > 0"
+              size="small"
+              type="primary"
+              style="margin-bottom: 10px"
+              @click="openBatchExtraData"
+            >
+              批量设置{{ label }}（全部 {{ selectedPerms.length }} 项）
+            </a-button>
             <a-tree
               v-if="subjectData.deptTree.value.length > 0"
               v-model:checked-keys="selectedDeptKeys"
@@ -170,11 +234,22 @@
         保存
       </a-button>
     </div>
+
+    <!-- 主体扩展信息编辑器：完全由父级注入的组件，ForwardConfig 只负责进出 extra_data 字符串 -->
+    <component
+      :is="extraDataEditor"
+      v-if="extraDataEditor"
+      v-bind="extraDataEditorProps"
+      :open="editorOpen"
+      :extra-data="editingExtraData"
+      @update:open="editorOpen = $event"
+      @update:extra-data="handleExtraDataUpdate"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, reactive, ref, watch } from 'vue'
+import { computed, inject, reactive, ref, watch, type Component } from 'vue'
 
 import type { SubjectData } from './useSubjectData'
 
@@ -187,6 +262,13 @@ import DepartmentAndStaffSelect from '@/framework/components/common/departmentAn
 const props = defineProps<{
   resourceType: string
   resourceId: string
+  // 主体扩展信息（extra_data）编辑器组件：由父级注入，实现 v-model:open 与 :extra-data / @update:extra-data 契约。
+  // 不传则不展示任何配置入口。ForwardConfig 只把 extra_data 当作不透明字符串进出，不解析其结构（对具体业务零依赖）
+  extraDataEditor?: Component
+  // 透传给编辑器的任意额外 props（如 Portal 场景传 { columns: [...] }），ForwardConfig 不关心其含义
+  extraDataEditorProps?: Record<string, any>
+  // 配置入口按钮文案（默认「扩展信息」；Portal 场景传「行条件」）
+  extraDataLabel?: string
 }>()
 
 const emit = defineEmits<{
@@ -203,12 +285,68 @@ const activeTab = ref('configured')
 // 已选择的授权列表
 const selectedPerms = ref<PermItem[]>([])
 
+// ================== 主体扩展信息（extra_data：不透明字符串） ==================
+// 以 subjectType:subjectId 为键暂存每个主体的 extra_data，与选择增删解耦，
+// 避免角色/用户/组/部门勾选重算 selectedPerms 时丢失已配置的值。
+// ForwardConfig 不解析 extra_data 内容，编辑器的打开/回填全交给父级注入的组件
+const extraDataMap = reactive<Record<string, string>>({})
+const permKey = (subjectType: number, subjectId: string) => `${subjectType}:${subjectId}`
+const label = computed(() => props.extraDataLabel || '扩展信息')
+
+const editorOpen = ref(false)
+const editingKey = ref('')
+const editingExtraData = ref('')
+const BATCH_KEY = '__batch__'
+
+const openExtraData = (item: { subjectType: number; subjectId: string }) => {
+  editingKey.value = permKey(item.subjectType, item.subjectId)
+  editingExtraData.value = extraDataMap[editingKey.value] || ''
+  editorOpen.value = true
+}
+
+// 批量：把同一份 extra_data 套到当前全部已选主体（部门整棵子树统一配置时免去逐条点）
+const openBatchExtraData = () => {
+  editingKey.value = BATCH_KEY
+  editingExtraData.value = ''
+  editorOpen.value = true
+}
+
+const handleExtraDataUpdate = (val: string) => {
+  if (!editingKey.value) return
+  if (editingKey.value === BATCH_KEY) {
+    // 批量模式：对全部已选主体统一写/清（传空则批量清除）
+    for (const p of selectedPerms.value) {
+      const key = permKey(p.subjectType, p.subjectId)
+      if (val) { extraDataMap[key] = val } else { delete extraDataMap[key] }
+    }
+  } else if (val) {
+    extraDataMap[editingKey.value] = val
+  } else {
+    delete extraDataMap[editingKey.value]
+  }
+  editorOpen.value = false
+}
+
 // ================== 角色 ==================
 const roleSearch = ref('')
 const filteredRoles = computed(() => {
   if (!roleSearch.value) return subjectData.roleList.value
   return subjectData.roleList.value.filter((r: any) => r.roleName?.includes(roleSearch.value))
 })
+
+// 全选/反选只作用于当前可见（搜索后）的角色列表
+const selectAllRoles = () => {
+  for (const r of filteredRoles.value) {
+    const id = String(r.roleId)
+    if (!isSubjectSelected(0, id)) { selectedPerms.value.push({ subjectType: 0, subjectId: id }) }
+  }
+}
+const invertRoles = () => {
+  for (const r of filteredRoles.value) {
+    const id = String(r.roleId)
+    toggleSubject(0, id, !isSubjectSelected(0, id))
+  }
+}
 
 // ================== 用户（搜索选择） ==================
 const permStaffList = ref<any[]>([])
@@ -223,21 +361,50 @@ const groupActiveTypes = ref<string[]>([])
 const selectedDeptKeys = ref<string[]>([])
 
 // ================== 权限摘要 ==================
-const permSummaryList = computed(() => {
-  const list: { typeName: string; name: string; color: string }[] = []
-  for (const perm of selectedPerms.value) {
-    if (perm.subjectType === 0) {
-      const role = subjectData.roleList.value.find((r: any) => String(r.roleId) === perm.subjectId)
-      list.push({ typeName: '角色', name: role?.roleName || perm.subjectId, color: '#722ed1' })
-    } else if (perm.subjectType === 1) {
-      const staff = permStaffList.value.find((s: any) => String(s.value) === perm.subjectId)
-      list.push({ typeName: '用户', name: staff?.label || perm.subjectId, color: '#1890ff' })
-    } else if (perm.subjectType === 2) {
-      const group = subjectData.groupList.value.find((g: any) => String(g.id) === perm.subjectId)
-      list.push({ typeName: '用户组', name: group?.name || perm.subjectId, color: '#eb2f96' })
-    } else if (perm.subjectType === 3) {
-      list.push({ typeName: '部门', name: perm.subjectId, color: '#52c41a' })
+// 部门授权记录只存部门 id（树节点 key 是 value、显示名是 title），展示时按 id 回查名称
+// 摊平成 Map 而非逐条递归查树：摘要条目和树节点都可能不少，且树结构加载后就不再变
+const deptNameMap = computed(() => {
+  const map: Record<string, string> = {}
+  const walk = (nodes: any[]) => {
+    for (const node of nodes || []) {
+      map[String(node.value)] = node.title || ''
+      if (node.children) { walk(node.children) }
     }
+  }
+  walk(subjectData.deptTree.value)
+  return map
+})
+
+const permSummaryList = computed(() => {
+  const list: { typeName: string; name: string; color: string; subjectType: number; subjectId: string; hasExtraData: boolean }[] = []
+  for (const perm of selectedPerms.value) {
+    // 读 extraDataMap 令 computed 依赖它，配置完后摘要会重算刷新按钮态
+    const hasExtraData = !!extraDataMap[permKey(perm.subjectType, perm.subjectId)]
+    let typeName = ''
+    let name = perm.subjectId
+    let color = '#999'
+    if (perm.subjectType === 0) {
+      typeName = '角色'
+      color = '#722ed1'
+      const role = subjectData.roleList.value.find((r: any) => String(r.roleId) === perm.subjectId)
+      name = role?.roleName || perm.subjectId
+    } else if (perm.subjectType === 1) {
+      typeName = '用户'
+      color = '#1890ff'
+      const staff = permStaffList.value.find((s: any) => String(s.value) === perm.subjectId)
+      name = staff?.label || perm.subjectId
+    } else if (perm.subjectType === 2) {
+      typeName = '用户组'
+      color = '#eb2f96'
+      const group = subjectData.groupList.value.find((g: any) => String(g.id) === perm.subjectId)
+      name = group?.name || perm.subjectId
+    } else if (perm.subjectType === 3) {
+      // 查不到名称时退让到 id：部门被删或树尚未加载完，至少能看出配了哪一条
+      typeName = '部门'
+      color = '#52c41a'
+      name = deptNameMap.value[perm.subjectId] || perm.subjectId
+    }
+    list.push({ typeName, name, color, subjectType: perm.subjectType, subjectId: perm.subjectId, hasExtraData })
   }
   return list
 })
@@ -327,6 +494,11 @@ const loadExistingPerms = async () => {
     const res = await getResourcePermList(props.resourceType, props.resourceId)
     const records = res.payload || []
     selectedPerms.value = records.map(r => ({ subjectType: r.subjectType, subjectId: r.subjectId }))
+    // 切换资源：重建行条件缓存，不把上一个 portal 的 extraData 残留过来
+    Object.keys(extraDataMap).forEach(k => delete extraDataMap[k])
+    records.forEach(r => {
+      if (r.extraData) { extraDataMap[permKey(r.subjectType, r.subjectId)] = r.extraData }
+    })
     selectedDeptKeys.value = records.filter(r => r.subjectType === 3).map(r => r.subjectId)
     syncGroupChecked()
     const userIds = records.filter(r => r.subjectType === 1).map(r => r.subjectId)
@@ -354,7 +526,7 @@ const handleSave = async () => {
     await saveResourcePerm({
       resourceType: props.resourceType,
       resourceId: props.resourceId,
-      perms: selectedPerms.value
+      perms: selectedPerms.value.map(p => ({ ...p, extraData: extraDataMap[permKey(p.subjectType, p.subjectId)] }))
     })
     emit('saved')
   } catch (e) {

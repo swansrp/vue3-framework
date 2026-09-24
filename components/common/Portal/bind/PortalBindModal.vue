@@ -190,7 +190,7 @@ import {
   unbindAttach,
   unbindBatchAttach
 } from '@/framework/apis/portal'
-import { getPortalConfig } from '@/framework/apis/portal/config'
+import { getPortalFullConfig } from '@/framework/apis/portal/config'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { ColumnType, QueryType, TableConfigType } from '@/framework/components/common/Portal/type'
 import { isEmpty, isNotEmpty } from '@/framework/utils/common'
@@ -284,7 +284,7 @@ const loadTreeData = async () => {
   try {
     // 先获取 Portal 配置以获得正确的 URL
     if (!attachUrl.value) {
-      const configRes = await getPortalConfig(bindDialogBox.attachName)
+      const configRes = await getPortalFullConfig(bindDialogBox.attachName)
       attachUrl.value = configRes.payload?.url || ''
       if (!attachUrl.value) {
         console.error('无法获取 attachEntity 的 URL 配置')

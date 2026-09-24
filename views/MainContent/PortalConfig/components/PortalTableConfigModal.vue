@@ -141,6 +141,23 @@
                 :portal-name="portalName"
               />
             </a-tab-pane>
+
+            <a-tab-pane
+              key="pivotPerm"
+              tab="透视列权限"
+              :disabled="selectedTable.pivotMode !== '1'"
+            >
+              <ResourcePermPanel
+                v-if="portalName"
+                :key="'pivot-perm-' + selectedTable.id"
+                resource-type="sys_portal_pivot"
+                :resource-id="portalName"
+                :resource-name="portalConfig?.displayName || portalName"
+                :extra-data-editor="PortalColumnPermEditor"
+                :extra-data-editor-props="{ columnOptions: pivotPermOptions, title: '设置隐藏透视列', tip: '透视父列/度量默认全部显示（√）；点一下把某列切成不显示（×）即对该主体隐藏（度量在 row 布局下按行隐藏）。' }"
+                extra-data-label="隐藏列"
+              />
+            </a-tab-pane>
           </a-tabs>
         </template>
         <a-empty
@@ -161,6 +178,8 @@ import { computed, ref, watch } from 'vue'
 import PortalTableBasicPane from './tableConfig/PortalTableBasicPane.vue'
 import PortalTableFilterPane from './tableConfig/PortalTableFilterPane.vue'
 import PortalTablePivotColumnPane from './tableConfig/PortalTablePivotColumnPane.vue'
+import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
+import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 
 import {
   addPortalTable,
@@ -203,11 +222,11 @@ const reportImporting = ref(false)
 
 // 配置域 tab 当前页(基础配置/筛选项配置/透视列配置)
 const configActiveTab = ref('basic')
-// 关闭透视模式时若停留在透视列 tab，自动回基础配置
+// 关闭透视模式时若停留在透视相关 tab，自动回基础配置
 watch(
   () => selectedTable.value?.pivotMode,
   (mode) => {
-    if (mode !== '1' && configActiveTab.value === 'pivot') {
+    if (mode !== '1' && (configActiveTab.value === 'pivot' || configActiveTab.value === 'pivotPerm')) {
       configActiveTab.value = 'basic'
     }
   }
@@ -223,6 +242,55 @@ const availableFields = computed(
       displayName: col.displayName,
       reference: col.reference,
     }))
+)
+
+// ===== 透视列权限（sys_portal_pivot）候选：透视父列(p:itemValue) + 度量(m:field) =====
+// 候选均为配置正源（与运行态共用），不经任何隐藏过滤，管理员可自由勾选/取消
+const pivotColumnItems = ref<Array<{ itemValue: string; itemName: string }>>([])
+const loadPivotPermColumns = async (tableId: number | undefined) => {
+  if (!tableId) { pivotColumnItems.value = []; return }
+  try {
+    const res = await getPortalPivotColumnList(tableId, false, false, false)
+    pivotColumnItems.value = (res?.payload?.records || []).map((c: any) => ({ itemValue: c.itemValue, itemName: c.itemName }))
+  } catch (error) {
+    console.error('加载透视列权限候选失败:', error)
+    pivotColumnItems.value = []
+  }
+}
+// property -> displayName，用于度量缺省名回退
+const columnLabelMap = computed(() => {
+  const map: Record<string, string> = {}
+  ;(props.columns || []).forEach((col: any) => { map[col.property] = col.displayName })
+  return map
+})
+// 当前选中表格的度量配置（pivotMeasures JSON）
+const measureRows = computed<any[]>(() => {
+  const raw = selectedTable.value?.pivotMeasures
+  if (!raw) { return [] }
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+})
+const pivotPermOptions = computed(() => {
+  const opts: Array<{ label: string; token: string; group: string }> = []
+  pivotColumnItems.value.forEach((c) => {
+    if (c.itemValue) { opts.push({ label: c.itemName || c.itemValue, token: `p:${c.itemValue}`, group: '透视父列' }) }
+  })
+  measureRows.value.forEach((m: any) => {
+    if (m?.field) { opts.push({ label: m.label || columnLabelMap.value[m.field] || m.field, token: `m:${m.field}`, group: '度量' }) }
+  })
+  return opts
+})
+// 选中表格/透视模式变化时，补载透视父列候选
+watch(
+  () => [selectedTable.value?.id, selectedTable.value?.pivotMode] as const,
+  ([id, mode]) => {
+    if (mode === '1') { loadPivotPermColumns(id) } else { pivotColumnItems.value = [] }
+  },
+  { immediate: true }
 )
 
 watch(
@@ -308,6 +376,58 @@ const handleAddTable = async () => {
   }
 }
 
+// tabItems 成员关系导出: tableId 是环境内主键, 跨系统不一致, 导出时为每项补 tableCode 字符串,
+// 导入侧按编码还原成员, 避免按 id 匹配错乱
+const buildExportTabItems = (raw?: string) => {
+  if (!raw) return raw
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return raw
+    return JSON.stringify(parsed.map((it: any) => {
+      const code = tableList.value.find((t) => t.id === Number(it?.tableId))?.tableCode
+      return code ? { ...it, tableCode: code } : it
+    }))
+  } catch (e) {
+    console.warn('解析 tabItems 失败:', e)
+    return raw
+  }
+}
+
+// 导入侧 tabItems 成员还原: 优先按导出时写入的 tableCode 字符串匹配目标表格,
+// 老格式(仅 tableId)退而用文件内 源id→编码 映射; 匹配不上的成员丢弃, 绝不按源环境 id 错配;
+// json 为 undefined 表示无需回写(文件无有效成员结构, 保留目标现状)
+const remapTabItems = (
+  raw: string,
+  sourceIdToCode: Map<number, string>,
+  codeToTargetId: Map<string, number>
+): { json?: string; dropped: number } => {
+  let parsed: any[] = []
+  try {
+    const obj = JSON.parse(raw)
+    if (Array.isArray(obj)) parsed = obj
+  } catch (e) {
+    console.warn('解析 tabItems 失败:', e)
+    return { json: undefined, dropped: 0 }
+  }
+  // 显式空数组 = 源端已解除 Tab 组, 回写 '[]' 同步清掉目标旧值
+  if (parsed.length === 0) return { json: '[]', dropped: 0 }
+  const entries: Array<Record<string, any>> = []
+  let dropped = 0
+  for (const it of parsed) {
+    const code = it?.tableCode || sourceIdToCode.get(Number(it?.tableId))
+    const targetId = code ? codeToTargetId.get(code) : undefined
+    if (targetId != null) {
+      const entry: Record<string, any> = { tableId: targetId }
+      if (it?.label) entry.label = it.label
+      if (it?.order != null) entry.order = it.order
+      entries.push(entry)
+    } else {
+      dropped++
+    }
+  }
+  return { json: JSON.stringify(entries), dropped }
+}
+
 // 组装单个表格的导出数据(基础配置+筛选器+透视列)
 const buildTableExportItem = async (table: PortalTableVO) => {
   // pageSize 拉大避免筛选器被分页截断; payload 兼容数组与分页对象两种结构
@@ -317,7 +437,7 @@ const buildTableExportItem = async (table: PortalTableVO) => {
     : (filters?.payload?.records || [])
   const pivotColumnsRes = await getPortalPivotColumnList(table.id!, false, false, false)
   return {
-    table: { ...table },
+    table: { ...table, tabItems: buildExportTabItems(table.tabItems) },
     filters: filterRows,
     pivotColumns: (pivotColumnsRes?.payload?.records || []).map((c: any) => c)
   }
@@ -406,10 +526,27 @@ const handleImportReportConfig = async (file: File) => {
           tableList.value.forEach(t => {
             if (t.tableCode) existingTableMap.set(t.tableCode, t)
           })
+          // 源环境 id → 编码(仅文件内表格), 供老格式 tabItems(只带 tableId)还原成员编码
+          const sourceIdToCode = new Map<number, string>()
+          importData.forEach((item: any) => {
+            if (item?.table?.id != null && item?.table?.tableCode) {
+              sourceIdToCode.set(Number(item.table.id), item.table.tableCode)
+            }
+          })
+          // 编码 → 目标环境 id: 先铺目标已有表格(含未随文件导出的成员), 导入过程再补新增表
+          const codeToTargetId = new Map<string, number>()
+          tableList.value.forEach(t => {
+            if (t.tableCode && t.id != null) codeToTargetId.set(t.tableCode, t.id)
+          })
+          // tabItems 成员可能指向文件内其它表格, 需等全部表落库后二次回写
+          const pendingTabItems: Array<{ tableId: number; raw: string }> = []
           for (const item of importData) {
             const tableData = { ...item.table }
             delete tableData.id
             delete tableData.filterCount
+            // tabItems 带源环境 id, 先剥离, 落库后按表格编码回写
+            const rawTabItems = tableData.tabItems
+            delete tableData.tabItems
             // 强制归属目标 portal, 避免带入源环境旧值
             tableData.portalName = portalName
             const tableCode = tableData.tableCode
@@ -426,13 +563,25 @@ const handleImportReportConfig = async (file: File) => {
               tableId = newTable.payload?.id || newTable.payload
               added++
             }
+            if (tableCode) codeToTargetId.set(tableCode, tableId)
+            if (rawTabItems) pendingTabItems.push({ tableId, raw: rawTabItems })
             // 全量同步筛选器/透视列(以文件为准, 文件外的多余项删除)
             await syncFiltersToTable(tableId, item.filters, filterStat)
             await syncPivotColumnsToTable(tableId, item.pivotColumns, pivotStat)
           }
+          // 二次回写 tabItems: 成员按表格编码字符串匹配目标 id(不同系统 id 不一致, 按 id 匹配会错乱)
+          let tabDropped = 0
+          for (const pending of pendingTabItems) {
+            const { json, dropped } = remapTabItems(pending.raw, sourceIdToCode, codeToTargetId)
+            tabDropped += dropped
+            if (json !== undefined) {
+              await updatePortalTable({ id: pending.tableId, tabItems: json }, false, false, false)
+            }
+          }
           message.success(`导入完成：表新增 ${added} / 更新 ${updated}，` +
             `筛选器新增 ${filterStat.added} / 更新 ${filterStat.updated} / 删除 ${filterStat.deleted}，` +
-            `透视列新增 ${pivotStat.added} / 更新 ${pivotStat.updated} / 删除 ${pivotStat.deleted}`)
+            `透视列新增 ${pivotStat.added} / 更新 ${pivotStat.updated} / 删除 ${pivotStat.deleted}` +
+            (tabDropped > 0 ? `，Tab成员在目标环境不存在已丢弃 ${tabDropped}` : ''))
           // 刷新列表
           await loadTableList()
         } catch (error: any) {

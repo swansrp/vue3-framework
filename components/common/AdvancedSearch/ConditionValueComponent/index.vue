@@ -1,6 +1,6 @@
 <template>
   <div :style="{width: width + 'px', display: 'inline-block'}">
-    <template v-if="type === FIELD_TYPE.INPUT">
+    <template v-if="type === FIELD_TYPE.INPUT || type === FIELD_TYPE.ENTITY">
       <a-input
         v-model:value="value"
         placeholder="请输入属性值"

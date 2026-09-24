@@ -21,7 +21,7 @@
           v-model:value="inputTableName"
           enter-button
           placeholder="请输入表格名称"
-          @search="onSearch"
+          @search="() => onSearch()"
           @input="onSearchInput"
         />
       </div>
@@ -73,7 +73,7 @@
                           @confirm="refreshConfig(item.value)"
                         >
                           <a-button
-                            shape="text"
+                            :shape="'text' as any"
                             size="small"
                           >
                             恢复
@@ -85,7 +85,7 @@
                       </a-menu-item>
                       <a-menu-item key="1">
                         <a-button
-                          shape="text"
+                          :shape="'text' as any"
                           size="small"
                           @click="openCopyConfigModal(item)"
                         >
@@ -101,7 +101,7 @@
                           @confirm="deleteConfig(item.value)"
                         >
                           <a-button
-                            shape="text"
+                            :shape="'text' as any"
                             size="small"
                           >
                             删除
@@ -332,11 +332,13 @@
               property: 'portalId',
               relation: FILTER_TYPE.EQUAL,
               value: [tableConfig.id],
+              conditionList: [],
             },
             {
               property: 'roleId',
               relation: FILTER_TYPE.EQUAL,
               value: [selectedRole],
+              conditionList: [],
             },
           ],
         }"
@@ -439,6 +441,14 @@
             @click="showPortalTableConfigModal = true"
           >
             报表配置
+          </a-button>
+          <!-- 权限配置：数据权限仅低代码 Portal（DATASET/MATRIX）生效；显示权限对所有 Portal 可配（普通 portal 仅前端隐藏） -->
+          <a-button
+            style="margin-right: 10px"
+            type="primary"
+            @click="showPermModal = true"
+          >
+            权限配置
           </a-button>
           <a-button
             style="margin-right: 10px"
@@ -585,7 +595,7 @@
             checked-value="1"
             style="width: 40px"
             un-checked-value="0"
-            @change="saveTableConfig"
+            @change="() => saveTableConfig()"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -598,7 +608,7 @@
             checked-value="1"
             style="width: 40px"
             un-checked-value="0"
-            @change="saveTableConfig"
+            @change="() => saveTableConfig()"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -611,7 +621,7 @@
             checked-value="1"
             style="width: 40px"
             un-checked-value="0"
-            @change="saveTableConfig"
+            @change="() => saveTableConfig()"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -640,7 +650,7 @@
             checked-value="1"
             style="width: 40px"
             un-checked-value="0"
-            @change="saveTableConfig"
+            @change="() => saveTableConfig()"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -751,7 +761,7 @@
             checked-value="1"
             style="width: 40px"
             un-checked-value="0"
-            @change="saveTableConfig"
+            @change="() => saveTableConfig()"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -764,7 +774,7 @@
             checked-value="1"
             style="width: 40px"
             un-checked-value="0"
-            @change="saveTableConfig"
+            @change="() => saveTableConfig()"
           />
         </a-descriptions-item>
         <a-descriptions-item
@@ -776,7 +786,7 @@
             checked-value="1"
             style="width: 40px"
             un-checked-value="0"
-            @change="saveTableConfig"
+            @change="() => saveTableConfig()"
           />
         </a-descriptions-item>
       </a-descriptions>
@@ -993,7 +1003,7 @@
             <template #extra>
               <a-dropdown>
                 <template #overlay>
-                  <a-menu @click="({ key: menuKey }) => quickConfig(columnMap.get(selectedColumnId), menuKey)">
+                  <a-menu @click="({ key: menuKey }) => quickConfig(columnMap.get(selectedColumnId), String(menuKey))">
                     <a-menu-item key="displayNone">
                       不显示
                     </a-menu-item>
@@ -1041,7 +1051,7 @@
                 v-model:checked="columnMap.get(selectedColumnId).enable"
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1169,7 +1179,7 @@
                       columnMap.get(selectedColumnId).dbField = null;
                       columnMap.get(selectedColumnId).entityField = null;
                     }
-                    getEntityConfig(v);
+                    getEntityConfig(v as string);
                     columnMap.get(selectedColumnId).reference = v;
                     saveTableColumn();
                   }
@@ -1290,7 +1300,7 @@
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1360,7 +1370,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1374,7 +1384,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1388,7 +1398,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1402,7 +1412,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1414,7 +1424,7 @@
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1428,7 +1438,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
           </a-descriptions>
@@ -1461,7 +1471,7 @@
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1508,7 +1518,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1531,7 +1541,7 @@
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1577,7 +1587,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1600,7 +1610,7 @@
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1646,7 +1656,7 @@
                 "
                 checked-value="1"
                 un-checked-value="0"
-                @change="saveTableColumn"
+                @change="() => saveTableColumn()"
               />
             </a-descriptions-item>
             <a-descriptions-item
@@ -1830,11 +1840,11 @@
             v-for="(column, index) in (tableConfig.columns || [])"
             :key="column.id"
             class="batch-field-card"
-            :class="{ 'batch-field-selected': batchSelectedIds.includes(column.id) }"
-            @click="batchToggleSelect(column.id, index, $event)"
+            :class="{ 'batch-field-selected': batchSelectedIds.includes(String(column.id)) }"
+            @click="batchToggleSelect(String(column.id), Number(index), $event)"
           >
             <div class="batch-field-checkbox">
-              <CheckOutlined v-if="batchSelectedIds.includes(column.id)" />
+              <CheckOutlined v-if="batchSelectedIds.includes(String(column.id))" />
             </div>
             <div class="batch-field-info">
               <div class="batch-field-name">
@@ -2001,6 +2011,43 @@
       :portal-config="tableConfig"
       :columns="tableConfig.columns"
     />
+    <!-- region 权限配置弹窗（当前选中 portal，portalName 粒度）：数据权限(sys_portal 行级) + 显示权限(sys_portal_column 原表列) -->
+    <a-modal
+      v-model:open="showPermModal"
+      :title="'权限配置 - ' + tableConfig.displayName"
+      width="100%"
+      :style="{ top: 0, maxWidth: '100%', paddingBottom: 0 }"
+      :body-style="{ height: 'calc(100vh - 110px)', padding: '16px', overflow: 'auto' }"
+      :footer="null"
+      :z-index="999"
+      wrap-class-name="fullscreen-modal"
+    >
+      <a-tabs v-if="showPermModal && tableConfig.name" v-model:active-key="permActiveTab">
+        <!-- 数据权限：行级过滤，仅低代码 Portal（DATASET/MATRIX）后端生效 -->
+        <a-tab-pane v-if="props.dataMode" key="data" tab="数据权限">
+          <ResourcePermPanel
+            resource-type="sys_portal"
+            :resource-id="tableConfig.name"
+            :resource-name="tableConfig.displayName"
+            :extra-data-editor="PortalExtraDataEditor"
+            :extra-data-editor-props="{ columns: policyColumnArray }"
+            extra-data-label="行条件"
+          />
+        </a-tab-pane>
+        <!-- 显示权限：原表列黑名单（c:），同时作用于表格显示列与透视表行维度 -->
+        <a-tab-pane key="display" tab="显示权限">
+          <ResourcePermPanel
+            resource-type="sys_portal_column"
+            :resource-id="tableConfig.name"
+            :resource-name="tableConfig.displayName"
+            :extra-data-editor="PortalColumnPermEditor"
+            :extra-data-editor-props="{ columnOptions: columnPermOptions, title: '设置隐藏列（原表列）', tip: '原表列默认全部显示（√）；点一下把某列切成不显示（×）即对该主体隐藏；同时作用于表格显示列与透视表的行维度（group by）。' }"
+            extra-data-label="隐藏列"
+          />
+        </a-tab-pane>
+      </a-tabs>
+    </a-modal>
+    <!-- endregion -->
   </div>
 </template>
 
@@ -2048,7 +2095,7 @@ import {
   existedPortalConfig,
   exportPortalConfig,
   getBindRole,
-  getPortalConfig,
+  getPortalFullConfig,
   getPortalList,
   getSql,
   importPortalConfig,
@@ -2063,6 +2110,9 @@ import { getCommonDashboard, getCommonStatistic, addCommonDashboard, addCommonSt
 import PublicDashboard from '@/framework/components/common/chartConfig/index.vue'
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import Portal from '@/framework/components/common/Portal/index.vue'
+import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
+import PortalExtraDataEditor from '@/framework/views/MainContent/PortalConfig/PortalExtraDataEditor.vue'
+import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
 import { filterOption } from '@/framework/components/common/utils'
@@ -2194,6 +2244,9 @@ const sqlData: Ref<string> = ref('')
 const indicatorModalShow: Ref<boolean> = ref(false)
 const showPortalTableConfigModal: Ref<boolean> = ref(false)
 const showDataPreviewDrawer: Ref<boolean> = ref(false)
+const showPermModal: Ref<boolean> = ref(false)
+// 权限配置弹窗当前 tab：低代码默认「数据权限」，普通 portal 只有「显示权限」
+const permActiveTab = ref(props.dataMode ? 'data' : 'display')
 const publicDashboardModalShow: Ref<boolean> = ref(false)
 const publicDashboardRef = ref()
 // 通用图表导出/导入状态
@@ -2219,7 +2272,7 @@ const copyConfig = () => {
 }
 
 const getEntityConfig = (tableId: string) => {
-  getPortalConfig(tableId, selectedRole.value).then((res) => {
+  getPortalFullConfig(tableId, selectedRole.value).then((res) => {
     entityColumnDict.length = 0
     entityConfig.value = res.payload
     entityConfig.value.columns.forEach((column: { property: any; displayName: any }) => {
@@ -2239,13 +2292,23 @@ const getEntityConfig = (tableId: string) => {
 
 const tableConfig = ref({} as any)
 const fieldRecords = ref([] as Array<any>)
+// 行级策略编辑器可用的列集合（全量列，不像 defaultCondition.columnArray 那样按 filterAble 收窄）
+const policyColumnArray = ref([] as Array<any>)
+// 显示权限编辑器候选：原表列（token=c:property），从当前 portal 全量列派生（走 /config/full，不经运行态隐藏剥离，才能把隐藏列再勾回）
+const columnPermOptions = computed(() =>
+  ((tableConfig.value?.columns || []) as Array<any>).map((col: any) => ({
+    label: col.displayName,
+    token: `c:${col.property}`
+  }))
+)
 const getTableConfigByName = (item: any) => {
-  getPortalConfig(item, selectedRole.value, props.dataMode || undefined, props.referenceId || undefined).then(async (res) => {
+  getPortalFullConfig(item, selectedRole.value, props.dataMode || undefined, props.referenceId || undefined).then(async (res) => {
     columnDict.length = 0
     columnMap.clear()
     selectedColumnId.value = ''
     entityCondition.condition = {} as ConditionType
     defaultCondition.columnArray = []
+    policyColumnArray.value = []
     tableConfig.value = res.payload
     const promiseList = [] as Array<Promise<any>>
     tableConfig.value.columns.forEach(
@@ -2261,31 +2324,32 @@ const getTableConfigByName = (item: any) => {
           value: column.property,
           label: strRemoveLF(column.displayName),
         } as ValueLabel)
-        columnMap.set(column.id, column)
+        columnMap.set(String(column.id), column)
         if (column.fieldType === FIELD_TYPE.ENTITY) {
           getEntityConfig(column.reference)
         }
+        // 行级策略可引用任意列：列集合不按 filterAble 收窄，保证权限弹窗里始终有可配置的列
+        const columnConfig = {
+          title: column.displayName,
+          key: column.property,
+          fieldType: column.fieldType,
+          referenceDictOption: null,
+        }
+        if (
+          column.fieldType === FIELD_TYPE.SELECT ||
+          column.fieldType === FIELD_TYPE.TREE ||
+          column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+          column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE
+        ) {
+          let promise = dict
+            .getDict(column.reference)
+            .then((option: any) => (columnConfig.referenceDictOption = option))
+          promiseList.push(promise)
+        }
+        policyColumnArray.value.push(columnConfig)
+        // 默认筛选条件维持仅收 filterAble 列的原行为（与上面共用同一对象，字典选项一并生效）
         if (column.filterAble === '1') {
-          const columnConfig = {
-            title: column.displayName,
-            key: column.property,
-            fieldType: column.fieldType,
-            referenceDictOption: null,
-          }
-          if (
-            column.fieldType === FIELD_TYPE.SELECT ||
-            column.fieldType === FIELD_TYPE.TREE ||
-            column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
-            column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE
-          ) {
-            let promise = dict
-              .getDict(column.reference)
-              .then((option: any) => (columnConfig.referenceDictOption = option))
-            promiseList.push(promise)
-          }
-          if (column.filterAble) {
-            defaultCondition.columnArray.push(columnConfig)
-          }
+          defaultCondition.columnArray.push(columnConfig)
         }
       }
     )
@@ -2343,8 +2407,21 @@ const saveTableConfig = (silent = true) => {
 }
 
 const saveTableColumn = (silent = true) => {
-  return updatePortalColumn(columnMap.get(selectedColumnId.value), silent).then(() =>
-    getPortalConfig(tableConfig.value.name, selectedRole.value)
+  const column = columnMap.get(selectedColumnId.value)
+  // 保护：字段配成字典/树类型却未选「相关引用」(字典项)时，运行时会因取不到字典而抛 valueMap 崩溃，保存前拦截
+  if (
+    column &&
+    (column.fieldType === FIELD_TYPE.SELECT ||
+      column.fieldType === FIELD_TYPE.TREE ||
+      column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
+      column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) &&
+    isEmpty(column.reference)
+  ) {
+    message.warning(`字段「${column.displayName}」配置为字典/树类型，但未选择「相关引用」（字典项），请补全后再保存`)
+    return Promise.resolve()
+  }
+  return updatePortalColumn(column, silent).then(() =>
+    getPortalFullConfig(tableConfig.value.name, selectedRole.value)
   )
 }
 
@@ -2381,9 +2458,9 @@ const batchToggleSelect = (id: string, index: number, e: MouseEvent) => {
     // shift多选: 从上次点击到当前之间的所有项都选中
     const start = Math.min(batchLastClickedIndex.value, index)
     const end = Math.max(batchLastClickedIndex.value, index)
-    const ids = columns.slice(start, end + 1).map((c: any) => c.id)
+    const ids = columns.slice(start, end + 1).map((c: any) => String(c.id))
     const existing = new Set(batchSelectedIds.value)
-    ids.forEach((id) => existing.add(id))
+    ids.forEach((id: string) => existing.add(id))
     batchSelectedIds.value = [...existing]
   } else {
     // 普通点击: 切换选中状态
@@ -2398,7 +2475,7 @@ const batchToggleSelect = (id: string, index: number, e: MouseEvent) => {
 }
 
 const batchSelectAll = () => {
-  batchSelectedIds.value = (tableConfig.value.columns || []).map((c: any) => c.id)
+  batchSelectedIds.value = (tableConfig.value.columns || []).map((c: any) => String(c.id))
   batchLastClickedIndex.value = null
 }
 
@@ -2955,7 +3032,7 @@ const handleQuickConfigInModal = (column: any) => {
 }
 
 const handleColumnSelected = (event: MouseEvent, params: CellRenderArgs) => {
-  selectedColumnId.value = params.record.id
+  selectedColumnId.value = String(params.record.id)
   if (params.record.fieldType === FIELD_TYPE.ENTITY) {
     if (isNotEmpty(params.record.reference)) {
       getEntityConfig(params.record.reference)

@@ -12,8 +12,14 @@ const treeDict = useTreeStore()
 export const parse = (record: any, index: number, column: ColumnType, config: TableConfigType) => {
   record.index = (index + 1) + config.pageSize * (config.currentPage - 1)
   if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
+    if (!column.referenceDict) {
+      console.warn(`[Portal 字典字段缺配置] 字段 "${column.dataIndex}"（${column.title}）类型为 SELECT 但未配置字典项(referenceDict 为空)`)
+    }
     record[column.dataIndex] = dict.getLabel(column.referenceDict, record[column.dataIndex])
   } else if (column.fieldType === FIELD_TYPE.TREE || column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
+    if (!column.referenceDict) {
+      console.warn(`[Portal 树字段缺配置] 字段 "${column.dataIndex}"（${column.title}）类型为 TREE 但未配置树字典项(referenceDict 为空)`)
+    }
     record[column.dataIndex] = treeDict.getLabel(column.referenceDict, record[column.dataIndex])
   } else if (column.fieldType === FIELD_TYPE.DATE) {
     record[column.dataIndex] = isNotEmpty(record[column.dataIndex]) ? dayjs(record[column.dataIndex]).format('YYYY-MM-DD') : ''

@@ -24,6 +24,17 @@ export const getPortalConfig = (name: string, roleId?: any, dataMode?: string, r
   referenceId
 }, {}, false, false) as Promise<any>
 
+/**
+ * 运行态视图配置（GET /config）后端已按当前用户列权限剥离隐藏列；
+ * 配置抽屉/编辑器等需要完整列清单的场景改用本接口（GET /config/full）
+ */
+export const getPortalFullConfig = (name: string, roleId?: any, dataMode?: string, referenceId?: any) => get(buildGetApi('/config/full'), {
+  name,
+  roleId,
+  dataMode,
+  referenceId
+}, {}, false, false) as Promise<any>
+
 export const updatePortalConfig = (portalConfig: any, silent: boolean) => post(buildPostApi('/config'), undefined, portalConfig, !silent, !silent) as Promise<any>
 
 export const exportPortalConfig = (configName: string, roleId: string, fileName: string) => download(buildGetApi('/config/export'), fileName, {

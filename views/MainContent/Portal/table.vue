@@ -20,6 +20,7 @@ import { parseUrlParams } from '@/framework/network/utils'
 import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
 import { resolveDynamicVariable } from '@/framework/utils/common'
+import { columnToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN } from '@/framework/utils/portalColumnPerm'
 
 
 interface Props {
@@ -205,6 +206,8 @@ const loadPortalTableConfig = async () => {
     const tableRes = await getPortalTableByCode(darkTableId.value)
     if(tableRes.payload) {
       portalTableConfig.value = tableRes.payload[0]
+      // 运行态列权限：拉当前用户在该 portal 上的隐藏列 token
+      ensureHiddenColumns(portalTableConfig.value!.portalName)
 
       // 多Tab页面: 入口记录配了 tabItems 即宿主, 异步拉成员配置(#table 插槽渲染; 未配置走现状单表)
       const tabItemList = parseTabItems(portalTableConfig.value!.tabItems)
@@ -446,8 +449,24 @@ const paddingStyle = computed(() => {
   }
 })
 
+// 运行态隐藏列 token（sys_portal_column，按 portalName 缓存，多 Tab 各成员独立）
+const hiddenCMap = ref<Record<string, Set<string>>>({})
+const ensureHiddenColumns = (portalName?: string) => {
+  if (!portalName || hiddenCMap.value[portalName]) {
+    return
+  }
+  resolveMyHiddenTokens(RESOURCE_TYPE_PORTAL_COLUMN, portalName).then((set) => {
+    hiddenCMap.value = { ...hiddenCMap.value, [portalName]: set }
+  })
+}
+
 // 列过滤函数
 const columnFilter = (column: any) => {
+  // 列级权限（显示权限）：命中的隐藏列不渲染表头/单元格（数据后端已剔）
+  const hid = portalTableConfig.value?.portalName ? hiddenCMap.value[portalTableConfig.value.portalName] : undefined
+  if (hid && hid.has(columnToken(column.dataIndex))) {
+    return false
+  }
   // 如果没有配置 filterColumns，默认显示所有列
   if (!portalTableConfig.value?.filterColumns) {
     return true
@@ -548,6 +567,8 @@ const loadTabEntries = async (items: PortalTabItem[]) => {
       })
       .filter((entry): entry is PortalTabEntry => !!entry)
     activeTab.value = tabEntries.value[0]?.key || ''
+    // 各 Tab 成员可能属不同 portalName，逐个拉隐藏列 token
+    tabEntries.value.forEach(e => ensureHiddenColumns(e.portalName))
   } finally {
     tabLoading.value = false
   }
@@ -558,6 +579,11 @@ const tabAdvanceCondition = computed(() => ({ conditionList: condition.value } a
 
 /** 成员各自的列排除过滤(filterColumns 按成员自身配置生效, 与宿主无关) */
 const makeColumnFilter = (config: PortalTableVO) => (column: any) => {
+  // 列级权限（显示权限）：该成员 portalName 命中的隐藏列不渲染
+  const hid = config.portalName ? hiddenCMap.value[config.portalName] : undefined
+  if (hid && hid.has(columnToken(column.dataIndex))) {
+    return false
+  }
   if (!config.filterColumns) {
     return true
   }

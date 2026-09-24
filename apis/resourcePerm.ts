@@ -12,6 +12,8 @@ const buildPostApi = (url: string) => buildPostApiByType(url, API_PREFIX, baseDo
 export interface PermItem {
   subjectType: number // 0=角色 1=用户 2=用户组 3=部门
   subjectId: string
+  // 行级策略扩展信息（JSON 字符串，形如 {"condition":{...AdvancedQuery}}），仅低代码 Portal 行权限使用；为空表示不加行限制
+  extraData?: string
 }
 
 export interface ResourcePermRecord {
@@ -20,6 +22,7 @@ export interface ResourcePermRecord {
   resourceId: string
   subjectType: number
   subjectId: string
+  extraData?: string
   createBy: string
   createAt: string
 }
@@ -64,3 +67,13 @@ export const getResourcePermBySubject = (resourceType: string, subjectType: numb
  */
 export const saveResourcePermBySubject = (data: { resourceType: string; subjectType: number; subjectId: string; resourceIds: string[] }) =>
   post(buildPostApi('/save-by-subject'), {}, data, true) as Promise<any>
+
+/**
+ * 查询当前用户命中某资源的授权行的扩展数据（extra_data 原始串列表）
+ * <p>
+ * 列级权限运行态使用：authorization 侧不解释内容（extra_data 对它是透明的），只按当前用户命中
+ * （含主体递归）返回若干原始串；调用方（前端）自行解析 {@code {"columns":["c:prop",…]}} 合并成隐藏列 token。
+ * 未登录 / 无命中 / 无配置时返回空数组（表示不隐藏任何列）。
+ */
+export const getMyMatchedExtra = (resourceType: string, resourceId: string) =>
+  get(buildGetApi('/my-matched-extra'), { resourceType, resourceId }, {}, false, false) as Promise<{ payload: string[] }>

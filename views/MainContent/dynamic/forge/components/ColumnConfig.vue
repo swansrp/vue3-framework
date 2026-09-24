@@ -9,15 +9,28 @@
       style="margin-bottom: 16px"
     />
     <div class="toolbar">
-      <a-button
-        type="primary"
-        @click="handleAdd"
-      >
-        <template #icon>
-          <PlusOutlined />
-        </template>
-        添加字段
-      </a-button>
+      <a-space>
+        <a-button
+          type="primary"
+          @click="handleAdd"
+        >
+          <template #icon>
+            <PlusOutlined />
+          </template>
+          添加字段
+        </a-button>
+        <a-tooltip title="列权限：限定每一列对哪些角色/部门/用户组/个人可见">
+          <a-button
+            :disabled="!dataSource.length"
+            @click="openPermManager"
+          >
+            <template #icon>
+              <SafetyCertificateOutlined />
+            </template>
+            列权限
+          </a-button>
+        </a-tooltip>
+      </a-space>
     </div>
 
     <a-table
@@ -396,11 +409,19 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 列级粒度权限配置 -->
+    <ResourcePermManager
+      v-model:visible="permVisible"
+      :resource-type="PERM_RESOURCE_TYPE"
+      :resources="permColumnResources"
+      title="矩阵列权限配置"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, SafetyCertificateOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { pinyin } from 'pinyin'
 import { ref, reactive, onMounted, computed } from 'vue'
@@ -410,6 +431,8 @@ import { COLUMN_TYPES, FIELD_TYPES } from '../types'
 
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
+import ResourcePermManager from '@/framework/components/common/ResourcePerm/ResourcePermManager.vue'
+import { useResourcePerm } from '@/framework/components/common/ResourcePerm/useResourcePerm'
 import {
   sysMatrixColumnGeneralSelect,
   sysMatrixColumnAdd,
@@ -441,6 +464,18 @@ const columns = [
 
 const dataSource = ref<ColumnInfo[]>([])
 const loading = ref(false)
+
+/** 列级授权的资源类型，与后端 ColumnPermGuard.RESOURCE_TYPE_MATRIX_COLUMN 保持一致 */
+const PERM_RESOURCE_TYPE = 'sys_matrix_column'
+
+const { permVisible, openPerm } = useResourcePerm()
+// 授权资源 = 本矩阵的全部列配置行，展示名优先用字段注释；
+// 新增字段后需重进本页面才会出现在权限树里（授权面向已落库的列 id）
+const permColumnResources = computed(() => dataSource.value.map(item => ({
+  id: String(item.id ?? ''),
+  name: item.columnComment || item.columnName || String(item.id ?? '')
+})))
+const openPermManager = () => openPerm(PERM_RESOURCE_TYPE, permColumnResources.value)
 const isInitialized = ref(false) // 标记是否已初始化
 const matrixList = ref<MatrixInfo[]>([])
 

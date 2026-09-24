@@ -17,6 +17,17 @@
           </template>
           刷新
         </a-button>
+        <a-tooltip title="列权限：限定每一列对哪些角色/部门/用户组/个人可见">
+          <a-button
+            :disabled="!dataSource.length"
+            @click="openPermManager"
+          >
+            <template #icon>
+              <SafetyCertificateOutlined />
+            </template>
+            列权限
+          </a-button>
+        </a-tooltip>
       </a-space>
     </div>
 
@@ -99,17 +110,27 @@
       :table-id="dataset.tableId"
       @ok="handleSubmit"
     />
+
+    <!-- 列级粒度权限配置 -->
+    <ResourcePermManager
+      v-model:visible="permVisible"
+      :resource-type="PERM_RESOURCE_TYPE"
+      :resources="permColumnResources"
+      title="数据集列权限配置"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { DownOutlined, PlusOutlined, ReloadOutlined, UpOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, PlusOutlined, ReloadOutlined, SafetyCertificateOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import type { DatasetColumnInfo, DatasetInfo } from '../types'
 import ColumnEditModal from './ColumnEditModal.vue'
 
+import ResourcePermManager from '@/framework/components/common/ResourcePerm/ResourcePermManager.vue'
+import { useResourcePerm } from '@/framework/components/common/ResourcePerm/useResourcePerm'
 import { 
   getColumns, 
   datasetConfigAddColumn, 
@@ -143,6 +164,12 @@ const modalVisible = ref(false)
 const modalTitle = ref('添加列')
 const currentColumn = ref<DatasetColumnInfo | null>(null)
 
+/** 列级授权的资源类型，与后端 ColumnPermGuard.RESOURCE_TYPE_DATASET_COLUMN 保持一致 */
+const PERM_RESOURCE_TYPE = 'sys_dataset_column'
+
+const { permVisible, openPerm } = useResourcePerm()
+const openPermManager = () => openPerm(PERM_RESOURCE_TYPE, permColumnResources.value)
+
 // 去掉别名的单引号
 const removeQuotes = (alias?: string) => {
   if (!alias) return ''
@@ -151,6 +178,13 @@ const removeQuotes = (alias?: string) => {
   }
   return alias
 }
+
+// 授权资源 = 本数据集的全部列配置行；展示名优先用别名，退让到备注/序号
+// 注意：新增列后需重进本页面才会出现在权限树里（授权面向已落库的列 id）
+const permColumnResources = computed(() => dataSource.value.map((item, index) => ({
+  id: String(item.id ?? ''),
+  name: removeQuotes(item.columnAlias) || item.remark || `第 ${index + 1} 列`
+})))
 
 const loadData = async () => {
   loading.value = true
