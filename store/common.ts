@@ -90,15 +90,20 @@ export const dictStore = defineStore('dictStore', {
       }
     }, getLabel(dictName: string, value: number | string) {
       if (isEmpty(value)) return ''
+      const dict = this.map.get(dictName)
+      // 字典未配置/未加载（如字段选了字典类型却没选具体字典项）时原样回显，避免整表渲染崩溃
+      if (isEmpty(dict)) return value.toString()
       const dictArray = value.toString().split(',')
       const display = [] as Array<string>
       dictArray.forEach((item: any) => {
-        display.push(this.map.get(dictName).valueMap.get(item))
+        display.push(dict.valueMap.get(item))
       })
       return display.join(',')
 
     }, getValue(dictName: string, label: number | string) {
-      return this.map.get(dictName).labelMap.get(label)
+      const dict = this.map.get(dictName)
+      if (isEmpty(dict)) return undefined
+      return dict.labelMap.get(label)
     }, async getAllDict(dictName: string) {
       if (isEmpty(this.allDict)) {
         return await getDictNameList({ name: dictName }).then((res) => {
@@ -140,15 +145,20 @@ export const useTreeStore = defineStore('treeStore', {
       })
     }, getLabel(dictName: string, value: number | string) {
       if (isEmpty(value)) return ''
+      const dict = this.map.get(dictName)
+      // 字典未配置/未加载时原样回显，避免整表渲染崩溃
+      if (isEmpty(dict)) return value.toString()
       const dictArray = value.toString().split(',')
       const display = [] as Array<string>
       dictArray.forEach((item: any) => {
-        display.push(this.map.get(dictName).valueMap.get(item))
+        display.push(dict.valueMap.get(item))
       })
       return display.join(',')
 
     }, getValue(dictName: string, label: number | string) {
-      return this.map.get(dictName).labelMap.get(label)
+      const dict = this.map.get(dictName)
+      if (isEmpty(dict)) return undefined
+      return dict.labelMap.get(label)
     }, async getAllDict() {
       if (isEmpty(this.allDict)) {
         return await getAllTreeDict().then((res: any) => {

@@ -270,54 +270,70 @@ const scrollToBottom = (container: Ref, force = false) => {
   }
 }
 
+// 内置时间变量统一按东八区(GMT+8)日历取值，与后端 ConditionVariableUtil（固定 GMT+8）对齐：
+// 旧实现用 toISOString() 按 UTC 日历取值，东八区每天 08:00 前会取到「昨天」，属历史缺陷（已修）；
+// ${currentDateTime} 同步改输出 "yyyy-MM-dd HH:mm:ss"（ISO 带 T 格式 MySQL DATETIME 列无法直接比较）。
+const GMT8_OFFSET_MS = 8 * 60 * 60 * 1000
+const DAY_OFFSET_MS = 24 * 60 * 60 * 1000
+// 平移 +8h 后用 getUTC* 读出的即东八区挂钟值，不随用户机器时区漂移
+const gmt8Date = (offsetDays: number): Date =>
+  new Date(Date.now() + GMT8_OFFSET_MS + offsetDays * DAY_OFFSET_MS)
+const pad2 = (n: number): string => n.toString().padStart(2, '0')
+const fmtDay = (d: Date): string => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
+const fmtMonth = (y: number, m: number): string => `${y}${pad2(m)}`
+const fmtDateTime = (d: Date): string =>
+  `${fmtDay(d)} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())}`
+// 月份加减走 (年*12+月) 整数运算，避开 Date.setMonth 月末进位陷阱（3月31日 -1月 会变 3 月）
+const shiftMonth = (y: number, m: number, delta: number): { y: number, m: number } => {
+  const idx = y * 12 + (m - 1) + delta
+  return { y: Math.floor(idx / 12), m: (idx % 12 + 12) % 12 + 1 }
+}
+
+// 通用格式变量 ${now:pattern}：按 Java DateTimeFormatter 语义的常见 token 子集格式化东八区当前时刻，
+// 与后端 ConditionVariableUtil.formatNow 对齐（注意不用 dayjs：dayjs 的年份/日期 token 是大写 YYYY/DD，与 Java 小写不一致）
+const NOW_TOKEN_PREFIX = 'now:'
+const formatNow = (pattern: string, d: Date): string => {
+  const tokens: Record<string, string> = {
+    yyyy: `${d.getUTCFullYear()}`,
+    yy: pad2(d.getUTCFullYear() % 100),
+    MM: pad2(d.getUTCMonth() + 1),
+    M: `${d.getUTCMonth() + 1}`,
+    dd: pad2(d.getUTCDate()),
+    d: `${d.getUTCDate()}`,
+    HH: pad2(d.getUTCHours()),
+    H: `${d.getUTCHours()}`,
+    mm: pad2(d.getUTCMinutes()),
+    m: `${d.getUTCMinutes()}`,
+    ss: pad2(d.getUTCSeconds()),
+    s: `${d.getUTCSeconds()}`,
+  }
+  // 分支长短语优先（yyyy 先于 yy、HH 先于 H），未知 token 原样输出
+  return pattern.replace(/yyyy|yy|MM|M|dd|d|HH|H|mm|m|ss|s/g, (t) => tokens[t] ?? t)
+}
+
 // 解析内置时间变量并返回实际时间值（兜底+专项双模式）
 const resolveDynamicVariable = (value: string | undefined): string | undefined => {
   if (!value || value === '' || value === null || value === undefined) {
     return undefined
   }
 
-  // 定义内置时间变量映射
+  // 定义内置时间变量映射（每次调用现算，跨天/跨月自动跟随）
+  const today = gmt8Date(0)
+  const year = today.getUTCFullYear()
+  const month = today.getUTCMonth() + 1
+  const lastMonth = shiftMonth(year, month, -1)
+  const nextMonth = shiftMonth(year, month, 1)
   const timeVariables: Record<string, string> = {
-    '${currentYear}': new Date().getFullYear().toString(),
-    '${currentMonth}': `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}`,
-    '${currentDay}': new Date().toISOString().slice(0, 10),
-    '${currentDateTime}': new Date().toISOString(),
-    '${lastYear}': `${new Date().getFullYear() - 1}`,
-    '${nextYear}': `${new Date().getFullYear() + 1}`,
-    '${lastMonth}': (() => {
-      const now = new Date()
-      let year = now.getFullYear()
-      let month = now.getMonth() + 1
-      if (month === 1) {
-        year = year - 1
-        month = 12
-      } else {
-        month = month - 1
-      }
-      return `${year}${month.toString().padStart(2, '0')}`
-    })(),
-    '${nextMonth}': (() => {
-      const now = new Date()
-      let year = now.getFullYear()
-      let month = now.getMonth() + 1
-      if (month === 12) {
-        year = year + 1
-        month = 1
-      } else {
-        month = month + 1
-      }
-      return `${year}${month.toString().padStart(2, '0')}`
-    })(),
-    '${lastDay}': (() => {
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      return yesterday.toISOString().slice(0, 10)
-    })(),
-    '${nextDay}': (() => {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      return tomorrow.toISOString().slice(0, 10)
-    })(),
+    '${currentYear}': `${year}`,
+    '${currentMonth}': fmtMonth(year, month),
+    '${currentDay}': fmtDay(today),
+    '${currentDateTime}': fmtDateTime(today),
+    '${lastYear}': `${year - 1}`,
+    '${nextYear}': `${year + 1}`,
+    '${lastMonth}': fmtMonth(lastMonth.y, lastMonth.m),
+    '${nextMonth}': fmtMonth(nextMonth.y, nextMonth.m),
+    '${lastDay}': fmtDay(gmt8Date(-1)),
+    '${nextDay}': fmtDay(gmt8Date(1)),
   }
 
   // 检查是否是内置时间变量
@@ -325,6 +341,11 @@ const resolveDynamicVariable = (value: string | undefined): string | undefined =
     const resolvedValue = timeVariables[value]
     if (resolvedValue !== undefined) {
       return resolvedValue
+    }
+    // 固定表未命中再试 ${now:pattern} 通用格式（与后端同口径，非法 pattern 原样保留）
+    const inner = value.slice(2, -1)
+    if (inner.startsWith(NOW_TOKEN_PREFIX)) {
+      return formatNow(inner.slice(NOW_TOKEN_PREFIX.length), gmt8Date(0))
     }
   }
 
