@@ -1,4 +1,5 @@
 import { defineStore, getActivePinia } from 'pinia'
+import { localStorageMethods } from '@/framework/utils/common'
 
 const THEME_STORAGE_KEY = 'app-theme'
 
@@ -23,7 +24,7 @@ let globalSwitchEnabled = false
 
 function resolveThemeId(): ThemeId {
   if (!globalSwitchEnabled) return globalDefaultTheme
-  const saved = localStorage.getItem(THEME_STORAGE_KEY) || ''
+  const saved = localStorageMethods.getLocalStorage(THEME_STORAGE_KEY)
   return VALID_THEME_IDS.has(saved) ? (saved as ThemeId) : globalDefaultTheme
 }
 
@@ -86,7 +87,7 @@ export const useThemeStore = defineStore('theme', {
     },
     applyTheme() {
       document.documentElement.setAttribute('data-theme', this.themeId)
-      localStorage.setItem(THEME_STORAGE_KEY, this.themeId)
+      localStorageMethods.setLocalStorage(THEME_STORAGE_KEY, this.themeId)
     }
   }
 })
