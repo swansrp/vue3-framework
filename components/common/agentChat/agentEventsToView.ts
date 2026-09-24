@@ -16,13 +16,13 @@
  * | run_start / finish / error / stopped | 只用于判终局（取 status 快照为准） |
  * | status.live | 未出结论时作为流式正文（替换式，与后端 pushLive 同口径） |
  */
-import type { AgentEventX, AgentSessionStateT } from './types'
 import {
   completeStep,
   newAssistantMessage,
   SPAWN_TOOL
 } from './processTree'
 import type { AssistantView, ToolStep, UiMessage } from './processTree'
+import type { AgentEventX, AgentSessionStateT } from './types'
 
 const TEXT_TYPES = new Set(['llm_output'])
 const THINK_TYPES = new Set(['log'])

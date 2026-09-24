@@ -202,94 +202,94 @@
       />
 
       <template v-if="!processTree">
-      <template
-        v-for="(group, gi) in thinkGroups"
-        :key="`g-${group.id}`"
-      >
-        <div class="think-group">
-          <div
-            class="think-header"
-            @click="toggleThink(group, gi)"
-          >
-            <RightOutlined
-              class="think-arrow"
-              :class="{ 'is-open': !isThinkCollapsed(group, gi) }"
-            />
-            <BulbOutlined class="think-icon" />
-            <span class="think-title">
-              {{ group.round != null ? `第 ${group.round} 轮思考` : '思考过程' }}
-            </span>
-            <span class="think-count">{{ group.events.length }} 条</span>
-          </div>
-          <div
-            v-show="!isThinkCollapsed(group, gi)"
-            class="think-body"
-          >
+        <template
+          v-for="(group, gi) in thinkGroups"
+          :key="`g-${group.id}`"
+        >
+          <div class="think-group">
             <div
-              v-for="ev in group.events"
-              :key="ev.seq"
-              class="think-line"
-              :class="`ev-${ev.type}`"
+              class="think-header"
+              @click="toggleThink(group, gi)"
             >
-              <!-- 消息体渲染器：slot 优先，renderers 注册次之，通用摘要兜底 -->
-              <slot
-                name="renderer"
-                :event="ev"
-                :payload="ev.payload"
+              <RightOutlined
+                class="think-arrow"
+                :class="{ 'is-open': !isThinkCollapsed(group, gi) }"
+              />
+              <BulbOutlined class="think-icon" />
+              <span class="think-title">
+                {{ group.round != null ? `第 ${group.round} 轮思考` : '思考过程' }}
+              </span>
+              <span class="think-count">{{ group.events.length }} 条</span>
+            </div>
+            <div
+              v-show="!isThinkCollapsed(group, gi)"
+              class="think-body"
+            >
+              <div
+                v-for="ev in group.events"
+                :key="ev.seq"
+                class="think-line"
+                :class="`ev-${ev.type}`"
               >
-                <component
-                  :is="renderers[ev.type]"
-                  v-if="renderers && renderers[ev.type]"
+                <!-- 消息体渲染器：slot 优先，renderers 注册次之，通用摘要兜底 -->
+                <slot
+                  name="renderer"
                   :event="ev"
                   :payload="ev.payload"
-                />
-                <template v-else>
-                  <span class="line-tag">{{ lineTag(ev.type) }}</span>
-                  <span class="line-text">{{ lineText(ev) }}</span>
-                  <!-- 长行展开（思考归档等全文不截断，默认预览 300 字） -->
-                  <a
-                    v-if="fullText(ev).length > 300"
-                    class="line-expand"
-                    @click="toggleExpand(ev.seq)"
-                  >{{ expandedSeqs.has(ev.seq) ? '收起' : '展开' }}</a>
-                </template>
-              </slot>
-            </div>
+                >
+                  <component
+                    :is="renderers[ev.type]"
+                    v-if="renderers && renderers[ev.type]"
+                    :event="ev"
+                    :payload="ev.payload"
+                  />
+                  <template v-else>
+                    <span class="line-tag">{{ lineTag(ev.type) }}</span>
+                    <span class="line-text">{{ lineText(ev) }}</span>
+                    <!-- 长行展开（思考归档等全文不截断，默认预览 300 字） -->
+                    <a
+                      v-if="fullText(ev).length > 300"
+                      class="line-expand"
+                      @click="toggleExpand(ev.seq)"
+                    >{{ expandedSeqs.has(ev.seq) ? '收起' : '展开' }}</a>
+                  </template>
+                </slot>
+              </div>
 
-            <!-- LLM 流式实时内容作为当前轮思考组末行（替换式 live，与问数链同口径）：
+              <!-- LLM 流式实时内容作为当前轮思考组末行（替换式 live，与问数链同口径）：
                  默认展开看全文详情（内滚跟随），可收起仅留状态行（字数实时跳动）；终态后端清空自然隐藏，
                  轮末全文另由【LLM 思考归档】事件留痕可展开 -->
-            <div
-              v-if="gi === thinkGroups.length - 1 && liveText"
-              class="think-line ev-live"
-            >
-              <span class="line-tag">流式</span>
-              <span class="line-text live-summary">{{ liveSummary }}</span>
-              <a
-                v-if="liveDetail"
-                class="line-expand"
-                @click="toggleLiveExpand"
-              >{{ liveExpanded ? '收起' : '展开' }}</a>
-            </div>
-            <div
-              v-if="gi === thinkGroups.length - 1 && liveExpanded && liveDetail"
-              class="live-detail"
-            >
-              {{ liveDetail }}
+              <div
+                v-if="gi === thinkGroups.length - 1 && liveText"
+                class="think-line ev-live"
+              >
+                <span class="line-tag">流式</span>
+                <span class="line-text live-summary">{{ liveSummary }}</span>
+                <a
+                  v-if="liveDetail"
+                  class="line-expand"
+                  @click="toggleLiveExpand"
+                >{{ liveExpanded ? '收起' : '展开' }}</a>
+              </div>
+              <div
+                v-if="gi === thinkGroups.length - 1 && liveExpanded && liveDetail"
+                class="live-detail"
+              >
+                {{ liveDetail }}
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- 状态条（组后平铺：暂停/恢复/指导语） -->
-        <div
-          v-for="ev in statusEventsBetween(group.endSeq, group.nextSeq)"
-          :key="`s-${ev.seq}`"
-          class="status-strip"
-          :class="`strip-${ev.type}`"
-        >
-          {{ statusText2(ev) }}
-        </div>
-      </template>
+          <!-- 状态条（组后平铺：暂停/恢复/指导语） -->
+          <div
+            v-for="ev in statusEventsBetween(group.endSeq, group.nextSeq)"
+            :key="`s-${ev.seq}`"
+            class="status-strip"
+            :class="`strip-${ev.type}`"
+          >
+            {{ statusText2(ev) }}
+          </div>
+        </template>
       </template>
 
       <!-- 尾随状态条（最后一组之后） -->
@@ -592,6 +592,8 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, nextTick, reactive, ref, watch, type Component } from 'vue'
 
+import { agentEventsToView } from './agentEventsToView'
+import AgentProcessTree from './AgentProcessTree.vue'
 import {
   isTerminalStatus, parseChatOption, type AgentConfirmationT, type AgentEventX, type AgentPlanItemT
 } from './types'
@@ -602,8 +604,6 @@ import {
 } from '@/framework/apis/agent'
 import AgentStages from '@/framework/components/common/agentStages/index.vue'
 import type { AgentStageItem } from '@/framework/components/common/agentStages/types'
-import AgentProcessTree from './AgentProcessTree.vue'
-import { agentEventsToView } from './agentEventsToView'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化自动重置轮询） */
