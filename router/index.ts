@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import {
   createRouter,
   createWebHashHistory,
@@ -62,8 +63,29 @@ const router = createRouter({
   routes: staticRoutes
 })
 
-export const createStaticRoutes = (path: string, component: string, metaPublic = true) => {
-  router.addRoute({ path: path, name: path, component: getComponent(component), meta: { public: metaPublic } })
+// ==================== 静态路由 keep-alive ====================
+// 框架自带 keep-alive 只活在 MainContent 壳内（:include 由菜单节点 isCache 收集），
+// 而 createStaticRoutes 注册的顶级整页路由由根 <router-view /> 渲染、在壳外 ⇒ 菜单配缓存管不到它们。
+// 接口：注册时声明 keepAliveName（须与 SFC defineOptions({ name }) 一致），
+// 业务层根 App.vue 用 getStaticKeepAliveNames() 作为 <keep-alive :include> 消费（未消费则该声明无副作用）。
+const staticKeepAliveNames = ref<string[]>([])
+export const getStaticKeepAliveNames = () => staticKeepAliveNames.value
+
+export const createStaticRoutes = (path: string, component: string, metaPublic = true, keepAliveName?: string) => {
+  const comp = getComponent(component)
+  router.addRoute({ path: path, name: path, component: comp, meta: { public: metaPublic } })
+  if (keepAliveName) {
+    staticKeepAliveNames.value.push(keepAliveName)
+    if (import.meta.env.DEV && comp) {
+      // include 按组件名匹配，不匹配则 keep-alive 静默失效——dev 下解析真实组件名比对，报错给到控制台
+      comp().then((module: any) => {
+        const realName = module.default?.name || module.default?.__name
+        if (realName !== keepAliveName) {
+          console.warn(`[router] 静态路由 ${path} 组件名(${realName})与 keepAliveName(${keepAliveName})不一致，keep-alive 不会生效；请在该 SFC 加 defineOptions({ name: '${keepAliveName}' })`)
+        }
+      }).catch(() => {})
+    }
+  }
 }
 
 /**
