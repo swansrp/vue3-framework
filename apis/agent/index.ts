@@ -111,8 +111,12 @@ export const getRatingStat = (params: {
     false
   )
 
-// ==================== flow 编排管理（自 chatbi 上提） ====================
+// 单条评价读取（两个评价写口的对称读口，回显"已点赞/已点踩"点亮态）：ratingId 口径同写口
+// （会话评价=sessionId，通用评价=conversationId:messageId）；未评价或已过保留期 payload 为空
+export const getRatingDetail = (skillCode: string, ratingId: string) =>
+  get(buildGetApiByType('/rating/detail', agentApiType), { skillCode, ratingId }, {}, false, false, false)
 
+// ==================== flow 编排管理（自 chatbi 上提） ====================
 // skill 注册表（skill 下链清单 + 画布可用结点类型 schema；工作台启动数据源）
 export const getFlowRegistry = (skillCode: string) =>
   get(buildGetApiByType('/flow/registry', agentApiType), { skillCode }, {}, false, false, false)
