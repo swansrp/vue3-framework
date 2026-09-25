@@ -34,6 +34,15 @@ export const navigation2Login = (includeRedirectUri = true) => {
     return Promise.resolve(ssoEntryHandler())
   }
   let redirectUri
+  if (!ssoLoginUrl) {
+    // 未配置 SSO 登录地址: 直接进本地登录页
+    const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
+    const redirect_uri = includeRedirectUri && url !== 'login' ? url : undefined
+    return router.replace({
+      path: '/login',
+      query: { redirect_uri } as LocationQueryRaw
+    }).then(() => window.location.reload())
+  }
   if (isNotEmpty(import.meta.env.VITE_ssoDomain)) {
     redirectUri = import.meta.env.VITE_ssoDomain
     if (redirectUri === 'localhost') {
@@ -59,7 +68,9 @@ export const navigation2Login = (includeRedirectUri = true) => {
 
 
 const _executeLogin = (token: any) => {
-  if (import.meta.env.VITE_ssoDomain === 'localhost') {
+  // ssoDomain 为空 = 未配置 SSO(同域自部署), 与 localhost 一致直接进本地登录页,
+  // 不能走认证中心 ssoLogin(/auth/login), 否则后端 404 导致白屏
+  if (!import.meta.env.VITE_ssoDomain || import.meta.env.VITE_ssoDomain === 'localhost') {
     const ssoLoginUrl = import.meta.env.VITE_ssoLoginUrl
     localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
     const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
