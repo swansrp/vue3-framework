@@ -76,7 +76,10 @@ const _executeLogin = (token: any) => {
     const url = removeURLParameter(window.location.href, 'redirect_uri').split('#/')[1]
     // 如果当前已经在 login 页面，不需要设置 redirect_uri，否则登录成功后又会跳回 login
     const redirect_uri = url && url !== 'login' ? url : undefined
-    return router.replace({ path: ssoLoginUrl, query: { redirect_uri } as LocationQueryRaw })
+    // 未配置 SSO 时 VITE_ssoLoginUrl 为空串，replace({path:''}) 落不进 /login，
+    // 守卫会再次 checkLoginState ⇒ checkLoginState↔_executeLogin 死循环刷 /token，
+    // 兜底到本地登录页须与 navigation2Login 的 '/login' 一致
+    return router.replace({ path: ssoLoginUrl || '/login', query: { redirect_uri } as LocationQueryRaw })
   } else if (ssoEntryHandler) {
     // 宿主自定义 SSO（如飞书）：由注入器发起登录
     return Promise.resolve(ssoEntryHandler(token)).then(() => undefined)
