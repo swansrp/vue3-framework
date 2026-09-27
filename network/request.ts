@@ -97,10 +97,11 @@ export function setRequestHeaderProvider(provider: RequestHeaderProvider | null)
 
 /**
  * 业务侧按次请求头控制用的 axios 配置扩展：
+ * explicitHeaderKeys＝本次经 request() 第 7 参显式传入的头键（provider 对它们让位）；
  * omitHeaderKeys 列出本次请求要抑制（删除）的头键（如跨空间只读不带 X-Space-Id）。
  * 不传即维持既往行为，向后兼容。
  */
-type SpaceAwareConfig = AxiosRequestConfig & { omitHeaderKeys?: string[] }
+type SpaceAwareConfig = AxiosRequestConfig & { omitHeaderKeys?: string[], explicitHeaderKeys?: string[] }
 
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -112,11 +113,17 @@ axiosInstance.interceptors.request.use(
     if (requestHeaderProvider) {
       const extraHeaders = requestHeaderProvider()
       if (extraHeaders) {
+        // 本次调用显式传入（request() 第 7 参）的键集合——provider 只对"非显式"键做全局覆盖。
+        // 注意不能用 config.headers[key] !== undefined 判"是否显式"：拦截器时点 headers 恒含
+        // axios 默认与 request() 预置的 Content-Type/api-version/client-type/X-Request-Id/Authorization，
+        // 那会把 provider 对这些键的值静默丢弃。
+        const explicitKeys = (((config as unknown as SpaceAwareConfig).explicitHeaderKeys) || [])
+          .map(k => k.toLowerCase())
         Object.keys(extraHeaders).forEach((key) => {
-          // 按次覆盖：调用方已在本次请求显式带该头（见 request() 的 headers 入参）时不覆盖，
+          // 按次覆盖：仅当本次请求显式带了该头（大小写不敏感）时 provider 让位，
           // 供跨空间运营页等「同页既要带指定空间头、又要抑制全局头」的场景使用；
-          // 不传 headers 的既有页面 config.headers[key] 恒为 undefined，行为与既往完全一致。
-          if (config.headers[key] !== undefined) return
+          // 不传 headers 的既有页面 explicitHeaderKeys 为空，行为与既往一致。
+          if (explicitKeys.includes(key.toLowerCase())) return
           const value = extraHeaders[key]
           if (value !== undefined && value !== null && value !== '') {
             config.headers[key] = value
@@ -125,12 +132,18 @@ axiosInstance.interceptors.request.use(
       }
     }
 
-    // 按次抑制：request() 传入 omitHeaderKeys 的键，即便全局 provider 加了也删除
-    // （跨空间只读端点要求不带 X-Space-Id——后端租户拦截器无上下文才跨空间读）
+    // 按次抑制：request() 传入 omitHeaderKeys 的键，即便全局 provider 加了也要删除
+    // （跨空间只读端点不带 X-Space-Id——后端 cross 声明＋服务层显式关隔离做跨空间读）
     const omitHeaderKeys = (config as unknown as SpaceAwareConfig).omitHeaderKeys
     if (omitHeaderKeys) {
       omitHeaderKeys.forEach(key => {
-        delete config.headers[key]
+        // axios 1.x 进拦截器时 headers 已是 AxiosHeaders：delete(key) 大小写不敏感；
+        // 纯对象形态（防御异常路径）回退裸 delete。删除不存在的键均为无害 no-op。
+        if (typeof (config.headers as { delete?: unknown }).delete === 'function') {
+          (config.headers as unknown as { delete: (k: string) => void }).delete(key)
+        } else {
+          delete (config.headers as Record<string, unknown>)[key]
+        }
       })
     }
 
@@ -260,7 +273,9 @@ function request(apiType: ApiType,
   showLoading = true,
   showErr = true,
   headers?: Record<string, string | null>) {
-  // 拆分显式覆盖头（非空值进 config.headers，空值键进 omitHeaderKeys 供拦截器删除）
+  // 拆分显式覆盖头（非空值进 config.headers，空值键进 omitHeaderKeys 供拦截器删除）；
+  // explicitHeaderKeys 把"本次显式带了哪些键"告知拦截器——provider 只对显式键让位，
+  // 其余键（含 Content-Type 等预置头）照常全局覆盖
   const explicitHeaders: Record<string, string> = {}
   const omitHeaderKeys: string[] = []
   if (headers) {
@@ -286,7 +301,8 @@ function request(apiType: ApiType,
       'X-Request-Id': generateRequestId(),
       ...explicitHeaders
     },
-    omitHeaderKeys
+    omitHeaderKeys,
+    explicitHeaderKeys: Object.keys(explicitHeaders)
   }
   return axiosInstance(config).then(resp => {
     if (resp.data.status?.code !== errCode.SUCCESS) {
