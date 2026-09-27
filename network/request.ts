@@ -1,5 +1,5 @@
 import { message } from 'ant-design-vue'
-import axios, { AxiosProgressEvent, AxiosResponse } from 'axios'
+import axios, { AxiosProgressEvent, AxiosRequestConfig, AxiosResponse } from 'axios'
 import qs from 'qs'
 
 import { name } from '@/../package.json'
@@ -95,6 +95,13 @@ export function setRequestHeaderProvider(provider: RequestHeaderProvider | null)
   requestHeaderProvider = provider
 }
 
+/**
+ * 业务侧按次请求头控制用的 axios 配置扩展：
+ * omitHeaderKeys 列出本次请求要抑制（删除）的头键（如跨空间只读不带 X-Space-Id）。
+ * 不传即维持既往行为，向后兼容。
+ */
+type SpaceAwareConfig = AxiosRequestConfig & { omitHeaderKeys?: string[] }
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const { data, showLoading } = config.data as configDataType
@@ -106,12 +113,25 @@ axiosInstance.interceptors.request.use(
       const extraHeaders = requestHeaderProvider()
       if (extraHeaders) {
         Object.keys(extraHeaders).forEach((key) => {
+          // 按次覆盖：调用方已在本次请求显式带该头（见 request() 的 headers 入参）时不覆盖，
+          // 供跨空间运营页等「同页既要带指定空间头、又要抑制全局头」的场景使用；
+          // 不传 headers 的既有页面 config.headers[key] 恒为 undefined，行为与既往完全一致。
+          if (config.headers[key] !== undefined) return
           const value = extraHeaders[key]
           if (value !== undefined && value !== null && value !== '') {
             config.headers[key] = value
           }
         })
       }
+    }
+
+    // 按次抑制：request() 传入 omitHeaderKeys 的键，即便全局 provider 加了也删除
+    // （跨空间只读端点要求不带 X-Space-Id——后端租户拦截器无上下文才跨空间读）
+    const omitHeaderKeys = (config as unknown as SpaceAwareConfig).omitHeaderKeys
+    if (omitHeaderKeys) {
+      omitHeaderKeys.forEach(key => {
+        delete config.headers[key]
+      })
     }
 
     if (showLoading) {
@@ -231,13 +251,26 @@ function post(apiType: ApiType,
 // showErr 是否显示操作成功提示信息
 // showLoading 是否需要在等待期间显示转菊花
 // showErr 是否显示错误提示信息
+// headers 按次请求头覆盖：值为空（null/undefined/''）＝抑制该头（含全局 provider 注入的键，如跨空间读不带 X-Space-Id）；
+//         值为非空字符串＝显式设置该头（provider 不再覆盖）。仅跨空间运营页等需要精确控制 X-Space-Id 的调用使用。
 function request(apiType: ApiType,
   params: object = {},
   body: object = {},
   showSuccess = false,
   showLoading = true,
-  showErr = true) {
-  return axiosInstance({
+  showErr = true,
+  headers?: Record<string, string | null>) {
+  // 拆分显式覆盖头（非空值进 config.headers，空值键进 omitHeaderKeys 供拦截器删除）
+  const explicitHeaders: Record<string, string> = {}
+  const omitHeaderKeys: string[] = []
+  if (headers) {
+    Object.keys(headers).forEach((key) => {
+      const value = headers[key]
+      if (value === null || value === undefined || value === '') omitHeaderKeys.push(key)
+      else explicitHeaders[key] = value
+    })
+  }
+  const config: SpaceAwareConfig = {
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,
     url: apiType.url + '?' + qs.stringify(params, { arrayFormat: 'repeat' }),
@@ -250,9 +283,12 @@ function request(apiType: ApiType,
       'Content-Type': 'application/json',
       'api-version': apiType.version,
       'client-type': 0,
-      'X-Request-Id': generateRequestId()
-    }
-  }).then(resp => {
+      'X-Request-Id': generateRequestId(),
+      ...explicitHeaders
+    },
+    omitHeaderKeys
+  }
+  return axiosInstance(config).then(resp => {
     if (resp.data.status?.code !== errCode.SUCCESS) {
       if (resp.data.status?.msg) {
         const errTypeMapList = ['info', 'info', 'info', 'warning', 'error', 'error']
