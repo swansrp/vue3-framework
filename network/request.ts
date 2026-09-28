@@ -354,19 +354,22 @@ function download(
   params: object,
   body: object) {
   message.success('开始下载……')
-  return axiosInstance({
+  const headers = {
+    'Content-Type': 'application/json',
+    'api-version': apiType.version,
+    'client-type': 0
+  }
+  const config: SpaceAwareConfig = {
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,
     url: apiType.url + '?' + qs.stringify(params, { arrayFormat: 'repeat' }),
     data: { data: body },
     params: null,
-    headers: {
-      'Content-Type': 'application/json',
-      'api-version': apiType.version,
-      'client-type': 0
-    },
+    headers,
+    explicitHeaderKeys: Object.keys(headers),
     responseType: 'blob'
-  }).then(resp => {
+  }
+  return axiosInstance(config).then(resp => {
     _download(resp, fileName)
     return {
       status: resp.data.status,
@@ -385,17 +388,20 @@ function upload(
   params: object,
   body: object,
   onUploadProgress: Function) {
-  return axiosInstance({
+  const headers = { 'Content-Type': 'multipart/form-data' }
+  const config: SpaceAwareConfig = {
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
     method: apiType.method,
     url: apiType.url + '?' + qs.stringify(params, { arrayFormat: 'repeat' }),
     data: { data: body },
     params: null,
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers,
+    explicitHeaderKeys: Object.keys(headers),
     onUploadProgress: (progressEvent: AxiosProgressEvent) => {
       onUploadProgress(progressEvent)
     }
-  }).then(resp => {
+  }
+  return axiosInstance(config).then(resp => {
     return {
       status: resp.data.status,
       payload: resp.data.payload,
