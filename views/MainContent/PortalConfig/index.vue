@@ -2022,9 +2022,16 @@
       :z-index="999"
       wrap-class-name="fullscreen-modal"
     >
-      <a-tabs v-if="showPermModal && tableConfig.name" v-model:active-key="permActiveTab">
+      <a-tabs
+        v-if="showPermModal && tableConfig.name"
+        v-model:active-key="permActiveTab"
+      >
         <!-- 数据权限：行级过滤，仅低代码 Portal（DATASET/MATRIX）后端生效 -->
-        <a-tab-pane v-if="props.dataMode" key="data" tab="数据权限">
+        <a-tab-pane
+          v-if="props.dataMode"
+          key="data"
+          tab="数据权限"
+        >
           <ResourcePermPanel
             resource-type="sys_portal"
             :resource-id="tableConfig.name"
@@ -2035,7 +2042,10 @@
           />
         </a-tab-pane>
         <!-- 显示权限：原表列黑名单（c:），同时作用于表格显示列与透视表行维度 -->
-        <a-tab-pane key="display" tab="显示权限">
+        <a-tab-pane
+          key="display"
+          tab="显示权限"
+        >
           <ResourcePermPanel
             resource-type="sys_portal_column"
             :resource-id="tableConfig.name"
@@ -2110,10 +2120,8 @@ import { getCommonDashboard, getCommonStatistic, addCommonDashboard, addCommonSt
 import PublicDashboard from '@/framework/components/common/chartConfig/index.vue'
 import { AUTO_UUID_ROW_KEY } from '@/framework/components/common/Portal/constant'
 import Portal from '@/framework/components/common/Portal/index.vue'
-import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
-import PortalExtraDataEditor from '@/framework/views/MainContent/PortalConfig/PortalExtraDataEditor.vue'
-import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
 import UploadFile from '@/framework/components/common/UploadFile/index.vue'
 import { filterOption } from '@/framework/components/common/utils'
 import { getUrlParam } from '@/framework/network/utils'
@@ -2122,6 +2130,8 @@ import { isEmpty, isNotEmpty, strLF2HtmlLF, strRemoveLF, updateTableSize } from 
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { AUTO } from '@/framework/utils/constant'
 import { ValueLabel } from '@/framework/utils/type'
+import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
+import PortalExtraDataEditor from '@/framework/views/MainContent/PortalConfig/PortalExtraDataEditor.vue'
 
 // 接收props
 const props = withDefaults(

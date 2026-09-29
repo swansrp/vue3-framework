@@ -1,4 +1,5 @@
 import { defineStore, getActivePinia } from 'pinia'
+
 import { localStorageMethods } from '@/framework/utils/common'
 
 const THEME_STORAGE_KEY = 'app-theme'

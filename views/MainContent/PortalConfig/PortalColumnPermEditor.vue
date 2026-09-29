@@ -9,12 +9,21 @@
     @ok="onConfirm"
     @cancel="emit('update:open', false)"
   >
-    <a-typography-paragraph type="secondary" style="margin-bottom: 12px">
+    <a-typography-paragraph
+      type="secondary"
+      style="margin-bottom: 12px"
+    >
       {{ tip || '默认全部显示（√）；点一下把某列切成不显示（×）即对该主体隐藏。' }}
     </a-typography-paragraph>
     <div class="column-perm-body">
-      <template v-for="group in groups" :key="group.title || '__flat__'">
-        <div v-if="group.title" class="column-perm-group-title">
+      <template
+        v-for="group in groups"
+        :key="group.title || '__flat__'"
+      >
+        <div
+          v-if="group.title"
+          class="column-perm-group-title"
+        >
           {{ group.title }}
         </div>
         <div class="column-perm-list">
@@ -29,7 +38,10 @@
               <CheckOutlined v-else />
             </span>
             <span class="column-perm-label">{{ opt.label }}</span>
-            <a-typography-text type="secondary" class="column-perm-token">
+            <a-typography-text
+              type="secondary"
+              class="column-perm-token"
+            >
               {{ opt.token }}
             </a-typography-text>
             <a-tag

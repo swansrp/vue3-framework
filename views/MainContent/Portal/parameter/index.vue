@@ -46,9 +46,9 @@
 import { CloudSyncOutlined } from '@ant-design/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 
+import { queryParams, refreshParams } from '@/framework/apis/params'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { queryParams, refreshParams } from '@/framework/apis/params'
 
 interface ParamGroup {
   name: string
