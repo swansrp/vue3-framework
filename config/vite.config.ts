@@ -135,5 +135,17 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  // preview（dist 预览）与 dev 同款代理：业务层「同源直调」通道（inkhubFetch 的 fetch/XHR 相对路径，
+  // 如 skill 包上传 multipart 直调）都按 /<pkg.name> 相对路径发请求，preview 不配代理时会落到
+  // 前端自身域名的 SPA fallback 上，请求永远到不了后端
+  preview: {
+    host: '0.0.0.0',
+    proxy: {
+      [apiPrefix]: {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true
+      }
+    }
   }
 })
