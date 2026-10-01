@@ -28,6 +28,8 @@ const props = withDefaults(
     exportPdf?: boolean
     /** 导出PDF文件名（不含扩展名） */
     exportPdfFileName?: string
+    /** 业务侧追加的 Tiptap 扩展（如 blockId 全局属性，M10 写作链路）；缺省行为完全不变 */
+    extraExtensions?: any[]
   }>(),
   {
     content: '',
@@ -38,6 +40,7 @@ const props = withDefaults(
     autofocus: false,
     exportPdf: false,
     exportPdfFileName: 'document',
+    extraExtensions: undefined,
   }
 )
 
@@ -77,7 +80,7 @@ const parsedContent = computed(() => {
 // 初始化编辑器
 const editor = useEditor({
   content: parsedContent.value,
-  extensions: getExtensions(placeholder.value),
+  extensions: getExtensions(placeholder.value).concat(props.extraExtensions || []),
   editable: !readonly.value,
   autofocus: false, // 关键：禁用自动聚焦，防止光标问题
   onUpdate: ({ editor: ed }) => {
