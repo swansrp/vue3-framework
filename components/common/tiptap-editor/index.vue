@@ -178,7 +178,12 @@ onBeforeUnmount(() => {
       :editor="editor"
       :export-pdf="exportPdf"
       :export-pdf-file-name="exportPdfFileName"
-    />
+    >
+      <!-- 业务页的 #toolbar-append 透传到工具栏最右侧 -->
+      <template #append>
+        <slot name="toolbar-append"></slot>
+      </template>
+    </tiptap-toolbar>
 
     <!-- 编辑器内容 -->
     <div class="tiptap-editor-content">

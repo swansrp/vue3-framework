@@ -587,6 +587,9 @@ const insertColumns = () => {
       </a-tooltip>
     </div>
 
+    <!-- 业务侧扩展位：业务页经 TiptapEditor 的 #toolbar-append 插槽透传到这里（最右侧） -->
+    <slot name="append"></slot>
+
     <!-- 链接弹窗 -->
     <a-modal
       v-model:open="linkModalVisible"
