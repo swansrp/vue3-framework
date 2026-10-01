@@ -98,10 +98,12 @@ export function setRequestHeaderProvider(provider: RequestHeaderProvider | null)
 /**
  * 业务侧按次请求头控制用的 axios 配置扩展：
  * explicitHeaderKeys＝本次经 request() 第 7 参显式传入的头键（provider 对它们让位）；
- * omitHeaderKeys 列出本次请求要抑制（删除）的头键（如跨空间只读不带 X-Space-Id）。
+ * omitHeaderKeys 列出本次请求要抑制（删除）的头键（如跨空间只读不带 X-Space-Id）；
+ * suppressErrorToast＝HTTP 层错误不弹全局错误条（fetchBlob 这类"取不到字节由调用方自己画占位"的
+ * 展示腿用；401 会话超时仍照常跳登录，不受该开关影响）。
  * 不传即维持既往行为，向后兼容。
  */
-type SpaceAwareConfig = AxiosRequestConfig & { omitHeaderKeys?: string[], explicitHeaderKeys?: string[] }
+type SpaceAwareConfig = AxiosRequestConfig & { omitHeaderKeys?: string[], explicitHeaderKeys?: string[], suppressErrorToast?: boolean }
 
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -210,7 +212,12 @@ axiosInstance.interceptors.response.use(
     }
     if(err.response) {
       _handleTimeOut(err.response.data, err.config)
-      if (err.response.status === 404)
+      // 按次静默：展示腿（取字节渲染）失败由调用方自己呈现占位，不弹全局错误条；
+      // 上面的 _handleTimeOut 照常执行，会话超时该跳登录仍跳登录
+      const silent = !!(err.config as SpaceAwareConfig | undefined)?.suppressErrorToast
+      if (silent)
+        console.log(err)
+      else if (err.response.status === 404)
         message.error('抱歉,尚未支持该服务!')
       else if (err.response.status === 504)
         message.error('服务开小差了,请稍后再试...')
@@ -222,8 +229,10 @@ axiosInstance.interceptors.response.use(
         message.error('服务正在快马加鞭,请稍等!')
       else
         console.log(err)
-    } else {
+    } else if (!(err.config as SpaceAwareConfig | undefined)?.suppressErrorToast) {
       message.error('网络异常')
+    } else {
+      console.log(err)
     }
 
     throw new Error(err)
@@ -315,9 +324,14 @@ function request(apiType: ApiType,
           if (errType === 'info') message.info(msg)
           else if (errType === 'warning') message.warning(msg)
           else if (errType === 'error') message.error(msg)
-          throw new Error(resp.data.status.msg)
+          // 抛错信息给人话；末尾不兜 status.msg——那是错误码枚举名（INK_PARAM 一类），
+          // 给用户看就是漏码；真取不到消息时给带码的人话
+          throw new Error(resp.data.payload.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
         } else {
-          throw new Error(resp.data.status.details)
+          // showErr=false（调用方自接管提示，如列表页静默取数）：错误照抛，只是不弹全局条。
+          // 框架侧非 SUCCESS 封套的 payload 必在（只由 Response(ServiceException) 产出并填 errMsg），
+          // 但网关/第三方回的同形封套可能没有 payload ⇒ 可选读，免得 TypeError 顶掉该抛给业务层的文案。
+          throw new Error(resp.data.payload?.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
         }
       }
     } else if (showSuccess) {
@@ -380,6 +394,94 @@ function download(
     message.error('下载失败，请检查网络后重试，或联系系统管理员！')
     console.log(err)
     throw new Error(err)
+  })
+}
+
+/**
+ * 取二进制到内存（展示腿：图片/附件要喂给 <img>、createObjectURL 或解析，而不是落盘保存）。
+ * 与 download() 的分工：download 读 content-disposition 触发浏览器下载，本函数只回 Blob；
+ * 头注入与其他请求同源（Authorization＋业务 provider 的 X-Space-Id 由拦截器统一带），
+ * 调用方不必再手工拼鉴权头。
+ * 默认按次静默（suppressErrorToast）：取不到字节属"这页没图"级别的常态，
+ * 由调用方自己画占位，不该弹全局错误条；401 会话超时仍照常跳登录。
+ */
+function fetchBlob(
+  apiType: ApiType,
+  params: object = {},
+  headers?: Record<string, string | null>): Promise<Blob | null> {
+  const explicitHeaders: Record<string, string> = {}
+  const omitHeaderKeys: string[] = []
+  if (headers) {
+    Object.keys(headers).forEach((key) => {
+      const value = headers[key]
+      if (value === null || value === undefined || value === '') omitHeaderKeys.push(key)
+      else explicitHeaders[key] = value
+    })
+  }
+  const presetHeaders = {
+    'api-version': apiType.version,
+    'client-type': 0,
+    'X-Request-Id': generateRequestId(),
+    ...explicitHeaders
+  }
+  const config: SpaceAwareConfig = {
+    baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
+    method: apiType.method,
+    url: apiType.url + '?' + qs.stringify(params, { arrayFormat: 'repeat' }),
+    // showLoading 缺省关转菊花：一页多图逐张取字节，不该反复弹全局遮罩
+    data: { data: {} },
+    params: null,
+    headers: presetHeaders,
+    explicitHeaderKeys: [...Object.keys(presetHeaders), ...omitHeaderKeys],
+    omitHeaderKeys,
+    suppressErrorToast: true,
+    responseType: 'blob'
+  }
+  return axiosInstance(config).then(resp => {
+    const blob = resp.data as Blob
+    // 空体（含 0 字节）当"没有可展示的字节"，交调用方回占位
+    return blob && blob.size > 0 ? blob : null
+  }, err => {
+    console.log(err)
+    return null
+  })
+}
+
+/**
+ * 具名分片上传（后端 `@RequestPart("file")` 这类按 part 名取件的形态）。
+ * 与 upload() 的分工：upload() 按框架约定把 body 裹成 {data: body} 并写死 Content-Type，
+ * 具名 part 与 boundary 都到不了后端；本函数把调用方拼好的 FormData 原样交出，
+ * 且**不设 Content-Type**——boundary 只能由浏览器生成，写死 multipart/form-data 后端解不开。
+ * 业务侧因此不必再自己拼 fetch＋鉴权头。
+ * 大文件要进度条：onUploadProgress 原样透给 axios（loaded/total）；params 序列化进查询串。
+ */
+function uploadParts(
+  apiType: ApiType,
+  formData: FormData,
+  params: object = {},
+  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void) {
+  const presetHeaders = {
+    'api-version': apiType.version,
+    'client-type': 0,
+    'X-Request-Id': generateRequestId()
+  }
+  const config: SpaceAwareConfig = {
+    baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
+    method: apiType.method,
+    url: apiType.url + (Object.keys(params).length ? '?' + qs.stringify(params, { arrayFormat: 'repeat' }) : ''),
+    // 拦截器按 config.data.data 取载荷，FormData 从这里原样交给 axios
+    data: { data: formData },
+    params: null,
+    headers: presetHeaders,
+    explicitHeaderKeys: Object.keys(presetHeaders),
+    onUploadProgress
+  }
+  return axiosInstance(config).then(resp => {
+    return {
+      status: resp.data.status,
+      payload: resp.data.payload,
+      response: resp
+    }
   })
 }
 
@@ -455,5 +557,5 @@ const downloadUrl = (fileURL: string, fileName: string) => {
 }
 
 
-export { baseURL, get, post, request, upload, download, downloadBlob, downloadUrl }
+export { baseURL, get, post, request, upload, uploadParts, download, fetchBlob, downloadBlob, downloadUrl }
 
