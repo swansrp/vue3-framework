@@ -629,11 +629,12 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, reactive, ref, watch } from 'vue'
 
+import { useConditionModal } from './useConditionModal'
+
 import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 
-import { useConditionModal } from './useConditionModal'
 
 const props = defineProps<{
   table: PortalTableVO;

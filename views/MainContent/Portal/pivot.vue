@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { CaretDownOutlined, CaretUpOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { useLocaleReceiver } from 'ant-design-vue/es/locale/LocaleReceiver'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import PivotDrillContent from './PivotDrillContent.vue'
 import PivotDrillContentDark from './PivotDrillContentDark.vue'

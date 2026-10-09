@@ -209,9 +209,6 @@ import { computed, ref, watch } from 'vue'
 import PortalTableBasicPane from './tableConfig/PortalTableBasicPane.vue'
 import PortalTableFilterPane from './tableConfig/PortalTableFilterPane.vue'
 import PortalTablePivotColumnPane from './tableConfig/PortalTablePivotColumnPane.vue'
-import PortalTableView from '@/framework/views/MainContent/Portal/table.vue'
-import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
-import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 
 import {
   addPortalTable,
@@ -233,8 +230,8 @@ import {
 } from '@/framework/apis/portal/table'
 import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
+import PortalTableView from '@/framework/views/MainContent/Portal/table.vue'
 import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
-
 
 const props = defineProps<{
   modelValue: boolean;
