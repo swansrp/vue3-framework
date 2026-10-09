@@ -220,6 +220,7 @@
             <!-- region 表格 -->
             <s-table
               :key="config.key"
+              class="portal-header-fixed-width"
               :columns="multiHeader ? multiHeadColumns : columns"
               :custom-row="handleCustomRow"
               :data-source="dataSource"
@@ -1059,7 +1060,6 @@ const getTableHeight = () => {
 const updateTableWidthAndHeight = () => {
   console.debug('updateTableWidthAndHeight')
   updateTableSize(root, tableWidth, 10 + (config.treeMenuShow ? 230 : 0), tableHeight, 225)
-  adjustColumnWidths()
 }
 const _updateTableSize = _.debounce(updateTableWidthAndHeight, 200)
 const _statisticButton = ref(false)
@@ -2132,7 +2132,6 @@ const initData = (data: Array<any>) => {
     parsedDataSource.value.push(parsedData)
   }
   onSelectChange([])
-  adjustColumnWidths()
 }
 const queryDataAsync = async (condition: QueryType) => {
   const resolve = (res: any) => {
@@ -2272,6 +2271,52 @@ const init = async () => {
   }
   return await queryDataAsync(condition)
 }
+/** 当前被降级成弹性列的 dataIndex, 用于渲染列变化时先还原再重选 */
+let elasticColumnKey: any = undefined
+
+/** 递归取叶子列: 多级表头的壳列没有宽度语义 */
+const collectLeafColumns = (list: Array<ColumnType>): Array<ColumnType> => {
+  const leaves: Array<ColumnType> = []
+  for (const column of list) {
+    if (column.children && column.children.length > 0) {
+      leaves.push(...collectLeafColumns(column.children as Array<ColumnType>))
+    } else {
+      leaves.push(column)
+    }
+  }
+  return leaves
+}
+
+/**
+ * 列宽全配置的表格铺满: 把最后一个非锁定列改成弹性(去掉 width, 原配置值转成 minWidth 兜底),
+ * 剩余宽度交给库算 ⇒ 表头/数据行/汇总行读同一份数字
+ * 只在建列完成(表格随后重挂载)或渲染列集合变化时改写: 挂载后就地改 column.width 只传得到表头,
+ * 数据行与汇总行仍按挂载时缓存的定宽布局渲染, 会变成单边撑开
+ */
+const applyElasticColumn = () => {
+  const rendered = props.multiHeader ? multiHeadColumns.value : columns.value
+  if (isNotEmpty(elasticColumnKey)) {
+    const previous = collectLeafColumns(columnArray.value).find(column => column.dataIndex === elasticColumnKey)
+    if (previous && isNotEmpty(previous.minWidth)) {
+      previous.width = previous.minWidth
+      delete previous.minWidth
+    }
+    elasticColumnKey = undefined
+  }
+  const leaves = collectLeafColumns(rendered)
+  // 已有自动列(宽度配成 0)时库本就会铺满, 不抢它的填充
+  if (leaves.length === 0 || leaves.some(column => typeof column.width !== 'number' || column.width <= 0)) {
+    return
+  }
+  const elastic = [...leaves].reverse().find(column => !column.fixed)
+  if (!elastic) {
+    return
+  }
+  elastic.minWidth = elastic.width
+  delete elastic.width
+  elasticColumnKey = elastic.dataIndex
+}
+
 const initConfig = async () => {
   // 外部直传配置优先(smart-query plan 推导产物与 sys_portal_table 记录同构): 无 tableId 记录可拉时跳过查询
   const loadConfigRes = async () => props.portalConfig
@@ -2506,6 +2551,8 @@ const initConfig = async () => {
     // 首列支持拖拽
     columnArray.value[0].rowDrag = (tableConfig.tableDrag === '1' && config.orderMode) || props.rowDragEnd !== undefined
 
+    applyElasticColumn()
+
     // 关联配置
     if (isNotEmpty(tableConfig.associates) && isEmpty(bindTabs.value)) {
       for (let associate of tableConfig.associates) {
@@ -2534,52 +2581,6 @@ const initConfig = async () => {
     return await Promise.all(promiseList)
   })
 }
-/**
- * 列宽度自动调整函数
- * 当所有列的宽度总和小于表格宽度时，按比例放大每列的宽度
- */
-const adjustColumnWidths = () => {
-  if (!initFinished) {
-    return
-  }
-  // 获取当前表格的宽度
-  const currentTableWidth = getTableWidth()
-
-  // 如果tableWidth为AUTO或无效值，不进行调整
-  if (currentTableWidth === AUTO || !currentTableWidth || currentTableWidth <= 0) {
-    console.debug('表格宽度未就绪，跳过列宽度调整', currentTableWidth)
-    return
-  }
-
-  // 计算所有列的宽度总和（包括有width属性的列）
-  let totalWidth = 0
-  const columnsWithWidth: ColumnType[] = []
-
-  for (const column of columnArray.value.filter(column => column.checked)) {
-    if (column.width) {
-      totalWidth += column.width
-      columnsWithWidth.push(column)
-    } else {
-      //自动填充列
-      return
-    }
-  }
-
-  // 如果没有设置width的列，不需要调整
-  if (columnsWithWidth.length === 0) {
-    return
-  }
-
-  // 如果总宽度小于表格宽度，按比例放大
-  if (totalWidth < currentTableWidth) {
-    const scale = (currentTableWidth - 50) / totalWidth
-
-    for (const column of columnsWithWidth) {
-      const newWidth = Math.floor(column.width * scale)
-      column.width = newWidth
-    }
-  }
-}
 
 const syncLocalDb = (column: ColumnType, customerColumns: Map<any, any>, order: number) => {
   if (customerColumns) {
@@ -2604,6 +2605,9 @@ const queryTreeData = async () => {
   }
 }
 //endregion
+
+// 渲染列集合变化(列显示勾选、外部列重算)时重选弹性列, 否则被隐藏的弹性列会让表格不再铺满
+watch(columns, () => applyElasticColumn())
 
 onMounted(() => {
   window.addEventListener('resize', _updateTableSize)
@@ -3254,6 +3258,14 @@ defineExpose({
 <style lang="less">
 // ============ surely-vue/table 全局样式覆盖 ============
 // 必须放在非 scoped 块中，否则 scoped [data-v-xxx] 无法匹配库渲染的元素
+
+// 表头列宽与数据行同源: 库把表头 table 内联成 width:100%, 容器比列宽合计宽时浏览器会把多余宽度按比例摊到各列,
+// 而数据行/汇总行是定宽 div 不摊 ⇒ 竖线错位。max-content 让表头按 colgroup 的列宽出宽
+// (配了 width 的列取配置值, 自动填充列取库算出的值, 两种都与数据行同一份数字)
+.portal-header-fixed-width .surely-table-header table {
+  width: max-content !important;
+}
+
 .surely-table-wrapper {
   // 包装容器也需要设置变量，因为 footer/title 与 .surely-table 同级
   --surely-table-bg: var(--bg-elevated);

@@ -1001,8 +1001,11 @@ html body .dark-content-layout .portal-table .surely-table-row {
 
 /* 表头边框加强 */
 :deep(.dark-content-layout .surely-table-header) {
-    border: 2px solid rgba(31, 198, 255, 0.6) !important;
+    border-top: 2px solid rgba(31, 198, 255, 0.6) !important;
     border-bottom: 3px solid rgba(31, 198, 255, 0.7) !important;
+    /* 左右不描: 数据行没有这条边框, 表头会被整体右移 2px 造成竖线恒定错位; 外层 .surely-table-wrapper 已有 2px 边框 */
+    border-left: 0 !important;
+    border-right: 0 !important;
     border-radius: 8px 8px 0 0 !important;
     background: linear-gradient(135deg, 
         rgb(2, 57, 85) 0%, 
@@ -1315,8 +1318,11 @@ html body .dark-content-layout .surely-table tr:nth-of-type(odd):hover {
     rgb(2, 57, 85) 0%,
     rgb(3, 69, 102) 50%,
     rgb(2, 57, 85) 100%) !important;
-  border: 2px solid rgba(31, 198, 255, 0.6) !important;
+  border-top: 2px solid rgba(31, 198, 255, 0.6) !important;
   border-bottom: 3px solid rgba(31, 198, 255, 0.7) !important;
+  /* 与 .surely-table-header 主规则一致: 左右不描边, 否则表头比数据行整体右移 2px */
+  border-left: 0 !important;
+  border-right: 0 !important;
   border-radius: 8px 8px 0 0 !important;
 }
 

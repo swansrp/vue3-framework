@@ -614,6 +614,9 @@ const buildGroupedColumns = (items: Array<{ path: string[]; col: ColumnType }>):
  * Portal 动态列: 行维度列 + 度量子列
  * col模式: 行维度 + (透视列×度量) 横向平铺
  * row模式: 行维度 + 指标名称列 + 透视列(每列一个度量值)
+ * 宽度分工: 行维度列(非聚合)取 portalConfig 配置的列宽; 聚合列(指标/合计/透视列/度量子列)在 portalConfig 里
+ * 没有对应列, 只给 minWidth 不给 width, 交给 s-table 自身自动填充铺满剩余宽度
+ * (表头是 table 会摊分剩余宽度、数据行是定宽 div, 只有库自己算出的列宽两边才同源)
  */
 const portalColumns = computed(() => {
   const cols: ColumnType[] = []
@@ -646,7 +649,7 @@ const portalColumns = computed(() => {
       title: '指标',
       dataIndex: MEASURE_NAME_COL,
       key: MEASURE_NAME_COL,
-      width: 120,
+      minWidth: 120,
       fixed: visibleGroupFieldConfigs.value.some(c => c.fixed) ? 'left' : false,
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
@@ -667,7 +670,7 @@ const portalColumns = computed(() => {
         title: '合计',
         dataIndex: TOTAL_COL,
         key: TOTAL_COL,
-        width: 120,
+        minWidth: 120,
         fieldType: FIELD_TYPE.NUMBER,
         contentAlign: 'right',
         tooltip: false,
@@ -687,7 +690,7 @@ const portalColumns = computed(() => {
         title: pv.itemName || pv.itemValue,
         dataIndex: pv.itemValue,
         key: pv.itemValue,
-        width: 140,
+        minWidth: 140,
         fieldType: FIELD_TYPE.NUMBER,
         contentAlign: 'right',
         tooltip: false,
@@ -726,7 +729,7 @@ const portalColumns = computed(() => {
           title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
           dataIndex: `${pv.itemValue}__${m.field}`,
           key: `${pv.itemValue}__${m.field}`,
-          width: 120,
+          minWidth: 120,
           fixed: m.fixed === true ? 'right' : false,
           fieldType: FIELD_TYPE.NUMBER,
           contentAlign: 'right',
