@@ -81,11 +81,14 @@
         </span>
         <a-tooltip
           v-else-if="syntaxStatus === 'invalid'"
-          :title="syntaxError"
+          :title="syntaxErrorTitle"
           placement="bottom"
         >
-          <span class="syntax-status invalid">
-            <CloseCircleFilled /> 语法错误
+          <span
+            class="syntax-status invalid"
+            @click="jumpToError"
+          >
+            <CloseCircleFilled /> 检测到语法错误
           </span>
         </a-tooltip>
         <a-button
@@ -119,6 +122,7 @@
         theme="chrome"
         :font-size="16"
         :options="{ scrollPastEnd: 0.5 }"
+        @init="onEditorInit"
       />
       <!-- 加载遮罩：不隐藏编辑器容器，避免ace以0高度初始化导致渲染裁剪 -->
       <div
@@ -240,7 +244,7 @@ import 'brace/mode/sql'
 import 'brace/snippets/sql'
 import 'brace/theme/chrome.js'
 import { format } from 'sql-formatter'
-import { onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue'
 
 import type { DatasetInfo, DatasetTableInfo, DatasetColumnInfo } from '../types'
 
@@ -299,14 +303,84 @@ loadDsNames()
 // SQL语法自动校验（复用后端 parseSql，与保存/预览同一解析器）
 const syntaxStatus = ref<'idle' | 'checking' | 'valid' | 'invalid'>('idle')
 const syntaxError = ref('')
+const errorPos = ref<{ line: number, column: number } | null>(null)
 const syntaxCheckSeq = ref(0)
 let syntaxTimer: ReturnType<typeof setTimeout> | null = null
+
+// ace 实例（@init 拿到；editorKey 重挂载后会重新触发）
+const aceEditor = shallowRef<any>(null)
+const lastErrorMark = ref<{ row: number, column: number, text: string } | null>(null)
+
+const onEditorInit = (editor: any) => {
+  aceEditor.value = editor
+  if (lastErrorMark.value) {
+    editor.session?.setAnnotations([{ ...lastErrorMark.value, type: 'error' }])
+  }
+}
+
+const clearErrorMark = () => {
+  lastErrorMark.value = null
+  errorPos.value = null
+  aceEditor.value?.session?.setAnnotations([])
+}
+
+// JSqlParser 报错形如 "Lexical error at line 95, column 33. Encountered: <EOF>"
+const parseErrorPos = (raw: string) => {
+  const m = raw.match(/at line (\d+), column (\d+)/)
+  return m ? { line: +m[1], column: +m[2] } : null
+}
+
+// 去掉异常类名与重复的行列句，<EOF> 翻译成大白话
+const humanizeReason = (raw: string) => {
+  let r = raw
+    .replace(/^SQL解析失败:\s*/, '')
+    .replace(/net\.sf\.jsqlparser\.[\w.]*?Exception:\s*/g, '')
+    .replace(/(Lexical error|Parse error|Encountered unexpected token:) at line \d+, column \d+\.\s*/i, '')
+  if (/Encountered: <EOF>/i.test(r)) {
+    r = 'SQL 在这里意外结束，常见原因：引号或注释没闭合'
+  }
+  return r.replace(/\s+/g, ' ').trim()
+}
+
+const syntaxErrorTitle = computed(() => {
+  if (!syntaxError.value) return ''
+  const pos = errorPos.value ? `第 ${errorPos.value.line} 行 第 ${errorPos.value.column} 列：` : ''
+  return pos + syntaxError.value
+})
+
+// 点击"检测到语法错误"跳到出错行
+const jumpToError = () => {
+  if (errorPos.value && aceEditor.value) {
+    aceEditor.value.gotoLine(errorPos.value.line, errorPos.value.column - 1, true)
+    aceEditor.value.focus()
+  }
+}
+
+const applyErrorResult = (rawMsg: string) => {
+  syntaxStatus.value = 'invalid'
+  errorPos.value = parseErrorPos(rawMsg)
+  syntaxError.value = humanizeReason(rawMsg)
+  const editor = aceEditor.value
+  if (errorPos.value) {
+    const mark = {
+      row: errorPos.value.line - 1,
+      column: errorPos.value.column - 1,
+      text: syntaxError.value,
+    }
+    lastErrorMark.value = mark
+    editor?.session?.setAnnotations([{ ...mark, type: 'error' }])
+  } else {
+    lastErrorMark.value = null
+    editor?.session?.setAnnotations([])
+  }
+}
 
 const checkSyntax = async () => {
   const curSeq = ++syntaxCheckSeq.value
   const sql = formState.sql?.trim()
   if (!sql) {
     syntaxStatus.value = 'idle'
+    clearErrorMark()
     return
   }
   syntaxStatus.value = 'checking'
@@ -319,14 +393,13 @@ const checkSyntax = async () => {
     if (res.status?.code === 0) {
       syntaxStatus.value = 'valid'
       syntaxError.value = ''
+      clearErrorMark()
     } else {
-      syntaxStatus.value = 'invalid'
-      syntaxError.value = res.status?.msg || 'SQL解析失败'
+      applyErrorResult(res.status?.details || res.status?.msg || 'SQL解析失败')
     }
   } catch (error: any) {
     if (curSeq !== syntaxCheckSeq.value) return
-    syntaxStatus.value = 'invalid'
-    syntaxError.value = error?.message || 'SQL解析失败'
+    applyErrorResult(error?.message || 'SQL解析失败')
   }
 }
 
@@ -336,6 +409,7 @@ watch(() => formState.sql, () => {
   if (!formState.sql?.trim()) {
     syntaxCheckSeq.value++
     syntaxStatus.value = 'idle'
+    clearErrorMark()
     return
   }
   syntaxTimer = setTimeout(checkSyntax, 1000)
@@ -428,8 +502,12 @@ watch(() => props.dataset, (dataset) => {
         if (curSeq !== sqlLoadSeq.value) return
         const sql = res?.payload?.sql
         if (res?.status?.code === 0 && typeof sql === 'string') {
+          // 外层 WHERE 不进表/列配置（保存时转存了常驻条件），回显时随 /sql 响应拼回去，
+          // 再次保存才不会把已转存的常驻条件清掉（必须同源取，列表接口不带该字段）
+          const baseFilter = res?.payload?.baseFilter
+          const where = baseFilter ? `\nWHERE ${baseFilter}` : ''
           // 点开自动格式化展示
-          formState.sql = formatSqlText(sql)
+          formState.sql = formatSqlText(sql + where)
           editorKey.value++
         }
       })
@@ -450,7 +528,7 @@ const handlePreview = async () => {
     const res = await parseSql({
       sql: formState.sql,
       dataSource: formState.dataSource
-    } as any, false, false)
+    } as any, false, false, false)
 
     if (res.status?.code === 0) {
       previewResult.value = {
@@ -459,9 +537,10 @@ const handlePreview = async () => {
       }
       previewDrawerVisible.value = true
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('预览失败:', error)
-    message.error('预览失败')
+    // 表单校验失败不弹错（字段旁已标红）；后端拒绝（如SQL解析失败）弹出具体原因
+    if (error?.message) message.error(error.message)
   } finally {
     previewLoading.value = false
   }
@@ -499,11 +578,16 @@ const handleSave = async () => {
       sql: formState.sql,
       dataSource: formState.dataSource,
       remark: formState.remark,
-    } as any, true, false)
+      // 常驻条件已无独立输入框：SQL 里的外层 WHERE 就是唯一来源（后端 SQL 优先转存）；
+      // 恒提交空串，SQL 没 WHERE 时即清除常驻条件
+      baseFilter: '',
+    } as any, true, false, false)
 
     emit('saved', res?.payload?.datasetId ?? props.dataset?.id)
-  } catch (error) {
+  } catch (error: any) {
     console.error('保存失败:', error)
+    // 表单校验失败不弹错（字段旁已标红）；后端拒绝（如SQL解析失败）弹出具体原因
+    if (error?.message) message.error(error.message)
   } finally {
     confirmLoading.value = false
   }
@@ -563,7 +647,7 @@ const copySql = () => {
 
     &.invalid {
       color: #ff4d4f;
-      cursor: help;
+      cursor: pointer;
     }
   }
 

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { CaretDownOutlined, CaretUpOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { useLocaleReceiver } from 'ant-design-vue/es/locale/LocaleReceiver'
 
 import PivotDrillContent from './PivotDrillContent.vue'
 import PivotDrillContentDark from './PivotDrillContentDark.vue'
@@ -221,7 +223,7 @@ const collectMeasureNums = (values: any[]): number[] =>
 
 /**
  * 按度量自身聚合方式对一组聚合值做二次聚合
- * sum/count 跨组可加; min/max 取极值; avg/countDistinct 无法由聚合后的值推导(加权均值/跨组去重), 留空
+ * sum/count 跨组可加; min/max 取极值; avg/countDistinct/ratio 无法由聚合后的值推导(加权均值/跨组去重/比率不可加), 留空
  * row/col 两种布局的合计都必须走本函数, 禁止无脑求和(曾因 row 模式混算不同度量 + 对 avg 求和产生过垃圾总计)
  */
 const aggregateByMeasure = (measure: PivotMeasureVO | undefined, nums: number[]): number | '' => {
@@ -231,7 +233,7 @@ const aggregateByMeasure = (measure: PivotMeasureVO | undefined, nums: number[])
   if (measure?.agg === 'max') {
     return nums.length ? Math.max(...nums) : ''
   }
-  if (measure?.agg === 'avg' || measure?.agg === 'countDistinct') {
+  if (measure?.agg === 'avg' || measure?.agg === 'countDistinct' || measure?.agg === 'ratio') {
     return ''
   }
   return nums.length ? nums.reduce((acc, n) => acc + n, 0) : ''
@@ -278,14 +280,19 @@ const sortValueOf = (row: any, property: string): any => {
 const isBlankSortValue = (value: any) => value === null || value === undefined || value === ''
 
 /**
- * 聚合结果行本地排序(透视报表全量返回、无服务端分页)
- * 不下推后端 sortList: 外层 ORDER BY 只认 group by 列与 ${透视列}__${度量} 别名, 度量跨多个透视列时没有唯一别名可排
+ * 聚合结果行本地排序(仅在排序键无法下推后端时兜底)
+ * 外层 ORDER BY 只认 group by 列与 ${透视列}__${度量} 别名: 度量跨多个透视列时同一度量有 N 个别名、
+ * 没有"跨列合计"这一列可排, 此时才落到本地按聚合值排
  * 空值恒排末位(不随方向翻转); avg/countDistinct 多透视列不可推导时各项均为空→稳定排序自然回退后端原序
- * 行维度排序已由 pushDownSortList 下推后端(返回即有序), 本地排序同序重排仅是幂等兼兕底
  */
 const sortedRows = computed<any[]>(() => {
   const sort = defaultSort.value
   if (!sort) {
+    return rows.value
+  }
+  // 后端已按本次输出的别名排好序(表头点击 或 默认排序命中可排别名)时不再本地重排:
+  // 本地按"跨透视列聚合值"排, 后端按"单元格列"排, 口径不同, 双排会让后端结果失效
+  if (backendSort.value) {
     return rows.value
   }
   const sign = sort.type === 1 ? -1 : 1
@@ -312,16 +319,139 @@ const sortedRows = computed<any[]>(() => {
   })
 })
 
-/** 下推后端的排序(聚合后外层 ORDER BY): 行维度配置排序 + 默认排序命中行维度字段时一并下推;
- *  度量排序不下推(跨透视列的度量聚合值在 SQL 里没有对应列), 仍由 sortedRows 本地排 */
+/** 下推后端的排序(聚合后外层 ORDER BY): 表头点击/默认排序为主序, 行维度配置排序退为次序 */
 const pushDownSortList = computed<{ property: string; type: number }[]>(() => {
   const list = [...sortList.value]
-  const sort = defaultSort.value
-  if (sort && groupFields.value.includes(sort.property) && !list.some((s) => s.property === sort.property)) {
-    list.push({ property: sort.property, type: sort.type })
+  const bs = backendSort.value
+  if (bs && !list.some((s) => s.property === bs.property)) {
+    list.unshift(bs)
   }
   return list
 })
+
+// ==================== 表头点击排序(下推后端 ORDER BY) ====================
+/**
+ * 本次 SQL 输出中可被 ORDER BY 引用的列名集合(与后端 outputAliases 同口径):
+ * 行维度字段名 + 每个 ${透视列标识}__${度量字段} 单元格别名。
+ * row 模式(度量转行)每行熔接一个度量, 同一列混装不同量纲, SQL 里不存在"这一列"的表达式, 故不纳入
+ */
+const sortableAliases = computed(() => {
+  const set = new Set<string>(groupFields.value)
+  if (!isMeasureInRow.value) {
+    for (const pv of effectivePivotColumns.value) {
+      for (const m of measures.value) {
+        set.add(`${pv.itemValue}__${m.field}`)
+      }
+    }
+  }
+  return set
+})
+
+/** 表头点击产生的排序(单列): 0=正序 1=倒序, null=未点击 */
+const headerSortClick = ref<{ property: string, type: number } | null>(null)
+
+/** 生效的点击排序: 度量布局/透视列变更后旧点击键可能不再是本次输出别名, 后端会按列权限拒绝, 故在此丢弃 */
+const headerSort = computed(() => {
+  const click = headerSortClick.value
+  return click && sortableAliases.value.has(click.property) ? click : null
+})
+
+/** 报表默认排序的 property 映射为可排别名(度量裸字段名仅在该度量只出现一次即单个透视列时有唯一别名) */
+const resolveSortAlias = (property: string): string | null => {
+  if (sortableAliases.value.has(property)) {
+    return property
+  }
+  if (!isMeasureInRow.value && effectivePivotColumns.value.length === 1 &&
+    measures.value.some(m => m.field === property)) {
+    return `${effectivePivotColumns.value[0].itemValue}__${property}`
+  }
+  return null
+}
+
+/** 主排序键: 表头点击优先, 其次能被后端表达的默认排序; 两者都无则回退 sortedRows 本地排 */
+const backendSort = computed<{ property: string, type: number } | null>(() => {
+  if (headerSort.value) {
+    return headerSort.value
+  }
+  const sort = defaultSort.value
+  if (!sort) {
+    return null
+  }
+  const alias = resolveSortAlias(sort.property)
+  return alias ? { property: alias, type: sort.type } : null
+})
+
+/** 度量列注释: 键与列生成同口径(${透视列标识}__${度量字段}); row 模式度量熔进行里, 没有列头可挂注释 */
+const measureDescMap = computed<Record<string, string>>(() => {
+  const map: Record<string, string> = {}
+  if (isMeasureInRow.value) {
+    return map
+  }
+  for (const pv of effectivePivotColumns.value) {
+    for (const m of measures.value) {
+      if (m.desc) {
+        map[`${pv.itemValue}__${m.field}`] = m.desc
+      }
+    }
+  }
+  return map
+})
+
+/** 自定义表头的列: 可点击排序 ∪ 配了列注释。一个 dataIndex 只能注册一个 headerCell 插槽 ⇒ 两种形态共用同一模板 */
+const headerSlotKeys = computed(() =>
+  portalColumns.value
+    .map(c => c.dataIndex)
+    .filter((d): d is string => !!d && (sortableAliases.value.has(d) || !!measureDescMap.value[d]))
+)
+
+const isSortableHeader = (key: string) => sortableAliases.value.has(key)
+const measureDesc = (key: string) => measureDescMap.value[key]
+
+/** 点击表头: 正序 → 倒序 → 取消, 取消后回落到报表默认排序 */
+const toggleSort = (alias: string) => {
+  const click = headerSort.value
+  if (!click || click.property !== alias) {
+    headerSortClick.value = { property: alias, type: 0 }
+  } else if (click.type === 0) {
+    headerSortClick.value = { property: alias, type: 1 }
+  } else {
+    headerSortClick.value = null
+  }
+  loadData()
+}
+
+/** 表头点击: 只有可排序列响应, 纯注释列点了不产生副作用 */
+const onHeaderClick = (key: string) => {
+  if (isSortableHeader(key)) {
+    toggleSort(key)
+  }
+}
+
+/** 表头双箭头激活态: 复用 Portal 原生 sorter 的类名, 上色交给组件库与 dark.css, 不自定义颜色 */
+const isSortAsc = (alias: string) => {
+  const sort = headerSort.value
+  return !!sort && sort.property === alias && sort.type === 0
+}
+
+const isSortDesc = (alias: string) => {
+  const sort = headerSort.value
+  return !!sort && sort.property === alias && sort.type === 1
+}
+
+/** s-table 原生 sorter 的提示文案正源(ConfigProvider 注入), 不另起一套中文 */
+const [tableLocale] = useLocaleReceiver('Table')
+
+/** 悬停提示与原生排序列同语义: 描述"下一次点击会发生什么" */
+const sortTip = (alias: string) => {
+  const locale = tableLocale.value
+  if (isSortDesc(alias)) {
+    return locale.cancelSort
+  }
+  if (isSortAsc(alias)) {
+    return locale.triggerDesc
+  }
+  return locale.triggerAsc
+}
 
 /** 加载 Portal 配置与透视列配置 */
 const loadConfig = async () => {
@@ -928,6 +1058,47 @@ onMounted(() => {
       hide-refresh
       hide-row-selection
     >
+      <!-- 自定义表头: 可排序列点击切换 正序→倒序→取消(每次重新下推 sortList 由后端 ORDER BY 全量排序),
+           双箭头复用 @surely-vue/table 的 sorter 类名(库样式全局引入) ⇒ 与 Portal 原生排序列同形态、同配色;
+           配了列注释的度量列在标题后挂问号 tooltip ⇒ 两种形态共用一个插槽模板 -->
+      <template
+        v-for="key in headerSlotKeys"
+        :key="`header-${key}`"
+        #[`headerCell_${key}`]="{ title }"
+      >
+        <span
+          :class="['pivot-sort-header', { 'pivot-sort-static': !isSortableHeader(key) }]"
+          @click="onHeaderClick(key)"
+        >
+          <span class="pivot-sort-label">
+            <span class="pivot-sort-title">{{ title }}</span>
+            <a-tooltip
+              v-if="measureDesc(key)"
+              :title="measureDesc(key)"
+            >
+              <question-circle-outlined
+                class="pivot-header-desc"
+                @click.stop
+              />
+            </a-tooltip>
+          </span>
+          <a-tooltip
+            v-if="isSortableHeader(key)"
+            :title="sortTip(key)"
+          >
+            <span class="surely-table-column-sorter surely-table-column-sorter-full">
+              <span class="surely-table-column-sorter-inner">
+                <caret-up-outlined
+                  :class="['surely-table-column-sorter-up', { active: isSortAsc(key) }]"
+                />
+                <caret-down-outlined
+                  :class="['surely-table-column-sorter-down', { active: isSortDesc(key) }]"
+                />
+              </span>
+            </span>
+          </a-tooltip>
+        </span>
+      </template>
       <!-- 度量单元格: 非空数字可点击钻取明细(动态插槽覆盖所有度量列) -->
       <template
         v-for="key in measureKeys"
@@ -1012,6 +1183,44 @@ onMounted(() => {
 
   &:hover {
     color: #4096ff;
+  }
+}
+
+// 可排序表头: 箭头形态与配色全部交给 @surely-vue/table 的 sorter 类名(main.ts 全局引入库样式)
+// 与 dark.css 的既有规则, 本组件只管布局(标题+问号+箭头整体居中)与手型 ⇒ 与 Portal/index.vue 原生排序列同观感
+.pivot-sort-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  cursor: pointer;
+  user-select: none;
+
+  &.pivot-sort-static {
+    cursor: default;
+  }
+
+  // 标题与注释问号同属一组, 与箭头一起整体居中; 窄列下由标题承担截断
+  // 箭头与标题的间距由库的 .surely-table-column-sorter{margin-left:8px} 提供, 此处不再叠加 gap
+  .pivot-sort-label {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .pivot-sort-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // 问号图标: 字号与库的排序箭头(11px)对齐, 颜色交给 antd 图标默认色与 dark.css 的表头规则
+  .pivot-header-desc {
+    flex: none;
+    font-size: 11px;
+    opacity: 0.5;
   }
 }
 </style>

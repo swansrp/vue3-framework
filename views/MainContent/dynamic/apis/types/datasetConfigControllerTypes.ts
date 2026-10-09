@@ -8,6 +8,8 @@
 // ResponseDataType 是全局类型，不需要导入
 
 export interface DatasetConfigRes {
+  /** 常驻条件（SQL 外层 WHERE 转存或页面输入，保存后生效值） */
+  baseFilter?: string
   /** 数据集列配置列表 */
   columns?: SysDatasetColumn[]
   /** 数据集ID */
@@ -77,6 +79,8 @@ export interface IdOrderReqVO {
 export interface DatasetConfigReq {
   /** 数据源配置名称（可选，为空则使用默认数据源） */
   dataSource?: string
+  /** 常驻过滤谓词（WHERE 片段，支持 '${currentYear}' 等条件变量；空=清除） */
+  baseFilter?: string
   /** 关联的数据集ID（parseSql预览时可为空，parseSqlAndSave保存时必填） */
   datasetId?: number
   /** 数据集名称（当新增保存时必填，替换保存可为空） */

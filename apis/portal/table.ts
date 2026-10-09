@@ -45,7 +45,27 @@ export interface PortalTableVO {
   tabItems?: string
   /** 默认排序JSON: [{property,type}] type 0=正序 1=倒序, 空数组=不排序(透视模式取行维度/聚合度量) */
   defaultSort?: string
+  /** 表格常驻条件JSON({andOr,conditionList}, 与 sys_portal.default_condition 同构, 支持 ${var} 条件变量); 多Tab页面按成员各自生效 */
+  fixedCondition?: string
 }
+
+/**
+ * 报表配置 JSON 的"以文件为准"字段清单(须保持字典序, 它同时是文件的 schema 签名)。
+ * 排除项及原因: 数值列(filterWidth/paddingTh/paddingTd)空串会炸 Jackson;
+ * id/portalName/tableCode 是身份与归属; status 清空破坏启停语义; tabItems 由导入的二次回写单独处理。
+ * 新增表格级字符串配置列时在这里登记。
+ */
+export const REPORT_TABLE_SYNC_FIELDS = [
+  'defaultSort',
+  'downloadAble',
+  'filterColumns',
+  'fixedCondition',
+  'groupByFields',
+  'pivotMeasureLayout',
+  'pivotMeasures',
+  'pivotMode',
+  'pivotTotalPos'
+]
 
 export interface PortalPivotColumnVO {
   /** 主键 ID */
@@ -68,12 +88,18 @@ export interface PortalPivotColumnVO {
 
 /** 透视度量列 */
 export interface PivotMeasureVO {
-  /** 度量字段名 */
+  /** 度量字段名（ratio 时仅作输出键, 取数走分子/分母字段） */
   field: string
   /** 度量显示名 */
   label?: string
-  /** 聚合方式 sum/count/countDistinct/avg/min/max */
+  /** 列注释: 悬停表头问号显示, 只给前端渲染用, 后端整串存取不解析 */
+  desc?: string
+  /** 聚合方式 sum/count/countDistinct/avg/min/max/ratio */
   agg?: string
+  /** 比率聚合分子字段(agg=ratio 时必填) */
+  numerator?: string
+  /** 比率聚合分母字段(agg=ratio 时必填) */
+  denominator?: string
   /** 是否右锁定(s-table 两边同时锁定会异常, 与行维度左锁定互斥) */
   fixed?: boolean
   /**

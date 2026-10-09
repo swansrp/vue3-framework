@@ -2,7 +2,7 @@
   <a-modal
     v-model:open="visible"
     :title="
-      'DarkTable 配置' +
+      '表格配置' +
         (portalConfig?.displayName ? ' - ' + portalConfig.displayName : '')
     "
     width="1500px"
@@ -158,6 +158,17 @@
                 extra-data-label="隐藏列"
               />
             </a-tab-pane>
+            <template #rightExtra>
+              <a-button
+                size="small"
+                @click="handlePreviewConfig"
+              >
+                <template #icon>
+                  <EyeOutlined />
+                </template>
+                预览配置
+              </a-button>
+            </template>
           </a-tabs>
         </template>
         <a-empty
@@ -166,11 +177,31 @@
         />
       </div>
     </div>
+
+    <!-- 配置预览弹窗：直接挂运行态表格组件，按当前配置的 tableCode 渲染真实数据 -->
+    <a-modal
+      v-model:open="previewVisible"
+      :title="'配置预览' + (previewTableCode ? ' - ' + previewTableCode : '')"
+      width="90%"
+      :style="{ top: '24px' }"
+      :body-style="{ height: '78vh', overflow: 'hidden', padding: '0' }"
+      :footer="null"
+    >
+      <div
+        v-if="previewVisible && previewTableCode"
+        class="preview-host"
+      >
+        <portal-table-view
+          :key="'preview-' + previewTableCode + '-' + previewSeq"
+          :table-id="previewTableCode"
+        />
+      </div>
+    </a-modal>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
@@ -178,6 +209,9 @@ import { computed, ref, watch } from 'vue'
 import PortalTableBasicPane from './tableConfig/PortalTableBasicPane.vue'
 import PortalTableFilterPane from './tableConfig/PortalTableFilterPane.vue'
 import PortalTablePivotColumnPane from './tableConfig/PortalTablePivotColumnPane.vue'
+import PortalTableView from '@/framework/views/MainContent/Portal/table.vue'
+import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
+import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 
 import {
   addPortalTable,
@@ -192,6 +226,7 @@ import {
   PortalPivotColumnVO,
   PortalTableFilterVO,
   PortalTableVO,
+  REPORT_TABLE_SYNC_FIELDS,
   updatePortalTable,
   updatePortalTableFilter,
   updatePortalPivotColumn,
@@ -453,6 +488,8 @@ const downloadReportFile = (data: any[], scope: 'all' | 'single') => {
     type: 'report',
     portalName: props.portalName,
     exportTime: new Date().toISOString(),
+    // 自带字段清单签名: 导入时据此判断能否把"文件里没给值"当成"该项应为空"
+    tableFields: [...REPORT_TABLE_SYNC_FIELDS],
     data
   })
   message.success('导出成功')
@@ -491,6 +528,22 @@ const handleExportSingleReportConfig = async () => {
   }
 }
 
+// 预览当前选中表格配置：弹框内挂运行态 table.vue 按 tableCode 渲染真实数据（读的是已保存配置）
+const previewVisible = ref(false)
+const previewTableCode = ref('')
+const previewSeq = ref(0)
+
+const handlePreviewConfig = () => {
+  const code = selectedTable.value?.tableCode
+  if (!code) {
+    message.warning('该配置还没有 tableCode，请先保存基础配置')
+    return
+  }
+  previewTableCode.value = code
+  previewSeq.value++
+  previewVisible.value = true
+}
+
 // 导入报表配置(文件由基础配置面板选择后传入)
 const handleImportReportConfig = async (file: File) => {
   try {
@@ -511,15 +564,23 @@ const handleImportReportConfig = async (file: File) => {
       message.warning('无法确定目标表格名称')
       return
     }
+    // 字段清单与当前 schema 完全一致才敢"以文件为准"清空; 缺签名或清单不符一律视为旧文件, 保持目标环境原值
+    const fileFields: string[] = Array.isArray(parsed.tableFields)
+      ? [...parsed.tableFields].map(String).sort()
+      : []
+    const syncTableFields = fileFields.join('|') === [...REPORT_TABLE_SYNC_FIELDS].sort().join('|')
     Modal.confirm({
       title: '确认导入',
-      content: `将导入 ${importData.length} 个报表配置到「${portalName}」，文件中未包含的筛选器/透视列将被删除，确认继续？`,
+      content: `将导入 ${importData.length} 个报表配置到「${portalName}」，文件中未包含的筛选器/透视列将被删除` +
+        (syncTableFields
+          ? '，表格配置以文件为准（文件里为空的字段将被清空），确认继续？'
+          : '（旧版文件：文件里没有的表格字段将保持目标环境原值），确认继续？'),
       okText: '确认导入',
       cancelText: '取消',
       onOk: async () => {
         reportImporting.value = true
         try {
-          let added = 0, updated = 0
+          let added = 0, updated = 0, fieldCleared = 0
           const filterStat = { added: 0, updated: 0, deleted: 0 }
           const pivotStat = { added: 0, updated: 0, deleted: 0 }
           // 构建已有表查重映射: tableCode → existing table
@@ -550,6 +611,16 @@ const handleImportReportConfig = async (file: File) => {
             delete tableData.tabItems
             // 强制归属目标 portal, 避免带入源环境旧值
             tableData.portalName = portalName
+            // 以文件为准: 文件里缺失/为 null 的表格级配置归一化成空串, 让 updateById 真正写入"清空"
+            // (不传字段时 MyBatis-Plus 的 NOT_NULL 策略会跳过, 目标环境会残留旧配置)
+            if (syncTableFields) {
+              REPORT_TABLE_SYNC_FIELDS.forEach((field) => {
+                if (tableData[field] === undefined || tableData[field] === null) {
+                  tableData[field] = ''
+                  fieldCleared++
+                }
+              })
+            }
             const tableCode = tableData.tableCode
             const existingTable = tableCode ? existingTableMap.get(tableCode) : null
             let tableId: number
@@ -582,7 +653,8 @@ const handleImportReportConfig = async (file: File) => {
           message.success(`导入完成：表新增 ${added} / 更新 ${updated}，` +
             `筛选器新增 ${filterStat.added} / 更新 ${filterStat.updated} / 删除 ${filterStat.deleted}，` +
             `透视列新增 ${pivotStat.added} / 更新 ${pivotStat.updated} / 删除 ${pivotStat.deleted}` +
-            (tabDropped > 0 ? `，Tab成员在目标环境不存在已丢弃 ${tabDropped}` : ''))
+            (tabDropped > 0 ? `，Tab成员在目标环境不存在已丢弃 ${tabDropped}` : '') +
+            (syncTableFields ? `，表格级空字段按文件清空 ${fieldCleared} 项` : ''))
           // 刷新列表
           await loadTableList()
         } catch (error: any) {
@@ -877,6 +949,16 @@ const handleCancel = () => {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+}
+
+.preview-host {
+  height: 100%;
+  overflow: hidden;
+
+  // DarkTable 外壳默认按视口高度(100vh-40px)，弹框内需改为撑满宿主容器
+  :deep(.desc-wrapper) {
+    height: 100%;
   }
 }
 </style>

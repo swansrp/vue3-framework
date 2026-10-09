@@ -165,6 +165,26 @@
                 </a-select-option>
               </a-select>
             </a-form-item>
+            <!-- 常驻条件: 每次查询强制 AND 拼入、用户在筛选栏改不掉; 挂在成员表格自身, 故多Tab页面各 Tab 互不影响 -->
+            <a-form-item label="常驻条件">
+              <div class="fixed-condition-row">
+                <a-button
+                  class="fixed-condition-btn"
+                  @click="showFixedConditionModal"
+                >
+                  {{ fixedRows.length > 0 ? `已配置 ${fixedRows.length} 条` : '配置' }}
+                </a-button>
+                <a-button
+                  v-if="fixedRows.length > 0"
+                  type="link"
+                  size="small"
+                  danger
+                  @click="clearFixedRows"
+                >
+                  清空
+                </a-button>
+              </div>
+            </a-form-item>
             <!-- 报表默认排序: 普通报表把 JSON 下发给查询接口当 sortList,
                  透视模式在聚合结果行上排(候选=行维度字段+聚合度量, 与「行维度顺序」里的逐字段排序并存) -->
             <a-form-item label="排序字段">
@@ -192,6 +212,9 @@
             </a-form-item>
           </div>
         </a-form>
+        <div class="basic-form-tip">
+          常驻条件每次查询都强制拼入，用户在筛选栏改不掉；多Tab页面按各 Tab 自身的表格配置生效，互不影响。
+        </div>
 
         <!-- 表格列显示配置(勾选=显示; 透视模式下由行维度字段配置取代，隐藏) -->
         <div
@@ -330,7 +353,7 @@
             <a-button
               type="primary"
               size="small"
-              @click="pivotMeasureRows.push({ field: '', label: '', agg: 'sum', fixed: false, hideZero: false })"
+              @click="pivotMeasureRows.push({ field: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, numerator: '', denominator: '' })"
             >
               <template #icon>
                 <PlusOutlined />
@@ -349,7 +372,33 @@
               class="pivot-measure-row"
             >
               <span class="measure-index">{{ index + 1 }}</span>
+              <!-- ratio(比率加权): field 仅作输出键, 取数走分子/分母两列, 各自聚合后相除 -->
+              <template v-if="measure.agg === 'ratio'">
+                <a-select
+                  v-model:value="measure.numerator"
+                  :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                  placeholder="分子字段"
+                  show-search
+                  :filter-option="filterOption"
+                  style="width: 210px"
+                  @change="handleRatioFieldChange(measure)"
+                />
+                <span
+                  class="measure-index"
+                  style="margin: 0 2px"
+                >/</span>
+                <a-select
+                  v-model:value="measure.denominator"
+                  :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                  placeholder="分母字段"
+                  show-search
+                  :filter-option="filterOption"
+                  style="width: 210px"
+                  @change="handleRatioFieldChange(measure)"
+                />
+              </template>
               <a-select
+                v-else
                 v-model:value="measure.field"
                 :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
                 placeholder="聚合字段"
@@ -362,6 +411,7 @@
                 placeholder="显示名"
                 style="width: 180px"
               />
+              <!-- 聚合方式与勾选框紧跟取值控件, 注释按钮贴到删除左侧成"行尾操作区" -->
               <a-select
                 v-model:value="measure.agg"
                 style="width: 120px"
@@ -384,6 +434,9 @@
                 <a-select-option value="max">
                   最大
                 </a-select-option>
+                <a-select-option value="ratio">
+                  比率(加权)
+                </a-select-option>
               </a-select>
               <!-- 仅求和项开放: sum 去掉 0/NULL 行合计仍恒等, 其余聚合滤零行会与单元格数字对不上 -->
               <a-checkbox
@@ -399,6 +452,26 @@
               >
                 锁定
               </a-checkbox>
+              <!-- 注释文本长, 不放窄输入框: 走按钮＋宽弹框, 按钮只区分"有/无"(虚线待填 vs 蓝色已填), 内容悬停回显 -->
+              <a-tooltip>
+                <template #title>
+                  <span v-if="measure.desc">{{ measure.desc }}</span>
+                  <span v-else>未填写列注释</span>
+                </template>
+                <a-button
+                  class="measure-desc-btn"
+                  :type="measure.desc ? 'primary' : 'dashed'"
+                  :ghost="!!measure.desc"
+                  size="small"
+                  @click="openDescEditor(index)"
+                >
+                  <template #icon>
+                    <message-filled v-if="measure.desc" />
+                    <edit-outlined v-else />
+                  </template>
+                  注释
+                </a-button>
+              </a-tooltip>
               <a-button
                 type="link"
                 danger
@@ -501,6 +574,45 @@
         </div>
       </div>
     </div>
+
+    <!-- 常驻条件编辑器: 与筛选项/透视列条件共用同一个高级条件弹窗 -->
+    <PortalAdvancedSearchModal
+      :advanced-condition="fixedConditionModal"
+      @confirm="saveFixedCondition"
+    />
+
+    <!-- 度量列注释编辑: 点行内「注释」按钮打开, 确定才写回该行 -->
+    <a-modal
+      v-model:open="descModal.open"
+      :title="`列注释 · ${descModal.label || '未命名度量'}`"
+      :width="640"
+    >
+      <a-textarea
+        v-model:value="descModal.draft"
+        :auto-size="{ minRows: 4, maxRows: 12 }"
+        :maxlength="300"
+        placeholder="写这一列衡量什么、怎么算、怎么读。报表表头悬停问号时显示。"
+        show-count
+      />
+      <template #footer>
+        <a-button
+          v-if="descModal.original"
+          danger
+          @click="clearDescEditor"
+        >
+          清除
+        </a-button>
+        <a-button @click="descModal.open = false">
+          取消
+        </a-button>
+        <a-button
+          type="primary"
+          @click="confirmDescEditor"
+        >
+          确定
+        </a-button>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -509,13 +621,19 @@ import {
   ArrowDownOutlined,
   ArrowUpOutlined,
   DownloadOutlined,
+  EditOutlined,
+  MessageFilled,
   PlusOutlined,
   UploadOutlined,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
+import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
+import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
+
+import { useConditionModal } from './useConditionModal'
 
 const props = defineProps<{
   table: PortalTableVO;
@@ -544,6 +662,40 @@ const reportFileInputRef = ref<HTMLInputElement>()
 
 // 表单编辑对象：指向与 table prop 同一引用，避免模板直接对 prop 写入触发 vue/no-mutating-props
 const tableForm = computed<PortalTableVO>(() => props.table)
+
+// ==================== 表格常驻条件 ====================
+// 落库结构同 sys_portal.default_condition: {"andOr":"0","conditionList":[...]}
+// 清空必须显式写空条件树而非 null —— update 接口非 strict 模式跳过 null，清不掉旧值（与默认排序同坑）
+const FIXED_CONDITION_EMPTY = '{"andOr":"0","conditionList":[]}'
+// 编辑中的条件行：切换表格时从 table.fixedCondition 反填，点「保存基础配置」才序列化落库
+const fixedRows = ref<any[]>([])
+
+const parseFixedCondition = (json?: string | null) => {
+  fixedRows.value = []
+  if (!json) return
+  try {
+    const parsed = JSON.parse(json)
+    // 兼容裸数组与 {conditionList} 两种历史写法
+    const list = Array.isArray(parsed) ? parsed : parsed?.conditionList
+    fixedRows.value = Array.isArray(list) ? list : []
+  } catch (e) {
+    console.warn('解析表格常驻条件失败:', e)
+  }
+}
+
+const {
+  filterConditionConfig: fixedConditionModal,
+  openConditionModal,
+  handleConditionConfirm: saveFixedCondition,
+} = useConditionModal(
+  () => props.portalConfig?.columns,
+  (condition: ConditionType) => {
+    fixedRows.value = Array.isArray(condition?.conditionList) ? [...condition.conditionList] : []
+  }
+)
+
+const showFixedConditionModal = () => openConditionModal(fixedRows.value)
+const clearFixedRows = () => { fixedRows.value = [] }
 
 // ==================== 透视配置(基础配置 tab 内的行维度/度量编辑状态) ====================
 // 行维度字段勾选列表(保存时序列化到 table.groupByFields，数组顺序即分组层级顺序)
@@ -629,6 +781,45 @@ const pivotGroupSortPriority = computed(() => {
 })
 // 度量列编辑行(保存时序列化到 table.pivotMeasures)
 const pivotMeasureRows = ref<PivotMeasureVO[]>([])
+
+// ratio 度量的 field 仅是输出键(取数走分子/分母), 由分子/分母派生保证取数键唯一且不与真实列混淆
+const handleRatioFieldChange = (measure: PivotMeasureVO) => {
+  if (measure.agg === 'ratio' && measure.numerator && measure.denominator) {
+    measure.field = `${measure.numerator}_over_${measure.denominator}`
+  }
+}
+
+// ==================== 度量列注释 ====================
+// 注释文本长(整段口径说明), 塞行内输入框会被挤成一截, 改为按钮开宽弹框编辑; 点「保存基础配置」才序列化落库
+const descModal = reactive<{ open: boolean; index: number; draft: string; original: string; label: string }>({
+  open: false,
+  index: -1,
+  draft: '',
+  original: '',
+  label: ''
+})
+
+const openDescEditor = (index: number) => {
+  const measure = pivotMeasureRows.value[index]
+  descModal.index = index
+  descModal.original = measure.desc || ''
+  descModal.draft = descModal.original
+  descModal.label = measure.label || measure.field
+  descModal.open = true
+}
+
+const confirmDescEditor = () => {
+  const measure = pivotMeasureRows.value[descModal.index]
+  if (measure) {
+    measure.desc = descModal.draft.trim()
+  }
+  descModal.open = false
+}
+
+const clearDescEditor = () => {
+  descModal.draft = ''
+  confirmDescEditor()
+}
 
 // 合计列位置: 缺省视为 last(与列默认值一致), 避免首开下拉为空
 const pivotTotalPosModel = computed<string>({
@@ -756,7 +947,7 @@ const parsePivotMeasures = (json: string | undefined) => {
   try {
     const parsed = JSON.parse(json)
     pivotMeasureRows.value = Array.isArray(parsed)
-      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', agg: m.agg || 'sum', fixed: m.fixed === true, hideZero: m.hideZero === true }))
+      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', desc: m.desc || '', agg: m.agg || 'sum', fixed: m.fixed === true, hideZero: m.hideZero === true, numerator: m.numerator || '', denominator: m.denominator || '' }))
       : []
   } catch (e) {
     console.warn('解析透视度量配置失败:', e)
@@ -838,6 +1029,7 @@ watch(
     parsePivotMeasures(table.pivotMeasures)
     parseTabItems(table.tabItems)
     parseDefaultSort(table.defaultSort)
+    parseFixedCondition(table.fixedCondition)
     // 锁定方向由两侧已存配置推导(界面保证只锁一边: 行维度有锁定→左锁, 度量有锁定→右锁)
     pivotLockSide.value = pivotGroupFixedFields.value.length > 0
       ? 'left'
@@ -913,14 +1105,19 @@ const handleSaveTable = async () => {
         }
       })
 
-      // 度量列：过滤掉未选字段的空行(非右锁方向时清掉锁定标记, 保证只锁一边)
+      // 度量列：过滤掉未选字段的空行(非右锁方向时清掉锁定标记, 保证只锁一边); ratio 行还要求分子/分母齐备
       const validMeasures = pivotMeasureRows.value
-        .filter((m) => m.field)
+        .filter((m) => m.field && (m.agg !== 'ratio' || (m.numerator && m.denominator)))
         .map((m) => ({
           ...m,
           fixed: pivotLockSide.value === 'right' ? m.fixed === true : false,
           // 防呆: 隐藏零值仅对 sum 有意义, 改成其余聚合后不留无效配置
-          hideZero: m.agg === 'sum' && m.hideZero === true
+          hideZero: m.agg === 'sum' && m.hideZero === true,
+          // 防呆: 比率分子/分母仅对 ratio 有意义
+          numerator: m.agg === 'ratio' ? m.numerator : undefined,
+          denominator: m.agg === 'ratio' ? m.denominator : undefined,
+          // 空注释不落库(JSON.stringify 会丢掉 undefined 键)
+          desc: m.desc?.trim() || undefined
         }))
       table.pivotMeasures =
         validMeasures.length > 0 ? JSON.stringify(validMeasures) : undefined
@@ -939,6 +1136,11 @@ const handleSaveTable = async () => {
         tabItemsPayload.push({ tableId: r.tableId as number, ...(r.label ? { label: r.label } : {}) })
       })
     table.tabItems = tabItemsPayload.length > 0 ? JSON.stringify(tabItemsPayload) : undefined
+
+    // 常驻条件: 无配置也要显式写空条件树, 否则非 strict update 跳过 null 清不掉旧值
+    table.fixedCondition = fixedRows.value.length > 0
+      ? JSON.stringify({ andOr: '0', conditionList: fixedRows.value })
+      : FIXED_CONDITION_EMPTY
 
     await updatePortalTable(table)
     message.success('保存成功')
@@ -990,6 +1192,27 @@ const handleSaveTable = async () => {
     flex: 1;
     min-width: 0;
   }
+
+  // 常驻条件: 按钮擑满整格, 与同行的输入框/下拉框右边缘对齐
+  .fixed-condition-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .fixed-condition-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+// 基础配置表单下方的一行说明
+.basic-form-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.6;
 }
 
 // 聚合配置 tab 度量行序号
@@ -1121,7 +1344,13 @@ const handleSaveTable = async () => {
   .pivot-measure-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
+  }
+
+  // 注释＋删除作为行尾操作区整体贴右: auto 挂在两者中靠前的注释上, 中间不留拉伸空隙
+  .pivot-measure-row .measure-desc-btn {
+    margin-left: auto;
   }
 
   .pivot-measure-row + .pivot-measure-row {

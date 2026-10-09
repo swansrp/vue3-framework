@@ -19,7 +19,7 @@ import { FILTER_TYPE, QuerySortType } from '@/framework/components/common/Portal
 import { parseUrlParams } from '@/framework/network/utils'
 import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
-import { resolveDynamicVariable } from '@/framework/utils/common'
+import { resolveConditionVariables, resolveDynamicVariable } from '@/framework/utils/common'
 import { columnToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN } from '@/framework/utils/portalColumnPerm'
 
 
@@ -414,6 +414,40 @@ const condition = computed(() => {
 const isPivotMode = computed(() => portalTableConfig.value?.pivotMode === '1')
 
 /**
+ * 表格常驻条件(sys_portal_table.fixed_condition): 与 sys_portal.default_condition 同构的 JSON 条件树,
+ * 每次查询强制 AND 拼入、用户在筛选栏改不掉；挂在各表格配置自身，多Tab页面因此能 per-tab 生效
+ */
+const parseFixedCondition = (raw?: string | null): ConditionListType[] => {
+  if (!raw) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    // 兼容裸数组与 {conditionList} 两种写法(空数组=无常驻条件)
+    const list = Array.isArray(parsed) ? parsed : parsed?.conditionList
+    if (!Array.isArray(list) || list.length === 0) {
+      return []
+    }
+    // '${currentYear}' 等内置变量与默认条件走同一份解析
+    resolveConditionVariables(list)
+    // 与筛选项条件同一道清洗: 脏值会让后端拼出残缺 SQL, 整张报表直接查询失败
+    return list.map(normalizeCondition).filter((cond: any) => cond !== undefined) as ConditionListType[]
+  } catch (e) {
+    console.error('解析表格常驻条件失败:', e)
+    return []
+  }
+}
+
+/** 某份表格配置的真实下发条件 = 该表格常驻条件 + 筛选栏条件 */
+const withFixedCondition = (config?: PortalTableVO | null) => [
+  ...parseFixedCondition(config?.fixedCondition),
+  ...condition.value
+]
+
+// 单表页面: 条件挂在入口表格自身
+const singleCondition = computed(() => withFixedCondition(portalTableConfig.value))
+
+/**
  * 报表默认排序(sys_portal_table.default_sort): 读到就作为 sortList 下发查询接口
  * 空/'[]'/解析失败 统一返回 undefined, 保持不下发(此时 Portal 回退到 sys_portal 级默认排序)
  */
@@ -438,7 +472,7 @@ const sideWidth = computed(() =>
 )
 
 // 浅色分支 Portal 的查询条件(DarkTable 内部同款包装)
-const lightAdvanceCondition = computed(() => ({ conditionList: condition.value } as ConditionListType))
+const lightAdvanceCondition = computed(() => ({ conditionList: singleCondition.value } as ConditionListType))
 
 // 计算 padding 样式
 const paddingStyle = computed(() => {
@@ -574,8 +608,26 @@ const loadTabEntries = async (items: PortalTabItem[]) => {
   }
 }
 
-// 多Tab页面普通表 tab 的查询条件包装(同浅色分支)
-const tabAdvanceCondition = computed(() => ({ conditionList: condition.value } as ConditionListType))
+/** 多Tab页面: 每个 tab 的真实下发条件(成员常驻条件 + 筛选栏条件), 按 tab key 缓存 */
+const tabCondition = computed(() => {
+  const map: Record<string, ConditionListType[]> = {}
+  tabEntries.value.forEach((entry) => {
+    map[entry.key] = withFixedCondition(entry.config)
+  })
+  return map
+})
+
+/**
+ * 普通表 tab 的 advanceCondition 包装(同浅色分支, 但条件取各成员自己的常驻条件)
+ * 缓存成 computed 而非模板里直接调函数: 子组件按引用比较监听 advanceCondition, 每次渲染新建对象会造成无谓重查
+ */
+const tabAdvanceCondition = computed(() => {
+  const map: Record<string, ConditionListType> = {}
+  Object.entries(tabCondition.value).forEach(([key, list]) => {
+    map[key] = { conditionList: list } as ConditionListType
+  })
+  return map
+})
 
 /** 成员各自的列排除过滤(filterColumns 按成员自身配置生效, 与宿主无关) */
 const makeColumnFilter = (config: PortalTableVO) => (column: any) => {
@@ -615,7 +667,7 @@ onMounted(() => {
     ref="tableRef"
     :table-mode="isPivotMode ? 'pivot' : 'portal'"
     :portal-table-config="portalTableConfig || undefined"
-    :condition="condition"
+    :condition="singleCondition"
     :table-id="portalTableConfig?.portalName"
     :column-filter="columnFilter"
     :default-sort-column="defaultSortColumn"
@@ -660,12 +712,12 @@ onMounted(() => {
             <pivot-table
               v-if="entry.config.pivotMode === '1'"
               :portal-table-config="entry.config"
-              :condition="condition"
+              :condition="tabCondition[entry.key]"
             />
             <portal
               v-else
               :action-width="0"
-              :advance-condition="tabAdvanceCondition"
+              :advance-condition="tabAdvanceCondition[entry.key]"
               :column-filter="makeColumnFilter(entry.config)"
               :default-sort-column="parseDefaultSort(entry.config.defaultSort)"
               :hide-export="entry.config.downloadAble === '0'"
@@ -723,13 +775,13 @@ onMounted(() => {
             <pivot-table
               v-if="entry.config.pivotMode === '1'"
               :portal-table-config="entry.config"
-              :condition="condition"
+              :condition="tabCondition[entry.key]"
               theme="light"
             />
             <portal
               v-else
               :action-width="0"
-              :advance-condition="tabAdvanceCondition"
+              :advance-condition="tabAdvanceCondition[entry.key]"
               :column-filter="makeColumnFilter(entry.config)"
               :default-sort-column="parseDefaultSort(entry.config.defaultSort)"
               :hide-export="entry.config.downloadAble === '0'"
@@ -748,7 +800,7 @@ onMounted(() => {
       <pivot-table
         v-else-if="isPivotMode"
         :portal-table-config="portalTableConfig"
-        :condition="condition"
+        :condition="singleCondition"
         theme="light"
       />
       <portal
