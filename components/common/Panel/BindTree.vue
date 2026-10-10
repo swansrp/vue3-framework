@@ -37,12 +37,16 @@
     </div>
     <div class="tree-scroll-wrapper">
       <a-spin :spinning="loading">
+        <!-- default-expand-parent 必须显式关掉：库默认值是 true，勾选会让 treeKey 重挂载 a-tree，
+             新实例首帧会对 expandedKeys 做 conductExpandParent(只向上补齐祖先)，
+             而首次加载灌的是全部节点 key，用户收起的父节点会被其子孙 key 反推着重开 -->
         <a-tree
           v-if="filteredTreeData.length > 0"
           :key="treeKey"
           :checked-keys="innerCheckedKeys"
           :half-checked-keys="innerHalfCheckedKeys"
           :expanded-keys="expandedKeys"
+          :default-expand-parent="false"
           :show-line="true"
           checkable
           check-strictly
