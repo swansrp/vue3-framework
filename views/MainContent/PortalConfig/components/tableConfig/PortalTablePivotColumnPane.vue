@@ -137,12 +137,11 @@
               <a-row :gutter="24">
                 <a-col :span="12">
                   <a-form-item label="列标识">
-                    <a-select
+                    <a-auto-complete
                       v-model:value="selectedPivotColumn.itemValue"
                       :options="pivotItemValueOptions"
-                      :placeholder="pivotItemValueOptions.length > 0 ? '请选择列标识' : '请先配置列条件'"
-                      show-search
-                      allow-clear
+                      :filter-option="filterItemValueOption"
+                      :placeholder="pivotItemValueOptions.length > 0 ? '从列条件带出，也可直接输入' : '可直接输入，或配置/粘贴列条件带出候选'"
                     />
                   </a-form-item>
                 </a-col>
@@ -396,23 +395,46 @@ const parsePivotConditionAndOr = (conditionStr: string | undefined): '0' | '1' =
   }
 }
 
-// 列标识下拉选项：取自当前列条件中的条件值(保证标识与条件一致，排除含 __ 的值)
-const pivotItemValueOptions = computed(() => {
-  const values: string[] = []
-  parsePivotConditionList(selectedPivotColumn.value?.condition).forEach((cond: any) => {
-    const vals = Array.isArray(cond?.value) ? cond.value : cond?.value != null ? [cond.value] : []
-    vals.forEach((v: any) => {
-      const s = String(v)
-      if (s && !s.includes('__') && !values.includes(s)) {
-        values.push(s)
-      }
-    })
-  })
-  return values.map((v) => ({ label: v, value: v }))
-})
-
 // 列条件 JSON 草稿(展示与手动编辑用)
 const conditionJsonDraft = ref('')
+
+// 收集条件树里的条件值：口径同后端 BaseSqlBuilder.buildCondition(子组节点递归、叶子取 value)，
+// 故「或」包成的组节点也能出候选；叶子序列化时带空 conditionList，所以两条判断都要走
+const collectConditionValues = (nodes: any[], acc: string[] = []): string[] => {
+  nodes.forEach((node: any) => {
+    if (Array.isArray(node?.conditionList)) {
+      collectConditionValues(node.conditionList, acc)
+    }
+    if (node?.property) {
+      const vals = Array.isArray(node.value) ? node.value : node.value != null ? [node.value] : []
+      vals.forEach((v: any) => {
+        const s = String(v)
+        if (s && !s.includes('__') && !acc.includes(s)) {
+          acc.push(s)
+        }
+      })
+    }
+  })
+  return acc
+}
+
+// 列标识取数的条件正源：草稿优先(粘完 JSON 即可选，不必先保存)，草稿不可解析时回落已落库条件
+const pivotConditionSource = computed(() => {
+  return normalizePivotCondition(conditionJsonDraft.value) || selectedPivotColumn.value?.condition
+})
+
+// 列标识下拉选项：取自当前列条件中的条件值(保证标识与条件一致，排除含 __ 的值)
+const pivotItemValueOptions = computed(() => {
+  return collectConditionValues(parsePivotConditionList(pivotConditionSource.value)).map((v) => ({
+    label: v,
+    value: v,
+  }))
+})
+
+// 候选按输入子串过滤：列标识允许直接输入(如月份 2024-07)，不必与条件值逐字相等
+const filterItemValueOption = (input: string, option: any): boolean => {
+  return String(option?.value ?? '').toLowerCase().includes(String(input ?? '').toLowerCase())
+}
 
 // 格式化 condition 为缩进 JSON，非法时原样展示(保存时报错)
 const formatPivotCondition = (condition?: string): string => {
@@ -433,9 +455,9 @@ watch(
   { immediate: true }
 )
 
-// 当前透视列是否已配置条件
+// 当前透视列是否已配置条件(草稿优先，与列标识候选同源)
 const hasPivotCondition = computed(() => {
-  return parsePivotConditionList(selectedPivotColumn.value?.condition).length > 0
+  return parsePivotConditionList(pivotConditionSource.value).length > 0
 })
 
 // 父表头路径编辑模型: groupPath JSON 字符串 <-> 有序标签数组(第1个=最外层)
@@ -513,7 +535,7 @@ const handleAddPivotColumn = () => {
   }
   pivotColumnList.value = [...pivotColumnList.value, newColumn]
   selectedPivotColumn.value = newColumn
-  message.info('请在右侧填写列标识与表头名称，然后点击「保存配置」')
+  message.info('请配置或粘贴列条件、填写「列标识」，然后点击「保存配置」')
 }
 
 // 保存透视列
@@ -523,12 +545,7 @@ const handleSavePivotColumn = async () => {
     message.warning('请先选择或新增一个透视列')
     return
   }
-  // 新增保存前校验列标识，避免后端报错
-  if (!selectedPivotColumn.value.id && !selectedPivotColumn.value.itemValue?.trim()) {
-    message.warning('列标识不能为空')
-    return
-  }
-  // 应用列条件 JSON 草稿：非空则解析归一化，非法则报错阻断
+  // 先应用列条件 JSON 草稿：非空则解析归一化，非法则报错阻断
   const draft = conditionJsonDraft.value.trim()
   if (draft) {
     const normalized = normalizePivotCondition(draft)
@@ -537,6 +554,14 @@ const handleSavePivotColumn = async () => {
       return
     }
     selectedPivotColumn.value.condition = normalized
+  }
+  // 再校验列标识(新增行)：草稿已写入 condition，故粘贴 JSON 后下拉即有候选
+  // 列标识是拼进 SQL 列别名的机器键，首尾空白会让跑数时被后端字符集校验拒掉，落库前先剥掉
+  const itemValue = selectedPivotColumn.value.itemValue?.trim()
+  selectedPivotColumn.value.itemValue = itemValue
+  if (!selectedPivotColumn.value.id && !itemValue) {
+    message.warning('「列标识」不能为空，请从下拉选择或直接输入')
+    return
   }
   savingPivotColumn.value = true
   try {
@@ -770,11 +795,12 @@ const { filterConditionConfig, openConditionModal, closeConditionModal } =
   useConditionModal(() => props.columns, savePivotCondition)
 
 // 打开透视列条件配置弹窗(复用高级搜索条件弹窗)
+// 回显取 pivotConditionSource(草稿优先)：否则粘贴过 JSON 再进弹窗，会用落库旧值覆盖掉草稿
 const openPivotConditionModal = async () => {
   if (!selectedPivotColumn.value) return
   await openConditionModal(
-    parsePivotConditionList(selectedPivotColumn.value.condition),
-    parsePivotConditionAndOr(selectedPivotColumn.value.condition)
+    parsePivotConditionList(pivotConditionSource.value),
+    parsePivotConditionAndOr(pivotConditionSource.value)
   )
 }
 </script>
