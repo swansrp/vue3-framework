@@ -78,10 +78,11 @@ export function useConditionModal(
   }
 
   // 打开条件配置弹窗(字典选项必须在打开前加载完：弹窗 deep watch 递增 key 强制重建)
-  const openConditionModal = async (conditionList: any[]) => {
+  // andOr 回传上次保存的条件间关系（'0'=与 '1'=或），不传则默认与
+  const openConditionModal = async (conditionList: any[], andOr: '0' | '1' = '0') => {
     await buildColumnArray()
     filterConditionConfig.condition = {
-      andOr: '0',
+      andOr,
       conditionList,
     }
     filterConditionConfig.show = true

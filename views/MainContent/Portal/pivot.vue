@@ -872,12 +872,15 @@ const parsePivotColumnCondition = (pv: PortalPivotColumnVO): ConditionListType[]
   }
   try {
     const parsed = JSON.parse(pv.condition)
+    let list: ConditionListType[] = []
     if (Array.isArray(parsed?.conditionList)) {
-      return parsed.conditionList
+      list = parsed.conditionList
+    } else if (parsed?.property) {
+      list = [parsed]
     }
-    if (parsed?.property) {
-      return [parsed]
-    }
+    // 条件间关系存的是整组的关系('0'=与 '1'=或)；「或」时包成组节点下发，拍平会被请求层的 AND 语义吞掉
+    // 老数据无该字段 ⇒ 与，返回值与原来逐字节一致
+    return parsed?.andOr === '1' && list.length > 1 ? [{ andOr: '1', conditionList: list }] : list
   } catch (e) {
     console.error('解析透视列钻取条件失败:', e)
   }

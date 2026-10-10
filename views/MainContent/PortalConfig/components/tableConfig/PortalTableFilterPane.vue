@@ -491,12 +491,16 @@ const filteredAvailableFields = computed(() => {
 interface ConditionConfig {
   default: any[]; // 通用兜底 condition
   options: Record<string, any[]>; // 按字典值映射的特殊 condition
+  defaultAndOr: string; // 通用条件的关系（'0'=与 '1'=或）
+  optionsAndOr: Record<string, string>; // 各特殊选项条件的关系
 }
 
 // 当前筛选项的条件配置
 const conditionConfig = reactive<ConditionConfig>({
   default: [],
   options: {},
+  defaultAndOr: '0',
+  optionsAndOr: {},
 })
 
 // 当前编辑的特殊选项值
@@ -517,6 +521,8 @@ const isNewConditionFormat = (condition: any): condition is ConditionConfig => {
 
 // 解析 condition 字符串到 conditionConfig
 const parseCondition = (conditionStr: string | undefined) => {
+  conditionConfig.defaultAndOr = '0'
+  conditionConfig.optionsAndOr = {}
   if (!conditionStr) {
     conditionConfig.default = []
     conditionConfig.options = {}
@@ -530,6 +536,9 @@ const parseCondition = (conditionStr: string | undefined) => {
       // 新格式
       conditionConfig.default = parsed.default || []
       conditionConfig.options = parsed.options || {}
+      // 关系字段是后补的，老数据没有 ⇒ 回退「与」
+      conditionConfig.defaultAndOr = parsed.defaultAndOr || '0'
+      conditionConfig.optionsAndOr = parsed.optionsAndOr || {}
     } else {
       // 老格式，作为通用 condition
       if (Array.isArray(parsed)) {
@@ -553,6 +562,8 @@ const serializeCondition = (): string => {
   const config: ConditionConfig = {
     default: conditionConfig.default,
     options: conditionConfig.options,
+    defaultAndOr: conditionConfig.defaultAndOr || '0',
+    optionsAndOr: conditionConfig.optionsAndOr || {},
   }
   return JSON.stringify(config)
 }
@@ -579,6 +590,7 @@ const loadFilterDictOptions = async () => {
 // 删除特殊选项条件
 const removeOptionCondition = (optionValue: string) => {
   delete conditionConfig.options[optionValue]
+  delete conditionConfig.optionsAndOr[optionValue]
   // 保存
   selectedFilter.value!.condition = serializeCondition()
   handleSaveFilter(selectedFilter.value!)
@@ -1030,6 +1042,7 @@ const handleFilterTypeChange = (value: any) => {
 // ==================== 条件配置弹窗(通用条件/特殊选项条件) ====================
 const saveFilterCondition = (condition: ConditionType) => {
   const conditionList = condition.conditionList || []
+  const andOr = condition.andOr || '0'
 
   if (!selectedFilter.value) return
 
@@ -1037,13 +1050,16 @@ const saveFilterCondition = (condition: ConditionType) => {
     // 保存特殊选项条件
     if (conditionList.length > 0) {
       conditionConfig.options[editingOptionValue.value] = conditionList
+      conditionConfig.optionsAndOr[editingOptionValue.value] = andOr
     } else {
       // 空条件则删除
       delete conditionConfig.options[editingOptionValue.value]
+      delete conditionConfig.optionsAndOr[editingOptionValue.value]
     }
   } else {
     // 保存通用条件
     conditionConfig.default = conditionList
+    conditionConfig.defaultAndOr = andOr
   }
 
   // 序列化存储
@@ -1062,7 +1078,7 @@ const openDefaultConditionModal = async () => {
   if (!selectedFilter.value) return
   editingOptionValue.value = '' // 标记为编辑通用条件
   // 使用 conditionConfig.default 作为当前条件
-  await openConditionModal(conditionConfig.default || [])
+  await openConditionModal(conditionConfig.default || [], (conditionConfig.defaultAndOr || '0') as '0' | '1')
 }
 
 // 打开特殊选项条件配置弹窗
@@ -1070,7 +1086,10 @@ const openOptionConditionModal = async (optionValue: string) => {
   if (!selectedFilter.value) return
   editingOptionValue.value = optionValue // 标记为编辑特殊选项条件
   // 使用该选项的专属条件
-  await openConditionModal(conditionConfig.options[optionValue] || [])
+  await openConditionModal(
+    conditionConfig.options[optionValue] || [],
+    (conditionConfig.optionsAndOr[optionValue] || '0') as '0' | '1'
+  )
 }
 </script>
 

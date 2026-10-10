@@ -386,6 +386,16 @@ const parsePivotConditionList = (conditionStr: string | undefined): any[] => {
   }
 }
 
+// 条件间关系('0'=与 '1'=或)；关系字段是后补的，老数据没有 ⇒ 与
+const parsePivotConditionAndOr = (conditionStr: string | undefined): '0' | '1' => {
+  if (!conditionStr) return '0'
+  try {
+    return JSON.parse(conditionStr)?.andOr === '1' ? '1' : '0'
+  } catch (e) {
+    return '0'
+  }
+}
+
 // 列标识下拉选项：取自当前列条件中的条件值(保证标识与条件一致，排除含 __ 的值)
 const pivotItemValueOptions = computed(() => {
   const values: string[] = []
@@ -746,7 +756,7 @@ const savePivotCondition = (condition: ConditionType) => {
       cond.relation = Number(cond.relation)
     }
   })
-  const conditionStr = JSON.stringify({ conditionList })
+  const conditionStr = JSON.stringify({ andOr: condition.andOr || '0', conditionList })
   selectedPivotColumn.value.condition = conditionStr
   // 立即同步 JSON 草稿：handleSavePivotColumn 会基于草稿覆盖 condition，
   // 若等 watch 异步刷新，草稿仍是旧值会把弹窗修改回滚
@@ -762,7 +772,10 @@ const { filterConditionConfig, openConditionModal, closeConditionModal } =
 // 打开透视列条件配置弹窗(复用高级搜索条件弹窗)
 const openPivotConditionModal = async () => {
   if (!selectedPivotColumn.value) return
-  await openConditionModal(parsePivotConditionList(selectedPivotColumn.value.condition))
+  await openConditionModal(
+    parsePivotConditionList(selectedPivotColumn.value.condition),
+    parsePivotConditionAndOr(selectedPivotColumn.value.condition)
+  )
 }
 </script>
 

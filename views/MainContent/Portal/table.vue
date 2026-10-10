@@ -261,7 +261,7 @@ const loadPortalTableConfig = async () => {
 }
 
 // 判断是否是新格式的 condition（支持按字典值映射）
-const isNewConditionFormat = (condition: any): condition is { default: any[], options: Record<string, any[]> } => {
+const isNewConditionFormat = (condition: any): condition is { default: any[], options: Record<string, any[]>, defaultAndOr?: string, optionsAndOr?: Record<string, string> } => {
   return condition && typeof condition === 'object' && 'default' in condition
 }
 
@@ -351,17 +351,22 @@ const condition = computed(() => {
             // 新格式：通用条件=必备过滤始终拼入；选中值命中专属 condition 时再 AND 追加
             // value 可能是数组（多选）或单值
             const values = Array.isArray(value) ? value : [value]
-            
+
+            // 条件间关系存的是整组的关系（'0'=与 '1'=或）；老数据无此字段 ⇒ 与，下发请求逐字节不变
+            // 关系为「或」且条件多于一条时包成组节点下发，拍平会被请求层的 AND 语义吞掉
+            const wrapGroup = (list: any[], andOr: string | undefined) =>
+              andOr === '1' && list.length > 1 ? [{ andOr: '1', conditionList: list }] : list
+
             // 通用兜底条件：必备条件，始终拼入（与专属条件 AND 合并）
             if (parsedCondition.default && Array.isArray(parsedCondition.default)) {
-              conditionArray.push(...parsedCondition.default)
+              conditionArray.push(...wrapGroup(parsedCondition.default, parsedCondition.defaultAndOr))
             }
-            
+
             // 检查选中的值是否有专属 condition，命中即追加(取第一个命中)
             for (const v of values) {
               const optionCondition = parsedCondition.options?.[v]
               if (optionCondition && Array.isArray(optionCondition) && optionCondition.length > 0) {
-                conditionArray.push(...optionCondition)
+                conditionArray.push(...wrapGroup(optionCondition, parsedCondition.optionsAndOr?.[v]))
                 break
               }
             }
@@ -431,7 +436,12 @@ const parseFixedCondition = (raw?: string | null): ConditionListType[] => {
     // '${currentYear}' 等内置变量与默认条件走同一份解析
     resolveConditionVariables(list)
     // 与筛选项条件同一道清洗: 脏值会让后端拼出残缺 SQL, 整张报表直接查询失败
-    return list.map(normalizeCondition).filter((cond: any) => cond !== undefined) as ConditionListType[]
+    const normalized = list.map(normalizeCondition).filter((cond: any) => cond !== undefined) as ConditionListType[]
+    // 条件间关系存的是整组的关系（'0'=与 '1'=或）；「或」时包成组节点下发，拍平会被请求层的 AND 语义吞掉
+    // 老数据无该字段 ⇒ 与，返回值与原来逐字节一致
+    return (!Array.isArray(parsed) && parsed?.andOr === '1' && normalized.length > 1)
+      ? [{ andOr: '1', conditionList: normalized }]
+      : normalized
   } catch (e) {
     console.error('解析表格常驻条件失败:', e)
     return []

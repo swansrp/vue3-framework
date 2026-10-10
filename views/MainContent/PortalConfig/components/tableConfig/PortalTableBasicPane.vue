@@ -670,15 +670,19 @@ const tableForm = computed<PortalTableVO>(() => props.table)
 const FIXED_CONDITION_EMPTY = '{"andOr":"0","conditionList":[]}'
 // 编辑中的条件行：切换表格时从 table.fixedCondition 反填，点「保存基础配置」才序列化落库
 const fixedRows = ref<any[]>([])
+// 条件间关系('0'=与 '1'=或)；关系字段是后补的，老数据没有 ⇒ 与
+const fixedAndOr = ref<'0' | '1'>('0')
 
 const parseFixedCondition = (json?: string | null) => {
   fixedRows.value = []
+  fixedAndOr.value = '0'
   if (!json) return
   try {
     const parsed = JSON.parse(json)
     // 兼容裸数组与 {conditionList} 两种历史写法
     const list = Array.isArray(parsed) ? parsed : parsed?.conditionList
     fixedRows.value = Array.isArray(list) ? list : []
+    fixedAndOr.value = (!Array.isArray(parsed) && parsed?.andOr === '1') ? '1' : '0'
   } catch (e) {
     console.warn('解析表格常驻条件失败:', e)
   }
@@ -692,10 +696,11 @@ const {
   () => props.portalConfig?.columns,
   (condition: ConditionType) => {
     fixedRows.value = Array.isArray(condition?.conditionList) ? [...condition.conditionList] : []
+    fixedAndOr.value = (condition?.andOr === '1') ? '1' : '0'
   }
 )
 
-const showFixedConditionModal = () => openConditionModal(fixedRows.value)
+const showFixedConditionModal = () => openConditionModal(fixedRows.value, fixedAndOr.value)
 const clearFixedRows = () => { fixedRows.value = [] }
 
 // ==================== 透视配置(基础配置 tab 内的行维度/度量编辑状态) ====================
@@ -1139,8 +1144,9 @@ const handleSaveTable = async () => {
     table.tabItems = tabItemsPayload.length > 0 ? JSON.stringify(tabItemsPayload) : undefined
 
     // 常驻条件: 无配置也要显式写空条件树, 否则非 strict update 跳过 null 清不掉旧值
+    // andOr 是整组的关系('0'=与 '1'=或)，不存下来重开永远回退「与」
     table.fixedCondition = fixedRows.value.length > 0
-      ? JSON.stringify({ andOr: '0', conditionList: fixedRows.value })
+      ? JSON.stringify({ andOr: fixedAndOr.value || '0', conditionList: fixedRows.value })
       : FIXED_CONDITION_EMPTY
 
     await updatePortalTable(table)

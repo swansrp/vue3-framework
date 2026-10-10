@@ -19,5 +19,5 @@ const props = defineProps<{value: string}>()
 const emit = defineEmits(['update:value'])
 const onChange = () => emit('update:value', _value.value)
 
-watch(() => props.value, () => _value.value = props.value)
+watch(() => props.value, () => _value.value = props.value, { immediate: true })
 </script>
