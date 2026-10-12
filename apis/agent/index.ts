@@ -21,6 +21,20 @@ export const listAgents = () =>
 export const getAgentRegistry = () =>
   get(buildGetApiByType('/registry', agentApiType), {}, {}, false, false, false)
 
+// 能力包清单（core/agent-console，M14 棒 1＝只读无写口）：代码登记上来的系统级能力包、
+// 包内工具注册名与副作用档；payload={packages:[{name,displayName,module,tags,tools,description}],toolNames:[...]}
+export const getCapabilityPackages = () =>
+  get(buildGetApiByType('/capability/packages', agentApiType), {}, {}, false, false, false)
+
+// 会话装配单（core/agent-console，M14 棒 2＝只读）：按会话查"当时手里有什么"——工具面定形清单、
+// 模型档、注入技能与版本、提示词段与业务标注；棒 2 之前发起的历史会话没有快照，payload 为空
+export const getAgentManifest = (sessionId: string) =>
+  get(buildGetApiByType(`/manifest/${sessionId}`, agentApiType), {}, {}, false, false, false)
+
+// 最近的装配单（agentKey 空＝跨 agent，按定形时刻新→旧；limit 后端截 100）
+export const listRecentManifest = (agentKey?: string, limit?: number) =>
+  get(buildGetApiByType('/manifest/recent', agentApiType), { agentKey, limit }, {}, false, false, false)
+
 // 发起自主 agent 会话：返回状态快照（sessionId 供控制与轮询）；
 // detachPolicy 可选覆盖（'STOP_ON_DETACH' 断开即停 / 'KEEP_RUNNING' 后台继续可重连），
 // 策略由发起页面按场景定义，不传回落定义层默认
