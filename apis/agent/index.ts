@@ -27,9 +27,11 @@ export const getCapabilityPackages = () =>
   get(buildGetApiByType('/capability/packages', agentApiType), {}, {}, false, false, false)
 
 // 会话装配单（core/agent-console，M14 棒 2＝只读）：按会话查"当时手里有什么"——工具面定形清单、
-// 模型档、注入技能与版本、提示词段与业务标注；棒 2 之前发起的历史会话没有快照，payload 为空
-export const getAgentManifest = (sessionId: string) =>
-  get(buildGetApiByType(`/manifest/${sessionId}`, agentApiType), {}, {}, false, false, false)
+// 模型档、注入技能与版本、提示词段与业务标注；棒 2 之前发起的历史会话没有快照，payload 为空。
+// include（棒 2 增量）＝'prompt'／'conversation'：这两件重载荷默认不下发，显式展开才回，
+// 且服务端按身份闸拦（只有发起人本人与平台管理员能拿到原文），被拒不按空数据处理
+export const getAgentManifest = (sessionId: string, include?: string) =>
+  get(buildGetApiByType(`/manifest/${sessionId}`, agentApiType), { include }, {}, false, false, false)
 
 // 最近的装配单（agentKey 空＝跨 agent，按定形时刻新→旧；limit 后端截 100）
 export const listRecentManifest = (agentKey?: string, limit?: number) =>

@@ -82,7 +82,7 @@
           type="info"
           show-icon
           message="一场会话一行，记的是工具面定形那一刻"
-          description="工具面＝真的发给模型的那份清单，含引擎按上下文治理追加的回捞工具，不是业务代码里声明的那份；技能与提示词段由业务贡献者在同一线程现读，与那次装配同源。快照只在 M14 棒 2 之后发起的会话才有，更早的历史会话查出来是空的。本页不提供增删改。"
+          description="工具面＝真的发给模型的那份清单，含引擎按上下文治理追加的回捞工具，不是业务代码里声明的那份；技能与提示词段由业务贡献者在同一线程现读，与那次装配同源。快照只在 M14 棒 2 之后发起的会话才有，更早的历史会话查出来是空的。提示词原文与对话原文默认不下发，点「展开」才取，且服务端只认发起人本人与平台管理员。本页不提供增删改。"
         />
 
         <div class="toolbar">
@@ -179,6 +179,20 @@
               {{ current.toolCount }}
             </a-descriptions-item>
             <a-descriptions-item
+              label="对话定位"
+              :span="2"
+            >
+              <a-typography-text
+                v-if="current.conversationId"
+                code
+                class="session-cell"
+                :copyable="{ text: current.conversationId }"
+              >
+                {{ current.conversationId }}
+              </a-typography-text>
+              <span v-else class="desc">这场会话没接历史对话层（纯后台型 agent 只落会话，不落对话）</span>
+            </a-descriptions-item>
+            <a-descriptions-item
               label="业务标注"
               :span="2"
             >
@@ -245,7 +259,22 @@
 
           <div class="block">
             <div class="block-title">
-              提示词段（按拼装顺序）
+              <span>提示词段（按拼装顺序）</span>
+              <a-button
+                v-if="current.hasPromptText"
+                size="small"
+                :loading="expandLoading"
+                class="block-action"
+                @click="toggleExpand('prompt')"
+              >
+                {{ promptText ? '收起原文' : '展开原文' }}
+              </a-button>
+              <a-tooltip
+                v-else
+                title="该行没有存 system 槽原文：会话早于棒 2 增量，或该 agent 压根不发 system 消息"
+              >
+                <span class="block-action desc">无原文</span>
+              </a-tooltip>
             </div>
             <div
               v-for="(section, idx) in current.promptSections"
@@ -260,6 +289,63 @@
             >
               该 agent 未登记段结构（贡献者只报代码里真实存在的段，未知 agent 留空不猜）
             </div>
+            <pre
+              v-if="promptText"
+              class="raw-body"
+            >{{ promptText }}</pre>
+          </div>
+
+          <div class="block">
+            <div class="block-title">
+              <span>对话全文</span>
+              <a-button
+                v-if="current.conversationId"
+                size="small"
+                :loading="expandLoading"
+                class="block-action"
+                @click="toggleExpand('conversation')"
+              >
+                {{ convo ? '收起对话' : '展开对话' }}
+              </a-button>
+            </div>
+            <div
+              v-if="!current.conversationId"
+              class="desc"
+            >
+              这场会话没接历史对话层（纯后台型 agent 只留装配快照，不留对话）
+            </div>
+            <div
+              v-else-if="convoExpired"
+              class="warn-line"
+            >
+              对话原文已超过保留期——定位 id 永久留着，正文按保留天数滚窗，过期就是过期了。
+            </div>
+            <template v-else-if="convo">
+              <div
+                v-for="(message, idx) in convo.messages || []"
+                :key="idx"
+                class="convo-line"
+              >
+                <a-tag :color="message.role === 'user' ? 'blue' : 'green'">
+                  {{ message.role === 'user' ? '人' : '助手' }}
+                </a-tag>
+                <a-tag
+                  v-if="message.status && message.status !== 'done'"
+                  color="red"
+                >
+                  {{ STATUS_LABELS[message.status] || message.status }}
+                </a-tag>
+                <div class="convo-body">
+                  {{ message.content }}
+                </div>
+              </div>
+              <div
+                v-if="!(convo.messages || []).length"
+                class="desc"
+              >
+                这条对话没有消息明细
+              </div>
+            </template>
           </div>
         </div>
       </a-tab-pane>
@@ -289,6 +375,11 @@ const TAB_TITLES: Record<string, string> = {
   manifest: '会话装配单'
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  error: '失败',
+  stopped: '已停止'
+}
+
 const columns = [
   { title: '能力包', key: 'name', dataIndex: 'name', width: 170 },
   { title: '来源模块', key: 'module', dataIndex: 'module', width: 120 },
@@ -316,6 +407,12 @@ const sessionId = ref('')
 const agentKey = ref<string>()
 const manifestLoading = ref(false)
 const queried = ref(false)
+
+// 两件重载荷（棒 2 增量）：默认不随装配单下发，展开才按 include 现取，切行走 watch 收回
+const expandLoading = ref(false)
+const promptText = ref('')
+const convo = ref<any>(null)
+const convoExpired = ref(false)
 
 const tagLabel = (tag: string) => TAG_LABELS[tag] || tag
 const tagColor = (tag: string) => TAG_COLORS[tag] || 'default'
@@ -419,6 +516,46 @@ const pickRow = (record: any) => ({
   }
 })
 
+/**
+ * 展开／收起原文（棒 2 增量）：已有就收起，没有才发一次带 include 的读请求。
+ * 服务端只给发起人本人与平台管理员返回原文，被拒时框架信封直接报错、这里不留半成品状态
+ */
+const toggleExpand = async (kind: 'prompt' | 'conversation') => {
+  if (kind === 'prompt' && promptText.value) {
+    promptText.value = ''
+    return
+  }
+  if (kind === 'conversation' && convo.value) {
+    convo.value = null
+    return
+  }
+  const id = current.value?.sessionId
+  if (!id) {
+    return
+  }
+  expandLoading.value = true
+  try {
+    const resp: any = await getAgentManifest(id, kind)
+    const payload: any = resp?.payload || {}
+    if (kind === 'prompt') {
+      promptText.value = payload.promptText || ''
+    } else {
+      convo.value = payload.conversation || null
+      // 有定位 id 却读不回正文＝原文已过保留期，与"这场会话压根没对话"是两件事
+      convoExpired.value = !convo.value && !!payload.conversationId
+    }
+  } finally {
+    expandLoading.value = false
+  }
+}
+
+// 换一场会话就把上一场的原文收回：这两栏只在展开时才有，留着会串会话读数
+watch(current, () => {
+  promptText.value = ''
+  convo.value = null
+  convoExpired.value = false
+})
+
 const loadAgents = async () => {
   const resp: any = await listAgents()
   agents.value = resp?.payload || []
@@ -502,8 +639,44 @@ onMounted(() => {
 }
 
 .block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   margin-bottom: 6px;
+}
+
+.block-action {
+  margin-left: auto;
+  font-weight: 400;
+}
+
+.raw-body {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  max-height: 340px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--fill-quaternary, #fafafa);
+  border: 1px solid var(--border-split, #f0f0f0);
+  border-radius: 4px;
+}
+
+.convo-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border-split, #f0f0f0);
+}
+
+.convo-body {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .line {
