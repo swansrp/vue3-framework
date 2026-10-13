@@ -3,9 +3,10 @@ import { request } from '@/framework/network/request'
 
 const buildGetApi = (url: string) => buildGetApiByType(url, apiType.account)
 const buildPostApi = (url: string) => buildPostApiByType(url, apiType.account)
-export const getStaffList = (deptIdList: Array<string>, name = '') => request(buildPostApi(''), {}, {
+export const getStaffList = (deptIdList: Array<string>, name = '', matchAllFields = false) => request(buildPostApi(''), {}, {
   deptIdList,
-  name
+  name,
+  matchAllFields
 }, false, false) as Promise<any>
 export const getAccountInfo = (names: Array<string>, active = true) => request(buildPostApi('/search'), { active }, names, false, false) as Promise<any>
 export const getDepartmentTree = () => request(buildGetApi('/department/tree'), {}, {}, false, false) as Promise<any>

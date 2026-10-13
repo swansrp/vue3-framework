@@ -20,6 +20,7 @@
               :width="300"
               placeholder="请搜索员工信息"
               :label-in-value="true"
+              source="user"
               style="margin-bottom: 20px"
             />
           </div>

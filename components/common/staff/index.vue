@@ -31,7 +31,7 @@
 import _ from 'lodash'
 
 import getImgUrl from '@/framework/assets/imgs/getImgUrl'
-import { getAccountInfo } from '@/framework/components/common/departmentAndStaffSelect/api'
+import { getAccountInfo, getStaffList } from '@/framework/components/common/departmentAndStaffSelect/api'
 import { QUERY_INTERVAL } from '@/framework/utils/constant'
 
 const props = withDefaults(
@@ -41,7 +41,10 @@ const props = withDefaults(
     placeholder?: string,
     disabled?: boolean,
     active?: boolean,
-    labelInValue?: boolean
+    labelInValue?: boolean,
+    // account＝登录账号表 ac_account（默认，保持原状）；user＝人事表 ac_user，
+    // 覆盖未开登录账号的同步人员，且选项 value 取工号供下游按 customerNumber 定位
+    source?: 'account' | 'user'
   }>(),
   {
     modelValue: '',
@@ -49,14 +52,15 @@ const props = withDefaults(
     placeholder: '请搜索员工信息',
     disabled: false,
     active: true,
-    labelInValue: false
+    labelInValue: false,
+    source: 'account'
   }
 )
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any): void
 }>()
-const { modelValue, width, placeholder, active, labelInValue } = toRefs(props)
+const { modelValue, width, placeholder, active, labelInValue, source } = toRefs(props)
 const selectUserValue = ref({ value: '', label: '' } as any)
 const staffList = ref([] as Array<any>)
 const handleInputChange = _.debounce((value: string) => getSelectOption(value), QUERY_INTERVAL)
@@ -65,14 +69,17 @@ const staffAvatar = (imgUrl: string) => {
   if (!imgUrl || imgUrl.indexOf('90') > -1) return defaultAvatar
   else return imgUrl
 }
+const searchStaff = (keyword: string) =>
+  source.value === 'user' ? getStaffList([], keyword, true) : getAccountInfo([keyword], active.value)
+const optionValue = (res: any) => (source.value === 'user' ? res.customerNumber : res.value)
 const getSelectOption = (searchValue: string) => {
   if (searchValue) {
-    getAccountInfo([searchValue], active.value).then((resp) => {
+    searchStaff(searchValue).then((resp) => {
       staffList.value.length = 0
       resp.payload.forEach((res: any) => {
         staffList.value.push({
-          value: res.value,
-          label: res.label + '(' + res.deptName + ')',
+          value: optionValue(res),
+          label: res.deptName ? res.label + '(' + res.deptName + ')' : res.label,
           avatar: res.pictureLink,
           name: res.label,
           deptName: res.deptName
@@ -86,10 +93,10 @@ watch(
   () => {
     if (labelInValue.value) {
       if (modelValue.value?.value) {
-        getAccountInfo([modelValue.value.value], active.value).then((resp) => {
+        searchStaff(modelValue.value.value).then((resp) => {
           staffList.value.length = 0
           resp.payload.forEach((res: any) => {
-            selectUserValue.value.value = res.value
+            selectUserValue.value.value = optionValue(res)
             selectUserValue.value.label = res.label
             emit('update:modelValue', selectUserValue.value)
           })
@@ -97,12 +104,12 @@ watch(
       }
     } else {
       if (modelValue.value) {
-        getAccountInfo([modelValue.value], active.value).then((resp) => {
+        searchStaff(modelValue.value).then((resp) => {
           staffList.value.length = 0
           resp.payload.forEach((res: any) => {
-            selectUserValue.value.value = res.value
+            selectUserValue.value.value = optionValue(res)
             selectUserValue.value.label = res.label
-            emit('update:modelValue', res.value)
+            emit('update:modelValue', optionValue(res))
           })
         })
       }
