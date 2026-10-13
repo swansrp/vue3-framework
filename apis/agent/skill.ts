@@ -48,6 +48,17 @@ export const listSkillAssets = () =>
   }>
 
 /**
+ * 系统半<b>可读集</b>的包名清单＝勾选页「系统技能包」那一栏的候选源。
+ * 判据与提示词注入同一把尺（`status=PUBLISHED ∧ valid=1`，同名多版只出一条）⇒ 候选里出现的名字 agent 一定读得到。
+ * 🔴 别拿 {@link listSkillAssets} 当候选源：台账全档含未发布/下线/墓碑，而「系统技能包」栏只登记不生效，
+ * 选错名字不会报错，只会留下一条永远读不到的意图。
+ */
+export const listReadableSkillNames = () =>
+  get(buildGetApiByType('/readable-names', skillApiType), {}, {}, false, false, true) as Promise<{
+    payload: string[]
+  }>
+
+/**
  * 上传（＝登记，不＝可见）：落 UNPUBLISHED 档，须再点「发布」才进所有空间的提示词。
  * 后端 `@RequestPart("file")`，走框架 uploadParts 具名分片通道；同名重传＝版本递增的新行，
  * 撞出厂包名（origin=BUILTIN）由服务端直接拒。
@@ -73,3 +84,11 @@ export const offlineSkillAsset = (id: number) =>
 /** 注销（落 TOMBSTONE）：撤销出厂包的正确表达——重启不装回、该名字不可再发布，只留档不删对象 */
 export const tombstoneSkillAsset = (id: number) =>
   request(buildPostApiByType(`/${id}/tombstone`, skillApiType), {}, {}, true, true)
+
+/**
+ * 删除（物理撤档）：台账行与包对象一起删，不可恢复。
+ * 🔴 只对上传档开放——出厂包（origin=BUILTIN）由服务端拒绝：jar 里带着那个包，
+ * 行删了下次启动对账器照样重新登记，撤销出厂包只能用 {@link tombstoneSkillAsset}。
+ */
+export const deleteSkillAsset = (id: number) =>
+  request(buildPostApiByType(`/${id}/delete`, skillApiType), {}, {}, true, true)

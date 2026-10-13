@@ -185,7 +185,8 @@
             {{ meta.unsetHint }}
           </span>
           <template v-else>
-            <!-- 参与运行期的一栏勾的是登记表里的包名，只能从清单里挑；其余四栏只登记，名字手填 -->
+            <!-- 有登记表的那两栏只能从清单里挑（能力包＝运行期栏、系统技能包＝台账已发布集）；
+                 没有正源可查的两栏（外部能力/提示词段）才允许手填，勾完只登记意图 -->
             <template v-if="meta.runtime">
               <a-checkbox-group
                 v-if="packages.length"
@@ -209,14 +210,27 @@
                 能力包清单没读到：交集只作用于登记过的工具，这时勾什么都不改变工具面（先确认能力包清单页有数据）
               </span>
             </template>
-            <a-select
-              v-else
-              v-model:value="draft[meta.key].names"
-              mode="tags"
-              :options="meta.options && meta.options()"
-              placeholder="填名字，回车入库（这一栏只登记，不参与运行期）"
-              class="pick-input"
-            />
+            <template v-else>
+              <a-select
+                v-model:value="draft[meta.key].names"
+                :mode="meta.strict ? 'multiple' : 'tags'"
+                :options="meta.options()"
+                :placeholder="meta.placeholder"
+                class="pick-input"
+              />
+              <div
+                v-if="meta.strict && !meta.options().length"
+                class="muted"
+              >
+                {{ meta.emptyHint }}
+              </div>
+              <div
+                v-else-if="meta.strict && staleNames(meta).length"
+                class="warn-line"
+              >
+                已勾的名字当前不在候选里（多半这一项后来被下线或注销）：{{ staleNames(meta).join('、') }}
+              </div>
+            </template>
           </template>
         </div>
         <div
@@ -252,6 +266,7 @@ import {
   type AgentSelectionCmd,
   type SelectionNames
 } from '@/framework/apis/agent/definition'
+import { listReadableSkillNames } from '@/framework/apis/agent/skill'
 
 const KIND_LABELS: Record<string, string> = {
   FLOW: '流程',
@@ -266,44 +281,76 @@ const TAG_COLORS: Record<string, string> = {
   EXTERNAL_EFFECT: 'purple'
 }
 
-/** 五栏的定义：只有 runtime 那栏拿能力包登记表当选项、也才校验包名 */
+/** 模型用途档是 core/llm 的封闭枚举，正源就是这四个值，没有台账可查 */
+const MODEL_PURPOSES = ['AGENT', 'VISION', 'DEFAULT', 'NODE']
+
+/** 「系统技能包」栏的候选源＝系统半可读集（core 与提示词注入同一把尺），空数组＝没读到或一个都没发布 */
+const systemSkillNames = ref<string[]>([])
+
+/**
+ * 五栏的定义。
+ *
+ * 🔴 控件形态按"有没有候选正源"分，不按"是否参与运行期"分：
+ * 能力包＝运行期栏（勾登记表里的包名）、系统技能包＝只登记但台账有已发布集可查（`strict`，只能挑不能敲），
+ * 模型用途档＝封闭枚举四值（`strict`），外部能力与提示词段＝本期没有正源可查，才留手填（`tags`）。
+ * 有清单还放开手填，等于让管理员敲出一个永远读不到的名字——这一栏不参与运行期，敲错了连报错都没有。
+ */
 const COLUMN_METAS = [
   {
     key: 'capabilityPackages',
     label: '能力包',
     runtime: true,
+    strict: true,
     unsetHint: '这一维全部放行（＝没勾选前的形态）',
-    options: () => [] as any[]
+    placeholder: '',
+    emptyHint: '',
+    options: (): { value: string, label: string }[] => []
   },
   {
     key: 'systemSkills',
     label: '系统技能包',
     runtime: false,
+    strict: true,
     unsetHint: '不启用；注入正源仍是空间「技能包」页的绑定，这一栏只登记意图',
-    options: () => [] as any[]
+    placeholder: '从已发布的系统技能包里挑（可多选，这一栏只登记、不参与运行期）',
+    emptyHint: '系统技能包台账里没有已发布的包（或清单没读到）⇒ 这一栏没有候选：先去「系统技能包」页上传并发布',
+    options: (): { value: string, label: string }[] =>
+      systemSkillNames.value.map(name => ({ value: name, label: name }))
   },
   {
     key: 'externalCapabilities',
     label: '外部能力',
     runtime: false,
+    strict: false,
     unsetHint: '不启用；外部能力真实接入不在本期，这一栏只登记意图',
-    options: () => [] as any[]
+    placeholder: '填名字，回车入库（这一栏还没有登记表，正源上线前只能手填）',
+    emptyHint: '',
+    options: (): { value: string, label: string }[] => []
   },
   {
     key: 'modelPurpose',
     label: '模型用途档',
     runtime: false,
+    strict: true,
     unsetHint: '不启用；实答模型仍由模型层现读系统配置，这一栏只登记意图',
-    options: () => ['AGENT', 'VISION', 'DEFAULT', 'NODE']
+    placeholder: '从四个用途档里挑（可多选，这一栏只登记、不参与运行期）',
+    emptyHint: '',
+    options: (): { value: string, label: string }[] =>
+      MODEL_PURPOSES.map(name => ({ value: name, label: name }))
   },
   {
     key: 'promptSegments',
     label: '提示词段',
     runtime: false,
+    strict: false,
     unsetHint: '不启用；拼装正源在业务侧，这一栏只登记意图',
-    options: () => [] as any[]
+    placeholder: '填名字，回车入库（段名正源在业务侧拼装处，平台侧没有清单可查）',
+    emptyHint: '',
+    options: (): { value: string, label: string }[] => []
   }
 ] as const
+
+type ColumnMeta = typeof COLUMN_METAS[number]
 
 const columns = [
   { title: 'Agent', key: 'agent', dataIndex: 'agentKey', width: 260 },
@@ -412,6 +459,17 @@ const loadPackages = async () => {
   packages.value = resp?.payload?.packages || []
 }
 
+const loadSystemSkillNames = async () => {
+  const resp: any = await listReadableSkillNames().catch(() => null)
+  systemSkillNames.value = resp?.payload || []
+}
+
+/** 勾了但已不在候选里的名字（包后来被下线/注销，或那是手填时代留下的旧值）：只提示不拦，这一栏不参与运行期 */
+const staleNames = (meta: ColumnMeta) => {
+  const known = meta.options().map(opt => opt.value)
+  return draft.value[meta.key].names.filter(name => !known.includes(name))
+}
+
 const load = async () => {
   loading.value = true
   try {
@@ -459,6 +517,7 @@ const save = async () => {
 onMounted(() => {
   load()
   loadPackages()
+  loadSystemSkillNames()
 })
 </script>
 

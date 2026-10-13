@@ -35,7 +35,7 @@
       type="info"
       show-icon
       message="上传不等于可见，注销不等于删除"
-      description="这一页管的是「这个包在系统层面是什么状态」：传上来先落未发布档，点发布才进所有空间的提示词（系统级包免绑定，空间那边不用装）；下线只是不再下发，包和本档都留着，随时能重新发布；注销是落墓碑——重启不会把它装回来，这个包名也再发布不了，要恢复只能重新上传，所以按钮上写的是注销而不是删除。随 jar 发版的那一档（出厂包）由启动对账器按内容指纹维护，包名是保留名，同名上传会被拒绝。各空间自己的技能安装与捐赠在「空间管理 → 技能包」，不在本页。"
+      description="这一页管的是「这个包在系统层面是什么状态」：传上来先落未发布档，点发布才进所有空间的提示词（系统级包免绑定，空间那边不用装）；下线只是不再下发，包和本档都留着，随时能重新发布；注销是落墓碑——重启不会把它装回来，这个包名也再发布不了，要恢复只能重新上传。删除是更重的一档：台账行与包对象一起物理撤掉、不可恢复，所以只给页面上传的那一档；随 jar 发版的出厂包不给删除（行删了下次启动还会按 jar 重新登记），要撤销它只能用注销。出厂包由启动对账器按内容指纹维护，包名是保留名，同名上传会被拒绝。各空间自己的技能安装与捐赠在「空间管理 → 技能包」，不在本页。"
     />
 
     <a-table
@@ -73,7 +73,7 @@
             v-if="record.origin === 'BUILTIN'"
             class="muted"
           >
-            重启按内容对账
+            重启按内容对账（没有删除这一档，只能注销）
           </div>
         </template>
         <template v-else-if="column.key === 'status'">
@@ -105,12 +105,9 @@
           </div>
         </template>
         <template v-else-if="column.key === 'action'">
-          <a-space
-            v-if="record.status !== 'TOMBSTONE'"
-            :size="4"
-          >
+          <a-space :size="4">
             <a-popconfirm
-              v-if="record.status !== 'PUBLISHED'"
+              v-if="record.status !== 'TOMBSTONE' && record.status !== 'PUBLISHED'"
               title="发布后所有空间的 agent 提示词都会带上它（不用逐空间安装）。确认发布？"
               @confirm="run(publishSkillAsset, record.id)"
             >
@@ -122,7 +119,7 @@
               </a-button>
             </a-popconfirm>
             <a-popconfirm
-              v-else
+              v-if="record.status === 'PUBLISHED'"
               title="下线后各空间提示词立即不再注入，本档与包对象保留，可重新发布。确认下线？"
               @confirm="run(offlineSkillAsset, record.id)"
             >
@@ -135,6 +132,7 @@
               </a-button>
             </a-popconfirm>
             <a-popconfirm
+              v-if="record.status !== 'TOMBSTONE'"
               title="注销＝落墓碑：重启不会把它装回来，这个包名也再发布不了，只能重新上传一份。确认注销？"
               @confirm="run(tombstoneSkillAsset, record.id)"
             >
@@ -146,13 +144,27 @@
                 注销
               </a-button>
             </a-popconfirm>
+            <!-- 🔴 删除只给上传档：出厂包的行删了会被启动对账按 jar 重新登记，按钮不给它（不是置灰，是没有这一档） -->
+            <a-popconfirm
+              v-if="record.origin !== 'BUILTIN'"
+              title="删除＝台账行与包对象一起物理撤掉，不可恢复（想留档可回滚请用注销）。确认删除？"
+              @confirm="run(deleteSkillAsset, record.id)"
+            >
+              <a-button
+                size="small"
+                type="link"
+                danger
+              >
+                删除
+              </a-button>
+            </a-popconfirm>
+            <a-tooltip
+              v-if="record.status === 'TOMBSTONE'"
+              title="墓碑档只留名不留用：不可再发布，包对象仍在存储里留档（要清掉留档就点删除）"
+            >
+              <span class="muted">已注销</span>
+            </a-tooltip>
           </a-space>
-          <a-tooltip
-            v-else
-            title="墓碑档只留名不留用：不可再发布，包对象仍在存储里留档"
-          >
-            <span class="muted">已注销</span>
-          </a-tooltip>
         </template>
       </template>
     </a-table>
@@ -167,17 +179,20 @@
 
 <script lang="ts" setup>
 /**
- * 系统级技能包管理页（M14 棒 4-H，框架侧纯加法）：台账全档 + 上传 / 发布 / 下线 / 注销。
+ * 系统级技能包管理页（M14 棒 4-H，框架侧纯加法）：台账全档 + 上传 / 发布 / 下线 / 注销 / 删除。
  *
  * 权限不在这里判：闸门在 core 的服务层（平台管理员），bean 取不到即按非管理员拒绝。
  * 本页因此不做"看不见"的处理——非管理员进来照样看得到按钮，点了由服务端拒并把
  * `status.details` 弹成红条。之所以不在前端藏按钮：藏了就得把管理员判定复制到前端，
  * 而那道闸的口径（反射取 permitService）服务端自己才是正源。
+ * 🔴 唯一的例外是「删除」按 origin 隐藏：那不是权限，是这一档对出厂包根本不存在（服务端也会拒），
+ * 给一个必被拒的按钮等于让管理员去试一次不可逆动作。
  */
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
 
 import {
+  deleteSkillAsset,
   listSkillAssets,
   offlineSkillAsset,
   publishSkillAsset,
