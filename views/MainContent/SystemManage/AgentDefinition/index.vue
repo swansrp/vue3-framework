@@ -178,41 +178,46 @@
           </a-radio-group>
         </div>
         <div class="draft-body">
-          <a-checkbox-group
-            v-if="draft[meta.key].custom && meta.runtime"
-            v-model:value="draft[meta.key].names"
-            class="pick-group"
-          >
-            <a-checkbox
-              v-for="pkg in packages"
-              :key="pkg.name"
-              :value="pkg.name"
-            >
-              <a-tooltip :title="`${pkg.description || pkg.displayName}｜${(pkg.tools || []).join('、')}`">
-                {{ pkg.name }}
-              </a-tooltip>
-            </a-checkbox>
-          </a-checkbox-group>
           <span
-            v-if="meta.runtime && draft[meta.key].custom && !packages.length"
-            class="muted"
-          >
-            能力包清单没读到：交集只作用于登记过的工具，这时勾什么都不改变工具面（先确认能力包清单页有数据）
-          </span>
-          <a-select
-            v-else-if="draft[meta.key].custom"
-            v-model:value="draft[meta.key].names"
-            mode="tags"
-            :options="meta.options && meta.options()"
-            placeholder="填名字，回车入库"
-            class="pick-group"
-          />
-          <span
-            v-else
+            v-if="!draft[meta.key].custom"
             class="muted"
           >
             {{ meta.unsetHint }}
           </span>
+          <template v-else>
+            <!-- 参与运行期的一栏勾的是登记表里的包名，只能从清单里挑；其余四栏只登记，名字手填 -->
+            <template v-if="meta.runtime">
+              <a-checkbox-group
+                v-if="packages.length"
+                v-model:value="draft[meta.key].names"
+                class="pick-group"
+              >
+                <a-checkbox
+                  v-for="pkg in packages"
+                  :key="pkg.name"
+                  :value="pkg.name"
+                >
+                  <a-tooltip :title="`${pkg.description || pkg.displayName}｜${(pkg.tools || []).join('、')}`">
+                    {{ pkg.name }}
+                  </a-tooltip>
+                </a-checkbox>
+              </a-checkbox-group>
+              <span
+                v-else
+                class="muted"
+              >
+                能力包清单没读到：交集只作用于登记过的工具，这时勾什么都不改变工具面（先确认能力包清单页有数据）
+              </span>
+            </template>
+            <a-select
+              v-else
+              v-model:value="draft[meta.key].names"
+              mode="tags"
+              :options="meta.options && meta.options()"
+              placeholder="填名字，回车入库"
+              class="pick-group"
+            />
+          </template>
         </div>
         <div
           v-if="draft[meta.key].custom && !draft[meta.key].names.length"
