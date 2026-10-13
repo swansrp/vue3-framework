@@ -106,7 +106,7 @@
           </a-tooltip>
         </template>
         <template v-else-if="column.key === 'owner'">
-          <div>{{ record.updateBy || '—' }}</div>
+          <div>{{ record.updateByName || record.updateBy || '—' }}</div>
           <div class="muted">
             {{ fmtTime(record.updateAt) }}
           </div>
@@ -214,8 +214,8 @@
               v-model:value="draft[meta.key].names"
               mode="tags"
               :options="meta.options && meta.options()"
-              placeholder="填名字，回车入库"
-              class="pick-group"
+              placeholder="填名字，回车入库（这一栏只登记，不参与运行期）"
+              class="pick-input"
             />
           </template>
         </div>
@@ -560,6 +560,12 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 16px;
+  width: 100%;
+}
+
+/* 🔴 手填那四栏别复用 .pick-group：flex 会把 antd select 的 .ant-select-selector 压成内容宽，
+   空值时整只框塌成一小格、placeholder 被挤没，看着像坏掉的空框 */
+.pick-input {
   width: 100%;
 }
 </style>

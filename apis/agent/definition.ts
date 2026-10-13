@@ -34,7 +34,10 @@ export interface AgentDefinitionView {
   externalCapabilities?: SelectionNames
   modelPurpose?: SelectionNames
   promptSegments?: SelectionNames
+  /** 最后改勾选人的工号（审计列，页面回显用） */
   updateBy?: string
+  /** 姓名派生列：读端点按工号查 ac_user.name 回填，查不到为空 ⇒ 页面回落到工号 */
+  updateByName?: string
   updateAt?: string
 }
 
