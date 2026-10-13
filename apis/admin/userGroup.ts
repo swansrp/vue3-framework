@@ -14,6 +14,8 @@ export const editUserGroupNode = (data: object) => request(buildPostApi('/update
 export const deleteUserGroupNode = (id: string) => request(buildPostApi('/delete'), {}, { id }, true) as Promise<any>
 export const updateUserGroupNodeOrder = (data: object) => request(buildPostApi('/order/update'), {}, data, true) as Promise<any>
 export const updateUserGroupNodePId = (id: string, pid: string) => request(buildPostApi('/pid'), {}, { id, pid }, true) as Promise<any>
+export const exportUserGroupType = (groupType: string) => request(buildGetApi('/export'), { groupType }, {}, false, false) as Promise<any>
+export const importUserGroupType = (data: object) => request(buildPostApi('/import'), {}, data, true) as Promise<any>
 
 
 export const getBindUser = (groupId: string, name='', dataScope='') => request(buildGetApi('/bind/list/search'), { groupId, name, dataScope }, {}, false, false) as Promise<any>

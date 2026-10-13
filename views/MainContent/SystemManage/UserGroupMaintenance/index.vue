@@ -49,6 +49,18 @@
               >
                 新增
               </a-button>
+              <a-tooltip title="导入用户组类型（同 id 类型已存在则整体替换）">
+                <a-button @click="importFileInputRef?.click()">
+                  导入
+                </a-button>
+              </a-tooltip>
+              <input
+                ref="importFileInputRef"
+                type="file"
+                accept=".json"
+                style="display: none"
+                @change="handleImportFileChange"
+              />
             </div>
           </template>
         </a-list>
@@ -64,13 +76,20 @@
             <a-input
               v-model:value="inputUserGroupTreeRootNodeName"
               placeholder="请输入根节点名称"
-              style="width: 200px;margin-right: 10px"
+              style="width: 160px;margin-right: 10px"
             />
             <a-button
               type="primary"
               @click="addUserGroupTreeRootNode"
             >
               添加根节点
+            </a-button>
+            <a-button
+              style="margin-left: 8px"
+              :loading="exporting"
+              @click="handleExportGroupType"
+            >
+              导出
             </a-button>
           </div>
           <a-tree
@@ -237,7 +256,7 @@
 <script lang="ts" setup>
 import '@/framework/assets/css/userGroup.css'
 import { WarningFilled } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { Key } from 'ant-design-vue/es/table/interface'
 import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
@@ -261,8 +280,10 @@ import {
   deleteUserGroupNode,
   deleteUserGroupType,
   editUserGroupNode,
+  exportUserGroupType,
   getUserGroupById,
   getUserGroupType,
+  importUserGroupType,
   updateUserGroupNodeOrder,
   updateUserGroupNodePId
 } from '@/framework/apis/admin/userGroup'
@@ -271,6 +292,7 @@ import { BindTree } from '@/framework/components/common/Panel'
 import UserPermission from '@/framework/components/common/userPermission/index.vue'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import { getAllParentNodes, getBrotherNodes } from '@/framework/utils/common'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { EDIT, LINK, QUERY_INTERVAL, VIEW } from '@/framework/utils/constant'
 import { IdName, IdNameArray } from '@/framework/utils/type'
 
@@ -303,6 +325,9 @@ const uploadParam = computed(() => ({
   groupType: currentUserGroupCategoryId.value,
   groupName: currentUserGroupInfo.value.name
 }))
+
+const importFileInputRef = ref()
+let exporting: Ref<boolean> = ref(false)
 
 // 权限树相关变量
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
@@ -409,6 +434,62 @@ const handleImportUsers = () => {
 
 const handleAfterImportConfirm = () => {
   renderBindUserFlag.value += 1
+}
+
+const countTransferNodes = (nodes: any[]): number =>
+  nodes.reduce((sum: number, node: any) => sum + 1 + countTransferNodes(node.children || []), 0)
+
+const handleExportGroupType = async () => {
+  if (!currentUserGroupCategoryId.value) return
+  exporting.value = true
+  try {
+    const res = await exportUserGroupType(currentUserGroupCategoryId.value)
+    const typeName = userGroupCategory.value.find((item: IdName) => item.id === currentUserGroupCategoryId.value)?.name
+      || currentUserGroupCategoryId.value
+    downloadJsonConfig(`用户组-${typeName}`, {
+      type: 'userGroupTree',
+      exportTime: new Date().toISOString(),
+      data: res.payload
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    exporting.value = false
+  }
+}
+
+const handleImportFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+
+  let parsed: any
+  try {
+    parsed = await readJsonFile(file)
+  } catch {
+    message.error('文件解析失败，请选择用户组导出的JSON文件')
+    return
+  }
+  const data = parsed?.type === 'userGroupTree' ? parsed.data : parsed
+  if (!data?.typeId || !data?.typeName || !Array.isArray(data.groups)) {
+    message.error('文件格式不正确，请选择用户组导出的JSON文件')
+    return
+  }
+  Modal.confirm({
+    title: '确认导入',
+    content: `将导入用户组类型「${data.typeName}」（共 ${countTransferNodes(data.groups)} 个用户组）。若当前环境已存在同 id 类型，将替换其全部用户组并清除原用户与权限绑定。确认继续？`,
+    okText: '确认导入',
+    cancelText: '取消',
+    onOk: async () => {
+      await importUserGroupType(data)
+      await renderUserGroupType()
+      if (currentUserGroupCategoryId.value === data.typeId) {
+        await renderUserGroupTree()
+      }
+    }
+  })
 }
 
 const renderUserGroupTree = () => getUserGroupById(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
