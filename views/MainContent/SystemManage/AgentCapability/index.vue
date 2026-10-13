@@ -16,7 +16,7 @@
       </a-button>
     </div>
 
-    <a-tabs v-model:activeKey="tab">
+    <a-tabs v-model:active-key="tab">
       <a-tab-pane
         key="packages"
         tab="能力包清单"
@@ -26,7 +26,7 @@
           type="info"
           show-icon
           message="清单来自代码登记，不是数据库"
-          description="能力包＝一组同副作用档的工具，登记单位是包不是单只工具；包缺席时工具降级不挂（不会让应用起不来）。本页不提供增删改——勾选与绑定长在 Agent 定义上（M14 后续棒次），且勾选只能收窄、加不出代码里没有的能力。"
+          description="能力包＝一组同副作用档的工具，登记单位是包不是单只工具；包缺席时工具降级不挂（不会让应用起不来）。本页不提供增删改——勾选与绑定长在 Agent 定义页上，且勾选只能收窄、加不出代码里没有的能力。"
         />
 
         <a-table
@@ -82,7 +82,7 @@
           type="info"
           show-icon
           message="一场会话一行，记的是工具面定形那一刻"
-          description="工具面＝真的发给模型的那份清单，含引擎按上下文治理追加的回捞工具，不是业务代码里声明的那份；技能与提示词段由业务贡献者在同一线程现读，与那次装配同源。快照只在 M14 棒 2 之后发起的会话才有，更早的历史会话查出来是空的。提示词原文与对话原文默认不下发，点「展开」才取，且服务端只认发起人本人与平台管理员。本页不提供增删改。"
+          description="工具面＝真的发给模型的那份清单，含引擎按上下文治理追加的回捞工具，不是业务代码里声明的那份；技能与提示词段由业务贡献者在同一线程现读，与那次装配同源。快照只记录本功能上线之后发起的会话，更早的历史会话查出来是空的。提示词原文与对话原文默认不下发，点「展开」才取，且服务端只认发起人本人与平台管理员。本页不提供增删改。"
         />
 
         <div class="toolbar">
@@ -118,11 +118,11 @@
           :columns="manifestColumns"
           :data-source="rows"
           :loading="manifestLoading"
-          :pagination="false"
+          :pagination="manifestPagination"
           row-key="sessionId"
           size="small"
           table-layout="fixed"
-          :custom-row="pickRow"
+          :expandable="manifestExpandable"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'sessionId'">
@@ -141,213 +141,218 @@
               {{ fmtTime(record.createAt) }}
             </template>
           </template>
+
+          <template #expandedRowRender="{ record }">
+            <div
+              v-if="current && current.sessionId === record.sessionId"
+              class="detail"
+            >
+              <a-descriptions
+                :column="2"
+                :label-style="{ width: '84px', whiteSpace: 'nowrap' }"
+                size="small"
+                bordered
+                class="detail-head"
+              >
+                <a-descriptions-item label="会话">
+                  {{ current.sessionId }}
+                </a-descriptions-item>
+                <a-descriptions-item label="Agent">
+                  {{ current.displayName || current.agentKey }}
+                </a-descriptions-item>
+                <a-descriptions-item label="发起人">
+                  {{ current.askedByName || current.askedBy || '—' }}
+                </a-descriptions-item>
+                <a-descriptions-item label="定形时刻">
+                  {{ fmtTime(current.createAt) }}
+                </a-descriptions-item>
+                <a-descriptions-item label="模型档">
+                  {{ current.modelTier || '（业务未报）' }}
+                </a-descriptions-item>
+                <a-descriptions-item label="工具只数">
+                  {{ current.toolCount }}
+                </a-descriptions-item>
+                <a-descriptions-item
+                  label="对话定位"
+                  :span="2"
+                >
+                  <a-typography-text
+                    v-if="current.conversationId"
+                    code
+                    class="session-cell"
+                    :copyable="{ text: current.conversationId }"
+                  >
+                    {{ current.conversationId }}
+                  </a-typography-text>
+                  <span
+                    v-else
+                    class="desc"
+                  >这场会话没接历史对话层（纯后台型 agent 只落会话，不落对话）</span>
+                </a-descriptions-item>
+                <a-descriptions-item
+                  label="业务标注"
+                  :span="2"
+                >
+                  <span
+                    v-for="(value, key) in current.extras"
+                    :key="key"
+                    class="extra-chip"
+                  >{{ key }}={{ value }}</span>
+                  <span v-if="!extraKeys.length">—</span>
+                </a-descriptions-item>
+              </a-descriptions>
+
+              <div class="block">
+                <div class="block-title">
+                  工具面（发给模型的那份，按注册序）
+                </div>
+                <a-tooltip
+                  v-for="tool in current.toolNames"
+                  :key="tool"
+                  :title="toolHint(tool)"
+                >
+                  <a-tag
+                    :color="toolTagColor(tool)"
+                    class="tool-name"
+                  >
+                    {{ tool }}
+                  </a-tag>
+                </a-tooltip>
+                <div
+                  v-if="unListed.length"
+                  class="warn-line"
+                >
+                  未入册 {{ unListed.length }} 只：{{ unListed.join('、') }}——代码里挂着但没有能力包登记它，按档勾选圈不住它。
+                </div>
+              </div>
+
+              <div class="block">
+                <div class="block-title">
+                  注入技能与版本
+                </div>
+                <div
+                  v-for="skill in current.skills"
+                  :key="skill.name"
+                  class="line"
+                >
+                  <a-typography-text code>
+                    {{ skill.name }}
+                  </a-typography-text>
+                  <span class="line-ver">{{ skill.version == null ? '版本未取到' : `v${skill.version}` }}</span>
+                  <a-tag
+                    v-if="skill.note"
+                    color="default"
+                  >
+                    {{ skill.note }}
+                  </a-tag>
+                </div>
+                <div
+                  v-if="!skillCount"
+                  class="desc"
+                >
+                  这场会话没有注入技能包
+                </div>
+              </div>
+
+              <div class="block">
+                <div class="block-title">
+                  <span>提示词段（按拼装顺序）</span>
+                  <a-button
+                    v-if="current.hasPromptText"
+                    size="small"
+                    :loading="expandLoading"
+                    class="block-action"
+                    @click.stop="toggleExpand('prompt')"
+                  >
+                    {{ promptText ? '收起原文' : '展开原文' }}
+                  </a-button>
+                  <a-tooltip
+                    v-else
+                    title="该行没有存 system 槽原文：会话早于本功能上线，或该 agent 压根不发 system 消息"
+                  >
+                    <span class="block-action desc">无原文</span>
+                  </a-tooltip>
+                </div>
+                <div
+                  v-for="(section, idx) in current.promptSections"
+                  :key="section"
+                  class="line"
+                >
+                  <span class="line-no">{{ idx + 1 }}</span>{{ section }}
+                </div>
+                <div
+                  v-if="!sectionCount"
+                  class="desc"
+                >
+                  该 agent 未登记段结构（贡献者只报代码里真实存在的段，未知 agent 留空不猜）
+                </div>
+                <pre
+                  v-if="promptText"
+                  class="raw-body"
+                >{{ promptText }}</pre>
+              </div>
+
+              <div class="block">
+                <div class="block-title">
+                  <span>对话全文</span>
+                  <a-button
+                    v-if="current.conversationId"
+                    size="small"
+                    :loading="expandLoading"
+                    class="block-action"
+                    @click.stop="toggleExpand('conversation')"
+                  >
+                    {{ convo ? '收起对话' : '展开对话' }}
+                  </a-button>
+                </div>
+                <div
+                  v-if="!current.conversationId"
+                  class="desc"
+                >
+                  这场会话没接历史对话层（纯后台型 agent 只留装配快照，不留对话）
+                </div>
+                <div
+                  v-else-if="convoExpired"
+                  class="warn-line"
+                >
+                  对话原文已超过保留期——定位 id 永久留着，正文按保留天数滚窗，过期就是过期了。
+                </div>
+                <template v-else-if="convo">
+                  <div
+                    v-for="(message, idx) in convo.messages || []"
+                    :key="idx"
+                    class="convo-line"
+                  >
+                    <a-tag :color="message.role === 'user' ? 'blue' : 'green'">
+                      {{ message.role === 'user' ? '人' : '助手' }}
+                    </a-tag>
+                    <a-tag
+                      v-if="message.status && message.status !== 'done'"
+                      color="red"
+                    >
+                      {{ STATUS_LABELS[message.status] || message.status }}
+                    </a-tag>
+                    <div class="convo-body">
+                      {{ message.content }}
+                    </div>
+                  </div>
+                  <div
+                    v-if="!(convo.messages || []).length"
+                    class="desc"
+                  >
+                    这条对话没有消息明细
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
         </a-table>
 
         <a-empty
           v-if="queried && !current"
           class="empty"
-          description="这场会话没有装配单（棒 2 之前发起的会话不留快照）"
+          description="这场会话没有装配单（本功能上线之前发起的会话不留快照）"
         />
-
-        <div
-          v-if="current"
-          class="detail"
-        >
-          <a-descriptions
-            :column="2"
-            :label-style="{ width: '84px', whiteSpace: 'nowrap' }"
-            size="small"
-            bordered
-            class="detail-head"
-          >
-            <a-descriptions-item label="会话">
-              {{ current.sessionId }}
-            </a-descriptions-item>
-            <a-descriptions-item label="Agent">
-              {{ current.displayName || current.agentKey }}
-            </a-descriptions-item>
-            <a-descriptions-item label="发起人">
-              {{ current.askedBy || '—' }}
-            </a-descriptions-item>
-            <a-descriptions-item label="定形时刻">
-              {{ fmtTime(current.createAt) }}
-            </a-descriptions-item>
-            <a-descriptions-item label="模型档">
-              {{ current.modelTier || '（业务未报）' }}
-            </a-descriptions-item>
-            <a-descriptions-item label="工具只数">
-              {{ current.toolCount }}
-            </a-descriptions-item>
-            <a-descriptions-item
-              label="对话定位"
-              :span="2"
-            >
-              <a-typography-text
-                v-if="current.conversationId"
-                code
-                class="session-cell"
-                :copyable="{ text: current.conversationId }"
-              >
-                {{ current.conversationId }}
-              </a-typography-text>
-              <span v-else class="desc">这场会话没接历史对话层（纯后台型 agent 只落会话，不落对话）</span>
-            </a-descriptions-item>
-            <a-descriptions-item
-              label="业务标注"
-              :span="2"
-            >
-              <span
-                v-for="(value, key) in current.extras"
-                :key="key"
-                class="extra-chip"
-              >{{ key }}={{ value }}</span>
-              <span v-if="!extraKeys.length">—</span>
-            </a-descriptions-item>
-          </a-descriptions>
-
-          <div class="block">
-            <div class="block-title">
-              工具面（发给模型的那份，按注册序）
-            </div>
-            <a-tooltip
-              v-for="tool in current.toolNames"
-              :key="tool"
-              :title="toolHint(tool)"
-            >
-              <a-tag
-                :color="toolTagColor(tool)"
-                class="tool-name"
-              >
-                {{ tool }}
-              </a-tag>
-            </a-tooltip>
-            <div
-              v-if="unListed.length"
-              class="warn-line"
-            >
-              未入册 {{ unListed.length }} 只：{{ unListed.join('、') }}——代码里挂着但没有能力包登记它，按档勾选圈不住它。
-            </div>
-          </div>
-
-          <div class="block">
-            <div class="block-title">
-              注入技能与版本
-            </div>
-            <div
-              v-for="skill in current.skills"
-              :key="skill.name"
-              class="line"
-            >
-              <a-typography-text code>
-                {{ skill.name }}
-              </a-typography-text>
-              <span class="line-ver">{{ skill.version == null ? '版本未取到' : `v${skill.version}` }}</span>
-              <a-tag
-                v-if="skill.note"
-                color="default"
-              >
-                {{ skill.note }}
-              </a-tag>
-            </div>
-            <div
-              v-if="!skillCount"
-              class="desc"
-            >
-              这场会话没有注入技能包
-            </div>
-          </div>
-
-          <div class="block">
-            <div class="block-title">
-              <span>提示词段（按拼装顺序）</span>
-              <a-button
-                v-if="current.hasPromptText"
-                size="small"
-                :loading="expandLoading"
-                class="block-action"
-                @click="toggleExpand('prompt')"
-              >
-                {{ promptText ? '收起原文' : '展开原文' }}
-              </a-button>
-              <a-tooltip
-                v-else
-                title="该行没有存 system 槽原文：会话早于棒 2 增量，或该 agent 压根不发 system 消息"
-              >
-                <span class="block-action desc">无原文</span>
-              </a-tooltip>
-            </div>
-            <div
-              v-for="(section, idx) in current.promptSections"
-              :key="section"
-              class="line"
-            >
-              <span class="line-no">{{ idx + 1 }}</span>{{ section }}
-            </div>
-            <div
-              v-if="!sectionCount"
-              class="desc"
-            >
-              该 agent 未登记段结构（贡献者只报代码里真实存在的段，未知 agent 留空不猜）
-            </div>
-            <pre
-              v-if="promptText"
-              class="raw-body"
-            >{{ promptText }}</pre>
-          </div>
-
-          <div class="block">
-            <div class="block-title">
-              <span>对话全文</span>
-              <a-button
-                v-if="current.conversationId"
-                size="small"
-                :loading="expandLoading"
-                class="block-action"
-                @click="toggleExpand('conversation')"
-              >
-                {{ convo ? '收起对话' : '展开对话' }}
-              </a-button>
-            </div>
-            <div
-              v-if="!current.conversationId"
-              class="desc"
-            >
-              这场会话没接历史对话层（纯后台型 agent 只留装配快照，不留对话）
-            </div>
-            <div
-              v-else-if="convoExpired"
-              class="warn-line"
-            >
-              对话原文已超过保留期——定位 id 永久留着，正文按保留天数滚窗，过期就是过期了。
-            </div>
-            <template v-else-if="convo">
-              <div
-                v-for="(message, idx) in convo.messages || []"
-                :key="idx"
-                class="convo-line"
-              >
-                <a-tag :color="message.role === 'user' ? 'blue' : 'green'">
-                  {{ message.role === 'user' ? '人' : '助手' }}
-                </a-tag>
-                <a-tag
-                  v-if="message.status && message.status !== 'done'"
-                  color="red"
-                >
-                  {{ STATUS_LABELS[message.status] || message.status }}
-                </a-tag>
-                <div class="convo-body">
-                  {{ message.content }}
-                </div>
-              </div>
-              <div
-                v-if="!(convo.messages || []).length"
-                class="desc"
-              >
-                这条对话没有消息明细
-              </div>
-            </template>
-          </div>
-        </div>
       </a-tab-pane>
     </a-tabs>
   </div>
@@ -420,7 +425,7 @@ const tagColor = (tag: string) => TAG_COLORS[tag] || 'default'
 const headerCount = computed(() =>
   tab.value === 'packages'
     ? `能力包 ${packages.value.length} 个 · 工具 ${toolNames.value.length} 只`
-    : `装配单 ${rows.value.length} 场`
+    : `装配单最近 ${rows.value.length} 场`
 )
 
 const extraKeys = computed(() => Object.keys(current.value?.extras || {}))
@@ -485,7 +490,8 @@ const loadRecent = async () => {
   manifestLoading.value = true
   queried.value = false
   try {
-    const resp: any = await listRecentManifest(agentKey.value, 20)
+    // 后端 limit 截 100：一次铺满，翻页在前端做（装配单是诊断面，不给它加游标）
+    const resp: any = await listRecentManifest(agentKey.value, 100)
     rows.value = resp?.payload || []
     current.value = rows.value[0] || null
   } finally {
@@ -504,17 +510,39 @@ const queryBySession = async () => {
     // 🔴 框架信封把 null 响应体渲染成空对象，不判空就会渲染出一张全空的详情壳
     const payload = resp?.payload
     current.value = payload && Object.keys(payload).length ? payload : null
+    // 详情现在只能长在表里的某一行上：按 ID 查到的这场不在最近清单里（更早／别的 agent），就把它置顶
+    if (current.value && !rows.value.some((row: any) => row.sessionId === current.value.sessionId)) {
+      rows.value = [current.value, ...rows.value]
+    }
   } finally {
     manifestLoading.value = false
   }
 }
 
-const pickRow = (record: any) => ({
-  onClick: () => {
-    current.value = record
+/**
+ * 详情跟着行走：装配单表在 `recent` 一次回最多 100 行，详情若挂在表尾，
+ * 点第 3 行要滚两屏才能看到自己点的东西。这里把它塞进被点那行的展开区，
+ * 一次只允许一行展开（`current` 就是唯一真相），点行＝展开、点已展开的行＝收起。
+ */
+const manifestExpandable = computed(() => ({
+  expandedRowKeys: current.value?.sessionId ? [current.value.sessionId] : [],
+  expandRowByClick: true,
+  showExpandColumn: false,
+  onExpand: (record: any, expanded: boolean) => {
+    current.value = expanded ? record : null
     queried.value = false
   }
-})
+}))
+
+// 服务端一次回 100 场，这里做前端分页：装配单是诊断面，不给它加翻页参数（后端只有 limit）
+const manifestPagination = computed(() => ({
+  pageSize: 10,
+  size: 'small',
+  showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  hideOnSinglePage: false,
+  showTotal: (total: number) => `共 ${total} 场`
+}))
 
 /**
  * 展开／收起原文（棒 2 增量）：已有就收起，没有才发一次带 include 的读请求。
@@ -627,7 +655,13 @@ onMounted(() => {
 }
 
 .detail {
-  margin-top: 16px;
+  margin: 0;
+}
+
+/* 展开区贴着被点那行走：给一层浅底＋内边距，视觉上从清单里"长"出来而不是悬在表尾 */
+:deep(.ant-table-expanded-row-cell) {
+  padding: 12px 16px;
+  background: var(--fill-quaternary, #fafafa);
 }
 
 .detail-head {
