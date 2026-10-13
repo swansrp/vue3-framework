@@ -99,7 +99,7 @@
           </div>
         </template>
         <template v-else-if="column.key === 'owner'">
-          <div>{{ record.createBy || '（对账线程无登录人）' }}</div>
+          <div>{{ record.createByName || record.createBy || '（对账线程无登录人）' }}</div>
           <div class="muted">
             {{ fmtTime(record.updateAt || record.createAt) }}
           </div>

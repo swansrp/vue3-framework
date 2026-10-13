@@ -10,7 +10,10 @@ import { get, request, uploadParts } from '@/framework/network/request'
 
 const skillApiType = '/api/agent/skill'
 
-/** 系统技能包台账行（sys_skill_asset，一行一个包档） */
+/**
+ * 系统技能包台账行——读视图 {@code SkillAssetView} 的形态，<b>不等于 {@code sys_skill_asset} 实体</b>：
+ * 存储对象键 packageKey 与恒为 1 的 valid 都不随台账下发（页面不消费，回一个不变量只会引人误读）。
+ */
 export interface SkillAsset {
   id: number
   skillName: string
@@ -24,13 +27,14 @@ export interface SkillAsset {
   status?: string
   /** BUILTIN 随 jar 发版（重启按内容指纹对账）／UPLOADED 页面上传（对账永不触碰） */
   origin?: string
-  packageKey?: string
   packageSha256?: string
   fileCount?: number
+  /** 登记人工号（对账线程写的行没有登录人，为空） */
   createBy?: string
+  /** 姓名派生列：读端点按工号查 ac_user.name 回填，查不到为空 ⇒ 页面回落到工号 */
+  createByName?: string
   createAt?: string
   updateAt?: string
-  valid?: string
 }
 
 /**
