@@ -96,8 +96,14 @@ const _executeLogin = (token: any) => {
         }
         return 1
       }, err => {
-        if (err && err.payload && err.payload.ssoLoginUrl) {
-          console.log(err.payload.ssoLoginUrl)
+        // 🔴 core 形态拒票是裸 Error（request 层 reject 不带 payload，实测 keys=[]），
+        // IdaaS 认证中心才在 err.payload.ssoLoginUrl 点名；触发条件＝「点名 ∨ 本系统配置了
+        // VITE_ssoLoginUrl」，🔴 不得拿 err.payload 当前提——那会把 core 腿在条件处短路回 throw。
+        // navigation2Login 读同一 env，不需要把 URL 传进去。
+        // loginRetryTime 计数门原样保留——防 authorize↔exchange 互踢死循环。
+        // 未配置 VITE_ssoLoginUrl 且无 payload.ssoLoginUrl 时本分支与改前逐字等价（零位移）
+        if (err && ((err.payload && err.payload.ssoLoginUrl) || ssoLoginUrl)) {
+          console.log((err.payload && err.payload.ssoLoginUrl) || ssoLoginUrl)
           const retryTimes = localStorageMethods.getLocalStorage('loginRetryTime')
           if (Number(retryTimes) - 1 >= 0) {
             localStorageMethods.setLocalStorage('loginRetryTime', '' + (Number(retryTimes) - 1))

@@ -14,7 +14,7 @@
  * `POST /web/sso/ticket` 要一张票 → 用**服务端回填的** redirect_uri 拼上 `id_token` 回跳 →
  * 拿不到票就把拒因就地画出来并给出口。</p>
  *
- * <p>🔴 回跳地址取自 `res.payload.redirectUri`（服务端按全串等值核过白名单的那一条），
+ * <p>🔴 回跳地址取自 `res.payload.redirectUri`（服务端按 origin 等值核过白名单的那一条），
  * 不用前端入参拼——入参可以是任意串，用它跳就是开放重定向。</p>
  * <p>🔴 未登录分流由本页自理：路由 meta.public=true、不进框架登录守卫——
  * 守卫探活体在非登录页必经 _executeLogin 发起嵌套 router.replace，嵌套导航等不到当前导航结束
@@ -70,8 +70,14 @@ const pendingToken = ref('')
 /**
  * 入参只用于"要不要发起"和页面说明；真正回跳用的是服务端回填的那条。
  * 🔴 参数名＝`sso_redirect_uri`，不能叫 `redirect_uri`（见文件头：框架登录腿会把同名参数剥掉）。
+ * 🔴 出票 redirect_uri 取值优先级＝`target_url` > `sso_redirect_uri`：会话过期回链腿
+ * （login.ts 的 `navigation2Login`）跳本页时只带 `target_url`＝过期前那个页面，用它出票
+ * 才能落回原页面；服务端按 origin 等值核白名单兜底，跳转仍用响应回显原串（见 `goRedirect`）。
+ * vue-router 对 hash 内 query 值自动解码一层，`target_url` 到手即原始 URL，不再二次编码/解码；
+ * 非 string 形态（数组等）按缺失处理、回落 `sso_redirect_uri`。
  */
-const redirectUri = computed(() => String(route.query.sso_redirect_uri ?? ''))
+const targetUrl = computed(() => (typeof route.query.target_url === 'string' ? route.query.target_url : ''))
+const redirectUri = computed(() => targetUrl.value || String(route.query.sso_redirect_uri ?? ''))
 /** 🔴 出票判据＝(app_id, redirect_uri) 组合，app_id 缺失不发请求 */
 const appId = computed(() => String(route.query.app_id ?? ''))
 const targetLabel = computed(() => redirectUri.value || '来源系统')
@@ -91,13 +97,14 @@ async function issue() {
   }
   if (!redirectUri.value) {
     // 后端对空值也是业务拒绝，这里在前端就地给同一句根因，省一次往返
-    fail('缺少 sso_redirect_uri 参数，请回到来源系统重新发起登录。')
+    // （两个入参名都列：正常发起带 sso_redirect_uri，过期回链带 target_url）
+    fail('缺少 target_url 或 sso_redirect_uri 参数，请回到来源系统重新发起登录。')
     return
   }
   state.value = 'issuing'
   try {
     const res = await postSsoTicket(appId.value, redirectUri.value)
-    // 🔴 只信服务端回填的回调地址（已过白名单全串等值核对）
+    // 🔴 只信服务端回填的回调地址（已过白名单 origin 等值核对）
     pendingUri.value = String(res.payload?.redirectUri ?? '')
     pendingToken.value = String(res.payload?.idToken ?? '')
     if (!pendingToken.value || !pendingUri.value) {
