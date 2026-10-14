@@ -23,6 +23,14 @@
       >
         编辑
       </a-button>
+      <a-button
+        size="small"
+        type="primary"
+        style="margin-left: 8px;"
+        @click="openRedirectPanel(record)"
+      >
+        回调地址
+      </a-button>
       <delete-pop-confirm @delete-event="handleDeleteTable(record)" />
     </template>
   </left-list-right-table>
@@ -66,6 +74,18 @@
       </a-form-item>
     </div>
   </dialog-box>
+  <dialog-box
+    v-model:visible="redirectBoxVisible"
+    title="SSO 回调地址登记"
+    is-full
+  >
+    <Portal
+      v-if="currentPartnerId"
+      table-id="AcSsoRedirect"
+      :advance-condition="advanceCondition"
+      :bind-default-value="{ partnerId: currentPartnerId }"
+    />
+  </dialog-box>
 </template>
 
 <script setup lang="ts">
@@ -79,6 +99,10 @@ import {
   deleteSequenceChannelTable,
   editSequenceChannelTable
 } from '@/framework/apis/channel'
+import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import Portal from '@/framework/components/common/Portal/index.vue'
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import LeftListRightTable from '@/framework/components/common/leftListRightTable/index.vue'
@@ -118,6 +142,16 @@ const submitEdit = () => {
   editSequenceChannelTable({ id, status }, baseDomain).then(updateTableData).then(() => editTableItemBoxVisible.value = false)
 }
 const handleDeleteTable = (record: any) => deleteSequenceChannelTable(record.id, baseDomain).then(updateTableData)
+
+const currentPartnerId: Ref<string | number | null> = ref(null)
+const redirectBoxVisible: Ref<boolean> = ref(false)
+const advanceCondition = computed(() => {
+  return { conditionList: [buildCondition('partnerId', FILTER_TYPE.EQUAL, [currentPartnerId.value])] } as ConditionListType
+})
+const openRedirectPanel = (record: any) => {
+  currentPartnerId.value = record.id
+  redirectBoxVisible.value = true
+}
 
 </script>
 
