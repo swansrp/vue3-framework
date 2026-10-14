@@ -6,7 +6,17 @@ const buildPostApi = (url: string) => buildPostApiByType(url)
 
 
 export const getToken = () => request(buildGetApi('/token')) as Promise<any>
-export const ssoLogin = (id_token: string) => request(buildPostApi('/auth/login'), { id_token }, {}, true, false) as Promise<any>
+// 🔴 VITE_ssoType 非空（建议值 'core'）＝票换会话打本系统 core 签发口 /web/sso/login
+// （墨枢 SSO 形态，接入指南 §8.1③；出参与 /web/login 同形）。缺省空＝照旧认证中心 /auth/login
+// （IdaaS 形态全族零位移；VITE_ssoType=feishu 等宿主自发起形态不落该调用分支，不受影响）
+export const ssoLogin = (id_token: string) =>
+  request(
+    buildPostApi(import.meta.env.VITE_ssoType ? '/sso/login' : '/auth/login'),
+    { id_token },
+    {},
+    true,
+    false
+  ) as Promise<any>
 
 export const logoff = () => request(buildPostApi('/logoff'), {}, {}, false, false) as Promise<any>
 
