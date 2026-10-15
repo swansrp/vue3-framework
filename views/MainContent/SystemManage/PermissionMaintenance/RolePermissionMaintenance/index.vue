@@ -129,6 +129,26 @@
                   enter-button
                   @search="handleSearchUser"
                 />
+                <a-button
+                  style="margin-right: 10px"
+                  :loading="exportingRoleUsers"
+                  @click="handleExportRoleUsers"
+                >
+                  导出
+                </a-button>
+                <a-button
+                  style="margin-right: 10px"
+                  @click="importRoleUserFileRef?.click()"
+                >
+                  导入
+                </a-button>
+                <input
+                  ref="importRoleUserFileRef"
+                  type="file"
+                  accept=".json"
+                  style="display: none"
+                  @change="handleImportRoleUserFileChange"
+                />
                 <delete-pop-confirm
                   btn-content="解绑所有用户"
                   pop-content="确认解绑全部用户吗？该操作不可恢复！"
@@ -182,6 +202,7 @@
 
 <script lang="ts" setup>
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { message, Modal } from 'ant-design-vue'
 import * as _ from 'lodash'
 import { Ref } from 'vue'
 
@@ -207,7 +228,10 @@ import {
   unbindRoleUserList,
 } from '@/framework/apis/admin/roleUser'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
+import { getStaffList } from '@/framework/components/common/departmentAndStaffSelect/api'
 import BindTree from '@/framework/components/common/Panel/BindTree.vue'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
+import { normalizeNameSeparators } from '@/framework/utils/common'
 import { EDIT, LINK, QUERY_INTERVAL, VIEW } from '@/framework/utils/constant'
 import { ValueLabelArray } from '@/framework/utils/type'
 
@@ -247,6 +271,85 @@ const handleUnbindAllRoleUser = () => {
   const entityId = currentRoleDate.value.roleId
   const userIdList = userList.value.map((user) => user.value)
   unbindRoleUserList(entityId, userIdList).then(renderRoleUserList)
+}
+
+// 关联用户跨环境迁移：导出按工号携带；导入按工号翻译为当前环境 userId 后整体替换当前角色的绑定
+const exportingRoleUsers: Ref<boolean> = ref(false)
+const importRoleUserFileRef = ref()
+
+const handleExportRoleUsers = async () => {
+  if (!currentRoleDate.value.roleId) return
+  exportingRoleUsers.value = true
+  try {
+    const res = await getRoleUserList(currentRoleDate.value.roleId)
+    const users = (res.payload || [])
+      .filter((u: any) => u.customerNumber)
+      .map((u: any) => ({ customerNumber: u.customerNumber, name: u.label }))
+    downloadJsonConfig(`角色关联用户-${currentRoleDate.value.roleName}`, {
+      type: 'roleUserBind',
+      exportTime: new Date().toISOString(),
+      data: { roleName: currentRoleDate.value.roleName, users }
+    })
+    message.success('导出成功')
+  } catch (error: any) {
+    message.error('导出失败: ' + (error?.message || '未知错误'))
+  } finally {
+    exportingRoleUsers.value = false
+  }
+}
+
+const resolveUserIdsByNumbers = async (numbers: string[]) => {
+  const userIds: Array<string | number> = []
+  const missed: string[] = []
+  for (const no of numbers) {
+    const res = await getStaffList([], no, true)
+    const hit = (res.payload || []).find((s: any) => String(s.customerNumber) === String(no))
+    hit ? userIds.push(hit.value) : missed.push(no)
+  }
+  return { userIds, missed }
+}
+
+const handleImportRoleUserFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  target.value = ''
+  if (!currentRoleDate.value.roleId) return message.error('请先选择角色')
+
+  let parsed: any
+  try {
+    parsed = await readJsonFile(file)
+  } catch {
+    message.error('文件解析失败，请选择角色关联用户导出的JSON文件')
+    return
+  }
+  const data = parsed?.type === 'roleUserBind' ? parsed.data : parsed
+  if (!data || !Array.isArray(data.users)) {
+    message.error('文件格式不正确，请选择角色关联用户导出的JSON文件')
+    return
+  }
+  const numbers = [...new Set(data.users.map((u: any) => u.customerNumber).filter(Boolean))] as string[]
+  if (!numbers.length) return message.error('文件中没有带工号的用户，无法导入')
+
+  const roleId = currentRoleDate.value.roleId
+  Modal.confirm({
+    title: '确认导入',
+    content: `将把当前角色「${currentRoleDate.value.roleName}」的关联用户替换为文件中的 ${numbers.length} 人（按工号匹配当前环境，查不到的工号跳过）。确认继续？`,
+    okText: '确认导入',
+    cancelText: '取消',
+    onOk: async () => {
+      const { userIds, missed } = await resolveUserIdsByNumbers(numbers)
+      const bindRes = await getRoleUserList(roleId)
+      const currentIds = (bindRes.payload || []).map((u: any) => u.value)
+      if (currentIds.length) await unbindRoleUserList(roleId, currentIds)
+      if (userIds.length) await bindRoleUserList(roleId, userIds)
+      await renderRoleUserList()
+      const missedMsg = missed.length
+          ? `，${missed.length} 个工号未找到已跳过：${missed.slice(0, 10).join('、')}`
+          : ''
+      message.success(`导入完成：绑定 ${userIds.length} 人${missedMsg}`)
+    }
+  })
 }
 
 const initAndUpdateRoleList = () =>
@@ -300,10 +403,12 @@ const tabChange = (key: string) => {
   else if (key === LINK) renderRoleUserList()
 }
 
-const handleSearchUser = () =>
-  (userList.value = userList.value.filter(
-    (user) => user.label.indexOf(searchUserName.value) > -1
-  ))
+const handleSearchUser = () => {
+  const keywords = normalizeNameSeparators(searchUserName.value).split(',').filter(k => k)
+  userList.value = keywords.length
+      ? userListBackUp.value.filter((user) => keywords.some(k => user.label.indexOf(k) > -1))
+      : userListBackUp.value
+}
 
 watch(searchUserName, (name) => !name && (userList.value = userListBackUp.value))
 
