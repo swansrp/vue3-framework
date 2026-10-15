@@ -83,6 +83,7 @@
 
 <script lang="ts" setup>
 import type { DataNode } from 'ant-design-vue/es/vc-tree/interface'
+import { normalizeNameSeparators } from '@/framework/utils/common'
 import { computed, onMounted, ref, toRefs, watch } from 'vue'
 
 // Props 定义
@@ -217,13 +218,13 @@ const filteredTreeData = computed(() => {
 
 // 处理搜索
 const handleSearch = (value: string) => {
-  searchText.value = value
+  searchText.value = normalizeNameSeparators(value)
 }
 
 // 处理搜索输入变化
 const handleSearchChange = (e: Event) => {
   const target = e.target as HTMLInputElement
-  searchText.value = target.value
+  searchText.value = normalizeNameSeparators(target.value)
 }
 
 // 受控展开：记录用户手动展开/收起，勾选导致重挂载后状态不丢失

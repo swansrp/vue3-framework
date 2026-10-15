@@ -152,6 +152,7 @@ import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/Del
 import DepartmentAndStaffSelect
   from '@/framework/components/common/departmentAndStaffSelect/DepartmentAndStaffSelect.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
+import { normalizeNameSeparators } from '@/framework/utils/common'
 import { IdName, ValueLabel, ValueLabelArray } from '@/framework/utils/type'
 import EditUserPermission
   from '@/framework/views/MainContent/SystemManage/UserGroupMaintenance/editUserPermission/index.vue'
@@ -297,7 +298,15 @@ const handleImport = () => {
   emit('import')
 }
 
-watch(searchUserName, renderBindUser)
+watch(searchUserName, (v) => {
+  // 输入即归一：换行/空格/顿号等分隔符统一成逗号，回写会再触发本 watch 走真正的查询
+  const normalized = normalizeNameSeparators(v)
+  if (normalized !== v) {
+    searchUserName.value = normalized
+    return
+  }
+  renderBindUser()
+})
 watch(selectPermission, renderBindUser)
 watch(renderBindUserFlag, renderBindUser, { immediate: true })
 

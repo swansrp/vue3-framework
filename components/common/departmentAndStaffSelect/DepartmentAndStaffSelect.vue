@@ -114,6 +114,7 @@ import { getDepartmentTree, getStaffList } from './api'
 
 import getImgUrl from '@/framework/assets/imgs/getImgUrl'
 import { QUERY_INTERVAL } from '@/framework/utils/constant'
+import { normalizeNameSeparators } from '@/framework/utils/common'
 import { StaffBaseSelectArrayType, ValueLabelArray } from '@/framework/utils/type'
 
 
@@ -206,7 +207,7 @@ const clearAllSelectStaff = () => {
   queryStaffList(departmentList, '')
 }
 const queryStaffList = (deptIdList: Array<string>, name = '') =>
-    getStaffList(deptIdList, name).then(res => {
+    getStaffList(deptIdList, normalizeNameSeparators(name)).then(res => {
       staffListOption.value = res.payload
       staffListOption.value.forEach(option => {
         if (option.deptName) {

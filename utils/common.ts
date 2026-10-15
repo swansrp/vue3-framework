@@ -401,6 +401,11 @@ const getTextWidth = (text: string, split = true, size = 1.6) => {
 }
 
 
+// 人名多值输入归一：白名单只留汉字/字母/数字/间隔号·/逗号，其余符号（引号、空格、换行、顿号、分号等）一律视为分隔符折叠成逗号
+const normalizeNameSeparators = (text: string): string =>
+  (text || '').replace(/[^一-鿿A-Za-z0-9·,]+/g, ',').replace(/,{2,}/g, ',').replace(/^,+|,+$/g, '')
+
+
 export {
   localStorageMethods,
   isEmpty,
@@ -430,5 +435,6 @@ export {
   scrollToBottom,
   getTextWidth,
   resolveDynamicVariable,
-  resolveConditionVariables
+  resolveConditionVariables,
+  normalizeNameSeparators
 }
