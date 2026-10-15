@@ -22,6 +22,7 @@ import {
   SPAWN_TOOL
 } from './processTree'
 import type { AssistantView, ToolStep, UiMessage } from './processTree'
+import { isNoiseLogLine } from './processLines'
 import type { AgentEventX, AgentSessionStateT } from './types'
 
 const TEXT_TYPES = new Set(['llm_output'])
@@ -83,7 +84,8 @@ export function agentEventsToView(
         if (text) outputs.push(text)
       } else if (THINK_TYPES.has(ev.type)) {
         const text = asText(ev.payload)
-        if (text) thinks.push(text)
+        // 噪声过程日志（工具收发/计量流水）与工具步骤重复：不进思考全文（判据＝processLines 单源）
+        if (text && !(ev.type === 'log' && isNoiseLogLine(text))) thinks.push(text)
       }
       // 其余类型（round_start/stage/plan/question/…）按对照表不进视图
     }

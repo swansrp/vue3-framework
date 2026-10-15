@@ -594,6 +594,7 @@ import { computed, nextTick, reactive, ref, watch, type Component } from 'vue'
 
 import { agentEventsToView } from './agentEventsToView'
 import AgentProcessTree from './AgentProcessTree.vue'
+import { isNoiseLogLine } from './processLines'
 import {
   isTerminalStatus, parseChatOption, type AgentConfirmationT, type AgentEventX, type AgentPlanItemT
 } from './types'
@@ -729,6 +730,8 @@ const thinkGroups = computed<ThinkGroupView[]>(() => {
   let current: ThinkGroupView | null = null
   for (const ev of events.value) {
     if (!THINK_TYPES.has(ev.type)) continue
+    // 噪声过程日志（工具收发/计量流水）与组内工具步骤行重复：渲染层跳过（事件仍在，「复制全体」不受影响）
+    if (ev.type === 'log' && typeof ev.payload === 'string' && isNoiseLogLine(ev.payload)) continue
     if (ev.type === 'round_start' || current === null) {
       current = { id: ev.seq, round: typeof ev.payload === 'number' ? ev.payload : null, events: [], endSeq: ev.seq, nextSeq: Infinity }
       groups.push(current)
