@@ -1,5 +1,5 @@
 {
-  "_comment": "portal-framework 运行时依赖唯一正源：项目 package.json 由 script/check-install.js 自动对齐（框架版本优先）。新增通用功能依赖只改这里。",
+  "_comment": "portal-framework 运行时依赖唯一正源：项目 package.json 由 script/check-install.js 自动对齐（框架版本优先）。新增通用功能依赖只改这里；钉版本请改本文件，改各项目 package.json 无效（下次 dev 会被覆写回框架值）。typescript 与 vue-tsc 成对钉精确值（5.4.5 / 1.8.27）＝vue-tsc 1.8 的 Volar 基座不兼容 TS ≥ 5.5，放 ^5.1.6 会解析到 5.6+ 使 vue 文件类型检查报错，两者必须同调。",
   "dependencies": {
     "@ant-design/icons-vue": "^6.1.0",
     "@kjgl77/datav-vue3": "^1.7.3",
@@ -92,7 +92,7 @@
     "sass": "^1.58.3",
     "swagger-typescript-api": "^13.2.13",
     "terser": "^5.17.6",
-    "typescript": "^5.1.6",
+    "typescript": "5.4.5",
     "unplugin-auto-import": "^0.16.7",
     "unplugin-vue-components": "^0.25.2",
     "vite": "^5.4.8",
@@ -102,6 +102,6 @@
     "vite-plugin-vue-devtools": "^7.0.27",
     "vite-plugin-vue-setup-extend": "^0.4.0",
     "vue-eslint-parser": "^10.2.0",
-    "vue-tsc": "^1.8.27"
+    "vue-tsc": "1.8.27"
   }
 }
