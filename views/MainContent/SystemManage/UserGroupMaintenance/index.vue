@@ -94,10 +94,11 @@
           </div>
           <a-tree
             v-if="userGroupTreeData.length"
-            :default-expand-all="true"
+            :expanded-keys="userGroupExpandedKeys"
             :show-line="true"
             :tree-data="userGroupTreeData"
             draggable
+            @expand="onGroupTreeExpand"
             @drop="onDrop"
             @select="selectUserGroup"
           >
@@ -304,6 +305,11 @@ let userGroupCategory: Ref<IdNameArray> = ref([])
 let currentUserGroupCategoryId: Ref<string> = ref('')
 
 let userGroupTreeData: Ref<Array<DataNode>> = ref([])
+// 受控展开：展开状态存父组件，右侧绑定等操作导致树重挂载时收起状态不丢；每次加载数据时默认全展开
+let userGroupExpandedKeys: Ref<string[]> = ref([])
+const collectGroupTreeKeys = (nodes: Array<DataNode>): string[] =>
+  nodes.flatMap(node => [String(node.key), ...collectGroupTreeKeys((node.children || []) as Array<DataNode>)])
+const onGroupTreeExpand = (keys: (string | number)[]) => userGroupExpandedKeys.value = keys.map(k => String(k))
 let inputUserGroupTreeRootNodeName: Ref<string> = ref('')
 
 let addUserGroupNodeVisible: Ref<boolean> = ref(false)
@@ -492,7 +498,10 @@ const handleImportFileChange = async (event: Event) => {
   })
 }
 
-const renderUserGroupTree = () => getUserGroupById(currentUserGroupCategoryId.value).then(res => userGroupTreeData.value = res.payload)
+const renderUserGroupTree = () => getUserGroupById(currentUserGroupCategoryId.value).then(res => {
+  userGroupTreeData.value = res.payload
+  userGroupExpandedKeys.value = collectGroupTreeKeys(res.payload || [])
+})
 
 const onDrop = (info: AntTreeNodeDropEvent) => {
   const dragKey = info.dragNode.key
