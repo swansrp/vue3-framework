@@ -35,25 +35,26 @@
             </a-list-item>
           </template>
           <template #header>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
               <a-input-search
                 v-model:value="inputUserGroupCategoryName"
                 enter-button
                 placeholder="请输入用户组类别名称"
-                style="flex: 1"
                 @search="onSearchUserGroupCategory"
               />
-              <a-button
-                type="primary"
-                @click="addGroupTypeVisible = true"
-              >
-                新增
-              </a-button>
-              <a-tooltip title="导入用户组类型（同 id 类型已存在则整体替换）">
-                <a-button @click="importFileInputRef?.click()">
-                  导入
+              <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <a-button
+                  type="primary"
+                  @click="addGroupTypeVisible = true"
+                >
+                  新增
                 </a-button>
-              </a-tooltip>
+                <a-tooltip title="导入用户组类型（同 id 类型已存在则整体替换）">
+                  <a-button @click="importFileInputRef?.click()">
+                    导入
+                  </a-button>
+                </a-tooltip>
+              </div>
               <input
                 ref="importFileInputRef"
                 type="file"
@@ -257,7 +258,7 @@
 <script lang="ts" setup>
 import '@/framework/assets/css/userGroup.css'
 import { WarningFilled } from '@ant-design/icons-vue'
-import { message, Modal } from 'ant-design-vue'
+import { Checkbox, message, Modal } from 'ant-design-vue'
 import { Key } from 'ant-design-vue/es/table/interface'
 import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
@@ -445,6 +446,12 @@ const handleAfterImportConfirm = () => {
 const countTransferNodes = (nodes: any[]): number =>
   nodes.reduce((sum: number, node: any) => sum + 1 + countTransferNodes(node.children || []), 0)
 
+const countTransferUsers = (nodes: any[]): number =>
+  nodes.reduce((sum: number, node: any) => sum + (node.users?.length || 0) + countTransferUsers(node.children || []), 0)
+
+const stripTransferUsers = (nodes: any[]): any[] =>
+  nodes.map((node: any) => ({ ...node, users: [], children: stripTransferUsers(node.children || []) }))
+
 const handleExportGroupType = async () => {
   if (!currentUserGroupCategoryId.value) return
   exporting.value = true
@@ -483,13 +490,27 @@ const handleImportFileChange = async (event: Event) => {
     message.error('文件格式不正确，请选择用户组导出的JSON文件')
     return
   }
+  const userCount = countTransferUsers(data.groups)
+  const withUsers = ref(userCount > 0)
   Modal.confirm({
     title: '确认导入',
-    content: `将导入用户组类型「${data.typeName}」（共 ${countTransferNodes(data.groups)} 个用户组）。若当前环境已存在同 id 类型，将替换其全部用户组并清除原用户与权限绑定。确认继续？`,
+    content: () => h('div', { style: 'display: flex; flex-direction: column; gap: 8px;' }, [
+      h('span', `将导入用户组类型「${data.typeName}」（共 ${countTransferNodes(data.groups)} 个用户组）。若当前环境已存在同 id 类型，将替换其全部用户组并清除原用户与权限绑定。`),
+      userCount > 0
+        ? h(Checkbox, {
+            checked: withUsers.value,
+            'onUpdate:checked': (v: boolean) => withUsers.value = v
+          }, { default: () => `同时导入关联用户（文件含 ${userCount} 条绑定，按工号匹配当前环境用户）` })
+        : h('span', '文件中不含关联用户，仅导入用户组结构。'),
+      userCount > 0 && !withUsers.value
+        ? h('span', { style: 'color: #faad14;' }, '已取消勾选：只建组树，不绑定任何用户。')
+        : null
+    ]),
     okText: '确认导入',
     cancelText: '取消',
     onOk: async () => {
-      await importUserGroupType(data)
+      const payload = withUsers.value ? data : { ...data, groups: stripTransferUsers(data.groups) }
+      await importUserGroupType(payload)
       await renderUserGroupType()
       if (currentUserGroupCategoryId.value === data.typeId) {
         await renderUserGroupTree()
