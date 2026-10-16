@@ -12,9 +12,9 @@ export const getPermitApplyMenuTree = () =>
 export const submitPermitApply = (url: string, reason: string) =>
   request(buildPostApi(''), { url, reason }, {}, true) as Promise<any>
 
-// 查询我的申请
-export const getMyApplyList = (customerNumber: string, url: string) =>
-  request(buildGetApi(''), { customerNumber, url }, {}, false) as Promise<any>
+// 查询我的申请状态（服务端按当前登录工号查询，无需传工号）
+export const getMyApplyStatus = (url: string) =>
+  request(buildGetApi('/my'), { url }, {}, false) as Promise<any>
 
 // 判断指定路径在系统中是否存在（是否为已登记页面）
 export const checkPermitPathExists = (url: string) =>

@@ -132,7 +132,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { checkPermitPathExists, getMyApplyList, submitPermitApply } from '@/framework/apis/admin/permitApply'
+import { checkPermitPathExists, getMyApplyStatus, submitPermitApply } from '@/framework/apis/admin/permitApply'
 import img404 from '@/framework/assets/imgs/404_images/404.png'
 import img404Cloud from '@/framework/assets/imgs/404_images/404_cloud.png'
 import { useUserStore } from '@/framework/store/user'
@@ -202,7 +202,7 @@ const fetchApplyStatus = async () => {
   if (!customerNumber.value) return
   loading.value = true
   try {
-    const resp = await getMyApplyList(customerNumber.value, targetUrl.value)
+    const resp = await getMyApplyStatus(targetUrl.value)
 
     applyRecord.value = resp?.payload ?? null
 
