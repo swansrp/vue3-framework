@@ -237,6 +237,8 @@ import { ref, reactive, onMounted } from 'vue'
 
 import type { LinkageInfo, MatrixInfo, FormConfigInfo } from '../types'
 import { TRIGGER_EVENTS } from '../types'
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 
 import {
   sysFormLinkageGeneralSelect,
@@ -298,14 +300,11 @@ const loadData = async () => {
 
     const res = await sysFormLinkageGeneralSelect(
       {
-        conditions: [
-          {
-            field: 'formConfigId',
-            operator: 'in',
-            value: formConfigIds,
-          },
+        conditionList: [
+          // buildCondition 属 Portal 类型族，与生成端 ConditionVO 仅结构兼容，需断言
+          buildCondition('formConfigId', FILTER_TYPE.IN, formConfigIds) as any,
         ],
-        orders: [{ field: 'sort', order: 'asc' }],
+        sortList: [{ property: 'sort', type: 0 }],
       },
       false,
       false

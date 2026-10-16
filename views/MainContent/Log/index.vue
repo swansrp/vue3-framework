@@ -305,7 +305,7 @@ import {
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
-import dayjs from 'dayjs'
+import dayjs, { Dayjs } from 'dayjs'
 import { marked } from 'marked'
 import { ref } from 'vue'
 

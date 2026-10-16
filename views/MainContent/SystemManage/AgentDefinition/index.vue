@@ -501,7 +501,7 @@ const save = async () => {
   COLUMN_METAS.forEach(meta => {
     const state = draft.value[meta.key]
     // 🔴 未启用必须送 null，不能送 []：后者在服务端是"这一维全不给"，是关停不是放行
-    (cmd as any)[meta.key] = state.custom ? state.names : null
+    cmd[meta.key as keyof AgentSelectionCmd] = state.custom ? state.names : null
   })
   saving.value = true
   try {

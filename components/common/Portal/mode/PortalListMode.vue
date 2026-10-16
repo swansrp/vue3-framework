@@ -91,8 +91,7 @@
             <a-pagination
               v-model:current="config.currentPage"
               v-model:page-size="config.pageSize"
-              :page-size="config.pageSize"
-              :size="config.size"
+              :size="config.size === 'small' ? 'small' : 'default'"
               :total="config.total"
               hide-on-single-page
               show-less-items

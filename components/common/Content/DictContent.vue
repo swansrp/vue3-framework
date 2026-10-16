@@ -3,7 +3,7 @@
     v-if="treeMode"
     v-model="selectedData"
     :check-strictly="props.checkStrictly"
-    :disable="props.disabled"
+    :disable="props.disable"
     :label-field="props.labelField"
     :multi="props.multi"
     :tree-data="treeData"
@@ -20,7 +20,7 @@
   <list-content
     v-else
     v-model="selectedData"
-    :disable="props.disabled"
+    :disable="props.disable"
     :label-field="props.labelField"
     :list-data="dictData"
     :multi="props.multi"

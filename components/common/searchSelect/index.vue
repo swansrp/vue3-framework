@@ -181,7 +181,7 @@ const loadOptionByValue = async (value: string | number) => {
         requestData.selectColumnList = [...props.selectColumns]
       }
       
-      res = await props.apiFn(requestData, false, false, false)
+      res = await props.apiFn!(requestData, false, false, false)
     }
     
     // 处理响应数据

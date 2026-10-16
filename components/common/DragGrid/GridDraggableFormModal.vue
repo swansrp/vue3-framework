@@ -2,7 +2,7 @@
 import { message } from 'ant-design-vue'
 import { ref } from 'vue'
 
-import { SchemaAttribute } from '@/apis/types'
+type SchemaAttribute = Record<string, any>
 import { GridDraggableForm, type FormFieldItem } from '@/framework/components/common/DragGrid'
 
 interface Props {

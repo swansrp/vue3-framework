@@ -1,7 +1,5 @@
 // 导出评估表单组件
-export { 
-  EvalFormViewer,
-  EvalGroupForm,
+export {
   SectionNavTree,
   useFormData
 } from './components'

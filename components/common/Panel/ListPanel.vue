@@ -285,9 +285,9 @@ const handleEdit = (item: ListItem) => {
   editingItem.value = item
   formData.value = {
     ...props.defaultFormData,
+    ...item,
     id: item.key || item.id,
-    title: item.title,
-    ...item
+    title: item.title
   }
   editModalVisible.value = true
 }
@@ -297,8 +297,8 @@ const handleCopy = (item: ListItem) => {
   editingItem.value = null
   formData.value = {
     ...props.defaultFormData,
-    title: `${item.title} (副本)`,
     ...item,
+    title: `${item.title} (副本)`,
     id: '' // 清空ID，作为新增
   }
   editModalVisible.value = true
