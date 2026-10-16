@@ -5,7 +5,8 @@
 // Tag Description: Form Schema Attribute Group Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, FormSchemaAttributeGroupVO, GeneralStatisticReq, GeneralSummaryReq, IdPidReqVO, IdReqVO, QueryConditionReq } from './types'
+import type { FormSchemaAttributeGroupVO } from './types'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdPidReqVO, IdReqVO, QueryConditionReq } from './types/common'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request, upload } from '@/framework/network/request'

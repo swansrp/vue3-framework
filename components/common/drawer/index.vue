@@ -48,7 +48,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import bus, { PORTAL_RESIZE } from '@/framework/mitt'
@@ -86,11 +86,11 @@ const shiftStyle = computed(() => {
     : { marginRight: drawerWidth.value + 'px' }
 })
 
-const startResize = (e) => {
+const startResize = (e: MouseEvent) => {
   const startX = e.clientX
   const startWidth = drawerWidth.value
 
-  const onMouseMove = (moveEvent) => {
+  const onMouseMove = (moveEvent: MouseEvent) => {
     const delta = moveEvent.clientX - startX
     let newWidth = props.placement === 'left'
       ? startWidth + delta
@@ -107,7 +107,7 @@ const startResize = (e) => {
   window.addEventListener('mouseup', onMouseUp)
 }
 
-const onKeydown = (e) => {
+const onKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape' && props.visible && props.escToClose) {
     emitClose()
   }

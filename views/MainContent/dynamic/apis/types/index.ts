@@ -4,6 +4,8 @@
 // ============================================================
 
 // Dataset Config Controller
+export * from './common'
+
 export * from './datasetConfigControllerTypes'
 
 // Dynamic Portal Controller

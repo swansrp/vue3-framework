@@ -185,11 +185,6 @@ export interface SchemaProductionVO {
   updateName?: string
 }
 
-export interface OrderItem {
-  asc?: boolean
-  column?: string
-}
-
 export interface AdvancedQuery {
   /** 0 and 1 or */
   andOr?: string
@@ -257,5 +252,242 @@ export interface ConditionVO {
   relation?: number
   /** 查询值 */
   value?: Array<any>
+}
+
+
+export type AdvancedQueryReqListResponse = ResponseDataType & {
+  payload: AdvancedQueryReq[]
+}
+
+export type AdvancedQueryReqPageResponse = ResponseDataType & {
+  payload: {
+    records: AdvancedQueryReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type AdvancedQueryReqResponse = ResponseDataType & {
+  payload: AdvancedQueryReq
+}
+
+export type AdvancedStatisticReqListResponse = ResponseDataType & {
+  payload: AdvancedStatisticReq[]
+}
+
+export type AdvancedStatisticReqPageResponse = ResponseDataType & {
+  payload: {
+    records: AdvancedStatisticReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type AdvancedStatisticReqResponse = ResponseDataType & {
+  payload: AdvancedStatisticReq
+}
+
+export type AdvancedSummaryReqListResponse = ResponseDataType & {
+  payload: AdvancedSummaryReq[]
+}
+
+export type AdvancedSummaryReqPageResponse = ResponseDataType & {
+  payload: {
+    records: AdvancedSummaryReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type AdvancedSummaryReqResponse = ResponseDataType & {
+  payload: AdvancedSummaryReq
+}
+
+export type GeneralStatisticReqListResponse = ResponseDataType & {
+  payload: GeneralStatisticReq[]
+}
+
+export type GeneralStatisticReqPageResponse = ResponseDataType & {
+  payload: {
+    records: GeneralStatisticReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type GeneralStatisticReqResponse = ResponseDataType & {
+  payload: GeneralStatisticReq
+}
+
+export type GeneralSummaryReqListResponse = ResponseDataType & {
+  payload: GeneralSummaryReq[]
+}
+
+export type GeneralSummaryReqPageResponse = ResponseDataType & {
+  payload: {
+    records: GeneralSummaryReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type GeneralSummaryReqResponse = ResponseDataType & {
+  payload: GeneralSummaryReq
+}
+
+export interface IdOrderReqVO {
+  /** id */
+  id?: object
+  /** 显示顺序 */
+  showOrder?: number
+}
+
+export type IdOrderReqVOListResponse = ResponseDataType & {
+  payload: IdOrderReqVO[]
+}
+
+export type IdOrderReqVOPageResponse = ResponseDataType & {
+  payload: {
+    records: IdOrderReqVO[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type IdOrderReqVOResponse = ResponseDataType & {
+  payload: IdOrderReqVO
+}
+
+export interface IdPidReqVO {
+  /** id */
+  id?: string
+  /** pid */
+  pid?: object
+}
+
+export type IdPidReqVOListResponse = ResponseDataType & {
+  payload: IdPidReqVO[]
+}
+
+export type IdPidReqVOPageResponse = ResponseDataType & {
+  payload: {
+    records: IdPidReqVO[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type IdPidReqVOResponse = ResponseDataType & {
+  payload: IdPidReqVO
+}
+
+export interface IdReqVO {
+  /** id */
+  id?: string
+}
+
+export type IdReqVOListResponse = ResponseDataType & {
+  payload: IdReqVO[]
+}
+
+export type IdReqVOPageResponse = ResponseDataType & {
+  payload: {
+    records: IdReqVO[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type IdReqVOResponse = ResponseDataType & {
+  payload: IdReqVO
+}
+
+export type QueryConditionReqListResponse = ResponseDataType & {
+  payload: QueryConditionReq[]
+}
+
+export type QueryConditionReqPageResponse = ResponseDataType & {
+  payload: {
+    records: QueryConditionReq[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type QueryConditionReqResponse = ResponseDataType & {
+  payload: QueryConditionReq
+}
+
+export type StatisticResListResponse = ResponseDataType & {
+  payload: StatisticRes[]
+}
+
+export type StatisticResPageResponse = ResponseDataType & {
+  payload: {
+    records: StatisticRes[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type StatisticResResponse = ResponseDataType & {
+  payload: StatisticRes
+}
+
+export interface TreeDataItemVO {
+  key?: object
+  pid?: object
+  title?: string
+}
+
+export type TreeDataItemVOListResponse = ResponseDataType & {
+  payload: TreeDataItemVO[]
+}
+
+export type TreeDataItemVOPageResponse = ResponseDataType & {
+  payload: {
+    records: TreeDataItemVO[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type TreeDataItemVOResponse = ResponseDataType & {
+  payload: TreeDataItemVO
+}
+
+export interface TreeDataResVO {
+  children?: TreeDataResVO[]
+  key?: object
+  pid?: object
+  title?: string
+}
+
+export type TreeDataResVOListResponse = ResponseDataType & {
+  payload: TreeDataResVO[]
+}
+
+export type TreeDataResVOPageResponse = ResponseDataType & {
+  payload: {
+    records: TreeDataResVO[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+export type TreeDataResVOResponse = ResponseDataType & {
+  payload: TreeDataResVO
 }
 

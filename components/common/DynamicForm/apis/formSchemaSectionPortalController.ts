@@ -6,7 +6,8 @@
 // Tag Description: Form Schema Section Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, FormSchemaSectionVO, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from './types'
+import type { FormSchemaSectionVO } from './types'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from './types/common'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request, upload } from '@/framework/network/request'

@@ -6,7 +6,7 @@
 // ============================================================
 
 // 导入公共类型
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, QueryConditionReq, StatisticRes } from './common'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, OrderItem, QueryConditionReq, StatisticRes } from './common'
 /**
  * 全局响应数据类型说明
  * @interface ResponseDataType
@@ -51,11 +51,6 @@ export interface PageFormSchemaAttributeGroupVO {
   total?: number
 }
 
-export interface OrderItem {
-  asc?: boolean
-  column?: string
-}
-
 export interface FormSchemaAttributeGroupVO {
   /** 创建时间 */
   createAt?: string
@@ -87,60 +82,6 @@ export interface FormSchemaAttributeGroupVO {
   updateName?: string
 }
 
-export interface TreeDataResVO {
-  children?: TreeDataResVO[]
-  key?: object
-  pid?: object
-  title?: string
-}
-
-export interface IdReqVO {
-  /** id */
-  id?: string
-}
-
-export interface IdOrderReqVO {
-  /** id */
-  id?: object
-  /** 显示顺序 */
-  showOrder?: number
-}
-
-export interface IdPidReqVO {
-  /** id */
-  id?: string
-  /** pid */
-  pid?: object
-}
-
-export interface TreeDataItemVO {
-  key?: object
-  pid?: object
-  title?: string
-}
-
-export interface OrderItem {
-  asc?: boolean
-  column?: string
-}
-
-export type AdvancedQueryReqResponse = ResponseDataType & {
-  payload: AdvancedQueryReq
-}
-
-export type AdvancedQueryReqListResponse = ResponseDataType & {
-  payload: AdvancedQueryReq[]
-}
-
-export type AdvancedQueryReqPageResponse = ResponseDataType & {
-  payload: {
-    records: AdvancedQueryReq[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
 export type PageFormSchemaAttributeGroupVOResponse = ResponseDataType & {
   payload: PageFormSchemaAttributeGroupVO
 }
@@ -164,193 +105,6 @@ export type FormSchemaAttributeGroupVOListResponse = ResponseDataType & {
 export type FormSchemaAttributeGroupVOPageResponse = ResponseDataType & {
   payload: {
     records: FormSchemaAttributeGroupVO[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type AdvancedStatisticReqResponse = ResponseDataType & {
-  payload: AdvancedStatisticReq
-}
-
-export type AdvancedStatisticReqListResponse = ResponseDataType & {
-  payload: AdvancedStatisticReq[]
-}
-
-export type AdvancedStatisticReqPageResponse = ResponseDataType & {
-  payload: {
-    records: AdvancedStatisticReq[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type StatisticResResponse = ResponseDataType & {
-  payload: StatisticRes
-}
-
-export type StatisticResListResponse = ResponseDataType & {
-  payload: StatisticRes[]
-}
-
-export type StatisticResPageResponse = ResponseDataType & {
-  payload: {
-    records: StatisticRes[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type AdvancedSummaryReqResponse = ResponseDataType & {
-  payload: AdvancedSummaryReq
-}
-
-export type AdvancedSummaryReqListResponse = ResponseDataType & {
-  payload: AdvancedSummaryReq[]
-}
-
-export type AdvancedSummaryReqPageResponse = ResponseDataType & {
-  payload: {
-    records: AdvancedSummaryReq[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type TreeDataResVOResponse = ResponseDataType & {
-  payload: TreeDataResVO
-}
-
-export type TreeDataResVOListResponse = ResponseDataType & {
-  payload: TreeDataResVO[]
-}
-
-export type TreeDataResVOPageResponse = ResponseDataType & {
-  payload: {
-    records: TreeDataResVO[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type IdReqVOResponse = ResponseDataType & {
-  payload: IdReqVO
-}
-
-export type IdReqVOListResponse = ResponseDataType & {
-  payload: IdReqVO[]
-}
-
-export type IdReqVOPageResponse = ResponseDataType & {
-  payload: {
-    records: IdReqVO[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type QueryConditionReqResponse = ResponseDataType & {
-  payload: QueryConditionReq
-}
-
-export type QueryConditionReqListResponse = ResponseDataType & {
-  payload: QueryConditionReq[]
-}
-
-export type QueryConditionReqPageResponse = ResponseDataType & {
-  payload: {
-    records: QueryConditionReq[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type GeneralStatisticReqResponse = ResponseDataType & {
-  payload: GeneralStatisticReq
-}
-
-export type GeneralStatisticReqListResponse = ResponseDataType & {
-  payload: GeneralStatisticReq[]
-}
-
-export type GeneralStatisticReqPageResponse = ResponseDataType & {
-  payload: {
-    records: GeneralStatisticReq[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type GeneralSummaryReqResponse = ResponseDataType & {
-  payload: GeneralSummaryReq
-}
-
-export type GeneralSummaryReqListResponse = ResponseDataType & {
-  payload: GeneralSummaryReq[]
-}
-
-export type GeneralSummaryReqPageResponse = ResponseDataType & {
-  payload: {
-    records: GeneralSummaryReq[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type IdOrderReqVOResponse = ResponseDataType & {
-  payload: IdOrderReqVO
-}
-
-export type IdOrderReqVOListResponse = ResponseDataType & {
-  payload: IdOrderReqVO[]
-}
-
-export type IdOrderReqVOPageResponse = ResponseDataType & {
-  payload: {
-    records: IdOrderReqVO[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type IdPidReqVOResponse = ResponseDataType & {
-  payload: IdPidReqVO
-}
-
-export type IdPidReqVOListResponse = ResponseDataType & {
-  payload: IdPidReqVO[]
-}
-
-export type IdPidReqVOPageResponse = ResponseDataType & {
-  payload: {
-    records: IdPidReqVO[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type TreeDataItemVOResponse = ResponseDataType & {
-  payload: TreeDataItemVO
-}
-
-export type TreeDataItemVOListResponse = ResponseDataType & {
-  payload: TreeDataItemVO[]
-}
-
-export type TreeDataItemVOPageResponse = ResponseDataType & {
-  payload: {
-    records: TreeDataItemVO[]
     total: number
     currentPage: number
     pageSize: number

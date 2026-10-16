@@ -5,7 +5,8 @@
 // Tag Description: Sys Matrix Change Log Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, ImportChangeLogReqVO, QueryConditionReq, SysMatrixChangeLogVO } from './types/sysMatrixChangeLogPortalControllerTypes'
+import type { SysMatrixChangeLogVO } from './types/sysMatrixChangeLogPortalControllerTypes'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, ImportChangeLogReqVO, QueryConditionReq } from './types/common'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'

@@ -5,7 +5,8 @@
 // Tag Description: Sys Form Linkage Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq, SysFormLinkageVO } from './types/sysFormLinkagePortalControllerTypes'
+import type { SysFormLinkageVO } from './types/sysFormLinkagePortalControllerTypes'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from './types/common'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'

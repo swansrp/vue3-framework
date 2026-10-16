@@ -5,7 +5,8 @@
 // Tag Description: Sys Matrix Column Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq, SysMatrixColumnVO } from './types/sysMatrixColumnPortalControllerTypes'
+import type { SysMatrixColumnVO } from './types/sysMatrixColumnPortalControllerTypes'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from './types/common'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'

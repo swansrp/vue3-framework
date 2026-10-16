@@ -64,18 +64,6 @@ export interface DatasetColumnReq {
   remark?: string
 }
 
-export interface IdReqVO {
-  /** id */
-  id?: string
-}
-
-export interface IdOrderReqVO {
-  /** id */
-  id?: object
-  /** 显示顺序 */
-  showOrder?: number
-}
-
 export interface DatasetConfigReq {
   /** 数据源配置名称（可选，为空则使用默认数据源） */
   dataSource?: string
@@ -163,40 +151,6 @@ export type DatasetColumnReqListResponse = ResponseDataType & {
 export type DatasetColumnReqPageResponse = ResponseDataType & {
   payload: {
     records: DatasetColumnReq[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type IdReqVOResponse = ResponseDataType & {
-  payload: IdReqVO
-}
-
-export type IdReqVOListResponse = ResponseDataType & {
-  payload: IdReqVO[]
-}
-
-export type IdReqVOPageResponse = ResponseDataType & {
-  payload: {
-    records: IdReqVO[]
-    total: number
-    currentPage: number
-    pageSize: number
-  }
-}
-
-export type IdOrderReqVOResponse = ResponseDataType & {
-  payload: IdOrderReqVO
-}
-
-export type IdOrderReqVOListResponse = ResponseDataType & {
-  payload: IdOrderReqVO[]
-}
-
-export type IdOrderReqVOPageResponse = ResponseDataType & {
-  payload: {
-    records: IdOrderReqVO[]
     total: number
     currentPage: number
     pageSize: number

@@ -9,7 +9,7 @@
     :show-line="true"
     :tree-data="treeData"
     @drop="(info: AntTreeNodeDropEvent) => emit('updateTree', info)"
-    @select="(selectedKeys: any, event: { selected: boolean, selectedNodes: any, node: any, event: any }) => emit('handleTreeSelected', selectedKeys, event)"
+    @select="(selectedKeys: any, event: any) => emit('handleTreeSelected', selectedKeys, event)"
   >
     <template #title="{ dataRef }">
       <!-- 菜单项全被禁用(只读且无详情)时不挂 contextmenu trigger, 交还浏览器默认右键菜单 -->

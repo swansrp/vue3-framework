@@ -5,7 +5,8 @@
 // Tag Description: Sys Matrix Portal Controller
 // ============================================================
 
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, ImportChangeLogReqVO, ImportMatrixReq, QueryConditionReq, SysMatrixVO } from './types/sysMatrixPortalControllerTypes'
+import type { ImportMatrixReq, SysMatrixVO } from './types/sysMatrixPortalControllerTypes'
+import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from './types/common'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'
@@ -126,19 +127,6 @@ export const sysMatrixDeleteList = (data?: any, showSuccess = true, showLoading 
 }
 
 /**
- * 导出变更日志
- * @api GET /forge/matrix/export-changelog
- * @see {@link @/apis/types/sysMatrixPortalControllerTypes} - 相关类型定义
- */
-export const exportChangeLog = (params?: {
-  /** id */
-  id: number
-}, showSuccess = true, showLoading = false, showErr = true) => {
-  const api = buildGetApiByType('/forge/matrix/export-changelog', '')
-  return request(api, params || {}, {}, showSuccess, showLoading, showErr)
-}
-
-/**
  * 导出DDL语句
  * @api GET /forge/matrix/export-ddl
  * @see {@link @/apis/types/sysMatrixPortalControllerTypes} - 相关类型定义
@@ -226,18 +214,6 @@ export const sysMatrixQueryById = (params?: {
 }, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildGetApiByType('/forge/matrix/id', '')
   return request(api, params || {}, {}, showSuccess, showLoading, showErr)
-}
-
-/**
- * 导入变更日志
- * @api POST /forge/matrix/import-changelog
- * @dataType ImportChangeLogReqVO
- * @requestTypes ImportChangeLogReqVO
- * @see {@link @/apis/types/sysMatrixPortalControllerTypes} - 相关类型定义
- */
-export const importChangeLog = (data?: ImportChangeLogReqVO, showSuccess = true, showLoading = false, showErr = true) => {
-  const api = buildPostApiByType('/forge/matrix/import-changelog', '')
-  return request(api, {}, data || {}, showSuccess, showLoading, showErr)
 }
 
 /**

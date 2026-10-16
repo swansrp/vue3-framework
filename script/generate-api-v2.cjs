@@ -382,7 +382,7 @@ function cleanSchemaName(schemaName) {
 }
 
 // 解析Swagger schema到TypeScript接口
-function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas = new Set()) {
+function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas = new Set(), commonNames = null) {
   // 处理schema名称
   const schemaInfo = processSchemaName(schemaName);
   const cleanedSchemaName = schemaInfo.name;
@@ -414,8 +414,8 @@ function parseSchemaToInterface(schemaName, schema, allSchemas, processedSchemas
     interfaceCode += `  total?: number\n`;
     interfaceCode += '}\n\n';
     
-    // 确保 OrderItem 类型被包含
-    if (!processedSchemas.has('OrderItem')) {
+    // 确保 OrderItem 类型被包含（公共类型由 import 提供，不在此盖章）
+    if (!processedSchemas.has('OrderItem') && !(commonNames && commonNames.has('OrderItem'))) {
       interfaceCode += `export interface OrderItem {\n`;
       interfaceCode += `  asc?: boolean\n`;
       interfaceCode += `  column?: string\n`;
@@ -1077,28 +1077,20 @@ function generateCommonTypesFile(allSchemas, controllerGroups, envConfig) {
     });
   });
   
-  // 定义业务实体类型的模式（这些类型不应该被提取为公共类型）
-  const businessEntityPatterns = [
-    /VO$/,           // 以VO结尾的视图对象
-    /DTO$/,          // 以DTO结尾的数据传输对象
-    /Entity$/,       // 以Entity结尾的实体
-    /Model$/,        // 以Model结尾的模型
-    /Info$/,         // 以Info结尾的信息对象
-    /Detail$/,       // 以Detail结尾的详情对象
-  ];
-  
-  // 判断是否为业务实体类型
-  function isBusinessEntity(schemaName) {
-    return businessEntityPatterns.some(pattern => pattern.test(schemaName));
-  }
-  
-  // 找出被多个控制器使用的类型 (使用次数 >= 2)，但排除业务实体类型
+  // 找出被多个控制器使用的类型 (使用次数 >= 2)
+  // 注意: 不能按 VO/DTO 等后缀排除"业务实体"——IdReqVO/SortVO 等被 >=2 个控制器共享时,
+  // 若各自在控制器文件里盖章, 桶文件 export * 汇总即 TS2308 撞名, 必须唯一落在 common.ts
   const commonSchemas = new Set();
   schemaUsageCount.forEach((count, schema) => {
-    if (count >= 2 && !isBusinessEntity(schema)) {
+    if (count >= 2) {
       commonSchemas.add(schema);
     }
   });
+
+  // OrderItem 是分页/响应包装类型的固定引用, 只要 common.ts 存在就一并收录, 避免悬空引用
+  if (commonSchemas.size > 0) {
+    commonSchemas.add('OrderItem');
+  }
   
   if (commonSchemas.size === 0) {
     content += `// 当前没有多个控制器共享的类型\n`;
@@ -1152,20 +1144,55 @@ function generateCommonTypesFile(allSchemas, controllerGroups, envConfig) {
     }
   }
   
-  // 生成所有公共类型
+  // 生成所有公共类型（共享 processed 集合，嵌套类型在本文件内只盖章一次）
+  const sharedProcessed = new Set();
   while (schemasToProcess.length > 0) {
     const schemaName = schemasToProcess.shift();
     const schemaInfo = processSchemaName(schemaName);
     const cleanedSchemaName = schemaInfo.name;
-    
+
     if (allSchemas[schemaName] && !processedSchemas.has(cleanedSchemaName)) {
       addDependentSchemas(schemaName);
-      const tempProcessedSchemas = new Set();
-      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, tempProcessedSchemas);
+      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, sharedProcessed);
       content += interfaceCode;
     }
   }
-  
+
+  // 公共类型的响应包装类型在此统一生成一次（控制器 Types 文件不再重复盖章）
+  Array.from(commonSchemas).forEach(schemaName => {
+    if (!allSchemas[schemaName]) return;
+    const schemaInfo = processSchemaName(schemaName);
+    const n = schemaInfo.name;
+    content += `export type ${n}Response = ResponseDataType & {
+  payload: ${n}
+}
+
+`;
+    content += `export type ${n}ListResponse = ResponseDataType & {
+  payload: ${n}[]
+}
+
+`;
+    if (schemaInfo.isGeneric && schemaInfo.containerType === 'Page') {
+      content += `export type ${n}PageResponse = ResponseDataType & {
+  payload: ${n}
+}
+
+`;
+    } else {
+      content += `export type ${n}PageResponse = ResponseDataType & {
+  payload: {
+    records: ${n}[]
+    total: number
+    currentPage: number
+    pageSize: number
+  }
+}
+
+`;
+    }
+  });
+
   return { content, commonSchemas };
 }
 
@@ -1218,7 +1245,13 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
   }
   content += `// ============================================================\n\n`;
   
-  // 如果使用了公共类型，添加导入语句
+  // 公共类型的 cleaned 名集合（引用匹配用）
+  const commonCleaned = new Set();
+  commonSchemas.forEach(schema => {
+    commonCleaned.add(processSchemaName(schema).name);
+  });
+
+  // 如果使用了公共类型，添加导入语句（含嵌套引用到的公共类型）
   const usedCommonTypes = new Set();
   Array.from(usedSchemas).forEach(schema => {
     if (commonSchemas.has(schema)) {
@@ -1226,7 +1259,38 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
       usedCommonTypes.add(schemaInfo.name);
     }
   });
-  
+
+  // 预遍历非公共 schema 的引用链, 嵌套指向的公共类型也要计入导入
+  const visitedRefs = new Set();
+  const walkRefs = (schemaName) => {
+    if (visitedRefs.has(schemaName)) return;
+    visitedRefs.add(schemaName);
+    const schema = allSchemas[schemaName];
+    if (!schema) return;
+    const info = processSchemaName(schemaName);
+    if (info.isGeneric && info.itemType && allSchemas[info.itemType]) {
+      const itClean = cleanSchemaName(info.itemType);
+      if (commonCleaned.has(itClean)) usedCommonTypes.add(itClean);
+      else walkRefs(info.itemType);
+    }
+    if (schema.properties) {
+      Object.values(schema.properties).forEach(prop => {
+        let refRaw = null;
+        if (prop.$ref) refRaw = prop.$ref;
+        else if (prop.type === 'array' && prop.items && prop.items.$ref) refRaw = prop.items.$ref;
+        if (refRaw) {
+          const refName = refRaw.split('/').pop();
+          const refClean = cleanSchemaName(refName);
+          if (commonCleaned.has(refClean)) usedCommonTypes.add(refClean);
+          else walkRefs(refName);
+        }
+      });
+    }
+  };
+  Array.from(usedSchemas).forEach(schema => {
+    if (!commonSchemas.has(schema)) walkRefs(schema);
+  });
+
   if (usedCommonTypes.size > 0) {
     content += `// 导入公共类型\n`;
     content += `import type { ${Array.from(usedCommonTypes).sort().join(', ')} } from './common'\n`;
@@ -1273,34 +1337,32 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
     processedSchemas.add(cleanedSchemaName);
     const schema = allSchemas[schemaName];
     
-    // 如果是泛型类型，也需要处理其元素类型
+    // 如果是泛型类型，也需要处理其元素类型（公共类型走 import，不本地盖章）
     if (schemaInfo.isGeneric && schemaInfo.itemType) {
       const itemTypeSchema = allSchemas[schemaInfo.itemType];
-      if (itemTypeSchema && !processedSchemas.has(cleanSchemaName(schemaInfo.itemType))) {
+      if (itemTypeSchema && !commonCleaned.has(cleanSchemaName(schemaInfo.itemType)) && !processedSchemas.has(cleanSchemaName(schemaInfo.itemType))) {
         schemasToProcess.push(schemaInfo.itemType);
       }
     }
-    
+
     if (schema.properties) {
       Object.values(schema.properties).forEach(prop => {
         if (prop.$ref) {
           const refType = prop.$ref.split('/').pop();
           const refSchemaInfo = processSchemaName(refType);
-          if (!processedSchemas.has(refSchemaInfo.name)) {
+          if (!commonCleaned.has(refSchemaInfo.name) && !processedSchemas.has(refSchemaInfo.name)) {
             schemasToProcess.push(refType);
           }
         } else if (prop.type === 'array' && prop.items && prop.items.$ref) {
           const refType = prop.items.$ref.split('/').pop();
           const refSchemaInfo = processSchemaName(refType);
-          if (!processedSchemas.has(refSchemaInfo.name)) {
+          if (!commonCleaned.has(refSchemaInfo.name) && !processedSchemas.has(refSchemaInfo.name)) {
             schemasToProcess.push(refType);
           }
         }
       });
     }
   }
-  
-  // 处理所有schema，确保接口定义被正确生成
   while (schemasToProcess.length > 0) {
     const schemaName = schemasToProcess.shift();
     const schemaInfo = processSchemaName(schemaName);
@@ -1312,7 +1374,7 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
       addDependentSchemas(schemaName);
       // 生成接口定义，为每个接口创建独立的processedSchemas
       const tempProcessedSchemas = new Set(); // 每个接口独立的处理记录
-      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, tempProcessedSchemas);
+      const interfaceCode = parseSchemaToInterface(schemaName, allSchemas[schemaName], allSchemas, tempProcessedSchemas, commonCleaned);
       content += interfaceCode;
     }
   }
@@ -1321,6 +1383,8 @@ function generateTypesFile(controllerName, controllerData, usedSchemas, allSchem
   const generatedResponseTypes = new Map(); // key: typeName, value: typeDefinition
   
   Array.from(usedSchemas).forEach(originalSchemaName => {
+    // 公共类型的响应包装由 common.ts 统一生成, 此处跳过避免重复盖章
+    if (commonSchemas.has(originalSchemaName)) return;
     const schemaInfo = processSchemaName(originalSchemaName);
     const cleanedSchemaName = schemaInfo.name;
     if (allSchemas[originalSchemaName]) {
