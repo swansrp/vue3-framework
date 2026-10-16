@@ -100,12 +100,12 @@ import {
   editSequenceChannelTable
 } from '@/framework/apis/channel'
 import type { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
-import Portal from '@/framework/components/common/Portal/index.vue'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { buildCondition } from '@/framework/components/common/Portal/utils'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import LeftListRightTable from '@/framework/components/common/leftListRightTable/index.vue'
+import Portal from '@/framework/components/common/Portal/index.vue'
+import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { buildCondition } from '@/framework/components/common/Portal/utils'
 import surelyTableColumns from '@/framework/views/MainContent/SystemManage/Channel/channel'
 
 

@@ -27,22 +27,49 @@
   <div class="sso-auth">
     <div class="sso-auth__card">
       <template v-if="state === 'issuing'">
-        <div class="sso-auth__title">正在签发单点登录票据…</div>
-        <div class="sso-auth__sub">签发完成后自动跳回 {{ targetLabel }}</div>
+        <div class="sso-auth__title">
+          正在签发单点登录票据…
+        </div>
+        <div class="sso-auth__sub">
+          签发完成后自动跳回 {{ targetLabel }}
+        </div>
       </template>
 
       <template v-else-if="state === 'redirecting'">
-        <div class="sso-auth__title">票据已签发，正在跳回来源系统…</div>
-        <div class="sso-auth__sub">若浏览器没有自动跳转，点下面的按钮</div>
-        <a-button type="primary" @click="goRedirect">继续跳回</a-button>
+        <div class="sso-auth__title">
+          票据已签发，正在跳回来源系统…
+        </div>
+        <div class="sso-auth__sub">
+          若浏览器没有自动跳转，点下面的按钮
+        </div>
+        <a-button
+          type="primary"
+          @click="goRedirect"
+        >
+          继续跳回
+        </a-button>
       </template>
 
       <template v-else>
-        <div class="sso-auth__title">没能跳回来源系统</div>
-        <div class="sso-auth__reason">{{ reason }}</div>
+        <div class="sso-auth__title">
+          没能跳回来源系统
+        </div>
+        <div class="sso-auth__reason">
+          {{ reason }}
+        </div>
         <div class="sso-auth__actions">
-          <a-button v-if="canRetry" @click="issue">重新签发</a-button>
-          <a-button type="primary" @click="backToHub">返回墨枢</a-button>
+          <a-button
+            v-if="canRetry"
+            @click="issue"
+          >
+            重新签发
+          </a-button>
+          <a-button
+            type="primary"
+            @click="backToHub"
+          >
+            返回墨枢
+          </a-button>
         </div>
       </template>
     </div>
@@ -54,10 +81,11 @@ defineOptions({ name: 'SsoAuthorizeView' })
 
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
+import { postSsoTicket } from '@/framework/apis/sso/sso'
 import { navigation2Login } from '@/framework/network/login'
 import pinia from '@/framework/store'
 import { useCommonStore } from '@/framework/store/common'
-import { postSsoTicket } from '@/framework/apis/sso/sso'
 
 const route = useRoute()
 const router = useRouter()
