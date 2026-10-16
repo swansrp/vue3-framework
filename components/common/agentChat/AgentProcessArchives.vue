@@ -38,10 +38,11 @@ const open = ref(false)
 </script>
 
 <style scoped>
+/* 直接用框架主题令牌——不读业务侧 --cf-* 别名（那层定义在 InkHub 业务 css，框架页面没有） */
 .apa {
-  border: 1px solid var(--cf-border);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
-  background: var(--bg-elevated, #fff);
+  background: var(--bg-elevated);
   padding: 8px 14px;
   margin-bottom: 14px;
 }
@@ -52,7 +53,7 @@ const open = ref(false)
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   cursor: pointer;
 }
 
@@ -60,7 +61,7 @@ const open = ref(false)
   flex: none;
   width: 0;
   height: 0;
-  border-left: 5px solid var(--cf-sub);
+  border-left: 5px solid var(--text-tertiary);
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
   margin-bottom: 2px;
@@ -77,7 +78,7 @@ const open = ref(false)
   border: 0;
   font-size: 12px;
   line-height: 1.8;
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 320px;

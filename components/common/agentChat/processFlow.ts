@@ -169,6 +169,23 @@ export function reduceProcessEvents(events: AgentEventX[], opts?: ProcessFlowOpt
         summary: summarizeTool(name, output, call?.args, opts, labelKeys),
         detail: stepDetail(name, call?.args, output)
       })
+    } else if (ev?.type === 'llm_output') {
+      // 外部任务子流的产出摘要行（core/llm LLM_OUTPUT，ExternalRuntimeTaskService 终局附带）：
+      // 归 log 行承载——旧面板此前按「输出」思考行显示，迁移后不丢信息
+      const line = typeof ev.payload === 'string' ? ev.payload : String(ev.payload ?? '')
+      if (!line.trim()) continue
+      pushStep(steps, wait, {
+        tool: '__log',
+        ord: 0,
+        running: false,
+        t0: ev.time,
+        t1: ev.time,
+        polls: 1,
+        sig: line,
+        summary: line.length > 120 ? line.slice(0, 120) + '…' : line,
+        detail: line,
+        isLog: true
+      })
     } else if (ev?.type === 'log') {
       const line = typeof ev.payload === 'string' ? ev.payload : String(ev.payload ?? '')
       if (!line.trim()) continue

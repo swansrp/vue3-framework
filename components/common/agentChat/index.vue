@@ -6,18 +6,16 @@
  * - 计划清单：status.plan 渲染待办勾选（LLM 开局 submit_plan 提交、start_plan_item 标记执行中、done_plan_item 逐条挑勾）；
  * - 问题卡片：status.questions 的 waiting 条目渲染可交互决策卡（ask_user 提问，
  *   候选项单选/自由输入/交由 AI 决定），作答经 sessionAnswer 写控制键唤醒后端阻塞；
- * - 消息流：思考类事件（round_start/tool_call/tool_result/llm_output/log）按轮分组
- *   折叠为「思考过程」（执行中最新组展开、结论出现全部折叠），状态条
- *   （paused/resumed/guidance）与终态结论平铺；
- * - 消息体渲染器注册制：renderers prop（事件 type→业务组件映射，如问数表格/
- *   提案卡片），#renderer 作用域插槽优先兜底——父组件不注册则按通用摘要行渲染；
+ * - 消息流：AgentProcessFlow 平铺执行过程（工具步编号+耗时、log 行弱化、等待轮询折叠成一行、
+ *   流式实时块）＋AgentProcessArchives 轮末思考归档折叠——与 InkHubChat 同一套过程显示件；
+ *   状态条（paused/resumed/guidance）与终态结论平铺；
  * - 底部输入区状态机：RUNNING→[暂停][停止]；PAUSED→[补指导语][继续][停止]；
  *   终态→结论摘要 + 点赞/点踩（dislike 收集反馈）+ [重新发起]；
  * - 轮询：useAgentSession 2s events(sinceSeq) 增量 + status；轮询即后端存活信号，
  *   页面隐藏不暂停（否则会被断开即停策略误判），组件卸载才停止轮询。
  *
- * 用法：<AgentChat :session-id="id" :renderers="{ tool_result: MyTable }" @restart="onRestart" />
- * 智能问数等业务以子组件形态外挂（传 renderers / #renderer），父组件不含业务。
+ * 用法：<AgentChat :session-id="id" @restart="onRestart" />
+ * 过程事件展示由框架过程件统一承载，业务定制组件不进面板。
  * 高度由外层容器给定（height: 100%）。
  */
 <template>
@@ -194,134 +192,23 @@
         </p>
       </div>
 
-      <!-- 统一过程树（opt-in）：开启后由 AgentProcessTree 接管过程呈现，
-           与 relay/其他引擎共用同一 AssistantView 视图模型；默认关闭=下方旧分组逐字节不变 -->
-      <AgentProcessTree
-        v-if="processTree && processView"
-        :view="processView"
+      <!-- 执行过程流（平铺步骤流：工具步编号+耗时、log 行弱化、等待轮询折叠、实时思考块；
+           执行中默认展开、终态自动收起）＋轮末思考归档折叠——与 InkHubChat 同一套过程显示件 -->
+      <AgentProcessFlow
+        :events="events"
+        :running="!isTerminal"
+        :live="status?.live || null"
       />
+      <AgentProcessArchives :events="events" />
 
-      <template v-if="!processTree">
-        <template
-          v-for="(group, gi) in thinkGroups"
-          :key="`g-${group.id}`"
-        >
-          <div class="think-group">
-            <div
-              class="think-header"
-              @click="toggleThink(group, gi)"
-            >
-              <RightOutlined
-                class="think-arrow"
-                :class="{ 'is-open': !isThinkCollapsed(group, gi) }"
-              />
-              <BulbOutlined class="think-icon" />
-              <span class="think-title">
-                {{ group.round != null ? `第 ${group.round} 轮思考` : '思考过程' }}
-              </span>
-              <span class="think-count">{{ group.events.length }} 条</span>
-            </div>
-            <div
-              v-show="!isThinkCollapsed(group, gi)"
-              class="think-body"
-            >
-              <div
-                v-for="ev in group.events"
-                :key="ev.seq"
-                class="think-line"
-                :class="`ev-${ev.type}`"
-              >
-                <!-- 消息体渲染器：slot 优先，renderers 注册次之，通用摘要兜底 -->
-                <slot
-                  name="renderer"
-                  :event="ev"
-                  :payload="ev.payload"
-                >
-                  <component
-                    :is="renderers[ev.type]"
-                    v-if="renderers && renderers[ev.type]"
-                    :event="ev"
-                    :payload="ev.payload"
-                  />
-                  <template v-else>
-                    <span class="line-tag">{{ lineTag(ev.type) }}</span>
-                    <span class="line-text">{{ lineText(ev) }}</span>
-                    <!-- 长行展开（思考归档等全文不截断，默认预览 300 字） -->
-                    <a
-                      v-if="fullText(ev).length > 300"
-                      class="line-expand"
-                      @click="toggleExpand(ev.seq)"
-                    >{{ expandedSeqs.has(ev.seq) ? '收起' : '展开' }}</a>
-                  </template>
-                </slot>
-              </div>
-
-              <!-- LLM 流式实时内容作为当前轮思考组末行（替换式 live，与问数链同口径）：
-                 默认展开看全文详情（内滚跟随），可收起仅留状态行（字数实时跳动）；终态后端清空自然隐藏，
-                 轮末全文另由【LLM 思考归档】事件留痕可展开 -->
-              <div
-                v-if="gi === thinkGroups.length - 1 && liveText"
-                class="think-line ev-live"
-              >
-                <span class="line-tag">流式</span>
-                <span class="line-text live-summary">{{ liveSummary }}</span>
-                <a
-                  v-if="liveDetail"
-                  class="line-expand"
-                  @click="toggleLiveExpand"
-                >{{ liveExpanded ? '收起' : '展开' }}</a>
-              </div>
-              <div
-                v-if="gi === thinkGroups.length - 1 && liveExpanded && liveDetail"
-                class="live-detail"
-              >
-                {{ liveDetail }}
-              </div>
-            </div>
-          </div>
-
-          <!-- 状态条（组后平铺：暂停/恢复/指导语） -->
-          <div
-            v-for="ev in statusEventsBetween(group.endSeq, group.nextSeq)"
-            :key="`s-${ev.seq}`"
-            class="status-strip"
-            :class="`strip-${ev.type}`"
-          >
-            {{ statusText2(ev) }}
-          </div>
-        </template>
-      </template>
-
-      <!-- 尾随状态条（最后一组之后） -->
+      <!-- 状态条（暂停/恢复/指导语，按事件顺序平铺） -->
       <div
-        v-for="ev in statusEventsBetween(lastThinkEndSeq, Infinity)"
+        v-for="ev in statusEvents"
         :key="`s-${ev.seq}`"
         class="status-strip"
         :class="`strip-${ev.type}`"
       >
         {{ statusText2(ev) }}
-      </div>
-
-      <!-- LLM 流式实时内容兜底（尚无思考组时，如首轮 round_start 前）：有组后挂组尾渲染，同口径默认折叠 -->
-      <div
-        v-if="liveText && thinkGroups.length === 0"
-        class="chat-live"
-      >
-        <div class="think-line ev-live">
-          <span class="line-tag">流式</span>
-          <span class="line-text live-summary">{{ liveSummary }}</span>
-          <a
-            v-if="liveDetail"
-            class="line-expand"
-            @click="toggleLiveExpand"
-          >{{ liveExpanded ? '收起' : '展开' }}</a>
-        </div>
-        <div
-          v-if="liveExpanded && liveDetail"
-          class="live-detail"
-        >
-          {{ liveDetail }}
-        </div>
       </div>
 
       <!-- 终态结论卡 -->
@@ -584,17 +471,16 @@
 
 <script lang="ts" setup>
 import {
-  BulbOutlined, CheckCircleFilled, CheckSquareOutlined, ClockCircleOutlined, CloseCircleFilled,
+  CheckCircleFilled, CheckSquareOutlined, ClockCircleOutlined, CloseCircleFilled,
   CopyOutlined, DislikeOutlined, ExclamationCircleFilled, LikeOutlined, LoadingOutlined, MinusOutlined,
-  PauseCircleOutlined, PlayCircleOutlined, QuestionCircleFilled, RedoOutlined, RightOutlined,
+  PauseCircleOutlined, PlayCircleOutlined, QuestionCircleFilled, RedoOutlined,
   RobotOutlined, StopFilled, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, nextTick, reactive, ref, watch, type Component } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
-import { agentEventsToView } from './agentEventsToView'
-import AgentProcessTree from './AgentProcessTree.vue'
-import { isNoiseLogLine } from './processLines'
+import AgentProcessArchives from './AgentProcessArchives.vue'
+import AgentProcessFlow from './AgentProcessFlow.vue'
 import {
   isTerminalStatus, parseChatOption, type AgentConfirmationT, type AgentEventX, type AgentPlanItemT
 } from './types'
@@ -610,10 +496,6 @@ interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化自动重置轮询） */
   sessionId: string | null
   title?: string
-  /** 消息体渲染器注册表：事件 type→业务组件（props: event/payload）；不注册走通用摘要行 */
-  renderers?: Record<string, Component>
-  /** 统一过程树（缺省 false=沿用按轮分组渲染；开启后过程块由 AgentProcessTree 接管） */
-  processTree?: boolean
 }
 
 const props = defineProps<Props>()
@@ -631,11 +513,6 @@ const { status, events } = useAgentSession(computed(() => props.sessionId))
 
 const sessionStatus = computed(() => status.value?.status || 'RUNNING')
 const isTerminal = computed(() => isTerminalStatus(sessionStatus.value))
-
-/** 统一视图模型（仅在开启过程树时归约，避免默认路径多算） */
-const processView = computed(() =>
-  props.processTree ? agentEventsToView(events.value, status.value) : null
-)
 
 const statusText = computed(() => {
   if (waitingQuestion.value) return '待回答'
@@ -712,107 +589,17 @@ const onSkipQuestion = async () => {
   }
 }
 
-// ===== 思考分组（round_start 开组；执行中最新组展开，结论出现全部折叠） =====
-
-interface ThinkGroupView {
-  id: number
-  round: number | null
-  events: AgentEventX[]
-  endSeq: number
-  nextSeq: number
-}
+// ===== 事件类型词汇（「复制全体」摘要与状态条共用；过程事件渲染归 AgentProcessFlow） =====
 
 const THINK_TYPES = new Set(['round_start', 'tool_call', 'tool_result', 'llm_output', 'log'])
 const STATUS_TYPES = new Set(['paused', 'resumed', 'guidance', 'question', 'answered'])
 
-const thinkGroups = computed<ThinkGroupView[]>(() => {
-  const groups: ThinkGroupView[] = []
-  let current: ThinkGroupView | null = null
-  for (const ev of events.value) {
-    if (!THINK_TYPES.has(ev.type)) continue
-    // 噪声过程日志（工具收发/计量流水）与组内工具步骤行重复：渲染层跳过（事件仍在，「复制全体」不受影响）
-    if (ev.type === 'log' && typeof ev.payload === 'string' && isNoiseLogLine(ev.payload)) continue
-    if (ev.type === 'round_start' || current === null) {
-      current = { id: ev.seq, round: typeof ev.payload === 'number' ? ev.payload : null, events: [], endSeq: ev.seq, nextSeq: Infinity }
-      groups.push(current)
-    }
-    current.events.push(ev)
-    current.endSeq = ev.seq
-  }
-  for (let i = 0; i < groups.length; i++) {
-    groups[i].nextSeq = i + 1 < groups.length ? groups[i + 1].id : Infinity
-  }
-  return groups
-})
-
-// 折叠状态独立于轮询重算：用户点开/收起优先，默认规则——
-// 执行中仅最新组展开（历史自动收起），结论出现全部折叠
-const userCollapsed = reactive<Record<number, boolean>>({})
-
-const isThinkCollapsed = (group: ThinkGroupView, index: number): boolean => {
-  if (userCollapsed[group.id] !== undefined) {
-    return userCollapsed[group.id]
-  }
-  return isTerminal.value || index < thinkGroups.value.length - 1
-}
-
-const toggleThink = (group: ThinkGroupView, index: number) => {
-  userCollapsed[group.id] = !isThinkCollapsed(group, index)
-}
-
-const lastThinkEndSeq = computed(() =>
-  thinkGroups.value.length > 0
-    ? thinkGroups.value[thinkGroups.value.length - 1].endSeq
-    : 0
-)
+/** 状态条事件（paused/resumed/guidance 等，按 seq 顺序平铺） */
+const statusEvents = computed(() => events.value.filter(ev => STATUS_TYPES.has(ev.type)))
 
 // ===== LLM 流式实时内容（替换式：会话 status.live，每秒覆盖的最新一帧；终态后端清空自然隐藏） =====
+// 屏显与跟随归 AgentProcessFlow 实时块；此处保留取值供「复制全体」带走执行中思考全文
 const liveText = computed(() => status.value?.live || '')
-
-// 流式行默认展开全文详情（内滚跟随），可收起仅留状态行（字数实时跳动）
-const liveExpanded = ref(true)
-// 详情元素定位：不用模板 ref——v-for（思考组循环）内的字符串 ref 行为不可靠（诊断日志实测读到
-// 非 DOM 对象：scrollHeight 等全 undefined，贴底永久失效），改从滚动容器内直接查询，
-// 任一时刻至多一个 .live-detail（组内与兜底两处 v-if 互斥），取最后一个防过渡期双存
-const liveDetailEl = (): HTMLDivElement | null => {
-  const els = bodyRef.value?.querySelectorAll('.live-detail')
-  return els && els.length ? (els[els.length - 1] as HTMLDivElement) : null
-}
-
-/** 状态行（live 首行，如「思考中·已思 N 字」） */
-const liveSummary = computed(() => {
-  const t = liveText.value
-  if (!t) return ''
-  const i = t.indexOf('\n')
-  return i < 0 ? t : t.slice(0, i)
-})
-
-/** 详情全文（状态行之后部分；无则不可展开） */
-const liveDetail = computed(() => {
-  const t = liveText.value
-  const i = t.indexOf('\n')
-  return i < 0 ? '' : t.slice(i + 1)
-})
-
-/** 展开/收起流式详情：展开即贴底（新内容通常已在尾部）；后续帧按位置自判跟随 */
-const toggleLiveExpand = async () => {
-  liveExpanded.value = !liveExpanded.value
-  if (liveExpanded.value) {
-    await nextTick()
-    const d = liveDetailEl()
-    if (d) d.scrollTop = d.scrollHeight
-  }
-}
-
-// 会话切换：流式行重置为默认展开（新会话不复用旧会话的展开状态）
-watch(() => props.sessionId, () => {
-  liveExpanded.value = true
-})
-
-/** 组间平铺的状态条（seq 在 (fromSeq, toSeq] 区间的 paused/resumed/guidance） */
-const statusEventsBetween = (fromSeq: number, toSeq: number): AgentEventX[] =>
-  events.value.filter(ev =>
-    STATUS_TYPES.has(ev.type) && ev.seq > fromSeq && ev.seq <= toSeq)
 
 const statusText2 = (ev: AgentEventX): string => {
   const text = typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)
@@ -885,14 +672,7 @@ const submitRevise = async () => {
   }
 }
 
-// ===== 通用摘要行（未注册渲染器的事件兜底渲染） =====
-// 长行（如思考归档全文）默认预览 300 字，点展开看全文（独立于轮询重算）
-const expandedSeqs = reactive(new Set<number>())
-
-const toggleExpand = (seq: number) => {
-  if (expandedSeqs.has(seq)) expandedSeqs.delete(seq)
-  else expandedSeqs.add(seq)
-}
+// ===== 事件行标签（「复制全体」摘要用） =====
 
 const lineTag = (type: string): string => {
   switch (type) {
@@ -902,13 +682,6 @@ const lineTag = (type: string): string => {
     case 'llm_output': return '输出'
     default: return '日志'
   }
-}
-
-const lineText = (ev: AgentEventX): string => {
-  const full = fullText(ev)
-  if (!full) return ''
-  if (expandedSeqs.has(ev.seq) || full.length <= 300) return full
-  return full.slice(0, 300) + '…'
 }
 
 // ===== 控制动作 =====
@@ -1066,39 +839,9 @@ const onBodyScroll = () => {
 }
 
 watch(() => events.value.length, () => scrollBottom(false))
-// 流式更新跟随逻辑已改为写前位置自判（见 watch(liveText)），内层无需 scroll 监听
-// 流式 live 替换更新时跟随滚底（单一滚动容器：贴近底部才跟随，用户上滚阅读不打断）；
-// 展开详情时详情区内滚贴底——跟随判定每帧用「写入前」的实时位置自判（用户上滚即停、滚回底部即恢复），
-// 不依赖独立状态位：旧方案靠 scroll 事件回写 liveFollow，外层同步滚底/元素重建/亚像素距离等场景
-// 回写时序错乱会把标志误置为 false，内滚随之永久停摆（用户实测：外层有滚动条时内滚失控）
-watch(liveText, async () => {
-  if (!liveText.value) return
-  const prev = liveDetailEl()
-  // 写前位置自判：内层当前贴底即跟随（用户上滚阅读即停，滚回底部附近自动恢复）
-  const prevDist = prev ? prev.scrollHeight - prev.scrollTop - prev.clientHeight : -1
-  const prevFollowing = !prev || prevDist < 48
-  await nextTick()
-  const d = liveDetailEl()
-  if (liveExpanded.value && d) {
-    // 元素重建（新轮次/搬组）时旧位置无意义，新内容直接贴底
-    const rebuilt = d !== prev
-    if (rebuilt || prevFollowing) {
-      d.scrollTop = d.scrollHeight
-      // 诊断：写后验证——若贴底后仍离底（亚像素/布局未定/元素异常）则暴露几何现场；
-      // 若判定跟随却因条件未进入贴底分支，同样打出（正常帧不记）
-      const after = d.scrollHeight - d.scrollTop - d.clientHeight
-      if (scrollDebug() && (after > 2 || rebuilt)) {
-        console.warn('[AgentChat scroll] 内层贴底', {
-          rebuilt, prevFollowing, prevDist, before: geom(prev), after: geom(d), liveLen: liveText.value.length,
-        })
-      }
-    } else if (scrollDebug()) {
-      // 内滚停摆候选：展开中但判停（用户在读历史则正常；若用户没滚却出现即为病灶）
-      console.warn('[AgentChat scroll] 内层未贴底：写前离底', { prevDist, before: geom(prev), liveLen: liveText.value.length })
-    }
-  }
-  // 外层独立按 nearBottom 门槛跟随（与内层位置无关）
-  await scrollBottom(false)
+// 流式 live 块高度变化的外层跟随（贴近底部才跟随；live 块内滚由 AgentProcessFlow 自持）
+watch(liveText, () => {
+  if (liveText.value) scrollBottom(false)
 })
 watch(conclusion, v => {
   if (v) {
@@ -1361,105 +1104,6 @@ watch(conclusion, v => {
   }
 }
 
-// 思考组
-.think-group {
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  background: var(--bg-elevated);
-  overflow: hidden;
-
-  .think-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    cursor: pointer;
-    user-select: none;
-    color: var(--text-secondary);
-    font-size: 12px;
-
-    .think-arrow {
-      font-size: 10px;
-      transition: transform 0.2s;
-
-      &.is-open { transform: rotate(90deg); }
-    }
-
-    .think-icon { color: var(--accent-mid); }
-    .think-title { color: var(--text-primary); }
-    .think-count { margin-left: auto; }
-  }
-
-  // 无内层滚动（单一滚动容器：外层 chat-body 统一跟随，避免双滚动容器互相截断显示不全）
-  .think-body {
-    border-top: 1px dashed var(--border-subtle);
-    padding: 6px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-.think-line {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 12px;
-  line-height: 20px;
-  word-break: break-all;
-
-  .line-tag {
-    flex-shrink: 0;
-    padding: 0 6px;
-    border-radius: 4px;
-    background: var(--bg-base);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-secondary);
-    font-size: 11px;
-  }
-
-  .line-text {
-    color: var(--text-secondary);
-    white-space: pre-wrap;
-  }
-
-  .line-expand {
-    flex-shrink: 0;
-    color: var(--accent);
-    font-size: 11px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  &.ev-llm_output .line-text {
-    color: var(--text-primary);
-  }
-
-  // 流式实时行（替换式 live 作为思考组末行）：主题色标识区分于留痕事件
-  &.ev-live {
-    .line-tag {
-      color: var(--accent);
-      border-color: var(--accent-mid);
-    }
-
-    .live-summary { color: var(--accent); }
-  }
-}
-
-// 流式详情（展开可见）：字体浅色+背景稍灰+内滚，不顶外层滚动条
-.live-detail {
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.04);
-  color: var(--text-tertiary, #8c8c8c);
-  font-size: 12px;
-  line-height: 20px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
 // 状态条
 .status-strip {
   padding: 4px 10px;
@@ -1471,14 +1115,6 @@ watch(conclusion, v => {
 
   &.strip-paused { color: var(--warning, #faad14); }
   &.strip-guidance { color: var(--accent); }
-}
-
-// LLM 流式实时内容兜底块（尚无思考组时）：默认折叠仅状态行，展开详情同 .live-detail
-.chat-live {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
 }
 
 // 终态结论卡

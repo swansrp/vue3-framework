@@ -190,18 +190,19 @@ const stepMs = (s: ProcessStep): number | null =>
 </script>
 
 <style scoped>
+/* 直接用框架主题令牌——不读业务侧 --cf-* 别名（那层定义在 InkHub 业务 css，框架页面没有） */
 .apf {
-  border: 1px solid var(--cf-border);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px 18px;
-  background: var(--bg-elevated, #fff);
+  background: var(--bg-elevated);
   margin-bottom: 14px;
 }
 
 .apf__head {
   font-size: 13px;
   font-weight: 600;
-  color: var(--cf-text);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -219,7 +220,7 @@ const stepMs = (s: ProcessStep): number | null =>
   flex: none;
   width: 0;
   height: 0;
-  border-left: 5px solid var(--cf-sub);
+  border-left: 5px solid var(--text-tertiary);
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
   /* 行盒（14.95px）比中文字形内容盒（17px）矮，居中后字的墨迹中心比行盒中心高约 1px ⇒ 箭头垫回去 */
@@ -251,7 +252,7 @@ const stepMs = (s: ProcessStep): number | null =>
 .apf__meta {
   font-size: 12px;
   font-weight: 400;
-  color: var(--cf-blue);
+  color: var(--accent);
 }
 
 .apf__step {
@@ -260,7 +261,7 @@ const stepMs = (s: ProcessStep): number | null =>
   gap: 10px;
   padding: 5px 0;
   font-size: 13px;
-  color: var(--cf-text);
+  color: var(--text-primary);
   /* 步骤行里带工具入参（文件标识/路径这类长不可断串），窄屏必须能断行 */
   overflow-wrap: anywhere;
   opacity: 0.9;
@@ -268,7 +269,7 @@ const stepMs = (s: ProcessStep): number | null =>
 
 .apf__step.is-run {
   opacity: 1;
-  color: var(--cf-blue);
+  color: var(--accent);
 }
 
 /* 「正在思考与检索」这一行（本轮还没有步骤时）：徽标是 20px 的圆，右边 13px 文本行框只有 15px，
@@ -287,8 +288,8 @@ const stepMs = (s: ProcessStep): number | null =>
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--accent-soft, var(--cf-hover));
-  color: var(--cf-blue);
+  background: var(--accent-soft, var(--bg-hover));
+  color: var(--accent);
   font-size: 11px;
   display: flex;
   align-items: center;
@@ -299,19 +300,19 @@ const stepMs = (s: ProcessStep): number | null =>
 /* 过程日志行（轮次心跳等）：不占编号、弱化成灰字，与工具步骤一眼分层 */
 .apf__step.is-log {
   opacity: 0.75;
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   font-size: 12px;
 }
 
 .apf__n.is-log {
   background: transparent;
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   font-size: 15px;
   line-height: 20px;
 }
 
 .apf__runhint {
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   font-size: 11px;
   margin-left: 6px;
 }
@@ -319,17 +320,17 @@ const stepMs = (s: ProcessStep): number | null =>
 /* 耗时靠右成列，读起来像一列数字而不是一串散字；跑着的那条用主蓝点明"还在跳" */
 .apf__dur {
   float: right;
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .apf__dur.is-live {
-  color: var(--cf-blue);
+  color: var(--accent);
 }
 
 .apf__polls {
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   font-size: 11px;
   margin-left: 6px;
 }
@@ -346,16 +347,16 @@ const stepMs = (s: ProcessStep): number | null =>
 }
 
 .apf__line:hover {
-  color: var(--cf-blue);
+  color: var(--accent);
 }
 
 .apf__raw {
   margin: 6px 0 2px;
   padding: 8px 10px;
-  border: 1px solid var(--cf-border);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  background: var(--cf-hover);
-  color: var(--cf-sub);
+  background: var(--bg-hover);
+  color: var(--text-tertiary);
   font-size: 11px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -369,7 +370,7 @@ const stepMs = (s: ProcessStep): number | null =>
   list-style: none;
   margin: 0 0 10px;
   padding: 0 0 8px;
-  border-bottom: 1px dashed var(--cf-border);
+  border-bottom: 1px dashed var(--border-subtle);
 }
 
 .apf-plan__item {
@@ -377,18 +378,18 @@ const stepMs = (s: ProcessStep): number | null =>
   gap: 8px;
   align-items: baseline;
   font-size: 12px;
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   padding: 2px 0;
 }
 
 .apf-plan__item.is-done {
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   text-decoration: line-through;
-  text-decoration-color: var(--cf-border);
+  text-decoration-color: var(--border-subtle);
 }
 
 .apf-plan__item.is-running {
-  color: var(--cf-blue);
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -400,10 +401,10 @@ const stepMs = (s: ProcessStep): number | null =>
 
 /* 实时思考块（status.live 全文，替换式刷新） */
 .apf-live {
-  border: 1px solid var(--cf-border);
-  border-left: 3px solid var(--cf-blue);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent);
   border-radius: 10px;
-  background: var(--bg-elevated, #fff);
+  background: var(--bg-elevated);
   padding: 10px 14px;
   margin-bottom: 14px;
 }
@@ -414,7 +415,7 @@ const stepMs = (s: ProcessStep): number | null =>
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--cf-blue);
+  color: var(--accent);
   margin-bottom: 6px;
 }
 
@@ -422,7 +423,7 @@ const stepMs = (s: ProcessStep): number | null =>
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--cf-blue);
+  background: var(--accent);
   animation: apf-pulse 1.2s ease-in-out infinite;
 }
 
@@ -434,7 +435,7 @@ const stepMs = (s: ProcessStep): number | null =>
 .apf-live__text {
   font-size: 12px;
   line-height: 1.8;
-  color: var(--cf-sub);
+  color: var(--text-tertiary);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 220px;
