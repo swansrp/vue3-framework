@@ -37,6 +37,18 @@ const staticRoutes: Array<RouteRecordRaw> = [
     meta: { public: true }
   },
   {
+    // 租户注册链接（ACCOUNT_REGISTER_MODE=tenant 形态的准入入口）：路径段即租户码，
+    // 页面（同登录页组件）读出后随注册请求提交；无码裸 /register 落回登录页——
+    // 删段/改段的失败模式统一收敛为"回登录页或后端拒绝"，不存在无租户漏网注册。
+    path: '/register/:code',
+    component: () => import('@/framework/views/Login/index.vue'),
+    meta: { public: true }
+  },
+  {
+    path: '/register',
+    redirect: '/login'
+  },
+  {
     path: '/wiki',
     component: () => import('@/framework/views/MainContent/wiki/index.vue'),
     meta: { public: true }

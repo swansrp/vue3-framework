@@ -26,7 +26,7 @@ export const getUserInfo = () => request(buildGetApi('/user/info'), {}, {}, fals
 export const updateUserInfo = (userInfo: any) => request(buildPostApi('/user/info'), {}, userInfo, true, false) as Promise<any>
 
 export const login = (graphCode: string, loginId: string, password: string) => request(buildPostApi('/login'), { graphCode, loginId, password }, {}, true, false) as Promise<any>
-export const passwordRegister = (graphCode: string, loginId: string, password: string) => request(buildPostApi('/login/register'), { graphCode, loginId, password }, {}, true, false) as Promise<any>
+export const passwordRegister = (graphCode: string, loginId: string, password: string, tenantCode?: string) => request(buildPostApi('/login/register'), { graphCode, loginId, password, tenantCode }, {}, true, false) as Promise<any>
 export const msgCodeLogin = (phoneNumber: string, msgCode: string) => request(buildPostApi('/login/msg'), { phoneNumber, msgCode }, {}, true, false) as Promise<any>
 export const msgCodeRegister = (userInfo: any) => request(buildPostApi('/login/register/msg'), userInfo, {}, true, false) as Promise<any>
 export const ghostLogin = (customerNumber: string) => request(buildPostApi('/admin/ghost/login'), { customerNumber }, {}, true, false) as Promise<any>

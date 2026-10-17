@@ -75,6 +75,7 @@
         </a-tabs>
         <div class="login-footer-links">
           <a-button
+            v-if="registerEntryVisible"
             class="login-mode-btn"
             type="text"
             @click="registerMode = true"
@@ -137,6 +138,10 @@ const formInline = reactive({ userName: '', password: '', captcha: '', rememberP
 const passwordResetMode: Ref<Boolean> = ref(false)
 const registerMode: Ref<Boolean> = ref(false)
 const registerWithPhoneNumber: Ref<boolean> = ref(false)
+// 自助注册三态（ACCOUNT_REGISTER_MODE）：入口按钮仅 open 态可见；tenant/closed 态登录页纯登录
+const registerEntryVisible: Ref<boolean> = ref(true)
+// 租户注册链接（/register/:code）路径段里的租户码，随注册请求提交
+const tenantCode: Ref<string> = ref('')
 const msgCodeKey = ref(0)
 const passwordExpiredModalVisible = ref(false)
 
@@ -214,7 +219,7 @@ const handleRegister = (data: { loginId: string; password: string; captcha: stri
   const { loginId, password, captcha } = data
   loading.value = true
   loginProcessLoading.value = true
-  return passwordRegister(captcha, loginId, Md5.hashStr(password))
+  return passwordRegister(captcha, loginId, Md5.hashStr(password), tenantCode.value || undefined)
       .then((res) => {
         afterLogin(res)
       })
@@ -228,7 +233,7 @@ const handleRegister = (data: { loginId: string; password: string; captcha: stri
 const handleMsgRegister = (data: any) => {
   loading.value = true
   loginProcessLoading.value = true
-  return msgCodeRegister(data)
+  return msgCodeRegister({ ...data, tenantCode: tenantCode.value || undefined })
       .then((res) => {
         afterLogin(res)
       })
@@ -514,6 +519,28 @@ onBeforeMount(() =>
     })
 )
 onMounted(() => {
+  // 租户注册链接直达：/register/:code 路径段即租户码；是否渲染注册形态等参数回来后定
+  // （closed 态即使带了码也回登录页——闸在服务端，这里只是形态收口）
+  const routeCode = router.currentRoute.value.params.code
+  if (typeof routeCode === 'string' && routeCode.trim()) {
+    tenantCode.value = routeCode.trim()
+  }
+  parameterStore()
+      .getParameter('ACCOUNT_REGISTER_MODE')
+      .then((mode) => {
+        const normalized = String(mode ?? 'open').trim().toLowerCase()
+        if (normalized === 'closed') {
+          registerEntryVisible.value = false
+          registerMode.value = false
+          tenantCode.value = ''
+        } else {
+          registerEntryVisible.value = normalized === 'open'
+          if (tenantCode.value) registerMode.value = true
+        }
+      })
+      .catch(() => {
+        // 参数通道异常保持现状（open 形态），注册闸由服务端兜底
+      })
   parameterStore()
       .getParameter('PHONE_NUMBER_REGISTER')
       .then((resp) => {
