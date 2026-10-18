@@ -82,6 +82,15 @@
           >
             还没有账号
           </a-button>
+          <!-- 业务侧经 setLoginExtraLink 注入的准入入口（未注入＝零渲染，与自助注册三态互不相干） -->
+          <a-button
+            v-if="extraLink"
+            class="login-mode-btn"
+            type="text"
+            @click="router.push(extraLink.path)"
+          >
+            {{ extraLink.label }}
+          </a-button>
         </div>
       </div>
     </div>
@@ -123,6 +132,7 @@ import {
 import CopyrightIcp from '@/framework/components/common/copyrightIcp/index.vue'
 import { checkLoginState } from '@/framework/network/login'
 import { baseURL } from '@/framework/network/request'
+import { getLoginExtraLink } from '@/framework/router'
 import { parameterStore } from '@/framework/store/common'
 import { localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
@@ -140,6 +150,8 @@ const registerMode: Ref<Boolean> = ref(false)
 const registerWithPhoneNumber: Ref<boolean> = ref(false)
 // 自助注册三态（ACCOUNT_REGISTER_MODE）：入口按钮仅 open 态可见；tenant/closed 态登录页纯登录
 const registerEntryVisible: Ref<boolean> = ref(true)
+// 业务侧注入的登录页外链（setLoginExtraLink，未注入＝null ⇒ 不渲染，与三态判定无关）
+const extraLink = getLoginExtraLink()
 // 租户注册链接（/register/:code）路径段里的租户码，随注册请求提交
 const tenantCode: Ref<string> = ref('')
 const msgCodeKey = ref(0)

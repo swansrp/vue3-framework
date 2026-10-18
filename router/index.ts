@@ -149,6 +149,24 @@ export const setDefaultContentComponent = (component: (() => Promise<any>) | nul
 export const getDefaultContentComponent = () => defaultContentComponent
 
 /**
+ * 登录页底部外链（业务层注入，默认不注入＝登录页零变化）
+ * 用途：准入入口在业务侧的项目（入驻申请页、开通向导之类）需要一个从登录页过去的口子，
+ * 而它不属于 core 自助注册三态（ACCOUNT_REGISTER_MODE）的任一态，故与「还没有账号」按钮分开给。
+ * @param link - { label, path }；传 null 可取消注册（path 用业务路由形态，hash 路由由 router.push 消化）
+ */
+export interface LoginExtraLink {
+  label: string
+  path: string
+}
+
+let loginExtraLink: LoginExtraLink | null = null
+export const setLoginExtraLink = (link: LoginExtraLink | null) => {
+  loginExtraLink = link
+}
+
+export const getLoginExtraLink = () => loginExtraLink
+
+/**
  * 设置根路径访问模式
  * @param mode - 'disabled' | 'auto' | 'showMenuOnly'
  */
