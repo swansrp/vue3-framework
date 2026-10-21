@@ -20,6 +20,13 @@
         <template v-if="column.dataIndex === 'index'">
           {{ (currentPage - 1) * pageSize + index + 1 }}
         </template>
+        <template v-else-if="column.dataIndex === 'status'">
+          <a-switch
+            :checked="!!+record.status"
+            :loading="statusLoading[record.id]"
+            @change="(checked: any) => onStatusChange(record, checked)"
+          />
+        </template>
         <template v-else-if="column.dataIndex === 'appSecret'">
           {{ secretVisible[record.id] ? record.appSecret : '••••••••' }}
           <a-button
@@ -32,13 +39,6 @@
         </template>
         <template v-else-if="column.dataIndex === 'operation'">
           <div style="display: flex; justify-content: space-around; align-items: center;">
-            <a-button
-              size="small"
-              type="primary"
-              @click="handleEditTable(record)"
-            >
-              编辑
-            </a-button>
             <a-button
               size="small"
               type="primary"
@@ -102,29 +102,6 @@
           {{ newTableItemInfo.appSecret }}
         </a-descriptions-item>
       </a-descriptions>
-    </dialog-box>
-
-    <!-- 编辑有效性 -->
-    <dialog-box
-      v-model:visible="editTableItemBoxVisible"
-      title="编辑应用信息"
-      :width="400"
-    >
-      <div style="width: 200px; margin: 0 auto;">
-        <a-form-item label="有效性">
-          <a-switch v-model:checked="tableDataItemDisabled" />
-        </a-form-item>
-        <a-form-item>
-          <a-button
-            html-type="submit"
-            type="primary"
-            block
-            @click="submitEdit"
-          >
-            提交修改
-          </a-button>
-        </a-form-item>
-      </div>
     </dialog-box>
 
     <!-- SSO 回调地址登记（ac_sso_redirect，按渠道过滤；只有地址＋备注两个录入字段） -->
@@ -268,23 +245,20 @@ const toggleSecret = (id: string) => {
   secretVisible[id] = !secretVisible[id]
 }
 
-// ==================== 编辑有效性 ====================
+// ==================== 有效性就地开关（免弹框） ====================
 
-let currentTableItemId: Ref<string> = ref('')
-let tableDataItemDisabled: Ref<boolean> = ref(false)
-let editTableItemBoxVisible: Ref<boolean> = ref(false)
-const handleEditTable = (record: any) => {
-  currentTableItemId.value = record.id
-  tableDataItemDisabled.value = !!+record.status
-  editTableItemBoxVisible.value = true
-}
-const submitEdit = () => {
-  const id = currentTableItemId.value
-  const status = Number(tableDataItemDisabled.value)
-  editSequenceChannelTable({ id, status }, baseDomain).then(() => {
-    editTableItemBoxVisible.value = false
-    fetchPage()
-  })
+const statusLoading = reactive<Record<string, boolean>>({})
+const onStatusChange = (record: any, checked: any) => {
+  const status = checked ? 1 : 0
+  statusLoading[record.id] = true
+  editSequenceChannelTable({ id: record.id, status }, baseDomain)
+    .then(() => {
+      record.status = status
+      record.statusDisplay = status === 1 ? '已启用' : '已停用'
+    })
+    .finally(() => {
+      statusLoading[record.id] = false
+    })
 }
 
 // ==================== 删除 ====================
