@@ -83,8 +83,9 @@
 
 <script lang="ts" setup>
 import type { DataNode } from 'ant-design-vue/es/vc-tree/interface'
-import { normalizeNameSeparators } from '@/framework/utils/common'
 import { computed, onMounted, ref, toRefs, watch } from 'vue'
+
+import { normalizeNameSeparators } from '@/framework/utils/common'
 
 // Props 定义
 interface Props {

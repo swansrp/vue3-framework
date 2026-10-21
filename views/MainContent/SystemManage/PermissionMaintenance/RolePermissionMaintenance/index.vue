@@ -201,8 +201,8 @@
 </template>
 
 <script lang="ts" setup>
-import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { message, Modal } from 'ant-design-vue'
+import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
 import { Ref } from 'vue'
 
@@ -230,8 +230,8 @@ import {
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import { getStaffList } from '@/framework/components/common/departmentAndStaffSelect/api'
 import BindTree from '@/framework/components/common/Panel/BindTree.vue'
-import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { normalizeNameSeparators } from '@/framework/utils/common'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { EDIT, LINK, QUERY_INTERVAL, VIEW } from '@/framework/utils/constant'
 import { ValueLabelArray } from '@/framework/utils/type'
 

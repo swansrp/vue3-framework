@@ -113,8 +113,8 @@ import { getCascaderList } from '../utils'
 import { getDepartmentTree, getStaffList } from './api'
 
 import getImgUrl from '@/framework/assets/imgs/getImgUrl'
-import { QUERY_INTERVAL } from '@/framework/utils/constant'
 import { normalizeNameSeparators } from '@/framework/utils/common'
+import { QUERY_INTERVAL } from '@/framework/utils/constant'
 import { StaffBaseSelectArrayType, ValueLabelArray } from '@/framework/utils/type'
 
 
