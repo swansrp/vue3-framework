@@ -16,8 +16,11 @@
       row-key="id"
       @change="onTableChange"
     >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'appSecret'">
+      <template #bodyCell="{ column, record, index }">
+        <template v-if="column.dataIndex === 'index'">
+          {{ (currentPage - 1) * pageSize + index + 1 }}
+        </template>
+        <template v-else-if="column.dataIndex === 'appSecret'">
           {{ secretVisible[record.id] ? record.appSecret : '••••••••' }}
           <a-button
             type="link"
@@ -28,22 +31,23 @@
           </a-button>
         </template>
         <template v-else-if="column.dataIndex === 'operation'">
-          <a-button
-            size="small"
-            type="primary"
-            @click="handleEditTable(record)"
-          >
-            编辑
-          </a-button>
-          <a-button
-            size="small"
-            type="primary"
-            style="margin-left: 8px;"
-            @click="openRedirectPanel(record)"
-          >
-            回调地址
-          </a-button>
-          <delete-pop-confirm @delete-event="handleDeleteTable(record)" />
+          <div style="display: flex; justify-content: space-around; align-items: center;">
+            <a-button
+              size="small"
+              type="primary"
+              @click="handleEditTable(record)"
+            >
+              编辑
+            </a-button>
+            <a-button
+              size="small"
+              type="primary"
+              @click="openRedirectPanel(record)"
+            >
+              回调地址
+            </a-button>
+            <delete-pop-confirm @delete-event="handleDeleteTable(record)" />
+          </div>
         </template>
       </template>
     </a-table>
