@@ -25,6 +25,11 @@ export const reLogin = (token: string) => request(buildPostApi('/login/refresh')
 export const getUserInfo = () => request(buildGetApi('/user/info'), {}, {}, false, false) as Promise<any>
 export const updateUserInfo = (userInfo: any) => request(buildPostApi('/user/info'), {}, userInfo, true, false) as Promise<any>
 
+// 生效的注册模式（open/tenant/closed）：库值(存量表态) → yml my.auth.register-mode → open，
+// 与注册闸同一读取点。老核心无此端点时静默 404（suppressErrorToast），由登录页回落旧参数通道。
+export const getRegisterMode = () =>
+  request(buildGetApi('/login/register-mode'), {}, {}, false, false, false, undefined, { suppressErrorToast: true }) as Promise<any>
+
 export const login = (graphCode: string, loginId: string, password: string) => request(buildPostApi('/login'), { graphCode, loginId, password }, {}, true, false) as Promise<any>
 export const passwordRegister = (graphCode: string, loginId: string, password: string, tenantCode?: string) => request(buildPostApi('/login/register'), { graphCode, loginId, password, tenantCode }, {}, true, false) as Promise<any>
 export const msgCodeLogin = (phoneNumber: string, msgCode: string) => request(buildPostApi('/login/msg'), { phoneNumber, msgCode }, {}, true, false) as Promise<any>

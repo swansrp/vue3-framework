@@ -122,6 +122,7 @@ import PhoneRegisterForm from './components/PhoneRegisterForm.vue'
 
 import {
   changePasswordAndLogin,
+  getRegisterMode,
   getToken,
   initPasswordAndLogin,
   login,
@@ -537,22 +538,29 @@ onMounted(() => {
   if (typeof routeCode === 'string' && routeCode.trim()) {
     tenantCode.value = routeCode.trim()
   }
-  parameterStore()
-      .getParameter('ACCOUNT_REGISTER_MODE')
-      .then((mode) => {
-        const normalized = String(mode ?? 'open').trim().toLowerCase()
-        if (normalized === 'closed') {
-          registerEntryVisible.value = false
-          registerMode.value = false
-          tenantCode.value = ''
-        } else {
-          registerEntryVisible.value = normalized === 'open'
-          if (tenantCode.value) registerMode.value = true
-        }
-      })
-      .catch(() => {
-        // 参数通道异常保持现状（open 形态），注册闸由服务端兜底
-      })
+  const applyRegisterMode = (mode: unknown) => {
+    const normalized = String(mode ?? 'open').trim().toLowerCase()
+    if (normalized === 'closed') {
+      registerEntryVisible.value = false
+      registerMode.value = false
+      tenantCode.value = ''
+    } else {
+      registerEntryVisible.value = normalized === 'open'
+      if (tenantCode.value) registerMode.value = true
+    }
+  }
+  // 优先读服务端生效模式（库值→yml 三级链同源）；老核心无该端点时回落参数页键，
+  // 两条通道都不可用则保持 open 形态——注册闸始终由服务端兜底。
+  getRegisterMode()
+      .then((res) => applyRegisterMode(res.payload))
+      .catch(() =>
+          parameterStore()
+              .getParameter('ACCOUNT_REGISTER_MODE')
+              .then(applyRegisterMode)
+              .catch(() => {
+                // 参数通道异常保持 open 形态
+              })
+      )
   parameterStore()
       .getParameter('PHONE_NUMBER_REGISTER')
       .then((resp) => {

@@ -281,7 +281,8 @@ function request(apiType: ApiType,
   showSuccess = false,
   showLoading = true,
   showErr = true,
-  headers?: Record<string, string | null>) {
+  headers?: Record<string, string | null>,
+  options?: { suppressErrorToast?: boolean }) {
   // 拆分显式覆盖头（非空值进 config.headers，空值键进 omitHeaderKeys 供拦截器删除）；
   // explicitHeaderKeys 把"本次显式带了哪些键"告知拦截器——provider 只对显式键让位，
   // 其余键（含 Content-Type 等预置头）照常全局覆盖
@@ -311,7 +312,8 @@ function request(apiType: ApiType,
       ...explicitHeaders
     },
     omitHeaderKeys,
-    explicitHeaderKeys: Object.keys(explicitHeaders)
+    explicitHeaderKeys: Object.keys(explicitHeaders),
+    suppressErrorToast: options?.suppressErrorToast === true
   }
   return axiosInstance(config).then(resp => {
     if (resp.data.status?.code !== errCode.SUCCESS) {
