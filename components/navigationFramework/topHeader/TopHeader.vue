@@ -191,7 +191,10 @@
         </a-dropdown>
       </div>
       <div class="top_user_setting">
-        <a-dropdown trigger="click">
+        <a-dropdown
+          trigger="click"
+          @open-change="onSettingDropdownOpen"
+        >
           <template #overlay>
             <a-menu
               class="user-dropdown-menu"
@@ -204,6 +207,42 @@
               >
                 <ToolOutlined />
                 {{ SYSTEM_MANAGE_MENU_TITLE }}
+              </a-menu-item>
+              <!-- 租户切换（框架内置，隐蔽）：只有「可切面」（多租户成员/平台档/系统级全量）才出现；
+                   单租户与无租户的普通用户，齿轮菜单与从前逐项一致 -->
+              <a-sub-menu
+                v-if="tenantMenu.visible"
+                key="tenantSwitch"
+              >
+                <template #icon>
+                  <SwapOutlined />
+                </template>
+                <template #title>
+                  切换租户（{{ tenantMenu.currentLabel }}）
+                </template>
+                <a-menu-item
+                  v-for="t in tenantStore.tenants"
+                  :key="'tenant-' + t.tenantId"
+                  :disabled="tenantStore.switching"
+                >
+                  <CheckOutlined v-if="t.current" />
+                  {{ t.name }}
+                  <a-tag
+                    v-if="t.isAdmin"
+                    color="blue"
+                  >
+                    管理员
+                  </a-tag>
+                </a-menu-item>
+              </a-sub-menu>
+              <!-- 系统管理级且无可切面（非平台档空集）：只读展示，无交互 -->
+              <a-menu-item
+                v-else-if="tenantMenu.systemLevel"
+                key="tenantSystemLevel"
+                disabled
+              >
+                <SwapOutlined />
+                系统级（可见全量数据）
               </a-menu-item>
               <a-menu-item key="1">
                 <RedoOutlined />
@@ -366,7 +405,8 @@
 </template>
 
 <script lang="ts" setup>
-import { PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { CheckOutlined, PoweroffOutlined, RedoOutlined, SafetyOutlined, SettingOutlined, SwapOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 import { Md5 } from 'ts-md5'
 import { useRouter } from 'vue-router'
 
@@ -381,6 +421,7 @@ import { dictStore } from '@/framework/store/common'
 import { useTabStore } from '@/framework/store/nav'
 import { useNavigationStore } from '@/framework/store/navigation'
 import { useRouteStore } from '@/framework/store/route'
+import { useTenantStore } from '@/framework/store/tenant'
 import { LIGHT_THEMES, useThemeStore } from '@/framework/store/theme'
 import { useUserStore } from '@/framework/store/user'
 import { isNotEmpty, localStorageMethods } from '@/framework/utils/common'
@@ -395,6 +436,7 @@ const tabStore = useTabStore(pinia)
 const themeStore = useThemeStore(pinia)
 const navigationStore = useNavigationStore(pinia)
 const routeStore = useRouteStore(pinia)
+const tenantStore = useTenantStore(pinia)
 
 // 子系统名：取当前激活顶部导航节点的标题，回退到项目名
 const subSystemTitle = computed(() => {
@@ -406,6 +448,28 @@ const subSystemTitle = computed(() => {
 const systemManageNode = computed(() => {
   return routeStore.dynamicRoute.find(n => (n.meta?.title || n.title || n.name) === SYSTEM_MANAGE_MENU_TITLE)
 })
+
+// ==================== 租户切换（框架内置，2026-10-21）====================
+// 隐蔽口径：只有「可切面」（多租户成员/平台档/系统级全量，后端 TenantMyController 现查决定）
+// 才在齿轮下拉里出现「切换租户」子菜单；单租户与无租户的普通用户，齿轮菜单与从前逐项一致。
+// 清单懒加载＝齿轮下拉首开时才拉（store 内 loaded 防重复），失败静默＝菜单不出现。
+const tenantMenu = computed(() => ({
+  visible: tenantStore.loaded && tenantStore.tenants.length > 1,
+  systemLevel: tenantStore.systemLevel,
+  currentLabel: tenantStore.currentTenantLabel
+}))
+
+const onSettingDropdownOpen = (open: boolean) => {
+  if (open) tenantStore.fetchMyTenants()
+}
+
+const onTenantMenuClick = (tenantId: number) => {
+  if (tenantStore.currentTenant?.tenantId === tenantId) return
+  tenantStore.switchTenant(tenantId).then(() => {
+    message.success('租户已切换，页面即将刷新')
+    setTimeout(() => window.location.reload(), 400)
+  })
+}
 
 // 以子系统方式新页签打开"系统管理"：落地到其第一个叶子子页面
 const openSystemManage = () => {
@@ -457,7 +521,10 @@ const modifyPassword = () => {
   })
 }
 const handleMenuClick = (e: any) => {
-  if (e.key === 'systemManage') {
+  if (typeof e.key === 'string' && e.key.startsWith('tenant-')) {
+    const tenantId = Number(e.key.slice('tenant-'.length))
+    if (!Number.isNaN(tenantId)) onTenantMenuClick(tenantId)
+  } else if (e.key === 'systemManage') {
     openSystemManage()
   } else if (e.key === '1') {
     const refreshToken = localStorageMethods.getLocalStorage(REFRESH_TOKEN)
