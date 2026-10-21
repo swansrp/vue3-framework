@@ -83,9 +83,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { postSsoTicket } from '@/framework/apis/sso/sso'
+import { verifyLogin } from '@/framework/apis/login/login'
 import { navigation2Login } from '@/framework/network/login'
-import pinia from '@/framework/store'
-import { useCommonStore } from '@/framework/store/common'
+import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
+import { localStorageMethods } from '@/framework/utils/common'
 
 const route = useRoute()
 const router = useRouter()
@@ -156,10 +157,23 @@ function backToHub() {
   router.replace('/').catch(() => window.location.reload())
 }
 
-onMounted(() => {
-  if (useCommonStore(pinia).hasLogin) {
-    issue()
-    return
+onMounted(async () => {
+  // 🔴 冷加载竞态（F-5，2026-10-21 修复）：hasLogin 由异步链置位，公开路由守卫不探活
+  // ⇒ 本页挂载时同步读恒 false＝「已登录被判未登录」弹登录页。这里不读内存标志，
+  // 直接拿本地 token 探会话（verifyLogin 只验不副作用——🔴 不能走 checkLoginState：
+  // 它开头就消费 query 且 target_url 在场会 location.href 跳走，授权页会陷入不出票的乒乓）。
+  // 有效 ⇒ 出票；无 token/无效 ⇒ 走下方既有保参跳登录。
+  const localToken = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+  if (localToken) {
+    try {
+      const res = await verifyLogin(localToken)
+      if (+res.payload) {
+        issue()
+        return
+      }
+    } catch (e) {
+      // 验证异常按未登录处理，落到底部保参跳登录
+    }
   }
   // 未登录先去登录（保参）：本地形态用本页 fullPath 自算（守卫不在场，router 空闲、replace 必提交）；
   // IdaaS 形态交给框架登录腿透传 target_url。登录成功后 Login 页 replace 回本页，hasLogin 已置真。
