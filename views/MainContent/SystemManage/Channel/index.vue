@@ -123,18 +123,52 @@
       </div>
     </dialog-box>
 
-    <!-- SSO 回调地址登记（ac_sso_redirect，按 partnerId 过滤） -->
+    <!-- SSO 回调地址登记（ac_sso_redirect，按渠道过滤；只有地址＋备注两个录入字段） -->
     <dialog-box
       v-model:visible="redirectBoxVisible"
       title="SSO 回调地址登记"
-      is-full
+      :width="860"
     >
-      <Portal
-        v-if="currentPartnerId"
-        table-id="AcSsoRedirect"
-        :advance-condition="advanceCondition"
-        :bind-default-value="{ partnerId: currentPartnerId }"
-      />
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <a-input
+          v-model:value="redirectDraft.redirectUri"
+          placeholder="回调地址（如 http://127.0.0.1:5174）"
+          style="flex: 1 1 320px;"
+        />
+        <a-input
+          v-model:value="redirectDraft.remark"
+          placeholder="备注（用途/环境）"
+          style="flex: 1 1 220px;"
+          @press-enter="addRedirect"
+        />
+        <a-button
+          type="primary"
+          :loading="redirectAdding"
+          @click="addRedirect"
+        >
+          登记
+        </a-button>
+      </div>
+      <a-table
+        size="small"
+        :columns="redirectColumns"
+        :data-source="redirectRows"
+        :loading="redirectLoading"
+        row-key="id"
+        :pagination="false"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.dataIndex === 'operation'">
+            <a-button
+              size="small"
+              danger
+              @click="removeRedirect(record)"
+            >
+              撤销
+            </a-button>
+          </template>
+        </template>
+      </a-table>
     </dialog-box>
   </div>
 </template>
@@ -147,9 +181,10 @@
  * 服务端生成 appKey/appSecret 并一次性展示）。回调地址登记面板（ac_sso_redirect）原样保留。
  * 🔴 删除渠道不级联删其回调登记行——登记行按 partnerId 查询自然查不到，无害。
  */
-import { Ref, computed, reactive, ref } from 'vue'
+import { Ref, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { addRequest, deleteRequest, generalQueryRequest } from '@/framework/apis'
 import {
   addSequenceChannelTable,
   deleteSequenceChannelTable,
@@ -158,9 +193,6 @@ import {
 } from '@/framework/apis/channel'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
-import Portal from '@/framework/components/common/Portal/index.vue'
-import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { buildCondition } from '@/framework/components/common/Portal/utils'
 import surelyTableColumns from '@/framework/views/MainContent/SystemManage/Channel/channel'
 import { message } from 'ant-design-vue'
 
@@ -259,12 +291,56 @@ const handleDeleteTable = (record: any) => deleteSequenceChannelTable(record.id,
 
 const currentPartnerId: Ref<string | number | null> = ref(null)
 const redirectBoxVisible: Ref<boolean> = ref(false)
-const advanceCondition = computed(() => {
-  return { conditionList: [buildCondition('partnerId', FILTER_TYPE.EQUAL, [currentPartnerId.value])] } as ConditionListType
-})
+const redirectRows: Ref<any[]> = ref([])
+const redirectLoading: Ref<boolean> = ref(false)
+const redirectDraft = reactive({ redirectUri: '', remark: '' })
+const redirectAdding: Ref<boolean> = ref(false)
+
+// SSO 回调登记：走通用口 /web/admin/sso/redirect/{general/query,add,delete}（AuthAdmin 档），
+// 只取 地址/备注 两个业务字段；撤销＝物理删除（登记约定本就是「撤销置 0、再登记插新行」，等效）
+const REDIRECT_URL = '/admin/sso/redirect'
+const redirectColumns = [
+  { title: '回调地址', dataIndex: 'redirectUri' },
+  { title: '备注', dataIndex: 'remark' },
+  { title: '登记时间', dataIndex: 'createAt', width: 180 },
+  { title: '操作', dataIndex: 'operation', width: 90 }
+]
+
+const loadRedirects = async () => {
+  if (!currentPartnerId.value) return
+  redirectLoading.value = true
+  try {
+    const res = await generalQueryRequest(REDIRECT_URL, new Map(), [{ property: 'partnerId', relation: 1, value: [currentPartnerId.value] }], [], 50, 1, baseDomain, false, false)
+    redirectRows.value = (res.payload.records || []).filter((r: any) => r.valid === '1')
+  } finally {
+    redirectLoading.value = false
+  }
+}
+const addRedirect = async () => {
+  const redirectUri = redirectDraft.redirectUri.trim()
+  if (!redirectUri) {
+    message.warning('回调地址不能为空')
+    return
+  }
+  redirectAdding.value = true
+  try {
+    await addRequest(REDIRECT_URL, { partnerId: currentPartnerId.value, redirectUri, remark: redirectDraft.remark.trim() }, baseDomain, true, false)
+    redirectDraft.redirectUri = ''
+    redirectDraft.remark = ''
+    loadRedirects()
+  } finally {
+    redirectAdding.value = false
+  }
+}
+const removeRedirect = (record: any) => {
+  deleteRequest(REDIRECT_URL, record.id, baseDomain, true, false).then(() => loadRedirects())
+}
 const openRedirectPanel = (record: any) => {
   currentPartnerId.value = record.id
   redirectBoxVisible.value = true
+  redirectRows.value = []
+  redirectLoading.value = true
+  loadRedirects()
 }
 
 </script>
