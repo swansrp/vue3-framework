@@ -723,26 +723,38 @@ const portalColumns = computed(() => {
     })
   } else {
     // === col 模式(原逻辑): 行维度 + 透视列×度量 ===
+    const colItems: Array<{ path: string[]; col: ColumnType }> = []
     for (const pv of effectivePivotColumns.value) {
       for (const m of measures.value) {
-        cols.push({
-          title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
-          dataIndex: `${pv.itemValue}__${m.field}`,
-          key: `${pv.itemValue}__${m.field}`,
-          minWidth: 120,
-          fixed: m.fixed === true ? 'right' : false,
-          fieldType: FIELD_TYPE.NUMBER,
-          contentAlign: 'right',
-          displayGroupName: hasPivot && multiMeasure ? pv.itemName : undefined,
-          tooltip: false,
-          order: order++,
-          editable: false,
-          sorter: false,
-          filterAble: false,
-          addShow: false,
-          editShow: false,
-          detailShow: false
-        } as ColumnType)
+        colItems.push({
+          // 透视列配了父链(groupPath)时按父链组装嵌套表头(与 row 模式同源)，未配则平铺
+          path: parseGroupPath(pv),
+          col: {
+            title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
+            dataIndex: `${pv.itemValue}__${m.field}`,
+            key: `${pv.itemValue}__${m.field}`,
+            minWidth: 120,
+            fixed: m.fixed === true ? 'right' : false,
+            fieldType: FIELD_TYPE.NUMBER,
+            contentAlign: 'right',
+            displayGroupName: hasPivot && multiMeasure ? pv.itemName : undefined,
+            tooltip: false,
+            order: order++,
+            editable: false,
+            sorter: false,
+            filterAble: false,
+            addShow: false,
+            editShow: false,
+            detailShow: false
+          } as ColumnType
+        })
+      }
+    }
+    if (colItems.some(it => it.path.length > 0)) {
+      cols.push(...buildGroupedColumns(colItems))
+    } else {
+      for (const it of colItems) {
+        cols.push(it.col)
       }
     }
   }
