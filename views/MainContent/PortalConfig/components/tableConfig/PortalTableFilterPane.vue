@@ -132,6 +132,7 @@
                       show-search
                       style="width: 100%"
                       allow-clear
+                      @change="loadFilterDictOptions"
                     />
                   </a-form-item>
                 </a-col>
@@ -145,7 +146,19 @@
                 </a-col>
                 <a-col :span="12">
                   <a-form-item label="默认值">
+                    <a-select
+                      v-if="useDictDefaultValue"
+                      v-model:value="defaultValueModel"
+                      :filter-option="filterOption"
+                      :mode="selectedFilter.multiple === '1' ? 'multiple' : undefined"
+                      :options="filterDictOptions"
+                      placeholder="请选择默认值"
+                      show-search
+                      style="width: 100%"
+                      allow-clear
+                    />
                     <a-input
+                      v-else
                       v-model:value="selectedFilter.defaultValue"
                       placeholder="请输入默认值"
                     />
@@ -403,7 +416,7 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
-import { useConditionModal } from './useConditionModal'
+import { useConditionModal, pruneBlankConditions } from './useConditionModal'
 
 import {
   addPortalTableFilter,
@@ -415,6 +428,7 @@ import {
   updatePortalTableFilter,
   updatePortalTableFilterOrder,
 } from '@/framework/apis/portal/table'
+import { genEmptyCondition } from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
@@ -508,6 +522,29 @@ const editingOptionValue = ref<string>('')
 
 // 当前筛选项的字典选项列表
 const filterDictOptions = ref<Array<{ label: string; value: string }>>([])
+
+// 默认值控件：下拉类型且已配字典编码时，默认值改为字典项下拉（多选按逗号拼串存储）
+const useDictDefaultValue = computed(() => {
+  const filter = selectedFilter.value
+  return (
+    !!filter?.dictCode &&
+    (filter.filterType === 'select' || filter.filterType === 'select_multi_in_one')
+  )
+})
+
+const defaultValueModel = computed<string | string[] | undefined>({
+  get: () => {
+    const raw = selectedFilter.value?.defaultValue || ''
+    if (selectedFilter.value?.multiple === '1') {
+      return raw ? raw.split(',') : []
+    }
+    return raw || undefined
+  },
+  set: (val) => {
+    if (!selectedFilter.value) return
+    selectedFilter.value.defaultValue = Array.isArray(val) ? val.join(',') : (val ?? '')
+  },
+})
 
 // 判断是否有通用 condition
 const hasDefaultCondition = computed(() => {
@@ -1029,6 +1066,7 @@ const handleFilterTypeChange = (value: any) => {
     if (matchedField?.reference) {
       selectedFilter.value.dictCode = matchedField.reference
       message.success(`已自动填入字典编码: ${matchedField.reference}`)
+      loadFilterDictOptions()
       console.log(
         `成功为筛选项 "${selectedFilter.value.label}" 填入字典编码: ${matchedField.reference}`
       )
@@ -1041,7 +1079,8 @@ const handleFilterTypeChange = (value: any) => {
 
 // ==================== 条件配置弹窗(通用条件/特殊选项条件) ====================
 const saveFilterCondition = (condition: ConditionType) => {
-  const conditionList = condition.conditionList || []
+  // 起步空行与用户中途放弃的空条件组不入库，否则界面会误显示「已配置」且留下一条永不生效的脏条件
+  const conditionList = pruneBlankConditions(condition.conditionList || [])
   const andOr = condition.andOr || '0'
 
   if (!selectedFilter.value) return
@@ -1085,9 +1124,19 @@ const openDefaultConditionModal = async () => {
 const openOptionConditionModal = async (optionValue: string) => {
   if (!selectedFilter.value) return
   editingOptionValue.value = optionValue // 标记为编辑特殊选项条件
-  // 使用该选项的专属条件
+  const saved = conditionConfig.options[optionValue]
+  // 没配过的选项默认给一条「本筛选项字段 = 该字典项」起步：
+  // 空白行得重新找字段、选关系、填值，而专属条件本来就是针对这一项的
+  const seed = saved?.length
+    ? saved
+    : [{
+        ...genEmptyCondition(),
+        property: selectedFilter.value.code,
+        relation: FILTER_TYPE.EQUAL,
+        value: [optionValue]
+      }]
   await openConditionModal(
-    conditionConfig.options[optionValue] || [],
+    seed,
     (conditionConfig.optionsAndOr[optionValue] || '0') as '0' | '1'
   )
 }

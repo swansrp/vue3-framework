@@ -333,7 +333,7 @@ import { message } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
 import PortalPivotGenModal from './PortalPivotGenModal.vue'
-import { normalizePivotCondition, useConditionModal } from './useConditionModal'
+import { normalizePivotCondition, pruneBlankConditions, useConditionModal } from './useConditionModal'
 
 import {
   addPortalPivotColumn,
@@ -773,7 +773,8 @@ const handleGenPivotGenerated = async () => {
 
 // ==================== 透视列条件配置弹窗 ====================
 const savePivotCondition = (condition: ConditionType) => {
-  const conditionList = condition.conditionList || []
+  // 起步空行与空条件组不入库（与筛选项条件同一口径）
+  const conditionList = pruneBlankConditions(condition.conditionList || [])
   if (!selectedPivotColumn.value) return
   // relation 统一为数字(与 FILTER_TYPE 枚举及历史数据一致，弹窗返回的是字符串)
   conditionList.forEach((cond: any) => {

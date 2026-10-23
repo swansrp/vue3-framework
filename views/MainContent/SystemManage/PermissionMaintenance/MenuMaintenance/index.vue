@@ -16,8 +16,8 @@
         <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
         <a-tree
           :key="treeData"
+          v-model:expanded-keys="treeExpandedKeys"
           v-model:selected-keys="treeSelectKey"
-          :default-expand-all="true"
           :show-line="true"
           :tree-data="treeData"
           draggable
@@ -347,11 +347,31 @@ const selectTreeKey = () => {
   }
 }
 
+// 树的展开状态由本组件持有：a-tree 用 :key="treeData" 在数据更新时整棵重建，
+// 交给组件自己记的 default-expand-all 会在每次提交后把所有节点重新撑开
+let treeExpandedKeys: Ref<Key[]> = ref([])
+// 换根（主菜单/子菜单、或切换父节点）时重新全展开；同一棵树内的增删改保留用户展开状态
+let expandAllOnNextLoad = true
+
+const collectParentKeys = (nodes: Array<DataNode>): Key[] =>
+  nodes.flatMap((node: any) => node.children?.length ? [node.key, ...collectParentKeys(node.children)] : [])
+
+const syncExpandedKeys = () => {
+  if (expandAllOnNextLoad) {
+    treeExpandedKeys.value = collectParentKeys(treeData.value)
+    expandAllOnNextLoad = false
+    return
+  }
+  const aliveKeys = new Set(collectParentKeys(treeData.value))
+  treeExpandedKeys.value = treeExpandedKeys.value.filter((key) => aliveKeys.has(key))
+}
+
 // 为了避免多次重写这两坨代码，将其写到一个函数中
 const updateMainTree = (needSelectKey = true) => {
   getMainMenu().then(res => {
     treeData.value = res.payload
     needSelectKey && selectTreeKey()
+    syncExpandedKeys()
   })
 }
 const updateSubTree = () => {
@@ -359,6 +379,7 @@ const updateSubTree = () => {
   getSubMenu(data).then(res => {
     treeData.value = res.payload
     selectTreeKey()
+    syncExpandedKeys()
   })
 
 }
@@ -436,6 +457,7 @@ const getSourceTypeColor = (type: SourceTypeEnum): string => {
 // 点击返回Main Menu tree的按钮后的操作
 const backToMainMenu = () => {
   grandId.value = undefined
+  expandAllOnNextLoad = true
   updateMainTree()
   menuNameListIndex.value = 0
   menuName.value = menuNameList[menuNameListIndex.value]
@@ -444,6 +466,8 @@ const backToMainMenu = () => {
 const enterSubMenu = () => {
   // 从当前节点进入，则当前Main Menu菜单节点是它对应Sub Menu的所有节点的祖先节点
   grandId.value = menuId.value
+  // 进入的是另一棵树（父节点下的子树），展开状态与主菜单树不通用
+  expandAllOnNextLoad = true
   updateSubTree()
   menuNameListIndex.value = 1
   menuName.value = menuNameList[menuNameListIndex.value]

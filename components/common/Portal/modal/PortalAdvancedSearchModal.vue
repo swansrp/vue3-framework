@@ -50,11 +50,11 @@ const handleAdvancedConditionConfirm = (condition: ConditionType) => {
   advancedConditionDrawClose()
 }
 watch(
-  () => advancedCondition.value,
-  () => key++,
-  {
-    deep: true
-  }
+  // 只认「开关抽屉」与「列/条件整体换了一份」这三个引用级变化来重建内容。
+  // 之前是 deep 监听整个 advancedCondition：用户对条件行的每一次增删改都落在 condition 对象内部，
+  // 也会触发 key++ ⇒ 编辑中途整块组件销毁重建（下拉收起、输入闪回空白），表现为"加不了也改不了"
+  () => [advancedCondition.value.show, advancedCondition.value.columnArray, advancedCondition.value.condition],
+  () => key++
 )
 onMounted(() => {
 })

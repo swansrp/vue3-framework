@@ -953,9 +953,35 @@ const handleCancel = () => {
   height: 100%;
   overflow: hidden;
 
-  // DarkTable 外壳默认按视口高度(100vh-40px)，弹框内需改为撑满宿主容器
+  // 运行态外壳整条高度链按视口写死(dark.css 把 .ant-layout 顶成 100vh、.dark-dialog 100vh-20px、
+  // .dialog-info 固定 850px)，弹框内底部连同表格横向滚动条被裁在框外 ⇒ 整链改为撑满宿主，滚动交给 .dialog-info
+  :deep(.ant-layout),
+  :deep(.ant-layout-has-sider) {
+    height: 100% !important;
+  }
+
   :deep(.desc-wrapper) {
     height: 100%;
+  }
+
+  :deep(.dark-dialog) {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    // 大屏外壳的 35px 居中标题在弹框里纯属占高：弹框自带「配置预览 - 表格编码」抬头
+    .title {
+      display: none;
+    }
+
+    // 原样式是 .dark-dialog .dialog-info 两层嵌套，覆盖须同层级才压得住权重
+    .dialog-info {
+      flex: 1;
+      height: auto;
+      min-height: 0;
+      margin: 0 auto;
+      transform: none;
+    }
   }
 }
 </style>

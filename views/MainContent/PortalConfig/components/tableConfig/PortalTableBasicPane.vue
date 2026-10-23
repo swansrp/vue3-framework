@@ -629,7 +629,7 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, reactive, ref, watch } from 'vue'
 
-import { useConditionModal } from './useConditionModal'
+import { pruneBlankConditions, useConditionModal } from './useConditionModal'
 
 import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
@@ -695,7 +695,8 @@ const {
 } = useConditionModal(
   () => props.portalConfig?.columns,
   (condition: ConditionType) => {
-    fixedRows.value = Array.isArray(condition?.conditionList) ? [...condition.conditionList] : []
+    // 起步空行与空条件组不回填，否则「保存基础配置」会把一条永不生效的空条件写进 fixedCondition
+    fixedRows.value = pruneBlankConditions(condition?.conditionList || [])
     fixedAndOr.value = (condition?.andOr === '1') ? '1' : '0'
   }
 )
@@ -1071,9 +1072,10 @@ const handleSaveTable = async () => {
       .filter((col: any) => col.checked === false)
       .map((col: any) => col.property)
 
-    // 如果没有排除的列，设为 null；否则用逗号连接
+    // 清空必须显式写空串：update 接口非 strict 模式跳过 null，取消全部排除列会清不掉旧值
+    // 消费侧(运行态列过滤与本面板回显)一律 falsy 判定，空串与 null 等价
     table.filterColumns =
-      excludedColumns.length > 0 ? excludedColumns.join(',') : null
+      excludedColumns.length > 0 ? excludedColumns.join(',') : ''
 
     // 默认排序: 未选字段写 '[]' 而非 null —— update 接口非 strict 模式会跳过 null, 无法清掉旧值
     // 透视模式下字段必须落在当前行维度/度量内, 否则渲染时命不中排序列(切模式残留的选择按不排序处理)
@@ -1102,7 +1104,7 @@ const handleSaveTable = async () => {
         return cfg
       })
       table.groupByFields =
-        groupConfig.length > 0 ? JSON.stringify(groupConfig) : undefined
+        groupConfig.length > 0 ? JSON.stringify(groupConfig) : '[]'
       // 清理已取消勾选字段在隐藏列表/排序配置中的残留
       pivotGroupHiddenFields.value = pivotGroupHiddenFields.value.filter((f) => pivotGroupFields.value.includes(f))
       Object.keys(pivotGroupSorts.value).forEach((f) => {
@@ -1126,12 +1128,13 @@ const handleSaveTable = async () => {
           desc: m.desc?.trim() || undefined
         }))
       table.pivotMeasures =
-        validMeasures.length > 0 ? JSON.stringify(validMeasures) : undefined
+        validMeasures.length > 0 ? JSON.stringify(validMeasures) : '[]'
       // 保存后同步移除空行，界面与落库数据一致
       pivotMeasureRows.value = validMeasures
     }
 
     // Tab 成员: 自身(勾选时为首项) + 成员行, 数组序即 tab 顺序; 全空则回退单表页面
+    // 清空必须显式写 '[]'：update 接口非 strict 模式跳过 null/undefined，删掉的成员会原样留在库里
     const tabItemsPayload: Array<{ tableId: number; label?: string }> = []
     if (tabSelfEnabled.value && table.id != null) {
       tabItemsPayload.push({ tableId: table.id, ...(tabSelfLabel.value ? { label: tabSelfLabel.value } : {}) })
@@ -1141,7 +1144,7 @@ const handleSaveTable = async () => {
       .forEach((r) => {
         tabItemsPayload.push({ tableId: r.tableId as number, ...(r.label ? { label: r.label } : {}) })
       })
-    table.tabItems = tabItemsPayload.length > 0 ? JSON.stringify(tabItemsPayload) : undefined
+    table.tabItems = tabItemsPayload.length > 0 ? JSON.stringify(tabItemsPayload) : '[]'
 
     // 常驻条件: 无配置也要显式写空条件树, 否则非 strict update 跳过 null 清不掉旧值
     // andOr 是整组的关系('0'=与 '1'=或)，不存下来重开永远回退「与」

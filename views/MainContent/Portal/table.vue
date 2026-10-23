@@ -227,7 +227,11 @@ const loadPortalTableConfig = async () => {
             // 解析内置时间变量并返回实际时间值（兜底+专项双模式）
             const resolvedValue = resolveDynamicVariable(filter.defaultValue)
             if (resolvedValue !== undefined) {
-              filterValues.value[filter.code!] = resolvedValue
+              // 多选下拉控件要数组值，配置里按逗号存 ⇒ 初始化时拆开
+              filterValues.value[filter.code!] =
+                filter.filterType === 'select' && filter.multiple === '1'
+                  ? resolvedValue.split(',')
+                  : resolvedValue
             }
           }
           // 预加载下拉选择类型的字典选项

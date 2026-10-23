@@ -397,11 +397,17 @@ const measureDescMap = computed<Record<string, string>>(() => {
   return map
 })
 
-/** 自定义表头的列: 可点击排序 ∪ 配了列注释。一个 dataIndex 只能注册一个 headerCell 插槽 ⇒ 两种形态共用同一模板 */
+/** 自定义表头的列: 可点击排序 ∪ 配了列注释。一个 dataIndex 只能注册一个 headerCell 插槽 ⇒ 两种形态共用同一模板
+ *  配了父节点的透视列会被包成 {title, children} 壳列(壳本身无 dataIndex)，统计列沉在末级
+ *  ⇒ 必须递归收叶子，否则二层表头的列拿不到插槽，表头渲染成纯文本、点不动排序 */
+const collectLeafDataIndexes = (cols: ColumnType[]): string[] =>
+  cols.flatMap((col: any) => col.children?.length
+    ? collectLeafDataIndexes(col.children)
+    : (col.dataIndex ? [col.dataIndex as string] : []))
+
 const headerSlotKeys = computed(() =>
-  portalColumns.value
-    .map(c => c.dataIndex)
-    .filter((d): d is string => !!d && (sortableAliases.value.has(d) || !!measureDescMap.value[d]))
+  collectLeafDataIndexes(portalColumns.value)
+    .filter(d => sortableAliases.value.has(d) || !!measureDescMap.value[d])
 )
 
 const isSortableHeader = (key: string) => sortableAliases.value.has(key)

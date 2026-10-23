@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 
+import { genEmptyCondition } from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { FIELD_TYPE } from '@/framework/components/common/Portal/type'
 import { dictStore } from '@/framework/store/common'
@@ -28,6 +29,18 @@ export const normalizePivotCondition = (raw: any): string | null => {
   }
   return null
 }
+
+/**
+ * 剔除未填写的条件行（含起步用的空行与清空后的空条件组），递归条件组
+ * 叶子行自带 conditionList:[]，故"是不是条件组"只能看有没有 property，不能看有没有子数组
+ */
+export const pruneBlankConditions = (list: any[]): any[] => list
+  .map((cond: any) => (
+    !cond?.property && Array.isArray(cond?.conditionList) && cond.conditionList.length > 0
+      ? { ...cond, conditionList: pruneBlankConditions(cond.conditionList) }
+      : cond
+  ))
+  .filter((cond: any) => !!cond?.property || (cond?.conditionList?.length ?? 0) > 0)
 
 /**
  * 条件配置弹窗(复用 PortalAdvancedSearchModal)状态与打开逻辑
@@ -77,13 +90,15 @@ export function useConditionModal(
     }
   }
 
-  // 打开条件配置弹窗(字典选项必须在打开前加载完：弹窗 deep watch 递增 key 强制重建)
+  // 打开条件配置弹窗(字典选项必须在打开前加载完：弹窗按 show/列/条件三份引用变化递增 key 强制重建)
   // andOr 回传上次保存的条件间关系（'0'=与 '1'=或），不传则默认与
   const openConditionModal = async (conditionList: any[], andOr: '0' | '1' = '0') => {
     await buildColumnArray()
     filterConditionConfig.condition = {
       andOr,
-      conditionList,
+      // 无已存条件时给一行空条件起步：条件对象恒有 andOr/conditionList 两个键，
+      // 弹窗的 isNotEmpty 只看键数 ⇒ 空列表会被当成"有内容"，抽屉开出来 0 行没法填
+      conditionList: conditionList.length > 0 ? conditionList : [genEmptyCondition()]
     }
     filterConditionConfig.show = true
   }
