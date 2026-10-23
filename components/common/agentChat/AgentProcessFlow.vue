@@ -85,9 +85,16 @@
       class="apf-live"
     >
       <div class="apf-live__head">
-        <span class="apf-live__dot"></span>实时思考
+        <span
+          class="apf-live__dot"
+          :class="{ 'is-idle': waiting }"
+        ></span>{{ waiting ? '等待你的回答' : '实时思考' }}
       </div>
-      <div class="apf-live__text">
+      <div
+        ref="liveTextRef"
+        class="apf-live__text"
+        @scroll="onLiveScroll"
+      >
         {{ live }}
       </div>
     </div>
@@ -115,6 +122,8 @@ const props = withDefaults(defineProps<{
   running: boolean
   /** LLM 流式实时内容（status.live，替换式刷新；终态后端清空自然隐藏） */
   live?: string | null
+  /** 等待用户回答（ask_user 提问卡在场）：标题切「等待你的回答」，脉冲点停跳 */
+  waiting?: boolean
   /** 计划板（status.plan，PlanBoard 快照） */
   plan?: AgentPlanItemT[]
   /** 业务工具人话名（覆盖框架基础表） */
@@ -125,6 +134,7 @@ const props = withDefaults(defineProps<{
   waitTools?: string[]
 }>(), {
   live: null,
+  waiting: false,
   plan: undefined,
   labels: undefined,
   summarize: undefined,
@@ -187,6 +197,27 @@ onBeforeUnmount(() => {
 
 const stepMs = (s: ProcessStep): number | null =>
   s.t0 != null ? Math.max(0, (s.t1 ?? now.value) - s.t0) : null
+
+/** live 全文替换刷新后自动跟底＝sticky 记忆态（非瞬时几何判定）：用户滚动时按
+ *  40px 余量刷新贴底记忆（贴底 true／上翻 false，模板 @scroll 随 v-if 块挂载/卸载
+ *  自动接好监听生命周期），新 live 帧只在记忆为贴底时滚到新底部——瞬时几何判定的
+ *  缺陷是单帧增长超余量时"已滚到旧底部≠新底部"判 false，跟随断开且不自恢复
+ *  （轮询路径常态触发）；记忆态下跟随只由用户滚动改变，长帧增长不断跟。
+ *  sticky 初始 true＝首帧长文起点即贴底跟随；参照同面板 index.vue 外层
+ *  nearBottom 的记忆态模式；flush: post＝DOM 已按新 live 渲染，scrollHeight
+ *  才是新内容高度（pre 时机读到旧高度会慢一帧） */
+const liveTextRef = ref<HTMLElement | null>(null)
+const sticky = ref(true)
+const onLiveScroll = () => {
+  const el = liveTextRef.value
+  if (!el) return
+  sticky.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 40
+}
+watch(() => props.live, () => {
+  const el = liveTextRef.value
+  if (!el) return
+  if (sticky.value) el.scrollTop = el.scrollHeight
+}, { flush: 'post' })
 </script>
 
 <style scoped>
@@ -425,6 +456,11 @@ const stepMs = (s: ProcessStep): number | null =>
   border-radius: 50%;
   background: var(--accent);
   animation: apf-pulse 1.2s ease-in-out infinite;
+}
+
+/* 等待用户回答：脉冲停跳（只停动画，不换色系） */
+.apf-live__dot.is-idle {
+  animation: none;
 }
 
 @keyframes apf-pulse {

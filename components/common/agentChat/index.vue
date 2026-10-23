@@ -198,6 +198,7 @@
         :events="events"
         :running="!isTerminal"
         :live="status?.live || null"
+        :waiting="!!waitingQuestion"
       />
       <AgentProcessArchives :events="events" />
 

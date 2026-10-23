@@ -68,3 +68,16 @@ export async function postSse(url: string, bodyObj: unknown, signal?: AbortSigna
     signal
   })
 }
+
+/** 发起带鉴权的 SSE GET 请求（流式端点用，如 agent 会话 /stream）；返回原始 Response 供调用方读流 */
+export async function getSseStream(url: string, signal?: AbortSignal): Promise<Response> {
+  const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+  return fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'text/event-stream',
+      ...(token ? { Authorization: 'Bearer ' + token } : {})
+    },
+    signal
+  })
+}
