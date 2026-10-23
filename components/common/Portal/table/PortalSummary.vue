@@ -29,9 +29,7 @@
           v-else-if="column.fieldType === FIELD_TYPE.MONEY"
           :style="{textAlign: 'center'}"
         >
-          {{
-            isEmpty(dataSummary) ? '--' : formatMoney(dataSummary![column.dataIndex], Number(column.referenceDict?.split(',')[0]), Number(column.referenceDict?.split(',')[1]))
-          }}
+          {{ moneyText(column) }}
         </div>
         <div
           v-else
@@ -92,9 +90,33 @@ const leafColumns = computed<Array<ColumnType>>(() => {
   return res
 })
 
-/** NUMBER 及其他列类型的汇总值文本(空为 '--') */
-const summaryText = (col: ColumnType): any =>
-  isEmpty(dataSummary.value) ? '--' : (dataSummary.value![col.dataIndex!] || '--')
+/**
+ * 取该列的汇总原值；没有该键、或值为 null/undefined/空串 才算"无汇总值"。
+ * 🔴 不能写成 dataSummary[col.dataIndex] || '--'：合计真的是 0 时（数字 0 与前导零串都是 falsy）
+ * 会被吞成 '--'，把"确实合计为 0"显示成"没有合计"。
+ */
+const summaryValue = (col: ColumnType): any => {
+  if (isEmpty(dataSummary.value)) {
+    return undefined
+  }
+  const value = dataSummary.value![col.dataIndex!]
+  return value === null || value === undefined || value === '' ? undefined : value
+}
+
+/** NUMBER 及其他列类型的汇总值文本(无汇总值才 '--') */
+const summaryText = (col: ColumnType): any => {
+  const value = summaryValue(col)
+  return value === undefined ? '--' : value
+}
+
+/** MONEY 列汇总文本：无汇总值给 '--'，有值(含 0)按列配置的小数位与除数格式化 */
+const moneyText = (col: ColumnType): string => {
+  const value = summaryValue(col)
+  if (value === undefined) {
+    return '--'
+  }
+  return formatMoney(value, Number(col.referenceDict?.split(',')[0]), Number(col.referenceDict?.split(',')[1]))
+}
 onMounted(() => {})
 </script>
 

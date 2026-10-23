@@ -498,7 +498,7 @@
                   :name="'customFilterDropdown_' + column.dataIndex"
                   :selected-keys="selectedKeys"
                   :set-selected-keys="setSelectedKeys"
-                  confirm="confirm"
+                  :confirm="confirm"
                 >
                   <portal-column-condition
                     ref="filterDropdownRef"
@@ -2531,6 +2531,17 @@ const initConfig = async () => {
         }
       }
       columnArray.value.sort((a, b) => a.order - b.order)
+      // 外部动态列(透视报表)自带 filterAble 时装漏斗：上面的 layout 循环只覆盖 sys_portal_column
+      // 配置的列，且数据模式(config.plain)下整体跳过，而透视正是数据模式
+      const enableLeafFilter = (cols: Array<ColumnType>) => cols.forEach((col) => {
+        if (col.children?.length) {
+          enableLeafFilter(col.children)
+        } else if (col.filterAble) {
+          col.customFilterDropdown = true
+          col.onFilterDropdownOpenChange = onFilterDropdownOpenChange
+        }
+      })
+      enableLeafFilter(columnArray.value)
     }
 
     if (config.rowKey === AUTO_UUID_ROW_KEY) {

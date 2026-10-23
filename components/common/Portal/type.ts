@@ -127,6 +127,8 @@ export type ColumnType = {
   minWidth: number,
   // 最大列宽
   maxWidth: number,
+  // 列宽已在建列时按内容定死(透视报表)：parse() 跳过运行期就地撑宽，省掉逐格 canvas 测量
+  widthFitted?: boolean,
   // 锁定列
   fixed: boolean | string,
   // 列宽调整

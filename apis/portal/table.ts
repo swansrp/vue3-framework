@@ -114,6 +114,8 @@ export interface PivotMeasureVO {
 export interface PivotReqVO {
   /** 查询条件 */
   condition?: any
+  /** 聚合后过滤(HAVING)：property 只能引用本次输出别名(行维度字段名或 ${列标识}__${度量字段})，后端按白名单校验 */
+  havingCondition?: any
   /** 聚合后行排序(作用于 group by 后的结果, 区别于 condition 内层数据排序) */
   sortList?: Array<{ property: string, type: number }>
   /** 行维度列 */

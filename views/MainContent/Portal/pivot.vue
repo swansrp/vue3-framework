@@ -18,7 +18,9 @@ import {
 } from '@/framework/apis/portal/table'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { AUTO_UUID_ROW_KEY, PIVOT_SUBTOTAL_PREFIX } from '@/framework/components/common/Portal/constant'
+import PortalColumnCondition from '@/framework/components/common/Portal/table/PortalColumnCondition.vue'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
+import { getTextWidth } from '@/framework/components/common/Portal/utils'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import { resolveConditionVariables } from '@/framework/utils/common'
 import { formatMoney } from '@/framework/utils/formatter'
@@ -513,6 +515,71 @@ const loadConfig = async () => {
   }
 }
 
+/** 列搜索(表头漏斗)条件: key=列 dataIndex, 值是一条可直接下发的条件 */
+const columnFilters = ref<Record<string, { property: string, relation: number, value: unknown[] }>>({})
+
+/**
+ * 列搜索按列的归属分两路：
+ * ${列标识}__${度量字段} 形态的是聚合输出别名 ⇒ 只能落在 HAVING(聚合后)，与后端 stripPivotHiddenColumns 同口径判形;
+ * 其余是行维度列 ⇒ 落在 WHERE(聚合前)，与左侧筛选项同一层，会改变统计口径。
+ */
+const isAggregateAlias = (key: string) => key.includes('__')
+
+// 切表/换透视列后旧键可能不再是本次输出别名，后端白名单会整条拒掉查询，故下发前先按别名集过滤
+const columnFilterList = computed(() =>
+  Object.values(columnFilters.value).filter(f => sortableAliases.value.has(f.property)))
+const whereColumnFilters = computed(() => columnFilterList.value.filter(f => !isAggregateAlias(f.property)))
+const havingColumnFilters = computed(() => columnFilterList.value.filter(f => isAggregateAlias(f.property)))
+
+const onColumnFilterChanged = (values: unknown, dataIndex: unknown, relation: unknown) => {
+  const key = String(dataIndex)
+  const scalars = Array.isArray(values)
+    ? values.filter(v => v !== null && v !== undefined && v !== '')
+    : []
+  if (scalars.length === 0) {
+    delete columnFilters.value[key]
+  } else {
+    columnFilters.value[key] = { property: key, relation: Number(relation), value: scalars }
+  }
+  loadData()
+}
+
+/** 漏斗控件用的列描述: 行维度列若配了字典，换成字典多选(候选是编码，与库里原始列同口径，避免"看得见却搜不到") */
+const filterColumnOf = (column: any) => {
+  const map = dictOptionMap.value[column.dataIndex]
+  if (!map) {
+    return column
+  }
+  return {
+    ...column,
+    fieldType: FIELD_TYPE.SELECT,
+    referenceDictOption: Object.entries(map).map(([value, label]) => ({ value, label }))
+  }
+}
+
+/** 漏斗插槽取参(动态插槽名 vue-tsc 推不出类型，同 bodyCell 的 any 封装)：列描述按字典情况改写后交给条件控件 */
+const filterSlotProps = (slot: any) => ({
+  column: filterColumnOf(slot?.column),
+  setSelectedKeys: slot?.setSelectedKeys,
+  selectedKeysRef: slot?.selectedKeys,
+  confirm: slot?.confirm,
+  clearFilters: slot?.clearFilters
+})
+
+/** 可列搜索的叶子列(二层表头需递归; 壳列与前端算出的指标/合计列不在其中) */
+const filterableLeafKeys = computed(() => {
+  const keys: string[] = []
+  const walk = (cols: ColumnType[]) => cols.forEach((col: any) => {
+    if (col.children?.length) {
+      walk(col.children)
+    } else if (col.filterAble && col.dataIndex) {
+      keys.push(col.dataIndex)
+    }
+  })
+  walk(portalColumns.value)
+  return keys
+})
+
 /** 组装请求并查询透视数据(透视列可为空, 空时退化为无条件总计列) */
 const loadData = async () => {
   if (!portalUrl.value || !groupFields.value.length || !measures.value.length) {
@@ -521,7 +588,11 @@ const loadData = async () => {
   try {
     const req: PivotReqVO = {
       // 默认查询条件(sys_portal.default_condition)并入: 与通用列表路径同一配置正源
-      condition: { conditionList: [...defaultConditions.value, ...props.condition] },
+      condition: { conditionList: [...defaultConditions.value, ...props.condition, ...whereColumnFilters.value] },
+      // 统计列过滤(聚合后): 后端按本次输出别名白名单校验，名单外直接拒
+      havingCondition: havingColumnFilters.value.length > 0
+        ? { andOr: '0', conditionList: havingColumnFilters.value }
+        : undefined,
       // 行维度排序下推(聚合后 ORDER BY 行维度列, 两链路均支持); 度量排序后端无别名可排, 不在此列
       sortList: pushDownSortList.value.length > 0 ? pushDownSortList.value : undefined,
       groupColumns: groupFields.value.filter(f => !hiddenC.value.has(columnToken(f))).map(f => ({
@@ -616,13 +687,48 @@ const buildGroupedColumns = (items: Array<{ path: string[]; col: ColumnType }>):
   return buildLevel(items)
 }
 
+/** 某列在本次渲染数据里的全部显示值(与表格里看到的字符串一致，含字典翻译与度量格式化) */
+const columnDisplayValues = (key: string | undefined): unknown[] =>
+  key ? dataSource.value.map((row: any) => row?.[key]) : []
+
+/**
+ * 建列时实测列宽(表头文字 ∪ 本次显示值)
+ * 此前聚合列只给 minWidth，而 Portal 的弹性列机制要求「所有渲染列都有数字 width」才启动
+ * ⇒ 机制不启动、富余宽度被库摊到每一列 ⇒ 整表变胖。这里一次算足交给 Portal，
+ * 由它把富余集中给最后一个非锁定列，表头/数据行/汇总行仍读同一份列宽。
+ * 用运行期 parse() 同一个 getTextWidth，算完后那句 max() 就成了空转，不会再出现挂载后就地撑宽的错位。
+ */
+const measureColWidth = (title: string | undefined, values: unknown[], floor: number): number => {
+  let widest = ''
+  let widestScore = -1
+  for (const value of values) {
+    if (value === null || value === undefined) {
+      continue
+    }
+    const text = String(value)
+    // 先按显示宽度粗筛(CJK 记 2)，只测最长的一条，避免逐格建 canvas
+    const score = text.length + (text.match(/[一-龥]/g)?.length ?? 0)
+    if (score > widestScore) {
+      widestScore = score
+      widest = text
+    }
+  }
+  const contentWidth = widestScore > 0 ? getTextWidth(widest) : 0
+  // +28 = 左右内边距 + 表头排序双箭头
+  return Math.min(Math.max(Math.ceil(Math.max(contentWidth, getTextWidth(title || ''))) + 28, floor), 360)
+}
+
+/** 标记本表所有叶子列的宽度已定死(递归进二层表头的壳列) */
+const markWidthFitted = (list: ColumnType[]): void => list.forEach((col: any) =>
+  col.children?.length ? markWidthFitted(col.children) : (col.widthFitted = true))
+
 /**
  * Portal 动态列: 行维度列 + 度量子列
  * col模式: 行维度 + (透视列×度量) 横向平铺
  * row模式: 行维度 + 指标名称列 + 透视列(每列一个度量值)
- * 宽度分工: 行维度列(非聚合)取 portalConfig 配置的列宽; 聚合列(指标/合计/透视列/度量子列)在 portalConfig 里
- * 没有对应列, 只给 minWidth 不给 width, 交给 s-table 自身自动填充铺满剩余宽度
- * (表头是 table 会摊分剩余宽度、数据行是定宽 div, 只有库自己算出的列宽两边才同源)
+ * 宽度分工: 全部列都在建列时按「表头 ∪ 本次显示值」实测出确定 width(行维度列以配置宽度为下限)，
+ * 富余宽度交给 Portal 的弹性列机制集中到最后一个非锁定列
+ * (表头是 table 会摊分剩余宽度、数据行是定宽 div，列宽必须在建列时定死、两边才同源)
  */
 const portalColumns = computed(() => {
   const cols: ColumnType[] = []
@@ -631,18 +737,24 @@ const portalColumns = computed(() => {
   let order = 2
   // 行维度只渲染显示字段(隐藏字段仍参与 group by，用于行粒度细化/筛选目标)
   for (const cfg of visibleGroupFieldConfigs.value) {
+    const dimTitle = columnMetaMap.value[cfg.field]?.displayName || cfg.field
     cols.push({
-      title: columnMetaMap.value[cfg.field]?.displayName || cfg.field,
+      title: dimTitle,
       dataIndex: cfg.field,
       key: cfg.field,
-      width: columnMetaMap.value[cfg.field]?.width || 140,
+      // 配置宽度当下限：配宽的列不缩，内容更长的列在建列时一次撑足(不在挂载后就地改)
+      width: Math.max(
+        columnMetaMap.value[cfg.field]?.width || 140,
+        measureColWidth(dimTitle, columnDisplayValues(cfg.field), 140)
+      ),
       fixed: cfg.fixed,
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
       order: order++,
       editable: false,
       sorter: false,
-      filterAble: false,
+      // 行维度列可列搜索: 打在聚合前(WHERE)，配了字典的走编码多选、否则走文本 LIKE
+      filterAble: true,
       addShow: false,
       editShow: false,
       detailShow: false
@@ -655,7 +767,7 @@ const portalColumns = computed(() => {
       title: '指标',
       dataIndex: MEASURE_NAME_COL,
       key: MEASURE_NAME_COL,
-      minWidth: 120,
+      width: measureColWidth('指标', columnDisplayValues(MEASURE_NAME_COL), 120),
       fixed: visibleGroupFieldConfigs.value.some(c => c.fixed) ? 'left' : false,
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
@@ -676,7 +788,7 @@ const portalColumns = computed(() => {
         title: '合计',
         dataIndex: TOTAL_COL,
         key: TOTAL_COL,
-        minWidth: 120,
+        width: measureColWidth('合计', columnDisplayValues(TOTAL_COL), 120),
         fieldType: FIELD_TYPE.NUMBER,
         contentAlign: 'right',
         tooltip: false,
@@ -696,7 +808,7 @@ const portalColumns = computed(() => {
         title: pv.itemName || pv.itemValue,
         dataIndex: pv.itemValue,
         key: pv.itemValue,
-        minWidth: 140,
+        width: measureColWidth(pv.itemName || pv.itemValue, columnDisplayValues(pv.itemValue), 140),
         fieldType: FIELD_TYPE.NUMBER,
         contentAlign: 'right',
         tooltip: false,
@@ -733,15 +845,17 @@ const portalColumns = computed(() => {
     for (const pv of effectivePivotColumns.value) {
       const gp = parseGroupPath(pv)
       for (const m of measures.value) {
+        const cellKey = `${pv.itemValue}__${m.field}`
+        const cellTitle = multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName
         colItems.push({
           // 透视列配了父链(groupPath)时按父链组装嵌套表头(与 row 模式同源)，未配则平铺；
           // 多度量时叶子表头让位给度量名，故把透视列自身名称(级别等)补进父链，否则中间层会丢失
           path: gp.length && multiMeasure ? [...gp, pv.itemName || pv.itemValue] : gp,
           col: {
-            title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
-            dataIndex: `${pv.itemValue}__${m.field}`,
-            key: `${pv.itemValue}__${m.field}`,
-            minWidth: 120,
+            title: cellTitle,
+            dataIndex: cellKey,
+            key: cellKey,
+            width: measureColWidth(cellTitle, columnDisplayValues(cellKey), 120),
             fixed: m.fixed === true ? 'right' : false,
             fieldType: FIELD_TYPE.NUMBER,
             contentAlign: 'right',
@@ -751,7 +865,8 @@ const portalColumns = computed(() => {
             order: order++,
             editable: false,
             sorter: false,
-            filterAble: false,
+            // 统计列可列搜索: 打在聚合后(HAVING)，数字区间控件
+            filterAble: true,
             addShow: false,
             editShow: false,
             detailShow: false
@@ -767,6 +882,8 @@ const portalColumns = computed(() => {
       }
     }
   }
+  // 列宽已在上面按「表头 ∪ 显示值」定死，标记后 Portal 装载数据时不再逐格就地撑宽
+  markWidthFitted(cols)
   return cols
 })
 
@@ -1125,6 +1242,19 @@ onMounted(() => {
             </span>
           </a-tooltip>
         </span>
+      </template>
+      <!-- 列搜索(表头漏斗): 控件复用 Portal 的列条件组件，但条件收回本组件按列归属分两路下发
+           (行维度→WHERE、统计列→HAVING)。不走 Portal 内部 queryConditionMap——那条腿只服务
+           Portal 自己发查询的链路，透视的查询在本组件 -->
+      <template
+        v-for="key in filterableLeafKeys"
+        :key="`filter-${key}`"
+        #[`customFilterDropdown_${key}`]="filterSlot"
+      >
+        <portal-column-condition
+          v-bind="filterSlotProps(filterSlot)"
+          @handle-search-condition-changed="onColumnFilterChanged"
+        />
       </template>
       <!-- 度量单元格: 非空数字可点击钻取明细(动态插槽覆盖所有度量列) -->
       <template
