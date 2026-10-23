@@ -725,10 +725,12 @@ const portalColumns = computed(() => {
     // === col 模式(原逻辑): 行维度 + 透视列×度量 ===
     const colItems: Array<{ path: string[]; col: ColumnType }> = []
     for (const pv of effectivePivotColumns.value) {
+      const gp = parseGroupPath(pv)
       for (const m of measures.value) {
         colItems.push({
-          // 透视列配了父链(groupPath)时按父链组装嵌套表头(与 row 模式同源)，未配则平铺
-          path: parseGroupPath(pv),
+          // 透视列配了父链(groupPath)时按父链组装嵌套表头(与 row 模式同源)，未配则平铺；
+          // 多度量时叶子表头让位给度量名，故把透视列自身名称(级别等)补进父链，否则中间层会丢失
+          path: gp.length && multiMeasure ? [...gp, pv.itemName || pv.itemValue] : gp,
           col: {
             title: multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName,
             dataIndex: `${pv.itemValue}__${m.field}`,
@@ -737,7 +739,8 @@ const portalColumns = computed(() => {
             fixed: m.fixed === true ? 'right' : false,
             fieldType: FIELD_TYPE.NUMBER,
             contentAlign: 'right',
-            displayGroupName: hasPivot && multiMeasure ? pv.itemName : undefined,
+            // 层级已由 groupPath 壳列表达时不再写 displayGroupName，避免与按分组名包壳的通路叠加出多余一层
+            displayGroupName: gp.length === 0 && hasPivot && multiMeasure ? pv.itemName : undefined,
             tooltip: false,
             order: order++,
             editable: false,

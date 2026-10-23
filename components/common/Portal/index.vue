@@ -1154,7 +1154,9 @@ const multiHeadColumns = computed(() => {
   const res = [] as Array<any>
   columns.value.forEach((column: ColumnType) => {
     if (isNotEmpty(column.displayGroupName)) {
-      if (res[res.length - 1].title !== column.displayGroupName) {
+      // 首列即带分组名时 res 为空, 直接取 res[length-1] 会抛 TypeError
+      const last = res[res.length - 1]
+      if (!last || last.title !== column.displayGroupName) {
         res.push({ title: column.displayGroupName, children: columnDisplayMap.value.get(column.displayGroupName) })
       }
     } else {
