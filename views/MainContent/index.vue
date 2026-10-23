@@ -44,8 +44,7 @@ import updateLocale from 'dayjs/plugin/updateLocale'
 
 import NavigationFramework from '@/framework/components/navigationFramework/index.vue'
 
-import { theme } from 'ant-design-vue'
-
+import { buildAntdTheme } from '@/framework/store/antdTheme'
 import { getDefaultContentComponent } from '@/framework/router'
 import { useRouteStore } from '@/framework/store/route'
 import { useThemeStore } from '@/framework/store/theme'
@@ -60,9 +59,8 @@ const registeredContent = getDefaultContentComponent()
 const defaultContentComp = registeredContent ? defineAsyncComponent(registeredContent) : null
 
 // Ant Design 主题配置 - 随系统 data-theme 自动切换
-const antTheme = computed(() => ({
-  algorithm: themeStore.isDark ? theme.darkAlgorithm : theme.defaultAlgorithm
-}))
+// （plsintec/plsintecDark 走 buildAntdTheme 的完整 token 映射，其余主题仅 algorithm 不动观感）
+const antTheme = computed(() => buildAntdTheme(themeStore.themeId))
 
 const routeStore = useRouteStore()
 dayjs.extend(updateLocale)

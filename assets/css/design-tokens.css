@@ -766,6 +766,242 @@
 }
 
 /* ====================================================================
+   主题：plsintec — 2026 基础UI视觉规范（浅色）
+   品牌蓝 #1E4BFF 单强调 + N0–N8 九级灰阶；正源＝docs/plsintec-ui-tokens.md。
+   深色左导航（#3a3a3a）+ 白顶栏 + 主色选中；无发光/位移动效。
+   仅由 plsintec 构建形态默认启用，bidr/pre 形态观感不变。
+   ==================================================================== */
+[data-theme="plsintec"] {
+  /* --- 圆角（本主题专属定稿 4/8/12，覆盖 :root 的 6/8/12/16） --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+
+  --bg-base: #f5f5f5;
+  --bg-elevated: #ffffff;
+  --bg-hover: #ecf0f5;
+  --bg-active: #e8edff;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  --border-subtle: #e0e0e0;
+  --border-hover: #6e7685;
+  --border-active: rgba(30, 75, 255, 0.4);
+  --text-primary: #1f1f1f;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --accent: #1e4bff;
+  --accent-subtle: rgba(30, 75, 255, 0.03);
+  --accent-soft: rgba(30, 75, 255, 0.08);
+  --accent-mid: rgba(30, 75, 255, 0.2);
+  --accent-glow: rgba(30, 75, 255, 0.25);
+  --accent-light: #3e66ff;
+  --success: #0f9d58;
+  --success-soft: rgba(15, 157, 88, 0.1);
+  --danger: #d93025;
+  --danger-soft: rgba(217, 48, 37, 0.1);
+  --warning: #ff9900;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-glow: none;
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-tab: 0 -1px 0 rgba(0, 0, 0, 0.06);
+  --shadow-nav-divider: 1px 0 0 #e0e0e0;
+  --card-gradient: #ffffff;
+  --card-gradient-header: linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light));
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* --- 左导航（深灰 #3a3a3a，G 章 p35） --- */
+  --left-nav-bg: #3a3a3a;
+  --left-nav-blur: none;
+  --left-nav-border: none;
+  --top-header-bg: #ffffff;
+  --top-header-blur: none;
+  --top-header-border: 1px solid #ebeef5;
+  --header-title-bg: #ffffff;
+  --history-tab-bg: #f5f5f5;
+  --history-tab-shadow: 0 -1px 0 #ebeef5;
+  --history-tab-active-shadow: 0 -1px 0 #ebeef5;
+  --loading-mask: rgba(0, 0, 0, 0.5);
+  --header-title-color: #1f1f1f;
+  --header-user-text: #1f1f1f;
+  --header-user-text-secondary: #999999;
+  --header-icon-color: #666666;
+  --header-hover-bg: #ecf0f5;
+  --header-btn-hover-bg: var(--accent-soft);
+  --header-btn-hover-color: var(--accent);
+  --nav-text: #cfd3dc;
+  --nav-text-hover: #ffffff;
+  --nav-text-tertiary: rgba(255, 255, 255, 0.5);
+  --nav-bg-hover: rgba(255, 255, 255, 0.08);
+  --nav-selected-bg: var(--accent);
+  --nav-selected-color: #ffffff;
+  --nav-selected-indicator: transparent;
+  --nav-selected-indicator-bg: none;
+  --nav-selected-icon-filter: none;
+  --nav-selected-icon-transform: none;
+  --nav-selected-glow: transparent;
+  --nav-selected-border: none;
+  --nav-selected-shadow: none;
+  --nav-selected-transform: none;
+  --nav-selected-font-weight: 500;
+  --nav-selected-text-shadow: none;
+  --nav-selected-indicator-width: 3px;
+  --nav-indicator-animation: none;
+  --nav-line: rgba(255, 255, 255, 0.08);
+  --nav-toggle-bg: rgba(255, 255, 255, 0.06);
+  --nav-toggle-bg-hover: rgba(255, 255, 255, 0.12);
+  --nav-toggle-arrow: rgba(255, 255, 255, 0.5);
+  --nav-toggle-arrow-hover: #ffffff;
+  --nav-item-separator: rgba(255, 255, 255, 0.04);
+  --topnav-item-bg: rgba(30, 75, 255, 0.04);
+  --topnav-selected-shadow: none;
+  --topnav-dropdown-selected-indicator: var(--accent);
+  --topnav-text: #666666;
+  --header-avatar-border: #e0e0e0;
+  --header-avatar-shadow: none;
+  --header-avatar-hover-shadow: 0 0 0 2px var(--accent-soft);
+  --header-avatar-hover-transform: none;
+  --header-role-bg: var(--accent-soft);
+  --header-role-border: none;
+  --header-role-radius: 4px;
+  --header-role-padding: 2px 6px;
+  --header-user-name-size: 14px;
+  --header-user-name-weight: 500;
+  --header-status-bg: var(--success);
+  --header-status-animation: none;
+  --header-setting-bg: #ffffff;
+  --header-setting-border: 1px solid #e0e0e0;
+  --header-setting-shadow: none;
+  --header-setting-hover-shadow: 0 0 0 2px var(--accent-soft);
+  --header-setting-hover-transform: none;
+  --header-setting-active-transform: none;
+}
+
+/* plsintec 主题字体栈（p10/p11：中文苹方、英文数字 Roboto；不打包 webfont，系统回退） */
+html[data-theme='plsintec'] body {
+  font-family: 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ====================================================================
+   主题：plsintecDark — 2026 基础UI视觉规范（暗色，G 章 p28–29）
+   独立于共享 dark 主题（红线：不动 dark 块任何现有值）。
+   阴影一律以 1px solid #414243 边框替代（p28 原文）；品牌蓝换锚 #4A87F5。
+   ==================================================================== */
+[data-theme="plsintecDark"] {
+  /* --- 圆角与浅色 plsintec 同稿 --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+
+  --bg-base: #121212;
+  --bg-elevated: #1e1e1e;
+  --bg-hover: #262626;
+  --bg-active: #2a2a2a;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+  --border-subtle: #414243;
+  --border-hover: #515253;
+  --border-active: rgba(74, 135, 245, 0.4);
+  --text-primary: #e5eaf3;
+  --text-secondary: #a3a6ad;
+  --text-tertiary: #8c9099;
+  --accent: #4a87f5;
+  --accent-subtle: rgba(74, 135, 245, 0.06);
+  --accent-soft: rgba(74, 135, 245, 0.14);
+  --accent-mid: rgba(74, 135, 245, 0.28);
+  --accent-glow: rgba(74, 135, 245, 0.35);
+  --accent-light: #6ba1f7;
+  --success: #529b4e;
+  --success-soft: rgba(82, 155, 78, 0.14);
+  --danger: #c45656;
+  --danger-soft: rgba(196, 86, 86, 0.14);
+  --warning: #b8823f;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-glow: none;
+  --shadow-elevated: none;
+  --shadow-tab: 0 -1px 0 #414243;
+  --shadow-nav-divider: 1px 0 0 #414243;
+  --card-gradient: #1e1e1e;
+  --card-gradient-header: linear-gradient(180deg, #232323 0%, #1e1e1e 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light));
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --left-nav-bg: #1e1e1e;
+  --left-nav-blur: none;
+  --left-nav-border: 1px solid #414243;
+  --top-header-bg: #1e1e1e;
+  --top-header-blur: none;
+  --top-header-border: 1px solid #414243;
+  --header-title-bg: #1e1e1e;
+  --history-tab-bg: #171717;
+  --history-tab-shadow: 0 -1px 0 #414243;
+  --history-tab-active-shadow: 0 -1px 0 #414243;
+  --loading-mask: rgba(0, 0, 0, 0.7);
+  --header-title-color: var(--text-primary);
+  --header-user-text: var(--text-primary);
+  --header-user-text-secondary: var(--text-tertiary);
+  --header-icon-color: var(--text-secondary);
+  --header-hover-bg: #262626;
+  --header-btn-hover-bg: var(--accent-soft);
+  --header-btn-hover-color: var(--accent);
+  --nav-text: #a3a6ad;
+  --nav-text-hover: #ffffff;
+  --nav-text-tertiary: #8c9099;
+  --nav-bg-hover: #262626;
+  --nav-selected-bg: var(--accent);
+  --nav-selected-color: #ffffff;
+  --nav-selected-indicator: transparent;
+  --nav-selected-indicator-bg: none;
+  --nav-selected-icon-filter: none;
+  --nav-selected-icon-transform: none;
+  --nav-selected-glow: transparent;
+  --nav-selected-border: none;
+  --nav-selected-shadow: none;
+  --nav-selected-transform: none;
+  --nav-selected-font-weight: 500;
+  --nav-selected-text-shadow: none;
+  --nav-selected-indicator-width: 3px;
+  --nav-indicator-animation: none;
+  --nav-line: #414243;
+  --nav-toggle-bg: #262626;
+  --nav-toggle-bg-hover: #2a2a2a;
+  --nav-toggle-arrow: #8c9099;
+  --nav-toggle-arrow-hover: #ffffff;
+  --nav-item-separator: rgba(255, 255, 255, 0.04);
+  --topnav-item-bg: rgba(74, 135, 245, 0.06);
+  --topnav-selected-shadow: none;
+  --topnav-dropdown-selected-indicator: var(--accent);
+  --topnav-text: #a3a6ad;
+  --header-avatar-border: #414243;
+  --header-avatar-shadow: none;
+  --header-avatar-hover-shadow: 0 0 0 2px var(--accent-soft);
+  --header-avatar-hover-transform: none;
+  --header-role-bg: var(--accent-soft);
+  --header-role-border: none;
+  --header-role-radius: 4px;
+  --header-role-padding: 2px 6px;
+  --header-user-name-size: 14px;
+  --header-user-name-weight: 500;
+  --header-status-bg: var(--success);
+  --header-status-animation: none;
+  --header-setting-bg: #1e1e1e;
+  --header-setting-border: 1px solid #414243;
+  --header-setting-shadow: none;
+  --header-setting-hover-shadow: 0 0 0 2px var(--accent-soft);
+  --header-setting-hover-transform: none;
+  --header-setting-active-transform: none;
+}
+
+/* plsintecDark 同字体栈 */
+html[data-theme='plsintecDark'] body {
+  font-family: 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ====================================================================
    关键帧动画
    在 classic 主题中通过 --nav-indicator-animation 和
    --header-status-animation 引用；其他主题默认不启用（值为 none）。
