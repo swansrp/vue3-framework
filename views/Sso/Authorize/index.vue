@@ -82,11 +82,11 @@ defineOptions({ name: 'SsoAuthorizeView' })
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { postSsoTicket } from '@/framework/apis/sso/sso'
 import { verifyLogin } from '@/framework/apis/login/login'
+import { postSsoTicket } from '@/framework/apis/sso/sso'
 import { navigation2Login } from '@/framework/network/login'
-import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 import { localStorageMethods } from '@/framework/utils/common'
+import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 
 const route = useRoute()
 const router = useRouter()

@@ -5,8 +5,8 @@
 // Tag Description: Dataset Config Controller
 // ============================================================
 
-import type { DatasetColumnReq, DatasetConfigReq } from './types/datasetConfigControllerTypes'
 import type { IdReqVO } from './types/common'
+import type { DatasetColumnReq, DatasetConfigReq } from './types/datasetConfigControllerTypes'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'

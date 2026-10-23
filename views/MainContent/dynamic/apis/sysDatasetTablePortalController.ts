@@ -5,8 +5,8 @@
 // Tag Description: Sys Dataset Table Portal Controller
 // ============================================================
 
-import type { SysDatasetTableVO } from './types/sysDatasetTablePortalControllerTypes'
 import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, IdReqVO, QueryConditionReq } from './types/common'
+import type { SysDatasetTableVO } from './types/sysDatasetTablePortalControllerTypes'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'

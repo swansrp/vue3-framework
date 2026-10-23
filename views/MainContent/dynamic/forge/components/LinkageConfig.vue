@@ -237,9 +237,9 @@ import { ref, reactive, onMounted } from 'vue'
 
 import type { LinkageInfo, MatrixInfo, FormConfigInfo } from '../types'
 import { TRIGGER_EVENTS } from '../types'
+
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
-
 import {
   sysFormLinkageGeneralSelect,
   sysFormLinkageAdd,

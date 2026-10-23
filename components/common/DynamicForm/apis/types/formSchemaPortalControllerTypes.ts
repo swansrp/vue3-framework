@@ -6,7 +6,7 @@
 // ============================================================
 
 // 导入公共类型
-import type { AdvancedQueryReq, AdvancedStatisticReq, AdvancedSummaryReq, GeneralStatisticReq, GeneralSummaryReq, OrderItem, QueryConditionReq, StatisticRes } from './common'
+import type { OrderItem } from './common'
 /**
  * 全局响应数据类型说明
  * @interface ResponseDataType

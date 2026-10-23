@@ -162,6 +162,7 @@
  * 服务端生成 appKey/appSecret 并一次性展示）。回调地址登记面板（ac_sso_redirect）原样保留。
  * 🔴 删除渠道不级联删其回调登记行——登记行按 partnerId 查询自然查不到，无害。
  */
+import { message } from 'ant-design-vue'
 import { Ref, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -175,7 +176,6 @@ import {
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import surelyTableColumns from '@/framework/views/MainContent/SystemManage/Channel/channel'
-import { message } from 'ant-design-vue'
 
 
 const { currentRoute } = useRouter()
