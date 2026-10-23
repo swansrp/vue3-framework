@@ -63,6 +63,8 @@ const hiddenPM = ref<Set<string>>(new Set())
 /** 透视列配置是否已加载完成(Portal 仅在初始化时读取 customColumns,
  *  必须等透视列列表就绪后再挂载, 否则可能以 TOTAL 退化列形态锁死表头) */
 const pivotColumnLoaded = ref(false)
+/** 首轮查询是否已结束(含失败/配置不全)：列宽要靠已取回的数据实测，挂载必须等这一步，否则整表按上限最小值起步且之后不再更新 */
+const firstLoadDone = ref(false)
 /** 未配置透视列时退化为单个无条件"总计"列(后端 CASE WHEN 1=1 即纯度量聚合) */
 const TOTAL_PIVOT = { itemValue: 'total', itemName: '' } as unknown as PortalPivotColumnVO
 const effectivePivotColumns = computed<PortalPivotColumnVO[]>(() => {
@@ -508,10 +510,14 @@ const loadConfig = async () => {
     pivotColumns.value = columnRes?.payload?.records || []
     pivotColumnLoaded.value = true
     await loadData()
+    // 配置链路走完才放行挂载（含"无行维度/无度量"的退化配置：那次 loadData 不会发查询，
+    // 但仍要放行，退化成空表比永久空白好排查）
+    firstLoadDone.value = true
   } catch (e) {
     console.error('加载透视报表配置失败:', e)
     // 配置加载异常也放行挂载, 避免表格永久空白(退化为 TOTAL 形态)
     pivotColumnLoaded.value = true
+    firstLoadDone.value = true
   }
 }
 
@@ -583,6 +589,8 @@ const filterableLeafKeys = computed(() => {
 /** 组装请求并查询透视数据(透视列可为空, 空时退化为无条件总计列) */
 const loadData = async () => {
   if (!portalUrl.value || !groupFields.value.length || !measures.value.length) {
+    // 参数没齐＝这次不该发（props.condition 的深度 watch 会在配置回来前先触发一次），
+    // 更不能把 firstLoadDone 点亮：那会让 Portal 在空数据上挂载、列宽按下限快照后不再更新
     return
   }
   try {
@@ -611,6 +619,8 @@ const loadData = async () => {
   } catch (e) {
     console.error('透视聚合查询失败:', e)
     rows.value = []
+  } finally {
+    firstLoadDone.value = true
   }
 }
 
@@ -790,7 +800,8 @@ const portalColumns = computed(() => {
         key: TOTAL_COL,
         width: measureColWidth('合计', columnDisplayValues(TOTAL_COL), 120),
         fieldType: FIELD_TYPE.NUMBER,
-        contentAlign: 'right',
+        // 表头由库居中，数字右对齐会在列宽收紧后看着与表头错位 ⇒ 同向居中
+        contentAlign: 'center',
         tooltip: false,
         order: order++,
         editable: false,
@@ -810,7 +821,8 @@ const portalColumns = computed(() => {
         key: pv.itemValue,
         width: measureColWidth(pv.itemName || pv.itemValue, columnDisplayValues(pv.itemValue), 140),
         fieldType: FIELD_TYPE.NUMBER,
-        contentAlign: 'right',
+        // 表头由库居中，数字右对齐会在列宽收紧后看着与表头错位 ⇒ 同向居中
+        contentAlign: 'center',
         tooltip: false,
         order: order++,
         editable: false,
@@ -858,7 +870,8 @@ const portalColumns = computed(() => {
             width: measureColWidth(cellTitle, columnDisplayValues(cellKey), 120),
             fixed: m.fixed === true ? 'right' : false,
             fieldType: FIELD_TYPE.NUMBER,
-            contentAlign: 'right',
+            // 表头由库居中，数字右对齐会在列宽收紧后看着与表头错位 ⇒ 同向居中
+            contentAlign: 'center',
             // 层级已由 groupPath 壳列表达时不再写 displayGroupName，避免与按分组名包壳的通路叠加出多余一层
             displayGroupName: gp.length === 0 && hasPivot && multiMeasure ? pv.itemName : undefined,
             tooltip: false,
@@ -986,6 +999,9 @@ const measureKeys = computed<string[]>(() => {
 const ready = computed(() =>
   !!portalUrl.value &&
   pivotColumnLoaded.value &&
+  // 列宽在建列时按显示值实测，而 Portal 只在 initConfig 读一次 customColumns（没有 watch）
+  // ⇒ 必须等首轮数据到位再挂载，否则整表按各列下限起步、之后再也更新不了（部门折行就是这么来的）
+  !!firstLoadDone.value &&
   visibleGroupFields.value.length > 0 &&
   measures.value.length > 0
 )
@@ -1175,6 +1191,8 @@ const openSummaryDrill = (key: string) => {
 const cellRecord = (slot: any) => slot?.record
 const cellIndex = (slot: any) => slot?.index
 const cellValue = (slot: any) => slot?.value
+/** 统计格对齐：自定义 bodyCell 插槽会整格接管，不显式写对齐就退回默认左对齐（口径取列配置的 contentAlign） */
+const cellAlign = (slot: any) => slot?.column?.contentAlign || 'center'
 
 onMounted(() => {
   loadConfig()
@@ -1265,6 +1283,7 @@ onMounted(() => {
         <span
           v-if="cellRecord(cellSlot)?.[key] !== '' && cellRecord(cellSlot)?.[key] != null"
           class="pivot-drill-cell"
+          :style="{ display: 'block', textAlign: cellAlign(cellSlot) }"
           @click="openDrill(cellRecord(cellSlot), cellIndex(cellSlot), key)"
         >{{ cellRecord(cellSlot)?.[key] }}</span>
       </template>

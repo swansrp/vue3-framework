@@ -28,6 +28,16 @@ const props = withDefaults(
 // 模板内通过局部引用修改对象内容(与父组件共享同一对象引用)
 const filterValues = computed(() => props.filterValues)
 const treeOptionsCache = computed(() => props.treeOptionsCache)
+
+/**
+ * 选择类控件（下拉/树形下拉/日期）的占位文案
+ * 历史配置不分类型统一存了「请输入X」，挂在只能选、不能输的控件上会让人误判成文本框
+ * ⇒ 以「请输入」开头的一律显示「请选择X」，其它自填文案保持原样
+ */
+const selectPlaceholder = (filter: PortalTableFilterVO) => {
+  const ph = filter.placeholder || ''
+  return ph && !ph.startsWith('请输入') ? ph : `请选择${filter.label || ''}`
+}
 </script>
 
 <template>
@@ -62,7 +72,7 @@ const treeOptionsCache = computed(() => props.treeOptionsCache)
             v-model:value="filterValues[filter.code!]"
             :allow-clear="filter.allowClear === '1'"
             :mode="filter.multiple === '1' ? 'multiple' : undefined"
-            :placeholder="filter.placeholder || '请选择' + filter.label"
+            :placeholder="selectPlaceholder(filter)"
             style="width: 95%"
             @focus="() => loadDictOptions(filter.dictCode)"
           >
@@ -98,7 +108,7 @@ const treeOptionsCache = computed(() => props.treeOptionsCache)
           <a-tree-select
             v-model:value="filterValues[filter.code!]"
             :allow-clear="filter.allowClear === '1'"
-            :placeholder="filter.placeholder || '请选择' + filter.label"
+            :placeholder="selectPlaceholder(filter)"
             :tree-data="treeOptionsCache[filter.dictCode!] || []"
             style="width: 95%"
             tree-node-filter-prop="label"
@@ -126,7 +136,7 @@ const treeOptionsCache = computed(() => props.treeOptionsCache)
           <a-date-picker
             v-model:value="filterValues[filter.code!]"
             :allow-clear="filter.allowClear === '1'"
-            :placeholder="filter.placeholder || '请选择' + filter.label"
+            :placeholder="selectPlaceholder(filter)"
             style="width: 95%"
             :picker="filter.filterType as any"
             value-format="YYYY-MM-DD"

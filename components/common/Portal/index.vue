@@ -422,14 +422,14 @@
                 </slot>
               </template>
               <!-- endregion -->
-              <!-- region 下拉搜索样式 -->
+              <!-- region 下拉搜索样式（列已挂自定义筛选下拉时，触发器就是放大镜，菜单里不再叠一个同功能的漏斗） -->
               <template #menuIcon="{ column, filtered }">
                 <bars-outlined
                   v-if="column.dataIndex === 'index'"
                   :class="filtered && 'filter-active'"
                 />
                 <filter-outlined
-                  v-else-if="column.filterAble"
+                  v-else-if="column.filterAble && !column.customFilterDropdown"
                   :class="filtered && 'filter-active'"
                 />
               </template>

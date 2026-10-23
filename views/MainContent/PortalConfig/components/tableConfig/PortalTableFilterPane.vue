@@ -895,7 +895,7 @@ const handleFieldToggle = async (
         label: field.displayName,
         filterType,
         dictCode,
-        placeholder: `请输入${field.displayName}`,
+        placeholder: `${filterType === 'select' || filterType === 'select_multi_in_one' || filterType === 'treeSelect' ? '请选择' : '请输入'}${field.displayName}`,
         defaultValue: '',
         multiple: '1',
         allowClear: '1',
