@@ -27,10 +27,8 @@ export const useTenantStore = defineStore('frameworkTenantStore', {
     tenants: []
   }),
   getters: {
-    /** 可切面存在（多租户成员/平台档/系统级全量）＝齿轮里出现「切换租户」 */
+    /** 可切面存在（多租户成员/平台档/系统级全量）＝齿轮里出现「切换租户」；清单空或只有一条＝不出现 */
     switchable: (state) => state.tenants.length > 1,
-    /** 无租户归属且无全量可切面＝系统管理级只读展示 */
-    systemLevel: (state) => state.loaded && state.tenants.length === 0,
     /** 当前租户条目（后端 current 标定；缺省回落 localStorage 记忆） */
     currentTenant(state): TenantMyVO | null {
       const fromServer = state.tenants.find((t) => t.current)
@@ -41,9 +39,8 @@ export const useTenantStore = defineStore('frameworkTenantStore', {
       }
       return null
     },
-    /** 当前租户显示名（无租户＝系统级；未定＝占位） */
+    /** 当前租户显示名（后端未标定且无记忆＝占位） */
     currentTenantLabel(): string {
-      if (this.systemLevel) return '系统级'
       return this.currentTenant?.name || '未选择'
     }
   },
