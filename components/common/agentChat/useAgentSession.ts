@@ -7,10 +7,10 @@
  * 轮询通道（兜底）：SSE 建连失败/断流窗口期 2s 增量拉取（events(sinceSeq)+status）；
  * 断流 10s 后重连（连续失败退避至 30s；重连带当前 sinceSeq，建连回放自动补齐断档，
  * 成功即停轮询）；永久回落轮询不再试 SSE 的两类形态：真 HTTP 401/404
- * （未登录/会话不存在，resp.ok=false），与平台错误信封——平台错误全返 HTTP 200＋
- * JSON 信封 body（status.code：401=登录态失效、101=系统错误如会话不存在），
- * 没有 4xx 形态，建连后按 content-type 嗅探发现非 text/event-stream 即信封
- * （详见 startStream 内注释）。
+ * （AUTH 型拦截链错误／网关层 404，resp.ok=false），与平台错误信封——SYSTEM/BIZ 型
+ * 业务错误实返 HTTP 200＋JSON 信封 body（status.code：401=登录态失效信封码、
+ * 101=系统错误如会话不存在），建连后按 content-type 嗅探发现非 text/event-stream
+ * 即信封（详见 startStream 内注释）。
  * 终态收口（done 帧，或 status 帧/保活响应兜底判定）：关流＋清保活/重连定时器＋
  * 停轮询，不再重连；会话切换（reset）/组件卸载（onScopeDispose）做同样清理。
  * 轮询/保活失败静默（下轮重试），错误提示由 request 层按信封统一处理。
@@ -165,8 +165,9 @@ export const useAgentSession = (sessionId: Ref<string | null>) => {
   }
 
   /** 通道回落：先起轮询兜底拿数据；永久停 SSE 只走轮询的形态＝真 HTTP 401/404
-   *  （未登录/会话不存在，resp.ok=false）或平台错误信封（调用方已置 sseDisabled，
-   *  见 startStream 嗅探），其余安排重连 */
+   *  （AUTH 型拦截链错误/网关层 404，resp.ok=false）或平台错误信封（SYSTEM/BIZ 型
+   *  200 信封，含会话不存在=101；调用方已置 sseDisabled，见 startStream 嗅探），
+   *  其余安排重连 */
   const fallbackToPolling = (httpStatus?: number) => {
     if (httpStatus === 401 || httpStatus === 404) sseDisabled = true
     abortStream()
@@ -203,8 +204,9 @@ export const useAgentSession = (sessionId: Ref<string | null>) => {
         fallbackToPolling(resp.status)
         return
       }
-      // 信封嗅探：平台错误不走 HTTP 状态码（全返 200＋JSON 信封 body，status.code：
-      // 401=登录态失效、101=系统错误如会话不存在）——resp.ok 为真但 content-type
+      // 信封嗅探：SYSTEM/BIZ 型业务错误不走 HTTP 状态码（实返 200＋JSON 信封 body，
+      // status.code：401=登录态失效信封码、101=系统错误如会话不存在；AUTH 型拦截链
+      // 错误才是真 HTTP 401，走上面 resp.ok=false 分支）——resp.ok 为真但 content-type
       // 非 text/event-stream 即错误信封。读 body 取 status.code 后永久回落轮询
       // （不重连：过期会话重连只会无限循环）；parse 失败/形态不符同样按信封
       // 永久回落处理（真 SSE 通道必是 text/event-stream，不存在误伤面）

@@ -15,7 +15,7 @@
       <span
         v-if="running"
         class="apf__meta"
-      >执行中…</span>
+      >{{ waiting ? '等待你的回答' : '执行中…' }}</span>
     </div>
     <div
       class="apf__wrap"
@@ -213,7 +213,11 @@ const onLiveScroll = () => {
   if (!el) return
   sticky.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 40
 }
-watch(() => props.live, () => {
+watch(() => props.live, (v, ov) => {
+  // live 块从无到有＝新一轮/新会话的块重挂载：复位贴底记忆——sticky 是组件级记忆态，
+  // 上一轮用户上翻过（false）会带进下一轮，首帧即不跟底（R2 S-6）；块内滚动记忆只在
+  // 同一块存活期内有效
+  if (v && !ov) sticky.value = true
   const el = liveTextRef.value
   if (!el) return
   if (sticky.value) el.scrollTop = el.scrollHeight
