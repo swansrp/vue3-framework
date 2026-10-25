@@ -190,6 +190,13 @@
           </template>
         </a-dropdown>
       </div>
+      <!-- 业务动作区插槽（如站内信铃铛）：落在齿轮左侧，默认不渲染 -->
+      <div
+        v-if="$slots['header-actions']"
+        class="top_header_actions"
+      >
+        <slot name="header-actions"></slot>
+      </div>
       <div class="top_user_setting">
         <a-dropdown
           trigger="click"
@@ -731,6 +738,12 @@ onMounted(() => {
 }
 
 /* 设置按钮区域 */
+.top_header_actions {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
 .setting-button-wrapper {
   position: relative;
   flex-shrink: 0;

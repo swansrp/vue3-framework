@@ -12,6 +12,13 @@
       >
         <slot name="header-extra"></slot>
       </template>
+      <!-- header-actions：齿轮左侧的业务动作区（如站内信铃铛） -->
+      <template
+        v-if="$slots['header-actions']"
+        #header-actions
+      >
+        <slot name="header-actions"></slot>
+      </template>
       <template #router-view>
         <!-- 根路径且注册了默认内容组件时, 显示业务层默认内容(不占路由) -->
         <component
