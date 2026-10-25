@@ -8,7 +8,10 @@
   >
     <a-badge
       :count="unreadCount"
-      :offset="[-2, 2]"
+      :offset="[0, 2]"
+      size="small"
+      :overflow-count="99"
+      class="ntf-bell__badge"
     >
       <button
         class="ntf-bell__btn"
@@ -144,6 +147,16 @@ onBeforeUnmount(() => {
   margin-right: 12px;
   display: inline-flex;
   align-items: center;
+}
+
+/* 徽标紧凑化（用户 2026-10-25：默认尺寸太大，压过铃铛本身） */
+.ntf-bell__badge :deep(.ant-badge-count) {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 14px;
+  box-shadow: none;
 }
 
 .ntf-bell__btn {
