@@ -74,19 +74,26 @@
 >
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-import type { NotificationItem } from '@/apis/inkhub/notification'
+/** 框架自有结构型（不依赖任何宿主 apis）：宿主消息行只要字段兼容即可传入 */
+export interface NotificationItemLike {
+  id: number
+  title: string
+  summary?: string
+  readFlag: string
+  pushedAt: string
+}
 
 /**
  * props：items＝收件箱首页；unreadCount＝徽标。宿主负责取数/探测/订阅/SSE。
  * emits：select(item)＝点行（宿主定夺跳转＋标已读）；markAllRead＝全部已读；refresh＝开面板拉列表。
  */
 const props = defineProps<{
-  items: NotificationItem[]
+  items: NotificationItemLike[]
   unreadCount: number
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', item: NotificationItem): void
+  (e: 'select', item: NotificationItemLike): void
   (e: 'markAllRead'): void
   (e: 'refresh'): void
 }>()
@@ -107,7 +114,7 @@ const togglePanel = () => {
   }
 }
 
-const onItemClick = (item: NotificationItem) => {
+const onItemClick = (item: NotificationItemLike) => {
   emit('select', item)
   panelOpen.value = false
 }
