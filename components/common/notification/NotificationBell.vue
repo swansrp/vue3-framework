@@ -8,7 +8,7 @@
   >
     <a-badge
       :count="unreadCount"
-      :offset="[0, 2]"
+      :offset="[2, 0]"
       size="small"
       :overflow-count="99"
       class="ntf-bell__badge"
