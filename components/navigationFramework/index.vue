@@ -11,6 +11,13 @@
     >
       <slot name="header-extra"></slot>
     </template>
+    <!-- 透传 header-actions（齿轮左侧业务动作区，如站内信铃铛） -->
+    <template
+      v-if="$slots['header-actions']"
+      #header-actions
+    >
+      <slot name="header-actions"></slot>
+    </template>
   </top-header>
   <div
     v-if="needLeftNav"
