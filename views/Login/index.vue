@@ -133,6 +133,7 @@ import {
 import CopyrightIcp from '@/framework/components/common/copyrightIcp/index.vue'
 import { checkLoginState } from '@/framework/network/login'
 import { baseURL } from '@/framework/network/request'
+import type { BizError } from '@/framework/network/request'
 import { getLoginExtraLink } from '@/framework/router'
 import { parameterStore } from '@/framework/store/common'
 import { localStorageMethods } from '@/framework/utils/common'
@@ -213,12 +214,12 @@ const handleSubmit = () => {
       .then((res) => {
         afterLogin(res)
       })
-      .catch((err) => {
-        if (err.message === 'AC_PASSWORD_NOT_EXISTED') {
+      .catch((err: BizError) => {
+        if (err.errCode === 'AC_PASSWORD_NOT_EXISTED') {
           passwordResetMode.value = true
           title.value = '首次登录-设置密码'
           captchaType = 'INIT_PASSWORD_CAPTCHA'
-        } else if (err.message === 'AC_PASSWORD_EXPIRED') {
+        } else if (err.errCode === 'AC_PASSWORD_EXPIRED') {
           // 密码已过期，弹出修改密码模态框
           passwordExpiredModalVisible.value = true
           updateCaptchaUrl('PASSWORD_CHANGE_CAPTCHA')

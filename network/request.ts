@@ -63,6 +63,22 @@ const errCode = {
   SUCCESS: 0,
   SESSION_TIME_OUT: 401
 }
+
+/**
+ * 业务错误：message＝人话（给 toast/页面展示用），errCode＝后端 ErrCode 枚举名
+ * （给调用方程序判断用，如登录页 AC_PASSWORD_NOT_EXISTED 翻「首次登录-设置密码」面板）。
+ * 比对请用 errCode（枚举名稳定、代码可读）：不要比 message（话术会改）、
+ * 不要比 status.code 数字（读不懂语义）。
+ */
+export interface BizError extends Error {
+  errCode?: string
+}
+
+const bizError = (message: string, errCode?: string): BizError => {
+  const err: BizError = new Error(message)
+  err.errCode = errCode
+  return err
+}
 const axiosInstance = axios.create({
   // 使用自定义的transformResponse来处理大整数
   transformResponse: [(data) => {
@@ -327,13 +343,14 @@ function request(apiType: ApiType,
           else if (errType === 'warning') message.warning(msg)
           else if (errType === 'error') message.error(msg)
           // 抛错信息给人话；末尾不兜 status.msg——那是错误码枚举名（INK_PARAM 一类），
-          // 给用户看就是漏码；真取不到消息时给带码的人话
-          throw new Error(resp.data.payload.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
+          // 给用户看就是漏码；真取不到消息时给带码的人话。
+          // 枚举名挂 errCode 字段随错抛出，供调用方程序判断（见 BizError 注释）
+          throw bizError(resp.data.payload.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`, resp.data.status.msg)
         } else {
           // showErr=false（调用方自接管提示，如列表页静默取数）：错误照抛，只是不弹全局条。
           // 框架侧非 SUCCESS 封套的 payload 必在（只由 Response(ServiceException) 产出并填 errMsg），
           // 但网关/第三方回的同形封套可能没有 payload ⇒ 可选读，免得 TypeError 顶掉该抛给业务层的文案。
-          throw new Error(resp.data.payload?.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
+          throw bizError(resp.data.payload?.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`, resp.data.status.msg)
         }
       }
     } else if (showSuccess) {
