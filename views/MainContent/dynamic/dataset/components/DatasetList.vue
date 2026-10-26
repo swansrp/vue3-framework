@@ -40,7 +40,7 @@
             >
               <CaretRightOutlined
                 class="group-arrow"
-                :class="{ expanded: !collapsed[row.node.pathKey] }"
+                :class="{ expanded: isExpanded(row.node.pathKey) }"
               />
               <span class="group-name">{{ row.node.name }}</span>
               <span class="group-count">{{ row.node.total }}</span>
@@ -118,7 +118,8 @@ const emit = defineEmits<{
 }>()
 
 const searchText = ref('')
-const collapsed = reactive<Record<string, boolean>>({})
+// 默认全闭合，手动展开的目录记入白名单；搜索时强制全展开，命中条目才可见
+const expanded = reactive<Record<string, boolean>>({})
 
 const UNGROUPED = '未分类'
 
@@ -200,7 +201,7 @@ const rows = computed<Row[]>(() => {
   const walk = (nodes: GroupNode[], depth: number) => {
     nodes.forEach(node => {
       out.push({ kind: 'group', node, depth })
-      if (collapsed[node.pathKey]) return
+      if (!isExpanded(node.pathKey)) return
       walk(node.children, depth + 1)
       node.items.forEach(item => out.push({ kind: 'item', item, depth: depth + 1 }))
     })
@@ -209,8 +210,10 @@ const rows = computed<Row[]>(() => {
   return out
 })
 
+const isExpanded = (pathKey: string) => !!expanded[pathKey] || !!searchText.value.trim()
+
 const toggleGroup = (pathKey: string) => {
-  collapsed[pathKey] = !collapsed[pathKey]
+  expanded[pathKey] = !expanded[pathKey]
 }
 </script>
 

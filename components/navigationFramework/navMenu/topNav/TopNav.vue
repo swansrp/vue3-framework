@@ -147,15 +147,10 @@ const selectNav = (obj: any) => {
   const isFrame = routeStore.routePathIsFrameMap[fullPathForFrame]
   
   if (isFrame) {
-    // 外链菜单：在打开外链前设置导航状态(保持原窗口菜单高亮)
-    // 仅叶子外链需要同步高亮；顶层外链(子系统)新开页签，原页签状态保持不动
-    if (selectedKey.includes('/')) {
-      // 设置 topNav 高亮
-      navigationStore.setActiveTopNav(selectedKey.split('/')[0])
-      // 设置 leftNav 高亮(如果是子菜单)
-      // 查找对应的节点
-      const routePath = fullPathForFrame
-      const node = routeStore.dynamicRouteMap[routePath]
+    // 仅当叶子外链属于当前激活的顶部导航时同步高亮(外链不产生路由变化，需手动点亮)；
+    // 跨顶部导航点外链一律新开页签，不得改写本页导航状态——leftNav 列表由 activeTopNavPath 派生，改写会整列换源
+    if (selectedKey.includes('/') && selectedKey.split('/')[0] === navigationStore.activeTopNavPath) {
+      const node = routeStore.dynamicRouteMap[fullPathForFrame]
       if (node && node.key) {
         navigationStore.setActiveLeftNav(node.key, [])
       }

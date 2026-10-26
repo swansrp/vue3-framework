@@ -216,7 +216,7 @@
           常驻条件每次查询都强制拼入，用户在筛选栏改不掉；多Tab页面按各 Tab 自身的表格配置生效，互不影响。
         </div>
 
-        <!-- 表格列显示配置(勾选=显示; 透视模式下由行维度字段配置取代，隐藏) -->
+        <!-- 表格列显示配置(勾选=显示, 箭头调列序; 透视模式下由行维度字段配置取代，隐藏) -->
         <div
           v-if="tableForm.pivotMode !== '1'"
           class="filter-columns-config"
@@ -242,14 +242,36 @@
               </a-button>
             </a-space>
           </div>
-          <div class="filter-columns-list">
-            <a-checkbox
-              v-for="column in portalConfig?.columns || []"
-              :key="column.property"
-              v-model:checked="column.checked"
+          <div class="filter-columns-list column-order-list">
+            <div
+              v-for="(column, index) in portalConfig?.columns || []"
+              :key="column.id ?? column.property"
+              class="column-order-row"
             >
-              {{ column.displayName }} ({{ column.property }})
-            </a-checkbox>
+              <a-checkbox v-model:checked="column.checked">
+                {{ column.displayName }} ({{ column.property }})
+              </a-checkbox>
+              <a-button
+                type="text"
+                size="small"
+                :disabled="index === 0"
+                @click="moveDisplayColumn(index, -1)"
+              >
+                <template #icon>
+                  <ArrowUpOutlined />
+                </template>
+              </a-button>
+              <a-button
+                type="text"
+                size="small"
+                :disabled="index === (portalConfig?.columns || []).length - 1"
+                @click="moveDisplayColumn(index, 1)"
+              >
+                <template #icon>
+                  <ArrowDownOutlined />
+                </template>
+              </a-button>
+            </div>
           </div>
         </div>
 
@@ -632,6 +654,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { pruneBlankConditions, useConditionModal } from './useConditionModal'
 
 import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
+import { updatePortalColumnOrder } from '@/framework/apis/portal/config'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 
@@ -1002,6 +1025,16 @@ const invertFilterColumns = () => {
   })
 }
 
+// 列顺序调整: 就地重排共享列数组(与父级/其他面板同一引用), 保存时按此顺序落 display_order
+const moveDisplayColumn = (index: number, delta: number) => {
+  const columns = props.portalConfig?.columns
+  if (!columns) return
+  const target = index + delta
+  if (target < 0 || target >= columns.length) return
+  const [item] = columns.splice(index, 1)
+  columns.splice(target, 0, item)
+}
+
 // 切换表格时初始化筛选列勾选与透视行维度/度量编辑状态
 watch(
   () => props.table,
@@ -1152,6 +1185,15 @@ const handleSaveTable = async () => {
       ? JSON.stringify({ andOr: fixedAndOr.value || '0', conditionList: fixedRows.value })
       : FIXED_CONDITION_EMPTY
 
+    // 列顺序: 按面板当前顺序批量落 display_order(全员默认序, 列 id 来自 /config/full 的实体行);
+    // 未调整时写回同值幂等, 与表格配置同批提交, 任一失败都不亮「保存成功」
+    const orderedColumns = props.portalConfig?.columns || []
+    if (orderedColumns.length > 0) {
+      await updatePortalColumnOrder(
+        orderedColumns.map((col: any, index: number) => ({ id: col.id, title: col.displayName, showOrder: index + 1 }))
+      )
+    }
+
     await updatePortalTable(table)
     message.success('保存成功')
     emit('saved')
@@ -1300,6 +1342,24 @@ const handleSaveTable = async () => {
       &.ant-checkbox-wrapper-disabled {
         opacity: 0.6;
         cursor: not-allowed;
+      }
+    }
+  }
+
+  // 非透视模式列序调整: 一行一列, 勾选片占满行宽, ↑↓ 靠右逐行对齐
+  .column-order-list {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 6px;
+
+    .column-order-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .ant-checkbox-wrapper {
+        flex: 1;
+        min-width: 0;
       }
     }
   }

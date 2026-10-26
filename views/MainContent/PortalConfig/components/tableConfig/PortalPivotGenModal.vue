@@ -26,6 +26,9 @@
           <a-radio-button value="cross">
             两字典组合
           </a-radio-button>
+          <a-radio-button value="table">
+            按数据表取值
+          </a-radio-button>
         </a-radio-group>
       </a-form-item>
       <template v-if="genSource === 'indicator'">
@@ -129,6 +132,107 @@
             加载组合预览
           </a-button>
           <span class="gen-cross-tip">每个 A×B 组合生成一列，条件为两个等于条件 AND</span>
+        </a-form-item>
+      </template>
+      <template v-else-if="genSource === 'table'">
+        <a-row :gutter="12">
+          <a-col :span="12">
+            <a-form-item label="条件字段（统计列按该字段的取值分列）">
+              <a-select
+                :value="genTableField"
+                show-search
+                allow-clear
+                :filter-option="filterOption"
+                placeholder="选择字段"
+                :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                @change="(val: any) => handleTableValueFieldChange(val)"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="名称字段（表头名称来源，可选）">
+              <a-select
+                :value="genNameField"
+                show-search
+                allow-clear
+                :filter-option="filterOption"
+                placeholder="选择字段"
+                :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                @change="(val: any) => handleTableLabelFieldChange(val)"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="6">
+            <a-form-item label="数据源（留空=默认）">
+              <a-input
+                v-model:value="genDataSource"
+                placeholder="如 DORIS"
+                @change="() => { genItems = [] }"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="18">
+            <a-form-item label="表名（物理表，支持 库名.表名）">
+              <a-input
+                v-model:value="genTableName"
+                placeholder="如 dwd_xxx 或 dw.dwd_xxx"
+                @change="() => { genItems = []; suggestDictNames() }"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="取值列 value（物理列名）">
+              <a-input
+                v-model:value="genValueColumn"
+                placeholder="默认与条件字段同名，可改"
+                @change="() => { genItems = []; suggestDictNames() }"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="名称列 label（物理列名）">
+              <a-input
+                v-model:value="genLabelColumn"
+                placeholder="默认与名称字段同名，可改"
+                @change="() => { genItems = [] }"
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-form-item>
+          <a-checkbox v-model:checked="genDictRegister">
+            同时登记为动态字典（字典维护中可管理，刷新时自动同步表数据）
+          </a-checkbox>
+        </a-form-item>
+        <template v-if="genDictRegister">
+          <a-row :gutter="12">
+            <a-col :span="12">
+              <a-form-item label="字典编码">
+                <a-input
+                  v-model:value="genDictCodeInput"
+                  placeholder="默认 表名_取值列"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item label="字典名称">
+                <a-input
+                  v-model:value="genDictNameInput"
+                  placeholder="默认 条件字段名+字典"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </template>
+        <a-form-item label=" ">
+          <a-button
+            type="primary"
+            :loading="genLoading"
+            @click="loadTableItems"
+          >
+            加载预览
+          </a-button>
+          <span class="gen-cross-tip">预览即登记后字典的内容，确认生成后透视列与字典维护两边同步出现</span>
         </a-form-item>
       </template>
       <template v-else>
@@ -259,6 +363,8 @@ import { VerticalAlignBottomOutlined, VerticalAlignTopOutlined } from '@ant-desi
 import { message } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
+import { getDictExisted } from '@/framework/apis/dict/bizDictController'
+import { getDynamicDict, saveDynamicDictConfig } from '@/framework/apis/dict/dict'
 import { getIndicatorConfig } from '@/framework/apis/portal'
 import { addPortalPivotColumnList } from '@/framework/apis/portal/table'
 import { collectLeafPathGroups, fetchTreeDict, flattenTreeToParentGroups } from '@/framework/components/common/chart/utils/treeStacked'
@@ -304,8 +410,8 @@ watch(openState, (open) => {
   }
 })
 
-// 生成来源: indicator=复用图表指标, dict=按字典生成, cross=两字典笛卡尔组合
-const genSource = ref<'indicator' | 'dict' | 'cross'>('indicator')
+// 生成来源: indicator=复用图表指标, dict=按字典生成, cross=两字典笛卡尔组合, table=按物理表取值(动态字典入口)
+const genSource = ref<'indicator' | 'dict' | 'cross' | 'table'>('indicator')
 // 指标组树(拉平为 分组名 -> 指标项 列表)
 interface GenIndicatorGroup {
   groupId: string
@@ -329,6 +435,17 @@ const genPivotFieldReset = () => {
   genFieldB.value = undefined
   genDictCodeB.value = undefined
   genDictModeB.value = 'flat'
+  genTableField.value = undefined
+  genNameField.value = undefined
+  genDataSource.value = undefined
+  genTableName.value = undefined
+  genValueColumn.value = undefined
+  genLabelColumn.value = undefined
+  genDictRegister.value = true
+  genDictCodeInput.value = undefined
+  genDictNameInput.value = undefined
+  lastDictCodeSuggest = ''
+  lastDictNameSuggest = ''
 }
 
 // 指标树拍平：递归收集所有组及其指标项(兼容嵌套子组)
@@ -469,6 +586,91 @@ const loadGenItems = async () => {
     }
   } catch (error) {
     console.error('加载字典失败:', error)
+  } finally {
+    genLoading.value = false
+  }
+}
+
+// ==================== 按数据表取值(动态字典入口) ====================
+// 条件字段(生成的列条件挂它) / 名称字段(表头名称来源, 可选)
+const genTableField = ref<string | undefined>(undefined)
+const genNameField = ref<string | undefined>(undefined)
+// 物理表信息：动态字典后端只认物理表名+物理列名
+const genDataSource = ref<string | undefined>(undefined)
+const genTableName = ref<string | undefined>(undefined)
+const genValueColumn = ref<string | undefined>(undefined)
+const genLabelColumn = ref<string | undefined>(undefined)
+// 生成透视列的同时把取值查询登记成动态字典(字典维护可管理, 刷新自动同步)
+const genDictRegister = ref(true)
+const genDictCodeInput = ref<string | undefined>(undefined)
+const genDictNameInput = ref<string | undefined>(undefined)
+// 上次自动建议值：编码/名称仍等于建议值时跟随输入刷新，用户改过则不再覆盖
+let lastDictCodeSuggest = ''
+let lastDictNameSuggest = ''
+
+// 字典编码/名称自动建议：编码=表名尾段_取值列(压成合法标识符)，名称=条件字段显示名+字典
+const suggestDictNames = () => {
+  const tableTail = (genTableName.value || '').trim().split('.').pop() || ''
+  const valueCol = genValueColumn.value?.trim() || ''
+  const codeSuggestion = tableTail && valueCol
+    ? `${tableTail}_${valueCol}`.replace(/[^a-zA-Z0-9_]/g, '_')
+    : undefined
+  if (codeSuggestion && (!genDictCodeInput.value || genDictCodeInput.value === lastDictCodeSuggest)) {
+    genDictCodeInput.value = codeSuggestion
+  }
+  lastDictCodeSuggest = codeSuggestion || lastDictCodeSuggest
+  const field = props.availableFields.find((f) => f.property === genTableField.value)
+  const nameSuggestion = field ? `${field.displayName}字典` : undefined
+  if (nameSuggestion && (!genDictNameInput.value || genDictNameInput.value === lastDictNameSuggest)) {
+    genDictNameInput.value = nameSuggestion
+  }
+  lastDictNameSuggest = nameSuggestion || lastDictNameSuggest
+}
+
+// 切换数据表模式的字段时带出对应物理列名(默认与查询字段同名，可手工修正)
+const handleTableValueFieldChange = (property?: string) => {
+  genTableField.value = property || undefined
+  const field = props.availableFields.find((f) => f.property === property)
+  genValueColumn.value = field?.property || undefined
+  suggestDictNames()
+  genItems.value = []
+}
+const handleTableLabelFieldChange = (property?: string) => {
+  genNameField.value = property || undefined
+  const field = props.availableFields.find((f) => f.property === property)
+  genLabelColumn.value = field?.property || undefined
+  genItems.value = []
+}
+
+// 按数据表加载预览：走动态字典的即时查询通道，预览内容=登记后字典内容
+const loadTableItems = async () => {
+  if (!genTableField.value) {
+    message.warning('请先选择条件字段')
+    return
+  }
+  if (!genTableName.value?.trim() || !genValueColumn.value?.trim() || !genLabelColumn.value?.trim()) {
+    message.warning('请填写表名、取值列与名称列')
+    return
+  }
+  genLoading.value = true
+  try {
+    const res = await getDynamicDict({
+      tableName: genTableName.value.trim(),
+      valueColumn: genValueColumn.value.trim(),
+      labelColumn: genLabelColumn.value.trim(),
+      dataSource: genDataSource.value?.trim() || undefined,
+    })
+    const rows = res?.payload || []
+    genItems.value = rows.map((r: any) => ({
+      value: String(r.value),
+      label: String(r.label ?? '') || String(r.value),
+      checked: true,
+    }))
+    if (genItems.value.length === 0) {
+      message.warning('表中没有可用数据（value/label 列为空的行会被过滤）')
+    }
+  } catch (error) {
+    console.error('按数据表取值失败:', error)
   } finally {
     genLoading.value = false
   }
@@ -626,11 +828,34 @@ const filterOption = (inputValue: string, option: any) => {
 const handleConfirmGenPivot = async () => {
   if (!props.tableId) return
   if (genSource.value === 'dict' && !genPivotField.value) return
+  if (genSource.value === 'table' && !genTableField.value) return
   // 按预览顺序取勾选项(顺序即生成后的 displayOrder)
   const selected = genItems.value.filter((item) => item.checked)
   if (selected.length === 0) {
     message.warning('请至少勾选一项')
     return
+  }
+  // 动态字典登记前置查重：后端 saveConfig 对同 dictCode 配置(含软删记录)是静默覆盖，
+  // 撞上别人的字典会改掉人家配置，先查重阻断；编码重复/名称重复都不放行
+  let registerDict = false
+  if (genSource.value === 'table' && genDictRegister.value) {
+    const dictCode = genDictCodeInput.value?.trim()
+    const dictName = genDictNameInput.value?.trim()
+    if (!dictCode || !dictName) {
+      message.warning('登记为动态字典需填写字典编码与字典名称')
+      return
+    }
+    const codeRes = await getDictExisted({ code: dictCode }, false, false, false)
+    if (codeRes?.payload === '1') {
+      message.warning(`字典编码「${dictCode}」已存在，请换一个编码，或取消勾选「登记为动态字典」`)
+      return
+    }
+    const nameRes = await getDictExisted({ name: dictName }, false, false, false)
+    if (nameRes?.payload === '1') {
+      message.warning(`字典名称「${dictName}」已存在，请换一个名称`)
+      return
+    }
+    registerDict = true
   }
   // 列标识查重：已存在的 itemValue 跳过(树形-多层的小计列另在下方独立补齐)
   const existingValues = new Set(props.existingPivotValues || [])
@@ -650,14 +875,14 @@ const handleConfirmGenPivot = async () => {
       groupPath: string;
     }> = []
     for (const item of toAdd) {
-      // 指标/组合模式：复用自带条件(归一化为 JSON 对象)；字典模式：字段 等于 字典值
+      // 指标/组合模式：复用自带条件(归一化为 JSON 对象)；字典/数据表模式：字段 等于 取值
       let conditionStr: string | null = null
-      if (genSource.value === 'dict') {
+      if (genSource.value === 'dict' || genSource.value === 'table') {
         conditionStr = JSON.stringify({
           andOr: '0',
           conditionList: [
             {
-              property: genPivotField.value,
+              property: genSource.value === 'table' ? genTableField.value : genPivotField.value,
               relation: FILTER_TYPE.EQUAL,
               value: [item.value],
             },
@@ -728,11 +953,29 @@ const handleConfirmGenPivot = async () => {
     }
     if (toInsert.length > 0) {
       await addPortalPivotColumnList(toInsert, false, false, false)
+    }
+    // 动态字典登记：独立于列插入执行(勾选项全部已存在时也补登记，修复上次登记失败后的重试)，
+    // saveConfig 立即跑一次查询写入 sys_biz_dict，注册即出现在字典维护的动态字典列表
+    if (registerDict) {
+      await saveDynamicDictConfig({
+        dictCode: genDictCodeInput.value!.trim(),
+        dictName: genDictNameInput.value!.trim(),
+        tableName: genTableName.value!.trim(),
+        valueColumn: genValueColumn.value!.trim(),
+        labelColumn: genLabelColumn.value!.trim(),
+        dataSource: genDataSource.value?.trim() || undefined,
+      })
+    }
+    if (toInsert.length > 0) {
       message.success(
-        skippedNoCondition > 0
+        (skippedNoCondition > 0
           ? `已生成 ${toInsert.length} 个透视列，跳过 ${skippedNoCondition} 个未配置条件的指标`
-          : `已生成 ${toInsert.length} 个透视列`
+          : `已生成 ${toInsert.length} 个透视列`) + (registerDict ? '，动态字典已登记' : '')
       )
+      openState.value = false
+      emit('generated')
+    } else if (registerDict) {
+      message.info('动态字典已登记；勾选项均已存在对应透视列，未新增')
       openState.value = false
       emit('generated')
     } else if (toAdd.length === 0) {
