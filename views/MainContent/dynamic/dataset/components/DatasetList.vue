@@ -27,67 +27,66 @@
       wrapper-class-name="list-spin"
     >
       <div class="group-container">
-        <template v-if="groupedList.length">
-          <div
-            v-for="group in groupedList"
-            :key="group.name"
-            class="group"
+        <template v-if="rows.length">
+          <template
+            v-for="row in rows"
+            :key="row.kind === 'group' ? `g-${row.node.pathKey}` : `i-${row.item.id}`"
           >
             <div
+              v-if="row.kind === 'group'"
               class="group-header"
-              @click="toggleGroup(group.name)"
+              :style="{ paddingLeft: `${12 + row.depth * 16}px` }"
+              @click="toggleGroup(row.node.pathKey)"
             >
               <CaretRightOutlined
                 class="group-arrow"
-                :class="{ expanded: !collapsed[group.name] }"
+                :class="{ expanded: !collapsed[row.node.pathKey] }"
               />
-              <span class="group-name">{{ group.name }}</span>
-              <span class="group-count">{{ group.items.length }}</span>
+              <span class="group-name">{{ row.node.name }}</span>
+              <span class="group-count">{{ row.node.total }}</span>
             </div>
-            <template v-if="!collapsed[group.name]">
-              <div
-                v-for="item in group.items"
-                :key="item.id"
-                class="dataset-item"
-                :class="{ active: item.id === selectedId }"
-                @click="emit('select', item)"
-              >
-                <div class="item-content">
-                  <div
-                    class="item-title"
-                    :title="item.remark"
-                  >
-                    {{ itemTitle(group.name, item) }}
-                  </div>
-                  <div
-                    class="item-name"
-                    :title="item.datasetName"
-                  >
-                    {{ item.datasetName }}
-                  </div>
-                </div>
-                <a-popconfirm
-                  title="确定删除该Dataset配置吗？"
-                  ok-text="确定"
-                  cancel-text="取消"
-                  placement="right"
-                  @confirm="emit('delete', item)"
+            <div
+              v-else
+              class="dataset-item"
+              :class="{ active: row.item.id === selectedId }"
+              :style="{ paddingLeft: `${12 + row.depth * 16}px` }"
+              @click="emit('select', row.item)"
+            >
+              <div class="item-content">
+                <div
+                  class="item-title"
+                  :title="row.item.remark"
                 >
-                  <a-button
-                    class="item-delete"
-                    type="text"
-                    size="small"
-                    danger
-                    @click.stop
-                  >
-                    <template #icon>
-                      <DeleteOutlined />
-                    </template>
-                  </a-button>
-                </a-popconfirm>
+                  {{ itemTitle(row.item) }}
+                </div>
+                <div
+                  class="item-name"
+                  :title="row.item.datasetName"
+                >
+                  {{ row.item.datasetName }}
+                </div>
               </div>
-            </template>
-          </div>
+              <a-popconfirm
+                title="确定删除该Dataset配置吗？"
+                ok-text="确定"
+                cancel-text="取消"
+                placement="right"
+                @confirm="emit('delete', row.item)"
+              >
+                <a-button
+                  class="item-delete"
+                  type="text"
+                  size="small"
+                  danger
+                  @click.stop
+                >
+                  <template #icon>
+                    <DeleteOutlined />
+                  </template>
+                </a-button>
+              </a-popconfirm>
+            </div>
+          </template>
         </template>
         <a-empty
           v-else-if="!loading"
@@ -123,23 +122,73 @@ const collapsed = reactive<Record<string, boolean>>({})
 
 const UNGROUPED = '未分类'
 
-// 备注约定「分类-描述」，按分隔符前缀分组；无前缀归入"未分类"
-const groupKeyOf = (item: DatasetInfo): string => {
-  const remark = (item.remark || '').trim()
-  const match = remark.match(/^(.+?)[-－—:：]/)
-  const key = match?.[1]?.trim()
-  return key || UNGROUPED
+interface GroupNode {
+  name: string
+  pathKey: string
+  children: GroupNode[]
+  items: DatasetInfo[]
+  total: number
 }
 
-// 列表项标题：去掉分组前缀后的备注，备注为空时回退到名称
-const itemTitle = (groupName: string, item: DatasetInfo): string => {
-  const remark = (item.remark || '').trim()
-  if (!remark) return item.datasetName || ''
-  if (groupName === UNGROUPED) return remark
-  return remark.slice(groupName.length).replace(/^[-－—:：\s]+/, '') || remark
+type Row =
+  | { kind: 'group'; node: GroupNode; depth: number }
+  | { kind: 'item'; item: DatasetInfo; depth: number }
+
+// 备注约定「多级-目录-描述」：每个分隔符都下钻一级目录；
+// 分隔符不足一个（切不出两级）时归入"未分类"
+const segmentsOf = (item: DatasetInfo): string[] =>
+  (item.remark || '').trim().split(/[-－—:：]+/).map(s => s.trim()).filter(Boolean)
+
+// 列表项标题：末级目录段，备注为空时回退到名称
+const itemTitle = (item: DatasetInfo): string => {
+  const segs = segmentsOf(item)
+  if (!segs.length) return item.datasetName || (item.remark || '').trim()
+  return segs[segs.length - 1]
 }
 
-const groupedList = computed(() => {
+const buildTree = (items: DatasetInfo[]): GroupNode[] => {
+  const roots: GroupNode[] = []
+  const ungrouped: DatasetInfo[] = []
+  items.forEach(item => {
+    const segs = segmentsOf(item)
+    if (segs.length <= 1) {
+      ungrouped.push(item)
+      return
+    }
+    let siblings = roots
+    let parentPath = ''
+    let parent: GroupNode | null = null
+    // 末段是条目标题，其余段逐级建目录
+    for (const seg of segs.slice(0, -1)) {
+      let node = siblings.find(c => c.name === seg)
+      if (!node) {
+        node = { name: seg, pathKey: parentPath ? `${parentPath}/${seg}` : seg, children: [], items: [], total: 0 }
+        siblings.push(node)
+      }
+      parent = node
+      parentPath = node.pathKey
+      siblings = node.children
+    }
+    parent!.items.push(item)
+  })
+  const finalize = (node: GroupNode): number => {
+    node.total = node.items.length + node.children.reduce((sum, c) => sum + finalize(c), 0)
+    node.children.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+    return node.total
+  }
+  roots.forEach(finalize)
+  if (ungrouped.length) {
+    roots.push({ name: UNGROUPED, pathKey: '\u0000ungrouped', children: [], items: ungrouped, total: ungrouped.length })
+  }
+  roots.sort((a, b) => {
+    if (a.name === UNGROUPED) return 1
+    if (b.name === UNGROUPED) return -1
+    return a.name.localeCompare(b.name, 'zh-CN')
+  })
+  return roots
+}
+
+const rows = computed<Row[]>(() => {
   const keyword = searchText.value.trim().toLowerCase()
   const filtered = keyword
     ? props.list.filter(item =>
@@ -147,25 +196,21 @@ const groupedList = computed(() => {
       || (item.remark || '').toLowerCase().includes(keyword))
     : props.list
 
-  const groupMap = new Map<string, DatasetInfo[]>()
-  filtered.forEach(item => {
-    const key = groupKeyOf(item)
-    if (!groupMap.has(key)) groupMap.set(key, [])
-    groupMap.get(key)!.push(item)
-  })
-
-  // 分组按名称排序，"未分类"始终垫底
-  return Array.from(groupMap.entries())
-    .sort((a, b) => {
-      if (a[0] === UNGROUPED) return 1
-      if (b[0] === UNGROUPED) return -1
-      return a[0].localeCompare(b[0], 'zh-CN')
+  const out: Row[] = []
+  const walk = (nodes: GroupNode[], depth: number) => {
+    nodes.forEach(node => {
+      out.push({ kind: 'group', node, depth })
+      if (collapsed[node.pathKey]) return
+      walk(node.children, depth + 1)
+      node.items.forEach(item => out.push({ kind: 'item', item, depth: depth + 1 }))
     })
-    .map(([name, items]) => ({ name, items }))
+  }
+  walk(buildTree(filtered), 0)
+  return out
 })
 
-const toggleGroup = (name: string) => {
-  collapsed[name] = !collapsed[name]
+const toggleGroup = (pathKey: string) => {
+  collapsed[pathKey] = !collapsed[pathKey]
 }
 </script>
 
