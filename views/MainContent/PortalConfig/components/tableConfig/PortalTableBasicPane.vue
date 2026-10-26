@@ -216,7 +216,25 @@
           常驻条件每次查询都强制拼入，用户在筛选栏改不掉；多Tab页面按各 Tab 自身的表格配置生效，互不影响。
         </div>
 
-        <!-- 表格列显示配置(勾选=显示, 箭头调列序; 透视模式下由行维度字段配置取代，隐藏) -->
+        <!-- 汇总行(非透视): portal 级「总结栏」总闸; 列级勾选在下方表格列显示配置里, 两层都开才出汇总行 -->
+        <div
+          v-if="tableForm.pivotMode !== '1'"
+          class="filter-columns-config"
+        >
+          <div class="filter-columns-header">
+            <span class="filter-columns-title">汇总行</span>
+            <span class="filter-columns-count">（打开后在下方勾选需汇总的列，对当前筛选的全量数据聚合）</span>
+            <a-switch
+              class="filter-columns-actions"
+              :checked="portalConfig?.summary"
+              checked-value="1"
+              un-checked-value="0"
+              @change="setPortalSummary"
+            />
+          </div>
+        </div>
+
+        <!-- 表格列显示配置(勾选=显示, 箭头调列序, 开关=该列参与汇总; 透视模式下由行维度字段配置取代，隐藏) -->
         <div
           v-if="tableForm.pivotMode !== '1'"
           class="filter-columns-config"
@@ -251,6 +269,14 @@
               <a-checkbox v-model:checked="column.checked">
                 {{ column.displayName }} ({{ column.property }})
               </a-checkbox>
+              <span class="column-summary-label">汇总</span>
+              <a-switch
+                v-model:checked="column.summaryAble"
+                checked-value="1"
+                un-checked-value="0"
+                size="small"
+                class="column-summary-switch"
+              />
               <a-button
                 type="text"
                 size="small"
@@ -654,7 +680,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { pruneBlankConditions, useConditionModal } from './useConditionModal'
 
 import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
-import { updatePortalColumnOrder } from '@/framework/apis/portal/config'
+import { updatePortalColumn, updatePortalColumnOrder, updatePortalConfig } from '@/framework/apis/portal/config'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 
@@ -686,6 +712,9 @@ const reportFileInputRef = ref<HTMLInputElement>()
 
 // 表单编辑对象：指向与 table prop 同一引用，避免模板直接对 prop 写入触发 vue/no-mutating-props
 const tableForm = computed<PortalTableVO>(() => props.table)
+
+// portal 配置编辑对象：同 tableForm 手法，写 summary 走此别名
+const portalConfigForm = computed<any>(() => props.portalConfig)
 
 // ==================== 表格常驻条件 ====================
 // 落库结构同 sys_portal.default_condition: {"andOr":"0","conditionList":[...]}
@@ -985,6 +1014,20 @@ const parsePivotMeasures = (json: string | undefined) => {
   }
 }
 
+// 汇总配置保存基线: portal 级总结栏开关值 + 列级 summaryAble(id -> '1'/'0'), 保存时差量提交
+let summaryBaseline: string | undefined
+let summaryAbleBaseline = new Map<any, string>()
+// 基线只在首次进入时快照一次; 不能拿 summaryAbleBaseline.size === 0 当判据——零列配置下 map 恒空,
+// 每次切表都会重拍基线, 把未保存的总结栏开关洗成"没改过"(保存时不发请求, 改动静默丢失)
+let summaryBaselineSnapped = false
+
+// a-switch 直接改 prop 内字段会触发 vue/no-mutating-props, 收口成函数; checked/checkedValue 同为 '1'/'0' 字符串(布尔与字符串 checkedValue 严格等值比较会失配, 视觉卡死), v 即目标值
+const setPortalSummary = (v: any) => {
+  if (portalConfigForm.value) {
+    portalConfigForm.value.summary = v
+  }
+}
+
 // 初始化筛选列配置
 const initFilterColumnsConfig = () => {
   if (!props.portalConfig?.columns) return
@@ -1002,6 +1045,15 @@ const initFilterColumnsConfig = () => {
       column.checked = true
     }
   })
+
+  // 汇总配置保存基线(仅首次快照): portal 级总结栏与列级汇总都是 portal 作用域, 不随切表重置, 否则未保存的编辑会被洗成基线
+  if (!summaryBaselineSnapped) {
+    summaryBaselineSnapped = true
+    summaryBaseline = props.portalConfig.summary
+    props.portalConfig.columns.forEach((column: any) => {
+      summaryAbleBaseline.set(column.id, column.summaryAble)
+    })
+  }
 }
 
 // 计算已排除的列数量
@@ -1194,6 +1246,20 @@ const handleSaveTable = async () => {
       )
     }
 
+    // 汇总行: portal 级总结栏总闸 + 列级汇总, 与基线差量提交(没动过不发请求); 同批失败不亮「保存成功」
+    if (props.portalConfig) {
+      if (props.portalConfig.summary !== summaryBaseline) {
+        await updatePortalConfig(props.portalConfig, true)
+        summaryBaseline = props.portalConfig.summary
+      }
+      for (const col of orderedColumns) {
+        if ((col.summaryAble || '0') !== (summaryAbleBaseline.get(col.id) || '0')) {
+          await updatePortalColumn(col, true)
+          summaryAbleBaseline.set(col.id, col.summaryAble)
+        }
+      }
+    }
+
     await updatePortalTable(table)
     message.success('保存成功')
     emit('saved')
@@ -1360,6 +1426,17 @@ const handleSaveTable = async () => {
       .ant-checkbox-wrapper {
         flex: 1;
         min-width: 0;
+      }
+
+      .column-summary-label {
+        flex-shrink: 0;
+        margin-left: 4px;
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+
+      .column-summary-switch {
+        flex-shrink: 0;
       }
     }
   }

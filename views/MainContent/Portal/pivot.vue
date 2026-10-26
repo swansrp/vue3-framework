@@ -586,9 +586,9 @@ const filterableLeafKeys = computed(() => {
   return keys
 })
 
-/** 组装请求并查询透视数据(透视列可为空, 空时退化为无条件总计列) */
+/** 组装请求并查询透视数据(透视列可为空, 空时退化为无条件总计列; 行维度可为空, 空时整个过滤集聚成一行总计) */
 const loadData = async () => {
-  if (!portalUrl.value || !groupFields.value.length || !measures.value.length) {
+  if (!portalUrl.value || !measures.value.length) {
     // 参数没齐＝这次不该发（props.condition 的深度 watch 会在配置回来前先触发一次），
     // 更不能把 firstLoadDone 点亮：那会让 Portal 在空数据上挂载、列宽按下限快照后不再更新
     return
@@ -975,6 +975,11 @@ const summaryData = computed(() => {
     // 横向合计已由合计列(TOTAL_COL)承担
     return summary
   }
+  // 无可见行维度: 聚合结果只有一行且本身就是总计, 再叠一行汇总=原值重复;
+  // 且 PortalSummary 的「总计」标签固定占首个数据列的格子, 无维度列时会吃掉第一个度量列的汇总值
+  if (visibleGroupFields.value.length === 0) {
+    return summary
+  }
   // col 模式: 每个 ${pv}__${measure} 列独立汇总(列内同度量同量纲)
   for (const pv of effectivePivotColumns.value) {
     for (const m of measures.value) {
@@ -995,14 +1000,13 @@ const measureKeys = computed<string[]>(() => {
   return effectivePivotColumns.value.flatMap(pv => measures.value.map(m => `${pv.itemValue}__${m.field}`))
 })
 
-/** 动态列必须就绪后才能挂载 Portal(Portal 仅在初始化时读取 customColumns; 透视列可为空=退化为总计列) */
+/** 动态列必须就绪后才能挂载 Portal(Portal 仅在初始化时读取 customColumns; 透视列可为空=退化为总计列, 行维度可为空=单行总计表) */
 const ready = computed(() =>
   !!portalUrl.value &&
   pivotColumnLoaded.value &&
   // 列宽在建列时按显示值实测，而 Portal 只在 initConfig 读一次 customColumns（没有 watch）
   // ⇒ 必须等首轮数据到位再挂载，否则整表按各列下限起步、之后再也更新不了（部门折行就是这么来的）
   !!firstLoadDone.value &&
-  visibleGroupFields.value.length > 0 &&
   measures.value.length > 0
 )
 
@@ -1128,7 +1132,8 @@ const openDrill = (record: any, index: number, key: string) => {
     }
     if (key === TOTAL_COL) {
       // 合计列: 该组该度量跨全部透视列的明细 → 不带透视列条件(②)
-      drillTitle.value = `${buildGroupLabel(rawRow)} · ${measure.label || measure.field} - 全部分类明细`
+      // 无行维度时组标签为空, 过滤后只剩度量名, 标题不出现悬空的 " · " 前缀
+      drillTitle.value = `${[buildGroupLabel(rawRow), measure.label || measure.field].filter(Boolean).join(' · ')} - 全部分类明细`
       drillCondition.value = { conditionList: buildDrillCondition(rawRow, undefined, measure), andOr: '0' }
       drillOpen.value = true
       return
