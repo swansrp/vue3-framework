@@ -7,7 +7,8 @@
       {{ subNavList.title }}
     </template>
     <template v-for="item in subNavList.children">
-      <template v-if="!item.children">
+      <!-- children 为空数组(如仅挂按钮权限被清除后)的节点须按叶子渲染，否则会出空下拉箭头 -->
+      <template v-if="!item.children || item.children.length === 0">
         <a-menu-item
           :id="item.key"
           :key="item.key"
