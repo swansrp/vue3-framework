@@ -216,32 +216,14 @@
           常驻条件每次查询都强制拼入，用户在筛选栏改不掉；多Tab页面按各 Tab 自身的表格配置生效，互不影响。
         </div>
 
-        <!-- 汇总行(非透视): portal 级「总结栏」总闸; 列级勾选在下方表格列显示配置里, 两层都开才出汇总行 -->
-        <div
-          v-if="tableForm.pivotMode !== '1'"
-          class="filter-columns-config"
-        >
-          <div class="filter-columns-header">
-            <span class="filter-columns-title">汇总行</span>
-            <span class="filter-columns-count">（打开后在下方勾选需汇总的列，对当前筛选的全量数据聚合）</span>
-            <a-switch
-              class="filter-columns-actions"
-              :checked="portalConfig?.summary"
-              checked-value="1"
-              un-checked-value="0"
-              @change="setPortalSummary"
-            />
-          </div>
-        </div>
-
-        <!-- 表格列显示配置(勾选=显示, 箭头调列序, 开关=该列参与汇总; 透视模式下由行维度字段配置取代，隐藏) -->
+        <!-- 表格列显示配置(勾选=显示, 拖动芯片调整列序; 透视模式下由行维度字段配置取代，隐藏) -->
         <div
           v-if="tableForm.pivotMode !== '1'"
           class="filter-columns-config"
         >
           <div class="filter-columns-header">
             <span class="filter-columns-title">表格列显示配置</span>
-            <span class="filter-columns-count">（已排除 {{ excludedColumnCount }} 列）</span>
+            <span class="filter-columns-count">（已排除 {{ excludedColumnCount }} 列，拖动芯片可调整列序）</span>
             <a-space
               class="filter-columns-actions"
               :size="4"
@@ -260,43 +242,20 @@
               </a-button>
             </a-space>
           </div>
-          <div class="filter-columns-list column-order-list">
+          <div class="filter-columns-list">
             <div
               v-for="(column, index) in portalConfig?.columns || []"
               :key="column.id ?? column.property"
-              class="column-order-row"
+              class="filter-columns-drag-shell"
+              draggable="true"
+              :class="{ 'filter-columns-item-dragging': dragIndex === index }"
+              @dragstart="onColumnDragStart(index, $event)"
+              @dragover.prevent="onColumnDragOver(index)"
+              @dragend="onColumnDragEnd"
             >
               <a-checkbox v-model:checked="column.checked">
-                {{ column.displayName }} ({{ column.property }})
+                {{ strRemoveLF(column.displayName) }} ({{ column.property }})
               </a-checkbox>
-              <span class="column-summary-label">汇总</span>
-              <a-switch
-                v-model:checked="column.summaryAble"
-                checked-value="1"
-                un-checked-value="0"
-                size="small"
-                class="column-summary-switch"
-              />
-              <a-button
-                type="text"
-                size="small"
-                :disabled="index === 0"
-                @click="moveDisplayColumn(index, -1)"
-              >
-                <template #icon>
-                  <ArrowUpOutlined />
-                </template>
-              </a-button>
-              <a-button
-                type="text"
-                size="small"
-                :disabled="index === (portalConfig?.columns || []).length - 1"
-                @click="moveDisplayColumn(index, 1)"
-              >
-                <template #icon>
-                  <ArrowDownOutlined />
-                </template>
-              </a-button>
             </div>
           </div>
         </div>
@@ -308,30 +267,43 @@
         >
           <div class="filter-columns-header">
             <span class="filter-columns-title">行维度字段配置</span>
-            <span class="filter-columns-count">（已勾选 {{ pivotGroupFields.length }} 个字段）</span>
+            <span class="filter-columns-count">（已勾选 {{ pivotGroupFields.length }} 个字段，拖动已勾选芯片可调整分组层级）</span>
           </div>
           <div class="filter-columns-list">
             <a-checkbox-group v-model:value="pivotGroupFields">
-              <a-checkbox
-                v-for="field in availableFields"
+              <div
+                v-for="field in orderedPivotGroupChips"
                 :key="field.property"
-                :value="field.property"
+                class="filter-columns-drag-shell"
+                :draggable="pivotGroupFields.includes(field.property)"
+                :class="{ 'filter-columns-item-dragging': groupDragIndex === pivotGroupFields.indexOf(field.property) }"
+                @dragstart="onGroupChipDragStart(field.property, $event)"
+                @dragover="onGroupChipDragOver(field.property, $event)"
+                @dragend="onGroupFieldDragEnd"
               >
-                {{ field.displayName }} ({{ field.property }})
-              </a-checkbox>
+                <a-checkbox :value="field.property">
+                  {{ strRemoveLF(field.displayName) }} ({{ field.property }})
+                </a-checkbox>
+              </div>
             </a-checkbox-group>
           </div>
-          <!-- 行维度顺序调整(决定 group by 层级) -->
+          <!-- 行维度顺序调整(决定 group by 层级, 拖动行调整顺序) -->
           <div
             v-if="pivotGroupFields.length > 0"
             class="pivot-group-order"
           >
-            <span class="pivot-group-order-title">行维度顺序（自上而下的分组层级，也是排序优先级）：</span>
+            <span class="pivot-group-order-title">行维度顺序（自上而下的分组层级，也是排序优先级，拖动行可调整）：</span>
             <div
               v-for="(fieldProp, index) in pivotGroupFields"
               :key="fieldProp"
               class="pivot-group-order-item"
+              :class="{ 'pivot-group-order-item-dragging': groupDragIndex === index }"
+              draggable="true"
+              @dragstart="onGroupFieldDragStart(index, $event)"
+              @dragover.prevent="onGroupFieldDragOver(index)"
+              @dragend="onGroupFieldDragEnd"
             >
+              <HolderOutlined class="pivot-group-order-handle" />
               <span class="measure-index">{{ index + 1 }}</span>
               <!-- 字段名靠左: 低维度在左, 右侧控件列固定顺序, 有无排序均对齐 -->
               <span class="pivot-group-order-name">{{ pivotGroupFieldDisplayName(fieldProp) }}</span>
@@ -367,26 +339,6 @@
               </a-select>
               <!-- 排序优先级占位固定宽度: 无排序的行保持对齐 -->
               <span class="pivot-sort-priority">{{ pivotGroupSortPriority[fieldProp] || '—' }}</span>
-              <a-button
-                type="text"
-                size="small"
-                :disabled="index === 0"
-                @click="movePivotGroupField(index, -1)"
-              >
-                <template #icon>
-                  <ArrowUpOutlined />
-                </template>
-              </a-button>
-              <a-button
-                type="text"
-                size="small"
-                :disabled="index === pivotGroupFields.length - 1"
-                @click="movePivotGroupField(index, 1)"
-              >
-                <template #icon>
-                  <ArrowDownOutlined />
-                </template>
-              </a-button>
             </div>
           </div>
         </div>
@@ -418,13 +370,22 @@
               v-for="(measure, index) in pivotMeasureRows"
               :key="index"
               class="pivot-measure-row"
+              :class="{ 'pivot-measure-row-dragging': measureDragIndex === index }"
+              @dragover.prevent="onMeasureDragOver(index)"
+              @dragend="onMeasureDragEnd"
             >
+              <!-- 只有手柄可发起拖拽: 整行 draggable 会吃掉行内输入框的文本拖选 -->
+              <HolderOutlined
+                class="pivot-measure-row-handle"
+                draggable="true"
+                @dragstart="onMeasureDragStart(index, $event)"
+              />
               <span class="measure-index">{{ index + 1 }}</span>
               <!-- ratio(比率加权): field 仅作输出键, 取数走分子/分母两列, 各自聚合后相除 -->
               <template v-if="measure.agg === 'ratio'">
                 <a-select
                   v-model:value="measure.numerator"
-                  :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                  :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
                   placeholder="分子字段"
                   show-search
                   :filter-option="filterOption"
@@ -437,7 +398,7 @@
                 >/</span>
                 <a-select
                   v-model:value="measure.denominator"
-                  :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                  :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
                   placeholder="分母字段"
                   show-search
                   :filter-option="filterOption"
@@ -448,7 +409,7 @@
               <a-select
                 v-else
                 v-model:value="measure.field"
-                :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
                 placeholder="聚合字段"
                 show-search
                 :filter-option="filterOption"
@@ -557,65 +518,57 @@
               >
                 本表格作为一个 Tab 页
               </a-checkbox>
-              <a-input
-                v-if="tabSelfEnabled"
-                v-model:value="tabSelfLabel"
-                :placeholder="tableForm.tableCode || '本表格 Tab 名称'"
-                style="width: 220px"
-              />
             </div>
             <div class="tab-member-rows">
               <a-empty
-                v-if="tabMemberRows.length === 0"
+                v-if="tabOrderedSlots.length === 0"
                 description="暂无 Tab 成员, 仅本表格单页展示"
               />
               <div
-                v-for="(member, index) in tabMemberRows"
-                :key="index"
+                v-for="(row, index) in tabOrderedSlots"
+                :key="row.key"
                 class="pivot-measure-row tab-member-row"
+                :class="{ 'pivot-measure-row-dragging': tabDragIndex === index }"
+                @dragover.prevent="onTabDragOver(index)"
+                @dragend="onTabDragEnd"
               >
-                <span class="measure-index">{{ index + (tabSelfEnabled ? 2 : 1) }}</span>
-                <a-select
-                  v-model:value="member.tableId"
-                  :options="tabMemberOptions(index)"
-                  placeholder="选择成员表格"
-                  show-search
-                  :filter-option="filterOption"
-                  style="width: 300px"
+                <HolderOutlined
+                  class="pivot-measure-row-handle"
+                  draggable="true"
+                  @dragstart="onTabDragStart(index, $event)"
                 />
-                <a-input
-                  v-model:value="member.label"
-                  placeholder="Tab 名称(留空用表格编码)"
-                  style="width: 200px"
-                />
-                <a-button
-                  type="text"
-                  size="small"
-                  :disabled="index === 0"
-                  @click="moveTabMemberRow(index, -1)"
-                >
-                  <template #icon>
-                    <ArrowUpOutlined />
-                  </template>
-                </a-button>
-                <a-button
-                  type="text"
-                  size="small"
-                  :disabled="index === tabMemberRows.length - 1"
-                  @click="moveTabMemberRow(index, 1)"
-                >
-                  <template #icon>
-                    <ArrowDownOutlined />
-                  </template>
-                </a-button>
-                <a-button
-                  type="link"
-                  danger
-                  size="small"
-                  @click="tabMemberRows.splice(index, 1)"
-                >
-                  删除
-                </a-button>
+                <span class="measure-index">{{ index + 1 }}</span>
+                <template v-if="row.self">
+                  <span class="tab-self-chip">本表格（页面宿主）</span>
+                  <a-input
+                    v-model:value="tabSelfLabel"
+                    placeholder="Tab 名称(留空用表格编码)"
+                    style="width: 200px"
+                  />
+                </template>
+                <template v-else>
+                  <a-select
+                    v-model:value="tabMemberRows[row.memberIndex].tableId"
+                    :options="tabMemberOptions(row.memberIndex)"
+                    placeholder="选择成员表格"
+                    show-search
+                    :filter-option="filterOption"
+                    style="width: 300px"
+                  />
+                  <a-input
+                    v-model:value="tabMemberRows[row.memberIndex].label"
+                    placeholder="Tab 名称(留空用表格编码)"
+                    style="width: 200px"
+                  />
+                  <a-button
+                    type="link"
+                    danger
+                    size="small"
+                    @click="tabMemberRows.splice(row.memberIndex, 1)"
+                  >
+                    删除
+                  </a-button>
+                </template>
               </div>
             </div>
           </div>
@@ -666,10 +619,9 @@
 
 <script setup lang="ts">
 import {
-  ArrowDownOutlined,
-  ArrowUpOutlined,
   DownloadOutlined,
   EditOutlined,
+  HolderOutlined,
   MessageFilled,
   PlusOutlined,
   UploadOutlined,
@@ -680,9 +632,10 @@ import { computed, reactive, ref, watch } from 'vue'
 import { pruneBlankConditions, useConditionModal } from './useConditionModal'
 
 import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
-import { updatePortalColumn, updatePortalColumnOrder, updatePortalConfig } from '@/framework/apis/portal/config'
+import { updatePortalColumnOrder } from '@/framework/apis/portal/config'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
+import { strRemoveLF } from '@/framework/utils/common'
 
 
 const props = defineProps<{
@@ -712,9 +665,6 @@ const reportFileInputRef = ref<HTMLInputElement>()
 
 // 表单编辑对象：指向与 table prop 同一引用，避免模板直接对 prop 写入触发 vue/no-mutating-props
 const tableForm = computed<PortalTableVO>(() => props.table)
-
-// portal 配置编辑对象：同 tableForm 手法，写 summary 走此别名
-const portalConfigForm = computed<any>(() => props.portalConfig)
 
 // ==================== 表格常驻条件 ====================
 // 落库结构同 sys_portal.default_condition: {"andOr":"0","conditionList":[...]}
@@ -763,16 +713,74 @@ const pivotGroupFields = ref<string[]>([])
 // 行维度字段显示名
 const pivotGroupFieldDisplayName = (property: string) => {
   const field = props.availableFields.find((f) => f.property === property)
-  return field ? `${field.displayName} (${field.property})` : property
+  return field ? `${strRemoveLF(field.displayName)} (${field.property})` : property
 }
 
-// 调整行维度字段顺序(交换相邻项)
-const movePivotGroupField = (index: number, delta: number) => {
-  const target = index + delta
-  if (target < 0 || target >= pivotGroupFields.value.length) return
-  const arr = pivotGroupFields.value.slice()
-  ;[arr[index], arr[target]] = [arr[target], arr[index]]
-  pivotGroupFields.value = arr
+// 字段中文名(不带英文名后缀): 度量未填显示名时的回退显示
+const fieldChineseName = (property: string) =>
+  strRemoveLF(props.availableFields.find((f) => f.property === property)?.displayName || property)
+
+// 行维度芯片渲染顺序: 已勾选按分组层级在前, 未勾选按字段清单顺序排后(层级顺序即芯片顺序, 两处拖拽面共享同一数组)
+const orderedPivotGroupChips = computed(() => {
+  const checked = pivotGroupFields.value.flatMap((p) => {
+    const f = props.availableFields.find((item) => item.property === p)
+    return f ? [f] : []
+  })
+  const checkedProps = new Set(pivotGroupFields.value)
+  const unchecked = props.availableFields.filter((f) => !checkedProps.has(f.property))
+  return [...checked, ...unchecked]
+})
+
+// 行维度顺序调整: 拖动时就地重排勾选数组, 保存时按此顺序序列化 groupByFields(顺序即分组层级/排序优先级)
+const groupDragIndex = ref<number | null>(null)
+const onGroupFieldDragStart = (index: number, e: DragEvent) => {
+  groupDragIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+// 拖过某行/某枚芯片即让位(实时预览最终顺序), 松手时数组已是目标顺序, 无需单独的 drop 处理
+const onGroupFieldDragOver = (index: number) => {
+  const from = groupDragIndex.value
+  if (from === null || from === index || index < 0) return
+  const [item] = pivotGroupFields.value.splice(from, 1)
+  pivotGroupFields.value.splice(index, 0, item)
+  groupDragIndex.value = index
+}
+const onGroupFieldDragEnd = () => {
+  groupDragIndex.value = null
+}
+// 芯片面入口: 勾选状态由位置转属性; 未勾选芯片不是层级槽位, 不放行 drop 也不让位
+const onGroupChipDragStart = (property: string, e: DragEvent) => {
+  onGroupFieldDragStart(pivotGroupFields.value.indexOf(property), e)
+}
+const onGroupChipDragOver = (property: string, e: DragEvent) => {
+  const to = pivotGroupFields.value.indexOf(property)
+  if (to < 0) return
+  e.preventDefault()
+  onGroupFieldDragOver(to)
+}
+
+// 聚合字段行拖拽排序: 行序即度量输出顺序(多度量列头顺序/row 模式熔接行序)
+const measureDragIndex = ref<number | null>(null)
+const onMeasureDragStart = (index: number, e: DragEvent) => {
+  measureDragIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+// 拖过某行即让位(实时预览最终顺序), 松手无需单独 drop 处理
+const onMeasureDragOver = (index: number) => {
+  const from = measureDragIndex.value
+  if (from === null || from === index || index < 0) return
+  const [item] = pivotMeasureRows.value.splice(from, 1)
+  pivotMeasureRows.value.splice(index, 0, item)
+  measureDragIndex.value = index
+}
+const onMeasureDragEnd = () => {
+  measureDragIndex.value = null
 }
 // 隐藏的行维度字段(仍参与 group by，仅不在表格中显示，常用于行粒度细化/筛选目标)
 const pivotGroupHiddenFields = ref<string[]>([])
@@ -863,7 +871,7 @@ const openDescEditor = (index: number) => {
   descModal.index = index
   descModal.original = measure.desc || ''
   descModal.draft = descModal.original
-  descModal.label = measure.label || measure.field
+  descModal.label = measure.label || fieldChineseName(measure.field)
   descModal.open = true
 }
 
@@ -900,7 +908,7 @@ const sortType = ref<number>(0)
  */
 const sortFieldOptions = computed(() => {
   const displayNameOf = (property: string) =>
-    props.availableFields.find((f) => f.property === property)?.displayName || property
+    strRemoveLF(props.availableFields.find((f) => f.property === property)?.displayName || property)
   if (tableForm.value.pivotMode === '1') {
     return [
       {
@@ -915,7 +923,7 @@ const sortFieldOptions = computed(() => {
       }
     ]
   }
-  return props.availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))
+  return props.availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))
 })
 
 /** 透视模式下当前可排序的字段集(行维度 + 度量), 用于拦掉切模式后失效的残留选择 */
@@ -940,24 +948,68 @@ const parseDefaultSort = (json: string | undefined) => {
 }
 
 // ==================== Tab 成员配置(多Tab页面) ====================
-// 本表格自身也作为一个 tab(默认勾选, 序列化时为 tabItems 首项)
+// 本表格自身也作为一个 tab(默认勾选, 与成员在同一序列参与拖拽排序)
 const tabSelfEnabled = ref(true)
 // 本表格的 tab 名称(留空用表格编码)
 const tabSelfLabel = ref('')
-// Tab 成员编辑行(保存时追加在自身之后序列化到 table.tabItems)
+// Tab 成员编辑行(保存时按合并序列的当前顺序写入 table.tabItems)
 const tabMemberRows = ref<Array<{ tableId: number | undefined; label: string }>>([])
 
 const addTabMemberRow = () => {
   tabMemberRows.value.push({ tableId: undefined, label: '' })
 }
 
-// 调整成员顺序(交换相邻项)
-const moveTabMemberRow = (index: number, delta: number) => {
-  const target = index + delta
-  if (target < 0 || target >= tabMemberRows.value.length) return
-  const arr = tabMemberRows.value.slice()
-  ;[arr[index], arr[target]] = [arr[target], arr[index]]
-  tabMemberRows.value = arr
+// Tab 页拖拽排序: 宿主与成员在同一序列里调序(行序即 tab 页顺序, 宿主不再固定第 1 页)
+const tabDragIndex = ref<number | null>(null)
+// 宿主落位 = 它前面有几个成员(0 即第 1 页); 删成员时相对位置自然保持
+const tabSelfPosition = ref(0)
+// 合并序列展开/拼回时识别宿主的占位标记
+const TAB_SELF_MARKER = { __tabSelf: true } as const
+
+// 合并视图: 宿主按 tabSelfPosition 插进成员序列, 未勾选宿主时仅成员
+const tabOrderedSlots = computed<Array<{ key: string; self: boolean; memberIndex: number }>>(() => {
+  const slots: Array<{ key: string; self: boolean; memberIndex: number }> = []
+  const selfPos = tabSelfEnabled.value
+    ? Math.max(0, Math.min(tabSelfPosition.value, tabMemberRows.value.length))
+    : -1
+  let placed = false
+  tabMemberRows.value.forEach((_, m) => {
+    if (!placed && m === selfPos) {
+      slots.push({ key: 'self', self: true, memberIndex: -1 })
+      placed = true
+    }
+    slots.push({ key: `m${m}`, self: false, memberIndex: m })
+  })
+  if (!placed && selfPos >= 0) {
+    slots.push({ key: 'self', self: true, memberIndex: -1 })
+  }
+  return slots
+})
+
+const onTabDragStart = (index: number, e: DragEvent) => {
+  tabDragIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+// 拖过某行即让位(实时预览最终顺序): 展开成条目序列 splice 后拼回宿主位置与成员顺序
+const onTabDragOver = (index: number) => {
+  const from = tabDragIndex.value
+  if (from === null || from === index || index < 0) return
+  const items: Array<typeof TAB_SELF_MARKER | { tableId: number | undefined; label: string }> =
+    tabOrderedSlots.value.map((s) => (s.self ? TAB_SELF_MARKER : tabMemberRows.value[s.memberIndex]))
+  const [moved] = items.splice(from, 1)
+  items.splice(index, 0, moved)
+  const selfIdx = items.indexOf(TAB_SELF_MARKER)
+  if (selfIdx >= 0) {
+    tabSelfPosition.value = selfIdx
+  }
+  tabMemberRows.value = items.filter((it) => it !== TAB_SELF_MARKER) as Array<{ tableId: number | undefined; label: string }>
+  tabDragIndex.value = index
+}
+const onTabDragEnd = () => {
+  tabDragIndex.value = null
 }
 
 // 成员候选: 同底表下其它表格, 且未被其它行选用(避免重复 tab)
@@ -973,24 +1025,28 @@ const tabMemberOptions = (currentIndex: number) => {
     .map((t) => ({ label: `${t.tableCode} (ID:${t.id})`, value: t.id as number }))
 }
 
-// 解析 tabItems JSON 到编辑状态(首项为自身时还原勾选与名称)
+// 解析 tabItems JSON 到编辑状态(按 tableId 识别宿主, 记下它在序列中的落位)
 const parseTabItems = (json: string | undefined) => {
   tabSelfEnabled.value = false
   tabSelfLabel.value = ''
   tabMemberRows.value = []
+  tabSelfPosition.value = 0
   if (!json) return
   try {
     const parsed = JSON.parse(json)
     if (!Array.isArray(parsed)) return
+    let validIdx = 0
     parsed.forEach((it: any) => {
       const tableId = Number(it?.tableId)
       if (!Number.isFinite(tableId)) return
       if (tableId === props.table.id) {
         tabSelfEnabled.value = true
         tabSelfLabel.value = it?.label || ''
+        tabSelfPosition.value = validIdx
       } else {
         tabMemberRows.value.push({ tableId, label: it?.label || '' })
       }
+      validIdx++
     })
   } catch (e) {
     console.warn('解析 tabItems 失败:', e)
@@ -1014,20 +1070,6 @@ const parsePivotMeasures = (json: string | undefined) => {
   }
 }
 
-// 汇总配置保存基线: portal 级总结栏开关值 + 列级 summaryAble(id -> '1'/'0'), 保存时差量提交
-let summaryBaseline: string | undefined
-let summaryAbleBaseline = new Map<any, string>()
-// 基线只在首次进入时快照一次; 不能拿 summaryAbleBaseline.size === 0 当判据——零列配置下 map 恒空,
-// 每次切表都会重拍基线, 把未保存的总结栏开关洗成"没改过"(保存时不发请求, 改动静默丢失)
-let summaryBaselineSnapped = false
-
-// a-switch 直接改 prop 内字段会触发 vue/no-mutating-props, 收口成函数; checked/checkedValue 同为 '1'/'0' 字符串(布尔与字符串 checkedValue 严格等值比较会失配, 视觉卡死), v 即目标值
-const setPortalSummary = (v: any) => {
-  if (portalConfigForm.value) {
-    portalConfigForm.value.summary = v
-  }
-}
-
 // 初始化筛选列配置
 const initFilterColumnsConfig = () => {
   if (!props.portalConfig?.columns) return
@@ -1045,15 +1087,6 @@ const initFilterColumnsConfig = () => {
       column.checked = true
     }
   })
-
-  // 汇总配置保存基线(仅首次快照): portal 级总结栏与列级汇总都是 portal 作用域, 不随切表重置, 否则未保存的编辑会被洗成基线
-  if (!summaryBaselineSnapped) {
-    summaryBaselineSnapped = true
-    summaryBaseline = props.portalConfig.summary
-    props.portalConfig.columns.forEach((column: any) => {
-      summaryAbleBaseline.set(column.id, column.summaryAble)
-    })
-  }
 }
 
 // 计算已排除的列数量
@@ -1077,14 +1110,26 @@ const invertFilterColumns = () => {
   })
 }
 
-// 列顺序调整: 就地重排共享列数组(与父级/其他面板同一引用), 保存时按此顺序落 display_order
-const moveDisplayColumn = (index: number, delta: number) => {
+// 列顺序调整: 拖动时就地重排共享列数组(与父级/其他面板同一引用), 保存时按此顺序落 display_order
+const dragIndex = ref<number | null>(null)
+const onColumnDragStart = (index: number, e: DragEvent) => {
+  dragIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+// 拖过某行即让位(实时预览最终顺序), 松手时数组已是目标顺序, 无需单独的 drop 处理
+const onColumnDragOver = (index: number) => {
+  const from = dragIndex.value
   const columns = props.portalConfig?.columns
-  if (!columns) return
-  const target = index + delta
-  if (target < 0 || target >= columns.length) return
-  const [item] = columns.splice(index, 1)
-  columns.splice(target, 0, item)
+  if (from === null || from === index || !columns) return
+  const [item] = columns.splice(from, 1)
+  columns.splice(index, 0, item)
+  dragIndex.value = index
+}
+const onColumnDragEnd = () => {
+  dragIndex.value = null
 }
 
 // 切换表格时初始化筛选列勾选与透视行维度/度量编辑状态
@@ -1218,17 +1263,22 @@ const handleSaveTable = async () => {
       pivotMeasureRows.value = validMeasures
     }
 
-    // Tab 成员: 自身(勾选时为首项) + 成员行, 数组序即 tab 顺序; 全空则回退单表页面
+    // Tab 成员: 按合并序列(拖拽后的显示顺序)落库, 宿主按 tableId 识别、可落在任意位置;
+    // 全空则回退单表页面
     // 清空必须显式写 '[]'：update 接口非 strict 模式跳过 null/undefined，删掉的成员会原样留在库里
     const tabItemsPayload: Array<{ tableId: number; label?: string }> = []
-    if (tabSelfEnabled.value && table.id != null) {
-      tabItemsPayload.push({ tableId: table.id, ...(tabSelfLabel.value ? { label: tabSelfLabel.value } : {}) })
-    }
-    tabMemberRows.value
-      .filter((r) => r.tableId != null)
-      .forEach((r) => {
-        tabItemsPayload.push({ tableId: r.tableId as number, ...(r.label ? { label: r.label } : {}) })
-      })
+    tabOrderedSlots.value.forEach((slot) => {
+      if (slot.self) {
+        if (table.id != null) {
+          tabItemsPayload.push({ tableId: table.id, ...(tabSelfLabel.value ? { label: tabSelfLabel.value } : {}) })
+        }
+      } else {
+        const r = tabMemberRows.value[slot.memberIndex]
+        if (r?.tableId != null) {
+          tabItemsPayload.push({ tableId: r.tableId as number, ...(r.label ? { label: r.label } : {}) })
+        }
+      }
+    })
     table.tabItems = tabItemsPayload.length > 0 ? JSON.stringify(tabItemsPayload) : '[]'
 
     // 常驻条件: 无配置也要显式写空条件树, 否则非 strict update 跳过 null 清不掉旧值
@@ -1244,20 +1294,6 @@ const handleSaveTable = async () => {
       await updatePortalColumnOrder(
         orderedColumns.map((col: any, index: number) => ({ id: col.id, title: col.displayName, showOrder: index + 1 }))
       )
-    }
-
-    // 汇总行: portal 级总结栏总闸 + 列级汇总, 与基线差量提交(没动过不发请求); 同批失败不亮「保存成功」
-    if (props.portalConfig) {
-      if (props.portalConfig.summary !== summaryBaseline) {
-        await updatePortalConfig(props.portalConfig, true)
-        summaryBaseline = props.portalConfig.summary
-      }
-      for (const col of orderedColumns) {
-        if ((col.summaryAble || '0') !== (summaryAbleBaseline.get(col.id) || '0')) {
-          await updatePortalColumn(col, true)
-          summaryAbleBaseline.set(col.id, col.summaryAble)
-        }
-      }
     }
 
     await updatePortalTable(table)
@@ -1412,32 +1448,18 @@ const handleSaveTable = async () => {
     }
   }
 
-  // 非透视模式列序调整: 一行一列, 勾选片占满行宽, ↑↓ 靠右逐行对齐
-  .column-order-list {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    gap: 6px;
+  // 拖拽壳: draggable 不能挂在 a-checkbox 根元素上(它是 label, Chromium 不从 checkbox label 发起原生拖拽),
+  // 壳紧贴芯片不添视觉; user-select 防 mousedown 起文本选择劫持拖拽
+  .filter-columns-drag-shell {
+    display: inline-flex;
+    user-select: none;
 
-    .column-order-row {
-      display: flex;
-      align-items: center;
-      gap: 4px;
+    &[draggable='true'] {
+      cursor: grab;
+    }
 
-      .ant-checkbox-wrapper {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .column-summary-label {
-        flex-shrink: 0;
-        margin-left: 4px;
-        font-size: 12px;
-        color: var(--text-secondary);
-      }
-
-      .column-summary-switch {
-        flex-shrink: 0;
-      }
+    &.filter-columns-item-dragging {
+      opacity: 0.6;
     }
   }
 }
@@ -1460,6 +1482,16 @@ const handleSaveTable = async () => {
     align-items: center;
     gap: 10px;
 
+    .pivot-group-order-handle {
+      flex-shrink: 0;
+      color: var(--text-tertiary);
+      cursor: grab;
+    }
+
+    &.pivot-group-order-item-dragging {
+      opacity: 0.6;
+    }
+
     .pivot-group-order-name {
       flex: 1;
       min-width: 0;
@@ -1468,7 +1500,7 @@ const handleSaveTable = async () => {
       white-space: nowrap;
     }
 
-    // 排序优先级固定占位: 无排序的行显示 "—", 保证 ↑↓ 按钮逐行对齐
+    // 排序优先级固定占位: 无排序的行显示 "—", 保证行间控件列对齐
     .pivot-sort-priority {
       display: inline-flex;
       align-items: center;
@@ -1493,6 +1525,16 @@ const handleSaveTable = async () => {
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
+
+    .pivot-measure-row-handle {
+      flex-shrink: 0;
+      color: var(--text-tertiary);
+      cursor: grab;
+    }
+
+    &.pivot-measure-row-dragging {
+      opacity: 0.6;
+    }
   }
 
   // 注释＋删除作为行尾操作区整体贴右: auto 挂在两者中靠前的注释上, 中间不留拉伸空隙
@@ -1525,6 +1567,19 @@ const handleSaveTable = async () => {
     display: flex;
     align-items: center;
     gap: 12px;
+  }
+
+  // 宿主行占位芯片: 与成员行的表格下拉(300px)同 footprint, 不可编辑仅标识
+  .tab-self-chip {
+    display: inline-flex;
+    align-items: center;
+    width: 300px;
+    height: 32px;
+    padding: 0 11px;
+    border: 1px solid var(--border-subtle, #d9d9d9);
+    border-radius: 4px;
+    background: var(--bg-hover, #f5f5f5);
+    color: var(--text-secondary, #666);
   }
 
   .tab-member-row {

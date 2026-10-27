@@ -805,7 +805,7 @@ import {
   TableConfigType,
   UpdateOrderType
 } from '@/framework/components/common/Portal/type'
-import { parse } from '@/framework/components/common/Portal/utils'
+import { headerColumnWidth, parse } from '@/framework/components/common/Portal/utils'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import bus, { PORTAL_RESIZE } from '@/framework/mitt'
 import { dictStore, useTreeStore } from '@/framework/store/common'
@@ -2415,11 +2415,6 @@ const initConfig = async () => {
       column.dataIndex = layout.property
       column.dbField = layout.dbField
       column.key = layout.property
-      if (layout.width !== 0) {
-        column.width = layout.width || 140
-      } else {
-        column.minWidth = 140
-      }
       column.fixed = layout.fixed === '1'
       column.fieldType = layout.fieldType
       column.referenceDict = layout.reference || layout.entity
@@ -2431,6 +2426,13 @@ const initConfig = async () => {
         advancedCondition.columnArray.push(column)
       }
       column.sorter = layout.sortAble === '1' && !config.plain
+      // 列宽 = 配置宽度(缺省 140) 与 表头腿(标题按 \n 拆行取最宽行 + 排序/列搜索图标带) 取大;
+      // 表头腿建列时算足——空表不走 parse 运行期撑宽, 不算则空表表头没人撑; width=0 表示弹性列, 只落 minWidth
+      if (layout.width !== 0) {
+        column.width = Math.max(layout.width || 140, headerColumnWidth(column))
+      } else {
+        column.minWidth = Math.max(140, headerColumnWidth(column))
+      }
       if (layout.summaryAble === '1') {
         summaryColumns.push(layout.property)
         column.summary = true

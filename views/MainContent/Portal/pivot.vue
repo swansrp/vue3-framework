@@ -20,9 +20,9 @@ import { ConditionListType } from '@/framework/components/common/AdvancedSearch/
 import { AUTO_UUID_ROW_KEY, PIVOT_SUBTOTAL_PREFIX } from '@/framework/components/common/Portal/constant'
 import PortalColumnCondition from '@/framework/components/common/Portal/table/PortalColumnCondition.vue'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
-import { getTextWidth } from '@/framework/components/common/Portal/utils'
+import { getTextWidth, HEADER_ICON_PAD_FILTER, HEADER_ICON_PAD_SORT } from '@/framework/components/common/Portal/utils'
 import { dictStore, useTreeStore } from '@/framework/store/common'
-import { resolveConditionVariables } from '@/framework/utils/common'
+import { resolveConditionVariables, strRemoveLF } from '@/framework/utils/common'
 import { formatMoney } from '@/framework/utils/formatter'
 import { columnToken, measureToken, pivotToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN, RESOURCE_TYPE_PORTAL_PIVOT } from '@/framework/utils/portalColumnPerm'
 
@@ -95,6 +95,18 @@ const measures = computed<PivotMeasureVO[]>(() => {
     return []
   }
 })
+
+/** 度量显示名: 配置的 label 优先, 未填回退列元数据的中文 displayName, 最后才是英文字段名 */
+const measureTitle = (field: string, label?: string): string =>
+  label || columnMetaMap.value[field]?.displayName || field
+
+/** 表头标题拆行: 真实换行与字面 \n 都按换行拆(与 Portal 普通表头、getTextWidth 列宽测量同语义) */
+const headerTitleLines = (title: unknown): string[] =>
+  title == null ? [] : String(title).split(/\n|\\n/g)
+
+/** 单行形态度量名: 表头以外的文本面(单元格值/钻取标题)不容换行, 字面与真实换行都拆掉 */
+const measureSingleLine = (field: string, label?: string): string =>
+  strRemoveLF(measureTitle(field, label))
 
 /** 行维度字段配置(兼容 JSON 数组 [{field,display,sort}] 与旧逗号串格式) */
 const groupFieldConfigs = computed(() => {
@@ -708,7 +720,7 @@ const columnDisplayValues = (key: string | undefined): unknown[] =>
  * 由它把富余集中给最后一个非锁定列，表头/数据行/汇总行仍读同一份列宽。
  * 用运行期 parse() 同一个 getTextWidth，算完后那句 max() 就成了空转，不会再出现挂载后就地撑宽的错位。
  */
-const measureColWidth = (title: string | undefined, values: unknown[], floor: number): number => {
+const measureColWidth = (title: string | undefined, values: unknown[], floor: number, iconPad = 0): number => {
   let widest = ''
   let widestScore = -1
   for (const value of values) {
@@ -723,9 +735,11 @@ const measureColWidth = (title: string | undefined, values: unknown[], floor: nu
       widest = text
     }
   }
-  const contentWidth = widestScore > 0 ? getTextWidth(widest) : 0
-  // +28 = 左右内边距 + 表头排序双箭头
-  return Math.min(Math.max(Math.ceil(Math.max(contentWidth, getTextWidth(title || ''))) + 28, floor), 360)
+  // 表头腿不封顶(表头必须完整可见, getTextWidth 对 \n/\\n 取换行后最宽行, 与表头按 \n 拆行渲染同语义);
+  // 数据腿封顶 360 防长文本撑爆; +28 = 左右内边距+余量, iconPad = 排序双箭头/漏斗+放大镜等常驻图标带
+  const titleWidth = Math.ceil(getTextWidth(title || ''))
+  const contentWidth = widestScore > 0 ? Math.min(Math.ceil(getTextWidth(widest)), 360 - 28 - iconPad) : 0
+  return Math.max(Math.max(titleWidth, contentWidth) + 28 + iconPad, floor)
 }
 
 /** 标记本表所有叶子列的宽度已定死(递归进二层表头的壳列) */
@@ -737,7 +751,8 @@ const markWidthFitted = (list: ColumnType[]): void => list.forEach((col: any) =>
  * col模式: 行维度 + (透视列×度量) 横向平铺
  * row模式: 行维度 + 指标名称列 + 透视列(每列一个度量值)
  * 宽度分工: 全部列都在建列时按「表头 ∪ 本次显示值」实测出确定 width(行维度列以配置宽度为下限)，
- * 富余宽度交给 Portal 的弹性列机制集中到最后一个非锁定列
+ * 富余宽度交给 Portal 的弹性列机制集中到最后一个非锁定列；行维度配置宽度 0 则指定该列为自动填充列
+ * (与普通表「0为自动」同契约: 只落 minWidth，弹性机制见缺数字 width 收手、富余全进此列)
  * (表头是 table 会摊分剩余宽度、数据行是定宽 div，列宽必须在建列时定死、两边才同源)
  */
 const portalColumns = computed(() => {
@@ -747,16 +762,23 @@ const portalColumns = computed(() => {
   let order = 2
   // 行维度只渲染显示字段(隐藏字段仍参与 group by，用于行粒度细化/筛选目标)
   for (const cfg of visibleGroupFieldConfigs.value) {
-    const dimTitle = columnMetaMap.value[cfg.field]?.displayName || cfg.field
+    const meta = columnMetaMap.value[cfg.field]
+    const dimTitle = meta?.displayName || cfg.field
+    // 配置宽度 0 = 指定此列为自动填充列(与普通表「0为自动」同契约): 只落 minWidth 不落 width，
+    // Portal 弹性列机制见有列缺数字 width 会收手不降末列 ⇒ 富余宽度进此列，末列保持实测宽
+    const elastic = meta?.width === 0
+    const measured = measureColWidth(dimTitle, columnDisplayValues(cfg.field), 140, HEADER_ICON_PAD_SORT + HEADER_ICON_PAD_FILTER)
     cols.push({
       title: dimTitle,
       dataIndex: cfg.field,
       key: cfg.field,
-      // 配置宽度当下限：配宽的列不缩，内容更长的列在建列时一次撑足(不在挂载后就地改)
-      width: Math.max(
-        columnMetaMap.value[cfg.field]?.width || 140,
-        measureColWidth(dimTitle, columnDisplayValues(cfg.field), 140)
-      ),
+      ...(elastic
+        ? { minWidth: measured }
+        : {
+            // 配置宽度当下限：配宽的列不缩，内容更长的列在建列时一次撑足(不在挂载后就地改)
+            // 行维度表头常驻 排序双箭头+列搜索漏斗+放大镜, 图标带计入宽度
+            width: Math.max(meta?.width || 140, measured)
+          }),
       fixed: cfg.fixed,
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
@@ -858,7 +880,7 @@ const portalColumns = computed(() => {
       const gp = parseGroupPath(pv)
       for (const m of measures.value) {
         const cellKey = `${pv.itemValue}__${m.field}`
-        const cellTitle = multiMeasure || !hasPivot ? (m.label || m.field) : pv.itemName
+        const cellTitle = multiMeasure || !hasPivot ? measureTitle(m.field, m.label) : pv.itemName
         colItems.push({
           // 透视列配了父链(groupPath)时按父链组装嵌套表头(与 row 模式同源)，未配则平铺；
           // 多度量时叶子表头让位给度量名，故把透视列自身名称(级别等)补进父链，否则中间层会丢失
@@ -867,7 +889,8 @@ const portalColumns = computed(() => {
             title: cellTitle,
             dataIndex: cellKey,
             key: cellKey,
-            width: measureColWidth(cellTitle, columnDisplayValues(cellKey), 120),
+            // 统计列表头常驻 排序双箭头+列搜索漏斗+放大镜, 图标带计入宽度
+            width: measureColWidth(cellTitle, columnDisplayValues(cellKey), 120, HEADER_ICON_PAD_SORT + HEADER_ICON_PAD_FILTER),
             fixed: m.fixed === true ? 'right' : false,
             fieldType: FIELD_TYPE.NUMBER,
             // 表头由库居中，数字右对齐会在列宽收紧后看着与表头错位 ⇒ 同向居中
@@ -943,7 +966,7 @@ const dataSource = computed(() => {
         lastGroupValues[f] = translated
       }
       // 指标名称列
-      item[MEASURE_NAME_COL] = m.label || m.field
+      item[MEASURE_NAME_COL] = measureSingleLine(m.field, m.label)
       // 每个透视列对应的度量值
       // 小计列(_gt_前缀)参与列输出, 但不并入横向合计(避免叶子+小计重复累加)
       const totalSourcePvs = effectivePivotColumns.value.filter((pv) => !isSubtotalColumn(pv))
@@ -1108,7 +1131,7 @@ const buildDrillCondition = (rawRow: any, pv: PortalPivotColumnVO | undefined, m
 const buildDrillTitle = (pv: PortalPivotColumnVO, itemValue: string, measure: PivotMeasureVO | undefined, measureField: string, suffix: string) => {
   const pivotLabel = hasPivotColumns.value ? (pv.itemName || itemValue) : ''
   // 无透视列: 标题必须带度量名(否则只剩原始字段名); 有透视列且单度量: 度量名无区分度可省略
-  const measureLabel = (!hasPivotColumns.value || measures.value.length > 1) && measure ? (measure.label || measure.field) : ''
+  const measureLabel = (!hasPivotColumns.value || measures.value.length > 1) && measure ? measureSingleLine(measure.field, measure.label) : ''
   return `${[pivotLabel, measureLabel].filter(Boolean).join(' · ') || measureField} - ${suffix}`
 }
 
@@ -1133,7 +1156,7 @@ const openDrill = (record: any, index: number, key: string) => {
     if (key === TOTAL_COL) {
       // 合计列: 该组该度量跨全部透视列的明细 → 不带透视列条件(②)
       // 无行维度时组标签为空, 过滤后只剩度量名, 标题不出现悬空的 " · " 前缀
-      drillTitle.value = `${[buildGroupLabel(rawRow), measure.label || measure.field].filter(Boolean).join(' · ')} - 全部分类明细`
+      drillTitle.value = `${[buildGroupLabel(rawRow), measureSingleLine(measure.field, measure.label)].filter(Boolean).join(' · ')} - 全部分类明细`
       drillCondition.value = { conditionList: buildDrillCondition(rawRow, undefined, measure), andOr: '0' }
       drillOpen.value = true
       return
@@ -1142,7 +1165,7 @@ const openDrill = (record: any, index: number, key: string) => {
     if (!pv) {
       return
     }
-    drillTitle.value = `${pv.itemName || key} · ${measure.label || measure.field} - 明细数据`
+    drillTitle.value = `${pv.itemName || key} · ${measureSingleLine(measure.field, measure.label)} - 明细数据`
     drillCondition.value = { conditionList: buildDrillCondition(rawRow, pv, measure), andOr: '0' }
   } else {
     // col 模式: key=${itemValue}__${measureField}
@@ -1238,7 +1261,20 @@ onMounted(() => {
           @click="onHeaderClick(key)"
         >
           <span class="pivot-sort-label">
-            <span class="pivot-sort-title">{{ title }}</span>
+            <!-- 标题含 \n(含字面)时逐行渲染, 与 Portal 普通表头同语义; 单行保持原有整串截断 -->
+            <span
+              v-if="headerTitleLines(title).length > 1"
+              class="pivot-sort-title pivot-sort-title-multi"
+            >
+              <div
+                v-for="(line, i) in headerTitleLines(title)"
+                :key="i"
+              >{{ line }}</div>
+            </span>
+            <span
+              v-else
+              class="pivot-sort-title"
+            >{{ title }}</span>
             <a-tooltip
               v-if="measureDesc(key)"
               :title="measureDesc(key)"
@@ -1395,6 +1431,14 @@ onMounted(() => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // 字面 \n 拆行标题(与 Portal 普通表头同语义): 逐行 div, 行内超宽仍逐行省略
+  .pivot-sort-title-multi {
+    div {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   // 问号图标: 字号与库的排序箭头(11px)对齐, 颜色交给 antd 图标默认色与 dark.css 的表头规则

@@ -56,7 +56,7 @@
                 show-search
                 :filter-option="filterOption"
                 placeholder="选择字段"
-                :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
                 @change="(val: any) => { genFieldA = val; handleGenCrossFieldChange('A', val) }"
               />
             </a-form-item>
@@ -94,7 +94,7 @@
                 show-search
                 :filter-option="filterOption"
                 placeholder="选择字段"
-                :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
                 @change="(val: any) => { genFieldB = val; handleGenCrossFieldChange('B', val) }"
               />
             </a-form-item>
@@ -144,7 +144,7 @@
                 allow-clear
                 :filter-option="filterOption"
                 placeholder="选择字段"
-                :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
                 @change="(val: any) => handleTableValueFieldChange(val)"
               />
             </a-form-item>
@@ -157,7 +157,7 @@
                 allow-clear
                 :filter-option="filterOption"
                 placeholder="选择字段"
-                :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+                :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
                 @change="(val: any) => handleTableLabelFieldChange(val)"
               />
             </a-form-item>
@@ -242,7 +242,7 @@
             show-search
             :filter-option="filterOption"
             placeholder="选择字段"
-            :options="availableFields.map((f) => ({ label: `${f.displayName} (${f.property})`, value: f.property }))"
+            :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
             @change="(val: any) => { genPivotField = val; handleGenFieldChange(val) }"
           />
         </a-form-item>
@@ -371,6 +371,7 @@ import { collectLeafPathGroups, fetchTreeDict, flattenTreeToParentGroups } from 
 import { PIVOT_SUBTOTAL_PREFIX } from '@/framework/components/common/Portal/constant'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { dictStore } from '@/framework/store/common'
+import { strRemoveLF } from '@/framework/utils/common'
 
 const props = defineProps<{
   open: boolean;
@@ -620,7 +621,7 @@ const suggestDictNames = () => {
   }
   lastDictCodeSuggest = codeSuggestion || lastDictCodeSuggest
   const field = props.availableFields.find((f) => f.property === genTableField.value)
-  const nameSuggestion = field ? `${field.displayName}字典` : undefined
+  const nameSuggestion = field ? `${strRemoveLF(field.displayName)}字典` : undefined
   if (nameSuggestion && (!genDictNameInput.value || genDictNameInput.value === lastDictNameSuggest)) {
     genDictNameInput.value = nameSuggestion
   }

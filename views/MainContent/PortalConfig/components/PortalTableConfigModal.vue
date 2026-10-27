@@ -230,6 +230,7 @@ import {
 } from '@/framework/apis/portal/table'
 import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
+import { strRemoveLF } from '@/framework/utils/common'
 import PortalTableView from '@/framework/views/MainContent/Portal/table.vue'
 import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 
@@ -266,11 +267,12 @@ watch(
 )
 
 // 可选字段列表（由 props.columns 推导，一次计算分发给各面板）
+// displayName 保留原样(筛选配置按它精确匹配落库数据), 仅展示标签(title)拆掉换行符
 const availableFields = computed(
   () =>
     (props.columns || []).map((col: any) => ({
       key: col.property,
-      title: `${col.displayName} (${col.property})`,
+      title: `${strRemoveLF(col.displayName)} (${col.property})`,
       property: col.property,
       displayName: col.displayName,
       reference: col.reference,
