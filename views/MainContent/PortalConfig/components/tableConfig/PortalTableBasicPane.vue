@@ -353,7 +353,7 @@
             <a-button
               type="primary"
               size="small"
-              @click="pivotMeasureRows.push({ field: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, numerator: '', denominator: '' })"
+              @click="pivotMeasureRows.push({ field: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, numerator: '', denominator: '', numeratorAgg: 'sum', denominatorAgg: 'sum' })"
             >
               <template #icon>
                 <PlusOutlined />
@@ -392,6 +392,12 @@
                   style="width: 210px"
                   @change="handleRatioFieldChange(measure)"
                 />
+                <!-- 腿聚合缺省 sum; 分母配 max 服务组内恒定目标值(达成率=sum(实际)/max(目标)) -->
+                <a-select
+                  v-model:value="measure.numeratorAgg"
+                  :options="ratioLegAggOptions"
+                  style="width: 92px"
+                />
                 <span
                   class="measure-index"
                   style="margin: 0 2px"
@@ -404,6 +410,11 @@
                   :filter-option="filterOption"
                   style="width: 210px"
                   @change="handleRatioFieldChange(measure)"
+                />
+                <a-select
+                  v-model:value="measure.denominatorAgg"
+                  :options="ratioLegAggOptions"
+                  style="width: 92px"
                 />
               </template>
               <a-select
@@ -846,6 +857,16 @@ const pivotGroupSortPriority = computed(() => {
   }
   return map
 })
+// ratio 腿聚合选项(缺省 sum; 分母配 max 服务组内恒定目标值, 防 sum 分母随行数放大)
+const ratioLegAggOptions = [
+  { label: '求和', value: 'sum' },
+  { label: '计数', value: 'count' },
+  { label: '去重计数', value: 'countDistinct' },
+  { label: '平均', value: 'avg' },
+  { label: '最小', value: 'min' },
+  { label: '最大', value: 'max' }
+]
+
 // 度量列编辑行(保存时序列化到 table.pivotMeasures)
 const pivotMeasureRows = ref<PivotMeasureVO[]>([])
 
@@ -1062,7 +1083,7 @@ const parsePivotMeasures = (json: string | undefined) => {
   try {
     const parsed = JSON.parse(json)
     pivotMeasureRows.value = Array.isArray(parsed)
-      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', desc: m.desc || '', agg: m.agg || 'sum', fixed: m.fixed === true, hideZero: m.hideZero === true, numerator: m.numerator || '', denominator: m.denominator || '' }))
+      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', desc: m.desc || '', agg: m.agg || 'sum', fixed: m.fixed === true, hideZero: m.hideZero === true, numerator: m.numerator || '', denominator: m.denominator || '', numeratorAgg: m.numeratorAgg || 'sum', denominatorAgg: m.denominatorAgg || 'sum' }))
       : []
   } catch (e) {
     console.warn('解析透视度量配置失败:', e)
@@ -1251,9 +1272,11 @@ const handleSaveTable = async () => {
           fixed: pivotLockSide.value === 'right' ? m.fixed === true : false,
           // 防呆: 隐藏零值仅对 sum 有意义, 改成其余聚合后不留无效配置
           hideZero: m.agg === 'sum' && m.hideZero === true,
-          // 防呆: 比率分子/分母仅对 ratio 有意义
+          // 防呆: 比率分子/分母及两腿聚合仅对 ratio 有意义
           numerator: m.agg === 'ratio' ? m.numerator : undefined,
           denominator: m.agg === 'ratio' ? m.denominator : undefined,
+          numeratorAgg: m.agg === 'ratio' ? (m.numeratorAgg || 'sum') : undefined,
+          denominatorAgg: m.agg === 'ratio' ? (m.denominatorAgg || 'sum') : undefined,
           // 空注释不落库(JSON.stringify 会丢掉 undefined 键)
           desc: m.desc?.trim() || undefined
         }))
