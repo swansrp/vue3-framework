@@ -90,6 +90,12 @@ export interface PortalPivotColumnVO {
 export interface PivotMeasureVO {
   /** 度量字段名（ratio 时仅作输出键, 取数走分子/分母字段） */
   field: string
+  /** 列输出键: 同字段多条件各出一列时区分用(缺省=field), 只作列别名后半段, 不参与取数 */
+  key?: string
+  /** 度量自身条件 JSON({andOr, conditionList}): 与透视列条件按「且」叠加, 只统计命中行 */
+  condition?: string
+  /** 父链路径 JSON(string[] 自外向内): 给度量列加多层级父表头, 叶子标题仍是度量显示名 */
+  groupPath?: string
   /** 度量显示名 */
   label?: string
   /** 列注释: 悬停表头问号显示, 只给前端渲染用, 后端整串存取不解析 */

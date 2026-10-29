@@ -374,6 +374,7 @@
                   :data-summary="dataSummary"
                   :hide-row-selection="hideRowSelection"
                   :is-expanded="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
+                  :label-data-index="summaryLabelColumn"
                 >
                   <!-- 汇总单元格插槽透传(同 bodyCell_ 范式, 按列 dataIndex 命名) -->
                   <template
@@ -952,6 +953,8 @@ const props = withDefaults(defineProps<{
     customColumns?: Array<ColumnType>
     /** 前端提供的汇总行数据(数据模式下使用) */
     summaryData?: { [key: string]: any }
+    /** 汇总行「总计」标签落点列的 dataIndex(默认首个数据列); 透视竖排布局指到透视值名目列 */
+    summaryLabelColumn?: string
     /** 自定义行主键字段(默认取 Portal 配置的 idColumn) */
     rowKeyField?: string
     /** 外部直传的 Portal 配置(smart-query plan 推导等): 跳过按 tableId 拉取 sys_portal_table */

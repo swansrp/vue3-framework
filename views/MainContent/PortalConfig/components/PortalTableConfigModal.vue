@@ -311,11 +311,16 @@ const measureRows = computed<any[]>(() => {
 })
 const pivotPermOptions = computed(() => {
   const opts: Array<{ label: string; token: string; group: string }> = []
+  // 权限 token 按字段维度: 同字段多条件各出一列时仍是同一个 m: 勾选项, 不重复列出
+  const measureTokens = new Set<string>()
   pivotColumnItems.value.forEach((c) => {
     if (c.itemValue) { opts.push({ label: c.itemName || c.itemValue, token: `p:${c.itemValue}`, group: '透视父列' }) }
   })
   measureRows.value.forEach((m: any) => {
-    if (m?.field) { opts.push({ label: m.label || columnLabelMap.value[m.field] || m.field, token: `m:${m.field}`, group: '度量' }) }
+    if (m?.field && !measureTokens.has(m.field)) {
+      measureTokens.add(m.field)
+      opts.push({ label: m.label || columnLabelMap.value[m.field] || m.field, token: `m:${m.field}`, group: '度量' })
+    }
   })
   return opts
 })
