@@ -143,3 +143,26 @@ export const getSql = (params?: {
   const api = buildGetApiByType('/dataset/config/sql', '')
   return request(api, params || ({} as any), {}, showSuccess, showLoading, showErr)
 }
+
+/**
+ * 数据集SQL快照列表（新→旧, 默认最近50条, 不含SQL全文）
+ * @api GET /dataset/config/snapshot/list
+ */
+export const getSqlSnapshotList = (params?: {
+  /** 数据集ID */
+  datasetId: number
+  /** 条数(默认50) */
+  limit?: number
+}, showSuccess = false, showLoading = false, showErr = true) => {
+  const api = buildGetApiByType('/dataset/config/snapshot/list', '')
+  return request(api, params || ({} as any), {}, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 数据集SQL快照详情（含SQL全文）
+ * @api GET /dataset/config/snapshot/{id}
+ */
+export const getSqlSnapshot = (id: number, showSuccess = false, showLoading = false, showErr = true) => {
+  const api = buildGetApiByType('/dataset/config/snapshot/' + id, '')
+  return request(api, {}, {}, showSuccess, showLoading, showErr)
+}

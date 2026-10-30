@@ -39,8 +39,10 @@ export interface PortalTableVO {
   pivotMeasures?: string
   /** 透视度量布局: col=度量作为列(默认), row=度量作为行 */
   pivotMeasureLayout?: string
-  /** 透视合计列位置(仅row布局生效): first=靠前 last=靠后(默认) */
+  /** 透视合计列位置(仅row布局生效): first=靠前 last=靠后(默认); pivotRow 布局另支持 none=不显示组内小计行 */
   pivotTotalPos?: string
+  /** 透视总计行(最底汇总行): 空=跟随Portal配置(summary) 1=显示 0=隐藏 */
+  pivotSummaryShow?: string
   /** Tab成员JSON(仅宿主): [{tableId,label,order}], 非空=多Tab页面(宿主=路由抓手,筛选栏归属) */
   tabItems?: string
   /** 默认排序JSON: [{property,type}] type 0=正序 1=倒序, 空数组=不排序(透视模式取行维度/聚合度量) */
@@ -64,6 +66,7 @@ export const REPORT_TABLE_SYNC_FIELDS = [
   'pivotMeasureLayout',
   'pivotMeasures',
   'pivotMode',
+  'pivotSummaryShow',
   'pivotTotalPos'
 ]
 

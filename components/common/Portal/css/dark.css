@@ -522,6 +522,44 @@ html body .dark-content-layout .portal-table .surely-table-row {
     }
 }
 
+/* 日期控件清除按钮(日/月/年与日期范围共用 .ant-picker-clear): 默认白底深灰叉, 在深蓝底上是一块白斑;
+   底色用控件同款深蓝盖住下层的日历后缀图标, 配色对齐输入框清除钮 */
+:deep(.ant-picker-clear) {
+    background-color: rgb(21, 76, 121) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:deep(.ant-picker-clear:hover) {
+    color: #1FC6FF !important;
+}
+
+/* 数字输入框深色适配: 库里没有对应覆盖, 默认白底容器叠白字(占位/内容都看不见, 成一块白框);
+   右侧上下调节钮 hover 时弹出, 底色同样压成深蓝 */
+:deep(.ant-input-number) {
+    background-color: rgb(21, 76, 121) !important;
+
+    .ant-input-number-input {
+        color: white !important;
+
+        &::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+    }
+
+    .ant-input-number-handler-wrap {
+        background: rgb(21, 76, 121);
+
+        .ant-input-number-handler {
+            color: rgba(255, 255, 255, 0.6);
+            border-inline-start-color: rgba(255, 255, 255, 0.2);
+
+            &:active {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        }
+    }
+}
+
 /* 描述列表样式 */
 :deep(.ant-descriptions .ant-descriptions-row > th) {
     padding-bottom: 12px;

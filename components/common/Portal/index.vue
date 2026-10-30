@@ -953,6 +953,8 @@ const props = withDefaults(defineProps<{
     customColumns?: Array<ColumnType>
     /** 前端提供的汇总行数据(数据模式下使用) */
     summaryData?: { [key: string]: any }
+    /** 汇总行显隐覆盖: true=强制显示 false=强制隐藏 undefined=不覆盖(按 sys_portal.summary 与 summaryData 判定) */
+    summaryVisible?: boolean
     /** 汇总行「总计」标签落点列的 dataIndex(默认首个数据列); 透视竖排布局指到透视值名目列 */
     summaryLabelColumn?: string
     /** 自定义行主键字段(默认取 Portal 配置的 idColumn) */
@@ -1020,6 +1022,7 @@ const props = withDefaults(defineProps<{
     computedColumns: undefined,
     customColumns: undefined,
     summaryData: undefined,
+    summaryVisible: undefined,
     rowKeyField: undefined,
     portalConfig: undefined
   })
@@ -2371,7 +2374,8 @@ const initConfig = async () => {
       config.readOnly = true
     }
     config.url = tableConfig.url
-    config.summary = tableConfig.summary === '1' || isNotEmpty(props.summaryData)
+    // 汇总行显隐: 外部 summaryVisible 三态覆盖(透视表按自身配置决定), 未传时按 sys_portal.summary 与 summaryData 判定
+    config.summary = props.summaryVisible ?? (tableConfig.summary === '1' || isNotEmpty(props.summaryData))
     if (isNotEmpty(props.summaryData)) {
       dataSummary.value = props.summaryData!
     }
@@ -2547,6 +2551,12 @@ const initConfig = async () => {
         }
       })
       enableLeafFilter(columnArray.value)
+      // 🔍 临时诊断(锁定方向排查): Portal 装载外部动态列后的 fixed 取值, 控制台按 [pivot-lock] 过滤; 排查完移除
+      console.log('[pivot-lock] Portal 列', JSON.parse(JSON.stringify(columnArray.value.map(c => ({
+        key: c.dataIndex ?? c.title,
+        fixed: c.fixed,
+        children: c.children?.map(k => ({ key: k.dataIndex ?? k.title, fixed: k.fixed })),
+      })))))
     }
 
     if (config.rowKey === AUTO_UUID_ROW_KEY) {

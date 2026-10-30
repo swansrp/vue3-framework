@@ -240,13 +240,30 @@ const formatNumber = (value: any) => {
 }
 
 /**
+ * ratio(比率)度量按百分比展示: 后端表达式是 分子聚合 / 分母聚合, 算出来是 0~1 的小数,
+ * 直接显示小数不直观 ⇒ 乘 100 保留最多 2 位小数并去掉尾随零(0.9256→92.56%, 1→100%, 0→0%)
+ */
+const formatRatioPercent = (value: any): string => {
+  const num = Number(value)
+  if (isNaN(num)) {
+    return String(value)
+  }
+  return `${Number((num * 100).toFixed(2))}%`
+}
+
+/**
  * 度量值格式化: 度量字段在 Portal 列配置为金额(fieldType=MONEY)时按 referenceDict "小数位,除数"换算
  * (如 2,10000 = 2位小数除以1万即万元), 与 Portal 单元格/汇总行同一 formatMoney;
- * 其余类型维持千分位通用格式。空值仍返回 ''(不渲染不钻取, 与 formatNumber 约定一致)
+ * ratio 度量按百分比展示(见 formatRatioPercent), 其余类型维持千分位通用格式。
+ * 空值仍返回 ''(不渲染不钻取, 与 formatNumber 约定一致)
  */
 const formatMeasure = (measure: PivotMeasureVO | undefined, value: any) => {
   if (value === null || value === undefined || value === '') {
     return ''
+  }
+  // ratio 的 field 是"分子_over_分母"派生输出键, 不在列元数据里, 优先级高于 MONEY 判断
+  if (measure?.agg === 'ratio') {
+    return formatRatioPercent(value)
   }
   const layout = measure ? columnMetaMap.value[measure.field] : undefined
   if (layout?.fieldType === FIELD_TYPE.MONEY) {
@@ -522,6 +539,8 @@ const loadConfig = async () => {
       return
     }
     portalUrl.value = configRes.payload.url
+    // Portal 配置的总计(summary)开关: pivotSummaryShow 未指定时总计行跟随它
+    portalSummaryOn.value = configRes.payload.summary === '1'
     // 运行态列权限：一次性拉当前用户命中的隐藏 token（原表列 c: + 透视列 p:/m:），后续渲染/拼请求均据此过滤
     const [cSet, pmSet] = await Promise.all([
       resolveMyHiddenTokens(RESOURCE_TYPE_PORTAL_COLUMN, props.portalTableConfig.portalName),
@@ -722,9 +741,11 @@ const parseGroupPath = (source: { groupPath?: string }): string[] => {
   }
 }
 
+// pivotRow 透视列部分(行维度+层级列+名目列)恒左冻结: 这些列就是行标识, 横向滚动时必须常驻
+// (无横向滚动时冻结无感知; 度量列在该布局不右锁, 不触发 s-table 两侧锁定异常)
+
 /** 透视列父链最大深度(竖排布局把父表头转成层级列时定列数): 全部透视列路径长度的最大值 */
-const pivotPathDepth = computed(() => {
-  if (!hasPivotColumns.value) {
+const pivotPathDepth = computed(() => {  if (!hasPivotColumns.value) {
     return 0
   }
   let max = 0
@@ -739,25 +760,16 @@ const pivotPathDepth = computed(() => {
 
 /**
  * 按父链组装树形多层表头(row 模式无度量层, 列头即纯树)
- * 每层按组首次出现序聚拢(组间序跟随 displayOrder, 预览拖拽调序仍生效),
- * 同父叶子包进 {title, children} 分组壳列(无 dataIndex, 不参与汇总), 叶子列原样下沉为末级
+ * 列序严格跟传入顺序(即配置行序): 只把「同父且相邻」的叶子包进 {title, children} 分组壳列
+ * (无 dataIndex, 不参与汇总), 叶子列原样下沉为末级;
+ * 同名父链被平铺列或其他组隔开时各自成壳(壳名相同), 不做跨位置聚拢, 平铺列与分组列按配置顺序穿插
  */
 const buildGroupedColumns = (items: Array<{ path: string[]; col: ColumnType }>): ColumnType[] => {
   const buildLevel = (list: Array<{ path: string[]; col: ColumnType }>): ColumnType[] => {
-    // 同父叶子必须相邻才能归组: 按组键首次出现序稳定聚拢(组内保持原相对序)
-    const keyOf = (it: { path: string[]; col: ColumnType }) => it.path[0] ?? ''
-    const groupSeq = new Map<string, number>()
-    for (const it of list) {
-      const k = keyOf(it)
-      if (!groupSeq.has(k)) {
-        groupSeq.set(k, groupSeq.size)
-      }
-    }
-    const sorted = [...list].sort((a, b) => (groupSeq.get(keyOf(a)) ?? 0) - (groupSeq.get(keyOf(b)) ?? 0))
     const res: ColumnType[] = []
     let i = 0
-    while (i < sorted.length) {
-      const item = sorted[i]
+    while (i < list.length) {
+      const item = list[i]
       if (item.path.length === 0) {
         res.push(item.col)
         i++
@@ -766,8 +778,8 @@ const buildGroupedColumns = (items: Array<{ path: string[]; col: ColumnType }>):
       const groupTitle = item.path[0]
       const groupItems: Array<{ path: string[]; col: ColumnType }> = []
       let j = i
-      while (j < sorted.length && sorted[j].path[0] === groupTitle) {
-        groupItems.push({ path: sorted[j].path.slice(1), col: sorted[j].col })
+      while (j < list.length && list[j].path[0] === groupTitle) {
+        groupItems.push({ path: list[j].path.slice(1), col: list[j].col })
         j++
       }
       res.push({ title: groupTitle, children: buildLevel(groupItems) } as unknown as ColumnType)
@@ -849,7 +861,9 @@ const portalColumns = computed(() => {
             // 行维度表头常驻 排序双箭头+列搜索漏斗+放大镜, 图标带计入宽度
             width: Math.max(meta?.width || 140, measured)
           }),
-      fixed: cfg.fixed,
+      // fixed 归一化为 'left': surely-vue 粘性定位按字符串比较("left"===fixed), 布尔 true 在部分路径不参与冻结计算;
+      // pivotRow 布局行维度恒左冻结(透视列部分=行标识)
+      fixed: isPivotInRow.value ? 'left' : (cfg.fixed ? 'left' : false),
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
       order: order++,
@@ -953,7 +967,7 @@ const portalColumns = computed(() => {
         dataIndex: pathKey,
         key: pathKey,
         width: measureColWidth('', columnDisplayValues(pathKey), 120),
-        fixed: visibleGroupFieldConfigs.value.some(c => c.fixed) ? 'left' : false,
+        fixed: 'left',
         fieldType: FIELD_TYPE.INPUT,
         tooltip: false,
         order: order++,
@@ -973,7 +987,7 @@ const portalColumns = computed(() => {
         dataIndex: PIVOT_NAME_COL,
         key: PIVOT_NAME_COL,
         width: measureColWidth('', columnDisplayValues(PIVOT_NAME_COL), 120),
-        fixed: visibleGroupFieldConfigs.value.some(c => c.fixed) ? 'left' : false,
+        fixed: 'left',
         fieldType: FIELD_TYPE.INPUT,
         tooltip: false,
         order: order++,
@@ -1076,6 +1090,12 @@ const portalColumns = computed(() => {
   }
   // 列宽已在上面按「表头 ∪ 显示值」定死，标记后 Portal 装载数据时不再逐格就地撑宽
   markWidthFitted(cols)
+  // 🔍 临时诊断(锁定方向排查): 列定义出口的 fixed 取值, 控制台按 [pivot-lock] 过滤; 排查完移除
+  console.log('[pivot-lock] 列定义', JSON.parse(JSON.stringify(cols.map(c => ({
+    key: c.dataIndex ?? c.title,
+    fixed: c.fixed,
+    children: (c as any).children?.map((k: any) => ({ key: k.dataIndex ?? k.title, fixed: k.fixed })),
+  })))))
   return cols
 })
 
@@ -1091,7 +1111,8 @@ const dataSource = computed(() => {
     const melted: any[] = []
     const lastGroupValues: Record<string, any> = {}
     // 组内小计: 每个原始行的透视列序列按父链全路径分段, 段尾(父链切换或行末)落一行小计;
-    // 单列段不出(小计=重复叶子行); 未配父链时无组可分, 不出小计(整表合计走汇总行);
+    // 单列段不出(小计=重复叶子行); 父链全空的段(没配父表头的列凑成的段)不出小计——它们只是没组可归,
+    // 不构成一个组(整表合计走汇总行); pivotTotalPos='none' 时配置了「不显示小计」, 全部抑制;
     // 小计位置复用 pivotTotalPos(与 row 布局合计列左/右同一字段): first=段首(叶子行之前), last=段尾(默认);
     // 组名每段只出现一次: first 时挂总计行(叶子行全空), 否则挂组内首行(总计行路径格空), 不重复出现
     const isSamePath = (a: string[], b: string[]) => pathKeys.every((_, i) => (a[i] ?? '') === (b[i] ?? ''))
@@ -1103,8 +1124,10 @@ const dataSource = computed(() => {
       const rows = runRows
       runPvs = []
       runRows = []
+      // pivotTotalPos='none'(配置「不显示小计」)时整段抑制小计, 行序仍按父链分段伪合并
       const subtotalFirst = props.portalTableConfig.pivotTotalPos === 'first'
-      const hasSubtotal = pathDepth > 0 && pvs.length >= 2
+      const subtotalOff = props.portalTableConfig.pivotTotalPos === 'none'
+      const hasSubtotal = !subtotalOff && pathDepth > 0 && pvs.length >= 2 && runPath.length > 0
       if (hasSubtotal && subtotalFirst) {
         // 小计在前: 组名由总计行携带, 段内叶子行的父链格全部留空
         for (const r of rows) {
@@ -1254,9 +1277,23 @@ const dataSource = computed(() => {
   return melted
 })
 
+// ==================== 总计行(最底汇总行)显隐 ====================
+// 所绑 Portal 配置的 summary 开关值(loadConfig 时捕获), 作为 pivotSummaryShow 未指定时的默认口径
+const portalSummaryOn = ref(false)
+// 总计行显隐: '1'=显示 '0'=隐藏 空=跟随Portal配置; 经 summaryVisible prop 强制 Portal 的汇总行判定
+const summaryRowShow = computed(() => {
+  const show = props.portalTableConfig.pivotSummaryShow
+  if (show === '1') {
+    return true
+  }
+  if (show === '0') {
+    return false
+  }
+  return portalSummaryOn.value
+})
+
 /** 汇总行数据 */
-const summaryData = computed(() => {
-  const summary: Record<string, any> = {}
+const summaryData = computed(() => {  const summary: Record<string, any> = {}
   if (isMeasureInRow.value) {
     // row 模式不出总计行: 列容器纵向堆叠多个度量(不同量纲), 单行汇总无论按列还是混算都语义错误;
     // 跨 group 的总计坐标是 (度量, 透视列), 天然形状为 N 行, summaryData 一行结构装不下;
@@ -1605,6 +1642,7 @@ onMounted(() => {
       :data="dataSource"
       :custom-columns="portalColumns"
       :summary-data="summaryData"
+      :summary-visible="summaryRowShow"
       :download-file-name="getDownloadFileName"
       :action-width="0"
       :index-width="0"
