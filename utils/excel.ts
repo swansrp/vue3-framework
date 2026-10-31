@@ -15,7 +15,38 @@ export const excelExport = (dataSource: any, columns: any, rawColumns: any, file
   XLSX.writeFile(wb, fileName + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
 }
 
-export const excel = (dataSource: any, columns: any, rawColumns: any) => {
+/**
+ * 多Sheet导出: 每个成员一个 sheet(sheet 名=成员名), 一次下载一个工作簿。
+ * 供多Tab页面宿主一次导出全部成员表使用。
+ * @param sheets 成员载荷数组: dataSource=格式化后全量数据, columns=展示列(含多级表头), rawColumns=原始列, sheetName=sheet名
+ */
+export const excelExportMultiSheet = (
+  sheets: Array<{ dataSource: any, columns: any, rawColumns: any, sheetName: string }>,
+  fileName: string
+) => {
+  const wb = XLSX.utils.book_new()
+  const used = new Set<string>()
+  sheets.forEach((sheet, index) => {
+    const ws = buildWorksheet(sheet.dataSource, sheet.columns, sheet.rawColumns)
+    // sheet 名约束: ≤31字符, 不可含 : \ / ? * [ ], 不可重复
+    let name = String(sheet.sheetName || '').replace(/[:\/?*\[\]]/g, ' ').trim() || ('sheet' + (index + 1))
+    if (name.length > 31) {
+      name = name.slice(0, 31)
+    }
+    let finalName = name
+    let seq = 2
+    while (used.has(finalName)) {
+      finalName = (name.slice(0, 28) + '_' + seq).slice(0, 31)
+      seq++
+    }
+    used.add(finalName)
+    XLSX.utils.book_append_sheet(wb, ws, finalName)
+  })
+  XLSX.writeFile(wb, fileName + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
+}
+
+/** 构造单个 sheet 工作表(多级表头合并/列宽/冻结/样式) */
+const buildWorksheet = (dataSource: any, columns: any, rawColumns: any) => {
   const columnHeight = _columnHeight(columns)
   const columnWidth = _columnWidth(columns)
   const header = [] as Array<any>
@@ -51,6 +82,14 @@ export const excel = (dataSource: any, columns: any, rawColumns: any) => {
     activePane: 'bottomRight',
     state: 'frozen'
   }
+  return ws
+}
+
+/**
+ * 单表导出工作簿(既有入口, 各表格导出仍在用): sheet 名固定 sheet1
+ */
+export const excel = (dataSource: any, columns: any, rawColumns: any) => {
+  const ws = buildWorksheet(dataSource, columns, rawColumns)
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'sheet1')
   return wb
@@ -78,36 +117,47 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
       // console.log(data[R][C], C, columns[C])
       if (typeof data[R][C] === 'object') { // 此处预留了自定义设置样式的功能，通过重写recursiveChildrenData方法，可为每一个单元格传入样式属性
         cell = data[R][C]
-      } else {
+      } else if (R < headerRows) {
+        // 表头: 浅灰蓝底 + 深蓝字加粗(低饱和, 打印/屏显都柔和)
         cell = {
           v: data[R][C],
           s: {
-            font: { name: '宋体', sz: 11, color: { auto: 1 } },
-            // 单元格对齐方式
+            font: { name: '微软雅黑', sz: 11, bold: true, color: { rgb: '1F4E79' } },
             alignment: {
-              /// 自动换行
               wrapText: 1,
-              // 水平居中
               horizontal: 'center',
-              // 垂直居中
               vertical: 'center'
+            },
+            border: {
+              top: { style: 'thin', color: { rgb: '9DB6D3' } },
+              left: { style: 'thin', color: { rgb: '9DB6D3' } },
+              bottom: { style: 'thin', color: { rgb: '8EAADB' } },
+              right: { style: 'thin', color: { rgb: '9DB6D3' } }
+            },
+            fill: { patternType: 'solid', fgColor: { rgb: 'B4C6E7' } }
+          }
+        }
+      } else {
+        // 数据行: 浅灰细边框 + 隔行浅灰蓝斑马纹
+        cell = {
+          v: data[R][C],
+          s: {
+            font: { name: '微软雅黑', sz: 11, color: { rgb: '333333' } },
+            alignment: {
+              wrapText: 1,
+              horizontal: 'center',
+              vertical: 'center'
+            },
+            border: {
+              top: { style: 'thin', color: { rgb: 'E4E9F0' } },
+              left: { style: 'thin', color: { rgb: 'E4E9F0' } },
+              bottom: { style: 'thin', color: { rgb: 'E4E9F0' } },
+              right: { style: 'thin', color: { rgb: 'E4E9F0' } }
             }
           }
         }
-      }
-      // 头部列表加边框
-      if (R < headerRows) {
-        cell.s.border = {
-          top: { style: 'thin', color: { rgb: '000000' } },
-          left: { style: 'thin', color: { rgb: '000000' } },
-          bottom: { style: 'thin', color: { rgb: '000000' } },
-          right: { style: 'thin', color: { rgb: '000000' } }
-        }
-        // 给个背景色
-        cell.s.fill = {
-          patternType: 'solid',
-          fgColor: { theme: 3, 'tint': 0.3999755851924192, rgb: 'DDD9C4' },
-          bgColor: { theme: 7, 'tint': 0.3999755851924192, rgb: '8064A2' }
+        if ((R - headerRows) % 2 === 1) {
+          cell.s.fill = { patternType: 'solid', fgColor: { rgb: 'DDEBF7' } }
         }
       }
       const cell_ref = XLSX.utils.encode_cell({ c: C, r: R })

@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import type { Ref } from 'vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { message } from 'ant-design-vue'
 
 import FilterItems from './FilterItems.vue'
 import PivotTable from './pivot.vue'
@@ -21,6 +23,7 @@ import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
 import { resolveConditionVariables, resolveDynamicVariable } from '@/framework/utils/common'
 import { columnToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN } from '@/framework/utils/portalColumnPerm'
+import { excelExportMultiSheet } from '@/framework/utils/excel'
 
 
 interface Props {
@@ -585,6 +588,66 @@ const parseTabItems = (raw?: string): PortalTabItem[] => {
   }
 }
 
+// 成员组件实例(按 tab key): 导出多Sheet时逐个取「格式化全量数据+列结构」
+const memberRefs = new Map<string, any>()
+const setMemberRef = (key: string) => (el: any) => {
+  if (el) {
+    memberRefs.set(key, el)
+  } else {
+    memberRefs.delete(key)
+  }
+}
+
+// 多Sheet导出: 逐成员取导出载荷(透视=内存数据; 普通表=内部走全量导出接口) 合成一个工作簿
+const exportingAllSheets = ref(false)
+// 正在后台挂载取数的成员(隐藏容器渲染), 完成后置 null
+const exportingEntry = ref<PortalTabEntry | null>(null)
+const exportMemberRef = ref<any>(null)
+const handleExportAllSheets = async () => {
+  if (!tabEntries.value.length) {
+    return
+  }
+  exportingAllSheets.value = true
+  try {
+    const sheets: Array<{ dataSource: any, columns: any, rawColumns: any, sheetName: string }> = []
+    for (const entry of tabEntries.value) {
+      let payload: any
+      const mounted = memberRefs.get(entry.key)
+      if (entry.key === activeTab.value && mounted?.getExportPayload) {
+        // 当前激活成员: 已挂载且数据就绪, 直接取
+        payload = await mounted.getExportPayload()
+      } else {
+        // 未激活成员: 后台挂载隐藏实例, 等数据就绪后取载荷再卸载(不进页面预载)
+        exportingEntry.value = entry
+        await nextTick()
+        try {
+          if (exportMemberRef.value?.whenReady) {
+            await exportMemberRef.value.whenReady()
+          }
+          payload = await exportMemberRef.value?.getExportPayload()
+        } finally {
+          exportingEntry.value = null
+          await nextTick()
+        }
+      }
+      if (payload?.rows) {
+        sheets.push({ ...payload, sheetName: entry.label || entry.portalName })
+      }
+    }
+    if (!sheets.length) {
+      message.warning('没有可导出的 Tab 成员')
+      return
+    }
+    excelExportMultiSheet(sheets, portalTableConfig.value?.portalName || '多Tab报表')
+    message.success('已导出 ' + sheets.length + ' 个 Sheet')
+  } catch (error: any) {
+    console.error('多Sheet导出失败:', error)
+    if (error?.message) message.error(error.message)
+  } finally {
+    exportingAllSheets.value = false
+  }
+}
+
 /** 并行拉取各 tab 成员配置(单个失败/缺 portalName 跳过, 不阻塞整页) */
 const loadTabEntries = async (items: PortalTabItem[]) => {
   tabLoading.value = true
@@ -718,6 +781,15 @@ onMounted(() => {
           v-model:active-key="activeTab"
           class="portal-group-tabs"
         >
+          <template #rightExtra>
+            <a-button
+              size="small"
+              :loading="exportingAllSheets"
+              @click="handleExportAllSheets"
+            >
+              多Sheet导出
+            </a-button>
+          </template>
           <a-tab-pane
             v-for="entry in tabEntries"
             :key="entry.key"
@@ -725,11 +797,13 @@ onMounted(() => {
           >
             <pivot-table
               v-if="entry.config.pivotMode === '1'"
+              ref="setMemberRef(entry.key)"
               :portal-table-config="entry.config"
               :condition="tabCondition[entry.key]"
             />
             <portal
               v-else
+              :ref="setMemberRef(entry.key)"
               :action-width="0"
               :advance-condition="tabAdvanceCondition[entry.key]"
               :column-filter="makeColumnFilter(entry.config)"
@@ -746,6 +820,34 @@ onMounted(() => {
             />
           </a-tab-pane>
         </a-tabs>
+        <!-- 多Sheet导出: 未激活成员后台挂载(不显示), 数据就绪后取载荷即卸载 -->
+        <div
+          v-if="exportingEntry"
+          class="group-export-offscreen"
+          aria-hidden="true"
+        >
+          <pivot-table
+            v-if="exportingEntry.config.pivotMode === '1'"
+            ref="exportMemberRef"
+            :portal-table-config="exportingEntry.config"
+            :condition="tabCondition[exportingEntry.key]"
+          />
+          <portal
+            v-else
+            ref="exportMemberRef"
+            :table-id="exportingEntry.portalName"
+            :action-width="0"
+            :advance-condition="tabAdvanceCondition[exportingEntry.key]"
+            :column-filter="makeColumnFilter(exportingEntry.config)"
+            :default-sort-column="parseDefaultSort(exportingEntry.config.defaultSort)"
+            hide-export
+            hide-refresh
+            hide-row-selection
+            multi-header
+            read-only
+            text-area-in-expanded
+          />
+        </div>
       </div>
     </template>
   </dark-table>
@@ -781,6 +883,15 @@ onMounted(() => {
           v-model:active-key="activeTab"
           class="portal-group-tabs"
         >
+          <template #rightExtra>
+            <a-button
+              size="small"
+              :loading="exportingAllSheets"
+              @click="handleExportAllSheets"
+            >
+              多Sheet导出
+            </a-button>
+          </template>
           <a-tab-pane
             v-for="entry in tabEntries"
             :key="entry.key"
@@ -788,12 +899,14 @@ onMounted(() => {
           >
             <pivot-table
               v-if="entry.config.pivotMode === '1'"
+              ref="setMemberRef(entry.key)"
               :portal-table-config="entry.config"
               :condition="tabCondition[entry.key]"
               theme="light"
             />
             <portal
               v-else
+              :ref="setMemberRef(entry.key)"
               :action-width="0"
               :advance-condition="tabAdvanceCondition[entry.key]"
               :column-filter="makeColumnFilter(entry.config)"
@@ -810,6 +923,34 @@ onMounted(() => {
             />
           </a-tab-pane>
         </a-tabs>
+        <!-- 多Sheet导出: 未激活成员后台挂载(不显示), 数据就绪后取载荷即卸载 -->
+        <div
+          v-if="exportingEntry"
+          class="group-export-offscreen"
+          aria-hidden="true"
+        >
+          <pivot-table
+            v-if="exportingEntry.config.pivotMode === '1'"
+            ref="exportMemberRef"
+            :portal-table-config="exportingEntry.config"
+            :condition="tabCondition[exportingEntry.key]"
+          />
+          <portal
+            v-else
+            ref="exportMemberRef"
+            :table-id="exportingEntry.portalName"
+            :action-width="0"
+            :advance-condition="tabAdvanceCondition[exportingEntry.key]"
+            :column-filter="makeColumnFilter(exportingEntry.config)"
+            :default-sort-column="parseDefaultSort(exportingEntry.config.defaultSort)"
+            hide-export
+            hide-refresh
+            hide-row-selection
+            multi-header
+            read-only
+            text-area-in-expanded
+          />
+        </div>
       </div>
       <pivot-table
         v-else-if="isPivotMode"
@@ -864,6 +1005,14 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
+}
+
+.group-export-offscreen {
+  position: absolute;
+  left: -99999px;
+  top: -99999px;
+  width: 1400px;
+  pointer-events: none;
 }
 
 .portal-group-tabs {

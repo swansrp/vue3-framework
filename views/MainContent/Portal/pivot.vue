@@ -1629,6 +1629,32 @@ const cellValue = (slot: any) => slot?.value
 /** 统计格对齐：自定义 bodyCell 插槽会整格接管，不显式写对齐就退回默认左对齐（口径取列配置的 contentAlign） */
 const cellAlign = (slot: any) => slot?.column?.contentAlign || 'center'
 
+// 多Tab宿主「多Sheet导出」: 转发内部 Portal 的导出载荷(格式化全量数据+列结构)。
+// 成员可能未被激活挂载过(宿主导出时后台挂载), whenReady 等首次数据加载完成再取载荷
+const portalRef = ref<any>(null)
+const whenReady = () => {
+  if (ready.value && firstLoadDone.value) {
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => {
+    const stop = watch([ready, firstLoadDone], ([r, f]) => {
+      if (r && f) {
+        stop()
+        resolve()
+      }
+    })
+  })
+}
+const getExportPayload = async () => {
+  await whenReady()
+  return portalRef.value?.getExportPayload()
+}
+
+defineExpose({
+  whenReady,
+  getExportPayload,
+})
+
 onMounted(() => {
   loadConfig()
 })
@@ -1638,6 +1664,7 @@ onMounted(() => {
   <div :class="['pivot-body', { 'pivot-light': props.theme === 'light' }]">
     <portal
       v-if="ready"
+      ref="portalRef"
       :table-id="props.portalTableConfig.portalName || ''"
       :data="dataSource"
       :custom-columns="portalColumns"

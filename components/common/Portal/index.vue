@@ -753,7 +753,7 @@ import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
-import { createVNode, h, nextTick, Ref, useSlots } from 'vue'
+import { createVNode, h, nextTick, Ref, useSlots, watch } from 'vue'
 
 import { name } from '@/../package.json'
 import {
@@ -2175,6 +2175,61 @@ const queryDataAsync = async (condition: QueryType) => {
     }
   }
 }
+/**
+ * 导出载荷(多Sheet导出复用): 返回格式化后的全量数据 + 展示列结构。
+ * plain(透视/外部数据)模式: 直接取内存数据(聚合结果本身即全量);
+ * 列表模式: 走导出专用全量接口(generalSelect/advancedSelect, 与页面分页查询不同接口)。
+ */
+const getExportPayload = (): Promise<{ rows: any[], columns: any[], rawColumns: any[] }> => {
+  const exportColumns = props.multiHeader ? multiHeadColumns.value : columns.value
+  if (config.plain) {
+    let exportDataArray
+    if (isNotEmpty(data.value)) {
+      exportDataArray = []
+      for (const index in data.value) {
+        const parsedData = _.cloneDeep(data.value[Number(index)])
+        columnArray.value.forEach((column: ColumnType) => {
+          parse(parsedData, Number(index), column, config)
+        })
+        exportDataArray.push(parsedData)
+      }
+    } else {
+      exportDataArray = [...parsedDataSource.value]
+    }
+    return Promise.resolve({ rows: exportDataArray, columns: exportColumns, rawColumns: columns.value })
+  }
+  const fetchAll = config.advancedSearchAble
+    ? advancedSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct)
+    : generalSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct)
+  return fetchAll.then((resp: any) => {
+    const dataArray = resp.payload || []
+    for (const index in dataArray) {
+      columnArray.value.forEach((column: ColumnType) => {
+        parse(dataArray[index], Number(index), column, config)
+      })
+    }
+    return { rows: dataArray, columns: exportColumns, rawColumns: columns.value }
+  })
+}
+
+/**
+ * 等待初始化完成(列配置已构建): 多Tab宿主导出未激活成员时, 后台挂载组件后
+ * 需等 initConfig 完成(列结构就绪)才能取导出载荷
+ */
+const whenReady = (): Promise<void> => {
+  if (columnArray.value.length > 0) {
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => {
+    const stop = watch(columnArray, (arr) => {
+      if (arr.length > 0) {
+        stop()
+        resolve()
+      }
+    })
+  })
+}
+
 const getDataSummary = async (condition: QueryType) => {
   if (config.advancedSearchAble) {
     return advancedSummary(config.url, condition, summaryColumns, config.baseDomain)
@@ -2196,37 +2251,9 @@ const paginationChange = () => {
  */
 const download = () => {
   const downloadFunc = () => {
-    if (config.plain) {
-      let exportDataArray
-      if (isNotEmpty(data.value)) {
-        exportDataArray = []
-        for (let index in data.value) {
-          const parsedData = _.cloneDeep(data.value[Number(index)])
-          columnArray.value.forEach((column: ColumnType) => {
-            parse(parsedData, Number(index), column, config)
-          })
-          exportDataArray.push(parsedData)
-        }
-      } else {
-        exportDataArray = [...parsedDataSource.value]
-      }
-      excelExport(exportDataArray, props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, downloadFileName.value(config))
-    } else {
-      const resolve = (resp: any) => {
-        const dataArray = resp.payload || []
-        for (let index in dataArray) {
-          columnArray.value.forEach((column: ColumnType) => {
-            parse(dataArray[index], Number(index), column, config)
-          })
-        }
-        excelExport(dataArray, multiHeadColumns.value, columns.value, downloadFileName.value(config))
-      }
-      if (config.advancedSearchAble) {
-        advancedSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct).then((resp: any) => resolve(resp))
-      } else {
-        generalSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct).then((resp: any) => resolve(resp))
-      }
-    }
+    getExportPayload().then(({ rows, columns: exportColumns }) => {
+      excelExport(rows, exportColumns, columns.value, downloadFileName.value(config))
+    })
   }
   if (config.total > 1000) {
     Modal.confirm({
@@ -2768,6 +2795,8 @@ const getUserFilterConditions = () => {
 
 defineExpose({
   queryData,
+  whenReady,
+  getExportPayload,
   queryTreeData,
   queryCondition,
   getRowSelection,
