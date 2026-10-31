@@ -682,12 +682,16 @@ const syncFiltersToTable = async (tableId: number, filters: any[] | undefined, s
     ? existingFiltersRes.payload
     : (existingFiltersRes?.payload?.records || [])
   const filterMap = new Map<string, PortalTableFilterVO>()
+  const duplicateFilterIds = new Set<number>()
   existingFilters.forEach(ef => {
-    if (ef.code) filterMap.set(ef.code, ef)
+    if (!ef.code || !ef.id) return
+    // 库里已存在同 code 的重复筛选器时只保留第一条参与更新, 其余随本次导入删除(自愈清重)
+    if (filterMap.has(ef.code)) duplicateFilterIds.add(ef.id)
+    else filterMap.set(ef.code, ef)
   })
   const importFilterCodes = new Set(filters.map((f: any) => f.code).filter(Boolean))
   const staleFilterIds = existingFilters
-    .filter(ef => ef.id && ef.code && !importFilterCodes.has(ef.code))
+    .filter(ef => ef.id && ((ef.code && !importFilterCodes.has(ef.code)) || duplicateFilterIds.has(ef.id!)))
     .map(ef => ef.id!)
   if (staleFilterIds.length) {
     await deletePortalTableFilterList(staleFilterIds, false, false, false)
@@ -710,18 +714,25 @@ const syncFiltersToTable = async (tableId: number, filters: any[] | undefined, s
 // 全量同步透视列到指定表格(以传入列表为准, 文件外的多余项删除; 只删有列标识可匹配的)
 const syncPivotColumnsToTable = async (tableId: number, pivotColumns: any[] | undefined, stat: { added: number; updated: number; deleted: number }) => {
   if (!Array.isArray(pivotColumns)) return
-  const existingPivotRes = await getPortalPivotColumnList(tableId, false, false, false)
+  // pageSize 拉大避免列多时截断: 拉不全会让窗口外旧列被重复 add 且永远删不到(与筛选器同步同款防截断)
+  const existingPivotRes = await getPortalPivotColumnList(tableId, false, false, false, 1000)
   const existingPivots: PortalPivotColumnVO[] = existingPivotRes?.payload?.records || []
   const pivotMap = new Map<string, PortalPivotColumnVO>()
+  const duplicatePivotIds = new Set<number>()
   existingPivots.forEach(ep => {
-    if (ep.itemValue) pivotMap.set(ep.itemValue, ep)
+    if (!ep.itemValue || !ep.id) return
+    // 库里已存在同 itemValue 的重复列时只保留第一条参与更新, 其余随本次导入删除(自愈清重)
+    if (pivotMap.has(ep.itemValue)) duplicatePivotIds.add(ep.id)
+    else pivotMap.set(ep.itemValue, ep)
   })
   const importPivotValues = new Set(pivotColumns.map((c: any) => c.itemValue).filter(Boolean))
   for (const ep of existingPivots) {
-    if (ep.id && ep.itemValue && !importPivotValues.has(ep.itemValue)) {
-      await deletePortalPivotColumn(ep.id, false, false, false)
-      stat.deleted++
-    }
+    if (!ep.id) continue
+    const isDuplicate = duplicatePivotIds.has(ep.id)
+    const isStale = ep.itemValue && !importPivotValues.has(ep.itemValue)
+    if (!isDuplicate && !isStale) continue
+    await deletePortalPivotColumn(ep.id, false, false, false)
+    stat.deleted++
   }
   for (const c of pivotColumns) {
     const { id: _srcPivotId, ...pivotData } = c

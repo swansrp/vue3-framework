@@ -314,12 +314,12 @@ export const updatePortalTableFilterOrder = (data: IdOrderReqVO[], showSuccess =
  * 根据 tableId 获取透视列配置列表
  * @api POST /admin/portal/table/pivot/column/advanced/query
  */
-export const getPortalPivotColumnList = (tableId: number, showSuccess = false, showLoading = false, showErr = true) => {
+export const getPortalPivotColumnList = (tableId: number, showSuccess = false, showLoading = false, showErr = true, pageSize = 100) => {
   const api = buildPostApiByType('/admin/portal/table/pivot/column/advanced/query', '')
   return request(api, {}, {
     condition: {
       conditionList: [{ property: 'tableId', relation: 1, value: [tableId] }]
-    }, sortList: [{ property: 'displayOrder', type: 0 }], pageSize: 100
+    }, sortList: [{ property: 'displayOrder', type: 0 }], pageSize
   }, showSuccess, showLoading, showErr)
 }
 
