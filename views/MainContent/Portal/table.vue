@@ -547,6 +547,8 @@ interface PortalTabItem {
   label?: string
   /** 显示顺序 */
   order?: number
+  /** 是否随多Sheet导出(缺省 true; 旧数据无此字段照常导出) */
+  exportAble?: boolean
 }
 
 /** 渲染用 tab 项(portalName 是表格查询抓手, 提前拽出来保证类型非空) */
@@ -554,6 +556,8 @@ interface PortalTabEntry {
   key: string
   label: string
   portalName: string
+  /** 是否参与多Sheet导出(parseTabItems 缺省补 true) */
+  exportAble: boolean
   config: PortalTableVO
 }
 
@@ -578,7 +582,8 @@ const parseTabItems = (raw?: string): PortalTabItem[] => {
       .map((it: any, idx: number) => ({
         tableId: Number(it?.tableId),
         label: it?.label as string | undefined,
-        order: typeof it?.order === 'number' ? it.order : idx
+        order: typeof it?.order === 'number' ? it.order : idx,
+        exportAble: it?.exportAble !== false
       }))
       .filter((it) => Number.isFinite(it.tableId))
       .sort((a, b) => a.order - b.order)
@@ -611,6 +616,10 @@ const handleExportAllSheets = async () => {
   try {
     const sheets: Array<{ dataSource: any, columns: any, rawColumns: any, sheetName: string }> = []
     for (const entry of tabEntries.value) {
+      // 成员在 Tab 成员配置里关了「导出」: 不进工作簿, 也不后台挂载取数
+      if (!entry.exportAble) {
+        continue
+      }
       let payload: any
       const mounted = memberRefs.get(entry.key)
       if (entry.key === activeTab.value && mounted?.getExportPayload) {
@@ -673,6 +682,7 @@ const loadTabEntries = async (items: PortalTabItem[]) => {
           key: String(it.tableId),
           label: it.label || config.tableCode || `Tab${i + 1}`,
           portalName: config.portalName,
+          exportAble: it.exportAble !== false,
           config
         }
       })
@@ -783,11 +793,13 @@ onMounted(() => {
         >
           <template #rightExtra>
             <a-button
+              v-if="portalTableConfig?.downloadAble !== '0'"
+              class="group-export-btn"
               size="small"
               :loading="exportingAllSheets"
               @click="handleExportAllSheets"
             >
-              多Sheet导出
+              导出
             </a-button>
           </template>
           <a-tab-pane
@@ -885,11 +897,13 @@ onMounted(() => {
         >
           <template #rightExtra>
             <a-button
+              v-if="portalTableConfig?.downloadAble !== '0'"
+              class="group-export-btn"
               size="small"
               :loading="exportingAllSheets"
               @click="handleExportAllSheets"
             >
-              多Sheet导出
+              导出
             </a-button>
           </template>
           <a-tab-pane
@@ -1078,6 +1092,26 @@ onMounted(() => {
     height: 2px !important;
     border-radius: 2px !important;
     box-shadow: 0 0 8px var(--accent-glow), 0 0 16px var(--accent-glow) !important;
+  }
+
+  // Tab 栏右侧「多Sheet导出」: 幽灵按钮, 与页签同一视觉语言(透明底淡字细框, hover 青光渐变托底)
+  // 全走主题变量, 深浅主题自动适配
+  :deep(.group-export-btn) {
+    height: 26px;
+    padding: 0 14px;
+    background: transparent !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 3px;
+    box-shadow: none !important;
+    color: var(--text-secondary) !important;
+    font-size: 12px;
+    transition: all 0.25s ease !important;
+
+    &:hover {
+      background: linear-gradient(to top, var(--accent-mid), transparent) !important;
+      border-color: var(--accent-mid) !important;
+      color: var(--text-primary) !important;
+    }
   }
 
   :deep(> .ant-tabs-content-holder) {

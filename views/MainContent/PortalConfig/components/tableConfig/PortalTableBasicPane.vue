@@ -661,6 +661,12 @@
                     placeholder="Tab 名称(留空用表格编码)"
                     style="width: 200px"
                   />
+                  <a-checkbox
+                    v-model:checked="tabSelfExport"
+                    class="tab-member-export-check"
+                  >
+                    导出
+                  </a-checkbox>
                 </template>
                 <template v-else>
                   <a-select
@@ -676,6 +682,12 @@
                     placeholder="Tab 名称(留空用表格编码)"
                     style="width: 200px"
                   />
+                  <a-checkbox
+                    v-model:checked="tabMemberRows[row.memberIndex].exportAble"
+                    class="tab-member-export-check"
+                  >
+                    导出
+                  </a-checkbox>
                   <a-button
                     type="link"
                     danger
@@ -1308,11 +1320,19 @@ const parseDefaultSort = (json: string | undefined) => {
 const tabSelfEnabled = ref(true)
 // 本表格的 tab 名称(留空用表格编码)
 const tabSelfLabel = ref('')
+// 本表格自身是否随多Sheet导出(缺省 true; 按钮显隐另由宿主 downloadAble 权限管, 两者独立)
+const tabSelfExport = ref(true)
 // Tab 成员编辑行(保存时按合并序列的当前顺序写入 table.tabItems)
-const tabMemberRows = ref<Array<{ tableId: number | undefined; label: string }>>([])
+interface TabMemberRow {
+  tableId: number | undefined
+  label: string
+  /** 是否随多Sheet导出(缺省 true; 旧数据无此字段照常导出) */
+  exportAble: boolean
+}
+const tabMemberRows = ref<TabMemberRow[]>([])
 
 const addTabMemberRow = () => {
-  tabMemberRows.value.push({ tableId: undefined, label: '' })
+  tabMemberRows.value.push({ tableId: undefined, label: '', exportAble: true })
 }
 
 // Tab 页拖拽排序: 宿主与成员在同一序列里调序(行序即 tab 页顺序, 宿主不再固定第 1 页)
@@ -1353,7 +1373,7 @@ const onTabDragStart = (index: number, e: DragEvent) => {
 const onTabDragOver = (index: number) => {
   const from = tabDragIndex.value
   if (from === null || from === index || index < 0) return
-  const items: Array<typeof TAB_SELF_MARKER | { tableId: number | undefined; label: string }> =
+  const items: Array<typeof TAB_SELF_MARKER | TabMemberRow> =
     tabOrderedSlots.value.map((s) => (s.self ? TAB_SELF_MARKER : tabMemberRows.value[s.memberIndex]))
   const [moved] = items.splice(from, 1)
   items.splice(index, 0, moved)
@@ -1361,7 +1381,7 @@ const onTabDragOver = (index: number) => {
   if (selfIdx >= 0) {
     tabSelfPosition.value = selfIdx
   }
-  tabMemberRows.value = items.filter((it) => it !== TAB_SELF_MARKER) as Array<{ tableId: number | undefined; label: string }>
+  tabMemberRows.value = items.filter((it) => it !== TAB_SELF_MARKER) as TabMemberRow[]
   tabDragIndex.value = index
 }
 const onTabDragEnd = () => {
@@ -1398,9 +1418,10 @@ const parseTabItems = (json: string | undefined) => {
       if (tableId === props.table.id) {
         tabSelfEnabled.value = true
         tabSelfLabel.value = it?.label || ''
+        tabSelfExport.value = it?.exportAble !== false
         tabSelfPosition.value = validIdx
       } else {
-        tabMemberRows.value.push({ tableId, label: it?.label || '' })
+        tabMemberRows.value.push({ tableId, label: it?.label || '', exportAble: it?.exportAble !== false })
       }
       validIdx++
     })
@@ -1700,16 +1721,25 @@ const handleSaveTable = async () => {
     // Tab 成员: 按合并序列(拖拽后的显示顺序)落库, 宿主按 tableId 识别、可落在任意位置;
     // 全空则回退单表页面
     // 清空必须显式写 '[]'：update 接口非 strict 模式跳过 null/undefined，删掉的成员会原样留在库里
-    const tabItemsPayload: Array<{ tableId: number; label?: string }> = []
+    const tabItemsPayload: Array<{ tableId: number; label?: string; exportAble?: boolean }> = []
     tabOrderedSlots.value.forEach((slot) => {
       if (slot.self) {
         if (table.id != null) {
-          tabItemsPayload.push({ tableId: table.id, ...(tabSelfLabel.value ? { label: tabSelfLabel.value } : {}) })
+          tabItemsPayload.push({
+            tableId: table.id,
+            ...(tabSelfLabel.value ? { label: tabSelfLabel.value } : {}),
+            ...(tabSelfExport.value === false ? { exportAble: false } : {})
+          })
         }
       } else {
         const r = tabMemberRows.value[slot.memberIndex]
         if (r?.tableId != null) {
-          tabItemsPayload.push({ tableId: r.tableId as number, ...(r.label ? { label: r.label } : {}) })
+          // exportAble 仅在关掉时写入(缺省即参与导出), 与 label 同风格保持 JSON 紧凑
+          tabItemsPayload.push({
+            tableId: r.tableId as number,
+            ...(r.label ? { label: r.label } : {}),
+            ...(r.exportAble === false ? { exportAble: false } : {})
+          })
         }
       }
     })
@@ -2054,6 +2084,13 @@ const handleSaveTable = async () => {
 
   .tab-member-row {
     margin-top: 0;
+
+    // 「导出」勾选不参与 flex 压缩, 保持与删除按钮的间距
+    .tab-member-export-check {
+      flex-shrink: 0;
+      margin: 0 4px;
+      white-space: nowrap;
+    }
   }
 }
 </style>
