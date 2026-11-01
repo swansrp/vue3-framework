@@ -47,8 +47,14 @@ export const excelExportMultiSheet = (
 
 /** 构造单个 sheet 工作表(多级表头合并/列宽/冻结/样式) */
 const buildWorksheet = (dataSource: any, columns: any, rawColumns: any) => {
-  const columnHeight = _columnHeight(columns)
-  const columnWidth = _columnWidth(columns)
+  const cols = Array.isArray(columns) ? columns : []
+  const rawCols = Array.isArray(rawColumns) ? rawColumns : []
+  const rows = Array.isArray(dataSource) ? dataSource : []
+  if (cols !== columns || rawCols !== rawColumns || rows !== dataSource) {
+    console.error('[excel] 列/数据形态异常, 已按空兜底继续导出:', { columns, rawColumns, dataSource })
+  }
+  const columnHeight = _columnHeight(cols)
+  const columnWidth = _columnWidth(cols)
   const header = [] as Array<any>
   for (let rowNum = 0; rowNum < columnHeight; rowNum++) {
     header[rowNum] = []
@@ -58,19 +64,19 @@ const buildWorksheet = (dataSource: any, columns: any, rawColumns: any) => {
   }
   let offset = 0
   const mergeRecord = [] as any
-  for (const item of columns) {
+  for (const item of cols) {
     generateExcelColumn(header, 0, offset, item, mergeRecord)
     offset += _treeWidth(item)
   }
-  header.push(...jsonDataToArray(columns, dataSource))
+  header.push(...jsonDataToArray(cols, rows))
   // 列宽
   const columnWidthArray = [] as Array<any>
-  rawColumns.forEach((col: any) => {
+  rawCols.forEach((col: any) => {
     const textWidth = getTextWidth(col.title)
     const wpx = textWidth ? (( textWidth < col.width ? textWidth : col.width ) || textWidth) : col.width
     columnWidthArray.push({ wpx })
   })
-  const ws = aoa_to_sheet(header, columnHeight, rawColumns, columnWidthArray)
+  const ws = aoa_to_sheet(header, columnHeight, rawCols, columnWidthArray)
   // 列宽
   ws['!cols'] = [...columnWidthArray]
   ws['!merges'] = mergeRecord
@@ -197,7 +203,7 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
 const generateExcelColumn = (columnTable: any, rowOffset: any, colOffset: any, columnDefine: any, mergeRecord: any) => {
   const columnWidth = _treeWidth(columnDefine)
   columnTable[rowOffset][colOffset] = strRemoveLF(columnDefine.title)
-  if (columnDefine.children) {
+  if (Array.isArray(columnDefine.children) && columnDefine.children.length > 0) {
     mergeRecord.push({ s: { r: rowOffset, c: colOffset }, e: { r: rowOffset, c: colOffset + columnWidth - 1 } })
     let tempOffSet = colOffset
     for (const child of columnDefine.children) {
@@ -211,21 +217,21 @@ const generateExcelColumn = (columnTable: any, rowOffset: any, colOffset: any, c
 }
 const _columnHeight = (column: any) => {
   let height = 0
-  for (const item of column) {
+  for (const item of Array.isArray(column) ? column : []) {
     height = Math.max(_treeHeight(item), height)
   }
   return height
 }
 const _columnWidth = (column: any) => {
   let width = 0
-  for (const item of column) {
+  for (const item of Array.isArray(column) ? column : []) {
     width += _treeWidth(item)
   }
   return width
 }
 const _treeHeight = (root: any) => {
   if (root) {
-    if (root.children && root.children.length !== 0) {
+    if (Array.isArray(root.children) && root.children.length !== 0) {
       let maxChildrenLen = 0
       for (const child of root.children) {
         maxChildrenLen = Math.max(maxChildrenLen, _treeHeight(child))
@@ -240,7 +246,7 @@ const _treeHeight = (root: any) => {
 }
 const _treeWidth = (root: any) => {
   if (!root) return 0
-  if (!root.children || root.children.length === 0) return 1
+  if (!Array.isArray(root.children) || root.children.length === 0) return 1
   let width = 0
   for (const child of root.children) {
     width += _treeWidth(child)
@@ -249,20 +255,21 @@ const _treeWidth = (root: any) => {
 }
 const jsonDataToArray = (column: any, data: any) => {
   const dataIndexes = [] as Array<any>
-  for (const item of column) {
+  for (const item of Array.isArray(column) ? column : []) {
     dataIndexes.push(...getLeafDataIndexes(item))
   }
-  return recursiveChildrenData(dataIndexes, data)
+  return recursiveChildrenData(dataIndexes, Array.isArray(data) ? data : [])
 }
 const recursiveChildrenData = (columnIndex: any, data: any) => {
   const result = [] as Array<any>
-  for (const rowData of data) {
+  for (const rowData of Array.isArray(data) ? data : []) {
     const row = []
     for (const index of columnIndex) {
       row.push(rowData[index])
     }
     result.push(row)
-    if (rowData.children) {
+    // children 只在确为数组时才当树展开: 行数据若有同名非数组字段(真值对象/数字)曾致 for...of 抛 not iterable
+    if (Array.isArray(rowData.children) && rowData.children.length > 0) {
       result.push(...recursiveChildrenData(columnIndex, rowData.children))
     }
   }
@@ -270,12 +277,12 @@ const recursiveChildrenData = (columnIndex: any, data: any) => {
 }
 const getLeafDataIndexes = (root: any) => {
   const result = [] as Array<any>
-  if (root.children) {
+  if (Array.isArray(root?.children) && root.children.length > 0) {
     for (const child of root.children) {
       result.push(...getLeafDataIndexes(child))
     }
   } else {
-    result.push(root.dataIndex)
+    result.push(root?.dataIndex)
   }
   return result
 }
