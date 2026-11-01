@@ -45,6 +45,18 @@ export const excelExportMultiSheet = (
   XLSX.writeFile(wb, fileName + '-' + dayjs().format('YYYYMMDDHHmmss') + '.xlsx')
 }
 
+/** 列树先序抽叶子(与 jsonDataToArray 的 dataIndexes 同序): aoa 列索引/列宽/金额判断都按叶子对齐 */
+const walkLeafColumns = (cols: any[], out: any[] = []): any[] => {
+  for (const col of cols || []) {
+    if (Array.isArray(col?.children) && col.children.length > 0) {
+      walkLeafColumns(col.children, out)
+    } else {
+      out.push(col)
+    }
+  }
+  return out
+}
+
 /** 构造单个 sheet 工作表(多级表头合并/列宽/冻结/样式) */
 const buildWorksheet = (dataSource: any, columns: any, rawColumns: any) => {
   const cols = Array.isArray(columns) ? columns : []
@@ -69,14 +81,12 @@ const buildWorksheet = (dataSource: any, columns: any, rawColumns: any) => {
     offset += _treeWidth(item)
   }
   header.push(...jsonDataToArray(cols, rows))
-  // 列宽
-  const columnWidthArray = [] as Array<any>
-  rawCols.forEach((col: any) => {
-    const textWidth = getTextWidth(col.title)
-    const wpx = textWidth ? (( textWidth < col.width ? textWidth : col.width ) || textWidth) : col.width
-    columnWidthArray.push({ wpx })
-  })
-  const ws = aoa_to_sheet(header, columnHeight, rawCols, columnWidthArray)
+  // 列宽按【列树叶子序】构建(先序遍历, 与 jsonDataToArray 的 dataIndexes 同序):
+  // 多级表头分组会重排列序, 旧按 rawColumns 序构建与 aoa 列索引错位 → 宽度张冠李戴、大面积折行
+  const leafCols = walkLeafColumns(cols)
+  // 配置宽起底(缺失给 60 保表头可读), 数据实测宽在 aoa_to_sheet 里再取 max
+  const columnWidthArray = leafCols.map((col: any) => ({ wpx: Math.max(col.width || 0, 60) }))
+  const ws = aoa_to_sheet(header, columnHeight, leafCols, columnWidthArray)
   // 列宽
   ws['!cols'] = [...columnWidthArray]
   ws['!merges'] = mergeRecord
@@ -144,7 +154,8 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
           }
         }
       } else {
-        // 数据行: 浅灰细边框 + 隔行浅灰蓝斑马纹
+        // 数据行: 浅灰蓝细边框 + 隔行淡蓝斑马纹
+        // 边框要压得住斑马底色: 过浅的 E4E9F0 在蓝纹上竖线不可见(用户实测)
         cell = {
           v: data[R][C],
           s: {
@@ -155,15 +166,15 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
               vertical: 'center'
             },
             border: {
-              top: { style: 'thin', color: { rgb: 'E4E9F0' } },
-              left: { style: 'thin', color: { rgb: 'E4E9F0' } },
-              bottom: { style: 'thin', color: { rgb: 'E4E9F0' } },
-              right: { style: 'thin', color: { rgb: 'E4E9F0' } }
+              top: { style: 'thin', color: { rgb: 'C9D6E8' } },
+              left: { style: 'thin', color: { rgb: 'C9D6E8' } },
+              bottom: { style: 'thin', color: { rgb: 'C9D6E8' } },
+              right: { style: 'thin', color: { rgb: 'C9D6E8' } }
             }
           }
         }
         if ((R - headerRows) % 2 === 1) {
-          cell.s.fill = { patternType: 'solid', fgColor: { rgb: 'DDEBF7' } }
+          cell.s.fill = { patternType: 'solid', fgColor: { rgb: 'EFF6FC' } }
         }
       }
       const cell_ref = XLSX.utils.encode_cell({ c: C, r: R })
@@ -190,7 +201,8 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
         }
         ws[cell_ref] = cell
         if (columnWidthArray[C]) {
-          columnWidthArray[C].wpx = Math.max(columnWidthArray[C].wpx, getTextWidth(cell.v))
+          // +14: 单元格左右内边距+千分位/格式化误差补偿(MONEY 列 max 时已去掉逗号, 实显更宽), 否则贴边就折行
+          columnWidthArray[C].wpx = Math.max(columnWidthArray[C].wpx, getTextWidth(cell.v) + 14)
         }
       }
     }
@@ -257,6 +269,10 @@ const jsonDataToArray = (column: any, data: any) => {
   const dataIndexes = [] as Array<any>
   for (const item of Array.isArray(column) ? column : []) {
     dataIndexes.push(...getLeafDataIndexes(item))
+  }
+  // 诊断: 有列但没取到任何数据列 dataIndex(叶子缺 dataIndex/壳列结构异常)是"导出有表头无内容"的头号嫌疑
+  if (Array.isArray(column) && column.length > 0 && dataIndexes.length === 0) {
+    console.error('[excel] 列树未解析出任何叶子 dataIndex, 数据列将全空。列结构:', JSON.parse(JSON.stringify(column)))
   }
   return recursiveChildrenData(dataIndexes, Array.isArray(data) ? data : [])
 }

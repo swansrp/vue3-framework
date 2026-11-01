@@ -640,7 +640,15 @@ const handleExportAllSheets = async () => {
         }
       }
       if (payload?.rows) {
-        sheets.push({ ...payload, sheetName: entry.label || entry.portalName })
+        // 字段名对齐: 载荷叫 rows, 多Sheet导出入参契约叫 dataSource(错位曾致 dataSource=undefined 导出全空)
+        sheets.push({
+          dataSource: payload.rows,
+          columns: payload.columns,
+          rawColumns: payload.rawColumns,
+          sheetName: entry.label || entry.portalName
+        })
+      } else {
+        console.warn(`[多Sheet导出] 成员「${entry.label}」未返回有效载荷:`, payload)
       }
     }
     if (!sheets.length) {
