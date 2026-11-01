@@ -21,6 +21,13 @@ export const ssoLogin = (id_token: string) =>
     false
   ) as Promise<any>
 
+// 🔴 T1.3 棒8 OAuth2 授权码换本地会话（/web/epc-ai/oauth2/exchange）：前端持 inkhub
+// /web/oauth2/authorize 302 回跳的 code 调后端（code→IdP token→本地验签→租户镜像→bidr 会话），
+// 出参与 /web/auth/login 同形（accessToken/refreshToken/name/customerNumber）。
+// request 第二参＝params（query）：code 走 query，与后端 @RequestParam 对齐
+export const exchangeLogin = (code: string) =>
+  request(buildPostApi('/epc-ai/oauth2/exchange'), { code }, {}, true, false) as Promise<any>
+
 export const logoff = () => request(buildPostApi('/logoff'), {}, {}, false, false) as Promise<any>
 
 export const verifyLogin = (token: string) => request(buildPostApi('/token'), {}, { token }, true, false) as Promise<any>

@@ -1,7 +1,7 @@
 import qs from 'qs'
 import { LocationQueryRaw } from 'vue-router'
 
-import { getToken, getUserInfo, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
+import { exchangeLogin, getToken, getUserInfo, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
 import { getQueryObject, removeURLParameter } from '@/framework/network/utils'
 import router from '@/framework/router'
 import pinia from '@/framework/store'
@@ -59,7 +59,13 @@ export const navigation2Login = (includeRedirectUri = true) => {
     redirectUri = http + url.split('?')[0].split('/')[0] + '/sso'
   }
   const targetUrl = encodeURIComponent(window.location.href)
-  if (includeRedirectUri) {
+  // T1.3 棒8 OAuth2 authorize 直链形态（VITE_ssoLoginUrl 指向 inkhub /web/oauth2/authorize）：
+  // redirect_uri 已全串内置于 VITE_ssoLoginUrl（必须与 ac_sso_redirect 白名单登记串一致，
+  // authorize 端全串等值复核），不得再追加；target_url 收进 state（RFC 6749 §4.1.1 原值透传，
+  // 回跳后由 checkLoginState 的 code 分支解码复原）
+  if (ssoLoginUrl.includes('/oauth2/authorize')) {
+    window.location.href = ssoLoginUrl + '&state=' + targetUrl
+  } else if (includeRedirectUri) {
     window.location.href = ssoLoginUrl + '&redirect_uri=' + redirectUri + '&target_url=' + targetUrl
   } else {
     window.location.href = ssoLoginUrl + '&target_url=' + targetUrl
@@ -130,6 +136,33 @@ export const checkLoginState = async () => {
       const targetUrl = String(queryObject.target_url)
       delete queryObject.target_url
       window.location.href = targetUrl + (targetUrl.includes('?') ? '&' : '?') + qs.stringify(queryObject, { arrayFormat: 'repeat' })
+    } else if (isNotEmpty(queryObject.code)) {
+      // T1.3 棒8 OAuth2 授权码回调：code 传后端 /web/epc-ai/oauth2/exchange 换本地会话；
+      // state＝navigation2Login 发起跳转时编码进来的原页地址（inkhub RFC 6749 原值透传），
+      // 会话落好后复原回原页（try/catch 解码，脏 state 就地放弃走清参重载）。
+      // 🔴 必须在此 return 短路：不return 的话下方 getToken/verify 链会并发走 _executeLogin
+      // ⇒ ssoLogin(空 id_token) 必 401 ⇒ 又触发 navigation2Login 回 authorize ⇒ 回跳环
+      exchangeLogin(String(queryObject.code)).then(res => {
+        const payload = res.payload
+        if (payload && payload.accessToken) {
+          userStore.name = payload.name
+          localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, payload.accessToken)
+          localStorageMethods.setLocalStorage(REFRESH_TOKEN, payload.refreshToken)
+          commonStore.hasLogin = true
+          localStorageMethods.setLocalStorage('loginRetryTime', '3')
+        }
+        const state = String(queryObject.state || '')
+        let target = ''
+        if (state) {
+          try { target = decodeURIComponent(state) } catch (e) { target = '' }
+        }
+        if (target && (target.startsWith('http://') || target.startsWith('https://'))) {
+          window.location.href = target
+        } else {
+          window.location.href = removeURLParameter(removeURLParameter(window.location.href, 'code'), 'state')
+        }
+      })
+      return undefined
     } else if (isNotEmpty(queryObject.id_token)) {
       userStore.setIdToken(<string>queryObject.id_token).then(() => {
         window.location.href = removeURLParameter(window.location.href, ID_TOKEN)
