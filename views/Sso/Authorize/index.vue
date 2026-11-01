@@ -68,7 +68,7 @@
             type="primary"
             @click="backToHub"
           >
-            返回墨枢
+            返回{{ brandStore.productName }}
           </a-button>
         </div>
       </template>
@@ -85,11 +85,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { verifyLogin } from '@/framework/apis/login/login'
 import { postSsoTicket } from '@/framework/apis/sso/sso'
 import { navigation2Login } from '@/framework/network/login'
+import { useBrandStore } from '@/framework/store/brand'
 import { localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 
 const route = useRoute()
 const router = useRouter()
+// 按钮文案随远端品牌（T1.5 棒5）：store 侧恒非空，拉取失败/超时回落墨枢
+const brandStore = useBrandStore()
 
 const state = ref<'issuing' | 'redirecting' | 'failed'>('issuing')
 const reason = ref('')
