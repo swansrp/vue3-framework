@@ -2198,6 +2198,11 @@ const getExportPayload = (): Promise<{ rows: any[], columns: any[], rawColumns: 
     }
     return Promise.resolve({ rows: exportDataArray, columns: exportColumns, rawColumns: columns.value })
   }
+  // 非数据模式(列表)才有全量查询: url 空(初始化未完成/配置缺失)时直接报错,
+  // 避免以空路径发出 /advanced/select 这类打到站点根的无效请求
+  if (!config.url) {
+    throw new Error(`报表「${config.title || props.tableId}」数据源未就绪或未配置, 无法导出`)
+  }
   const fetchAll = config.advancedSearchAble
     ? advancedSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct)
     : generalSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct)

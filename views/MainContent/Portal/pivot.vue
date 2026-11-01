@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { CaretDownOutlined, CaretUpOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { useLocaleReceiver } from 'ant-design-vue/es/locale/LocaleReceiver'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import PivotDrillContent from './PivotDrillContent.vue'
@@ -1632,18 +1632,22 @@ const cellAlign = (slot: any) => slot?.column?.contentAlign || 'center'
 // 多Tab宿主「多Sheet导出」: 转发内部 Portal 的导出载荷(格式化全量数据+列结构)。
 // 成员可能未被激活挂载过(宿主导出时后台挂载), whenReady 等首次数据加载完成再取载荷
 const portalRef = ref<any>(null)
-const whenReady = () => {
-  if (ready.value && firstLoadDone.value) {
-    return Promise.resolve()
-  }
-  return new Promise<void>((resolve) => {
-    const stop = watch([ready, firstLoadDone], ([r, f]) => {
-      if (r && f) {
-        stop()
-        resolve()
-      }
+const whenReady = async () => {
+  if (!ready.value || !firstLoadDone.value) {
+    await new Promise<void>((resolve) => {
+      const stop = watch([ready, firstLoadDone], ([r, f]) => {
+        if (r && f) {
+          stop()
+          resolve()
+        }
+      })
     })
-  })
+  }
+  // 内嵌 Portal 在 ready 后才挂载(v-if), 其 initConfig 是异步的:
+  // plain/url 判定要等 getPortalConfig 返回才写入, 不等它就取导出载荷
+  // 会以空 url 发出 /advanced/select(多Sheet导出未激活成员的竞态实锤)
+  await nextTick()
+  await portalRef.value?.whenReady?.()
 }
 const getExportPayload = async () => {
   await whenReady()
