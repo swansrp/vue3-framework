@@ -2226,12 +2226,20 @@ const whenReady = (): Promise<void> => {
     return Promise.resolve()
   }
   return new Promise<void>((resolve) => {
-    const stop = watch(columnArray, (arr) => {
-      if (arr.length > 0) {
+    // 监听长度而非数组引用: 列是 push 原地填充, watch(ref) 只认 .value 引用替换,
+    // 永远不触发(曾致多Sheet导出后台成员永久等待、按钮转圈不落)
+    const stop = watch(() => columnArray.value.length, (len) => {
+      if (len > 0) {
         stop()
+        clearTimeout(timer)
         resolve()
       }
     })
+    // 列构建异常/空列兜底: 超时放行, 由 getExportPayload 的 url 兜底抛出明确报错
+    const timer = setTimeout(() => {
+      stop()
+      resolve()
+    }, 20000)
   })
 }
 
