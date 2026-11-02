@@ -280,6 +280,11 @@ const afterLogin = (res: any) => {
           : undefined
       : undefined
 
+  // 后端路径（非 SPA 路由）必须整页跳转：OAuth2 authorize 是后端端点，vue-router 里没有对应路由，
+  // 用 router.replace 会落到空白/404；整页跳转还能让浏览器带上登录时种下的会话 cookie（见后端
+  // LoginController#login 与 OAuth2IdpController.SESSION_COOKIE）。
+  const isBackendPath = (uri?: string) => !!uri && /^\/(inkhub\/)?web\//.test(uri)
+
   // 防御性检查：如果 redirect_uri 指向登录页本身，则不跳转（否则会循环回到登录页）
   if (redirect_uri === '/login') {
     redirect_uri = undefined
@@ -442,25 +447,22 @@ const afterLogin = (res: any) => {
   }
   // 2.5秒后开始退场动画，完成后再跳转页面
   setTimeout(() => {
+    const finish = () => {
+      if (isBackendPath(redirect_uri)) {
+        window.location.href = redirect_uri
+        return
+      }
+      router.replace(redirect_uri || '/').then(() => {
+        nextTick(() => {
+          removeAnimation()
+          // 登录流程完全结束后重置按钮状态
+          loginProcessLoading.value = false
+        })
+      })
+    }
     checkLoginState()
-        .then(() => {
-          router.replace(redirect_uri || '/').then(() => {
-            nextTick(() => {
-              removeAnimation()
-              // 登录流程完全结束后重置按钮状态
-              loginProcessLoading.value = false
-            })
-          })
-        })
-        .catch(() => {
-          router.replace(redirect_uri || '/').then(() => {
-            nextTick(() => {
-              removeAnimation()
-              // 登录流程完全结束后重置按钮状态
-              loginProcessLoading.value = false
-            })
-          })
-        })
+        .then(finish)
+        .catch(finish)
   }, 2500)
 }
 
