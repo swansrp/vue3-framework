@@ -37,7 +37,7 @@ const staticRoutes: Array<RouteRecordRaw> = [
     meta: { public: true }
   },
   {
-    // 租户注册链接（ACCOUNT_REGISTER_MODE=tenant 形态的准入入口）：路径段即租户码，
+    // 租户注册链接（yml my.auth.register-mode=tenant 形态的准入入口）：路径段即租户码，
     // 页面（同登录页组件）读出后随注册请求提交；无码裸 /register 落回登录页——
     // 删段/改段的失败模式统一收敛为"回登录页或后端拒绝"，不存在无租户漏网注册。
     path: '/register/:code',
@@ -151,7 +151,7 @@ export const getDefaultContentComponent = () => defaultContentComponent
 /**
  * 登录页底部外链（业务层注入，默认不注入＝登录页零变化）
  * 用途：准入入口在业务侧的项目（入驻申请页、开通向导之类）需要一个从登录页过去的口子，
- * 而它不属于 core 自助注册三态（ACCOUNT_REGISTER_MODE）的任一态，故与「还没有账号」按钮分开给。
+ * 而它不属于 core 自助注册三态（yml my.auth.register-mode）的任一态，故与「还没有账号」按钮分开给。
  * @param link - { label, path }；传 null 可取消注册（path 用业务路由形态，hash 路由由 router.push 消化）
  */
 export interface LoginExtraLink {

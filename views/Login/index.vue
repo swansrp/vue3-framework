@@ -185,7 +185,7 @@ const formInline = reactive({ userName: '', password: '', captcha: '', rememberP
 const passwordResetMode: Ref<Boolean> = ref(false)
 const registerMode: Ref<Boolean> = ref(false)
 const registerWithPhoneNumber: Ref<boolean> = ref(false)
-// 自助注册三态（ACCOUNT_REGISTER_MODE）：入口按钮仅 open 态可见；tenant/closed 态登录页纯登录
+// 自助注册三态（yml my.auth.register-mode）：入口按钮仅 open 态可见；tenant/closed 态登录页纯登录
 const registerEntryVisible: Ref<boolean> = ref(true)
 // 业务侧注入的登录页外链（setLoginExtraLink，未注入＝null ⇒ 不渲染，与三态判定无关）
 const extraLink = getLoginExtraLink()
@@ -587,18 +587,13 @@ onMounted(() => {
       if (tenantCode.value) registerMode.value = true
     }
   }
-  // 优先读服务端生效模式（库值→yml 三级链同源）；老核心无该端点时回落参数页键，
-  // 两条通道都不可用则保持 open 形态——注册闸始终由服务端兜底。
+  // 生效模式只读服务端（yml my.auth.register-mode → open，与注册闸同源）；
+  // 端点不可用则保持 open 形态——注册闸始终由服务端兜底，本页只决定入口形态。
   getRegisterMode()
       .then((res) => applyRegisterMode(res.payload))
-      .catch(() =>
-          parameterStore()
-              .getParameter('ACCOUNT_REGISTER_MODE')
-              .then(applyRegisterMode)
-              .catch(() => {
-                // 参数通道异常保持 open 形态
-              })
-      )
+      .catch(() => {
+        // 端点不可用保持 open 形态
+      })
   parameterStore()
       .getParameter('PHONE_NUMBER_REGISTER')
       .then((resp) => {
