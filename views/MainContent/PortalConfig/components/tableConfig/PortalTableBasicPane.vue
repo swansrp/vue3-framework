@@ -642,8 +642,8 @@ import { computed, reactive, ref, watch } from 'vue'
 
 import { pruneBlankConditions, useConditionModal } from './useConditionModal'
 
-import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
 import { updatePortalColumnOrder } from '@/framework/apis/portal/config'
+import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 import { strRemoveLF } from '@/framework/utils/common'

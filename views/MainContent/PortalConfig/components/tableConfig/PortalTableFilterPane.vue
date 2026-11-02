@@ -431,10 +431,10 @@ import {
 import { genEmptyCondition } from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
-import { strRemoveLF } from '@/framework/utils/common'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { dictStore } from '@/framework/store/common'
+import { strRemoveLF } from '@/framework/utils/common'
 
 
 const props = defineProps<{

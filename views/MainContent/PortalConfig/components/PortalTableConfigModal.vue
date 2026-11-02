@@ -229,8 +229,8 @@ import {
   updatePortalPivotColumn,
 } from '@/framework/apis/portal/table'
 import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
-import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { strRemoveLF } from '@/framework/utils/common'
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import PortalTableView from '@/framework/views/MainContent/Portal/table.vue'
 import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 
