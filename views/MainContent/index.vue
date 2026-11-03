@@ -50,9 +50,8 @@ import dayjs from 'dayjs'
 import updateLocale from 'dayjs/plugin/updateLocale'
 
 import NavigationFramework from '@/framework/components/navigationFramework/index.vue'
-
-import { buildAntdTheme } from '@/framework/store/antdTheme'
 import { getDefaultContentComponent } from '@/framework/router'
+import { buildAntdTheme } from '@/framework/store/antdTheme'
 import { useRouteStore } from '@/framework/store/route'
 import { useThemeStore } from '@/framework/store/theme'
 

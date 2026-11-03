@@ -11,9 +11,9 @@
  *   等 alias token 派生，只能通过 components 作用域覆写 alias token 间接控制；
  * - 表格行高无法用 token 精确控制（padding 种子水平垂直共用），不在此收口。
  */
+import { theme as antdTheme } from 'ant-design-vue'
 import type { ThemeConfig } from 'ant-design-vue/es/config-provider/context'
 
-import { theme as antdTheme } from 'ant-design-vue'
 
 import type { ThemeId } from './theme'
 

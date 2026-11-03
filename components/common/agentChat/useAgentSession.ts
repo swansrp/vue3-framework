@@ -21,9 +21,9 @@ import { onScopeDispose, ref, watch, type Ref } from 'vue'
 import type { AgentEventX, AgentSessionStateT } from './types'
 import { isTerminalStatus } from './types'
 
+import { name } from '@/../package.json'
 import { sessionEvents, sessionStatus } from '@/framework/apis/agent'
 import { getSseStream, readSseStream } from '@/framework/utils/sse'
-import { name } from '@/../package.json'
 
 const POLL_INTERVAL = 2000
 /** SSE 保活间隔（刷新 status＋兼作后端 touchView 在场信号） */
