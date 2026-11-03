@@ -327,13 +327,20 @@ function request(apiType: ApiType,
           else if (errType === 'warning') message.warning(msg)
           else if (errType === 'error') message.error(msg)
           // 抛错信息给人话；末尾不兜 status.msg——那是错误码枚举名（INK_PARAM 一类），
-          // 给用户看就是漏码；真取不到消息时给带码的人话
-          throw new Error(resp.data.payload.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
+          // 给用户看就是漏码；真取不到消息时给带码的人话。
+          // 码枚举名单独挂 err.codeMsg 供调用方按码分支（登录页 AC_PASSWORD_EXPIRED 弹改密
+          // 模态／AC_PASSWORD_NOT_EXISTED 进首次设密表单）——err.message 是人话文案，
+          // 按码比对必须走这个字段（#45：比 message 恒不中＝死分支，6.60 真机 zhang_p 实证）。
+          const bizErr = new Error(resp.data.payload.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
+          ;(bizErr as any).codeMsg = resp.data.status.msg
+          throw bizErr
         } else {
           // showErr=false（调用方自接管提示，如列表页静默取数）：错误照抛，只是不弹全局条。
           // 框架侧非 SUCCESS 封套的 payload 必在（只由 Response(ServiceException) 产出并填 errMsg），
           // 但网关/第三方回的同形封套可能没有 payload ⇒ 可选读，免得 TypeError 顶掉该抛给业务层的文案。
-          throw new Error(resp.data.payload?.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
+          const bizErr = new Error(resp.data.payload?.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
+          ;(bizErr as any).codeMsg = resp.data.status.msg
+          throw bizErr
         }
       }
     } else if (showSuccess) {
