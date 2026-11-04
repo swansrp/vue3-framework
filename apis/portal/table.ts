@@ -39,8 +39,10 @@ export interface PortalTableVO {
   pivotMeasures?: string
   /** 透视度量布局: col=度量作为列(默认), row=度量作为行 */
   pivotMeasureLayout?: string
-  /** 透视合计列位置(仅row布局生效): first=靠前 last=靠后(默认) */
+  /** 透视合计列位置(仅row布局生效): first=靠前 last=靠后(默认); pivotRow 布局另支持 none=不显示组内小计行 */
   pivotTotalPos?: string
+  /** 透视总计行(最底汇总行): 空=跟随Portal配置(summary) 1=显示 0=隐藏 */
+  pivotSummaryShow?: string
   /** Tab成员JSON(仅宿主): [{tableId,label,order}], 非空=多Tab页面(宿主=路由抓手,筛选栏归属) */
   tabItems?: string
   /** 默认排序JSON: [{property,type}] type 0=正序 1=倒序, 空数组=不排序(透视模式取行维度/聚合度量) */
@@ -64,6 +66,7 @@ export const REPORT_TABLE_SYNC_FIELDS = [
   'pivotMeasureLayout',
   'pivotMeasures',
   'pivotMode',
+  'pivotSummaryShow',
   'pivotTotalPos'
 ]
 
@@ -90,6 +93,12 @@ export interface PortalPivotColumnVO {
 export interface PivotMeasureVO {
   /** 度量字段名（ratio 时仅作输出键, 取数走分子/分母字段） */
   field: string
+  /** 列输出键: 同字段多条件各出一列时区分用(缺省=field), 只作列别名后半段, 不参与取数 */
+  key?: string
+  /** 度量自身条件 JSON({andOr, conditionList}): 与透视列条件按「且」叠加, 只统计命中行 */
+  condition?: string
+  /** 父链路径 JSON(string[] 自外向内): 给度量列加多层级父表头, 叶子标题仍是度量显示名 */
+  groupPath?: string
   /** 度量显示名 */
   label?: string
   /** 列注释: 悬停表头问号显示, 只给前端渲染用, 后端整串存取不解析 */
@@ -100,6 +109,10 @@ export interface PivotMeasureVO {
   numerator?: string
   /** 比率聚合分母字段(agg=ratio 时必填) */
   denominator?: string
+  /** 比率分子腿聚合方式(agg=ratio 时可选, 不配=sum) */
+  numeratorAgg?: string
+  /** 比率分母腿聚合方式(agg=ratio 时可选, 不配=sum; 组内恒定目标值配 max, 防 sum 分母随行数放大) */
+  denominatorAgg?: string
   /** 是否右锁定(s-table 两边同时锁定会异常, 与行维度左锁定互斥) */
   fixed?: boolean
   /**
@@ -301,12 +314,12 @@ export const updatePortalTableFilterOrder = (data: IdOrderReqVO[], showSuccess =
  * 根据 tableId 获取透视列配置列表
  * @api POST /admin/portal/table/pivot/column/advanced/query
  */
-export const getPortalPivotColumnList = (tableId: number, showSuccess = false, showLoading = false, showErr = true) => {
+export const getPortalPivotColumnList = (tableId: number, showSuccess = false, showLoading = false, showErr = true, pageSize = 100) => {
   const api = buildPostApiByType('/admin/portal/table/pivot/column/advanced/query', '')
   return request(api, {}, {
     condition: {
       conditionList: [{ property: 'tableId', relation: 1, value: [tableId] }]
-    }, sortList: [{ property: 'displayOrder', type: 0 }], pageSize: 100
+    }, sortList: [{ property: 'displayOrder', type: 0 }], pageSize
   }, showSuccess, showLoading, showErr)
 }
 

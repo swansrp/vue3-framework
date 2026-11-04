@@ -307,7 +307,7 @@
               @change="(e: any) => handleFieldToggle(field, e.target.checked)"
             >
               <div class="field-info">
-                <span class="field-name">{{ field.displayName }}</span>
+                <span class="field-name">{{ strRemoveLF(field.displayName) }}</span>
                 <span class="field-code">{{ field.property }}</span>
               </div>
             </a-checkbox>
@@ -431,6 +431,7 @@ import {
 import { genEmptyCondition } from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
+import { strRemoveLF } from '@/framework/utils/common'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { buildCondition } from '@/framework/components/common/Portal/utils'
 import { dictStore } from '@/framework/store/common'

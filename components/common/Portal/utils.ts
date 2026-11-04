@@ -9,6 +9,29 @@ import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const dict = dictStore()
 const treeDict = useTreeStore()
+// 表头常驻图标带预算: 排序双箭头 ≈20px, 列搜索漏斗+放大镜 ≈40px(与表头实际渲染图标同宽级)
+export const HEADER_ICON_PAD_SORT = 20
+export const HEADER_ICON_PAD_FILTER = 40
+
+// 建列表头腿宽度: 标题按 \n/\\n 拆行取最宽行(与表头按 \n 拆行渲染同语义) + 按列开关计入常驻图标带
+export const headerColumnWidth = (column: Pick<ColumnType, 'title' | 'sorter' | 'filterAble' | 'customFilterDropdown'>): number => {
+  const icons = (column.sorter ? HEADER_ICON_PAD_SORT : 0)
+    + (column.filterAble || column.customFilterDropdown ? HEADER_ICON_PAD_FILTER : 0)
+  return Math.ceil(getTextWidth(String(column.title ?? ''))) + icons
+}
+
+// 表头宽度记忆化: title 恒定而 parse 逐行被调, 按列对象缓存避免每行重建 canvas 重测
+const titleWidthCache = new WeakMap<ColumnType, number>()
+const columnTitleWidth = (column: ColumnType): number => {
+  const cached = titleWidthCache.get(column)
+  if (cached !== undefined) {
+    return cached
+  }
+  const width = headerColumnWidth(column)
+  titleWidthCache.set(column, width)
+  return width
+}
+
 export const parse = (record: any, index: number, column: ColumnType, config: TableConfigType) => {
   record.index = (index + 1) + config.pageSize * (config.currentPage - 1)
   if (column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE) {
@@ -31,8 +54,9 @@ export const parse = (record: any, index: number, column: ColumnType, config: Ta
     record[column.dataIndex] = formatPercent(record[column.dataIndex], Number(column.referenceDict?.split(',')[0]), Number(column.referenceDict?.split(',')[1]))
   }
   // widthFitted: 列宽已由建列方(透视报表)按内容算足，此处再 max() 既是空转也要逐格建 canvas 测量
+  // 列宽三源取最大: 配置宽度 ∪ 表头标题(getTextWidth 对 \n/\\n 取换行后最宽行, 与表头按 \n 拆行渲染同语义) ∪ 本行数据
   if (column.fieldType !== FIELD_TYPE.TEXT_AREA && column.width !== undefined && !column.widthFitted) {
-    column.width = column.width > getTextWidth(record[column.dataIndex]) ? column.width : getTextWidth(record[column.dataIndex])
+    column.width = Math.max(column.width, columnTitleWidth(column), getTextWidth(record[column.dataIndex]))
   }
 }
 

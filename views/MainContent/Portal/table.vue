@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import type { Ref } from 'vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { message } from 'ant-design-vue'
 
 import FilterItems from './FilterItems.vue'
 import PivotTable from './pivot.vue'
@@ -21,6 +23,7 @@ import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
 import { resolveConditionVariables, resolveDynamicVariable } from '@/framework/utils/common'
 import { columnToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN } from '@/framework/utils/portalColumnPerm'
+import { excelExportMultiSheet } from '@/framework/utils/excel'
 
 
 interface Props {
@@ -544,6 +547,8 @@ interface PortalTabItem {
   label?: string
   /** 显示顺序 */
   order?: number
+  /** 是否随多Sheet导出(缺省 true; 旧数据无此字段照常导出) */
+  exportAble?: boolean
 }
 
 /** 渲染用 tab 项(portalName 是表格查询抓手, 提前拽出来保证类型非空) */
@@ -551,6 +556,8 @@ interface PortalTabEntry {
   key: string
   label: string
   portalName: string
+  /** 是否参与多Sheet导出(parseTabItems 缺省补 true) */
+  exportAble: boolean
   config: PortalTableVO
 }
 
@@ -575,13 +582,86 @@ const parseTabItems = (raw?: string): PortalTabItem[] => {
       .map((it: any, idx: number) => ({
         tableId: Number(it?.tableId),
         label: it?.label as string | undefined,
-        order: typeof it?.order === 'number' ? it.order : idx
+        order: typeof it?.order === 'number' ? it.order : idx,
+        exportAble: it?.exportAble !== false
       }))
       .filter((it) => Number.isFinite(it.tableId))
       .sort((a, b) => a.order - b.order)
   } catch (e) {
     console.error('解析 tabItems 失败:', e)
     return []
+  }
+}
+
+// 成员组件实例(按 tab key): 导出多Sheet时逐个取「格式化全量数据+列结构」
+const memberRefs = new Map<string, any>()
+const setMemberRef = (key: string) => (el: any) => {
+  if (el) {
+    memberRefs.set(key, el)
+  } else {
+    memberRefs.delete(key)
+  }
+}
+
+// 多Sheet导出: 逐成员取导出载荷(透视=内存数据; 普通表=内部走全量导出接口) 合成一个工作簿
+const exportingAllSheets = ref(false)
+// 正在后台挂载取数的成员(隐藏容器渲染), 完成后置 null
+const exportingEntry = ref<PortalTabEntry | null>(null)
+const exportMemberRef = ref<any>(null)
+const handleExportAllSheets = async () => {
+  if (!tabEntries.value.length) {
+    return
+  }
+  exportingAllSheets.value = true
+  try {
+    const sheets: Array<{ dataSource: any, columns: any, rawColumns: any, sheetName: string }> = []
+    for (const entry of tabEntries.value) {
+      // 成员在 Tab 成员配置里关了「导出」: 不进工作簿, 也不后台挂载取数
+      if (!entry.exportAble) {
+        continue
+      }
+      let payload: any
+      const mounted = memberRefs.get(entry.key)
+      if (entry.key === activeTab.value && mounted?.getExportPayload) {
+        // 当前激活成员: 已挂载且数据就绪, 直接取
+        payload = await mounted.getExportPayload()
+      } else {
+        // 未激活成员: 后台挂载隐藏实例, 等数据就绪后取载荷再卸载(不进页面预载)
+        exportingEntry.value = entry
+        await nextTick()
+        try {
+          if (exportMemberRef.value?.whenReady) {
+            await exportMemberRef.value.whenReady()
+          }
+          payload = await exportMemberRef.value?.getExportPayload()
+        } finally {
+          exportingEntry.value = null
+          await nextTick()
+        }
+      }
+      if (payload?.rows) {
+        // 字段名对齐: 载荷叫 rows, 多Sheet导出入参契约叫 dataSource(错位曾致 dataSource=undefined 导出全空)
+        sheets.push({
+          dataSource: payload.rows,
+          columns: payload.columns,
+          rawColumns: payload.rawColumns,
+          sheetName: entry.label || entry.portalName
+        })
+      } else {
+        console.warn(`[多Sheet导出] 成员「${entry.label}」未返回有效载荷:`, payload)
+      }
+    }
+    if (!sheets.length) {
+      message.warning('没有可导出的 Tab 成员')
+      return
+    }
+    excelExportMultiSheet(sheets, portalTableConfig.value?.portalName || '多Tab报表')
+    message.success('已导出 ' + sheets.length + ' 个 Sheet')
+  } catch (error: any) {
+    console.error('多Sheet导出失败:', error)
+    if (error?.message) message.error(error.message)
+  } finally {
+    exportingAllSheets.value = false
   }
 }
 
@@ -610,6 +690,7 @@ const loadTabEntries = async (items: PortalTabItem[]) => {
           key: String(it.tableId),
           label: it.label || config.tableCode || `Tab${i + 1}`,
           portalName: config.portalName,
+          exportAble: it.exportAble !== false,
           config
         }
       })
@@ -718,6 +799,17 @@ onMounted(() => {
           v-model:active-key="activeTab"
           class="portal-group-tabs"
         >
+          <template #rightExtra>
+            <a-button
+              v-if="portalTableConfig?.downloadAble !== '0'"
+              class="group-export-btn"
+              size="small"
+              :loading="exportingAllSheets"
+              @click="handleExportAllSheets"
+            >
+              导出
+            </a-button>
+          </template>
           <a-tab-pane
             v-for="entry in tabEntries"
             :key="entry.key"
@@ -725,11 +817,13 @@ onMounted(() => {
           >
             <pivot-table
               v-if="entry.config.pivotMode === '1'"
+              ref="setMemberRef(entry.key)"
               :portal-table-config="entry.config"
               :condition="tabCondition[entry.key]"
             />
             <portal
               v-else
+              :ref="setMemberRef(entry.key)"
               :action-width="0"
               :advance-condition="tabAdvanceCondition[entry.key]"
               :column-filter="makeColumnFilter(entry.config)"
@@ -746,6 +840,34 @@ onMounted(() => {
             />
           </a-tab-pane>
         </a-tabs>
+        <!-- 多Sheet导出: 未激活成员后台挂载(不显示), 数据就绪后取载荷即卸载 -->
+        <div
+          v-if="exportingEntry"
+          class="group-export-offscreen"
+          aria-hidden="true"
+        >
+          <pivot-table
+            v-if="exportingEntry.config.pivotMode === '1'"
+            ref="exportMemberRef"
+            :portal-table-config="exportingEntry.config"
+            :condition="tabCondition[exportingEntry.key]"
+          />
+          <portal
+            v-else
+            ref="exportMemberRef"
+            :table-id="exportingEntry.portalName"
+            :action-width="0"
+            :advance-condition="tabAdvanceCondition[exportingEntry.key]"
+            :column-filter="makeColumnFilter(exportingEntry.config)"
+            :default-sort-column="parseDefaultSort(exportingEntry.config.defaultSort)"
+            hide-export
+            hide-refresh
+            hide-row-selection
+            multi-header
+            read-only
+            text-area-in-expanded
+          />
+        </div>
       </div>
     </template>
   </dark-table>
@@ -781,6 +903,17 @@ onMounted(() => {
           v-model:active-key="activeTab"
           class="portal-group-tabs"
         >
+          <template #rightExtra>
+            <a-button
+              v-if="portalTableConfig?.downloadAble !== '0'"
+              class="group-export-btn"
+              size="small"
+              :loading="exportingAllSheets"
+              @click="handleExportAllSheets"
+            >
+              导出
+            </a-button>
+          </template>
           <a-tab-pane
             v-for="entry in tabEntries"
             :key="entry.key"
@@ -788,12 +921,14 @@ onMounted(() => {
           >
             <pivot-table
               v-if="entry.config.pivotMode === '1'"
+              ref="setMemberRef(entry.key)"
               :portal-table-config="entry.config"
               :condition="tabCondition[entry.key]"
               theme="light"
             />
             <portal
               v-else
+              :ref="setMemberRef(entry.key)"
               :action-width="0"
               :advance-condition="tabAdvanceCondition[entry.key]"
               :column-filter="makeColumnFilter(entry.config)"
@@ -810,6 +945,34 @@ onMounted(() => {
             />
           </a-tab-pane>
         </a-tabs>
+        <!-- 多Sheet导出: 未激活成员后台挂载(不显示), 数据就绪后取载荷即卸载 -->
+        <div
+          v-if="exportingEntry"
+          class="group-export-offscreen"
+          aria-hidden="true"
+        >
+          <pivot-table
+            v-if="exportingEntry.config.pivotMode === '1'"
+            ref="exportMemberRef"
+            :portal-table-config="exportingEntry.config"
+            :condition="tabCondition[exportingEntry.key]"
+          />
+          <portal
+            v-else
+            ref="exportMemberRef"
+            :table-id="exportingEntry.portalName"
+            :action-width="0"
+            :advance-condition="tabAdvanceCondition[exportingEntry.key]"
+            :column-filter="makeColumnFilter(exportingEntry.config)"
+            :default-sort-column="parseDefaultSort(exportingEntry.config.defaultSort)"
+            hide-export
+            hide-refresh
+            hide-row-selection
+            multi-header
+            read-only
+            text-area-in-expanded
+          />
+        </div>
       </div>
       <pivot-table
         v-else-if="isPivotMode"
@@ -864,6 +1027,14 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
+}
+
+.group-export-offscreen {
+  position: absolute;
+  left: -99999px;
+  top: -99999px;
+  width: 1400px;
+  pointer-events: none;
 }
 
 .portal-group-tabs {
@@ -929,6 +1100,26 @@ onMounted(() => {
     height: 2px !important;
     border-radius: 2px !important;
     box-shadow: 0 0 8px var(--accent-glow), 0 0 16px var(--accent-glow) !important;
+  }
+
+  // Tab 栏右侧「多Sheet导出」: 幽灵按钮, 与页签同一视觉语言(透明底淡字细框, hover 青光渐变托底)
+  // 全走主题变量, 深浅主题自动适配
+  :deep(.group-export-btn) {
+    height: 26px;
+    padding: 0 14px;
+    background: transparent !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 3px;
+    box-shadow: none !important;
+    color: var(--text-secondary) !important;
+    font-size: 12px;
+    transition: all 0.25s ease !important;
+
+    &:hover {
+      background: linear-gradient(to top, var(--accent-mid), transparent) !important;
+      border-color: var(--accent-mid) !important;
+      color: var(--text-primary) !important;
+    }
   }
 
   :deep(> .ant-tabs-content-holder) {

@@ -179,14 +179,12 @@
                     label="父表头路径"
                     :label-col="{ span: 3 }"
                     :wrapper-col="{ span: 21 }"
-                    extra="每个标签一层父表头(自外向内, 支持/或,分隔快速输入); 留空为平铺列; 需点「保存配置」生效"
+                    extra="以 / 或 , 分层(自外向内); 光标点到哪就插到哪(加在最前面就点到开头输入), 整条可全选复制; 留空为平铺列; 需点「保存配置」生效"
                   >
-                    <a-select
-                      v-model:value="groupPathModel"
-                      mode="tags"
-                      :open="false"
-                      :token-separators="[',', '/']"
+                    <a-input
+                      v-model:value="groupPathText"
                       placeholder="如: 一级部门 / 二级部门"
+                      allow-clear
                     />
                   </a-form-item>
                 </a-col>
@@ -330,7 +328,7 @@ import {
   UpSquareOutlined,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 import PortalPivotGenModal from './PortalPivotGenModal.vue'
 import { normalizePivotCondition, pruneBlankConditions, useConditionModal } from './useConditionModal'
@@ -395,8 +393,34 @@ const parsePivotConditionAndOr = (conditionStr: string | undefined): '0' | '1' =
   }
 }
 
-// 列条件 JSON 草稿(展示与手动编辑用)
-const conditionJsonDraft = ref('')
+// 格式化 condition 为缩进 JSON，非法时原样展示(保存时报错)
+const formatPivotCondition = (condition?: string): string => {
+  if (!condition) return ''
+  try {
+    return JSON.stringify(JSON.parse(condition), null, 2)
+  } catch (e) {
+    return condition
+  }
+}
+
+// 列条件 JSON 草稿按列隔离(键为列对象引用): 换列时各自保留未保存的编辑文本,
+// 与父表头/批量保存"配完一串最后点一次"的习惯一致; 无条目视为未编辑, 展示已存 condition 的格式化文本
+// 草稿 Map 必须响应式(reactive): computed get 依赖 Map.get, 普通 Map 不触发依赖收集,
+// set 后 computed 缓存不失效 ⇒ 粘贴/输入的文本在下次重渲染时被打回旧值(看起来"字不显示但能保存")
+const conditionDrafts = reactive(new Map<PortalPivotColumnVO, string>())
+const conditionJsonDraft = computed<string>({
+  get: () => {
+    const column = selectedPivotColumn.value
+    if (!column) return ''
+    return conditionDrafts.get(column) ?? formatPivotCondition(column.condition)
+  },
+  set: (val) => {
+    const column = selectedPivotColumn.value
+    if (column) {
+      conditionDrafts.set(column, val)
+    }
+  },
+})
 
 // 收集条件树里的条件值：口径同后端 BaseSqlBuilder.buildCondition(子组节点递归、叶子取 value)，
 // 故「或」包成的组节点也能出候选；叶子序列化时带空 conditionList，所以两条判断都要走
@@ -436,55 +460,59 @@ const filterItemValueOption = (input: string, option: any): boolean => {
   return String(option?.value ?? '').toLowerCase().includes(String(input ?? '').toLowerCase())
 }
 
-// 格式化 condition 为缩进 JSON，非法时原样展示(保存时报错)
-const formatPivotCondition = (condition?: string): string => {
-  if (!condition) return ''
-  try {
-    return JSON.stringify(JSON.parse(condition), null, 2)
-  } catch (e) {
-    return condition
-  }
-}
-
-// 切换列或条件被弹窗外部修改时刷新草稿
-watch(
-  () => selectedPivotColumn.value?.condition,
-  (cond) => {
-    conditionJsonDraft.value = formatPivotCondition(cond)
-  },
-  { immediate: true }
-)
-
 // 当前透视列是否已配置条件(草稿优先，与列标识候选同源)
 const hasPivotCondition = computed(() => {
   return parsePivotConditionList(pivotConditionSource.value).length > 0
 })
 
-// 父表头路径编辑模型: groupPath JSON 字符串 <-> 有序标签数组(第1个=最外层)
-const groupPathModel = computed<string[]>({
+// 路径文本 <-> 层级数组: 以 / 或 ，, 分层, 前后空白剔除, 空段丢弃; 空路径落 ''(平铺)
+const parsePathText = (text: string): string[] =>
+  text.split(/[/，,]/).map((s) => s.trim()).filter(Boolean)
+const pathTextToJson = (text: string): string => {
+  const path = parsePathText(text)
+  return path.length > 0 ? JSON.stringify(path) : ''
+}
+
+// 父表头路径草稿按列隔离(同列条件草稿): 输入框是纯文本(以 / 分层, 自外向内), 换列各留各的编辑文本;
+// 无条目回落展示已存 groupPath 的格式化文本
+const groupPathDrafts = reactive(new Map<PortalPivotColumnVO, string>())
+const groupPathDisplayOf = (column: PortalPivotColumnVO): string => {
+  if (!column.groupPath) {
+    return ''
+  }
+  try {
+    const parsed = JSON.parse(column.groupPath)
+    return Array.isArray(parsed) ? parsed.filter((s: any) => typeof s === 'string' && s).join(' / ') : ''
+  } catch (error) {
+    return ''
+  }
+}
+const groupPathText = computed<string>({
   get: () => {
-    if (!selectedPivotColumn.value?.groupPath) {
-      return []
-    }
-    try {
-      const parsed = JSON.parse(selectedPivotColumn.value.groupPath)
-      return Array.isArray(parsed) ? parsed.filter((s: any) => typeof s === 'string' && s) : []
-    } catch (error) {
-      return []
-    }
+    const column = selectedPivotColumn.value
+    return column ? (groupPathDrafts.get(column) ?? groupPathDisplayOf(column)) : ''
   },
-  set: (vals) => {
-    if (selectedPivotColumn.value) {
-      selectedPivotColumn.value.groupPath = JSON.stringify(vals)
+  set: (val) => {
+    const column = selectedPivotColumn.value
+    if (column) {
+      groupPathDrafts.set(column, val)
     }
   },
 })
+
+// 装载快照: 「保存配置」按它与当前值 diff 出真正改过的列, 一键把改动列全部落库
+// (只存选中列时, 其它列配好的父表头等本地修改会在保存后的刷新中被后端数据冲掉)
+const columnSnapshots = new Map<PortalPivotColumnVO, string>()
 
 // 加载透视列列表
 const loadPivotColumnList = async (tableId: number) => {
   try {
     const res = await getPortalPivotColumnList(tableId)
     pivotColumnList.value = res.payload?.records || []
+    columnSnapshots.clear()
+    pivotColumnList.value.forEach((c) => columnSnapshots.set(c, JSON.stringify(c)))
+    conditionDrafts.clear()
+    groupPathDrafts.clear()
     selectedPivotColumn.value = pivotColumnList.value.length > 0 ? pivotColumnList.value[0] : null
   } catch (error) {
     console.error('加载透视列失败:', error)
@@ -534,45 +562,66 @@ const handleAddPivotColumn = () => {
     status: '1',
   }
   pivotColumnList.value = [...pivotColumnList.value, newColumn]
+  // 新增行也记快照: 空白未编辑的新增行不会被判成"有改动"混进批量保存
+  columnSnapshots.set(newColumn, JSON.stringify(newColumn))
   selectedPivotColumn.value = newColumn
   message.info('请配置或粘贴列条件、填写「列标识」，然后点击「保存配置」')
 }
 
-// 保存透视列
+// 保存透视列: 与装载快照 diff 出全部有本地改动的列一键落库(含新增行)。
+// 只存选中列的话, 用户"配完一串最后点一次"时其余列的修改会在保存后的刷新中被后端数据冲掉
 const handleSavePivotColumn = async () => {
   if (!props.tableId) return
   if (!selectedPivotColumn.value) {
     message.warning('请先选择或新增一个透视列')
     return
   }
-  // 先应用列条件 JSON 草稿：非空则解析归一化，非法则报错阻断
-  const draft = conditionJsonDraft.value.trim()
-  if (draft) {
-    const normalized = normalizePivotCondition(draft)
+  // 各列未保存的草稿(列条件 JSON / 父表头路径, 均按列隔离)落进对象; 空草稿不动已存值, 非法草稿点名阻断
+  for (const c of pivotColumnList.value) {
+    const draftText = conditionDrafts.get(c)?.trim()
+    if (!draftText) {
+      continue
+    }
+    const normalized = normalizePivotCondition(draftText)
     if (!normalized) {
-      message.warning('列条件 JSON 格式不合法，请检查后再保存')
+      message.warning(`「${c.itemName || '未命名'}」的列条件 JSON 格式不合法，请检查后再保存`)
       return
     }
-    selectedPivotColumn.value.condition = normalized
+    c.condition = normalized
   }
-  // 再校验列标识(新增行)：草稿已写入 condition，故粘贴 JSON 后下拉即有候选
-  // 列标识是拼进 SQL 列别名的机器键，首尾空白会让跑数时被后端字符集校验拒掉，落库前先剥掉
-  const itemValue = selectedPivotColumn.value.itemValue?.trim()
-  selectedPivotColumn.value.itemValue = itemValue
-  if (!selectedPivotColumn.value.id && !itemValue) {
-    message.warning('「列标识」不能为空，请从下拉选择或直接输入')
+  for (const c of pivotColumnList.value) {
+    const draftText = groupPathDrafts.get(c)
+    if (draftText != null) {
+      c.groupPath = pathTextToJson(draftText)
+    }
+  }
+  const changed = pivotColumnList.value.filter((c) => columnSnapshots.get(c) !== JSON.stringify(c))
+  if (changed.length === 0) {
+    message.info('没有需要保存的修改')
     return
+  }
+  // 校验改动行(新增行)的列标识: 它是拼进 SQL 列别名的机器键, 必填且首尾空白会被后端字符集校验拒掉, 落库前先剥掉
+  for (const c of changed) {
+    c.itemValue = c.itemValue?.trim()
+    if (!c.id && !c.itemValue) {
+      message.warning(`「${c.itemName || '未命名'}」的「列标识」不能为空，请从下拉选择或直接输入`)
+      return
+    }
   }
   savingPivotColumn.value = true
   try {
-    if (selectedPivotColumn.value.id) {
-      await updatePortalPivotColumn(selectedPivotColumn.value)
-    } else {
-      const res = await addPortalPivotColumn(selectedPivotColumn.value)
-      // /insert 返回的是完整实体(含 id)，兼容纯 id 返回
-      selectedPivotColumn.value.id = res.payload?.id ?? res.payload
-    }
-    message.success('保存成功')
+    await Promise.all(
+      changed.map(async (c) => {
+        if (c.id) {
+          await updatePortalPivotColumn(c, false)
+        } else {
+          const res = await addPortalPivotColumn(c, false)
+          // /insert 返回的是完整实体(含 id)，兼容纯 id 返回
+          c.id = res.payload?.id ?? res.payload
+        }
+      })
+    )
+    message.success(changed.length > 1 ? `已保存 ${changed.length} 列配置` : '保存成功')
     // 先记录当前选中 id(loadPivotColumnList 会默认选中第一列，须在其之前取)，刷新后恢复选中
     const keepId = selectedPivotColumn.value?.id
     await loadPivotColumnList(props.tableId)
@@ -588,6 +637,8 @@ const handleSavePivotColumn = async () => {
 const handleDeletePivotColumn = async (column: PortalPivotColumnVO) => {
   if (!column.id) {
     pivotColumnList.value = pivotColumnList.value.filter((c) => c !== column)
+    conditionDrafts.delete(column)
+    groupPathDrafts.delete(column)
     if (selectedPivotColumn.value === column) {
       selectedPivotColumn.value = pivotColumnList.value[0] || null
     }
@@ -596,6 +647,8 @@ const handleDeletePivotColumn = async (column: PortalPivotColumnVO) => {
   try {
     await deletePortalPivotColumn(column.id!)
     message.success('删除成功')
+    conditionDrafts.delete(column)
+    groupPathDrafts.delete(column)
     if (selectedPivotColumn.value?.id === column.id) {
       selectedPivotColumn.value = null
     }
@@ -784,9 +837,9 @@ const savePivotCondition = (condition: ConditionType) => {
   })
   const conditionStr = JSON.stringify({ andOr: condition.andOr || '0', conditionList })
   selectedPivotColumn.value.condition = conditionStr
-  // 立即同步 JSON 草稿：handleSavePivotColumn 会基于草稿覆盖 condition，
-  // 若等 watch 异步刷新，草稿仍是旧值会把弹窗修改回滚
-  conditionJsonDraft.value = formatPivotCondition(conditionStr)
+  // condition 已直写列对象: 清掉该列草稿条目, 编辑区经 getter 回落展示新 condition,
+  // 也不会再被保存时的草稿覆盖逻辑回滚
+  conditionDrafts.delete(selectedPivotColumn.value)
   closeConditionModal()
   // 自动保存
   handleSavePivotColumn()

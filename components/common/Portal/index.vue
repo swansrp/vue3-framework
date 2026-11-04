@@ -374,6 +374,7 @@
                   :data-summary="dataSummary"
                   :hide-row-selection="hideRowSelection"
                   :is-expanded="isNotEmpty($slots.expandedRowRender) || props.textAreaInExpanded"
+                  :label-data-index="summaryLabelColumn"
                 >
                   <!-- 汇总单元格插槽透传(同 bodyCell_ 范式, 按列 dataIndex 命名) -->
                   <template
@@ -752,7 +753,7 @@ import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DefaultRecordType } from 'ant-design-vue/es/vc-table/interface'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
-import { createVNode, h, nextTick, Ref, useSlots } from 'vue'
+import { createVNode, h, nextTick, Ref, useSlots, watch } from 'vue'
 
 import { name } from '@/../package.json'
 import {
@@ -805,7 +806,7 @@ import {
   TableConfigType,
   UpdateOrderType
 } from '@/framework/components/common/Portal/type'
-import { parse } from '@/framework/components/common/Portal/utils'
+import { headerColumnWidth, parse } from '@/framework/components/common/Portal/utils'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import bus, { PORTAL_RESIZE } from '@/framework/mitt'
 import { dictStore, useTreeStore } from '@/framework/store/common'
@@ -952,6 +953,10 @@ const props = withDefaults(defineProps<{
     customColumns?: Array<ColumnType>
     /** 前端提供的汇总行数据(数据模式下使用) */
     summaryData?: { [key: string]: any }
+    /** 汇总行显隐覆盖: true=强制显示 false=强制隐藏 undefined=不覆盖(按 sys_portal.summary 与 summaryData 判定) */
+    summaryVisible?: boolean
+    /** 汇总行「总计」标签落点列的 dataIndex(默认首个数据列); 透视竖排布局指到透视值名目列 */
+    summaryLabelColumn?: string
     /** 自定义行主键字段(默认取 Portal 配置的 idColumn) */
     rowKeyField?: string
     /** 外部直传的 Portal 配置(smart-query plan 推导等): 跳过按 tableId 拉取 sys_portal_table */
@@ -1017,6 +1022,7 @@ const props = withDefaults(defineProps<{
     computedColumns: undefined,
     customColumns: undefined,
     summaryData: undefined,
+    summaryVisible: undefined,
     rowKeyField: undefined,
     portalConfig: undefined
   })
@@ -2169,6 +2175,74 @@ const queryDataAsync = async (condition: QueryType) => {
     }
   }
 }
+/**
+ * 导出载荷(多Sheet导出复用): 返回格式化后的全量数据 + 展示列结构。
+ * plain(透视/外部数据)模式: 直接取内存数据(聚合结果本身即全量);
+ * 列表模式: 走导出专用全量接口(generalSelect/advancedSelect, 与页面分页查询不同接口)。
+ */
+const getExportPayload = (): Promise<{ rows: any[], columns: any[], rawColumns: any[] }> => {
+  const exportColumns = props.multiHeader ? multiHeadColumns.value : columns.value
+  if (config.plain) {
+    let exportDataArray
+    if (isNotEmpty(data.value)) {
+      exportDataArray = []
+      for (const index in data.value) {
+        const parsedData = _.cloneDeep(data.value[Number(index)])
+        columnArray.value.forEach((column: ColumnType) => {
+          parse(parsedData, Number(index), column, config)
+        })
+        exportDataArray.push(parsedData)
+      }
+    } else {
+      exportDataArray = [...parsedDataSource.value]
+    }
+    return Promise.resolve({ rows: exportDataArray, columns: exportColumns, rawColumns: columns.value })
+  }
+  // 非数据模式(列表)才有全量查询: url 空(初始化未完成/配置缺失)时直接报错,
+  // 避免以空路径发出 /advanced/select 这类打到站点根的无效请求
+  if (!config.url) {
+    throw new Error(`报表「${config.title || props.tableId}」数据源未就绪或未配置, 无法导出`)
+  }
+  const fetchAll = config.advancedSearchAble
+    ? advancedSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct)
+    : generalSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct)
+  return fetchAll.then((resp: any) => {
+    const dataArray = resp.payload || []
+    for (const index in dataArray) {
+      columnArray.value.forEach((column: ColumnType) => {
+        parse(dataArray[index], Number(index), column, config)
+      })
+    }
+    return { rows: dataArray, columns: exportColumns, rawColumns: columns.value }
+  })
+}
+
+/**
+ * 等待初始化完成(列配置已构建): 多Tab宿主导出未激活成员时, 后台挂载组件后
+ * 需等 initConfig 完成(列结构就绪)才能取导出载荷
+ */
+const whenReady = (): Promise<void> => {
+  if (columnArray.value.length > 0) {
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => {
+    // 监听长度而非数组引用: 列是 push 原地填充, watch(ref) 只认 .value 引用替换,
+    // 永远不触发(曾致多Sheet导出后台成员永久等待、按钮转圈不落)
+    const stop = watch(() => columnArray.value.length, (len) => {
+      if (len > 0) {
+        stop()
+        clearTimeout(timer)
+        resolve()
+      }
+    })
+    // 列构建异常/空列兜底: 超时放行, 由 getExportPayload 的 url 兜底抛出明确报错
+    const timer = setTimeout(() => {
+      stop()
+      resolve()
+    }, 20000)
+  })
+}
+
 const getDataSummary = async (condition: QueryType) => {
   if (config.advancedSearchAble) {
     return advancedSummary(config.url, condition, summaryColumns, config.baseDomain)
@@ -2190,37 +2264,9 @@ const paginationChange = () => {
  */
 const download = () => {
   const downloadFunc = () => {
-    if (config.plain) {
-      let exportDataArray
-      if (isNotEmpty(data.value)) {
-        exportDataArray = []
-        for (let index in data.value) {
-          const parsedData = _.cloneDeep(data.value[Number(index)])
-          columnArray.value.forEach((column: ColumnType) => {
-            parse(parsedData, Number(index), column, config)
-          })
-          exportDataArray.push(parsedData)
-        }
-      } else {
-        exportDataArray = [...parsedDataSource.value]
-      }
-      excelExport(exportDataArray, props.multiHeader ? multiHeadColumns.value : columns.value, columns.value, downloadFileName.value(config))
-    } else {
-      const resolve = (resp: any) => {
-        const dataArray = resp.payload || []
-        for (let index in dataArray) {
-          columnArray.value.forEach((column: ColumnType) => {
-            parse(dataArray[index], Number(index), column, config)
-          })
-        }
-        excelExport(dataArray, multiHeadColumns.value, columns.value, downloadFileName.value(config))
-      }
-      if (config.advancedSearchAble) {
-        advancedSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct).then((resp: any) => resolve(resp))
-      } else {
-        generalSelect(config.url, queryCondition(), config.baseDomain, true, true, props.selectColumnList, props.distinct).then((resp: any) => resolve(resp))
-      }
-    }
+    getExportPayload().then(({ rows, columns: exportColumns }) => {
+      excelExport(rows, exportColumns, columns.value, downloadFileName.value(config))
+    })
   }
   if (config.total > 1000) {
     Modal.confirm({
@@ -2368,7 +2414,8 @@ const initConfig = async () => {
       config.readOnly = true
     }
     config.url = tableConfig.url
-    config.summary = tableConfig.summary === '1' || isNotEmpty(props.summaryData)
+    // 汇总行显隐: 外部 summaryVisible 三态覆盖(透视表按自身配置决定), 未传时按 sys_portal.summary 与 summaryData 判定
+    config.summary = props.summaryVisible ?? (tableConfig.summary === '1' || isNotEmpty(props.summaryData))
     if (isNotEmpty(props.summaryData)) {
       dataSummary.value = props.summaryData!
     }
@@ -2415,11 +2462,6 @@ const initConfig = async () => {
       column.dataIndex = layout.property
       column.dbField = layout.dbField
       column.key = layout.property
-      if (layout.width !== 0) {
-        column.width = layout.width || 140
-      } else {
-        column.minWidth = 140
-      }
       column.fixed = layout.fixed === '1'
       column.fieldType = layout.fieldType
       column.referenceDict = layout.reference || layout.entity
@@ -2431,6 +2473,13 @@ const initConfig = async () => {
         advancedCondition.columnArray.push(column)
       }
       column.sorter = layout.sortAble === '1' && !config.plain
+      // 列宽 = 配置宽度(缺省 140) 与 表头腿(标题按 \n 拆行取最宽行 + 排序/列搜索图标带) 取大;
+      // 表头腿建列时算足——空表不走 parse 运行期撑宽, 不算则空表表头没人撑; width=0 表示弹性列, 只落 minWidth
+      if (layout.width !== 0) {
+        column.width = Math.max(layout.width || 140, headerColumnWidth(column))
+      } else {
+        column.minWidth = Math.max(140, headerColumnWidth(column))
+      }
       if (layout.summaryAble === '1') {
         summaryColumns.push(layout.property)
         column.summary = true
@@ -2542,6 +2591,12 @@ const initConfig = async () => {
         }
       })
       enableLeafFilter(columnArray.value)
+      // 🔍 临时诊断(锁定方向排查): Portal 装载外部动态列后的 fixed 取值, 控制台按 [pivot-lock] 过滤; 排查完移除
+      console.log('[pivot-lock] Portal 列', JSON.parse(JSON.stringify(columnArray.value.map(c => ({
+        key: c.dataIndex ?? c.title,
+        fixed: c.fixed,
+        children: c.children?.map(k => ({ key: k.dataIndex ?? k.title, fixed: k.fixed })),
+      })))))
     }
 
     if (config.rowKey === AUTO_UUID_ROW_KEY) {
@@ -2753,6 +2808,8 @@ const getUserFilterConditions = () => {
 
 defineExpose({
   queryData,
+  whenReady,
+  getExportPayload,
   queryTreeData,
   queryCondition,
   getRowSelection,

@@ -63,6 +63,22 @@ const errCode = {
   SUCCESS: 0,
   SESSION_TIME_OUT: 401
 }
+
+/**
+ * 业务错误：message＝人话（给 toast/页面展示用），errCode＝后端 ErrCode 枚举名
+ * （给调用方程序判断用，如登录页 AC_PASSWORD_NOT_EXISTED 翻「首次登录-设置密码」面板）。
+ * 比对请用 errCode（枚举名稳定、代码可读）：不要比 message（话术会改）、
+ * 不要比 status.code 数字（读不懂语义）。
+ */
+export interface BizError extends Error {
+  errCode?: string
+}
+
+const bizError = (message: string, errCode?: string): BizError => {
+  const err: BizError = new Error(message)
+  err.errCode = errCode
+  return err
+}
 const axiosInstance = axios.create({
   // 使用自定义的transformResponse来处理大整数
   transformResponse: [(data) => {
@@ -328,19 +344,13 @@ function request(apiType: ApiType,
           else if (errType === 'error') message.error(msg)
           // 抛错信息给人话；末尾不兜 status.msg——那是错误码枚举名（INK_PARAM 一类），
           // 给用户看就是漏码；真取不到消息时给带码的人话。
-          // 码枚举名单独挂 err.codeMsg 供调用方按码分支（登录页 AC_PASSWORD_EXPIRED 弹改密
-          // 模态／AC_PASSWORD_NOT_EXISTED 进首次设密表单）——err.message 是人话文案，
-          // 按码比对必须走这个字段（#45：比 message 恒不中＝死分支，6.60 真机 zhang_p 实证）。
-          const bizErr = new Error(resp.data.payload.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
-          ;(bizErr as any).codeMsg = resp.data.status.msg
-          throw bizErr
+          // 枚举名挂 errCode 字段随错抛出，供调用方程序判断（见 BizError 注释）
+          throw bizError(resp.data.payload.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`, resp.data.status.msg)
         } else {
           // showErr=false（调用方自接管提示，如列表页静默取数）：错误照抛，只是不弹全局条。
           // 框架侧非 SUCCESS 封套的 payload 必在（只由 Response(ServiceException) 产出并填 errMsg），
           // 但网关/第三方回的同形封套可能没有 payload ⇒ 可选读，免得 TypeError 顶掉该抛给业务层的文案。
-          const bizErr = new Error(resp.data.payload?.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`)
-          ;(bizErr as any).codeMsg = resp.data.status.msg
-          throw bizErr
+          throw bizError(resp.data.payload?.errMsg || resp.data.status.details || `请求失败（${resp.data.status.code}）`, resp.data.status.msg)
         }
       }
     } else if (showSuccess) {

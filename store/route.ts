@@ -98,12 +98,17 @@ export const useRouteStore = defineStore('routeStore', {
             parentTitlePathArray.push(node.title)
             setField(routePath2RouteTitlePathMap, parentPathArray.join('/'), parentTitlePathArray.join('/'))
             setField(routePathIsFrameMap, parentPathArray.join('/'), !!+node.isFrame)
-            node.component = getComponent(node.component)
-            if (node.component) {
-              node.component().then((module: any) => {
+            const rawLoader = getComponent(node.component)
+            if (rawLoader) {
+              // keep-alive include 按组件名匹配、组件名默认取文件名，大量 index.vue 会让
+              // 非缓存页撞上同名缓存页被误缓存；改为每菜单发唯一名，include 只认唯一名
+              const cacheName = `menu-${node.key}`
+              node.component = () => rawLoader().then((module: any) => {
                 if (node.isCache === '1') {
-                  this.keepAliveList.push((module.default.name || module.default.__name) as string)
+                  this.keepAliveList.push(cacheName)
+                  return { ...module, default: { ...module.default, name: cacheName } }
                 }
+                return module
               })
             }
             const navPath = parentPathArray.join('/')

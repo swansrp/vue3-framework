@@ -230,6 +230,7 @@ import {
 } from '@/framework/apis/portal/table'
 import ResourcePermPanel from '@/framework/components/common/ResourcePerm/ResourcePermPanel.vue'
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
+import { strRemoveLF } from '@/framework/utils/common'
 import PortalTableView from '@/framework/views/MainContent/Portal/table.vue'
 import PortalColumnPermEditor from '@/framework/views/MainContent/PortalConfig/PortalColumnPermEditor.vue'
 
@@ -266,11 +267,12 @@ watch(
 )
 
 // 可选字段列表（由 props.columns 推导，一次计算分发给各面板）
+// displayName 保留原样(筛选配置按它精确匹配落库数据), 仅展示标签(title)拆掉换行符
 const availableFields = computed(
   () =>
     (props.columns || []).map((col: any) => ({
       key: col.property,
-      title: `${col.displayName} (${col.property})`,
+      title: `${strRemoveLF(col.displayName)} (${col.property})`,
       property: col.property,
       displayName: col.displayName,
       reference: col.reference,
@@ -309,11 +311,16 @@ const measureRows = computed<any[]>(() => {
 })
 const pivotPermOptions = computed(() => {
   const opts: Array<{ label: string; token: string; group: string }> = []
+  // 权限 token 按字段维度: 同字段多条件各出一列时仍是同一个 m: 勾选项, 不重复列出
+  const measureTokens = new Set<string>()
   pivotColumnItems.value.forEach((c) => {
     if (c.itemValue) { opts.push({ label: c.itemName || c.itemValue, token: `p:${c.itemValue}`, group: '透视父列' }) }
   })
   measureRows.value.forEach((m: any) => {
-    if (m?.field) { opts.push({ label: m.label || columnLabelMap.value[m.field] || m.field, token: `m:${m.field}`, group: '度量' }) }
+    if (m?.field && !measureTokens.has(m.field)) {
+      measureTokens.add(m.field)
+      opts.push({ label: m.label || columnLabelMap.value[m.field] || m.field, token: `m:${m.field}`, group: '度量' })
+    }
   })
   return opts
 })
@@ -675,12 +682,16 @@ const syncFiltersToTable = async (tableId: number, filters: any[] | undefined, s
     ? existingFiltersRes.payload
     : (existingFiltersRes?.payload?.records || [])
   const filterMap = new Map<string, PortalTableFilterVO>()
+  const duplicateFilterIds = new Set<number>()
   existingFilters.forEach(ef => {
-    if (ef.code) filterMap.set(ef.code, ef)
+    if (!ef.code || !ef.id) return
+    // 库里已存在同 code 的重复筛选器时只保留第一条参与更新, 其余随本次导入删除(自愈清重)
+    if (filterMap.has(ef.code)) duplicateFilterIds.add(ef.id)
+    else filterMap.set(ef.code, ef)
   })
   const importFilterCodes = new Set(filters.map((f: any) => f.code).filter(Boolean))
   const staleFilterIds = existingFilters
-    .filter(ef => ef.id && ef.code && !importFilterCodes.has(ef.code))
+    .filter(ef => ef.id && ((ef.code && !importFilterCodes.has(ef.code)) || duplicateFilterIds.has(ef.id!)))
     .map(ef => ef.id!)
   if (staleFilterIds.length) {
     await deletePortalTableFilterList(staleFilterIds, false, false, false)
@@ -703,18 +714,25 @@ const syncFiltersToTable = async (tableId: number, filters: any[] | undefined, s
 // 全量同步透视列到指定表格(以传入列表为准, 文件外的多余项删除; 只删有列标识可匹配的)
 const syncPivotColumnsToTable = async (tableId: number, pivotColumns: any[] | undefined, stat: { added: number; updated: number; deleted: number }) => {
   if (!Array.isArray(pivotColumns)) return
-  const existingPivotRes = await getPortalPivotColumnList(tableId, false, false, false)
+  // pageSize 拉大避免列多时截断: 拉不全会让窗口外旧列被重复 add 且永远删不到(与筛选器同步同款防截断)
+  const existingPivotRes = await getPortalPivotColumnList(tableId, false, false, false, 1000)
   const existingPivots: PortalPivotColumnVO[] = existingPivotRes?.payload?.records || []
   const pivotMap = new Map<string, PortalPivotColumnVO>()
+  const duplicatePivotIds = new Set<number>()
   existingPivots.forEach(ep => {
-    if (ep.itemValue) pivotMap.set(ep.itemValue, ep)
+    if (!ep.itemValue || !ep.id) return
+    // 库里已存在同 itemValue 的重复列时只保留第一条参与更新, 其余随本次导入删除(自愈清重)
+    if (pivotMap.has(ep.itemValue)) duplicatePivotIds.add(ep.id)
+    else pivotMap.set(ep.itemValue, ep)
   })
   const importPivotValues = new Set(pivotColumns.map((c: any) => c.itemValue).filter(Boolean))
   for (const ep of existingPivots) {
-    if (ep.id && ep.itemValue && !importPivotValues.has(ep.itemValue)) {
-      await deletePortalPivotColumn(ep.id, false, false, false)
-      stat.deleted++
-    }
+    if (!ep.id) continue
+    const isDuplicate = duplicatePivotIds.has(ep.id)
+    const isStale = ep.itemValue && !importPivotValues.has(ep.itemValue)
+    if (!isDuplicate && !isStale) continue
+    await deletePortalPivotColumn(ep.id, false, false, false)
+    stat.deleted++
   }
   for (const c of pivotColumns) {
     const { id: _srcPivotId, ...pivotData } = c

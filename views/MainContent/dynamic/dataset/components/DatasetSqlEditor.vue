@@ -93,6 +93,12 @@
         </a-tooltip>
         <a-button
           size="small"
+          @click="handleAddAsAliases"
+        >
+          一键加AS
+        </a-button>
+        <a-button
+          size="small"
           @click="handleFormatSql"
         >
           格式化SQL
@@ -102,6 +108,16 @@
           @click="copySql"
         >
           复制SQL
+        </a-button>
+        <a-button
+          size="small"
+          :disabled="!props.dataset?.id"
+          @click="openSnapshotModal"
+        >
+          <template #icon>
+            <HistoryOutlined />
+          </template>
+          历史版本
         </a-button>
         <a-button
           size="small"
@@ -230,11 +246,64 @@
         </a-tab-pane>
       </a-tabs>
     </a-modal>
+
+    <!-- SQL历史版本弹窗: 每次保存且SQL有变化自动留快照, 载回编辑器需再点保存 -->
+    <a-modal
+      v-model:open="snapshotModalVisible"
+      title="SQL 历史版本"
+      width="920px"
+      :footer="null"
+    >
+      <a-alert
+        message="每次保存且 SQL 有变化时会自动留一份快照。选中版本载入编辑器后，需再点「保存」才会生效。"
+        type="info"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+      <a-table
+        :data-source="snapshotList"
+        :columns="snapshotColumns"
+        row-key="id"
+        size="small"
+        :loading="snapshotLoading"
+        :pagination="false"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'createAt'">
+            {{ formatSnapshotTime(record.createAt) }}
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <a-space>
+              <a-button
+                size="small"
+                @click="viewSnapshot(record)"
+              >
+                {{ snapshotViewId === record.id ? '收起' : '查看SQL' }}
+              </a-button>
+              <a-button
+                size="small"
+                type="primary"
+                @click="loadSnapshot(record)"
+              >
+                载入编辑器
+              </a-button>
+            </a-space>
+          </template>
+        </template>
+      </a-table>
+      <div
+        v-if="snapshotSql"
+        class="snapshot-view-wrap"
+      >
+        <div class="snapshot-view-title">快照 SQL（只读，载入后可编辑）</div>
+        <pre class="sql-example">{{ snapshotSql }}</pre>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { CheckCircleFilled, CloseCircleFilled, LoadingOutlined, SaveOutlined } from '@ant-design/icons-vue'
+import { CheckCircleFilled, CloseCircleFilled, HistoryOutlined, LoadingOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import type { FormInstance } from 'ant-design-vue'
 import { message } from 'ant-design-vue'
 // @ts-ignore
@@ -243,13 +312,14 @@ import 'brace/ext/language_tools'
 import 'brace/mode/sql'
 import 'brace/snippets/sql'
 import 'brace/theme/chrome.js'
+import dayjs from 'dayjs'
 import { format } from 'sql-formatter'
 import { computed, onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue'
 
 import type { DatasetInfo, DatasetTableInfo, DatasetColumnInfo } from '../types'
 
 import { listDataSourceNames } from '@/framework/apis/dataSource'
-import { getSql, parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
+import { getSql, getSqlSnapshot, getSqlSnapshotList, parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
 
 const props = defineProps<{
   // null 表示新建模式
@@ -470,6 +540,225 @@ const formatSqlText = (sql: string): string => {
   }
 }
 
+// ==================== 一键加 AS ====================
+// 给 SELECT 列表里没写别名的简单列引用(d.pmp_code)补 AS 驼峰别名(pmpCode)。
+// 只动顶层 SELECT 到 FROM 之间的列：已有别名(AS 或隐式)、函数、运算式、星号一律跳过；
+// -- 行注释、/* 块注释、字符串字面量不参与逗号拆分，插入点在列表达式末尾，行尾注释原地不动。
+const SQL_IDENT_SRC = '(?:[A-Za-z_][\\w$]*|"[^"]*"|`[^`]*`)'
+const SQL_SIMPLE_REF_RE = new RegExp('^' + SQL_IDENT_SRC + '(?:\\s*\\.\\s*' + SQL_IDENT_SRC + ')*$')
+const SQL_IDENT_GLOBAL_RE = new RegExp(SQL_IDENT_SRC, 'g')
+// 生成裸别名会撞语法的关键字，这类列保持原样让用户自己定别名
+const SQL_RESERVED_ALIASES = new Set([
+  'order', 'group', 'from', 'where', 'select', 'table', 'key', 'index', 'left', 'right',
+  'join', 'on', 'as', 'by', 'union', 'all', 'distinct', 'having', 'limit', 'case', 'when',
+  'then', 'else', 'end', 'and', 'or', 'not', 'in', 'is', 'null', 'like', 'exists',
+  'between', 'asc', 'desc', 'insert', 'update', 'delete', 'set', 'values', 'into',
+  'partition', 'rows', 'range', 'window', 'over', 'with', 'using', 'natural', 'cross',
+  'inner', 'outer', 'full',
+])
+
+// pmp_code -> pmpCode，PMP_CODE -> pmpCode，DY -> dy；已是驼峰/小写的原样返回
+const toCamelAlias = (raw: string): string | null => {
+  if (!/^[\w$]+$/.test(raw)) return null
+  if (raw.includes('_')) {
+    return raw.toLowerCase()
+      .split('_')
+      .filter(Boolean)
+      .map((part, idx) => (idx === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)))
+      .join('')
+  }
+  if (raw === raw.toUpperCase() && /[A-Z]/.test(raw)) return raw.toLowerCase()
+  return raw
+}
+
+const addSelectAliases = (sql: string): { sql: string, added: number } => {
+  const isWord = (c: string | undefined) => !!c && /[A-Za-z0-9_$]/.test(c)
+  type Segment = { exprStart: number, exprEnd: number, isFirst: boolean }
+  const segments: Segment[] = []
+  let selectEnd = -1
+  let fromStart = -1
+  let state: 'code' | 'line' | 'block' | 'quote' | 'dquote' | 'backtick' = 'code'
+  let depth = 0
+  let exprStart = -1
+  let exprEnd = -1
+  let isFirst = true
+
+  const inList = () => selectEnd >= 0 && fromStart < 0
+  const markCode = (from: number, to: number) => {
+    if (!inList()) return
+    if (exprStart < 0) exprStart = from
+    exprEnd = to
+  }
+  const closeSegment = () => {
+    segments.push({ exprStart, exprEnd, isFirst })
+    exprStart = -1
+    exprEnd = -1
+    isFirst = false
+  }
+
+  let i = 0
+  while (i < sql.length) {
+    const c = sql[i]
+    const next = sql[i + 1]
+
+    if (state === 'line') {
+      if (c === '\n') state = 'code'
+      i++
+      continue
+    }
+    if (state === 'block') {
+      if (c === '*' && next === '/') {
+        state = 'code'
+        i += 2
+        continue
+      }
+      i++
+      continue
+    }
+    if (state === 'quote') {
+      if (!/\s/.test(c)) markCode(i, i)
+      if (c === '\\' && next !== undefined) {
+        i += 2
+        continue
+      }
+      if (c === "'") {
+        if (next === "'") {
+          i += 2
+          continue
+        }
+        state = 'code'
+      }
+      i++
+      continue
+    }
+    if (state === 'dquote') {
+      if (!/\s/.test(c)) markCode(i, i)
+      if (c === '"') {
+        if (next === '"') {
+          i += 2
+          continue
+        }
+        state = 'code'
+      }
+      i++
+      continue
+    }
+    if (state === 'backtick') {
+      if (!/\s/.test(c)) markCode(i, i)
+      if (c === '`') {
+        if (next === '`') {
+          i += 2
+          continue
+        }
+        state = 'code'
+      }
+      i++
+      continue
+    }
+
+    // code 态
+    if (c === '-' && next === '-') {
+      state = 'line'
+      i += 2
+      continue
+    }
+    if (c === '/' && next === '*') {
+      state = 'block'
+      i += 2
+      continue
+    }
+    if (c === "'") {
+      state = 'quote'
+      markCode(i, i)
+      i++
+      continue
+    }
+    if (c === '"') {
+      state = 'dquote'
+      markCode(i, i)
+      i++
+      continue
+    }
+    if (c === '`') {
+      state = 'backtick'
+      markCode(i, i)
+      i++
+      continue
+    }
+    if (c === '(') {
+      depth++
+      markCode(i, i)
+      i++
+      continue
+    }
+    if (c === ')') {
+      depth--
+      markCode(i, i)
+      i++
+      continue
+    }
+    if (c === ',' && depth === 0 && inList()) {
+      closeSegment()
+      i++
+      continue
+    }
+    if (isWord(c) && !isWord(sql[i - 1])) {
+      let j = i
+      while (j < sql.length && isWord(sql[j])) j++
+      const word = sql.slice(i, j).toLowerCase()
+      if (word === 'select' && depth === 0 && selectEnd < 0) {
+        selectEnd = j
+      } else if (word === 'from' && depth === 0 && selectEnd >= 0) {
+        fromStart = i
+        break
+      } else {
+        markCode(i, j - 1)
+      }
+      i = j
+      continue
+    }
+    if (!/\s/.test(c)) markCode(i, i)
+    i++
+  }
+
+  if (selectEnd < 0 || fromStart < 0) return { sql, added: 0 }
+  closeSegment()
+
+  // 先收集已有的 AS 别名与本次将生成的新别名，撞名时后者跳过（避免产出重复列别名）
+  const usedAliases = new Set<string>()
+  for (const seg of segments) {
+    if (seg.exprStart < 0 || seg.exprEnd < seg.exprStart) continue
+    const expr = sql.slice(seg.exprStart, seg.exprEnd + 1)
+    const m = expr.match(/\bas\s+([A-Za-z_][\w$]*|"[^"]*"|`[^`]*`)\s*$/i)
+    if (m) usedAliases.add(m[1].replace(/^["`]|["`]$/g, '').toLowerCase())
+  }
+
+  const insertions: Array<{ at: number, text: string }> = []
+  for (const seg of segments) {
+    if (seg.exprStart < 0 || seg.exprEnd < seg.exprStart) continue
+    let expr = sql.slice(seg.exprStart, seg.exprEnd + 1)
+    if (seg.isFirst) {
+      expr = expr.replace(/^(distinct|all)\s+/i, '')
+    }
+    if (!SQL_SIMPLE_REF_RE.test(expr)) continue
+    const idents = expr.match(SQL_IDENT_GLOBAL_RE)
+    const lastIdent = idents ? idents[idents.length - 1] : ''
+    const raw = lastIdent.replace(/^["`]|["`]$/g, '')
+    const alias = toCamelAlias(raw)
+    if (!alias || alias === raw) continue
+    if (SQL_RESERVED_ALIASES.has(alias.toLowerCase()) || usedAliases.has(alias.toLowerCase())) continue
+    usedAliases.add(alias.toLowerCase())
+    insertions.push({ at: seg.exprEnd + 1, text: ` AS ${alias}` })
+  }
+
+  if (!insertions.length) return { sql, added: 0 }
+  let result = sql
+  for (let k = insertions.length - 1; k >= 0; k--) {
+    result = result.slice(0, insertions[k].at) + insertions[k].text + result.slice(insertions[k].at)
+  }
+  return { sql: result, added: insertions.length }
+}
+
 // 切换dataset时重新加载表单与SQL
 watch(() => props.dataset, (dataset) => {
   const curSeq = ++sqlLoadSeq.value
@@ -563,6 +852,26 @@ const handleFormatSql = () => {
   }
 }
 
+const handleAddAsAliases = () => {
+  if (!formState.sql?.trim()) {
+    message.warning('请先输入SQL语句')
+    return
+  }
+  try {
+    const { sql, added } = addSelectAliases(formState.sql)
+    if (!added) {
+      message.info('没有需要补别名的列（已有AS别名的、函数、表达式、星号都跳过）')
+      return
+    }
+    formState.sql = sql
+    editorKey.value++
+    message.success(`已为 ${added} 列补上AS别名`)
+  } catch (error) {
+    console.error('加AS失败:', error)
+    message.error('加AS失败，请检查SQL语法')
+  }
+}
+
 const handleSave = async () => {
   try {
     await formRef.value?.validate()
@@ -590,6 +899,71 @@ const handleSave = async () => {
     if (error?.message) message.error(error.message)
   } finally {
     confirmLoading.value = false
+  }
+}
+
+// ==================== SQL 历史版本 ====================
+// 每次保存且 SQL 有变化时后端自动留快照; 载回编辑器后还需手动点保存才生效
+const snapshotModalVisible = ref(false)
+const snapshotLoading = ref(false)
+const snapshotList = ref<any[]>([])
+const snapshotSql = ref('')
+const snapshotViewId = ref<number | null>(null)
+
+const snapshotColumns = [
+  { title: '保存时间', dataIndex: 'createAt', key: 'createAt', width: 180 },
+  { title: '操作人', dataIndex: 'createBy', key: 'createBy', width: 110 },
+  { title: '数据集备注(当时)', dataIndex: 'remark', key: 'remark', ellipsis: true },
+  { title: '操作', key: 'action', width: 190 },
+]
+
+const formatSnapshotTime = (val: any): string =>
+  val ? dayjs(val).format('YYYY-MM-DD HH:mm:ss') : ''
+
+const openSnapshotModal = async () => {
+  if (!props.dataset?.id) return
+  snapshotModalVisible.value = true
+  snapshotSql.value = ''
+  snapshotViewId.value = null
+  snapshotLoading.value = true
+  try {
+    const res = await getSqlSnapshotList({ datasetId: props.dataset.id, limit: 50 }, false, true)
+    snapshotList.value = res?.payload || []
+    if (!snapshotList.value.length) message.info('还没有历史快照：保存过一次后这里就会出现版本')
+  } catch (error: any) {
+    if (error?.message) message.error(error.message)
+  } finally {
+    snapshotLoading.value = false
+  }
+}
+
+const viewSnapshot = async (record: any) => {
+  if (snapshotViewId.value === record.id) {
+    snapshotViewId.value = null
+    snapshotSql.value = ''
+    return
+  }
+  try {
+    const res = await getSqlSnapshot(record.id)
+    snapshotSql.value = res?.payload?.sqlText || ''
+    snapshotViewId.value = record.id
+  } catch (error: any) {
+    if (error?.message) message.error(error.message)
+  }
+}
+
+const loadSnapshot = async (record: any) => {
+  try {
+    let text = snapshotSql.value
+    if (snapshotViewId.value !== record.id || !text) {
+      const res = await getSqlSnapshot(record.id)
+      text = res?.payload?.sqlText || ''
+    }
+    formState.sql = text
+    snapshotModalVisible.value = false
+    message.success('已载入所选版本到编辑器，请检查后点「保存」生效')
+  } catch (error: any) {
+    if (error?.message) message.error(error.message)
   }
 }
 
@@ -683,6 +1057,16 @@ const copySql = () => {
   border-radius: 4px;
   display: inline-block;
   margin-left: 8px;
+}
+
+.snapshot-view-wrap {
+  margin-top: 12px;
+
+  .snapshot-view-title {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
 }
 
 .sql-example {

@@ -151,6 +151,7 @@ import {
 import CopyrightIcp from '@/framework/components/common/copyrightIcp/index.vue'
 import { checkLoginState } from '@/framework/network/login'
 import { baseURL } from '@/framework/network/request'
+import type { BizError } from '@/framework/network/request'
 import { getLoginExtraLink } from '@/framework/router'
 import { useBrandStore } from '@/framework/store/brand'
 import { parameterStore } from '@/framework/store/common'
@@ -249,15 +250,12 @@ const handleSubmit = () => {
       .then((res) => {
         afterLogin(res)
       })
-      .catch((err) => {
-        // 按码分支读 err.codeMsg（request 层挂在抛错上的码枚举名）；err.message 是人话文案，
-        // 按码比对恒不中（#45 死分支——老号首次设密/密码过期改密两个入口都曾被它堵死）。
-        // 保留对 err.message 的旧比对兜底（防有调用链路仍抛码名形态）。
-        if (err.codeMsg === 'AC_PASSWORD_NOT_EXISTED' || err.message === 'AC_PASSWORD_NOT_EXISTED') {
+      .catch((err: BizError) => {
+        if (err.errCode === 'AC_PASSWORD_NOT_EXISTED') {
           passwordResetMode.value = true
           title.value = '首次登录-设置密码'
           captchaType = 'INIT_PASSWORD_CAPTCHA'
-        } else if (err.codeMsg === 'AC_PASSWORD_EXPIRED' || err.message === 'AC_PASSWORD_EXPIRED') {
+        } else if (err.errCode === 'AC_PASSWORD_EXPIRED') {
           // 密码已过期，弹出修改密码模态框
           passwordExpiredModalVisible.value = true
           updateCaptchaUrl('PASSWORD_CHANGE_CAPTCHA')

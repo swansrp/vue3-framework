@@ -5,9 +5,9 @@
       :key="cellIndex(colIdx)"
       :index="cellIndex(colIdx)"
     >
-      <!-- 首个数据列固定放"总计"标签(它不参与汇总), 居中对齐同其余汇总格 -->
+      <!-- "总计"标签格(它不参与汇总), 默认落首个数据列, 可经 labelDataIndex 指到指定列(透视竖排=透视值名目列) -->
       <div
-        v-if="colIdx === 0"
+        v-if="colIdx === labelCellIdx"
         :style="{textAlign: 'center'}"
       >
         总计
@@ -55,10 +55,11 @@ const props = withDefaults(
     dataSummary: { [key: string]: any } | null,
     isExpanded: boolean
     hideRowSelection: boolean
+    labelDataIndex?: string
   }>(),
   {}
 )
-const { config, columns, dataSummary, isExpanded, hideRowSelection } = toRefs(props)
+const { config, columns, dataSummary, isExpanded, hideRowSelection, labelDataIndex } = toRefs(props)
 
 /**
  * surely-table 的 summary cell index 是「全列表(含行选择列/展开列)的 0 基下标」,
@@ -88,6 +89,21 @@ const leafColumns = computed<Array<ColumnType>>(() => {
   }
   walk(columns.value)
   return res
+})
+
+/**
+ * "总计"标签落点: labelDataIndex 指到的叶子列, 没配或找不到时回落首个数据列。
+ * 指到的列必须真的在 leafColumns 里(竖排布局无真实透视列时不渲染名目列, 此时标签回首个叶子列兜底)。
+ */
+const labelCellIdx = computed(() => {
+  const target = labelDataIndex.value
+  if (target) {
+    const idx = leafColumns.value.findIndex((col) => col.dataIndex === target)
+    if (idx >= 0) {
+      return idx
+    }
+  }
+  return 0
 })
 
 /**
