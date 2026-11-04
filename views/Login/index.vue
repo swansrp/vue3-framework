@@ -1,16 +1,29 @@
 <template>
-  <div class="login-box fullscreen-bg">
+  <!-- --brand-primary：远端 themePrimary 到手才有值（null 被 Vue 转空串 setProperty(name,'')
+       → CSSOM「空串＝移除属性」→ 变量回退 var() fallback＝回落形态零动作，D-7 机制表述修正），
+       仅作本页一处 accent（login-mode-btn hover 边框），不接管 antd token -->
+  <div
+    class="login-box fullscreen-bg"
+    :style="{ '--brand-primary': brandStore.themePrimary }"
+  >
     <div class="login-container">
       <div class="login-logo">
         <img
           :width="40"
           alt="登录图案"
           class="logo-img"
-          src="../../../assets/image/login/logo.png"
+          :src="brandStore.logoUrl ?? defaultLogoUrl"
         />
         <h1 class="login-title">
           {{ title }}
         </h1>
+      </div>
+      <!-- 品牌副标题（T1.5 棒5）：远端 loginSubtitle 非空才渲染；回落形态零渲染、结构零变化 -->
+      <div
+        v-if="brandStore.loginSubtitle"
+        class="login-brand-subtitle"
+      >
+        {{ brandStore.loginSubtitle }}
       </div>
 
       <!-- 首次登录设置密码 -->
@@ -110,7 +123,7 @@
 
 <script lang="ts" setup>
 import { Md5 } from 'ts-md5'
-import { onBeforeMount, onMounted, reactive, Ref, ref } from 'vue'
+import { onBeforeMount, onMounted, reactive, Ref, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AccountLoginForm from './components/AccountLoginForm.vue'
@@ -120,6 +133,11 @@ import PasswordResetForm from './components/PasswordResetForm.vue'
 import PhoneLoginForm from './components/PhoneLoginForm.vue'
 import PhoneRegisterForm from './components/PhoneRegisterForm.vue'
 
+// h1 回落正源（D-5）：index.html <title> 为空、App.vue onMounted（父钩子晚于子）尚未写标题时，
+// 登录页 h1 直接吃 package.json title，消除空标题窗口
+import { title as packageJsonTitle } from '../../../../package.json'
+
+import defaultLogoUrl from '@/assets/image/login/logo.png'
 import {
   changePasswordAndLogin,
   getRegisterMode,
@@ -135,6 +153,7 @@ import { checkLoginState } from '@/framework/network/login'
 import { baseURL } from '@/framework/network/request'
 import type { BizError } from '@/framework/network/request'
 import { getLoginExtraLink } from '@/framework/router'
+import { useBrandStore } from '@/framework/store/brand'
 import { parameterStore } from '@/framework/store/common'
 import { localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
@@ -143,14 +162,31 @@ import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
 
 const activeKey = ref('1')
 
-const title: Ref<string> = ref(document.title)
+// h1 回落（D-5）：document.title 为空（首挂窗口）时落 package.json title
+const title: Ref<string> = ref(document.title || packageJsonTitle)
+// 品牌消费（T1.5 棒5）：logo/副标题/--brand-primary 三件套；store 侧已回落墨枢默认，页面只读不拉取
+const brandStore = useBrandStore()
+// h1 与 document.title 的最后同步基线（D-5 守卫）：区分「品牌标题滞后一轮」（应跟进同步）与
+// 「本地已切模式文案」（如首次登录-设置密码，不应被踩踏）——不能直接比 document.title，
+// App.vue 的 post-flush 先写新标题、滞后本身也会造成不等
+let titleSyncedFrom = document.title || packageJsonTitle
+// App.vue 在品牌 loaded 后接管 document.title（env + productName；post watcher job 与 mounted 回调
+// 同处 post 队列且都无 id（Infinity），次序＝订阅/入队顺序：App 根组件先 setup 先订阅 ⇒ 先写），
+// 本 watcher 在 Login setup 时后订阅 ⇒ 后执行，读到的必是新标题，登录页 h1 同步吃新名
+watch(() => brandStore.loaded, (loaded) => {
+  if (!loaded) return
+  // 守卫（D-5）：h1 已被本地切走（偏离同步基线＝模式文案在场）时不踩踏，用户切回登录态再跟进
+  if (title.value !== titleSyncedFrom) return
+  titleSyncedFrom = document.title
+  title.value = document.title
+}, { flush: 'post' })
 const router = useRouter()
 const loading: Ref<boolean> = ref(false)
 const formInline = reactive({ userName: '', password: '', captcha: '', rememberPassword: false })
 const passwordResetMode: Ref<Boolean> = ref(false)
 const registerMode: Ref<Boolean> = ref(false)
 const registerWithPhoneNumber: Ref<boolean> = ref(false)
-// 自助注册三态（ACCOUNT_REGISTER_MODE）：入口按钮仅 open 态可见；tenant/closed 态登录页纯登录
+// 自助注册三态（yml my.auth.register-mode）：入口按钮仅 open 态可见；tenant/closed 态登录页纯登录
 const registerEntryVisible: Ref<boolean> = ref(true)
 // 业务侧注入的登录页外链（setLoginExtraLink，未注入＝null ⇒ 不渲染，与三态判定无关）
 const extraLink = getLoginExtraLink()
@@ -280,6 +316,11 @@ const afterLogin = (res: any) => {
           ? '/' + route.query.redirect_uri
           : undefined
       : undefined
+
+  // 后端路径（非 SPA 路由）必须整页跳转：OAuth2 authorize 是后端端点，vue-router 里没有对应路由，
+  // 用 router.replace 会落到空白/404；整页跳转还能让浏览器带上登录时种下的会话 cookie（见后端
+  // LoginController#login 与 OAuth2IdpController.SESSION_COOKIE）。
+  const isBackendPath = (uri?: string) => !!uri && /^\/(inkhub\/)?web\//.test(uri)
 
   // 防御性检查：如果 redirect_uri 指向登录页本身，则不跳转（否则会循环回到登录页）
   if (redirect_uri === '/login') {
@@ -443,25 +484,22 @@ const afterLogin = (res: any) => {
   }
   // 2.5秒后开始退场动画，完成后再跳转页面
   setTimeout(() => {
+    const finish = () => {
+      if (isBackendPath(redirect_uri)) {
+        window.location.href = redirect_uri
+        return
+      }
+      router.replace(redirect_uri || '/').then(() => {
+        nextTick(() => {
+          removeAnimation()
+          // 登录流程完全结束后重置按钮状态
+          loginProcessLoading.value = false
+        })
+      })
+    }
     checkLoginState()
-        .then(() => {
-          router.replace(redirect_uri || '/').then(() => {
-            nextTick(() => {
-              removeAnimation()
-              // 登录流程完全结束后重置按钮状态
-              loginProcessLoading.value = false
-            })
-          })
-        })
-        .catch(() => {
-          router.replace(redirect_uri || '/').then(() => {
-            nextTick(() => {
-              removeAnimation()
-              // 登录流程完全结束后重置按钮状态
-              loginProcessLoading.value = false
-            })
-          })
-        })
+        .then(finish)
+        .catch(finish)
   }, 2500)
 }
 
@@ -550,18 +588,13 @@ onMounted(() => {
       if (tenantCode.value) registerMode.value = true
     }
   }
-  // 优先读服务端生效模式（库值→yml 三级链同源）；老核心无该端点时回落参数页键，
-  // 两条通道都不可用则保持 open 形态——注册闸始终由服务端兜底。
+  // 生效模式只读服务端（yml my.auth.register-mode → open，与注册闸同源）；
+  // 端点不可用则保持 open 形态——注册闸始终由服务端兜底，本页只决定入口形态。
   getRegisterMode()
       .then((res) => applyRegisterMode(res.payload))
-      .catch(() =>
-          parameterStore()
-              .getParameter('ACCOUNT_REGISTER_MODE')
-              .then(applyRegisterMode)
-              .catch(() => {
-                // 参数通道异常保持 open 形态
-              })
-      )
+      .catch(() => {
+        // 端点不可用保持 open 形态
+      })
   parameterStore()
       .getParameter('PHONE_NUMBER_REGISTER')
       .then((resp) => {
@@ -751,6 +784,16 @@ onMounted(() => {
         min-height: 300px;
       }
     }
+  }
+
+  // 品牌副标题（T1.5 棒5）：远端 loginSubtitle 非空才渲染；克制一行，不与标题抢戏
+  .login-brand-subtitle {
+    margin: -12px 0 18px;
+    text-align: center;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.65);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   }
 
   .login-logo {
@@ -1402,7 +1445,8 @@ onMounted(() => {
         rgba(255, 200, 140, 0.25) 0%,
         rgba(255, 220, 160, 0.2) 50%,
         rgba(255, 240, 180, 0.25) 100%) !important;
-        border-color: rgba(255, 200, 140, 0.6) !important;
+        // themePrimary 到手时此处吃 --brand-primary（登录页唯一 accent 点）；null 时回退原色＝零变化
+        border-color: var(--brand-primary, rgba(255, 200, 140, 0.6)) !important;
         box-shadow: 0 3px 10px rgba(255, 180, 120, 0.25),
         inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 180, 120, 0.4) !important;
