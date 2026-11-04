@@ -218,23 +218,30 @@ for BRANCH in "${BRANCHES[@]}"; do
     continue
   fi
 
-  # 合并 gitee（--allow-unrelated-histories 处理首次无共同祖先的情况）
-  log_info "合并 $REMOTE_GITEE/$BRANCH"
-  if ! git merge "$REMOTE_GITEE/$BRANCH" --allow-unrelated-histories --no-edit 2>&1; then
-    log_error "合并 $REMOTE_GITEE/$BRANCH 失败，跳过分支 $BRANCH"
-    git merge --abort 2>/dev/null || true
-    FAILED_BRANCHES+=("$BRANCH")
-    echo ""
-    continue
-  fi
+  # gitee 无新提交时跳过合并/rebase：rebase 会压平合并历史，
+  # 重放旧提交易在格式化/重排类提交上产生假冲突，直接走下方 FF 推送
+  GITEE_AHEAD=$(git rev-list --count "HEAD..$REMOTE_GITEE/$BRANCH" || echo 0)
+  if [ "$GITEE_AHEAD" -gt 0 ]; then
+    # 合并 gitee（--allow-unrelated-histories 处理首次无共同祖先的情况）
+    log_info "合并 $REMOTE_GITEE/$BRANCH（$GITEE_AHEAD 个新提交）"
+    if ! git merge "$REMOTE_GITEE/$BRANCH" --allow-unrelated-histories --no-edit 2>&1; then
+      log_error "合并 $REMOTE_GITEE/$BRANCH 失败，跳过分支 $BRANCH"
+      git merge --abort 2>/dev/null || true
+      FAILED_BRANCHES+=("$BRANCH")
+      echo ""
+      continue
+    fi
 
-  # rebase 整理提交顺序（确保本地新提交在远程之上）
-  log_info "rebase 到 $REMOTE_GITEE/$BRANCH"
-  if ! try_rebase "$REMOTE_GITEE/$BRANCH"; then
-    log_error "rebase $REMOTE_GITEE/$BRANCH 失败，跳过分支 $BRANCH"
-    FAILED_BRANCHES+=("$BRANCH")
-    echo ""
-    continue
+    # rebase 整理提交顺序（确保本地新提交在远程之上）
+    log_info "rebase 到 $REMOTE_GITEE/$BRANCH"
+    if ! try_rebase "$REMOTE_GITEE/$BRANCH"; then
+      log_error "rebase $REMOTE_GITEE/$BRANCH 失败，跳过分支 $BRANCH"
+      FAILED_BRANCHES+=("$BRANCH")
+      echo ""
+      continue
+    fi
+  else
+    log_info "$REMOTE_GITEE/$BRANCH 无新提交，跳过合并/rebase"
   fi
 
   # ---- 推送 -> gitee ----
