@@ -266,7 +266,8 @@ const handleRequestAccess = () => {
 /** 复制分享链接 */
 const handleCopyShareLink = () => {
   if (!pageData.value) return
-  const shareUrl = `${window.location.origin}/#/wiki/view?id=${pageData.value.id}`
+  // SPA 可能挂在子路径（/inkhub/、/epc-ai/）：前缀必须跟当前页 pathname，只拼 origin + '/#/' 会落到站根
+  const shareUrl = `${window.location.origin}${window.location.pathname}#/wiki/view?id=${pageData.value.id}`
   navigator.clipboard.writeText(shareUrl).then(() => {
     message.success('分享链接已复制到剪贴板')
   }).catch(() => {
