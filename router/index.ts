@@ -58,15 +58,9 @@ const staticRoutes: Array<RouteRecordRaw> = [
     component: () => import('@/framework/views/MainContent/wiki/view.vue'),
     meta: { public: true }
   },
-  {
-    // SSO 出票中转页（M15 棒0b-3，随框架自带）：子系统把未登录用户带到本应用
-    // /sso/authorize?app_id=...&sso_redirect_uri=...，登录后自动出票回跳（页面头注释有全链说明）。
-    // 🔴 必须 meta.public：本页进登录守卫会探活死锁（8s 超时＋pop 导航被取消丢参），
-    // 未登录分流由页面挂载时自查。
-    path: '/sso/authorize',
-    component: () => import('@/framework/views/Sso/Authorize/index.vue'),
-    meta: { public: true }
-  },
+  // 🔴 `/sso/authorize` 出票中转页已随 T1.3 协议退役整块删除（2026-11-04 对账单 #16）：
+// 它依赖的 `POST /web/sso/ticket` 后端已下线，页面留着只会把访问者带进 404。
+// 子系统接入/验签走 OAuth2 授权码（`my.idp.bearer.*`，见 authorization-client）。
   {
     path: '/',
     name: 'Root',
