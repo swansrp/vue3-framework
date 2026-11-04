@@ -113,6 +113,8 @@ export interface PivotMeasureVO {
   numeratorAgg?: string
   /** 比率分母腿聚合方式(agg=ratio 时可选, 不配=sum; 组内恒定目标值配 max, 防 sum 分母随行数放大) */
   denominatorAgg?: string
+  /** 比率显示形式(agg=ratio 时可选, 缺省/true=×100 加%号; false=直接显示商(千分位最多4位小数), 服务于"除出来即值"的分值/单耗类比率 */
+  ratioPercent?: boolean
   /** 是否右锁定(s-table 两边同时锁定会异常, 与行维度左锁定互斥) */
   fixed?: boolean
   /**

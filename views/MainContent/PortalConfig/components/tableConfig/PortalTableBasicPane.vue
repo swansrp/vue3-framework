@@ -396,7 +396,7 @@
               <a-button
                 type="primary"
                 size="small"
-                @click="pivotMeasureRows.push({ field: '', key: '', condition: '', groupPath: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, numerator: '', denominator: '', numeratorAgg: 'sum', denominatorAgg: 'sum' })"
+                @click="pivotMeasureRows.push({ field: '', key: '', condition: '', groupPath: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, ratioPercent: true, numerator: '', denominator: '', numeratorAgg: 'sum', denominatorAgg: 'sum' })"
               >
                 <template #icon>
                   <PlusOutlined />
@@ -512,6 +512,15 @@
                   比率(加权)
                 </a-select-option>
               </a-select>
+              <!-- ratio 显示形式: 勾选×100加%(达成率类), 取消直接显示商(除出来即值的分值/单耗类) -->
+              <a-tooltip v-if="measure.agg === 'ratio'">
+                <template #title>
+                  勾选=×100 显示为百分比（达成率类）；取消=直接显示分子÷分母的商（除出来即值的分值/单耗类）
+                </template>
+                <a-checkbox v-model:checked="measure.ratioPercent">
+                  按%显示
+                </a-checkbox>
+              </a-tooltip>
               <!-- 仅求和项开放: sum 去掉 0/NULL 行合计仍恒等, 其余聚合滤零行会与单元格数字对不上 -->
               <a-checkbox
                 v-if="measure.agg === 'sum'"
@@ -1440,6 +1449,7 @@ const normalizeMeasureRow = (m: any) => ({
   agg: m.agg || 'sum',
   fixed: m.fixed === true,
   hideZero: m.hideZero === true,
+  ratioPercent: m.ratioPercent !== false,
   numerator: m.numerator || '',
   denominator: m.denominator || '',
   numeratorAgg: m.numeratorAgg || 'sum',
@@ -1708,6 +1718,8 @@ const handleSaveTable = async () => {
           denominator: m.agg === 'ratio' ? m.denominator : undefined,
           numeratorAgg: m.agg === 'ratio' ? (m.numeratorAgg || 'sum') : undefined,
           denominatorAgg: m.agg === 'ratio' ? (m.denominatorAgg || 'sum') : undefined,
+          // 防呆: % 形式开关仅对 ratio 有意义(缺省 true, 显式落值保持行编辑所见即所得)
+          ratioPercent: m.agg === 'ratio' ? m.ratioPercent !== false : undefined,
           // 空注释不落库(JSON.stringify 会丢掉 undefined 键)
           desc: m.desc?.trim() || undefined
         }))

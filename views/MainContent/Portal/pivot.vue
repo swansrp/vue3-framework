@@ -254,15 +254,16 @@ const formatRatioPercent = (value: any): string => {
 /**
  * 度量值格式化: 度量字段在 Portal 列配置为金额(fieldType=MONEY)时按 referenceDict "小数位,除数"换算
  * (如 2,10000 = 2位小数除以1万即万元), 与 Portal 单元格/汇总行同一 formatMoney;
- * ratio 度量按百分比展示(见 formatRatioPercent), 其余类型维持千分位通用格式。
+ * ratio 度量默认按百分比展示(可配 ratioPercent=false 直显商, 见 formatMeasure), 其余类型维持千分位通用格式。
  * 空值仍返回 ''(不渲染不钻取, 与 formatNumber 约定一致)
  */
 const formatMeasure = (measure: PivotMeasureVO | undefined, value: any) => {
   if (value === null || value === undefined || value === '') {
     return ''
   }
-  // ratio 的 field 是"分子_over_分母"派生输出键, 不在列元数据里, 优先级高于 MONEY 判断
-  if (measure?.agg === 'ratio') {
+  // ratio 的 field 是"分子_over_分母"派生输出键, 不在列元数据里, 优先级高于 MONEY 判断;
+  // 显示形式可配(ratioPercent): 缺省×100加%, 取消勾选时商走下方 formatNumber 直显(千分位最多4位小数)
+  if (measure?.agg === 'ratio' && measure?.ratioPercent !== false) {
     return formatRatioPercent(value)
   }
   const layout = measure ? columnMetaMap.value[measure.field] : undefined
