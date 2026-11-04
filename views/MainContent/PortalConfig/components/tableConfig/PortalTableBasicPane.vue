@@ -102,10 +102,11 @@
                 </a-select-option>
               </a-select>
             </a-form-item>
-            <!-- 锁定方向(仅透视模式): s-table 两边同时锁定会异常, 只能选一边;
-                 左锁→行维度字段逐个勾选左锁定, 右锁→度量列逐个勾选右锁定 -->
+            <!-- 锁定方向(仅透视模式, pivotRow 布局除外): s-table 两边同时锁定会异常, 只能选一边;
+                 左锁→行维度字段逐个勾选左锁定, 右锁→度量列逐个勾选右锁定;
+                 pivotRow 布局无此项: 透视列部分(行维度+层级列+名目列)恒左冻结(行标识常驻), 度量不右锁 -->
             <a-form-item
-              v-if="tableForm.pivotMode === '1'"
+              v-if="tableForm.pivotMode === '1' && tableForm.pivotMeasureLayout !== 'pivotRow'"
               label="锁定方向"
             >
               <a-select
@@ -123,7 +124,7 @@
                 </a-select-option>
               </a-select>
             </a-form-item>
-            <!-- 度量布局(仅透视模式且多度量时生效): col=度量横向平铺为列, row=度量纵向展开为行 -->
+            <!-- 度量布局(仅透视模式): col=度量横向平铺为列, row=度量纵向展开为行, pivotRow=透视值纵向展开为行(度量仍作列) -->
             <a-form-item
               v-if="tableForm.pivotMode === '1'"
               label="度量布局"
@@ -137,19 +138,46 @@
                 <a-select-option value="row">
                   行(度量纵向展开)
                 </a-select-option>
+                <a-select-option value="pivotRow">
+                  透视列转行(竖排)
+                </a-select-option>
               </a-select>
             </a-form-item>
-            <!-- 合计列位置(仅透视+row布局生效): first=透视列之前(紧跟指标列), last=透视列之后(默认) -->
+            <!-- 合计位置同一字段两用: row=合计列在透视列前/后, pivotRow=组内小计行在组内前/后; first=靠前 last=靠后(默认) -->
             <a-form-item
-              v-if="tableForm.pivotMode === '1' && tableForm.pivotMeasureLayout === 'row'"
-              label="合计列位置"
+              v-if="tableForm.pivotMode === '1' && (tableForm.pivotMeasureLayout === 'row' || tableForm.pivotMeasureLayout === 'pivotRow')"
+              :label="tableForm.pivotMeasureLayout === 'row' ? '合计列位置' : '小计行位置'"
             >
               <a-select v-model:value="pivotTotalPosModel">
                 <a-select-option value="first">
-                  靠前(透视列之前)
+                  {{ tableForm.pivotMeasureLayout === 'row' ? '靠前(透视列之前)' : '靠前(组内首行之前)' }}
                 </a-select-option>
                 <a-select-option value="last">
-                  靠后(透视列之后)
+                  {{ tableForm.pivotMeasureLayout === 'row' ? '靠后(透视列之后)' : '靠后(组内末行之后)' }}
+                </a-select-option>
+                <!-- 不显示小计仅 pivotRow(组内小计行)可选项; row 布局的合计列不支持隐藏 -->
+                <a-select-option
+                  v-if="tableForm.pivotMeasureLayout === 'pivotRow'"
+                  value="none"
+                >
+                  不显示小计
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <!-- 总计行(仅透视模式): 最底部汇总行; 默认跟随所绑 Portal 配置的 summary 开关, 可按表覆盖 -->
+            <a-form-item
+              v-if="tableForm.pivotMode === '1'"
+              label="总计行"
+            >
+              <a-select v-model:value="pivotSummaryShowModel">
+                <a-select-option value="">
+                  跟随Portal配置
+                </a-select-option>
+                <a-select-option value="1">
+                  显示
+                </a-select-option>
+                <a-select-option value="0">
+                  隐藏
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -350,16 +378,42 @@
         >
           <div class="filter-columns-header">
             <span class="filter-columns-title">聚合字段（度量列）</span>
-            <a-button
-              type="primary"
-              size="small"
-              @click="pivotMeasureRows.push({ field: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, numerator: '', denominator: '', numeratorAgg: 'sum', denominatorAgg: 'sum' })"
-            >
-              <template #icon>
-                <PlusOutlined />
-              </template>
-              添加聚合字段
-            </a-button>
+            <a-space :size="4">
+              <a-button
+                size="small"
+                @click="handleExportMeasures"
+              >
+                导出
+              </a-button>
+              <a-popconfirm
+                title="导入将替换当前全部聚合字段（点「保存基础配置」后才落库），确认？"
+                @confirm="measureImportInputRef?.click()"
+              >
+                <a-button size="small">
+                  导入
+                </a-button>
+              </a-popconfirm>
+              <a-button
+                type="primary"
+                size="small"
+                @click="pivotMeasureRows.push({ field: '', key: '', condition: '', groupPath: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, numerator: '', denominator: '', numeratorAgg: 'sum', denominatorAgg: 'sum' })"
+              >
+                <template #icon>
+                  <PlusOutlined />
+                </template>
+                添加聚合字段
+              </a-button>
+            </a-space>
+            <input
+              ref="measureImportInputRef"
+              type="file"
+              accept=".json,application/json"
+              style="display: none"
+              @change="handleImportMeasuresFile"
+            />
+          </div>
+          <div class="measure-config-tip">
+            每个聚合字段可单独配条件，与透视列条件按「且」叠加；同一字段配多条不同条件会各自成列；「父表头」可把度量列挂到多层级表头下。导出的 JSON 可在其它表格配置里导入（需目标数据集存在同名字段）。
           </div>
           <div class="measure-rows">
             <a-empty
@@ -389,7 +443,7 @@
                   placeholder="分子字段"
                   show-search
                   :filter-option="filterOption"
-                  style="width: 210px"
+                  style="width: 180px; min-width: 120px"
                   @change="handleRatioFieldChange(measure)"
                 />
                 <!-- 腿聚合缺省 sum; 分母配 max 服务组内恒定目标值(达成率=sum(实际)/max(目标)) -->
@@ -408,7 +462,7 @@
                   placeholder="分母字段"
                   show-search
                   :filter-option="filterOption"
-                  style="width: 210px"
+                  style="width: 180px; min-width: 120px"
                   @change="handleRatioFieldChange(measure)"
                 />
                 <a-select
@@ -424,12 +478,12 @@
                 placeholder="聚合字段"
                 show-search
                 :filter-option="filterOption"
-                style="width: 300px"
+                style="width: 300px; min-width: 200px"
               />
               <a-input
                 v-model:value="measure.label"
                 placeholder="显示名"
-                style="width: 180px"
+                style="width: 180px; min-width: 120px"
               />
               <!-- 聚合方式与勾选框紧跟取值控件, 注释按钮贴到删除左侧成"行尾操作区" -->
               <a-select
@@ -472,34 +526,85 @@
               >
                 锁定
               </a-checkbox>
-              <!-- 注释文本长, 不放窄输入框: 走按钮＋宽弹框, 按钮只区分"有/无"(虚线待填 vs 蓝色已填), 内容悬停回显 -->
-              <a-tooltip>
-                <template #title>
-                  <span v-if="measure.desc">{{ measure.desc }}</span>
-                  <span v-else>未填写列注释</span>
-                </template>
+              <!-- 行尾操作区: 整体贴右且宽度由内容固定, 各行按钮起点对齐成一条竖线 -->
+              <div class="measure-row-actions">
+                <!-- 父表头: 给度量列加多层级表头(叶子标题仍是显示名), 与透视列父链叠加 -->
+                <a-tooltip>
+                  <template #title>
+                    <span v-if="measure.groupPath">{{ parseGroupPathLabel(measure.groupPath) }}</span>
+                    <span v-else>设置多层级父表头（叶子标题仍是显示名）</span>
+                  </template>
+                  <a-button
+                    class="measure-path-btn"
+                    :type="measure.groupPath ? 'primary' : 'dashed'"
+                    :ghost="!!measure.groupPath"
+                    size="small"
+                    @click="openPathEditor(index)"
+                  >
+                    <template #icon>
+                      <apartment-outlined />
+                    </template>
+                    父表头
+                  </a-button>
+                </a-tooltip>
+                <!-- 度量自身条件: 与透视列条件按「且」叠加, 每个聚合字段各配各的 -->
+                <a-tooltip>
+                  <template #title>
+                    <span v-if="measure.condition">已配置度量条件（点开修改），与透视列条件按「且」叠加</span>
+                    <span v-else>给该聚合字段单独加条件，与透视列条件按「且」叠加</span>
+                  </template>
+                  <a-button
+                    class="measure-cond-btn"
+                    :type="measure.condition ? 'primary' : 'dashed'"
+                    :ghost="!!measure.condition"
+                    size="small"
+                    @click="openMeasureCondition(index)"
+                  >
+                    <template #icon>
+                      <filter-outlined />
+                    </template>
+                    条件
+                  </a-button>
+                </a-tooltip>
+                <!-- 注释文本长, 不放窄输入框: 走按钮＋宽弹框, 按钮只区分"有/无"(虚线待填 vs 蓝色已填), 内容悬停回显 -->
+                <a-tooltip>
+                  <template #title>
+                    <span v-if="measure.desc">{{ measure.desc }}</span>
+                    <span v-else>未填写列注释</span>
+                  </template>
+                  <a-button
+                    class="measure-desc-btn"
+                    :type="measure.desc ? 'primary' : 'dashed'"
+                    :ghost="!!measure.desc"
+                    size="small"
+                    @click="openDescEditor(index)"
+                  >
+                    <template #icon>
+                      <message-filled v-if="measure.desc" />
+                      <edit-outlined v-else />
+                    </template>
+                    注释
+                  </a-button>
+                </a-tooltip>
+                <!-- 复制: 整行深拷贝追加到列表末尾(含条件/父表头/注释), 输出键保存时按行序自动加 _2/_3 不用改 -->
                 <a-button
-                  class="measure-desc-btn"
-                  :type="measure.desc ? 'primary' : 'dashed'"
-                  :ghost="!!measure.desc"
                   size="small"
-                  @click="openDescEditor(index)"
+                  @click="copyMeasureRow(index)"
                 >
                   <template #icon>
-                    <message-filled v-if="measure.desc" />
-                    <edit-outlined v-else />
+                    <copy-outlined />
                   </template>
-                  注释
+                  复制
                 </a-button>
-              </a-tooltip>
-              <a-button
-                type="link"
-                danger
-                size="small"
-                @click="pivotMeasureRows.splice(index, 1)"
-              >
-                删除
-              </a-button>
+                <a-button
+                  type="link"
+                  danger
+                  size="small"
+                  @click="pivotMeasureRows.splice(index, 1)"
+                >
+                  删除
+                </a-button>
+              </div>
             </div>
           </div>
         </div>
@@ -556,6 +661,12 @@
                     placeholder="Tab 名称(留空用表格编码)"
                     style="width: 200px"
                   />
+                  <a-checkbox
+                    v-model:checked="tabSelfExport"
+                    class="tab-member-export-check"
+                  >
+                    导出
+                  </a-checkbox>
                 </template>
                 <template v-else>
                   <a-select
@@ -571,6 +682,12 @@
                     placeholder="Tab 名称(留空用表格编码)"
                     style="width: 200px"
                   />
+                  <a-checkbox
+                    v-model:checked="tabMemberRows[row.memberIndex].exportAble"
+                    class="tab-member-export-check"
+                  >
+                    导出
+                  </a-checkbox>
                   <a-button
                     type="link"
                     danger
@@ -591,6 +708,12 @@
     <PortalAdvancedSearchModal
       :advanced-condition="fixedConditionModal"
       @confirm="saveFixedCondition"
+    />
+
+    <!-- 聚合字段条件编辑器: 与常驻条件同一弹窗组件, 确认才写回该度量行(点「保存基础配置」落库) -->
+    <PortalAdvancedSearchModal
+      :advanced-condition="measureConditionModal"
+      @confirm="saveMeasureCondition"
     />
 
     <!-- 度量列注释编辑: 点行内「注释」按钮打开, 确定才写回该行 -->
@@ -625,13 +748,55 @@
         </a-button>
       </template>
     </a-modal>
+
+    <!-- 度量父表头编辑: 纯文本以 / 分层(自外向内), 光标任意位置可插入(加在最前就点到开头输), 全选可复制; 确定才写回该行 -->
+    <a-modal
+      v-model:open="pathModal.open"
+      :title="`父表头 · ${pathModal.label || '未命名度量'}`"
+      :width="560"
+    >
+      <div class="measure-path-input-row">
+        <a-input
+          v-model:value="pathModal.draft"
+          placeholder="如: 经营目标 / 合同类（以 / 分层, 自外向内）"
+          allow-clear
+        />
+        <a-button @click="copyPathDraft">
+          复制
+        </a-button>
+      </div>
+      <div class="measure-path-tip">
+        以 / 分隔层级、自外向内; 光标点到哪就插到哪（加在最前面就点到开头输入）; 整条路径可全选复制。与透视列父表头叠加: 同一透视列下多个度量配同一父链会合并成同组; 留空则挂回透视列直下。
+      </div>
+      <template #footer>
+        <a-button
+          v-if="pathModal.draft.length > 0"
+          danger
+          @click="clearPathEditor"
+        >
+          清除
+        </a-button>
+        <a-button @click="pathModal.open = false">
+          取消
+        </a-button>
+        <a-button
+          type="primary"
+          @click="confirmPathEditor"
+        >
+          确定
+        </a-button>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import {
+  ApartmentOutlined,
+  CopyOutlined,
   DownloadOutlined,
   EditOutlined,
+  FilterOutlined,
   HolderOutlined,
   MessageFilled,
   PlusOutlined,
@@ -642,7 +807,7 @@ import { computed, reactive, ref, watch } from 'vue'
 
 import { pruneBlankConditions, useConditionModal } from './useConditionModal'
 
-import { updatePortalColumnOrder } from '@/framework/apis/portal/config'
+import { updatePortalColumn, updatePortalColumnOrder, updatePortalConfig } from '@/framework/apis/portal/config'
 import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/apis/portal/table'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
@@ -796,7 +961,8 @@ const onMeasureDragEnd = () => {
 // 隐藏的行维度字段(仍参与 group by，仅不在表格中显示，常用于行粒度细化/筛选目标)
 const pivotGroupHiddenFields = ref<string[]>([])
 // 锁定方向: ''=不锁定 left=左锁(行维度逐个勾选) right=右锁(度量逐个勾选);
-// s-table 两边同时锁定会渲染异常, 切换方向时清空对侧勾选
+// s-table 两边同时锁定会渲染异常, 切换方向时清空对侧勾选;
+// pivotRow 布局无锁定方向: 透视列部分(行维度+层级列+名目列)恒左冻结, 该布局下恒为 ''(勾选区不出现)
 const pivotLockSide = ref<'' | 'left' | 'right'>('')
 // 左锁定的行维度字段列表(保存时写入 groupByFields JSON 项的 fixed)
 const pivotGroupFixedFields = ref<string[]>([])
@@ -877,6 +1043,85 @@ const handleRatioFieldChange = (measure: PivotMeasureVO) => {
   }
 }
 
+// 复制度量行: 整行深拷贝(值全为原始类型/JSON串)追加到列表末尾; 输出键保存时按行序自动加 _2/_3 后缀, 无需处理
+const copyMeasureRow = (index: number) => {
+  pivotMeasureRows.value.push(JSON.parse(JSON.stringify(pivotMeasureRows.value[index])))
+}
+
+// ==================== 聚合字段条件(度量自身条件) ====================
+// 与透视列条件按「且」叠加: 透视列圈定表头切片, 度量条件圈定该度量自己的口径
+const activeMeasureIndex = ref(-1)
+
+// 条件 JSON → 弹窗输入(兼容裸数组/单条件对象/已存成对象等历史写法, 与透视列条件同口径)
+const parseConditionJson = (raw?: any): { list: any[], andOr: '0' | '1' } => {
+  if (raw == null || raw === '') return { list: [], andOr: '0' }
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    const list = Array.isArray(parsed)
+      ? parsed
+      : (Array.isArray(parsed?.conditionList) ? parsed.conditionList : (parsed?.property ? [parsed] : []))
+    return { list, andOr: (!Array.isArray(parsed) && parsed?.andOr === '1') ? '1' : '0' }
+  } catch (e) {
+    console.warn('解析度量条件失败:', e)
+    return { list: [], andOr: '0' }
+  }
+}
+
+// 配置里统一存 JSON 串(外部导入可能给对象): 否则回填/保存时的字符串操作会炸
+const conditionToJson = (raw: any): string => {
+  if (raw == null || raw === '') return ''
+  return typeof raw === 'string' ? raw : JSON.stringify(raw)
+}
+
+// 确认即写回行内(点「保存基础配置」才落库); 条件清空则回落空串, 序列化时不落该键
+const saveMeasureCondition = (condition: ConditionType) => {
+  const measure = pivotMeasureRows.value[activeMeasureIndex.value]
+  if (!measure) return
+  const conditionList = pruneBlankConditions(condition?.conditionList || [])
+  // relation 统一为数字(与透视列条件及历史数据一致, 弹窗返回的是字符串)
+  conditionList.forEach((cond: any) => {
+    if (cond?.relation != null && cond.relation !== '' && !isNaN(Number(cond.relation))) {
+      cond.relation = Number(cond.relation)
+    }
+  })
+  measure.condition = conditionList.length > 0
+    ? JSON.stringify({ andOr: condition.andOr || '0', conditionList })
+    : ''
+  closeMeasureConditionModal()
+}
+
+const { filterConditionConfig: measureConditionModal, openConditionModal: openMeasureConditionModal, closeConditionModal: closeMeasureConditionModal } =
+  useConditionModal(() => props.portalConfig?.columns, saveMeasureCondition)
+
+const openMeasureCondition = async (index: number) => {
+  activeMeasureIndex.value = index
+  const parsed = parseConditionJson(pivotMeasureRows.value[index]?.condition)
+  await openMeasureConditionModal(parsed.list, parsed.andOr)
+}
+
+/**
+ * 度量输出键: 字段唯一时=字段(老配置零变更), 同字段第2条起加 _2/_3 后缀。
+ * 键只作列别名后半段(${透视列}__${键}), 取数仍走 field; 行序即分配顺序
+ */
+const buildMeasureKeys = (rows: PivotMeasureVO[]): string[] => {
+  const used = new Set<string>()
+  return rows.map((m) => {
+    const base = (m.field || '').trim()
+    if (!base) return ''
+    let key = base
+    let n = 2
+    while (used.has(key)) {
+      key = `${base}_${n}`
+      n++
+    }
+    used.add(key)
+    return key
+  })
+}
+
+// 编辑态行的输出键(默认排序候选/可排校验用, 与保存时序列化同源)
+const measureKeysPreview = computed(() => buildMeasureKeys(pivotMeasureRows.value))
+
 // ==================== 度量列注释 ====================
 // 注释文本长(整段口径说明), 塞行内输入框会被挤成一截, 改为按钮开宽弹框编辑; 点「保存基础配置」才序列化落库
 const descModal = reactive<{ open: boolean; index: number; draft: string; original: string; label: string }>({
@@ -909,10 +1154,107 @@ const clearDescEditor = () => {
   confirmDescEditor()
 }
 
+// ==================== 度量父表头(多层级) ====================
+// 父链路径 string[](自外向内)序列化存 groupPath; 运行态与透视列父链拼接成多层表头, 叶子标题仍是度量显示名
+const parseGroupPathDraft = (raw?: any): string[] => {
+  if (raw == null || raw === '') return []
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return Array.isArray(parsed) ? parsed.map((s) => String(s)).filter(Boolean) : []
+  } catch (e) {
+    console.warn('解析父表头路径失败:', e)
+    return []
+  }
+}
+
+// 统一存 JSON 串(外部导入可能给数组): 空链落空串, 序列化时不落该键
+const groupPathToJson = (raw: any): string => {
+  const path = parseGroupPathDraft(raw)
+  return path.length > 0 ? JSON.stringify(path) : ''
+}
+
+const parseGroupPathLabel = (raw?: any): string => {
+  const path = parseGroupPathDraft(raw)
+  return path.length > 0 ? path.join(' / ') : ''
+}
+
+// 路径文本 <-> 层级数组: 以 / 或 ，, 分层, 前后空白剔除, 空段丢弃; 空路径落 ''(平铺)
+const parsePathText = (text: string): string[] =>
+  text.split(/[/，,]/).map((s) => s.trim()).filter(Boolean)
+const pathTextToJson = (text: string): string => {
+  const path = parsePathText(text)
+  return path.length > 0 ? JSON.stringify(path) : ''
+}
+
+const pathModal = reactive<{ open: boolean; index: number; draft: string; label: string }>({
+  open: false,
+  index: -1,
+  draft: '',
+  label: ''
+})
+
+const openPathEditor = (index: number) => {
+  const measure = pivotMeasureRows.value[index]
+  pathModal.index = index
+  pathModal.draft = parseGroupPathDraft(measure.groupPath).join(' / ')
+  pathModal.label = measure.label || fieldChineseName(measure.field)
+  pathModal.open = true
+}
+
+const writeBackPathDraft = () => {
+  const measure = pivotMeasureRows.value[pathModal.index]
+  if (measure) {
+    measure.groupPath = pathTextToJson(pathModal.draft)
+  }
+  pathModal.open = false
+}
+
+const confirmPathEditor = () => {
+  writeBackPathDraft()
+}
+
+const clearPathEditor = () => {
+  pathModal.draft = ''
+  writeBackPathDraft()
+}
+
+// 复制当前路径文本(整条可粘到其它度量或透视列的父表头输入框): clipboard API 在 http 内网不可用, 回退 execCommand
+const copyPathDraft = async () => {
+  const text = pathModal.draft
+  if (!text) {
+    message.warning('路径为空，无可复制')
+    return
+  }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    message.success('父表头路径已复制')
+  } catch (e) {
+    console.error('复制父表头路径失败:', e)
+    message.error('复制失败，请手动选择文本复制')
+  }
+}
+
 // 合计列位置: 缺省视为 last(与列默认值一致), 避免首开下拉为空
 const pivotTotalPosModel = computed<string>({
   get: () => tableForm.value.pivotTotalPos || 'last',
   set: (val) => { tableForm.value.pivotTotalPos = val }
+})
+
+// 总计行显隐: ''=跟随Portal配置(缺省), '1'=显示, '0'=隐藏
+const pivotSummaryShowModel = computed<string>({
+  get: () => tableForm.value.pivotSummaryShow || '',
+  set: (val) => { tableForm.value.pivotSummaryShow = val }
 })
 
 // ==================== 报表默认排序 ====================
@@ -939,17 +1281,21 @@ const sortFieldOptions = computed(() => {
       {
         label: '聚合度量',
         options: pivotMeasureRows.value
-          .filter((m) => m.field)
-          .map((m) => ({ value: m.field, label: `合计 ${m.label || displayNameOf(m.field)} (${m.agg || 'sum'})` }))
+          .map((m, index) => ({ measure: m, key: measureKeysPreview.value[index] }))
+          .filter(({ measure, key }) => !!measure.field && !!key)
+          .map(({ measure, key }) => ({
+            value: key,
+            label: `合计 ${measure.label || displayNameOf(measure.field)} (${measure.agg || 'sum'})`
+          }))
       }
     ]
   }
   return props.availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))
 })
 
-/** 透视模式下当前可排序的字段集(行维度 + 度量), 用于拦掉切模式后失效的残留选择 */
+/** 透视模式下当前可排序的字段集(行维度 + 度量输出键), 用于拦掉切模式后失效的残留选择 */
 const isSortableInPivot = (property: string) =>
-  pivotGroupFields.value.includes(property) || pivotMeasureRows.value.some((m) => m.field === property)
+  pivotGroupFields.value.includes(property) || measureKeysPreview.value.includes(property)
 
 // 解析 defaultSort JSON 到编辑状态(仅取第一项, 与 portal 级默认排序同约束)
 const parseDefaultSort = (json: string | undefined) => {
@@ -973,11 +1319,19 @@ const parseDefaultSort = (json: string | undefined) => {
 const tabSelfEnabled = ref(true)
 // 本表格的 tab 名称(留空用表格编码)
 const tabSelfLabel = ref('')
+// 本表格自身是否随多Sheet导出(缺省 true; 按钮显隐另由宿主 downloadAble 权限管, 两者独立)
+const tabSelfExport = ref(true)
 // Tab 成员编辑行(保存时按合并序列的当前顺序写入 table.tabItems)
-const tabMemberRows = ref<Array<{ tableId: number | undefined; label: string }>>([])
+interface TabMemberRow {
+  tableId: number | undefined
+  label: string
+  /** 是否随多Sheet导出(缺省 true; 旧数据无此字段照常导出) */
+  exportAble: boolean
+}
+const tabMemberRows = ref<TabMemberRow[]>([])
 
 const addTabMemberRow = () => {
-  tabMemberRows.value.push({ tableId: undefined, label: '' })
+  tabMemberRows.value.push({ tableId: undefined, label: '', exportAble: true })
 }
 
 // Tab 页拖拽排序: 宿主与成员在同一序列里调序(行序即 tab 页顺序, 宿主不再固定第 1 页)
@@ -1018,7 +1372,7 @@ const onTabDragStart = (index: number, e: DragEvent) => {
 const onTabDragOver = (index: number) => {
   const from = tabDragIndex.value
   if (from === null || from === index || index < 0) return
-  const items: Array<typeof TAB_SELF_MARKER | { tableId: number | undefined; label: string }> =
+  const items: Array<typeof TAB_SELF_MARKER | TabMemberRow> =
     tabOrderedSlots.value.map((s) => (s.self ? TAB_SELF_MARKER : tabMemberRows.value[s.memberIndex]))
   const [moved] = items.splice(from, 1)
   items.splice(index, 0, moved)
@@ -1026,7 +1380,7 @@ const onTabDragOver = (index: number) => {
   if (selfIdx >= 0) {
     tabSelfPosition.value = selfIdx
   }
-  tabMemberRows.value = items.filter((it) => it !== TAB_SELF_MARKER) as Array<{ tableId: number | undefined; label: string }>
+  tabMemberRows.value = items.filter((it) => it !== TAB_SELF_MARKER) as TabMemberRow[]
   tabDragIndex.value = index
 }
 const onTabDragEnd = () => {
@@ -1063,9 +1417,10 @@ const parseTabItems = (json: string | undefined) => {
       if (tableId === props.table.id) {
         tabSelfEnabled.value = true
         tabSelfLabel.value = it?.label || ''
+        tabSelfExport.value = it?.exportAble !== false
         tabSelfPosition.value = validIdx
       } else {
-        tabMemberRows.value.push({ tableId, label: it?.label || '' })
+        tabMemberRows.value.push({ tableId, label: it?.label || '', exportAble: it?.exportAble !== false })
       }
       validIdx++
     })
@@ -1073,6 +1428,23 @@ const parseTabItems = (json: string | undefined) => {
     console.warn('解析 tabItems 失败:', e)
   }
 }
+
+// 聚合字段行归一化(落库 JSON 解析与导入文件共用同一映射, 字段缺省口径一致)
+const normalizeMeasureRow = (m: any) => ({
+  field: m.field || '',
+  key: m.key || '',
+  condition: conditionToJson(m.condition),
+  groupPath: groupPathToJson(m.groupPath),
+  label: m.label || '',
+  desc: m.desc || '',
+  agg: m.agg || 'sum',
+  fixed: m.fixed === true,
+  hideZero: m.hideZero === true,
+  numerator: m.numerator || '',
+  denominator: m.denominator || '',
+  numeratorAgg: m.numeratorAgg || 'sum',
+  denominatorAgg: m.denominatorAgg || 'sum',
+})
 
 // 解析 pivotMeasures JSON 到编辑行
 const parsePivotMeasures = (json: string | undefined) => {
@@ -1083,11 +1455,58 @@ const parsePivotMeasures = (json: string | undefined) => {
   try {
     const parsed = JSON.parse(json)
     pivotMeasureRows.value = Array.isArray(parsed)
-      ? parsed.map((m: any) => ({ field: m.field || '', label: m.label || '', desc: m.desc || '', agg: m.agg || 'sum', fixed: m.fixed === true, hideZero: m.hideZero === true, numerator: m.numerator || '', denominator: m.denominator || '', numeratorAgg: m.numeratorAgg || 'sum', denominatorAgg: m.denominatorAgg || 'sum' }))
+      ? parsed.map(normalizeMeasureRow)
       : []
   } catch (e) {
     console.warn('解析透视度量配置失败:', e)
     pivotMeasureRows.value = []
+  }
+}
+
+// ==================== 聚合字段导入/导出 ====================
+// 导出当前聚合字段配置为 JSON(与全表报表配置同一下载通道), 供其它表格配置导入套用, 免逐行手填
+const measureImportInputRef = ref<HTMLInputElement | null>(null)
+const handleExportMeasures = () => {
+  if (!pivotMeasureRows.value.length) {
+    message.warning('暂无聚合字段可导出')
+    return
+  }
+  downloadJsonConfig(`${tableForm.value.portalName || '透视表'}-聚合字段配置`, {
+    type: 'portalPivotMeasures',
+    exportTime: new Date().toISOString(),
+    measures: pivotMeasureRows.value,
+  })
+  message.success('导出成功')
+}
+
+// 导入聚合字段配置: 以文件为准整表替换(仅替换本地编辑行, 点「保存基础配置」才落库);
+// 行映射走与落库解析同一套归一化, 同字段多条件行/输出键冲突仍由保存时的 _2/_3 后缀兜底
+const handleImportMeasuresFile = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  target.value = ''
+  if (!file) {
+    return
+  }
+  try {
+    const parsed = await readJsonFile(file)
+    const rawList = Array.isArray(parsed) ? parsed : parsed?.measures
+    if (!Array.isArray(rawList)) {
+      message.warning('文件格式不正确：需要聚合字段配置 JSON（含 measures 数组）')
+      return
+    }
+    const imported = rawList
+      .filter((m: any) => m && m.field)
+      .map(normalizeMeasureRow)
+    if (!imported.length) {
+      message.warning('文件里没有可导入的聚合字段（缺 field）')
+      return
+    }
+    pivotMeasureRows.value = imported
+    message.success(`已导入 ${imported.length} 个聚合字段，请确认字段在目标数据集存在，点「保存基础配置」生效`)
+  } catch (e) {
+    console.error('导入聚合字段失败:', e)
+    message.error('导入失败：文件不是合法 JSON')
   }
 }
 
@@ -1188,10 +1607,14 @@ watch(
     parseTabItems(table.tabItems)
     parseDefaultSort(table.defaultSort)
     parseFixedCondition(table.fixedCondition)
-    // 锁定方向由两侧已存配置推导(界面保证只锁一边: 行维度有锁定→左锁, 度量有锁定→右锁)
+    // 锁定方向由两侧已存配置推导(界面保证只锁一边: 行维度有锁定→左锁, 度量有锁定→右锁);
+    // pivotRow 布局无锁定方向(透视列部分恒左冻结): 恒为 '', 旧数据遗留的右锁/左锁推导一并回落
     pivotLockSide.value = pivotGroupFixedFields.value.length > 0
       ? 'left'
       : (pivotMeasureRows.value.some((m) => m.fixed) ? 'right' : '')
+    if (tableForm.value.pivotMeasureLayout === 'pivotRow') {
+      pivotLockSide.value = ''
+    }
   },
   { immediate: true }
 )
@@ -1265,10 +1688,18 @@ const handleSaveTable = async () => {
       })
 
       // 度量列：过滤掉未选字段的空行(非右锁方向时清掉锁定标记, 保证只锁一边); ratio 行还要求分子/分母齐备
-      const validMeasures = pivotMeasureRows.value
+      const validRows = pivotMeasureRows.value
         .filter((m) => m.field && (m.agg !== 'ratio' || (m.numerator && m.denominator)))
-        .map((m) => ({
+      // 输出键按行序生成: 同字段多条件各出一列时第2条起加后缀, 老配置(字段唯一)键=字段
+      const validKeys = buildMeasureKeys(validRows)
+      const validMeasures = validRows
+        .map((m, index) => ({
           ...m,
+          key: validKeys[index],
+          // 未配条件不落库(空串落库会被后端当成显式条件)
+          condition: conditionToJson(m.condition).trim() || undefined,
+          // 空父链不落库(与老配置零差异)
+          groupPath: groupPathToJson(m.groupPath) || undefined,
           fixed: pivotLockSide.value === 'right' ? m.fixed === true : false,
           // 防呆: 隐藏零值仅对 sum 有意义, 改成其余聚合后不留无效配置
           hideZero: m.agg === 'sum' && m.hideZero === true,
@@ -1289,16 +1720,25 @@ const handleSaveTable = async () => {
     // Tab 成员: 按合并序列(拖拽后的显示顺序)落库, 宿主按 tableId 识别、可落在任意位置;
     // 全空则回退单表页面
     // 清空必须显式写 '[]'：update 接口非 strict 模式跳过 null/undefined，删掉的成员会原样留在库里
-    const tabItemsPayload: Array<{ tableId: number; label?: string }> = []
+    const tabItemsPayload: Array<{ tableId: number; label?: string; exportAble?: boolean }> = []
     tabOrderedSlots.value.forEach((slot) => {
       if (slot.self) {
         if (table.id != null) {
-          tabItemsPayload.push({ tableId: table.id, ...(tabSelfLabel.value ? { label: tabSelfLabel.value } : {}) })
+          tabItemsPayload.push({
+            tableId: table.id,
+            ...(tabSelfLabel.value ? { label: tabSelfLabel.value } : {}),
+            ...(tabSelfExport.value === false ? { exportAble: false } : {})
+          })
         }
       } else {
         const r = tabMemberRows.value[slot.memberIndex]
         if (r?.tableId != null) {
-          tabItemsPayload.push({ tableId: r.tableId as number, ...(r.label ? { label: r.label } : {}) })
+          // exportAble 仅在关掉时写入(缺省即参与导出), 与 label 同风格保持 JSON 紧凑
+          tabItemsPayload.push({
+            tableId: r.tableId as number,
+            ...(r.label ? { label: r.label } : {}),
+            ...(r.exportAble === false ? { exportAble: false } : {})
+          })
         }
       }
     })
@@ -1546,7 +1986,9 @@ const handleSaveTable = async () => {
   .pivot-measure-row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    // 行不换行: 宽度压力全部由可收缩的取值/显示名控件(带 min-width 下限)吸收,
+    // 行尾操作区(父表头/条件/注释/复制/删除)加了按钮也不会把删除顶到第二行
+    flex-wrap: nowrap;
     gap: 8px;
 
     .pivot-measure-row-handle {
@@ -1555,18 +1997,52 @@ const handleSaveTable = async () => {
       cursor: grab;
     }
 
+    .measure-index,
+    .ant-checkbox-wrapper,
+    .ant-btn {
+      flex-shrink: 0;
+    }
+
     &.pivot-measure-row-dragging {
       opacity: 0.6;
     }
   }
 
-  // 注释＋删除作为行尾操作区整体贴右: auto 挂在两者中靠前的注释上, 中间不留拉伸空隙
-  .pivot-measure-row .measure-desc-btn {
+  // 行尾操作区(父表头/条件/注释/复制/删除)整体贴右: 宽度由内容决定且不收缩 ⇒
+  // 无论左侧控件多少(ratio 行有两套分子/分母), 各行的按钮起点都在同一条竖线上
+  .pivot-measure-row .measure-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
     margin-left: auto;
   }
 
   .pivot-measure-row + .pivot-measure-row {
     margin-top: 10px;
+  }
+
+  .measure-config-tip {
+    padding: 8px 16px 0;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+}
+
+// 度量父表头弹窗里的提示(teleport 到 body, 但 scoped 属性随组件渲染仍在)
+.measure-path-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+// 度量父表头弹窗: 路径输入框 + 复制按钮同行
+.measure-path-input-row {
+  display: flex;
+  gap: 8px;
+
+  :deep(.ant-input-affix-wrapper) {
+    flex: 1;
   }
 }
 
@@ -1607,6 +2083,13 @@ const handleSaveTable = async () => {
 
   .tab-member-row {
     margin-top: 0;
+
+    // 「导出」勾选不参与 flex 压缩, 保持与删除按钮的间距
+    .tab-member-export-check {
+      flex-shrink: 0;
+      margin: 0 4px;
+      white-space: nowrap;
+    }
   }
 }
 </style>

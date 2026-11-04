@@ -111,6 +111,16 @@
         </a-button>
         <a-button
           size="small"
+          :disabled="!props.dataset?.id"
+          @click="openSnapshotModal"
+        >
+          <template #icon>
+            <HistoryOutlined />
+          </template>
+          历史版本
+        </a-button>
+        <a-button
+          size="small"
           type="link"
           @click="exampleModalVisible = true"
         >
@@ -236,11 +246,64 @@
         </a-tab-pane>
       </a-tabs>
     </a-modal>
+
+    <!-- SQL历史版本弹窗: 每次保存且SQL有变化自动留快照, 载回编辑器需再点保存 -->
+    <a-modal
+      v-model:open="snapshotModalVisible"
+      title="SQL 历史版本"
+      width="920px"
+      :footer="null"
+    >
+      <a-alert
+        message="每次保存且 SQL 有变化时会自动留一份快照。选中版本载入编辑器后，需再点「保存」才会生效。"
+        type="info"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+      <a-table
+        :data-source="snapshotList"
+        :columns="snapshotColumns"
+        row-key="id"
+        size="small"
+        :loading="snapshotLoading"
+        :pagination="false"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'createAt'">
+            {{ formatSnapshotTime(record.createAt) }}
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <a-space>
+              <a-button
+                size="small"
+                @click="viewSnapshot(record)"
+              >
+                {{ snapshotViewId === record.id ? '收起' : '查看SQL' }}
+              </a-button>
+              <a-button
+                size="small"
+                type="primary"
+                @click="loadSnapshot(record)"
+              >
+                载入编辑器
+              </a-button>
+            </a-space>
+          </template>
+        </template>
+      </a-table>
+      <div
+        v-if="snapshotSql"
+        class="snapshot-view-wrap"
+      >
+        <div class="snapshot-view-title">快照 SQL（只读，载入后可编辑）</div>
+        <pre class="sql-example">{{ snapshotSql }}</pre>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { CheckCircleFilled, CloseCircleFilled, LoadingOutlined, SaveOutlined } from '@ant-design/icons-vue'
+import { CheckCircleFilled, CloseCircleFilled, HistoryOutlined, LoadingOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import type { FormInstance } from 'ant-design-vue'
 import { message } from 'ant-design-vue'
 // @ts-ignore
@@ -249,13 +312,14 @@ import 'brace/ext/language_tools'
 import 'brace/mode/sql'
 import 'brace/snippets/sql'
 import 'brace/theme/chrome.js'
+import dayjs from 'dayjs'
 import { format } from 'sql-formatter'
 import { computed, onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue'
 
 import type { DatasetInfo, DatasetTableInfo, DatasetColumnInfo } from '../types'
 
 import { listDataSourceNames } from '@/framework/apis/dataSource'
-import { getSql, parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
+import { getSql, getSqlSnapshot, getSqlSnapshotList, parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
 
 const props = defineProps<{
   // null 表示新建模式
@@ -838,6 +902,71 @@ const handleSave = async () => {
   }
 }
 
+// ==================== SQL 历史版本 ====================
+// 每次保存且 SQL 有变化时后端自动留快照; 载回编辑器后还需手动点保存才生效
+const snapshotModalVisible = ref(false)
+const snapshotLoading = ref(false)
+const snapshotList = ref<any[]>([])
+const snapshotSql = ref('')
+const snapshotViewId = ref<number | null>(null)
+
+const snapshotColumns = [
+  { title: '保存时间', dataIndex: 'createAt', key: 'createAt', width: 180 },
+  { title: '操作人', dataIndex: 'createBy', key: 'createBy', width: 110 },
+  { title: '数据集备注(当时)', dataIndex: 'remark', key: 'remark', ellipsis: true },
+  { title: '操作', key: 'action', width: 190 },
+]
+
+const formatSnapshotTime = (val: any): string =>
+  val ? dayjs(val).format('YYYY-MM-DD HH:mm:ss') : ''
+
+const openSnapshotModal = async () => {
+  if (!props.dataset?.id) return
+  snapshotModalVisible.value = true
+  snapshotSql.value = ''
+  snapshotViewId.value = null
+  snapshotLoading.value = true
+  try {
+    const res = await getSqlSnapshotList({ datasetId: props.dataset.id, limit: 50 }, false, true)
+    snapshotList.value = res?.payload || []
+    if (!snapshotList.value.length) message.info('还没有历史快照：保存过一次后这里就会出现版本')
+  } catch (error: any) {
+    if (error?.message) message.error(error.message)
+  } finally {
+    snapshotLoading.value = false
+  }
+}
+
+const viewSnapshot = async (record: any) => {
+  if (snapshotViewId.value === record.id) {
+    snapshotViewId.value = null
+    snapshotSql.value = ''
+    return
+  }
+  try {
+    const res = await getSqlSnapshot(record.id)
+    snapshotSql.value = res?.payload?.sqlText || ''
+    snapshotViewId.value = record.id
+  } catch (error: any) {
+    if (error?.message) message.error(error.message)
+  }
+}
+
+const loadSnapshot = async (record: any) => {
+  try {
+    let text = snapshotSql.value
+    if (snapshotViewId.value !== record.id || !text) {
+      const res = await getSqlSnapshot(record.id)
+      text = res?.payload?.sqlText || ''
+    }
+    formState.sql = text
+    snapshotModalVisible.value = false
+    message.success('已载入所选版本到编辑器，请检查后点「保存」生效')
+  } catch (error: any) {
+    if (error?.message) message.error(error.message)
+  }
+}
+
 const copySql = () => {
   if (!formState.sql) {
     message.warning('没有SQL可复制')
@@ -928,6 +1057,16 @@ const copySql = () => {
   border-radius: 4px;
   display: inline-block;
   margin-left: 8px;
+}
+
+.snapshot-view-wrap {
+  margin-top: 12px;
+
+  .snapshot-view-title {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
 }
 
 .sql-example {
