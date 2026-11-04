@@ -295,7 +295,9 @@
         v-if="snapshotSql"
         class="snapshot-view-wrap"
       >
-        <div class="snapshot-view-title">快照 SQL（只读，载入后可编辑）</div>
+        <div class="snapshot-view-title">
+          快照 SQL（只读，载入后可编辑）
+        </div>
         <pre class="sql-example">{{ snapshotSql }}</pre>
       </div>
     </a-modal>
