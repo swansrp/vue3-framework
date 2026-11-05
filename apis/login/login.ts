@@ -1,4 +1,5 @@
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
+import { oauth2ExchangeApi, ssoTicketApi } from '@/framework/network/loginMode'
 import { request } from '@/framework/network/request'
 
 const buildGetApi = (url: string) => buildGetApiByType(url)
@@ -6,15 +7,15 @@ const buildPostApi = (url: string) => buildPostApiByType(url)
 
 
 export const getToken = () => request(buildGetApi('/token')) as Promise<any>
-// 🔴 VITE_ssoType 非空（建议值 'core'）＝票换会话打本系统 core 签发口 /web/sso/login
-// （墨枢 SSO 形态，接入指南 §8.1③；出参与 /web/login 同形）。缺省空＝照旧认证中心 /auth/login
-// （IdaaS 形态全族零位移；VITE_ssoType=feishu 等宿主自发起形态不落该调用分支，不受影响）
+// 🔴 签发口随登录形态：VITE_loginMode=idaas-core 打本系统 core /web/sso/login，
+// idaas 打认证中心 /auth/login（出参同形）。未配置 mode 时按旧 VITE_ssoType 判据推导，
+// 存量项目零位移；host/oauth2 形态不落本调用分支。
 // 🔴 request 第二参＝params（query）：id_token 必须走 query——bidr 全族后端签发口
 // （AuthController/SsoLoginController 的 login(String id_token)）都是裸参数绑定＝query/form，
 // JSON body 里的 id_token 没人解析（2026-10-28 生产 iframe 联调时差点误改成 body， curled 回来）
 export const ssoLogin = (id_token: string) =>
   request(
-    buildPostApi(import.meta.env.VITE_ssoType ? '/sso/login' : '/auth/login'),
+    buildPostApi(ssoTicketApi),
     { id_token },
     {},
     true,
@@ -27,7 +28,7 @@ export const ssoLogin = (id_token: string) =>
 // →租户镜像→宿主会话，出参与 /web/auth/login 同形（accessToken/refreshToken/name/customerNumber）。
 // request 第二参＝params（query）：code 走 query，与后端 @RequestParam 对齐
 export const exchangeLogin = (code: string) =>
-  request(buildPostApi(import.meta.env.VITE_oauth2ExchangeApi), { code }, {}, true, false) as Promise<any>
+  request(buildPostApi(oauth2ExchangeApi), { code }, {}, true, false) as Promise<any>
 
 export const logoff = () => request(buildPostApi('/logoff'), {}, {}, false, false) as Promise<any>
 

@@ -1,7 +1,7 @@
 <template>
   <!-- 框架「设置密码」弹层（从 TopHeader 抽出的共用件）：旧密码＋新密码＋确认，
        提交 changePassword（三段均 md5）。业务顶栏复用本件；入口是否显示由宿主按
-       VITE_ssoDomain 闸门决定，本件不管入口 -->
+       登录形态闸门决定（VITE_loginMode=local，存量等价 VITE_ssoDomain='localhost'），本件不管入口 -->
   <a-modal
     :open="open"
     cancel-text="取消"

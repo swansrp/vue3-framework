@@ -1,7 +1,8 @@
 <template>
   <!-- 框架「设置个人信息」弹层（从 TopHeader 抽出的共用件）：昵称/姓名/性别/头像，
        保存走 updateUserInfo → getUserInfo 回填 userStore。业务顶栏（如 InkHub 顶栏齿轮）
-       复用本件；入口是否显示由宿主按 VITE_ssoDomain 闸门决定，本件不管入口 -->
+       复用本件；入口是否显示由宿主按登录形态闸门决定（VITE_loginMode=local，
+       存量等价 VITE_ssoDomain='localhost'），本件不管入口 -->
   <a-modal
     :open="open"
     cancel-text="取消"

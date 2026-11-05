@@ -414,6 +414,7 @@ import { changePassword, getUserInfo, logoff, reLogin, updateUserInfo } from '@/
 import Marquee from '@/framework/components/common/marquee/index.vue'
 import TopNav from '@/framework/components/navigationFramework/navMenu/topNav/TopNav.vue'
 import { afterLogin } from '@/framework/network/login'
+import { isLoginModeConfigured, loginMode } from '@/framework/network/loginMode'
 import pinia from '@/framework/store'
 import { dictStore } from '@/framework/store/common'
 import { useTabStore } from '@/framework/store/nav'
@@ -490,7 +491,7 @@ const genderOptionList = ref<Array<{value: string, label: string}>>([])
 const router = useRouter()
 // 点击左上角标题区返回首页: 交由框架根路径逻辑处理(auto 模式自动进入第一个动态路由), 不硬编码业务路径
 const goHome = () => router.push('/').catch(() => {})
-const localLoginType = import.meta.env.VITE_ssoDomain === 'localhost'
+const localLoginType = isLoginModeConfigured ? loginMode === 'local' : import.meta.env.VITE_ssoDomain === 'localhost'
 const modifyPasswordModal = reactive({
   open: false,
   oldPassword: '',
