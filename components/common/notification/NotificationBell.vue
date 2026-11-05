@@ -162,14 +162,17 @@ onBeforeUnmount(() => {
 .ntf-bell__btn {
   border: 0;
   background: transparent;
-  color: #fff;
+  /* 顶栏图标色随主题令牌（浅色顶栏上写死 #fff 会与背景同色＝隐形） */
+  color: var(--header-icon-color, #646a73);
   cursor: pointer;
   padding: 4px;
   display: inline-flex;
   align-items: center;
+  border-radius: 6px;
 
   &:hover {
-    opacity: 0.85;
+    color: var(--header-btn-hover-color, var(--header-icon-color, #646a73));
+    background: var(--header-btn-hover-bg, transparent);
   }
 }
 

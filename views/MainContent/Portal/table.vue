@@ -1,9 +1,9 @@
 <script lang="ts" setup>
+import { message } from 'ant-design-vue'
 import type { Ref } from 'vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { message } from 'ant-design-vue'
 
 import FilterItems from './FilterItems.vue'
 import PivotTable from './pivot.vue'
@@ -22,8 +22,8 @@ import { parseUrlParams } from '@/framework/network/utils'
 import { dictStore } from '@/framework/store/common'
 import { useTreeStore } from '@/framework/store/common'
 import { resolveConditionVariables, resolveDynamicVariable } from '@/framework/utils/common'
-import { columnToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN } from '@/framework/utils/portalColumnPerm'
 import { excelExportMultiSheet } from '@/framework/utils/excel'
+import { columnToken, resolveMyHiddenTokens, RESOURCE_TYPE_PORTAL_COLUMN } from '@/framework/utils/portalColumnPerm'
 
 
 interface Props {
