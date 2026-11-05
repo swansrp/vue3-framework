@@ -136,10 +136,16 @@ export const checkLoginState = async () => {
       const targetUrl = String(queryObject.target_url)
       delete queryObject.target_url
       window.location.href = targetUrl + (targetUrl.includes('?') ? '&' : '?') + qs.stringify(queryObject, { arrayFormat: 'repeat' })
-    } else if (isNotEmpty(queryObject.code)) {
+    } else if (ssoLoginUrl.includes('/oauth2/authorize') && isNotEmpty(queryObject.code)) {
       // T1.3 棒8 OAuth2 授权码回调：code 传后端 /web/epc-ai/oauth2/exchange 换本地会话；
       // state＝navigation2Login 发起跳转时编码进来的原页地址（inkhub RFC 6749 原值透传），
       // 会话落好后复原回原页（try/catch 解码，脏 state 就地放弃走清参重载）。
+      // 🔴 形态前提闸（2026-11-05 生产事故修复）：code 分支是 authorize 直链形态专属回调，
+      // 判据必须与 navigation2Login 的进入分支同条件（ssoLoginUrl 含 /oauth2/authorize）。
+      // 裸判 ?code= 会劫持宿主 SSO 回调页——pan 飞书回调 #/feishu/callback?code= 被误判，
+      // POST /web/epc-ai/oauth2/exchange（epc-ai＝inkhub 对接示例项目名）404 登录断链，
+      // 守卫与回调页双入口并发各打一发（nginx 日志同秒双 POST 实证）。未配 authorize 直链的
+      // 宿主（VITE_ssoLoginUrl 空或非该形态）一律走原 getToken/verify 链，code 归宿主回调页自理。
       // 🔴 必须在此 return 短路：不return 的话下方 getToken/verify 链会并发走 _executeLogin
       // ⇒ ssoLogin(空 id_token) 必 401 ⇒ 又触发 navigation2Login 回 authorize ⇒ 回跳环
       exchangeLogin(String(queryObject.code)).then(res => {
