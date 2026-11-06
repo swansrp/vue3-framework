@@ -11,19 +11,27 @@ export const isLoginModeConfigured = LOGIN_MODES.includes(configuredMode as Logi
 export const ssoLoginUrl = String(import.meta.env.VITE_ssoLoginUrl || '')
 // OAuth2 授权码兑换端点（宿主后端各自路径，随 env 注入，框架零业务常量）
 export const oauth2ExchangeApi = String(import.meta.env.VITE_oauth2ExchangeApi || '')
-// OAuth2 authorize 请求内置的 redirect_uri（从 VITE_ssoLoginUrl 的 query 解析）。
-// RFC 6749 §4.1.3：authorize 带了 redirect_uri，token 请求就必须原样回传（等值复核 MUST）——
-// 墨枢端等值闸在 code 消费之后，不回传/回传错串＝code 被白白烧掉换 invalid_grant（2026-11-06 实证）。
-// 仅 oauth2 形态的 authorize 直链有值；解析失败/无此参数/SSR＝空串，调用方不传走宿主兜底
-// （老项目 VITE_ssoLoginUrl 是票内省/IdaaS 形态，query 里没有 redirect_uri，天然落空串零位移）。
-export const oauth2AuthorizeRedirectUri = (() => {
-  if (!ssoLoginUrl || !ssoLoginUrl.includes('/oauth2/authorize') || typeof window === 'undefined') return ''
+// OAuth2 authorize 直链 URL 解析（畸形串＝null；非 authorize 形态/SSR＝null）。
+const parsedAuthorizeUrl = (() => {
+  if (!ssoLoginUrl || !ssoLoginUrl.includes('/oauth2/authorize') || typeof window === 'undefined') return null
   try {
-    return new URL(ssoLoginUrl, window.location.origin).searchParams.get('redirect_uri') || ''
+    return new URL(ssoLoginUrl, window.location.origin)
   } catch (e) {
-    return ''
+    return null
   }
 })()
+// OAuth2 authorize 的 redirect_uri 与「是否 env 内置」两值。RFC 6749 §4.1.3：authorize 带了
+// redirect_uri，token 请求就必须原样回传（等值复核 MUST）——墨枢端等值闸在 code 消费之后，
+// 不回传/回传错串＝code 被白白烧掉换 invalid_grant（2026-11-06 实证）。
+// 取值规则：env（VITE_ssoLoginUrl）内置了 redirect_uri ⇒ 用内置串（生产/部署形态，白名单登记串
+// 显式可控）；未内置 ⇒ 动态拼当前访问地址 origin+'/'（哪个地址访问回跳哪个地址；本地/内网由
+// 墨枢回环豁免放行，公网地址会被白名单闸拒＝安全面未扩大）。发起跳转与兑换回传两处同源取本值
+// ⇒ 等值闸恒过。非 authorize 形态（票内省/IdaaS）＝空串，调用方不传，存量零位移。
+export const oauth2AuthorizeRedirectUri = parsedAuthorizeUrl
+  ? (parsedAuthorizeUrl.searchParams.get('redirect_uri') || window.location.origin + '/')
+  : ''
+export const oauth2AuthorizeRedirectUriBuiltin =
+  !!parsedAuthorizeUrl && parsedAuthorizeUrl.searchParams.has('redirect_uri')
 
 const deriveLegacyMode = (): LoginMode => {
   // 仅为存量项目保留的兼容推导。VITE_ssoDomain='localhost' 是旧版“本地账号登录形态”

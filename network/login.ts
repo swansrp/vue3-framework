@@ -2,7 +2,7 @@ import qs from 'qs'
 import { LocationQueryRaw } from 'vue-router'
 
 import { exchangeLogin, getToken, getUserInfo, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
-import { isLoginModeConfigured, loginMode, oauth2AuthorizeRedirectUri, oauth2ExchangeApi, ssoLoginUrl } from '@/framework/network/loginMode'
+import { isLoginModeConfigured, loginMode, oauth2AuthorizeRedirectUri, oauth2AuthorizeRedirectUriBuiltin, oauth2ExchangeApi, ssoLoginUrl } from '@/framework/network/loginMode'
 import { getQueryObject, removeURLParameter } from '@/framework/network/utils'
 import router from '@/framework/router'
 import pinia from '@/framework/store'
@@ -87,11 +87,15 @@ export const navigation2Login = (includeRedirectUri = true) => {
     return navigateLocalLogin(includeRedirectUri)
   }
   if (loginMode === 'oauth2') {
-    // authorize 直链形态：redirect_uri 已全串内置于 VITE_ssoLoginUrl（必须与白名单登记串一致，
-    // authorize 端全串等值复核），不得再追加；target_url 收进 state（RFC 6749 原值透传，
+    // authorize 直链形态：redirect_uri 内置于 VITE_ssoLoginUrl（生产/部署形态，白名单登记串）
+    // 时原样跳转；未内置 ⇒ 动态追加当前访问地址（oauth2AuthorizeRedirectUri 与兑换回传腿同源
+    // 取值 ⇒ 等值闸恒过；本地/内网走墨枢回环豁免）。target_url 收进 state（RFC 6749 原值透传，
     // 回跳后由 checkLoginState 的 code 分支解码复原）
     const targetUrl = encodeURIComponent(window.location.href)
-    window.location.href = ssoLoginUrl + '&state=' + targetUrl
+    const redirectPart = oauth2AuthorizeRedirectUriBuiltin
+      ? ''
+      : '&redirect_uri=' + encodeURIComponent(oauth2AuthorizeRedirectUri)
+    window.location.href = ssoLoginUrl + redirectPart + '&state=' + targetUrl
     return
   }
   let redirectUri
