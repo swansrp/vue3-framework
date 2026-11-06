@@ -11,6 +11,19 @@ export const isLoginModeConfigured = LOGIN_MODES.includes(configuredMode as Logi
 export const ssoLoginUrl = String(import.meta.env.VITE_ssoLoginUrl || '')
 // OAuth2 授权码兑换端点（宿主后端各自路径，随 env 注入，框架零业务常量）
 export const oauth2ExchangeApi = String(import.meta.env.VITE_oauth2ExchangeApi || '')
+// OAuth2 authorize 请求内置的 redirect_uri（从 VITE_ssoLoginUrl 的 query 解析）。
+// RFC 6749 §4.1.3：authorize 带了 redirect_uri，token 请求就必须原样回传（等值复核 MUST）——
+// 墨枢端等值闸在 code 消费之后，不回传/回传错串＝code 被白白烧掉换 invalid_grant（2026-11-06 实证）。
+// 仅 oauth2 形态的 authorize 直链有值；解析失败/无此参数/SSR＝空串，调用方不传走宿主兜底
+// （老项目 VITE_ssoLoginUrl 是票内省/IdaaS 形态，query 里没有 redirect_uri，天然落空串零位移）。
+export const oauth2AuthorizeRedirectUri = (() => {
+  if (!ssoLoginUrl || !ssoLoginUrl.includes('/oauth2/authorize') || typeof window === 'undefined') return ''
+  try {
+    return new URL(ssoLoginUrl, window.location.origin).searchParams.get('redirect_uri') || ''
+  } catch (e) {
+    return ''
+  }
+})()
 
 const deriveLegacyMode = (): LoginMode => {
   // 仅为存量项目保留的兼容推导。VITE_ssoDomain='localhost' 是旧版“本地账号登录形态”

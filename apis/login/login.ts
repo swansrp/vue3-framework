@@ -27,8 +27,17 @@ export const ssoLogin = (id_token: string) =>
 // 2026-11-05 生产误劫持 pan 飞书回调 404 断链，已改 env 驱动）。code→IdP token→本地验签
 // →租户镜像→宿主会话，出参与 /web/auth/login 同形（accessToken/refreshToken/name/customerNumber）。
 // request 第二参＝params（query）：code 走 query，与后端 @RequestParam 对齐
-export const exchangeLogin = (code: string) =>
-  request(buildPostApi(oauth2ExchangeApi), { code }, {}, true, false) as Promise<any>
+// redirect_uri 可选＝authorize 时的原串回传（RFC 6749 §4.1.3 MUST，取自
+// oauth2AuthorizeRedirectUri，与 VITE_ssoLoginUrl 里发起 authorize 的串天然同源）；
+// 不传＝宿主后端按自己配置兜底（存量行为零位移）
+export const exchangeLogin = (code: string, redirectUri?: string) =>
+  request(
+    buildPostApi(oauth2ExchangeApi),
+    redirectUri ? { code, redirect_uri: redirectUri } : { code },
+    {},
+    true,
+    false
+  ) as Promise<any>
 
 export const logoff = () => request(buildPostApi('/logoff'), {}, {}, false, false) as Promise<any>
 

@@ -2,7 +2,7 @@ import qs from 'qs'
 import { LocationQueryRaw } from 'vue-router'
 
 import { exchangeLogin, getToken, getUserInfo, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
-import { isLoginModeConfigured, loginMode, oauth2ExchangeApi, ssoLoginUrl } from '@/framework/network/loginMode'
+import { isLoginModeConfigured, loginMode, oauth2AuthorizeRedirectUri, oauth2ExchangeApi, ssoLoginUrl } from '@/framework/network/loginMode'
 import { getQueryObject, removeURLParameter } from '@/framework/network/utils'
 import router from '@/framework/router'
 import pinia from '@/framework/store'
@@ -210,7 +210,10 @@ export const checkLoginState = async () => {
       // （nginx 日志同秒双 POST 实证）。
       // 🔴 必须在此 return 短路：不return 的话下方 getToken/verify 链会并发走 _executeLogin
       // ⇒ ssoLogin(空 id_token) 必 401 ⇒ 又触发 navigation2Login 回 authorize ⇒ 回跳环
-      exchangeLogin(String(queryObject.code)).then(res => {
+      // redirect_uri＝authorize 时原串回传（RFC 6749 §4.1.3，从 VITE_ssoLoginUrl 解析同源取值；
+      // 2026-11-06 实证：不回传时宿主后端兜底串与 authorize 不一致 ⇒ 墨枢等值闸拒且 code 已烧，
+      // 重试报「授权码无效、已过期或已使用」）
+      exchangeLogin(String(queryObject.code), oauth2AuthorizeRedirectUri || undefined).then(res => {
         const payload = res.payload
         if (payload && payload.accessToken) {
           userStore.name = payload.name
