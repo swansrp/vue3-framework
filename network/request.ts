@@ -80,6 +80,11 @@ const bizError = (message: string, errCode?: string): BizError => {
   return err
 }
 const axiosInstance = axios.create({
+  // 🔴 跨源形态（vite 独立端口打后端）必须带 credentials：登录响应的 Set-Cookie（INKHUB_TOKEN，
+  // iframe 内 authorize 的 cookie 回退唯一凭据）才会落盘（2026-11-08 实锤：无此项 dev 登录
+  // cookie 永不落盘 ⇒ iframe SSO 恒「未登录」）。同源形态（pre/生产）带不带等价，零影响。
+  // 配套：后端 AuthInterceptor.enableCrossDomain 在 dev/local/corsEnable 分支回 ACAC=true。
+  withCredentials: true,
   // 使用自定义的transformResponse来处理大整数
   transformResponse: [(data) => {
     if (typeof data === 'string') {
