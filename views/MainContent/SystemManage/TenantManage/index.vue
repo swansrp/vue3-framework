@@ -20,6 +20,13 @@
       <a-button @click="renderTenantList">
         刷新
       </a-button>
+      <a-checkbox
+        v-model:checked="showDisabled"
+        class="tenant-show-disabled"
+        @change="renderTenantList"
+      >
+        显示已停用
+      </a-checkbox>
     </div>
     <a-table
       :columns="tenantColumns"
@@ -32,36 +39,57 @@
       <template #bodyCell="{ column, record }">
         <template v-if="column.dataIndex === 'operation'">
           <div class="table-operation-btns">
-            <a-button
-              size="small"
-              type="primary"
-              @click="openEditDialog(record)"
-            >
-              编辑
-            </a-button>
-            <a-button
-              size="small"
-              @click="openMemberDialog(record)"
-            >
-              成员
-            </a-button>
-            <a-button
-              size="small"
-              @click="openAppGrantDialog(record)"
-            >
-              应用授权
-            </a-button>
-            <a-popconfirm
-              title="确定停用该租户吗？（软删，停用后不可作为成员归属目标）"
-              @confirm="handleDisableTenant(record)"
-            >
+            <template v-if="record.valid === '1'">
               <a-button
-                danger
                 size="small"
+                type="primary"
+                @click="openEditDialog(record)"
               >
-                停用
+                编辑
               </a-button>
-            </a-popconfirm>
+              <a-button
+                size="small"
+                @click="openMemberDialog(record)"
+              >
+                成员
+              </a-button>
+              <a-button
+                size="small"
+                @click="openAppGrantDialog(record)"
+              >
+                应用授权
+              </a-button>
+              <a-popconfirm
+                title="确定停用该租户吗？（软删，停用后不可作为成员归属目标）"
+                @confirm="handleDisableTenant(record)"
+              >
+                <a-button
+                  danger
+                  size="small"
+                >
+                  停用
+                </a-button>
+              </a-popconfirm>
+            </template>
+            <template v-else>
+              <a-tag
+                color="red"
+                class="tenant-disabled-tag"
+              >
+                已停用
+              </a-tag>
+              <a-popconfirm
+                title="确定启用该租户吗？（恢复 valid='1'）"
+                @confirm="handleEnableTenant(record)"
+              >
+                <a-button
+                  size="small"
+                  type="primary"
+                >
+                  启用
+                </a-button>
+              </a-popconfirm>
+            </template>
           </div>
         </template>
       </template>
@@ -255,6 +283,7 @@ import {
   addMyTenantMember,
   createTenant,
   disableTenant,
+  enableTenant,
   getMyTenantMembers,
   getTenantList,
   lookupTenantUser,
@@ -365,9 +394,12 @@ const appGrantRows: Ref<AppGrantRow[]> = ref([])
 const appGrantLoading: Ref<boolean> = ref(false)
 const appGrantSaving: Ref<boolean> = ref(false)
 
+// 「显示已停用」开关（enable 对称补齐）：勾上=列表含停用行（行操作=「启用」）
+const showDisabled: Ref<boolean> = ref(false)
+
 const renderTenantList = () => {
   listLoading.value = true
-  return getTenantList()
+  return getTenantList(showDisabled.value)
       .then(res => tenantList.value = res.payload || [])
       .finally(() => listLoading.value = false)
 }
@@ -395,6 +427,10 @@ const handleUpdateTenant = () => {
 
 const handleDisableTenant = (record: TenantRow) =>
   disableTenant(record.id).then(renderTenantList)
+
+// 启用（对称 disable；未勾「显示已停用」时操作不可达=行为零变化）
+const handleEnableTenant = (record: TenantRow) =>
+  enableTenant(record.id).then(renderTenantList)
 
 const renderMemberList = () => {
   memberLoading.value = true
@@ -641,5 +677,14 @@ onMounted(renderTenantList)
 .table-operation-btns {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+.tenant-show-disabled {
+  margin-left: 16px;
+}
+
+.tenant-disabled-tag {
+  margin-right: 0;
 }
 </style>

@@ -10,7 +10,7 @@ const buildPostApi = (url: string) => buildPostApiByType(url, TENANT_PORTAL_TYPE
 
 // ==================== 平台档面（类级 AuthAdmin） ====================
 
-export const getTenantList = () => request(buildGetApi('/list'), {}, {}, false, false) as Promise<any>
+export const getTenantList = (includeDisabled?: boolean) => request(buildGetApi('/list'), { includeDisabled }, {}, false, false) as Promise<any>
 
 export const getTenantDetail = (id: string | number) => request(buildGetApi('/detail'), { id }, {}, false, false) as Promise<any>
 
@@ -19,6 +19,9 @@ export const createTenant = (name: string, code = '') => request(buildPostApi('/
 export const updateTenant = (id: string | number, name: string, code = '') => request(buildPostApi('/update'), { id, name, code }, {}, true) as Promise<any>
 
 export const disableTenant = (id: string | number) => request(buildPostApi('/disable'), { id }, {}, true) as Promise<any>
+
+// 启用租户（恢复停用行，对称 disable；2026-11-08 enable 对称补齐）
+export const enableTenant = (id: string | number) => request(buildPostApi('/enable'), { id }, {}, true) as Promise<any>
 
 // ==================== 本租户面（方法级登录档豁免，后端 service 现查判权） ====================
 
