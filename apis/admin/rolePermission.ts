@@ -14,7 +14,8 @@ export const editRole = (role: object) => request(buildPostApi('/update'), {}, r
 
 // 角色对应权限的增删改查
 export const getRolePermissionListById = (entityId: string) => request(buildGetApi('/bind/list'), { entityId }, {}, false) as Promise<any>
-export const getRolePermissionTree = (entityId: string) => request(buildGetApi('/menu/tree'), { entityId }, {}, false) as Promise<any>
+// appCode：按应用作用域查角色权限树（方案B 棒6）；缺省/空＝平台自身（不传该参数）
+export const getRolePermissionTree = (entityId: string, appCode?: string) => request(buildGetApi('/menu/tree'), { entityId, ...(appCode ? { appCode } : {}) }, {}, false) as Promise<any>
 export const bindRolePermission = (entityId: string, attachId: string) => request(buildPostApi('/bind'), {}, { entityId, attachId }, true, false) as Promise<any>
 export const unbindRolePermission = (entityId: string, attachId: string) => request(buildPostApi('/unbind'), { entityId }, { entityId, attachId }, true, false) as Promise<any>
 

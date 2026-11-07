@@ -1,6 +1,9 @@
 <template>
   <div class="wrapper">
-    <a-layout style="height: 100%;background-color: var(--bg-elevated)">
+    <div class="app-scope-bar">
+      <AppScopeSelect />
+    </div>
+    <a-layout style="flex: 1 1 auto; min-height: 0; background-color: var(--bg-elevated)">
       <a-layout-sider
         class="user-group-category-list-wrapper"
         width="280"
@@ -264,9 +267,10 @@ import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
 import { Ref } from 'vue'
+import { useRoute } from 'vue-router'
 
 
-
+import AppScopeSelect from '../PermissionMaintenance/AppScopeSelect.vue'
 import AddAndEditUserGroup from './addAndEditUserGroup/index.vue'
 
 import {
@@ -420,9 +424,13 @@ const selectUserGroup = (_: Key[], info: any) => {
   renderEditGroupPermissionTree()
 }
 
+// 应用上下文（方案B 棒6）：route.query.appCode 有值＝该应用作用域；无值/空＝平台自身（NULL）
+const route = useRoute()
+const appCode = computed(() => (typeof route.query.appCode === 'string' && route.query.appCode) || '')
+
 // 渲染用户组权限树
 const renderGroupPermissionTree = () =>
-  getGroupPermissionTree(String(currentUserGroupInfo.value.id)).then(res => groupPermissionTreeData.value = res.payload)
+  getGroupPermissionTree(String(currentUserGroupInfo.value.id), appCode.value).then(res => groupPermissionTreeData.value = res.payload)
 
 const renderEditGroupPermissionTree = () =>
   getGroupPermissionListById(String(currentUserGroupInfo.value.id))
@@ -542,9 +550,20 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
 
 onMounted(() => {
   renderUserGroupType()
-  getCompletePermissionTree().then(res => {
+  getCompletePermissionTree(appCode.value).then(res => {
     completePermissionTreeData.value = res.payload
   })
+})
+
+// 🔴 应用切换必须页内 watch（M-11）：重载可授予的完整树；已选用户组则同步重载其权限树/勾选
+watch(() => route.query.appCode, () => {
+  getCompletePermissionTree(appCode.value).then(res => {
+    completePermissionTreeData.value = res.payload
+  })
+  if (hasSelectUserGroup.value && currentUserGroupInfo.value.id) {
+    renderGroupPermissionTree()
+    renderEditGroupPermissionTree()
+  }
 })
 
 watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL))
@@ -555,6 +574,14 @@ watch(inputUserGroupCategoryName, _.debounce(renderUserGroupType, QUERY_INTERVAL
 .wrapper {
   height: calc(100vh - 96px); /* 顶部header 60px + history-tab 36px */
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-scope-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0 4px;
 }
 
 .user-group-category-list-wrapper {

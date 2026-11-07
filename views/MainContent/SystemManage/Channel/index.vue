@@ -52,11 +52,13 @@
       </template>
     </a-table>
 
-    <!-- 新增：渠道名称（remark）——appKey/appSecret 由服务端生成，保存后一次性展示 -->
+    <!-- 新增：渠道名称（remark）——appKey/appSecret 由服务端生成，保存后一次性展示；
+         可选「同时注册子系统」：勾选后走 /partner/admin/register-subsystem（一个事务建渠道+应用），
+         不勾＝原 /add 行为零变化 -->
     <dialog-box
       v-model:visible="addBoxVisible"
       title="新增渠道"
-      :width="420"
+      :width="520"
     >
       <a-form-item
         :validate-status="addNameError ? 'error' : ''"
@@ -70,6 +72,53 @@
           @press-enter="submitAdd"
         />
       </a-form-item>
+      <a-form-item>
+        <a-checkbox v-model:checked="alsoRegisterSubsystem">
+          同时注册子系统（一键建渠道+应用）
+        </a-checkbox>
+      </a-form-item>
+      <template v-if="alsoRegisterSubsystem">
+        <a-form-item
+          :validate-status="subsystemError.appCode ? 'error' : ''"
+          :help="subsystemError.appCode"
+          label="应用编码"
+        >
+          <a-input
+            v-model:value="subsystemDraft.appCode"
+            :maxlength="64"
+            placeholder="子系统业务主键，创建后不可改"
+          />
+        </a-form-item>
+        <a-form-item
+          :validate-status="subsystemError.name ? 'error' : ''"
+          :help="subsystemError.name"
+          label="子系统名称"
+        >
+          <a-input
+            v-model:value="subsystemDraft.name"
+            :maxlength="100"
+          />
+        </a-form-item>
+        <a-form-item label="入口类型">
+          <a-select
+            v-model:value="subsystemDraft.entryType"
+            :options="subsystemEntryTypeOptions"
+            allow-clear
+            placeholder="入口打开形态"
+          />
+        </a-form-item>
+        <a-form-item
+          :validate-status="subsystemError.entryUrl ? 'error' : ''"
+          :help="subsystemError.entryUrl"
+          label="入口地址"
+        >
+          <a-input
+            v-model:value="subsystemDraft.entryUrl"
+            :maxlength="500"
+            placeholder="选了入口类型则必填"
+          />
+        </a-form-item>
+      </template>
       <a-button
         type="primary"
         block
@@ -80,7 +129,7 @@
       </a-button>
     </dialog-box>
 
-    <!-- 密钥一次性展示（关闭后不再可见） -->
+    <!-- 密钥一次性展示（关闭后不再可见）；勾了注册子系统时应用编码(appCode)一并展示 -->
     <dialog-box
       v-model:visible="addTableItemFinishedVisible"
       title="信息"
@@ -100,6 +149,12 @@
         </a-descriptions-item>
         <a-descriptions-item label="应用密钥">
           {{ newTableItemInfo.appSecret }}
+        </a-descriptions-item>
+        <a-descriptions-item
+          v-if="newTableItemInfo.appCode"
+          label="应用编码"
+        >
+          {{ newTableItemInfo.appCode }}
         </a-descriptions-item>
       </a-descriptions>
     </dialog-box>
@@ -173,6 +228,7 @@ import {
   editSequenceChannelTable,
   getSequenceChannelTable
 } from '@/framework/apis/channel'
+import { registerSubsystemFromChannel } from '@/framework/apis/admin/subsystem'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import surelyTableColumns from '@/framework/views/MainContent/SystemManage/Channel/channel'
@@ -212,11 +268,44 @@ const addName: Ref<string> = ref('')
 const addNameError: Ref<string> = ref('')
 const adding: Ref<boolean> = ref(false)
 let addTableItemFinishedVisible: Ref<boolean> = ref(false)
-const newTableItemInfo: Ref<{ remark: string, appKey: string, appSecret: string }> = ref({ remark: '', appKey: '', appSecret: '' })
+const newTableItemInfo: Ref<{ remark: string, appKey: string, appSecret: string, appCode: string }> =
+  ref({ remark: '', appKey: '', appSecret: '', appCode: '' })
+
+// ==================== 可选：同时注册子系统（/partner/admin/register-subsystem） ====================
+
+// 入口形态取值口径与 AcSubsystem.entryType 注释一致（iframe/新窗口/同页）
+const subsystemEntryTypeOptions = [
+  { value: 'iframe', label: 'iframe' },
+  { value: '新窗口', label: '新窗口' },
+  { value: '同页', label: '同页' }
+]
+const alsoRegisterSubsystem: Ref<boolean> = ref(false)
+const subsystemDraft = reactive({ appCode: '', name: '', entryType: undefined as string | undefined, entryUrl: '' })
+const subsystemError = reactive({ appCode: '', name: '', entryUrl: '' })
+
+const resetSubsystemDraft = () => {
+  alsoRegisterSubsystem.value = false
+  subsystemDraft.appCode = ''
+  subsystemDraft.name = ''
+  subsystemDraft.entryType = undefined
+  subsystemDraft.entryUrl = ''
+  subsystemError.appCode = ''
+  subsystemError.name = ''
+  subsystemError.entryUrl = ''
+}
+
+// 必填校验与应用管理页同口径：appCode/name 必填；选了入口类型则入口地址必填
+const validateSubsystemDraft = () => {
+  subsystemError.appCode = subsystemDraft.appCode.trim() ? '' : '应用编码不能为空'
+  subsystemError.name = subsystemDraft.name.trim() ? '' : '子系统名称不能为空'
+  subsystemError.entryUrl = subsystemDraft.entryType && !subsystemDraft.entryUrl.trim() ? '选了入口类型则入口地址不能为空' : ''
+  return !subsystemError.appCode && !subsystemError.name && !subsystemError.entryUrl
+}
 
 const openAddBox = () => {
   addName.value = ''
   addNameError.value = ''
+  resetSubsystemDraft()
   addBoxVisible.value = true
 }
 const submitAdd = async () => {
@@ -226,10 +315,24 @@ const submitAdd = async () => {
     return
   }
   addNameError.value = ''
+  if (alsoRegisterSubsystem.value && !validateSubsystemDraft()) return
   adding.value = true
   try {
-    const res = await addSequenceChannelTable({ remark }, baseDomain)
-    newTableItemInfo.value = { remark, appKey: res.payload.appKey, appSecret: res.payload.appSecret }
+    if (alsoRegisterSubsystem.value) {
+      // 勾了注册子系统：渠道名+子系统字段一个事务，返回 {appKey, appSecret, appCode} 一次性展示
+      const res = await registerSubsystemFromChannel({
+        remark,
+        appCode: subsystemDraft.appCode.trim(),
+        name: subsystemDraft.name.trim(),
+        entryType: subsystemDraft.entryType || '',
+        entryUrl: subsystemDraft.entryUrl.trim()
+      }, baseDomain)
+      newTableItemInfo.value = { remark, appKey: res.payload.appKey, appSecret: res.payload.appSecret, appCode: res.payload.appCode }
+    } else {
+      // 不勾＝原 /add 行为零变化
+      const res = await addSequenceChannelTable({ remark }, baseDomain)
+      newTableItemInfo.value = { remark, appKey: res.payload.appKey, appSecret: res.payload.appSecret, appCode: '' }
+    }
     addBoxVisible.value = false
     addTableItemFinishedVisible.value = true
     fetchPage(1)

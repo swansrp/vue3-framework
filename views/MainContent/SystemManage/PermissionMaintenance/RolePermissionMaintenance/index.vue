@@ -1,5 +1,8 @@
 <template>
-  <div style="height: calc(100% - 66px)">
+  <div style="height: calc(100% - 66px); display: flex; flex-direction: column;">
+    <div class="app-scope-bar">
+      <AppScopeSelect />
+    </div>
     <a-layout class="role-permission-user-maintenance">
       <a-layout-sider
         class="role-list-wrap"
@@ -205,7 +208,9 @@ import { message, Modal } from 'ant-design-vue'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import * as _ from 'lodash'
 import { Ref } from 'vue'
+import { useRoute } from 'vue-router'
 
+import AppScopeSelect from '../AppScopeSelect.vue'
 import { initRoleData, RoleDataType } from '../type'
 import AddAndEditRoleForm from './AddAndEditRoleForm/index.vue'
 
@@ -355,6 +360,10 @@ const handleImportRoleUserFileChange = async (event: Event) => {
 const initAndUpdateRoleList = () =>
   getRoleList(inputRoleName.value).then((res) => (roleData.value = res.payload.records))
 
+// 应用上下文（方案B 棒6）：route.query.appCode 有值＝该应用作用域；无值/空＝平台自身（NULL）
+const route = useRoute()
+const appCode = computed(() => (typeof route.query.appCode === 'string' && route.query.appCode) || '')
+
 const queryRoleDetail = (roleData: RoleDataType, index: number) => {
   activateItemIndex.value = index
   currentRoleDate.value = roleData
@@ -363,7 +372,7 @@ const queryRoleDetail = (roleData: RoleDataType, index: number) => {
 }
 
 const renderRolePermissionTree = () =>
-  getRolePermissionTree(currentRoleDate.value.roleId).then(
+  getRolePermissionTree(currentRoleDate.value.roleId, appCode.value).then(
     (res) => (rolePermissionTreeData.value = res.payload)
   )
 
@@ -417,11 +426,26 @@ watch(inputRoleName, _.debounce(initAndUpdateRoleList, QUERY_INTERVAL))
 onBeforeMount(initAndUpdateRoleList)
 
 onMounted(() =>
-  getCompletePermissionTree().then((res) => (completeRoleTreeData.value = res.payload))
+  getCompletePermissionTree(appCode.value).then((res) => (completeRoleTreeData.value = res.payload))
 )
+
+// 🔴 应用切换必须页内 watch（M-11）：重载可授予的完整树；已选角色则同步重载其权限树/勾选
+watch(() => route.query.appCode, () => {
+  getCompletePermissionTree(appCode.value).then((res) => (completeRoleTreeData.value = res.payload))
+  if (showPermissionTreeTab.value && currentRoleDate.value.roleId) {
+    renderRolePermissionTree()
+    renderEditRolePermissionTree()
+  }
+})
 </script>
 
 <style scoped>
+.app-scope-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0 4px;
+}
+
 .role-list-wrap {
   background: var(--bg-elevated);
 }
@@ -430,7 +454,8 @@ onMounted(() =>
   width: 400px;
 }
 .role-permission-user-maintenance {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 :deep(.role-permission-user-maintenance .ant-layout-content) {
   height: 100%;

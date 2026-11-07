@@ -1,5 +1,8 @@
 <template>
-  <div style="height: calc(100vh - 96px); overflow: hidden;">
+  <div style="height: calc(100vh - 96px); overflow: hidden; display: flex; flex-direction: column;">
+    <div class="app-scope-bar">
+      <AppScopeSelect />
+    </div>
     <a-layout class="dept-permission-maintenance">
       <a-layout-sider
         class="dept-tree-wrap"
@@ -150,7 +153,9 @@
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { Ref } from 'vue'
+import { useRoute } from 'vue-router'
 
+import AppScopeSelect from '../AppScopeSelect.vue'
 import { bindDeptPermission, getDeptTree, getDeptPermissionListById, getDeptPermissionTree, unbindDeptPermission } from '@/framework/apis/admin/deptPermission'
 import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
 import { BindTree } from '@/framework/components/common/Panel'
@@ -377,8 +382,12 @@ const loadMultipleDeptPermissions = async (deptIds: string[]) => {
   halfCheckedKeys.value = halfKeys
 }
 
+// 应用上下文（方案B 棒6）：route.query.appCode 有值＝该应用作用域；无值/空＝平台自身（NULL）
+const route = useRoute()
+const appCode = computed(() => (typeof route.query.appCode === 'string' && route.query.appCode) || '')
+
 const renderDeptPermissionTree = (deptId: string) =>
-  getDeptPermissionTree(deptId).then(res => deptPermissionTreeData.value = res.payload)
+  getDeptPermissionTree(deptId, appCode.value).then(res => deptPermissionTreeData.value = res.payload)
 
 const renderEditDeptPermissionTree = (deptId: string) =>
   getDeptPermissionListById(deptId)
@@ -411,14 +420,36 @@ const loadDeptTree = () => {
 
 onMounted(() => {
   loadDeptTree()
-  getCompletePermissionTree().then(res => {
+  getCompletePermissionTree(appCode.value).then(res => {
     completePermissionTreeData.value = res.payload
   })
+})
+
+// 🔴 应用切换必须页内 watch（M-11）：重载可授予的完整树；已有选中部门则按当前模式重载其权限数据
+watch(() => route.query.appCode, () => {
+  getCompletePermissionTree(appCode.value).then(res => {
+    completePermissionTreeData.value = res.payload
+  })
+  if (!showPermissionTreeTab.value) return
+  if (deptMultiSelect.value) {
+    const checkedArr = Array.isArray(selectedDeptKeys.value)
+      ? selectedDeptKeys.value
+      : (selectedDeptKeys.value as { checked: string[] }).checked
+    if (checkedArr.length) loadMultipleDeptPermissions(checkedArr)
+  } else if (selectedDeptId.value) {
+    loadTabData(selectedDeptId.value)
+  }
 })
 
 </script>
 
 <style scoped>
+.app-scope-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0 4px;
+}
+
 .dept-tree-wrap {
   background: var(--bg-elevated);
   border-right: 1px solid var(--border-subtle);
@@ -478,7 +509,8 @@ onMounted(() => {
 }
 
 .dept-permission-maintenance {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
 }
 

@@ -18,6 +18,7 @@ export const apiType: any = {
   menu: '/menu',
   account: '/account',
   channel: '/partner/admin',
+  subsystem: '/admin/subsystem',
   rolePermission: '/admin/role/menu',
   roleUser: '/admin/role/user',
   deptUser: '/admin/dept/user',

@@ -1,5 +1,13 @@
 <template>
   <div class="menu-config">
+    <!--应用上下文条（方案B 棒6）：无 appCode＝平台自身，保持原标题不显示该标题-->
+    <div class="app-scope-bar">
+      <span
+        v-if="appCode"
+        class="app-scope-title"
+      >菜单配置 - {{ currentAppName || appCode }}</span>
+      <AppScopeSelect @apps-loaded="onAppsLoaded" />
+    </div>
     <!--展示树状结构的样式-->
     <div class="menu-tree">
       <div class="menu-category">
@@ -255,7 +263,9 @@ import { Key } from 'ant-design-vue/es/_util/type'
 import { AntTreeNodeDropEvent } from 'ant-design-vue/es/tree'
 import { DataNode } from 'ant-design-vue/es/vc-tree/interface'
 import { Ref } from 'vue'
+import { useRoute } from 'vue-router'
 
+import AppScopeSelect from '../AppScopeSelect.vue'
 import { addMainMenu, addMenuButton, addMenuContent, addSubMenu, changePID, deleteMainMenu, getMainMenu, getSubMenu, updateMainMenu, updateMenuOrder, updateSubMenu, getPermitSource } from '@/framework/apis/admin/navEdit'
 import TreeEditForm from '@/framework/components/common/treeEditForm/TreeEditForm.vue'
 import { FormState } from '@/framework/components/common/treeEditForm/type'
@@ -264,7 +274,15 @@ import { getAllParentNodes, getBrotherNodes, setField } from '@/framework/utils/
 import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 import { EDIT } from '@/framework/utils/constant'
 
-const _initFormState: FormState = {
+// 应用上下文（方案B 棒6）：route.query.appCode 有值＝该应用作用域；无值/空＝平台自身（NULL）。
+// appCode 只作查询/写入上下文，表单不暴露该字段：以隐形属性挂在 formState 上，
+// TreeEditForm 提交时整体展开 formState → 请求 body 自然携带（平台自身时为 undefined，JSON 序列化丢弃＝不传）。
+type AppFormState = FormState & { appCode?: string }
+
+const route = useRoute()
+const appCode = computed(() => (typeof route.query.appCode === 'string' && route.query.appCode) || '')
+
+const _initFormState: AppFormState = {
   title: '',
   icon: 'SettingOutlined',
   menuType: 0,
@@ -275,7 +293,8 @@ const _initFormState: FormState = {
   pid: undefined,
   grandId: undefined,
   menuId: undefined,
-  component: ''
+  component: '',
+  appCode: undefined
 }
 
 let menuId: Ref<number | undefined> = ref(undefined)
@@ -286,10 +305,25 @@ let tabActiveKey = ref('editNode')
 let treeSelectKey: Ref<TreeKeyType> = ref<TreeKeyType>([])
 let treeData: Ref<Array<DataNode>> = ref([])
 let menuConfigItem = ref<MenuConfigItem>('')
-let editMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
-let addSubMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
-let addRootMenuFormState: FormState = reactive<FormState>({ ..._initFormState })
+let editMenuFormState: AppFormState = reactive<AppFormState>({ ..._initFormState })
+let addSubMenuFormState: AppFormState = reactive<AppFormState>({ ..._initFormState })
+let addRootMenuFormState: AppFormState = reactive<AppFormState>({ ..._initFormState })
 let canEnterSubMenuFlag: Ref<boolean> = ref(false)
+
+// 页面标题「菜单配置 - {应用名}」取应用显示名
+let appOptionList: Ref<Array<{ value: string, label: string }>> = ref([])
+const currentAppName = computed(() => appOptionList.value.find((option) => option.value === appCode.value)?.label || '')
+const onAppsLoaded = (options: Array<{ value: string, label: string }>) => {
+  appOptionList.value = options
+}
+
+// 把当前应用上下文同步进三个 formState（TreeEditForm 提交时隐式携带）
+const applyAppCodeToForms = () => {
+  editMenuFormState.appCode = appCode.value || undefined
+  addSubMenuFormState.appCode = appCode.value || undefined
+  addRootMenuFormState.appCode = appCode.value || undefined
+}
+applyAppCodeToForms()
 
 // 菜单绑定信息相关状态
 let permitSourceLoading: Ref<boolean> = ref(false)
@@ -366,9 +400,9 @@ const syncExpandedKeys = () => {
   treeExpandedKeys.value = treeExpandedKeys.value.filter((key) => aliveKeys.has(key))
 }
 
-// 为了避免多次重写这两坨代码，将其写到一个函数中
+// 为了避免多次重写这两坨代码，将其写到一个函数中（树查询统一携带当前应用上下文）
 const updateMainTree = (needSelectKey = true) => {
-  getMainMenu().then(res => {
+  getMainMenu(appCode.value).then(res => {
     treeData.value = res.payload
     needSelectKey && selectTreeKey()
     syncExpandedKeys()
@@ -376,7 +410,7 @@ const updateMainTree = (needSelectKey = true) => {
 }
 const updateSubTree = () => {
   const data = { menuId: grandId.value }
-  getSubMenu(data).then(res => {
+  getSubMenu(data, appCode.value).then(res => {
     treeData.value = res.payload
     selectTreeKey()
     syncExpandedKeys()
@@ -410,6 +444,8 @@ const selectTreeNode = (_: string, info: any) => {
   }
   // 将当前的节点信息拷贝到editMenuFormState中(只拷贝editMenuFormState中已有的属性的值)
   Object.keys(editMenuFormState).forEach(key => setField(editMenuFormState, key as keyof FormState, node[key]))
+  // 树节点自带的 appCode 可能为空/为旧值，统一钉回当前应用上下文（编辑提交隐式携带）
+  applyAppCodeToForms()
   // 判断当前节点是否为叶子节点
   if (node.children && node.children.length) {
     // 如果不是叶子节点,无法从该节点直接进入到对应的Sub Menu,也不可以进行删除
@@ -493,7 +529,7 @@ const tabsChange = (activeKey: Key) => {
 // 删除菜单节点的方法
 const deleteNode = () => {
   // 删除Main Menu 和Sub Menu的方法都是一样的，所以只是根据menuNameListIndex的选择情况判断需要使用哪个方法更新a-tree
-  deleteMainMenu({ id: menuId.value }).then(() => {
+  deleteMainMenu({ id: menuId.value }, true, appCode.value).then(() => {
     if (menuNameListIndex.value === 0) updateMainTree()
     else if (menuNameListIndex.value === 1) updateSubTree()
     // 删除节点后,不显示menu-config-space的配置面板
@@ -521,8 +557,8 @@ const onDrop = (info: AntTreeNodeDropEvent) => {
     updateOrderData.push({ id: node.menuId, showOrder: index })
   })
 
-  let changeOrderPromise = updateMenuOrder(updateOrderData)
-  changeOrderPromise.then(() => changePID(updatePIdData)).then(() => {
+  let changeOrderPromise = updateMenuOrder(updateOrderData, appCode.value)
+  changeOrderPromise.then(() => changePID(updatePIdData, appCode.value)).then(() => {
     if (grandId && grandId.value) updateSubTree()
     else updateMainTree()
   })
@@ -578,7 +614,7 @@ const handleExportMenu = async () => {
     let data: any
     if (isMain) {
       // 顶部菜单：拉取其下完整子菜单树（含按钮资源）一并导出
-      const res = await getSubMenu({ menuId: node.menuId })
+      const res = await getSubMenu({ menuId: node.menuId }, appCode.value)
       data = { ...cleanMenuNode(node), children: (res.payload || []).map(cleanMenuNode) }
     } else {
       data = cleanMenuNode(node)
@@ -586,6 +622,8 @@ const handleExportMenu = async () => {
     downloadJsonConfig(`${isMain ? '顶部菜单' : '子菜单'}-${node.title}`, {
       type: 'menuTree',
       scope: isMain ? 'main' : 'sub',
+      // 导出文件顶层记录应用上下文：null＝平台自身；导入时与当前上下文比对（方案B 棒6）
+      appCode: appCode.value || null,
       exportTime: new Date().toISOString(),
       data
     })
@@ -610,17 +648,17 @@ const addMenuNode = async (fileNode: any, pid: number | null, grandIdVal: number
     pid: pid ?? undefined
   }
   if (grandIdVal === null) {
-    await addMainMenu(body, false)
+    await addMainMenu(body, false, appCode.value)
   } else {
     body.grandId = grandIdVal
-    if (fileNode.menuType === 3) await addMenuButton(body, false)
-    else if (fileNode.menuType === 2) await addMenuContent(body, false)
-    else await addSubMenu(body, false)
+    if (fileNode.menuType === 3) await addMenuButton(body, false, appCode.value)
+    else if (fileNode.menuType === 2) await addMenuContent(body, false, appCode.value)
+    else await addSubMenu(body, false, appCode.value)
   }
   counters.added++
   // 无子节点的子菜单节点无需回查 id
   if (grandIdVal !== null && !fileNode.children?.length) return undefined
-  const res = grandIdVal === null ? await getMainMenu() : await getSubMenu({ menuId: grandIdVal })
+  const res = grandIdVal === null ? await getMainMenu(appCode.value) : await getSubMenu({ menuId: grandIdVal }, appCode.value)
   const tree = res.payload || []
   const siblings = pid === null ? tree : (findNodeById(tree, pid)?.children || [])
   const matched = siblings.filter((n: any) => menuNodeKey(n) === menuNodeKey(fileNode))
@@ -639,8 +677,8 @@ const updateMenuFields = async (fileNode: any, menuIdVal: number, grandIdVal: nu
     isFrame: normFlag(fileNode.isFrame),
     menuId: menuIdVal
   }
-  if (grandIdVal === null) await updateMainMenu(body, false)
-  else await updateSubMenu(body, false)
+  if (grandIdVal === null) await updateMainMenu(body, false, appCode.value)
+  else await updateSubMenu(body, false, appCode.value)
 }
 
 // 删除节点及其所有下属节点（后序遍历，先删子后删父）
@@ -648,7 +686,7 @@ const deleteMenuSubtree = async (node: any, counters: { deleted: number }) => {
   for (const child of node.children || []) {
     await deleteMenuSubtree(child, counters)
   }
-  await deleteMainMenu({ id: node.menuId }, false)
+  await deleteMainMenu({ id: node.menuId }, false, appCode.value)
   counters.deleted++
 }
 
@@ -686,7 +724,7 @@ const syncMenuChildren = async (fileChildren: any[], existChildren: any[], pid: 
 
 // 顶部菜单导入：按匹配键在主菜单中查找，存在则更新，随后同步其下完整子菜单树
 const importMainMenu = async (rootNode: any, counters: any) => {
-  const mains = (await getMainMenu()).payload || []
+  const mains = (await getMainMenu(appCode.value)).payload || []
   const exist = mains.find((n: any) => menuNodeKey(n) === menuNodeKey(rootNode))
   let topId: number | undefined
   if (exist) {
@@ -697,13 +735,13 @@ const importMainMenu = async (rootNode: any, counters: any) => {
     topId = await addMenuNode(rootNode, null, null, counters)
   }
   if (topId === undefined) throw new Error('无法定位导入的顶部菜单，导入中断')
-  const subRoots = (await getSubMenu({ menuId: topId })).payload || []
+  const subRoots = (await getSubMenu({ menuId: topId }, appCode.value)).payload || []
   await syncMenuChildren(rootNode.children || [], subRoots, null, topId, counters)
 }
 
 // 子菜单导入：与当前子菜单树的根层级比对，仅同步导入的这棵子树，不影响其他同级子菜单
 const importSubMenu = async (rootNode: any, counters: any) => {
-  const roots = (await getSubMenu({ menuId: grandId.value })).payload || []
+  const roots = (await getSubMenu({ menuId: grandId.value }, appCode.value)).payload || []
   const exist = roots.find((n: any) => menuNodeKey(n) === menuNodeKey(rootNode)) || null
   await upsertMenuNode(rootNode, exist, null, grandId.value!, counters)
 }
@@ -726,6 +764,15 @@ const handleMenuFileChange = async (event: Event) => {
       message.error(parsed.scope === 'main'
         ? '该文件为顶部菜单导出文件，请返回主菜单后再导入'
         : '该文件为子菜单导出文件，请进入对应顶部菜单的子菜单后再导入')
+      return
+    }
+    // 应用上下文比对（方案B 棒6）：文件所属应用与当前上下文不一致 → 拒绝导入，提示切换应用。
+    // 旧版导出文件无 appCode 键（undefined → null）视为平台自身
+    const fileAppCode = parsed.appCode ?? null
+    if (fileAppCode !== (appCode.value || null)) {
+      message.error(fileAppCode
+        ? `该文件属于应用 ${fileAppCode}，请切换到对应应用后导入`
+        : '该文件属于平台自身，请切换到「平台自身」后导入')
       return
     }
     const rootNode = parsed.data
@@ -759,6 +806,26 @@ const handleMenuFileChange = async (event: Event) => {
   }
 }
 
+// 🔴 应用切换必须页内 watch（M-11）：vue-router 同记录 query 变化不触发 beforeEnter/重挂载。
+// 切应用＝切数据域：回到主菜单视图、清空选中与配置面板（跨应用的选中 id 无意义），按新上下文重载主树
+watch(() => route.query.appCode, () => {
+  applyAppCodeToForms()
+  menuNameListIndex.value = 0
+  menuName.value = menuNameList[0]
+  menuId.value = undefined
+  grandId.value = undefined
+  menuTitle.value = ''
+  subMenuCurrentPath.value = ''
+  menuConfigItem.value = ''
+  tabActiveKey.value = 'editNode'
+  treeSelectKey.value = []
+  canEnterSubMenuFlag.value = false
+  disableDeleteBtn.value = false
+  permitSourceData.value = []
+  expandAllOnNextLoad = true
+  updateMainTree(false)
+})
+
 </script>
 
 <style scoped>
@@ -769,6 +836,20 @@ const handleMenuFileChange = async (event: Event) => {
   align-items: stretch;
   width: 100%;
   box-sizing: border-box;
+}
+
+.app-scope-bar {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 15px 0 15px;
+  box-sizing: border-box;
+}
+
+.app-scope-title {
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .no-data {
