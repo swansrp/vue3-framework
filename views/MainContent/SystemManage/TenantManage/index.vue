@@ -208,8 +208,15 @@
 
 <script lang="ts" setup>
 import { message } from 'ant-design-vue'
+import dayjs from 'dayjs'
 import { Ref } from 'vue'
 
+import { getSubsystemTable } from '@/framework/apis/admin/subsystem'
+import {
+  bindTenantApp,
+  getTenantAppList,
+  unbindTenantApp
+} from '@/framework/apis/admin/tenantApp'
 import {
   addMyTenantMember,
   createTenant,
@@ -220,14 +227,7 @@ import {
   setMyTenantMemberAdmin,
   updateTenant
 } from '@/framework/apis/admin/tenantManage'
-import {
-  bindTenantApp,
-  getTenantAppList,
-  unbindTenantApp
-} from '@/framework/apis/admin/tenantApp'
-import { getSubsystemTable } from '@/framework/apis/admin/subsystem'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
-import dayjs from 'dayjs'
 
 interface TenantRow {
   id: string | number
@@ -395,7 +395,8 @@ const loadAppGrant = () => {
   ]).then(([appsRes, boundRes]) => {
     if (appGrantTenantId.value !== tenantIdSnapshot) return
     const apps = (((appsRes.payload || {}).records || []) as SubsystemRow[]).filter(row => row.status === '1')
-    const boundByCode = new Map<string, TenantAppRow>()
+    // 🔴 行尾分号必须保留：下一行以 (( 开头，无分号则 ASI 不生效 ⇒ 编译成 (new Map())(...) 把实例当函数调（e2e③ 实锤）
+    const boundByCode = new Map<string, TenantAppRow>();
     (((boundRes.payload || {}).records || []) as TenantAppRow[]).forEach(row => {
       if (row.valid === '1' && row.status === 'ENABLED') boundByCode.set(row.appCode, row)
     })
