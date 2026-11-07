@@ -24,6 +24,12 @@ export const disableTenant = (id: string | number) => request(buildPostApi('/dis
 
 export const getMyTenantMembers = (tenantId: string | number) => request(buildGetApi('/my/members'), { tenantId }, {}, false, false) as Promise<any>
 
+// 查人（加成员第一步，工号/手机号/姓名精确等值；后端挂类级 AuthAdmin 平台档闸，同 /list 面）：
+// showErr=false——查无/歧义等 lookup 阶段拒绝不弹全局 toast，由成员弹窗表单内红字就地呈现
+// （红字分工照 SpaceDirectory/MemberAddModal 家规：lookup 阶段拒绝=表单内红字；
+// add 阶段拒绝如「已是成员」=请求层 toast 透出后端人话）
+export const lookupTenantUser = (keyword: string) => request(buildGetApi('/my/lookup-user'), { keyword }, {}, false, false, false) as Promise<any>
+
 export const addMyTenantMember = (tenantId: string | number, userId: string | number, isAdmin = false) => request(buildPostApi('/my/member/add'), { tenantId, userId, isAdmin }, {}, true) as Promise<any>
 
 export const removeMyTenantMember = (tenantId: string | number, userId: string | number) => request(buildPostApi('/my/member/remove'), { tenantId, userId }, {}, true) as Promise<any>

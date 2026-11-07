@@ -98,20 +98,54 @@
       :width="900"
       :title="memberDialogTitle"
     >
+      <!-- 加成员照 SpaceDirectory/MemberAddModal 家规：输入工号/手机号/姓名精确查人 → 核对回显 → 确认添加；
+           查无/歧义=表单内红字（lookupTenantUser showErr=false），已是成员等 add 阶段拒绝=请求层 toast -->
+      <p class="member-add-hint">
+        输入工号 / 手机号 / 姓名后点「查找」（精确匹配，不做模糊搜索），核对姓名再添加。
+      </p>
       <div class="member-add-row">
         <a-input
-          v-model:value="newMemberUserId"
+          v-model:value="newMemberKeyword"
           class="form-input"
-          placeholder="用户id（ac_user 主键）"
+          :maxlength="50"
+          placeholder="工号 / 手机号 / 姓名（精确匹配）"
+          allow-clear
+          @press-enter="handleLookupMember"
         />
+        <a-button
+          :loading="memberLooking"
+          :disabled="!newMemberKeyword.trim()"
+          @click="handleLookupMember"
+        >
+          查找
+        </a-button>
+      </div>
+      <p
+        v-if="memberLookupError"
+        class="member-lookup-error"
+      >
+        {{ memberLookupError }}
+      </p>
+      <div
+        v-if="memberHit"
+        class="member-add-hit"
+      >
+        <span class="member-add-hit-label">已找到</span>
+        <b>{{ memberHit.customerNumber }}</b>
+        <span class="member-add-hit-name">{{ memberHit.name }}</span>
+        <span>{{ memberHit.phoneNumber }}</span>
+      </div>
+      <div class="member-add-actions">
         <a-checkbox v-model:checked="newMemberIsAdmin">
           设为租户管理员
         </a-checkbox>
         <a-button
           type="primary"
+          :loading="memberAdding"
+          :disabled="!memberHit"
           @click="handleAddMember"
         >
-          加成员
+          确认添加
         </a-button>
       </div>
       <a-table
@@ -223,6 +257,7 @@ import {
   disableTenant,
   getMyTenantMembers,
   getTenantList,
+  lookupTenantUser,
   removeMyTenantMember,
   setMyTenantMemberAdmin,
   updateTenant
@@ -243,6 +278,14 @@ interface MemberRow {
   name?: string
   userName?: string
   isAdmin: boolean
+}
+
+// 查人命中（后端 TenantUserLookupVO 最小面：id＋工号＋姓名＋手机号），核对后以 userId 确认添加
+interface MemberHit {
+  userId: string | number
+  customerNumber?: string
+  name?: string
+  phoneNumber?: string
 }
 
 // 应用授权弹窗行：checked/expireAt 为编辑态，initial* 为打开时快照（保存按二者 diff）
@@ -305,7 +348,11 @@ const memberDialogTitle: Ref<string> = ref('成员管理')
 const currentTenantId: Ref<string | number> = ref('')
 const memberList: Ref<MemberRow[]> = ref([])
 const memberLoading: Ref<boolean> = ref(false)
-const newMemberUserId: Ref<string> = ref('')
+const newMemberKeyword: Ref<string> = ref('')
+const memberHit: Ref<MemberHit | null> = ref(null)
+const memberLookupError: Ref<string> = ref('')
+const memberLooking: Ref<boolean> = ref(false)
+const memberAdding: Ref<boolean> = ref(false)
 const newMemberIsAdmin: Ref<boolean> = ref(false)
 
 const appGrantDialogVisible: Ref<boolean> = ref(false)
@@ -359,19 +406,68 @@ const renderMemberList = () => {
 const openMemberDialog = (record: TenantRow) => {
   currentTenantId.value = record.id
   memberDialogTitle.value = `成员管理 - ${record.name}`
+  // 每次打开都是干净加成员表单（照 MemberAddModal.resetFields）；顺带切断上一弹窗的迟到查找
+  newMemberKeyword.value = ''
+  memberHit.value = null
+  memberLookupError.value = ''
+  memberLooking.value = false
+  memberAdding.value = false
+  newMemberIsAdmin.value = false
   memberDialogVisible.value = true
   renderMemberList()
 }
 
+// 照 MemberAddModal.lookup：点「查找」/回车才发一次查询；响应期间改了输入或切了租户弹窗 ⇒ 迟到响应弃用（then/catch 快照守卫）；
+// finally 无条件复位 looking（家规 L118：改完可直接再点查找）
+const handleLookupMember = () => {
+  const keyword = newMemberKeyword.value.trim()
+  if (!keyword || memberLooking.value) return
+  const tenantIdSnapshot = currentTenantId.value
+  // 关键字快照守卫（review F1，照 MemberAddModal L110/L114/L118）：in-flight 期间改输入 ⇒
+  // 迟到响应弃用——不守则「张三」的命中落到已改为「李四」的输入框，确认对象与输入串错位
+  const kwSnapshot = keyword
+  memberLooking.value = true
+  lookupTenantUser(keyword)
+      .then(res => {
+        if (currentTenantId.value !== tenantIdSnapshot || newMemberKeyword.value.trim() !== kwSnapshot) return
+        memberHit.value = res?.payload || null
+        memberLookupError.value = memberHit.value ? '' : '查无此人'
+      })
+      .catch((e: unknown) => {
+        // 查无/歧义等人话由后端 ServiceException 带出（showErr=false 不弹全局条），就地红字呈现
+        if (currentTenantId.value !== tenantIdSnapshot || newMemberKeyword.value.trim() !== kwSnapshot) return
+        memberHit.value = null
+        const msg = e instanceof Error ? e.message.replace(/^Error:\s*/, '') : ''
+        memberLookupError.value = msg || '查找失败，请重试'
+      })
+      .finally(() => {
+        // 照 MemberAddModal 家规无条件复位：输入框未禁用，in-flight 改输入后必须能直接再点查找
+        // （迟到腿的数据面已由 then/catch 快照守卫弃用，这里只管灯）；租户快照条件防旧弹窗腿误熄新弹窗
+        if (currentTenantId.value === tenantIdSnapshot) memberLooking.value = false
+      })
+}
+
+// 改关键字即作废上次命中与红字：确认对象只对「查过的那个串」有效（MemberAddModal 同纪律）
+watch(newMemberKeyword, () => {
+  memberHit.value = null
+  memberLookupError.value = ''
+})
+
 const handleAddMember = () => {
-  const userId = Number(newMemberUserId.value)
-  if (!newMemberUserId.value || Number.isNaN(userId)) return message.error('请输入数字用户id')
-  addMyTenantMember(currentTenantId.value, userId, newMemberIsAdmin.value)
+  const hit = memberHit.value
+  if (!hit || memberAdding.value) return
+  memberAdding.value = true
+  addMyTenantMember(currentTenantId.value, hit.userId, newMemberIsAdmin.value)
       .then(() => {
-        newMemberUserId.value = ''
+        // 成功 toast 由请求层弹（后端 Resp.notice「成员已加入」）；清查找态并刷新清单
+        newMemberKeyword.value = ''
         newMemberIsAdmin.value = false
         renderMemberList()
       })
+      .catch(() => {
+        // 「该用户已是成员」等人话由请求层 toast；弹窗留在原位，命中回显仍在可重试
+      })
+      .finally(() => memberAdding.value = false)
 }
 
 const handleRemoveMember = (record: MemberRow) =>
@@ -474,7 +570,50 @@ onMounted(renderTenantList)
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+}
+
+/* 全部走框架语义令牌（design-tokens.css 全局注入），照 SpaceDirectory/MemberAddModal 同款配色 */
+.member-add-hint {
+  margin: 0 0 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.member-lookup-error {
+  margin: 6px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.member-add-hit {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+
+.member-add-hit-label {
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.member-add-hit-name {
+  font-weight: 600;
+}
+
+.member-add-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .app-grant-hint {
