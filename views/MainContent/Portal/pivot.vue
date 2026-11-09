@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { CaretDownOutlined, CaretUpOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { CaretDownOutlined, CaretUpOutlined, DownOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { useLocaleReceiver } from 'ant-design-vue/es/locale/LocaleReceiver'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -392,12 +392,13 @@ const pushDownSortList = computed<{ property: string; type: number }[]>(() => {
 /**
  * 本次 SQL 输出中可被 ORDER BY 引用的列名集合(与后端 outputAliases 同口径):
  * 行维度字段名 + 每个 ${透视列标识}__${度量字段} 单元格别名。
- * row 模式(度量转行)每行熔接一个度量、pivotRow 模式(透视列转行)度量列混装全部透视值,
- * 同一列都没有唯一对应的 SQL 别名, 故度量别名不纳入(行维度仍可下推)
+ * row 模式(度量转行)展示列=透视值名、与单元格别名对不上, 度量别名不纳入(行维度仍可下推)。
+ * pivotRow 模式(透视列转行)纳入单元格别名: 下推排的是宽表行序, 熔接按行序原样摊开
+ * ⇒ 语义即"按某透视值的度量给行维度组排序"(分组/小计不破坏)
  */
 const sortableAliases = computed(() => {
   const set = new Set<string>(groupFields.value)
-  if (!isMeasureInRow.value && !isPivotInRow.value) {
+  if (!isMeasureInRow.value) {
     for (const pv of effectivePivotColumns.value) {
       for (const m of measures.value) {
         set.add(`${pv.itemValue}__${measureKey(m)}`)
@@ -410,19 +411,21 @@ const sortableAliases = computed(() => {
 /** 表头点击产生的排序(单列): 0=正序 1=倒序, null=未点击 */
 const headerSortClick = ref<{ property: string, type: number } | null>(null)
 
-/** 生效的点击排序: 度量布局/透视列变更后旧点击键可能不再是本次输出别名, 后端会按列权限拒绝, 故在此丢弃 */
+/** 生效的点击排序: 度量布局/透视列变更后旧点击键可能不再是本次输出别名, 后端会按列权限拒绝, 故在此丢弃
+ *  (裸度量键经 resolveSortAlias 能映射到唯一单元格别名时同样生效: 单透视列的 pivotRow 直接点击排序) */
 const headerSort = computed(() => {
   const click = headerSortClick.value
-  return click && sortableAliases.value.has(click.property) ? click : null
+  return click && resolveSortAlias(click.property) ? click : null
 })
 
-/** 报表默认排序的 property 映射为可排别名(度量裸字段名仅在该度量只出现一次即单个透视列时有唯一别名) */
+/** 报表默认排序/表头点击的 property 映射为可排别名(度量裸键仅在该度量只出现一次即单个透视列时有唯一别名) */
 const resolveSortAlias = (property: string): string | null => {
   if (sortableAliases.value.has(property)) {
     return property
   }
-  // pivotRow 模式: 下推单个透视值的别名只影响宽表行序、与熔接后展示列口径不符, 度量排序一律走本地聚合值
-  if (!isMeasureInRow.value && !isPivotInRow.value && effectivePivotColumns.value.length === 1 &&
+  // 单透视列(含无透视列退化总计): col 与 pivotRow 布局度量列都独占一个单元格别名, 裸键可映射;
+  // 多透视列时裸键跨透视值无唯一别名, 返回 null(pivotRow 走透视值菜单/本地排)
+  if (!isMeasureInRow.value && effectivePivotColumns.value.length === 1 &&
     measures.value.some(m => measureKey(m) === property)) {
     return `${effectivePivotColumns.value[0].itemValue}__${property}`
   }
@@ -432,7 +435,9 @@ const resolveSortAlias = (property: string): string | null => {
 /** 主排序键: 表头点击优先, 其次能被后端表达的默认排序; 两者都无则回退 sortedRows 本地排 */
 const backendSort = computed<{ property: string, type: number } | null>(() => {
   if (headerSort.value) {
-    return headerSort.value
+    // 点击键可能是裸度量键(单透视列 pivotRow), 下推前映射为单元格别名
+    const alias = resolveSortAlias(headerSort.value.property)
+    return alias ? { property: alias, type: headerSort.value.type } : null
   }
   const sort = defaultSort.value
   if (!sort) {
@@ -476,10 +481,12 @@ const collectLeafDataIndexes = (cols: ColumnType[]): string[] =>
 
 const headerSlotKeys = computed(() =>
   collectLeafDataIndexes(portalColumns.value)
-    .filter(d => sortableAliases.value.has(d) || !!measureDescMap.value[d])
+    .filter(d => isSortableHeader(d) || !!measureDescMap.value[d] || isPivotRowMeasureKey(d))
 )
 
-const isSortableHeader = (key: string) => sortableAliases.value.has(key)
+/** 可点击排序的表头键: 本次输出别名 ∪ pivotRow 单透视列的裸度量键(经 resolveSortAlias 映射后下推) */
+const isSortableHeader = (key: string) =>
+  sortableAliases.value.has(key) || isPivotRowDirectSortKey(key)
 const measureDesc = (key: string) => measureDescMap.value[key]
 
 /** 点击表头: 正序 → 倒序 → 取消, 取消后回落到报表默认排序 */
@@ -495,8 +502,12 @@ const toggleSort = (alias: string) => {
   loadData()
 }
 
-/** 表头点击: 只有可排序列响应, 纯注释列点了不产生副作用 */
+/** 表头点击: 可排序列切换排序; pivotRow 度量列打开透视值排序菜单; 纯注释列点了不产生副作用 */
 const onHeaderClick = (key: string) => {
+  if (isPivotRowMeasureKey(key)) {
+    pivotRowSortMenuOpen.value = pivotRowSortMenuOpen.value === key ? null : key
+    return
+  }
   if (isSortableHeader(key)) {
     toggleSort(key)
   }
@@ -526,6 +537,41 @@ const sortTip = (alias: string) => {
     return locale.triggerDesc
   }
   return locale.triggerAsc
+}
+
+// ==================== pivotRow 度量列排序入口(按透视值×度量下推) ====================
+/** 多透视值时该布局度量列混装全部透视值、无单一别名 ⇒ 表头点击弹出透视值菜单, 选定后按 ${标识}__${度量} 下推 ORDER BY */
+const isPivotRowMeasureKey = (key: string) =>
+  isPivotInRow.value && effectivePivotColumns.value.length > 1 &&
+  measures.value.some(m => measureKey(m) === key)
+
+/** 单透视列(含无透视列退化总计)时度量列独占唯一单元格别名 ⇒ 表头点击直接走普通排序循环, 不弹菜单 */
+const isPivotRowDirectSortKey = (key: string) =>
+  isPivotInRow.value && effectivePivotColumns.value.length === 1 &&
+  measures.value.some(m => measureKey(m) === key)
+
+/** 菜单候选: 真实透视列(小计列在转行布局是前端再聚合行、不作排序项); 无透视列退化总计列时单项=总计 */
+const pivotRowSortOptions = computed(() =>
+  effectivePivotColumns.value
+    .filter(pv => !isSubtotalColumn(pv))
+    .map(pv => ({ value: pv.itemValue!, label: pv.itemName || (pv === TOTAL_PIVOT ? '总计' : pv.itemValue!) }))
+)
+
+/** 当前打开排序菜单的度量列键(null=全关); 表头整体点击与箭头触发共用此受控态 */
+const pivotRowSortMenuOpen = ref<string | null>(null)
+
+/** 该度量列生效中的排序别名(表头箭头激活态用), 无则空串 */
+const pivotRowActiveAlias = (mKey: string): string => {
+  const sort = headerSort.value
+  return sort && pivotRowSortOptions.value.some(opt => `${opt.value}__${mKey}` === sort.property)
+    ? sort.property
+    : ''
+}
+
+/** 菜单选定: 复用表头点击的 正序→倒序→取消 循环并重新下推查询 */
+const onPivotRowSortMenuClick = ({ key }: { key: string | number }) => {
+  pivotRowSortMenuOpen.value = null
+  toggleSort(String(key))
 }
 
 /** 加载 Portal 配置与透视列配置 */
@@ -668,7 +714,7 @@ const loadData = async () => {
       havingCondition: havingColumnFilters.value.length > 0
         ? { andOr: '0', conditionList: havingColumnFilters.value }
         : undefined,
-      // 行维度排序下推(聚合后 ORDER BY 行维度列, 两链路均支持); 度量排序后端无别名可排, 不在此列
+      // 排序下推(聚合后 ORDER BY): 行维度配置排序 + 表头点击/默认排序命中可排别名(含 pivotRow 单元格别名); row 模式度量无别名不在此列
       sortList: pushDownSortList.value.length > 0 ? pushDownSortList.value : undefined,
       groupColumns: groupFields.value.filter(f => !hiddenC.value.has(columnToken(f))).map(f => ({
         value: f,
@@ -1020,7 +1066,7 @@ const portalColumns = computed(() => {
           order: order++,
           editable: false,
           sorter: false,
-          // 度量列在本布局混装全部透视值, 无唯一 SQL 别名 ⇒ 不开排序/列搜索(口径见 sortableAliases)
+          // 库原生排序/列搜索不开: 多透视值时度量列混装全部透视值无唯一别名, 排序入口走自定义表头插槽(口径见 sortableAliases)
           filterAble: false,
           addShow: false,
           editShow: false,
@@ -1698,7 +1744,7 @@ onMounted(() => {
         #[`headerCell_${key}`]="{ title }"
       >
         <span
-          :class="['pivot-sort-header', { 'pivot-sort-static': !isSortableHeader(key) }]"
+          :class="['pivot-sort-header', { 'pivot-sort-static': !isSortableHeader(key) && !isPivotRowMeasureKey(key) }]"
           @click="onHeaderClick(key)"
         >
           <span class="pivot-sort-label">
@@ -1740,6 +1786,50 @@ onMounted(() => {
                 />
               </span>
             </span>
+          </a-tooltip>
+          <!-- pivotRow 度量列: 混装全部透视值无单一别名 ⇒ 箭头区作菜单触发, 选透视值后按单元格别名下推 -->
+          <a-tooltip
+            v-else-if="isPivotRowMeasureKey(key)"
+            title="按透视值排序"
+          >
+            <a-dropdown
+              trigger="click"
+              :open="pivotRowSortMenuOpen === key"
+              @open-change="(open) => (pivotRowSortMenuOpen = open ? key : null)"
+            >
+              <span
+                class="surely-table-column-sorter surely-table-column-sorter-full pivot-sort-menu-trigger"
+                @click.stop
+              >
+                <span class="surely-table-column-sorter-inner">
+                  <caret-up-outlined
+                    :class="['surely-table-column-sorter-up', { active: isSortAsc(pivotRowActiveAlias(key)) }]"
+                  />
+                  <caret-down-outlined
+                    :class="['surely-table-column-sorter-down', { active: isSortDesc(pivotRowActiveAlias(key)) }]"
+                  />
+                </span>
+                <down-outlined class="pivot-sort-menu-caret" />
+              </span>
+              <template #overlay>
+                <a-menu @click="onPivotRowSortMenuClick">
+                  <a-menu-item
+                    v-for="opt in pivotRowSortOptions"
+                    :key="`${opt.value}__${key}`"
+                  >
+                    {{ opt.label }}
+                    <caret-up-outlined
+                      v-if="isSortAsc(`${opt.value}__${key}`)"
+                      class="pivot-sort-menu-state"
+                    />
+                    <caret-down-outlined
+                      v-else-if="isSortDesc(`${opt.value}__${key}`)"
+                      class="pivot-sort-menu-state"
+                    />
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </a-tooltip>
         </span>
       </template>
@@ -1895,6 +1985,24 @@ onMounted(() => {
     font-size: 11px;
     opacity: 0.5;
   }
+
+  // pivotRow 排序菜单触发: 箭头区可点(手型), 末尾小三角提示有下拉
+  .pivot-sort-menu-trigger {
+    cursor: pointer;
+  }
+
+  .pivot-sort-menu-caret {
+    flex: none;
+    margin-left: 2px;
+    font-size: 9px;
+    opacity: 0.55;
+  }
+}
+
+// 排序菜单激活项的方向图标(overlay 由本组件插槽渲染, 带 scoped 标记)
+.pivot-sort-menu-state {
+  margin-left: 6px;
+  font-size: 11px;
 }
 </style>
 
