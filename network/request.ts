@@ -290,6 +290,11 @@ axiosInstance.interceptors.response.use(
       // 极端情况:清理所有可能的 timer
       clearAllTimers()
     }
+    // 主动取消（上传面板「停止上传」这类调用方发起的中止）：不是网络故障，
+    // 不弹全局提示，原样抛给调用方自行收尾（据此落"已停止"而不是"上传失败"）
+    if (axios.isCancel(err)) {
+      throw err
+    }
     if(err.response) {
       return _recoverSession(err.response.data, err.config, () => {
         // 按次静默：展示腿（取字节渲染）失败由调用方自己呈现占位，不弹全局错误条；
@@ -583,7 +588,8 @@ function upload(
   apiType: ApiType,
   params: object,
   body: object,
-  onUploadProgress: Function) {
+  onUploadProgress: Function,
+  signal?: AbortSignal) {
   const headers = { 'Content-Type': 'multipart/form-data' }
   const config: SpaceAwareConfig = {
     baseURL: import.meta.env.VITE_baseURL + apiType.baseDomain + web,
@@ -593,6 +599,8 @@ function upload(
     params: null,
     headers,
     explicitHeaderKeys: Object.keys(headers),
+    // 可选取消信号：不传＝维持既往不可取消行为（既有调用零位移）
+    signal,
     onUploadProgress: (progressEvent: AxiosProgressEvent) => {
       onUploadProgress(progressEvent)
     }
@@ -604,6 +612,8 @@ function upload(
       response: resp
     }
   }).catch(err => {
+    // 主动取消由调用方接管状态（如落"已停止"），不弹上传失败提示
+    if (axios.isCancel(err)) throw err
     message.error('上传失败，请检查网络后重试，或联系系统管理员！')
     console.log(err)
     throw new Error(err)
