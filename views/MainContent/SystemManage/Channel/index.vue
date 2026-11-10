@@ -222,13 +222,13 @@ import { Ref, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { addRequest, deleteRequest, generalQueryRequest } from '@/framework/apis'
+import { registerSubsystemFromChannel } from '@/framework/apis/admin/subsystem'
 import {
   addSequenceChannelTable,
   deleteSequenceChannelTable,
   editSequenceChannelTable,
   getSequenceChannelTable
 } from '@/framework/apis/channel'
-import { registerSubsystemFromChannel } from '@/framework/apis/admin/subsystem'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
 import surelyTableColumns from '@/framework/views/MainContent/SystemManage/Channel/channel'

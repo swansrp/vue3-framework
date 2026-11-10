@@ -156,6 +156,7 @@ import { Ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 import AppScopeSelect from '../AppScopeSelect.vue'
+
 import { bindDeptPermission, getDeptTree, getDeptPermissionListById, getDeptPermissionTree, unbindDeptPermission } from '@/framework/apis/admin/deptPermission'
 import { getCompletePermissionTree } from '@/framework/apis/admin/navEdit'
 import { BindTree } from '@/framework/components/common/Panel'
