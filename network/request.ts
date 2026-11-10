@@ -4,7 +4,7 @@ import qs from 'qs'
 
 import { name } from '@/../package.json'
 import { load } from '@/framework/components/common/Loading'
-import { navigation2Login } from '@/framework/network/login'
+import { navigation2Login, tryRefreshToken } from '@/framework/network/login'
 import { isEmpty, localStorageMethods } from '@/framework/utils/common'
 import { AUTHORIZATION_TOKEN } from '@/framework/utils/constant'
 export const domain = '/' + name
@@ -131,12 +131,30 @@ export function setRequestHeaderProvider(provider: RequestHeaderProvider | null)
  * 展示腿用；401 会话超时仍照常跳登录，不受该开关影响）。
  * 不传即维持既往行为，向后兼容。
  */
-type SpaceAwareConfig = AxiosRequestConfig & { omitHeaderKeys?: string[], explicitHeaderKeys?: string[], suppressErrorToast?: boolean }
+type SpaceAwareConfig = AxiosRequestConfig & {
+  omitHeaderKeys?: string[],
+  explicitHeaderKeys?: string[],
+  suppressErrorToast?: boolean,
+  // 续期/登出等自证请求：命中会话超时时不参与静默续期与跳登录（由外层失败回落统一处理）
+  skipSessionRecovery?: boolean,
+  // 已用 refresh token 恢复过会话的请求标记（每个请求最多重放一次，防环）
+  sessionRetried?: boolean,
+  // 请求体已从 {data, showLoading} 解包过（重放时不得再解一层）
+  bodyUnwrapped?: boolean,
+  bodyShowLoading?: boolean
+}
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const { data, showLoading } = config.data as configDataType
-    config.data = data
+    // 会话续期后的重放会再次进入本拦截器：body 已解包过就不能再解一层（否则请求体整体丢失）；
+    // showLoading 首次解包时缓存到 config，供重放复用
+    const payloadConfig = config as SpaceAwareConfig
+    if (!payloadConfig.bodyUnwrapped) {
+      const { data, showLoading } = config.data as configDataType
+      config.data = data
+      payloadConfig.bodyUnwrapped = true
+      payloadConfig.bodyShowLoading = showLoading
+    }
     const token = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
     if (token) config.headers['Authorization'] = 'Bearer ' + localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
 
@@ -177,7 +195,7 @@ axiosInstance.interceptors.request.use(
       })
     }
 
-    if (showLoading) {
+    if (payloadConfig.bodyShowLoading) {
       const record: any = { startAt: Date.now(), shownAt: null }
       // 延迟展示 loading
       record.timer = setTimeout(() => {
@@ -226,11 +244,45 @@ const clearAllTimers = () => {
   load.close()
 }
 
+const _isSessionTimeout = (data: ResponseDataType) =>
+  data != null && data.status != null && data.status.code === errCode.SESSION_TIME_OUT
+
+// 可续期判据：续期/登出等自证请求、已重放过的请求不再续期（防环）；其余 401 一律先试静默续期
+const _isRefreshable = (config?: SpaceAwareConfig) =>
+  !!config
+    && !config.skipSessionRecovery
+    && !config.sessionRetried
+    && !config.url?.includes('/logoff')
+    && !config.url?.includes('/login/refresh')
+
+/**
+ * 会话超时统一恢复口：能续期就先静默续期（refresh token）并重放原请求一次，用户无感；
+ * 不可续期或续期失败则回落既有 navigation2Login（宿主 SSO 授权），
+ * 并以 passThrough 交还原调用链收尾（成功直通 / 错误提示并抛出）。
+ * httpUnauthorized：响应体读不出会话封套（Blob/网关）但 HTTP 状态为 401 时的兜底通道。
+ */
+const _recoverSession = (data: ResponseDataType, config: SpaceAwareConfig, passThrough: () => any,
+  httpUnauthorized = false) => {
+  if (!(_isSessionTimeout(data) || httpUnauthorized) || !_isRefreshable(config)) {
+    _handleTimeOut(data, config, httpUnauthorized)
+    return passThrough()
+  }
+  config.sessionRetried = true
+  return tryRefreshToken().then((refreshed) => {
+    if (refreshed) {
+      // 用新 config 重放：不复用已收尾的首次请求链（loadMap 记录/拦截器状态）；
+      // 重放结果由本次调用链直接返回，不再写回调用方持有的 config
+      return axiosInstance({ ...(config as AxiosRequestConfig) })
+    }
+    _handleTimeOut(data, config, httpUnauthorized)
+    return passThrough()
+  })
+}
+
 axiosInstance.interceptors.response.use(
   (resp) => {
     closeLoading(resp.config)
-    _handleTimeOut(resp.data, resp.config)
-    return Promise.resolve(resp)
+    return _recoverSession(resp.data, resp.config, () => Promise.resolve(resp))
   }, err => {
     if (err.config) {
       closeLoading(err.config)
@@ -239,41 +291,43 @@ axiosInstance.interceptors.response.use(
       clearAllTimers()
     }
     if(err.response) {
-      _handleTimeOut(err.response.data, err.config)
-      // 按次静默：展示腿（取字节渲染）失败由调用方自己呈现占位，不弹全局错误条；
-      // 上面的 _handleTimeOut 照常执行，会话超时该跳登录仍跳登录
-      const silent = !!(err.config as SpaceAwareConfig | undefined)?.suppressErrorToast
-      if (silent)
-        console.log(err)
-      else if (err.response.status === 404)
-        message.error('抱歉,尚未支持该服务!')
-      else if (err.response.status === 504)
-        message.error('服务开小差了,请稍后再试...')
-      else if (err.response.status === 403)
-        message.error('权限不足,请联系管理员!')
-      else if (err.response.status === 500)
-        message.error('系统错误,联系管理员!')
-      else if (err.response.status === 502)
-        message.error('服务正在快马加鞭,请稍等!')
-      else
-        console.log(err)
-    } else if (!(err.config as SpaceAwareConfig | undefined)?.suppressErrorToast) {
+      return _recoverSession(err.response.data, err.config, () => {
+        // 按次静默：展示腿（取字节渲染）失败由调用方自己呈现占位，不弹全局错误条；
+        // 上面的会话恢复照常执行，会话超时该跳登录仍跳登录
+        const silent = !!(err.config as SpaceAwareConfig | undefined)?.suppressErrorToast
+        if (silent)
+          console.log(err)
+        else if (err.response.status === 404)
+          message.error('抱歉,尚未支持该服务!')
+        else if (err.response.status === 504)
+          message.error('服务开小差了,请稍后再试...')
+        else if (err.response.status === 403)
+          message.error('权限不足,请联系管理员!')
+        else if (err.response.status === 500)
+          message.error('系统错误,联系管理员!')
+        else if (err.response.status === 502)
+          message.error('服务正在快马加鞭,请稍等!')
+        else
+          console.log(err)
+        throw new Error(err)
+      }, err.response.status === 401)
+    }
+    if (!(err.config as SpaceAwareConfig | undefined)?.suppressErrorToast) {
       message.error('网络异常')
     } else {
       console.log(err)
     }
-
     throw new Error(err)
   }
 )
 
-const _handleTimeOut = function (data: ResponseDataType, config?: any) {
-  if (data.status != null) {
-    if (data.status.code === errCode.SESSION_TIME_OUT) {
-      // 如果是 logoff 请求，则不添加 redirect_uri
-      const isLogoffRequest = config?.url?.includes('/logoff')
-      navigation2Login(!isLogoffRequest)?.then()
-    }
+const _handleTimeOut = function (data: ResponseDataType, config?: SpaceAwareConfig, httpUnauthorized = false) {
+  // 续期/登出等自证请求：跳登录由外层失败回落统一处理，这里不得抢跑
+  if (config?.skipSessionRecovery) return
+  if (httpUnauthorized || data?.status?.code === errCode.SESSION_TIME_OUT) {
+    // 如果是 logoff 请求，则不添加 redirect_uri
+    const isLogoffRequest = config?.url?.includes('/logoff')
+    navigation2Login(!isLogoffRequest)?.then()
   }
 }
 
@@ -310,7 +364,7 @@ function request(apiType: ApiType,
   showLoading = true,
   showErr = true,
   headers?: Record<string, string | null>,
-  options?: { suppressErrorToast?: boolean }) {
+  options?: { suppressErrorToast?: boolean, skipSessionRecovery?: boolean, timeoutMs?: number }) {
   // 拆分显式覆盖头（非空值进 config.headers，空值键进 omitHeaderKeys 供拦截器删除）；
   // explicitHeaderKeys 把"本次显式带了哪些键"告知拦截器——provider 只对显式键让位，
   // 其余键（含 Content-Type 等预置头）照常全局覆盖
@@ -332,6 +386,10 @@ function request(apiType: ApiType,
       showLoading
     },
     params: null,
+    // 按次超时（毫秒）：不传＝沿用 axios 默认（无限期等待），既有调用零位移。
+    // 静默续期必须带上限——续期请求若挂起，并发 401 全挂在同一单飞 promise 上，
+    // 既不重放也不回落登录，界面会陷入"所有请求无响应"的哑死状态
+    timeout: options?.timeoutMs,
     headers: {
       'Content-Type': 'application/json',
       'api-version': apiType.version,
@@ -341,7 +399,8 @@ function request(apiType: ApiType,
     },
     omitHeaderKeys,
     explicitHeaderKeys: Object.keys(explicitHeaders),
-    suppressErrorToast: options?.suppressErrorToast === true
+    suppressErrorToast: options?.suppressErrorToast === true,
+    skipSessionRecovery: options?.skipSessionRecovery === true
   }
   return axiosInstance(config).then(resp => {
     if (resp.data.status?.code !== errCode.SUCCESS) {
@@ -376,8 +435,12 @@ function request(apiType: ApiType,
     }
   }, err => {
     load.close()
-    const statusCode = err.message.split('status code ')[1]
-    if (statusCode === 404)
+    // 按次静默（静默续期等自证请求）：传输层错误同样不弹全局条，错误照抛给调用方
+    const silent = !!(err.config as SpaceAwareConfig | undefined)?.suppressErrorToast
+    const statusCode = silent ? undefined : err.message.split('status code ')[1]
+    if (silent)
+      console.log(err)
+    else if (statusCode === 404)
       message.error('抱歉,尚未支持该服务!')
     else if (statusCode === 504)
       message.error('服务开小差了,请稍后再试...')
