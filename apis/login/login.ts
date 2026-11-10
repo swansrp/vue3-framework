@@ -1,6 +1,8 @@
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { oauth2ExchangeApi, ssoTicketApi } from '@/framework/network/loginMode'
 import { request } from '@/framework/network/request'
+import { localStorageMethods } from '@/framework/utils/common'
+import { AUTHORIZATION_TOKEN, REFRESH_TOKEN } from '@/framework/utils/constant'
 
 const buildGetApi = (url: string) => buildGetApiByType(url)
 const buildPostApi = (url: string) => buildPostApiByType(url)
@@ -30,10 +32,26 @@ export const ssoLogin = (id_token: string) =>
 export const exchangeLogin = (code: string) =>
   request(buildPostApi(oauth2ExchangeApi), { code }, {}, true, false) as Promise<any>
 
-export const logoff = () => request(buildPostApi('/logoff'), {}, {}, false, false) as Promise<any>
+// 登出即终止本地会话：服务端只删当前 access token，refresh token 会继续存活到 TTL 到期；
+// 若留在本地，静默续期会在登出后被自动消费把用户「复活」——故发请求前就同步清双票。
+// 先清后发：在途续期回来会撞上 performRefresh「access 票已空」守卫而不写回；
+// 也不存在「登出响应返回前其他标签页写入新票被误删」的窗口。
+// 清票后拦截器不再补 Authorization，故显式携带发起时的 access 票，供后端按票删除
+export const logoff = () => {
+  const accessToken = localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)
+  localStorageMethods.removeLocalStorage(AUTHORIZATION_TOKEN)
+  localStorageMethods.removeLocalStorage(REFRESH_TOKEN)
+  const headers = accessToken ? { Authorization: 'Bearer ' + accessToken } : undefined
+  return request(buildPostApi('/logoff'), {}, {}, false, false, true, headers) as Promise<any>
+}
 
 export const verifyLogin = (token: string) => request(buildPostApi('/token'), {}, { token }, true, false) as Promise<any>
-export const reLogin = (token: string) => request(buildPostApi('/login/refresh'), {}, { token }, true, false) as Promise<any>
+// 静默续期的超时上限：挂起的续期请求会拖住所有并发 401 的重放与回落
+const REFRESH_TIMEOUT_MS = 10000
+// silent=true：静默续期形态——不弹成功/失败提示，且续期请求自身不触发会话恢复/跳转
+export const reLogin = (token: string, silent = false) =>
+  request(buildPostApi('/login/refresh'), {}, { token }, !silent, false, !silent, undefined,
+    { suppressErrorToast: silent, skipSessionRecovery: silent, timeoutMs: silent ? REFRESH_TIMEOUT_MS : undefined }) as Promise<any>
 export const getUserInfo = () => request(buildGetApi('/user/info'), {}, {}, false, false) as Promise<any>
 export const updateUserInfo = (userInfo: any) => request(buildPostApi('/user/info'), {}, userInfo, true, false) as Promise<any>
 

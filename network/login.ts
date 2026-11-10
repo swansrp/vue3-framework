@@ -1,7 +1,7 @@
 import qs from 'qs'
 import { LocationQueryRaw } from 'vue-router'
 
-import { exchangeLogin, getToken, getUserInfo, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
+import { exchangeLogin, getToken, getUserInfo, reLogin, ssoLogin, verifyLogin } from '@/framework/apis/login/login'
 import { isLoginModeConfigured, loginMode, oauth2ExchangeApi, ssoLoginUrl } from '@/framework/network/loginMode'
 import { getQueryObject, removeURLParameter } from '@/framework/network/utils'
 import router from '@/framework/router'
@@ -158,6 +158,47 @@ const exchangeIdToken = () => ssoLogin(userStore.getIdToken)
     throw new Error(err)
   })
 
+// refresh token 静默续期（单飞）：并发多个 401 只发一次 /login/refresh；
+// 成功后写回轮换后的双票（旧 refresh 已被服务端消费），失败返回 false 由调用方回落原登录/SSO 分支
+let refreshPromise: Promise<boolean> | null = null
+
+const performRefresh = async (): Promise<boolean> => {
+  const refreshToken = localStorageMethods.getLocalStorage(REFRESH_TOKEN)
+  if (!refreshToken) return false
+  try {
+    const res = await reLogin(refreshToken, true)
+    const payload = res && res.payload
+    if (payload && payload.accessToken) {
+      // 请求期间本地票已被清空（登出/主动清票）则不得写回：否则会把已终止的会话复活
+      if (!localStorageMethods.getLocalStorage(AUTHORIZATION_TOKEN)) return false
+      localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, payload.accessToken)
+      // 轮换语义：服务端每次续期都发新 refresh 票，旧票已被本次消费；
+      // 出参缺票时清掉本地旧票，避免下次拿已消费票去换
+      if (payload.refreshToken) localStorageMethods.setLocalStorage(REFRESH_TOKEN, payload.refreshToken)
+      else localStorageMethods.removeLocalStorage(REFRESH_TOKEN)
+      commonStore.hasLogin = true
+      return true
+    }
+    return false
+  } catch (e) {
+    // 多标签页并发续期：旧 refresh 可能已被其他标签轮换消费。
+    // 轮换必然换票，本地 refresh 票已被其他标签更新即视为续期成功，用新票继续
+    const refreshAfter = localStorageMethods.getLocalStorage(REFRESH_TOKEN)
+    return !!refreshAfter && refreshAfter !== refreshToken
+  }
+}
+
+export const tryRefreshToken = (): Promise<boolean> => {
+  if (!refreshPromise) {
+    // 契约：永不 reject——续期的一切失败都以 false 交回调用方回落登录/SSO；
+    // 否则 _recoverSession 的 .then 无拒绝腿，会话恢复链会静默中断（不重放也不跳登录）
+    refreshPromise = performRefresh().catch(() => false).finally(() => {
+      refreshPromise = null
+    })
+  }
+  return refreshPromise
+}
+
 const _executeLogin = (token: any) => {
   if (isLoginModeConfigured) {
     if (loginMode === 'local') return enterLocalLogin(token)
@@ -248,12 +289,18 @@ export const checkLoginState = async () => {
           if (window.location.hash === '#/login') {
             return localStorageMethods.setLocalStorage(AUTHORIZATION_TOKEN, token)
           } else {
-            return _executeLogin(token).then(() => {
-              if (!isLocalLoginMode) {
-                if (window.location.hash !== '#/login') {
-                  return afterLogin()
-                }
+            // access token 过期先静默续期（refresh token 有效期 7 天），失败才走原登录/SSO 分支
+            return tryRefreshToken().then((refreshed) => {
+              if (refreshed) {
+                return afterLogin()
               }
+              return _executeLogin(token).then(() => {
+                if (!isLocalLoginMode) {
+                  if (window.location.hash !== '#/login') {
+                    return afterLogin()
+                  }
+                }
+              })
             })
           }
         } else {
