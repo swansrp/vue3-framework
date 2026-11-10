@@ -79,12 +79,19 @@ const bizError = (message: string, errCode?: string): BizError => {
   err.errCode = errCode
   return err
 }
+// 跨源请求是否携带凭据（cookie / TLS 客户端证书）。默认 false＝不带，与 2026-11-08 之前的长期行为一致：
+// 网关以 'Access-Control-Allow-Origin: *' 代答 CORS 的宿主只能吃 false——credentials=include 配通配 ACAO
+// 会被浏览器判为预检失败并整站拦掉请求（2026-11-09 erp pre 实录：ACAO/ACHeaders 全由 APISIX cors 插件
+// 覆写，应用侧回显 Origin＋ACAC 的头到不了浏览器，故这类宿主改后端无用，只能不带凭据）。
+// 需要登录响应 Set-Cookie 落盘的宿主（vite 独立端口直连后端、iframe authorize 的 cookie 回退唯一凭据）
+// 显式配 VITE_withCredentials='true'，前提是该形态不过网关、且后端 enableCrossDomain 回显 Origin＋ACAC。
+// 判定只认显式 env，不按 URL 猜形态（避免"同源/跨源"再次被误判成零影响）。
+const rawWithCredentials = String(import.meta.env.VITE_withCredentials || 'false')
+if (import.meta.env.DEV && rawWithCredentials !== 'true' && rawWithCredentials !== 'false') {
+  console.warn(`[network] VITE_withCredentials 取值非法（${rawWithCredentials}），已按 false 处理`)
+}
 const axiosInstance = axios.create({
-  // 🔴 跨源形态（vite 独立端口打后端）必须带 credentials：登录响应的 Set-Cookie（INKHUB_TOKEN，
-  // iframe 内 authorize 的 cookie 回退唯一凭据）才会落盘（2026-11-08 实锤：无此项 dev 登录
-  // cookie 永不落盘 ⇒ iframe SSO 恒「未登录」）。同源形态（pre/生产）带不带等价，零影响。
-  // 配套：后端 AuthInterceptor.enableCrossDomain 在 dev/local/corsEnable 分支回 ACAC=true。
-  withCredentials: true,
+  withCredentials: rawWithCredentials === 'true',
   // 使用自定义的transformResponse来处理大整数
   transformResponse: [(data) => {
     if (typeof data === 'string') {
