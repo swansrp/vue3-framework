@@ -154,6 +154,8 @@ export interface PortalTableFilterVO {
   displayOrder?: number
   /** 筛选条目类型 */
   filterType?: string
+  /** 日期值格式（日期类筛选项下发后端的值格式，空=YYYY-MM-DD） */
+  valueFormat?: string
   /** 主键 ID */
   id?: number
   /** 筛选条目编码 */
@@ -406,4 +408,18 @@ export const FILTER_TYPE_OPTIONS = [
   { label: '年份选择', value: 'year' },
   { label: '数字输入', value: 'number' }
 ]
+
+/**
+ * 日期类筛选项的值格式枚举（dayjs format，决定下发后端的日期字符串形态）
+ */
+export const VALUE_FORMAT_OPTIONS = [
+  { label: 'YYYY-MM-DD（默认）', value: 'YYYY-MM-DD' },
+  { label: 'YYYYMMDD', value: 'YYYYMMDD' },
+  { label: 'YYYY-MM', value: 'YYYY-MM' },
+  { label: 'YYYYMM', value: 'YYYYMM' },
+  { label: 'YYYY', value: 'YYYY' }
+]
+
+/** 日期类筛选类型（值格式配置仅对这些类型生效） */
+export const DATE_FILTER_TYPES = ['date', 'dateRange', 'week', 'month', 'year']
 

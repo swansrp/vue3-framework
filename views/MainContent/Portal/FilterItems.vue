@@ -93,7 +93,7 @@ const selectPlaceholder = (filter: PortalTableFilterVO) => {
             :allow-clear="filter.allowClear === '1'"
             :placeholder="[filter.placeholder || '开始日期', filter.placeholder || '结束日期']"
             style="width: 95%"
-            value-format="YYYY-MM-DD"
+            :value-format="filter.valueFormat || 'YYYY-MM-DD'"
             @change="(dates: any) => {
               if (dates && dates.length === 2) {
                 // $1 对应开始日期，$2 对应结束日期
@@ -139,7 +139,7 @@ const selectPlaceholder = (filter: PortalTableFilterVO) => {
             :placeholder="selectPlaceholder(filter)"
             style="width: 95%"
             :picker="filter.filterType as any"
-            value-format="YYYY-MM-DD"
+            :value-format="filter.valueFormat || 'YYYY-MM-DD'"
           />
         </template>
       </a-descriptions-item>

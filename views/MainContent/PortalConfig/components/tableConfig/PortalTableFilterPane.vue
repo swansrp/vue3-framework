@@ -122,6 +122,19 @@
                     />
                   </a-form-item>
                 </a-col>
+                <a-col
+                  v-if="isDateFilter"
+                  :span="12"
+                >
+                  <a-form-item label="值格式">
+                    <a-select
+                      v-model:value="selectedFilter.valueFormat"
+                      :options="VALUE_FORMAT_OPTIONS"
+                      placeholder="默认 YYYY-MM-DD"
+                      style="width: 100%"
+                    />
+                  </a-form-item>
+                </a-col>
                 <a-col :span="12">
                   <a-form-item label="字典编码">
                     <a-select
@@ -420,6 +433,7 @@ import { useConditionModal, pruneBlankConditions } from './useConditionModal'
 
 import {
   addPortalTableFilter,
+  DATE_FILTER_TYPES,
   deletePortalTableFilter,
   FILTER_TYPE_OPTIONS,
   getPortalTableFilterList,
@@ -427,6 +441,7 @@ import {
   PortalTableFilterVO,
   updatePortalTableFilter,
   updatePortalTableFilterOrder,
+  VALUE_FORMAT_OPTIONS,
 } from '@/framework/apis/portal/table'
 import { genEmptyCondition } from '@/framework/components/common/AdvancedSearch/ConditionList/funs'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
@@ -636,6 +651,9 @@ const removeOptionCondition = (optionValue: string) => {
 
 // 筛选类型选项
 const filterTypeOptions = FILTER_TYPE_OPTIONS
+
+// 日期类筛选项才显示值格式配置
+const isDateFilter = computed(() => DATE_FILTER_TYPES.includes(selectedFilter.value?.filterType || ''))
 
 // 获取筛选类型标签
 const getFilterTypeLabel = (type: string | undefined) => {
