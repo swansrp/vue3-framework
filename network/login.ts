@@ -334,8 +334,12 @@ export const afterLogin = async () => {
   return await routeStore.getDynamicRouteAction().then(getUserInfo).then((res) => {
     const data = res.payload
     const userStore = useUserStore(pinia)
+    // 🔴 换号重登先清档案（2026-11-11 用户实测：本地登录 router.replace 不整页刷新，
+    // 旧代码「非空才覆盖」会让新账号的空头像/空昵称沿用上一个账号的值）。
+    userStore.resetProfile()
     Object.keys(data).forEach((key: string) => {
-      if (data[key]) { // @ts-ignore
+      // 空串/0/false 都是合法档案值（如无头像、性别未知），只挡 null/undefined
+      if (data[key] !== null && data[key] !== undefined) { // @ts-ignore
         userStore[key] = data[key]
       }
     })

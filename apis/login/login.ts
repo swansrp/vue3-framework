@@ -64,6 +64,13 @@ export const reLogin = (token: string, silent = false) =>
 export const getUserInfo = () => request(buildGetApi('/user/info'), {}, {}, false, false) as Promise<any>
 export const updateUserInfo = (userInfo: any) => request(buildPostApi('/user/info'), {}, userInfo, true, false) as Promise<any>
 
+// 飞书 SSO（plsintec 形态；后端＝com.plsintec:feishu 桥的 GET /web/feishu/sso/{authorize,callback}）：
+// authorize 返飞书授权页地址（String payload）；callback 用飞书回跳 code 换本地登录态（LoginRes）。
+export const getFeishuAuthorizeUrl = (state?: string) =>
+  request(buildGetApi('/feishu/sso/authorize'), state ? { state } : {}, {}, false, false) as Promise<any>
+export const feishuCallbackLogin = (code: string) =>
+  request(buildGetApi('/feishu/sso/callback'), { code }, {}, false, false) as Promise<any>
+
 // 生效的注册模式（open/tenant/closed）：只读 yml my.auth.register-mode（不配＝open，不入 sys_config），
 // 与注册闸同一读取点。老核心无此端点时静默 404（suppressErrorToast），登录页保持 open 形态。
 export const getRegisterMode = () =>
