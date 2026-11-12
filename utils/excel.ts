@@ -204,13 +204,16 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
           // 整串严格匹配防 parseFloat 把 "123abc" 截成 123; 百分号串还原为小数走百分比格式
           const raw = cell.v.replace(/,/g, '')
           if (/^-?\d+(\.\d+)?$/.test(raw)) {
-            cell.v = Number(raw)
+            const num = Number(raw)
+            cell.v = num
             cell.t = 'n'
-            cell.z = '#,##0.####'
+            // 整数不带小数点: .#### 的小数点是字面量, 整数会显出 "5." 尾巴(用户实测), 按值选格式
+            cell.z = Number.isInteger(num) ? '#,##0' : '#,##0.####'
           } else if (/^-?\d+(\.\d+)?%$/.test(raw)) {
-            cell.v = Number(raw.slice(0, -1)) / 100
+            const pct = Number(raw.slice(0, -1))
+            cell.v = pct / 100
             cell.t = 'n'
-            cell.z = '0.##%'
+            cell.z = Number.isInteger(pct) ? '0%' : '0.##%'
           }
         }
         ws[cell_ref] = cell
