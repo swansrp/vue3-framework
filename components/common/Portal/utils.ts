@@ -4,7 +4,7 @@ import { ConditionListType } from '@/framework/components/common/AdvancedSearch/
 import { MetricStatisticType } from '@/framework/components/common/Portal/dashboard/type'
 import { ColumnType, FIELD_TYPE, FILTER_TYPE, TableConfigType } from '@/framework/components/common/Portal/type'
 import { dictStore, useTreeStore } from '@/framework/store/common'
-import { isNotEmpty } from '@/framework/utils/common'
+import { isEmpty, isNotEmpty } from '@/framework/utils/common'
 import { formatMoney, formatPercent } from '@/framework/utils/formatter'
 
 const dict = dictStore()
@@ -58,6 +58,41 @@ export const parse = (record: any, index: number, column: ColumnType, config: Ta
   if (column.fieldType !== FIELD_TYPE.TEXT_AREA && column.width !== undefined && !column.widthFitted) {
     column.width = Math.max(column.width, columnTitleWidth(column), getTextWidth(record[column.dataIndex]))
   }
+}
+
+/**
+ * 导出用总计行, 与 PortalSummary 页面渲染逐格同口径:
+ * 显隐判据同其 v-if(summary 开 且 (列表模式 或 数据模式汇总非空))——页面不显示总计行则导出不带;
+ * 标签落点同 labelCellIdx(指定列不在叶子里时回落首个数据列), 标签格固定"总计"不参与汇总;
+ * 无汇总值(null/undefined/空串)给 '--'(数字 0 照实), MONEY 按列配置格式化(同 moneyText 参数), 其余列原值
+ */
+export const buildSummaryExportRow = (
+  summaryOn: boolean,
+  plain: boolean,
+  dataSummary: { [key: string]: any } | null | undefined,
+  leafColumns: Array<ColumnType>,
+  labelDataIndex?: string
+): Record<string, any> | null => {
+  if (!summaryOn || (plain && isEmpty(dataSummary)) || leafColumns.length === 0) {
+    return null
+  }
+  const labelCol = (labelDataIndex && leafColumns.find((col) => col.dataIndex === labelDataIndex)) || leafColumns[0]
+  const row: Record<string, any> = {}
+  for (const col of leafColumns) {
+    if (col.dataIndex === labelCol.dataIndex) {
+      row[col.dataIndex!] = '总计'
+      continue
+    }
+    const value = dataSummary?.[col.dataIndex!]
+    if (value === null || value === undefined || value === '') {
+      row[col.dataIndex!] = '--'
+    } else if (col.fieldType === FIELD_TYPE.MONEY) {
+      row[col.dataIndex!] = formatMoney(value, Number(col.referenceDict?.split(',')[0]), Number(col.referenceDict?.split(',')[1]))
+    } else {
+      row[col.dataIndex!] = value
+    }
+  }
+  return row
 }
 
 export const getTextWidth = (text: string) => {

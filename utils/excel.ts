@@ -195,8 +195,22 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
           cell.v = cell.v.replace(/,/g, '')
           const value = parseFloat(cell.v)
           if (!isNaN(value)) {
+            cell.v = value
             cell.t = 'n'
             cell.z = '#,##0.00'
+          }
+        } else if (col?.fieldType === FIELD_TYPE.NUMBER && typeof cell.v === 'string') {
+          // NUMBER 列(透视统计列等)进来的是显示层千分位字符串, 还原成数字单元格 Excel 才能直接求和;
+          // 整串严格匹配防 parseFloat 把 "123abc" 截成 123; 百分号串还原为小数走百分比格式
+          const raw = cell.v.replace(/,/g, '')
+          if (/^-?\d+(\.\d+)?$/.test(raw)) {
+            cell.v = Number(raw)
+            cell.t = 'n'
+            cell.z = '#,##0.####'
+          } else if (/^-?\d+(\.\d+)?%$/.test(raw)) {
+            cell.v = Number(raw.slice(0, -1)) / 100
+            cell.t = 'n'
+            cell.z = '0.##%'
           }
         }
         ws[cell_ref] = cell

@@ -806,7 +806,7 @@ import {
   TableConfigType,
   UpdateOrderType
 } from '@/framework/components/common/Portal/type'
-import { headerColumnWidth, parse } from '@/framework/components/common/Portal/utils'
+import { buildSummaryExportRow, headerColumnWidth, parse } from '@/framework/components/common/Portal/utils'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import bus, { PORTAL_RESIZE } from '@/framework/mitt'
 import { dictStore, useTreeStore } from '@/framework/store/common'
@@ -2179,9 +2179,16 @@ const queryDataAsync = async (condition: QueryType) => {
  * 导出载荷(多Sheet导出复用): 返回格式化后的全量数据 + 展示列结构。
  * plain(透视/外部数据)模式: 直接取内存数据(聚合结果本身即全量);
  * 列表模式: 走导出专用全量接口(generalSelect/advancedSelect, 与页面分页查询不同接口)。
+ * 页面显示总计行时末尾追加同款总计行(buildSummaryExportRow 与 PortalSummary 同口径)。
  */
 const getExportPayload = (): Promise<{ rows: any[], columns: any[], rawColumns: any[] }> => {
   const exportColumns = props.multiHeader ? multiHeadColumns.value : columns.value
+  const appendSummaryRow = (rows: any[]) => {
+    const summaryRow = buildSummaryExportRow(config.summary, config.plain, dataSummary.value, collectLeafColumns(exportColumns), props.summaryLabelColumn)
+    if (summaryRow) {
+      rows.push(summaryRow)
+    }
+  }
   if (config.plain) {
     let exportDataArray
     if (isNotEmpty(data.value)) {
@@ -2196,6 +2203,7 @@ const getExportPayload = (): Promise<{ rows: any[], columns: any[], rawColumns: 
     } else {
       exportDataArray = [...parsedDataSource.value]
     }
+    appendSummaryRow(exportDataArray)
     return Promise.resolve({ rows: exportDataArray, columns: exportColumns, rawColumns: columns.value })
   }
   // 非数据模式(列表)才有全量查询: url 空(初始化未完成/配置缺失)时直接报错,
@@ -2213,6 +2221,7 @@ const getExportPayload = (): Promise<{ rows: any[], columns: any[], rawColumns: 
         parse(dataArray[index], Number(index), column, config)
       })
     }
+    appendSummaryRow(dataArray)
     return { rows: dataArray, columns: exportColumns, rawColumns: columns.value }
   })
 }
