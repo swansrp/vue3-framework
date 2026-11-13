@@ -5,8 +5,10 @@
  * flow 编排管理（registry/detail/save/reset/traces，自 chatbi 上提泛化）。
  * request() 返回 {status, payload, response} 包装，业务数据在 resp.payload。
  */
+import type { AxiosProgressEvent } from 'axios'
+
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
-import { get, post } from '@/framework/network/request'
+import { get, post, uploadParts } from '@/framework/network/request'
 
 const agentApiType = '/api/agent'
 
@@ -86,6 +88,35 @@ export const sessionActive = (agentKey?: string) =>
 // 会话整体评价（like/dislike，空=取消；feedback 收集反馈文本）
 export const sessionRate = (sessionId: string, rating: string, feedback?: string) =>
   post(buildPostApiByType(`/session/${sessionId}/rate`, agentApiType), {}, { rating, feedback }, false)
+
+// ==================== 会话附件（P0a 附件协议） ====================
+
+// 上传会话附件：multipart 字段名 file。具名 part 与 boundary 只能由浏览器生成，
+// 走 uploadParts（不写死 Content-Type、不吃 {data:{}} 包裹），baseURL/鉴权头与既有请求同源。
+// 进度回调原样透给调用方（附件 chips 进度条）；非 SUCCESS 信封在此抛人话（uploadParts 不判信封）。
+export const sessionUpload = (
+  sessionId: string,
+  file: File,
+  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
+) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return uploadParts(
+    buildPostApiByType(`/session/${sessionId}/files`, agentApiType),
+    formData,
+    {},
+    onUploadProgress
+  ).then((resp: any) => {
+    if (resp?.status && resp.status.code !== 0) {
+      throw new Error(resp?.payload?.errMsg || resp?.status?.details || `上传失败（${resp.status.code}）`)
+    }
+    return resp
+  })
+}
+
+// 本会话附件清单（文件卡回显/刷新恢复的数据源；后端以 file_attached 事件为正源重建）
+export const sessionFiles = (sessionId: string) =>
+  get(buildGetApiByType(`/session/${sessionId}/files`, agentApiType), {}, {}, false, false, false)
 
 // ==================== 通用评价（flow/autonomous 两型统一，skill 底座） ====================
 
