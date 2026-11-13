@@ -21,10 +21,12 @@
       </div>
       <div class="bidr-agent-pane__meta">
         <span
-          v-for="cap in capabilityBadges"
-          :key="cap"
+          v-for="badge in capabilityBadges"
+          :key="badge.label"
           class="bidr-agent-pane__cap"
-        >{{ cap }}</span>
+          :class="{ 'bidr-agent-pane__cap--dim': badge.dimmed }"
+          :title="badge.dimmed ? '已配置但服务不可达/未配置' : undefined"
+        >{{ badge.label }}</span>
         <a-button
           v-if="showRestart && isTerminal"
           size="small"
@@ -313,7 +315,7 @@ import { message } from 'ant-design-vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Composer from './composer/Composer.vue'
-import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem } from './types'
+import { formatFileSize, AGENT_CAPABILITY, AGENT_HEALTH, type AgentArtifact, type AgentFileRef, type AgentToolItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
 interface Props {
@@ -323,6 +325,9 @@ interface Props {
   title?: string
   /** 能力位（/agents 条目 capabilities；决定附件入口与文件卡「已读取」提示） */
   capabilities?: string[]
+  /** 能力位运行级健康快照（/agents 条目 health；探活件上报，key=能力位名，value=up/down/unconfigured）。
+   *  缺席/undefined＝旧后端＝徽标全亮（兼容） */
+  health?: Record<string, string> | null
   /** 终态时是否显示「重新发起」 */
   showRestart?: boolean
 }
@@ -330,6 +335,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   title: '',
   capabilities: () => [],
+  health: null,
   showRestart: true
 })
 
@@ -345,13 +351,34 @@ const emit = defineEmits<{
 const capabilityList = computed<string[]>(() => props.capabilities || [])
 const canUpload = computed(() => capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD))
 const canReadFiles = computed(() => capabilityList.value.includes(AGENT_CAPABILITY.FILES_READ))
-const capabilityBadges = computed<string[]>(() => {
-  const badges: string[] = []
-  if (capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD)) badges.push('附件上传')
-  if (canReadFiles.value) badges.push('文件可读')
-  if (capabilityList.value.includes(AGENT_CAPABILITY.ARTIFACTS_DOC)) badges.push('产物导出')
-  if (capabilityList.value.includes(AGENT_CAPABILITY.OCR)) badges.push('文字识别')
-  if (capabilityList.value.includes(AGENT_CAPABILITY.EXEC_SANDBOX)) badges.push('沙箱执行')
+
+/** 徽标条目（亮/灰两态）：dimmed＝health 为 down/unconfigured（灰态＋悬浮提示） */
+interface CapabilityBadge {
+  label: string
+  dimmed: boolean
+}
+
+/** 徽标健康两态判定：health 缺席（旧后端）＝全亮；down/unconfigured＝灰 */
+const healthMap = computed<Record<string, string> | null>(() => props.health || null)
+const healthDimmed = (capability: string): boolean => {
+  const value = healthMap.value?.[capability]
+  return value === AGENT_HEALTH.DOWN || value === AGENT_HEALTH.UNCONFIGURED
+}
+
+const capabilityBadges = computed<CapabilityBadge[]>(() => {
+  const badges: CapabilityBadge[] = []
+  // 附件上传（files.upload）/文件可读（files.read）无探活腿，不映射探针恒亮
+  if (capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD)) badges.push({ label: '附件上传', dimmed: false })
+  if (canReadFiles.value) badges.push({ label: '文件可读', dimmed: false })
+  if (capabilityList.value.includes(AGENT_CAPABILITY.ARTIFACTS_DOC)) {
+    badges.push({ label: '产物导出', dimmed: healthDimmed(AGENT_CAPABILITY.ARTIFACTS_DOC) })
+  }
+  if (capabilityList.value.includes(AGENT_CAPABILITY.OCR)) {
+    badges.push({ label: '文字识别', dimmed: healthDimmed(AGENT_CAPABILITY.OCR) })
+  }
+  if (capabilityList.value.includes(AGENT_CAPABILITY.EXEC_SANDBOX)) {
+    badges.push({ label: '沙箱执行', dimmed: healthDimmed(AGENT_CAPABILITY.EXEC_SANDBOX) })
+  }
   return badges
 })
 

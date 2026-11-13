@@ -119,6 +119,15 @@
   white-space: nowrap;
 }
 
+/* 徽标灰态（探活 health=down/unconfigured）：降不透明度＋去饱和，布局尺寸与亮态一致；
+   health 字段缺席（旧后端）不走本变体＝全亮兼容 */
+.bidr-agent-pane__cap--dim {
+  opacity: 0.45;
+  color: var(--text-secondary, #999);
+  border-color: var(--border-base, #d9d9d9);
+  filter: grayscale(1);
+}
+
 .bidr-agent-pane__body {
   flex: 1;
   min-height: 0;

@@ -38,7 +38,17 @@ export const AGENT_CAPABILITY = {
   EXEC_SANDBOX: 'exec.sandbox'
 } as const
 
-/** /agents 清单条目（本模块只消费 key/displayName/capabilities，其余字段透传） */
+/** 能力位健康值常量（与后端 AgentCapabilityHealthProvider 常量同口径，值恒小写） */
+export const AGENT_HEALTH = {
+  /** 探测可达 */
+  UP: 'up',
+  /** 已配置但服务不可达（连接异常/非预期状态码/密钥无效） */
+  DOWN: 'down',
+  /** 未配置（对应腿 base-url/密钥缺失或未启用），不发包不计失败 */
+  UNCONFIGURED: 'unconfigured'
+} as const
+
+/** /agents 清单条目（本模块只消费 key/displayName/capabilities/health，其余字段透传） */
 export interface AgentSummary {
   /** autonomous 型=agentKey；flow 型=flowKey */
   key: string
@@ -47,6 +57,9 @@ export interface AgentSummary {
   skillCode?: string | null
   /** 附件能力位；空/缺省＝附件能力整体不启用 */
   capabilities?: string[]
+  /** 能力位运行级健康快照（探活件上报；key=能力位名，value=up/down/unconfigured）。
+   *  声明级 capabilities 的运行级补充；旧后端不出该字段＝undefined＝徽标全亮（兼容） */
+  health?: Record<string, string>
 }
 
 /** 会话事件帧（seq 会话内单调递增，sinceSeq 增量轮询依据） */

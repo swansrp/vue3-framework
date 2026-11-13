@@ -15,6 +15,7 @@ export { useAgentConversation } from './useAgentConversation'
 export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventText } from './events'
 export {
   AGENT_CAPABILITY,
+  AGENT_HEALTH,
   formatFileSize,
   isTerminalStatus
 } from './types'
