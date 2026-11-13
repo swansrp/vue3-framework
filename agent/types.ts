@@ -31,7 +31,11 @@ export const AGENT_CAPABILITY = {
   /** 模型可读文件（会话受限工具 read_attachment 可用时装配） */
   FILES_READ: 'files.read',
   /** 模型可生成可下载产物（generate_artifact 工具实转时装配） */
-  ARTIFACTS_DOC: 'artifacts.doc'
+  ARTIFACTS_DOC: 'artifacts.doc',
+  /** 照片/扫描件可 OCR 转写（后端增强转写腿在场＝声明级，探活只观测不影响本位） */
+  OCR: 'ocr',
+  /** 模型可在会话沙箱执行命令并取回产出文件（sandbox_run/sandbox_fetch，沙箱端口在场才装配） */
+  EXEC_SANDBOX: 'exec.sandbox'
 } as const
 
 /** /agents 清单条目（本模块只消费 key/displayName/capabilities，其余字段透传） */

@@ -350,6 +350,8 @@ const capabilityBadges = computed<string[]>(() => {
   if (capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD)) badges.push('附件上传')
   if (canReadFiles.value) badges.push('文件可读')
   if (capabilityList.value.includes(AGENT_CAPABILITY.ARTIFACTS_DOC)) badges.push('产物导出')
+  if (capabilityList.value.includes(AGENT_CAPABILITY.OCR)) badges.push('文字识别')
+  if (capabilityList.value.includes(AGENT_CAPABILITY.EXEC_SANDBOX)) badges.push('沙箱执行')
   return badges
 })
 
