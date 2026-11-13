@@ -270,6 +270,64 @@
   color: var(--success, #52c41a);
 }
 
+/* ==================== 产物下载卡（P2a） ==================== */
+
+.bidr-agent-artifact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-mid, #91caff);
+  border-radius: 6px;
+  background: var(--bg-elevated, #fafafa);
+}
+
+.bidr-agent-artifact__icon {
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.bidr-agent-artifact__icon.is-word {
+  color: #2b579a;
+}
+
+.bidr-agent-artifact__icon.is-pdf {
+  color: #c0392b;
+}
+
+.bidr-agent-artifact__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.bidr-agent-artifact__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary, #333);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bidr-agent-artifact__meta {
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+  line-height: 16px;
+  word-break: break-all;
+}
+
+.bidr-agent-artifact__download {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.bidr-agent-artifact__state {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-secondary, #999);
+}
+
 /* ==================== 状态条 / 日志 ==================== */
 
 .bidr-agent-strip {

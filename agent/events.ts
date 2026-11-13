@@ -8,6 +8,7 @@
  * | tool_call | 工具卡（running）；tool_result 按 tool_call_id 配对补全，无 id 仅在唯一在途工具时回退，多工具并行不猜（落日志行） |
  * | log | 弱化日志行（渲染成小字，不占正文层级） |
  * | file_attached | 文件卡（payload file_id/name/size/mime → FileRef） |
+ * | artifact | 产物下载卡（payload file_id/name/size/mime/format/url → AgentArtifact，P2a） |
  * | paused/resumed/guidance/answered/question/error | 状态条（按事件顺序平铺） |
  * | round_start/run_start/stage/finish/stopped | 不进消息流：轮次无独立语义，终态由 status 快照结论卡承载 |
  *
@@ -15,6 +16,7 @@
  * AssistantView，两模块无耦合）。
  */
 import type {
+  AgentArtifact,
   AgentEventFrame,
   AgentFileRef,
   AgentStatusItem,
@@ -55,6 +57,24 @@ export const fileRefFromEventPayload = (payload: unknown): AgentFileRef | null =
     size: typeof size === 'number' ? size : Number(size) || 0,
     mime: field(payload, 'mime') ?? null,
     key: null
+  }
+}
+
+/**
+ * 产物引用归一（P2a）：artifact 事件 payload（file_id/name/size/mime/format/url）→ AgentArtifact。
+ * url 缺席（脏帧/旧数据）不挡卡片本身，只是没有下载按钮——按文件名+大小展示。
+ */
+export const artifactFromEventPayload = (payload: unknown): AgentArtifact | null => {
+  const fileId = field(payload, 'file_id') ?? field(payload, 'fileId')
+  if (fileId === undefined || fileId === null || String(fileId) === '') return null
+  const size = field(payload, 'size')
+  return {
+    fileId: String(fileId),
+    name: String(field(payload, 'name') ?? ''),
+    size: typeof size === 'number' ? size : Number(size) || 0,
+    mime: field(payload, 'mime') ?? null,
+    format: String(field(payload, 'format') ?? ''),
+    url: field(payload, 'url') ?? null
   }
 }
 
@@ -182,6 +202,13 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
       case 'file_attached': {
         const file = fileRefFromEventPayload(ev.payload)
         if (file) items.push({ kind: 'file', id: `file-${ev.seq}`, seq: ev.seq, time: ev.time, file })
+        break
+      }
+      case 'artifact': {
+        const artifact = artifactFromEventPayload(ev.payload)
+        if (artifact) {
+          items.push({ kind: 'artifact', id: `artifact-${ev.seq}`, seq: ev.seq, time: ev.time, artifact })
+        }
         break
       }
       case 'log': {

@@ -29,7 +29,9 @@ export const AGENT_CAPABILITY = {
   /** 可上传附件（存储端口在场才装配） */
   FILES_UPLOAD: 'files.upload',
   /** 模型可读文件（会话受限工具 read_attachment 可用时装配） */
-  FILES_READ: 'files.read'
+  FILES_READ: 'files.read',
+  /** 模型可生成可下载产物（generate_artifact 工具实转时装配） */
+  ARTIFACTS_DOC: 'artifacts.doc'
 } as const
 
 /** /agents 清单条目（本模块只消费 key/displayName/capabilities，其余字段透传） */
@@ -127,6 +129,31 @@ export interface AgentFileCardItem {
   file: AgentFileRef
 }
 
+/** 会话产物引用（后端 com.bidr.llm.agent.file.AgentArtifact，artifact 事件 payload 归一产物） */
+export interface AgentArtifact {
+  /** 会话内产物标识（artifact 事件的 file_id 同值） */
+  fileId: string
+  /** 展示用文件名（含扩展名，如「监理日志-2026-11-13.docx」） */
+  name: string
+  /** 字节数 */
+  size: number
+  /** 内容类型（docx/pdf 固定 MIME） */
+  mime?: string | null
+  /** 产物格式（docx/pdf，小写；格式图标与下载文件名用） */
+  format: string
+  /** 生成时点的预签名读址（约 1 小时有效；下载按钮 href，过期后让 AI 重新生成） */
+  url?: string | null
+}
+
+/** 产物下载卡条目（artifact 事件 → AgentPane 渲染下载按钮） */
+export interface AgentArtifactCardItem {
+  kind: 'artifact'
+  id: string
+  seq: number
+  time: number
+  artifact: AgentArtifact
+}
+
 export interface AgentStatusItem {
   kind: 'status'
   id: string
@@ -150,6 +177,7 @@ export type AgentViewItem =
   | AgentTextItem
   | AgentToolItem
   | AgentFileCardItem
+  | AgentArtifactCardItem
   | AgentStatusItem
   | AgentLogItem
 

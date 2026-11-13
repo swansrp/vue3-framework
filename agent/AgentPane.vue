@@ -144,6 +144,51 @@
           >已上传</span>
         </div>
 
+        <!-- 产物下载卡（P2a）：AI 生成的 docx/pdf 产物，点击即下载 -->
+        <div
+          v-else-if="item.kind === 'artifact'"
+          class="bidr-agent-artifact"
+        >
+          <FileWordOutlined
+            v-if="isWordArtifact(item.artifact)"
+            class="bidr-agent-artifact__icon is-word"
+          />
+          <FilePdfOutlined
+            v-else
+            class="bidr-agent-artifact__icon is-pdf"
+          />
+          <div class="bidr-agent-artifact__main">
+            <div
+              class="bidr-agent-artifact__name"
+              :title="item.artifact.name"
+            >
+              {{ item.artifact.name || item.artifact.fileId }}
+            </div>
+            <div class="bidr-agent-artifact__meta">
+              {{ formatFileSize(item.artifact.size) }}
+              <template v-if="artifactFormatLabel(item.artifact)">
+                · {{ artifactFormatLabel(item.artifact) }}
+              </template>
+            </div>
+          </div>
+          <a
+            v-if="item.artifact.url"
+            class="bidr-agent-artifact__download"
+            :href="item.artifact.url"
+            :download="item.artifact.name || undefined"
+            target="_blank"
+            rel="noopener"
+          >
+            <a-button size="small" type="primary" ghost>
+              <DownloadOutlined /> 下载
+            </a-button>
+          </a>
+          <span
+            v-else
+            class="bidr-agent-artifact__state"
+          >链接缺失，可让 AI 重新生成</span>
+        </div>
+
         <div
           v-else-if="item.kind === 'status'"
           class="bidr-agent-strip"
@@ -261,13 +306,14 @@
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CloseCircleFilled, FileTextOutlined, LoadingOutlined, RobotOutlined, StopOutlined
+  CheckCircleFilled, CloseCircleFilled, DownloadOutlined, FilePdfOutlined, FileTextOutlined,
+  FileWordOutlined, LoadingOutlined, RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Composer from './composer/Composer.vue'
-import { formatFileSize, AGENT_CAPABILITY, type AgentFileRef, type AgentToolItem } from './types'
+import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
 interface Props {
@@ -303,6 +349,7 @@ const capabilityBadges = computed<string[]>(() => {
   const badges: string[] = []
   if (capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD)) badges.push('附件上传')
   if (canReadFiles.value) badges.push('文件可读')
+  if (capabilityList.value.includes(AGENT_CAPABILITY.ARTIFACTS_DOC)) badges.push('产物导出')
   return badges
 })
 
@@ -358,6 +405,20 @@ const readProbeText = computed(() => items.value
 const isFileRead = (file: AgentFileRef): boolean => {
   if (!canReadFiles.value || !readProbeText.value) return false
   return readProbeText.value.includes(file.fileId) || (!!file.name && readProbeText.value.includes(file.name))
+}
+
+// ==================== 产物下载卡（P2a） ====================
+
+/** 格式图标判定：docx/doc 走 Word 图标，其余（pdf 等）走 PDF 图标 */
+const isWordArtifact = (artifact: AgentArtifact): boolean =>
+  /\.docx?$/i.test(artifact.name || '') || artifact.format?.toLowerCase() === 'docx'
+
+/** 格式徽标文案：docx→Word 文档、pdf→PDF 文档，其余回落大写格式串 */
+const artifactFormatLabel = (artifact: AgentArtifact): string => {
+  const fmt = (artifact.format || '').toLowerCase()
+  if (fmt === 'docx') return 'Word 文档'
+  if (fmt === 'pdf') return 'PDF 文档'
+  return fmt ? fmt.toUpperCase() : ''
 }
 
 // ==================== 终态结论 ====================
