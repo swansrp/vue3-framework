@@ -1,0 +1,592 @@
+/**
+ * 框架 AI 会话面板样式（全部 .bidr-agent-* 前缀，不污染宿主全局）
+ *
+ * 色板取框架 design-tokens 变量并带兜底值：宿主未加载 tokens 时仍是可用的中性灰/蓝。
+ * 组件内部不写 scoped 样式，统一在本文件维护，便于跨组件复用同一套视觉。
+ */
+
+/* ==================== 面板骨架 ==================== */
+
+.bidr-agent-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 8px;
+}
+
+.bidr-agent-pane.is-dragover {
+  box-shadow: inset 0 0 0 2px var(--accent, #1677ff);
+}
+
+/* 面板级拖拽提示：覆盖 Composer 之外的正文/头部/决策卡区域 */
+.bidr-agent-pane__drop-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--accent, #1677ff);
+  background: rgba(22, 119, 255, 0.08);
+  pointer-events: none;
+}
+
+.bidr-agent-pane__poll-error {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 12px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--error, #ff4d4f);
+  background: var(--bg-elevated, #fafafa);
+  border-bottom: 1px solid var(--border-subtle, #f0f0f0);
+}
+
+.bidr-agent-pane__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-elevated, #fafafa);
+  border-bottom: 1px solid var(--border-subtle, #f0f0f0);
+}
+
+.bidr-agent-pane__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-primary, #333);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bidr-agent-pane__title-icon {
+  flex-shrink: 0;
+  color: var(--accent, #1677ff);
+  font-size: 16px;
+}
+
+.bidr-agent-pane__title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bidr-agent-pane__status {
+  flex-shrink: 0;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  border: 1px solid currentColor;
+  border-radius: 9px;
+}
+
+.bidr-agent-pane__status.is-running { color: var(--accent, #1677ff); }
+.bidr-agent-pane__status.is-waiting { color: var(--warning, #faad14); }
+.bidr-agent-pane__status.is-paused { color: var(--warning, #faad14); }
+.bidr-agent-pane__status.is-finished { color: var(--success, #52c41a); }
+.bidr-agent-pane__status.is-failed { color: var(--error, #ff4d4f); }
+.bidr-agent-pane__status.is-stopped { color: var(--text-secondary, #999); }
+
+.bidr-agent-pane__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.bidr-agent-pane__cap {
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--accent, #1677ff);
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--accent-mid, #91caff);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.bidr-agent-pane__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+/* flex 子项禁止收缩：内容超高时应出滚动条，而不是被压扁裁掉 */
+.bidr-agent-pane__body > * {
+  flex-shrink: 0;
+}
+
+.bidr-agent-pane__empty {
+  margin: auto;
+  color: var(--text-secondary, #999);
+  font-size: 13px;
+}
+
+/* ==================== 助手正文 ==================== */
+
+.bidr-agent-msg__text {
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  line-height: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ==================== 工具卡 ==================== */
+
+.bidr-agent-tool {
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 6px;
+  background: var(--bg-elevated, #fafafa);
+  overflow: hidden;
+}
+
+.bidr-agent-tool__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.bidr-agent-tool__head::-webkit-details-marker {
+  display: none;
+}
+
+.bidr-agent-tool__spin { color: var(--accent, #1677ff); }
+.bidr-agent-tool__done { color: var(--success, #52c41a); }
+
+.bidr-agent-tool__name {
+  color: var(--text-primary, #333);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.bidr-agent-tool__state {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.bidr-agent-tool__section {
+  padding: 0 10px 8px;
+}
+
+.bidr-agent-tool__label {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--text-secondary, #999);
+}
+
+.bidr-agent-tool__pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 6px 8px;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-primary, #333);
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ==================== 文件卡 ==================== */
+
+.bidr-agent-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-mid, #91caff);
+  border-radius: 6px;
+  background: var(--bg-elevated, #fafafa);
+}
+
+.bidr-agent-file__icon {
+  flex-shrink: 0;
+  color: var(--accent, #1677ff);
+  font-size: 18px;
+}
+
+.bidr-agent-file__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.bidr-agent-file__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary, #333);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bidr-agent-file__meta {
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+  line-height: 16px;
+  word-break: break-all;
+}
+
+.bidr-agent-file__state {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-secondary, #999);
+}
+
+.bidr-agent-file__read {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--success, #52c41a);
+}
+
+/* ==================== 状态条 / 日志 ==================== */
+
+.bidr-agent-strip {
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary, #999);
+  background: var(--bg-elevated, #fafafa);
+  border: 1px dashed var(--border-subtle, #f0f0f0);
+  border-radius: 6px;
+  word-break: break-word;
+}
+
+.bidr-agent-strip.is-warn { color: var(--warning, #faad14); }
+.bidr-agent-strip.is-error { color: var(--error, #ff4d4f); }
+.bidr-agent-strip.is-info { color: var(--accent, #1677ff); }
+
+.bidr-agent-log {
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ==================== 流式实时块 ==================== */
+
+.bidr-agent-live {
+  padding: 8px 10px;
+  border: 1px dashed var(--accent-mid, #91caff);
+  border-radius: 6px;
+  background: var(--bg-elevated, #fafafa);
+}
+
+.bidr-agent-live__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--accent, #1677ff);
+}
+
+.bidr-agent-live__text {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--text-secondary, #999);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ==================== 终态结论 ==================== */
+
+.bidr-agent-conclusion {
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 8px;
+  background: var(--bg-elevated, #fafafa);
+}
+
+.bidr-agent-conclusion__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bidr-agent-conclusion__text {
+  margin-top: 6px;
+  color: var(--text-secondary, #999);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bidr-agent-conclusion.is-finish .bidr-agent-conclusion__title { color: var(--success, #52c41a); }
+.bidr-agent-conclusion.is-error .bidr-agent-conclusion__title { color: var(--error, #ff4d4f); }
+.bidr-agent-conclusion.is-stopped .bidr-agent-conclusion__title { color: var(--text-secondary, #999); }
+
+/* ==================== AI 决策问题卡（自身可滚，长问题不裁按钮） ==================== */
+
+.bidr-agent-question {
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  padding: 8px 12px;
+  background: var(--bg-elevated, #fafafa);
+  border-top: 1px solid var(--border-subtle, #f0f0f0);
+}
+
+.bidr-agent-question__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.bidr-agent-question__title {
+  color: var(--text-primary, #333);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bidr-agent-question__id {
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+}
+
+.bidr-agent-question__text {
+  margin-bottom: 6px;
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bidr-agent-question__options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.bidr-agent-question__option {
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: left;
+  color: var(--text-primary, #333);
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 6px;
+  cursor: pointer;
+  word-break: break-word;
+}
+
+.bidr-agent-question__option:hover:not(:disabled) {
+  border-color: var(--accent, #1677ff);
+  color: var(--accent, #1677ff);
+}
+
+.bidr-agent-question__option:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bidr-agent-question__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==================== 输入区 ==================== */
+
+.bidr-agent-composer {
+  position: relative;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  background: var(--bg-elevated, #fafafa);
+  border-top: 1px solid var(--border-subtle, #f0f0f0);
+  transition: box-shadow 0.2s, background 0.2s;
+}
+
+.bidr-agent-composer.is-dragover {
+  background: var(--bg-base, #fff);
+  box-shadow: inset 0 0 0 2px var(--accent, #1677ff);
+}
+
+.bidr-agent-composer__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.bidr-agent-composer__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.bidr-agent-composer__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.bidr-agent-composer__file-input {
+  display: none;
+}
+
+.bidr-agent-composer__drop-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--accent, #1677ff);
+  background: rgba(22, 119, 255, 0.06);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* ==================== 附件 chips ==================== */
+
+.bidr-agent-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.bidr-agent-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 6px;
+}
+
+.bidr-agent-chip.is-error {
+  border-color: var(--error, #ff4d4f);
+}
+
+.bidr-agent-chip__icon {
+  flex-shrink: 0;
+  color: var(--accent, #1677ff);
+  font-size: 14px;
+}
+
+.bidr-agent-chip__main {
+  min-width: 0;
+  max-width: 220px;
+}
+
+.bidr-agent-chip__line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bidr-agent-chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary, #333);
+  font-size: 12px;
+}
+
+.bidr-agent-chip__size {
+  flex-shrink: 0;
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+}
+
+.bidr-agent-chip__progress {
+  height: 2px;
+  margin-top: 3px;
+  overflow: hidden;
+  background: var(--border-subtle, #f0f0f0);
+  border-radius: 1px;
+}
+
+.bidr-agent-chip__progress-bar {
+  height: 100%;
+  background: var(--accent, #1677ff);
+  transition: width 0.2s;
+}
+
+.bidr-agent-chip__error {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--error, #ff4d4f);
+  font-size: 11px;
+}
+
+.bidr-agent-chip__state {
+  flex-shrink: 0;
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+}
+
+.bidr-agent-chip.is-done .bidr-agent-chip__state {
+  color: var(--success, #52c41a);
+}
+
+.bidr-agent-chip__remove {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2px;
+  color: var(--text-secondary, #999);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.bidr-agent-chip__remove:hover:not(:disabled) {
+  color: var(--error, #ff4d4f);
+}
+
+.bidr-agent-chip__remove:disabled {
+  color: var(--text-secondary, #999);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
