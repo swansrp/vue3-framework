@@ -151,7 +151,14 @@ const exchangeIdToken = () => ssoLogin(userStore.getIdToken)
       const retryTimes = localStorageMethods.getLocalStorage('loginRetryTime')
       if (Number(retryTimes) - 1 >= 0) {
         localStorageMethods.setLocalStorage('loginRetryTime', '' + (Number(retryTimes) - 1))
-        navigation2Login()?.then()
+        // 🔴 整页外跳（idaas/idaas-core）必须挂起本链（2026-11-14 台账 #69）：原先外跳后照常
+        // resolve ⇒ 守卫探活判 false 走 next('/login') 把本地登录页挂出来闪一下（authorize
+        // 回落点改 /#/ 后每次 SSO 外跳都过这里），afterLogin 还会拿游客票打鉴权接口（feishu
+        // host 腿同款教训，main.ts 外跳挂起先例）。router 型回落（local）返回 Promise 不挂起
+        // ⇒ 走原链路零位移；外跳重试门 loginRetryTime 耗尽不外跳也照旧 resolve（防回跳环）。
+        const jumped = navigation2Login()
+        if (jumped === undefined) return new Promise(() => {})
+        jumped?.then()
       }
     } else {
       console.log('token验证失败')

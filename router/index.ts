@@ -338,6 +338,23 @@ const runLoginProbe = (o: LoginGuardOptions) => {
   return loginProbeInFlight
 }
 
+/**
+ * authorize 未登录回跳的续驾（2026-11-14 台账 #69）：后端 authorize 未登录 302 到
+ * loginPagePath（默认 /#/login；SSO 形态部署配 /#/ 落根路由由本守卫分派）并带
+ * ?redirect_uri=<原 authorize 地址>（loginBackUrl 约定，值不带前导斜杠）。
+ * 已登录状态下 URL 还挂着该参数 ⇒ 整页跳回去续驾 authorize（authorize 读刚种下的会话
+ * cookie 秒签 code 回子系统），取消本次 SPA 导航；跳完 URL 换面不回路。
+ * 判据＝{ctx}/web/ 形态的后端端点（SPA 路由全是 #/ hash 形态，不会命中；登录页对 SPA
+ * 路径的 redirect_uri 约定不带 /web/，互不干扰）。
+ */
+const jumpAuthorizeBack = (to: RouteLocationNormalized, next: NavigationGuardNext) => {
+  const ru = String(to.query.redirect_uri ?? '')
+  if (!ru || ru.includes('#') || !/^\/?[\w.-]+\/web\//.test(ru)) return false
+  window.location.href = '/' + ru.replace(/^\//, '')
+  next(false)
+  return true
+}
+
 router.beforeEach(async (to, from, next) => {
   const o = loginGuardOptions
   if (!o) {
@@ -352,6 +369,7 @@ router.beforeEach(async (to, from, next) => {
   if (o.isLoggedIn()) {
     loginProbeFailures = 0
     o.onAuthenticated?.(false)
+    if (jumpAuthorizeBack(to, next)) return
     enterDynamicRoute(to, from, next)
     return
   }
@@ -372,6 +390,7 @@ router.beforeEach(async (to, from, next) => {
   }
   loginProbeFailures = 0
   o.onAuthenticated?.(true)
+  if (jumpAuthorizeBack(to, next)) return
   const query = { ...to.query }
   delete query.id_token        // SSO 回跳参数不带入后续地址（框架 SSO 流自己的参数）
   next({ path: to.path, query })
