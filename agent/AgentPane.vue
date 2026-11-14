@@ -317,6 +317,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Composer from './composer/Composer.vue'
 import { formatFileSize, AGENT_CAPABILITY, AGENT_HEALTH, type AgentArtifact, type AgentFileRef, type AgentToolItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
+import { getSseStream, readSseStream } from '@/framework/utils/sse'
+import { name } from '@/../package.json'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */
@@ -358,8 +360,12 @@ interface CapabilityBadge {
   dimmed: boolean
 }
 
-/** 徽标健康两态判定：health 缺席（旧后端）＝全亮；down/unconfigured＝灰 */
-const healthMap = computed<Record<string, string> | null>(() => props.health || null)
+/**
+ * 徽标健康两态判定：SSE 实时值（sseHealth）优先，缺席回落 props.health（首屏初始值）；
+ * 两者都缺席（旧后端）＝全亮；down/unconfigured＝灰。
+ */
+const sseHealth = ref<Record<string, string> | null>(null)
+const healthMap = computed<Record<string, string> | null>(() => sseHealth.value ?? (props.health || null))
 const healthDimmed = (capability: string): boolean => {
   const value = healthMap.value?.[capability]
   return value === AGENT_HEALTH.DOWN || value === AGENT_HEALTH.UNCONFIGURED
@@ -381,6 +387,84 @@ const capabilityBadges = computed<CapabilityBadge[]>(() => {
   }
   return badges
 })
+
+// ==================== 健康度实时通道（SSE，探活状态变化即翻转徽标） ====================
+
+/**
+ * SSE 直连地址：agentChat 会话流（useAgentSession）同款拼法——VITE_baseURL＋应用名前缀
+ * ＋/web/api/agent/**（epc 部署在 /epc-ai/ 下，裸写 /web/api 会 404）；鉴权头由
+ * getSseStream 注入（Bearer，与 request.ts 拦截器同口径），不走 request 封装。
+ */
+const HEALTH_STREAM_URL = `${import.meta.env.VITE_baseURL}/${name}/web/api/agent/health/stream`
+
+/** 断流重连上限与间隔：超额降级 props.health（现状行为）；建连失败（旧后端 404 等）不重试 */
+const HEALTH_SSE_MAX_ATTEMPTS = 3
+const HEALTH_SSE_RETRY_MS = 5000
+
+let healthAbortController: AbortController | null = null
+/** 本生命周期内通道不可用（建连失败或重连超额）：不再尝试，徽标回落 props.health */
+let healthSseDead = false
+let healthSseAttempts = 0
+let healthSseRetryTimer: ReturnType<typeof setTimeout> | null = null
+
+const closeHealthSse = () => {
+  if (healthSseRetryTimer) {
+    clearTimeout(healthSseRetryTimer)
+    healthSseRetryTimer = null
+  }
+  healthAbortController?.abort()
+  healthAbortController = null
+}
+
+const retryHealthSse = () => {
+  healthSseAttempts += 1
+  if (healthSseAttempts > HEALTH_SSE_MAX_ATTEMPTS) {
+    healthSseDead = true
+    sseHealth.value = null
+    return
+  }
+  healthSseRetryTimer = setTimeout(() => {
+    healthSseRetryTimer = null
+    void connectHealthSse()
+  }, HEALTH_SSE_RETRY_MS)
+}
+
+const connectHealthSse = async () => {
+  if (healthSseDead || healthAbortController) return
+  healthAbortController = new AbortController()
+  const { signal } = healthAbortController
+  try {
+    const resp = await getSseStream(HEALTH_STREAM_URL, signal)
+    // 传输层嗅探（站内信流同款）：ok＋text/event-stream＋有 body 才算建连；
+    // 旧后端 404／错误信封 200+JSON＝不满足 → 本生命周期降级 props.health 不再重试
+    const contentType = resp.headers.get('content-type') || ''
+    if (!resp.ok || !contentType.includes('text/event-stream') || !resp.body) {
+      resp.body?.cancel().catch(() => { })
+      healthAbortController = null
+      healthSseDead = true
+      return
+    }
+    healthSseAttempts = 0
+    await readSseStream(resp.body, (event, data) => {
+      if (event === 'health') {
+        try {
+          sseHealth.value = JSON.parse(data)
+        } catch {
+          // 坏帧忽略：快照以最近一帧合法 JSON 为准
+        }
+      }
+      // connected 帧＝通道就绪确认；:ping 注释行 readSseStream 已过滤，均无需处理
+    })
+    // 读流正常退出＝断流（后端重启/代理斩断）：有限次重连，超额降级
+    healthAbortController = null
+    retryHealthSse()
+  } catch {
+    healthAbortController = null
+    if (!signal.aborted) {
+      retryHealthSse()
+    }
+  }
+}
 
 const sessionIdRef = computed(() => props.sessionId)
 const {
@@ -680,12 +764,14 @@ onMounted(() => {
   window.addEventListener('dragend', onWindowDragEnd)
   window.addEventListener('drop', onWindowDragEnd)
   window.addEventListener('dragleave', onWindowDragLeave)
+  void connectHealthSse()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('dragend', onWindowDragEnd)
   window.removeEventListener('drop', onWindowDragEnd)
   window.removeEventListener('dragleave', onWindowDragLeave)
+  closeHealthSse()
 })
 
 // ==================== 轮询失败手动刷新 ====================
