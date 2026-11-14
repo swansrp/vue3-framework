@@ -17,6 +17,22 @@ import VueSetupExtend from 'vite-plugin-vue-setup-extend'
 const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf-8'))
 const apiPrefix = `/${pkg.name}`
 
+// 🔴 dev/preview 代理目标：读项目根 .env.development 的 VITE_PROXY_TARGET（缺省本地 InkHub）。
+// 本机联调口径（2026-11-14 拍板）＝VITE_baseURL 恒空＋代理同源转发：浏览器全程零跨域
+// （直连网关形态在 localStorage 残留票带 Authorization 头时，会被预检 ACAH:* 不覆盖
+// Authorization 卡死＝浏览器报跨域；curl 无此校验所以探测全绿，勿再走直连形态）。
+// 改 VITE_PROXY_TARGET 同样要重启 vite（配置只在起服时读一次）。
+const devEnvText = (() => {
+  try {
+    return fs.readFileSync(path.resolve(__dirname, '../../../.env.development'), 'utf-8')
+  } catch {
+    return ''
+  }
+})()
+const proxyTarget =
+  (devEnvText.match(/^VITE_PROXY_TARGET='?([^'\r\n]+)'?\s*$/m) || [])[1]?.trim()
+  || 'http://127.0.0.1:8080'
+
 // https://vitejs.dev/config/
 export default defineConfig({
   build: {
@@ -131,7 +147,7 @@ export default defineConfig({
     port: 8082, //vite项目启动时自定义端口
     proxy: {
       [apiPrefix]: {
-        target: 'http://127.0.0.1:8080',
+        target: proxyTarget,
         changeOrigin: true
       }
     }
@@ -143,7 +159,7 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       [apiPrefix]: {
-        target: 'http://127.0.0.1:8080',
+        target: proxyTarget,
         changeOrigin: true
       }
     }
