@@ -2,14 +2,14 @@
   <div
     ref="paneRef"
     class="bidr-agent-pane"
-    :class="{ 'is-dragover': paneDragActive }"
+    :class="[{ 'is-dragover': paneDragActive }, { 'is-workbench': isWorkbench }]"
     @dragenter.prevent="onPaneDragEnter"
     @dragover.prevent="onPaneDragOver"
     @dragleave.prevent="onPaneDragLeave"
     @drop.prevent="onPaneDrop"
     @dragend="resetPaneDrag"
   >
-    <!-- 头部：标题 + 会话状态 + 能力位徽标（能力位缺席时不渲染徽标，也不影响任何交互） -->
+    <!-- 头部：标题 + 会话状态 + 能力健康点（能力位缺席时不渲染绿点，也不影响任何交互） -->
     <div class="bidr-agent-pane__header">
       <div class="bidr-agent-pane__title">
         <RobotOutlined class="bidr-agent-pane__title-icon" />
@@ -20,13 +20,40 @@
         >{{ statusText }}</span>
       </div>
       <div class="bidr-agent-pane__meta">
-        <span
-          v-for="badge in capabilityBadges"
-          :key="badge.label"
-          class="bidr-agent-pane__cap"
-          :class="{ 'bidr-agent-pane__cap--dim': badge.dimmed }"
-          :title="badge.dimmed ? '已配置但服务不可达/未配置' : undefined"
-        >{{ badge.label }}</span>
+        <!-- 能力健康点（原逐项徽标收敛为一个点）：绿＝声明能力全部可用、红＝有不可用；
+             点开列清单逐项 ✓/✕，SSE 探活变化实时翻转（healthMap 同源） -->
+        <div
+          v-if="capabilityItems.length"
+          ref="capWrapRef"
+          class="bidr-agent-pane__capwrap"
+        >
+          <span
+            class="bidr-agent-pane__capdot"
+            :class="`is-${capDotState}`"
+            :title="capDotTitle"
+            @click.stop="capListOpen = !capListOpen"
+          ></span>
+          <div
+            v-if="capListOpen"
+            class="bidr-agent-pane__caplist"
+          >
+            <div class="bidr-agent-pane__caplist-head">
+              能力状态
+            </div>
+            <div
+              v-for="item in capabilityItems"
+              :key="item.label"
+              class="bidr-agent-pane__capitem"
+            >
+              <span
+                class="bidr-agent-pane__capitem-mark"
+                :class="item.ok ? 'is-ok' : 'is-bad'"
+              >{{ item.ok ? '✓' : '✕' }}</span>
+              <span class="bidr-agent-pane__capitem-label">{{ item.label }}</span>
+              <span class="bidr-agent-pane__capitem-note">{{ item.note }}</span>
+            </div>
+          </div>
+        </div>
         <a-button
           v-if="showRestart && isTerminal"
           size="small"
@@ -75,9 +102,11 @@
           v-if="item.kind === 'text'"
           class="bidr-agent-msg"
         >
-          <div class="bidr-agent-msg__text">
-            {{ item.text }}
-          </div>
+          <!-- LLM 正文 markdown 渲染（净化后 v-html；流式期仍走 live 区纯文本） -->
+          <div
+            class="bidr-agent-msg__text is-md"
+            v-html="markdownOf(item.text)"
+          ></div>
         </div>
 
         <details
@@ -95,7 +124,12 @@
               v-else
               class="bidr-agent-tool__done"
             />
-            <span class="bidr-agent-tool__name">{{ item.name }}</span>
+            <span class="bidr-agent-tool__name">{{ item.label || item.name }}</span>
+            <span
+              v-if="item.digest"
+              class="bidr-agent-tool__digest"
+              :title="item.digest"
+            >{{ item.digest }}</span>
             <span class="bidr-agent-tool__state">{{ item.status === 'running' ? '调用中' : '已完成' }}</span>
           </summary>
           <div
@@ -131,7 +165,9 @@
               {{ item.file.name || item.file.fileId }}
             </div>
             <div class="bidr-agent-file__meta">
-              {{ formatFileSize(item.file.size) }}<template v-if="item.file.mime"> · {{ item.file.mime }}</template>
+              {{ formatFileSize(item.file.size) }}<template v-if="item.file.mime">
+                · {{ item.file.mime }}
+              </template>
             </div>
           </div>
           <span
@@ -181,7 +217,11 @@
             target="_blank"
             rel="noopener"
           >
-            <a-button size="small" type="primary" ghost>
+            <a-button
+              size="small"
+              type="primary"
+              ghost
+            >
               <DownloadOutlined /> 下载
             </a-button>
           </a>
@@ -233,10 +273,9 @@
         </div>
         <div
           v-if="conclusion.text"
-          class="bidr-agent-conclusion__text"
-        >
-          {{ conclusion.text }}
-        </div>
+          class="bidr-agent-conclusion__text is-md"
+          v-html="markdownOf(conclusion.text)"
+        ></div>
       </div>
     </div>
 
@@ -249,9 +288,10 @@
         <span class="bidr-agent-question__title">AI 需要你的决策</span>
         <span class="bidr-agent-question__id">#{{ waitingQuestion.id }}</span>
       </div>
-      <div class="bidr-agent-question__text">
-        {{ waitingQuestion.question }}
-      </div>
+      <div
+        class="bidr-agent-question__text is-md"
+        v-html="markdownOf(waitingQuestion.question)"
+      ></div>
       <div
         v-if="questionOptions.length > 0"
         class="bidr-agent-question__options"
@@ -312,19 +352,24 @@ import {
   FileWordOutlined, LoadingOutlined, RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { marked } from 'marked'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Composer from './composer/Composer.vue'
 import { formatFileSize, AGENT_CAPABILITY, AGENT_HEALTH, type AgentArtifact, type AgentFileRef, type AgentToolItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
-import { getSseStream, readSseStream } from '@/framework/utils/sse'
+
 import { name } from '@/../package.json'
+import { getSseStream, readSseStream } from '@/framework/utils/sse'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */
   sessionId: string | null
   /** 面板标题（缺省取会话 displayName） */
   title?: string
+  /** 形态位：sidebar＝侧栏密度（缺省，窄列）；workbench＝主区工作台（内容列限宽居中、排版放松）。
+   *  布局归属（侧栏/主区）由宿主页决定，本组件只按形态切排版密度 */
+  variant?: 'sidebar' | 'workbench'
   /** 能力位（/agents 条目 capabilities；决定附件入口与文件卡「已读取」提示） */
   capabilities?: string[]
   /** 能力位运行级健康快照（/agents 条目 health；探活件上报，key=能力位名，value=up/down/unconfigured）。
@@ -336,6 +381,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   title: '',
+  variant: 'sidebar',
   capabilities: () => [],
   health: null,
   showRestart: true
@@ -346,6 +392,40 @@ const emit = defineEmits<{
   (e: 'restart'): void
 }>()
 
+// ==================== 正文 Markdown 渲染（marked＋本地净化，口径同 AiChat） ====================
+
+// marked v17：gfm 已含 tables，独立 tables 键已移除（TypeScript 选项校验）
+marked.setOptions({ breaks: true, gfm: true })
+
+/** 剥离脚本载体：script/iframe 等标签、on* 事件属性、javascript: 链接（LLM 输出不可信） */
+const sanitizeHtml = (html: string): string => {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  doc.body.querySelectorAll('script,style,iframe,object,embed,link,meta,base').forEach(el => el.remove())
+  doc.body.querySelectorAll('*').forEach(el => {
+    // getAttributeNames 返回 string[]（NamedNodeMap 不可直接迭代）
+    for (const name of el.getAttributeNames()) {
+      const lower = name.toLowerCase()
+      if (lower.startsWith('on') || ((lower === 'href' || lower === 'src') && (el.getAttribute(name) || '').trim().toLowerCase().startsWith('javascript:'))) {
+        el.removeAttribute(name)
+      }
+    }
+  })
+  return doc.body.innerHTML
+}
+
+/** 渲染缓存（items 全量重算每轮轮询都会重渲染；同文本只 parse 一次） */
+const markdownCache = new Map<string, string>()
+
+const markdownOf = (text: string): string => {
+  if (!text) return ''
+  const cached = markdownCache.get(text)
+  if (cached !== undefined) return cached
+  const html = sanitizeHtml(marked.parse(text) as string)
+  if (markdownCache.size > 200) markdownCache.clear()
+  markdownCache.set(text, html)
+  return html
+}
+
 /**
  * 能力位显式解构（computed）：模板不直接裸引用 props 数组/父级 store 字段，
  * 避免 Vue 3 setup 模板裸引用在运行时才炸（项目钉子教训）。
@@ -353,12 +433,8 @@ const emit = defineEmits<{
 const capabilityList = computed<string[]>(() => props.capabilities || [])
 const canUpload = computed(() => capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD))
 const canReadFiles = computed(() => capabilityList.value.includes(AGENT_CAPABILITY.FILES_READ))
-
-/** 徽标条目（亮/灰两态）：dimmed＝health 为 down/unconfigured（灰态＋悬浮提示） */
-interface CapabilityBadge {
-  label: string
-  dimmed: boolean
-}
+/** 工作台形态（主区）：样式按 .is-workbench 分支放大排版密度；缺省 sidebar 保持窄列密度 */
+const isWorkbench = computed(() => props.variant === 'workbench')
 
 /**
  * 徽标健康两态判定：SSE 实时值（sseHealth）优先，缺席回落 props.health（首屏初始值）；
@@ -371,22 +447,58 @@ const healthDimmed = (capability: string): boolean => {
   return value === AGENT_HEALTH.DOWN || value === AGENT_HEALTH.UNCONFIGURED
 }
 
-const capabilityBadges = computed<CapabilityBadge[]>(() => {
-  const badges: CapabilityBadge[] = []
-  // 附件上传（files.upload）/文件可读（files.read）无探活腿，不映射探针恒亮
-  if (capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD)) badges.push({ label: '附件上传', dimmed: false })
-  if (canReadFiles.value) badges.push({ label: '文件可读', dimmed: false })
+// ==================== 能力健康点（原逐项徽标收敛为一个点＋点开清单） ====================
+
+/** 能力清单行：ok＝可用（探活 up 或无探活腿＝声明即可用）；note＝一句话状态说明 */
+interface CapabilityItem {
+  label: string
+  ok: boolean
+  note: string
+}
+
+/** 探活值→一句话状态说明（health 缺席＝旧后端＝按可用处理） */
+const healthNote = (capability: string): string => {
+  const value = healthMap.value?.[capability]
+  if (value === AGENT_HEALTH.DOWN) return '服务不可达'
+  if (value === AGENT_HEALTH.UNCONFIGURED) return '未配置'
+  return '正常'
+}
+
+/** 能力清单（绿点下拉消费；与 /agents 契约 capabilities 推导同源） */
+const capabilityItems = computed<CapabilityItem[]>(() => {
+  const items: CapabilityItem[] = []
+  // 附件上传（files.upload）/文件可读（files.read）无探活腿，声明即可用
+  if (capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD)) items.push({ label: '附件上传', ok: true, note: '随会话可用' })
+  if (canReadFiles.value) items.push({ label: '文件可读', ok: true, note: '随会话可用' })
   if (capabilityList.value.includes(AGENT_CAPABILITY.ARTIFACTS_DOC)) {
-    badges.push({ label: '产物导出', dimmed: healthDimmed(AGENT_CAPABILITY.ARTIFACTS_DOC) })
+    items.push({ label: '产物导出', ok: !healthDimmed(AGENT_CAPABILITY.ARTIFACTS_DOC), note: healthNote(AGENT_CAPABILITY.ARTIFACTS_DOC) })
   }
   if (capabilityList.value.includes(AGENT_CAPABILITY.OCR)) {
-    badges.push({ label: '文字识别', dimmed: healthDimmed(AGENT_CAPABILITY.OCR) })
+    items.push({ label: '文字识别', ok: !healthDimmed(AGENT_CAPABILITY.OCR), note: healthNote(AGENT_CAPABILITY.OCR) })
   }
   if (capabilityList.value.includes(AGENT_CAPABILITY.EXEC_SANDBOX)) {
-    badges.push({ label: '沙箱执行', dimmed: healthDimmed(AGENT_CAPABILITY.EXEC_SANDBOX) })
+    items.push({ label: '沙箱执行', ok: !healthDimmed(AGENT_CAPABILITY.EXEC_SANDBOX), note: healthNote(AGENT_CAPABILITY.EXEC_SANDBOX) })
   }
-  return badges
+  return items
 })
+
+/** 绿点两态：任一声明能力不可用＝红，否则绿（health 缺席＝全绿兼容） */
+const capDotState = computed<'ok' | 'bad'>(() =>
+  capabilityItems.value.some(item => !item.ok) ? 'bad' : 'ok')
+
+const capDotTitle = computed(() => {
+  const bad = capabilityItems.value.filter(item => !item.ok).length
+  return bad === 0 ? '能力全部可用（点开查看清单）' : `有 ${bad} 项能力不可用（点开查看）`
+})
+
+/** 清单开合＋点外部收起（document 级监听，挂载/卸载随既有钩子） */
+const capListOpen = ref(false)
+const capWrapRef = ref<HTMLElement | null>(null)
+const onDocClickForCapList = (e: MouseEvent) => {
+  if (capListOpen.value && capWrapRef.value && !capWrapRef.value.contains(e.target as Node)) {
+    capListOpen.value = false
+  }
+}
 
 // ==================== 健康度实时通道（SSE，探活状态变化即翻转徽标） ====================
 
@@ -764,6 +876,7 @@ onMounted(() => {
   window.addEventListener('dragend', onWindowDragEnd)
   window.addEventListener('drop', onWindowDragEnd)
   window.addEventListener('dragleave', onWindowDragLeave)
+  document.addEventListener('click', onDocClickForCapList)
   void connectHealthSse()
 })
 
@@ -771,6 +884,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('dragend', onWindowDragEnd)
   window.removeEventListener('drop', onWindowDragEnd)
   window.removeEventListener('dragleave', onWindowDragLeave)
+  document.removeEventListener('click', onDocClickForCapList)
   closeHealthSse()
 })
 

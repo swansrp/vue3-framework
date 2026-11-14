@@ -99,6 +99,92 @@ const formatArgs = (args: unknown): string => {
   }
 }
 
+/** 工具名 → 人话名（框架工具＋epc/InkHub 常见业务工具的摘要口径；未知工具回落原名） */
+const TOOL_LABELS: Record<string, string> = {
+  sandbox_run: '沙箱执行',
+  sandbox_fetch: '取回沙箱产物',
+  read_attachment: '读取附件',
+  read_file: '读取附件',
+  generate_artifact: '生成产物文件',
+  upload_file: '上传产物文件',
+  save_supervision_log: '保存监理日志',
+  askUser: '向用户提问',
+  finish: '收口',
+  submitExternalTask: '委托外部执行',
+  waitExternalTask: '等待外部结果',
+  queryExternalTask: '查询外部任务',
+  readExternalTaskResult: '读取外部结果',
+  cancelExternalTask: '终止外部任务',
+  search_docs: '知识库检索',
+  fetch_document: '知识库取文',
+  grep_document: '知识库深搜'
+}
+
+/** 各工具的关键参数字段（按序取第一个非空值作摘要；均缺省回落全文摘要） */
+const TOOL_DIGEST_FIELDS: Record<string, string[]> = {
+  sandbox_run: ['command'],
+  sandbox_fetch: ['rel_path', 'relPath', 'file_path', 'filePath', 'path'],
+  read_attachment: ['name', 'file_name', 'fileName', 'file_id', 'fileId'],
+  read_file: ['name', 'file_name', 'fileName', 'file_id', 'fileId'],
+  generate_artifact: ['file_name', 'fileName', 'name', 'format'],
+  upload_file: ['object_name', 'objectName', 'name'],
+  save_supervision_log: ['log_date', 'logDate'],
+  askUser: ['question'],
+  submitExternalTask: ['title', 'task', 'prompt'],
+  waitExternalTask: ['task_id', 'taskId'],
+  queryExternalTask: ['task_id', 'taskId'],
+  readExternalTaskResult: ['task_id', 'taskId'],
+  cancelExternalTask: ['task_id', 'taskId'],
+  search_docs: ['query', 'keyword', 'q'],
+  fetch_document: ['doc_id', 'docId', 'file_id', 'fileId'],
+  grep_document: ['keyword', 'pattern', 'query']
+}
+
+/** 摘要截断：一句话收口，超长省略号（不换行渲染由样式兜底） */
+const clipDigest = (text: string, max = 64): string => {
+  const one = text.replace(/\s+/g, ' ').trim()
+  return one.length > max ? `${one.slice(0, max)}…` : one
+}
+
+/**
+ * 工具卡摘要（工作台形态 summary 行用）：人话名＋关键参数一句话。
+ * 纯函数——args 解析失败/字段缺失一律回落「人话名＋空摘要」，绝不抛。
+ */
+export const toolDigest = (name: string, argsText: string): { label: string; digest: string } => {
+  const label = TOOL_LABELS[name] || name
+  let digest = ''
+  try {
+    const parsed = typeof argsText === 'string' && argsText.trim()
+      ? JSON.parse(argsText)
+      : argsText
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const keys = TOOL_DIGEST_FIELDS[name] || []
+      for (const key of keys) {
+        const value = (parsed as Record<string, any>)[key]
+        if (value !== undefined && value !== null && String(value) !== '') {
+          digest = clipDigest(String(value))
+          break
+        }
+      }
+      if (!digest) {
+        // 未登记字段：取第一个字符串值兜底，保证 summary 行不空转
+        for (const value of Object.values(parsed as Record<string, any>)) {
+          if (typeof value === 'string' && value.trim()) {
+            digest = clipDigest(value)
+            break
+          }
+        }
+      }
+    } else if (typeof parsed === 'string' && parsed.trim()) {
+      digest = clipDigest(parsed)
+    }
+  } catch {
+    // 非法 JSON：原文截断兜底
+    digest = argsText ? clipDigest(argsText, 48) : ''
+  }
+  return { label, digest }
+}
+
 /** 状态条文案口径（与 events 语义一一对应，业务壳无需再映射） */
 export const statusEventText = (type: string, payload: unknown): string => {
   const text = payloadText(payload)
@@ -149,6 +235,8 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
       case 'tool_call': {
         const toolCallId = String(field(ev.payload, 'tool_call_id') ?? '')
         const name = String(field(ev.payload, 'tool_name') ?? (typeof ev.payload === 'string' ? ev.payload : '工具调用'))
+        const args = formatArgs(field(ev.payload, 'arguments'))
+        const digest = toolDigest(name, args)
         const tool: AgentToolItem = {
           kind: 'tool',
           id: `tool-${ev.seq}`,
@@ -156,7 +244,9 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
           time: ev.time,
           toolCallId,
           name,
-          args: formatArgs(field(ev.payload, 'arguments')),
+          label: digest.label,
+          digest: digest.digest,
+          args,
           output: '',
           status: 'running'
         }

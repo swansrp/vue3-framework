@@ -131,6 +131,10 @@ export interface AgentToolItem {
   /** 后端工具调用标识（tool_call 与 tool_result 配对键） */
   toolCallId: string
   name: string
+  /** 人话名（toolDigest 映射产出；缺席回落 name 渲染） */
+  label?: string
+  /** 关键参数一句话摘要（summary 行展示；原始 args 仍收折叠体） */
+  digest?: string
   /** 入参（JSON 文本，便于折叠展示） */
   args: string
   /** 返回（未配对前为空） */
