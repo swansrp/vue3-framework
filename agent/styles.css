@@ -216,16 +216,21 @@
 
 .bidr-agent-tool {
   border: 1px solid var(--border-subtle, #f0f0f0);
-  border-radius: 6px;
-  background: var(--bg-elevated, #fafafa);
+  border-radius: 8px;
+  background: var(--bg-base, #fff);
   overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.bidr-agent-tool:hover {
+  border-color: var(--border-base, #d9d9d9);
 }
 
 .bidr-agent-tool__head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  gap: 8px;
+  padding: 6px 12px;
   font-size: 12px;
   color: var(--text-secondary, #999);
   cursor: pointer;
@@ -242,18 +247,28 @@
 
 .bidr-agent-tool__name {
   color: var(--text-primary, #333);
-  font-weight: 600;
+  font-weight: 500;
   word-break: break-all;
 }
 
+/* 状态徽标：中性灰胶囊；运行中着 accent 色（一眼分辨在途/完成） */
 .bidr-agent-tool__state {
   margin-left: auto;
   flex-shrink: 0;
+  padding: 0 8px;
   font-size: 11px;
+  line-height: 18px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.bidr-agent-tool__state.is-running {
+  color: var(--accent, #1677ff);
+  background: rgba(22, 119, 255, 0.08);
 }
 
 .bidr-agent-tool__section {
-  padding: 0 10px 8px;
+  padding: 0 12px 10px;
 }
 
 .bidr-agent-tool__label {
@@ -271,7 +286,7 @@
   font-size: 11px;
   line-height: 16px;
   color: var(--text-primary, #333);
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fafafa);
   border: 1px solid var(--border-subtle, #f0f0f0);
   border-radius: 4px;
   white-space: pre-wrap;
@@ -392,25 +407,68 @@
 
 /* ==================== 状态条 / 日志 ==================== */
 
+/* 基底＝系统事件（paused/resumed）：弱化中性信息行，不与正文抢层级 */
 .bidr-agent-strip {
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-size: 12px;
-  line-height: 18px;
+  line-height: 20px;
   color: var(--text-secondary, #999);
-  background: var(--bg-elevated, #fafafa);
-  border: 1px dashed var(--border-subtle, #f0f0f0);
-  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
   word-break: break-word;
 }
 
-.bidr-agent-strip.is-warn { color: var(--warning, #faad14); }
+/* 提醒色文字用深金（浅金 #faad14 在浅底上不可读） */
+.bidr-agent-strip.is-warn { color: var(--warning-deep, #d48806); }
 .bidr-agent-strip.is-error { color: var(--error, #ff4d4f); }
-.bidr-agent-strip.is-info { color: var(--accent, #1677ff); }
+.bidr-agent-strip.is-info { color: var(--text-secondary, #999); }
 
+/* AI 提问回声：奶黄 callout＋warning 左标（与底部决策卡同语系，流内只作历史留痕） */
+.bidr-agent-strip.is-question {
+  padding: 8px 12px;
+  color: var(--text-primary, #333);
+  background: #fffbe6;
+  border-left: 3px solid var(--warning, #faad14);
+  border-radius: 4px 8px 8px 4px;
+}
+
+.bidr-agent-strip.is-question.is-warn,
+.bidr-agent-strip.is-question.is-info {
+  color: var(--text-primary, #333);
+}
+
+/* 用户发言（补充指导 / 作答）：右对齐浅蓝气泡——用户说话的视觉身份 */
+.bidr-agent-strip.is-guidance,
+.bidr-agent-strip.is-answered {
+  width: fit-content;
+  max-width: 88%;
+  margin-left: auto;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  background: var(--accent-tint, #e6f4ff);
+  border-radius: 12px 12px 4px 12px;
+}
+
+.bidr-agent-strip.is-guidance.is-info,
+.bidr-agent-strip.is-answered.is-info {
+  color: var(--text-primary, #333);
+}
+
+/* 错误：红底浅染，正文色加深保证可读 */
+.bidr-agent-strip.is-error {
+  padding: 8px 12px;
+  color: var(--error, #ff4d4f);
+  background: #fff2f0;
+  border-left: 3px solid var(--error, #ff4d4f);
+  border-radius: 4px 8px 8px 4px;
+}
+
+/* 日志行：弱化到近似脚注（LLM 轮次/工具配对等技术噪音） */
 .bidr-agent-log {
-  color: var(--text-secondary, #999);
+  color: var(--text-tertiary, #bfbfbf);
   font-size: 11px;
-  line-height: 16px;
+  line-height: 18px;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -418,10 +476,10 @@
 /* ==================== 流式实时块 ==================== */
 
 .bidr-agent-live {
-  padding: 8px 10px;
-  border: 1px dashed var(--accent-mid, #91caff);
-  border-radius: 6px;
-  background: var(--bg-elevated, #fafafa);
+  padding: 10px 12px;
+  border: 1px solid var(--accent-mid, #91caff);
+  border-radius: 8px;
+  background: rgba(22, 119, 255, 0.03);
 }
 
 .bidr-agent-live__head {
@@ -448,9 +506,9 @@
 /* ==================== 终态结论 ==================== */
 
 .bidr-agent-conclusion {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border-subtle, #f0f0f0);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg-elevated, #fafafa);
 }
 
@@ -459,17 +517,28 @@
   align-items: center;
   gap: 6px;
   color: var(--text-primary, #333);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .bidr-agent-conclusion__text {
   margin-top: 6px;
-  color: var(--text-secondary, #999);
-  font-size: 12px;
-  line-height: 20px;
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 终态分色：成功浅绿 / 失败浅红，浅染底＋同系描边 */
+.bidr-agent-conclusion.is-finish {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.bidr-agent-conclusion.is-error {
+  background: #fff2f0;
+  border-color: #ffccc7;
 }
 
 .bidr-agent-conclusion.is-finish .bidr-agent-conclusion__title { color: var(--success, #52c41a); }
@@ -478,15 +547,16 @@
 
 /* ==================== AI 决策问题卡（自身可滚，长问题不裁按钮） ==================== */
 
+/* 交互焦点件：白底＋accent 左标＋顶部投影，与流内容拉开一层 */
 .bidr-agent-question {
   flex-shrink: 0;
   max-height: 50%;
   overflow-y: auto;
-  padding: 10px 14px;
-  background: var(--bg-elevated, #fafafa);
+  padding: 12px 16px;
+  background: var(--bg-base, #fff);
   border-top: 1px solid var(--border-subtle, #f0f0f0);
-  /* 决策卡视觉强化：accent 左标（工作台形态下可扫视定位） */
   border-left: 3px solid var(--accent, #1677ff);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .bidr-agent-question__head {
@@ -497,7 +567,7 @@
 }
 
 .bidr-agent-question__title {
-  color: var(--text-primary, #333);
+  color: var(--accent, #1677ff);
   font-size: 13px;
   font-weight: 600;
 }
@@ -508,7 +578,7 @@
 }
 
 .bidr-agent-question__text {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: var(--text-primary, #333);
   font-size: 13px;
   line-height: 20px;
@@ -520,7 +590,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .bidr-agent-question__option {
@@ -532,16 +602,16 @@
   color: var(--text-primary, #333);
   background: var(--bg-base, #fff);
   border: 1px solid var(--border-base, #d9d9d9);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   word-break: break-word;
-  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 
 .bidr-agent-question__option:hover:not(:disabled) {
-  border-color: var(--accent, #1677ff);
   color: var(--accent, #1677ff);
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  background: var(--accent-tint, #e6f4ff);
+  border-color: var(--accent, #1677ff);
 }
 
 .bidr-agent-question__option:disabled {
@@ -837,10 +907,28 @@
   padding: 20px 32px;
 }
 
+/* 用户发言气泡不受 860px 限宽约束：收回右缘（聊天气泡语义优先于内容列对齐） */
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-strip.is-guidance,
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-strip.is-answered {
+  width: fit-content;
+  max-width: 78%;
+  margin-left: auto;
+  margin-right: 0;
+}
+
 /* 正文与决策卡排版放大一档 */
 .bidr-agent-pane.is-workbench .bidr-agent-msg__text.is-md {
   font-size: 14px;
   line-height: 1.8;
+}
+
+/* 流内容放大：提问回声/用户气泡/错误行在工作台取正文同级字号 */
+.bidr-agent-pane.is-workbench .bidr-agent-strip.is-question,
+.bidr-agent-pane.is-workbench .bidr-agent-strip.is-guidance,
+.bidr-agent-pane.is-workbench .bidr-agent-strip.is-answered,
+.bidr-agent-pane.is-workbench .bidr-agent-strip.is-error {
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .bidr-agent-pane.is-workbench .bidr-agent-tool__head {

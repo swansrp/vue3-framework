@@ -130,7 +130,10 @@
               class="bidr-agent-tool__digest"
               :title="item.digest"
             >{{ item.digest }}</span>
-            <span class="bidr-agent-tool__state">{{ item.status === 'running' ? '调用中' : '已完成' }}</span>
+            <span
+              class="bidr-agent-tool__state"
+              :class="{ 'is-running': item.status === 'running' }"
+            >{{ item.status === 'running' ? '调用中' : '已完成' }}</span>
           </summary>
           <div
             v-if="item.args"
@@ -234,7 +237,7 @@
         <div
           v-else-if="item.kind === 'status'"
           class="bidr-agent-strip"
-          :class="`is-${item.tone}`"
+          :class="[`is-${item.tone}`, `is-${item.type}`]"
         >
           {{ item.text }}
         </div>
