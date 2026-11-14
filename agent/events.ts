@@ -146,6 +146,34 @@ const clipDigest = (text: string, max = 64): string => {
   return one.length > max ? `${one.slice(0, max)}…` : one
 }
 
+/* ==================== 过程流降噪 ==================== */
+
+/**
+ * 后端 report 回显日志：与工具卡信息完全重复（名称/参数在 tool_call、返回在 tool_result），
+ * 或属 tokens 级噪音——成帧即丢，不进消息流。轮次行（LLM 第 N 轮…）与失败行保留作节奏锚。
+ */
+const LOG_NOISE_PREFIXES = ['└ 工具调用：', '└ LLM 输出：', 'LLM 响应已收到']
+
+const isNoisyBackendLog = (text: string): boolean =>
+  LOG_NOISE_PREFIXES.some(p => text.startsWith(p))
+
+/**
+ * LLM 转述噪声：模型会把工具调用/返回/用户作答复读成单行转述文本，信息与工具卡/作答条
+ * 完全重复。保守口径——仅「整帧单行」命中这些形态才丢，多段正文（真实回答）绝不触碰。
+ */
+const NARRATION_NOISE_RES = [
+  /^调用工具[:：\s]\s*\S+\s*[({【]/,
+  /^└?\s*工具调用[:：]/,
+  /^工具\s*\S+\s*返回[:：]/,
+  /^用户作答\s*#\d+\s*[（(]?\d*\)?[：:]/
+]
+
+const isNarrationNoise = (text: string): boolean => {
+  const one = text.trim()
+  if (!one || one.includes('\n')) return false
+  return NARRATION_NOISE_RES.some(re => re.test(one))
+}
+
 /**
  * 工具卡摘要（工作台形态 summary 行用）：人话名＋关键参数一句话。
  * 纯函数——args 解析失败/字段缺失一律回落「人话名＋空摘要」，绝不抛。
@@ -229,7 +257,9 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
     switch (ev.type) {
       case 'llm_output': {
         const text = payloadText(ev.payload).trim()
-        if (text) items.push({ kind: 'text', id: `t-${ev.seq}`, seq: ev.seq, time: ev.time, text })
+        if (text && !isNarrationNoise(text)) {
+          items.push({ kind: 'text', id: `t-${ev.seq}`, seq: ev.seq, time: ev.time, text })
+        }
         break
       }
       case 'tool_call': {
@@ -303,7 +333,9 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
       }
       case 'log': {
         const text = payloadText(ev.payload).trim()
-        if (text) items.push({ kind: 'log', id: `log-${ev.seq}`, seq: ev.seq, time: ev.time, text })
+        if (text && !isNoisyBackendLog(text) && !isNarrationNoise(text)) {
+          items.push({ kind: 'log', id: `log-${ev.seq}`, seq: ev.seq, time: ev.time, text })
+        }
         break
       }
       default: {

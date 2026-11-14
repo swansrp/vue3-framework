@@ -293,23 +293,30 @@
   word-break: break-word;
 }
 
-/* ==================== 过程折叠组（工具/日志收纳：正文留主面，过程按需展开） ==================== */
+/* ==================== 过程折叠卡（工具/日志收纳：正文留主面，过程按需展开） ==================== */
+
+/* 卡片形态（参考「执行过程（N 步 · 共 Xs）」）：白底细边框圆角 */
+.bidr-agent-proc {
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 8px;
+  background: var(--bg-base, #fff);
+  overflow: hidden;
+}
 
 .bidr-agent-proc__head {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 7px 12px;
   font-size: 12px;
-  color: var(--text-tertiary, #8c8c8c);
+  color: var(--text-secondary, #595959);
   cursor: pointer;
   list-style: none;
   user-select: none;
-  border-radius: 6px;
 }
 
 .bidr-agent-proc__head:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .bidr-agent-proc__head::-webkit-details-marker {
@@ -332,27 +339,34 @@
   transform: rotate(90deg);
 }
 
-.bidr-agent-proc__spin { color: var(--accent, #1677ff); }
-.bidr-agent-proc__done { color: var(--success, #52c41a); }
+.bidr-agent-proc__label {
+  color: var(--text-secondary, #595959);
+}
 
+/* 状态字：右侧弱化；执行中着 accent */
 .bidr-agent-proc__state {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary, #bfbfbf);
 }
 
-/* 活动区：左连接线缩进（参考 IDE agent 流的过程行形态） */
+.bidr-agent-proc__state.is-running {
+  color: var(--accent, #1677ff);
+}
+
+/* 活动区：组头下方缩进行列（不再用连接线，留白即可） */
 .bidr-agent-proc__body {
-  margin: 2px 0 6px 13px;
-  padding: 2px 0 2px 12px;
-  border-left: 2px solid var(--border-subtle, #f0f0f0);
+  margin: 0;
+  padding: 2px 12px 10px 26px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  border-top: 1px solid var(--border-subtle, #f0f0f0);
+  padding-top: 6px;
 }
 
-/* 过程日志行：单行截断＋title 悬浮全文（技术噪音不抢视线） */
+/* 过程日志行（轮次锚等幸存者）：单行截断＋title 悬浮全文 */
 .bidr-agent-proc__log {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -535,30 +549,51 @@
   border-radius: 4px 8px 8px 4px;
 }
 
-/* ==================== 流式实时块（降噪：无边框弱化行，两行预览即可） ==================== */
+/* ==================== 实时思考卡（流式实时块）：脉冲点＋正文滚动盒 ==================== */
 
 .bidr-agent-live {
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 8px;
+  background: var(--bg-base, #fff);
 }
 
 .bidr-agent-live__head {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 2px;
+  margin-bottom: 6px;
   font-size: 12px;
   color: var(--accent, #1677ff);
 }
 
+/* 脉冲点：呼吸闪烁替代旋转图标 */
+.bidr-agent-live__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #1677ff);
+  animation: bidr-agent-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes bidr-agent-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* 正文滚动盒：浅底内嵌，跟手滚动看思路 */
 .bidr-agent-live__text {
   margin: 0;
-  max-height: 40px;
-  overflow: hidden;
+  max-height: 200px;
+  overflow: auto;
+  padding: 8px 10px;
   font-family: inherit;
   font-size: 12px;
-  line-height: 20px;
-  color: var(--text-tertiary, #8c8c8c);
+  line-height: 19px;
+  color: var(--text-secondary, #8c8c8c);
+  background: var(--bg-elevated, #fafafa);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 6px;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -989,14 +1024,14 @@
   color: var(--text-primary, #262626);
 }
 
-/* 过程折叠组在工作台的呼吸感 */
+/* 过程折叠卡在工作台的呼吸感 */
 .bidr-agent-pane.is-workbench .bidr-agent-proc__head {
-  padding: 5px 10px;
+  padding: 8px 14px;
 }
 
-.bidr-agent-pane.is-workbench .bidr-agent-proc__log,
-.bidr-agent-pane.is-workbench .bidr-agent-tool__head {
-  font-size: 12px;
+.bidr-agent-pane.is-workbench .bidr-agent-proc__body {
+  padding-left: 30px;
+  padding-right: 14px;
 }
 
 /* 流内容放大：提问回声/用户气泡/错误行在工作台取正文同级字号 */

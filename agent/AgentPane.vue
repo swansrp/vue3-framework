@@ -118,20 +118,11 @@
         >
           <summary class="bidr-agent-proc__head">
             <span class="bidr-agent-proc__chev"></span>
-            <LoadingOutlined
-              v-if="item.running"
-              spin
-              class="bidr-agent-proc__spin"
-            />
-            <CheckCircleFilled
-              v-else
-              class="bidr-agent-proc__done"
-            />
             <span class="bidr-agent-proc__label">{{ procLabel(item) }}</span>
             <span
               class="bidr-agent-proc__state"
               :class="item.running ? 'is-running' : 'is-done'"
-            >{{ item.running ? '执行中' : '已完成' }}</span>
+            >{{ item.running ? '执行中…' : '已完成' }}</span>
           </summary>
           <div class="bidr-agent-proc__body">
             <template
@@ -282,14 +273,14 @@
         </div>
       </template>
 
-      <!-- LLM 流式实时内容（替换式最新一帧；终态清空） -->
+      <!-- LLM 流式实时内容（替换式最新一帧；终态清空）——实时思考卡：脉冲点＋正文滚动盒 -->
       <div
         v-if="liveText"
         class="bidr-agent-live"
       >
         <div class="bidr-agent-live__head">
-          <LoadingOutlined spin />
-          <span>思考中…</span>
+          <span class="bidr-agent-live__dot"></span>
+          <span>实时思考…</span>
         </div>
         <pre class="bidr-agent-live__text">{{ liveText }}</pre>
       </div>
@@ -681,14 +672,23 @@ const groupedItems = computed<AgentRenderItem[]>(() => {
   return out
 })
 
-/** 折叠组标题：按内容计数（工具调用 N 次 · 过程日志 M 条） */
+/** 折叠组时长（首尾事件差取整秒；无有效差值返回 null 不展示） */
+const procDuration = (group: AgentProcessGroup): number | null => {
+  const first = group.children[0]
+  const last = group.children[group.children.length - 1]
+  if (!first || !last) return null
+  const sec = Math.round((last.time - first.time) / 1000)
+  return Number.isFinite(sec) && sec > 0 ? sec : null
+}
+
+/** 折叠组标题（参考 IDE agent 流的「执行过程」卡头）：执行过程（N 步 · 共 Xs） */
 const procLabel = (group: AgentProcessGroup): string => {
   const tools = group.children.filter(i => i.kind === 'tool').length
-  const logs = group.children.length - tools
-  const parts: string[] = []
-  if (tools > 0) parts.push(tools === 1 ? '工具调用 1 次' : `工具调用 ${tools} 次`)
-  if (logs > 0) parts.push(`过程日志 ${logs} 条`)
-  return parts.join(' · ')
+  const span = procDuration(group)
+  const inner: string[] = []
+  if (tools > 0) inner.push(`${tools} 步`)
+  if (span !== null) inner.push(`共 ${span}s`)
+  return inner.length ? `执行过程（${inner.join(' · ')}）` : '执行过程'
 }
 
 const statusClass = computed(() => (waitingQuestion.value ? 'waiting' : sessionStatus.value.toLowerCase()))
