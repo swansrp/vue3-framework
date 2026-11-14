@@ -95,7 +95,7 @@
       </div>
 
       <template
-        v-for="item in items"
+        v-for="item in groupedItems"
         :key="item.id"
       >
         <div
@@ -109,49 +109,88 @@
           ></div>
         </div>
 
+        <!-- 过程折叠组：连续的工具调用/日志收进一个可折叠块（正文留主面，过程按需展开）；
+             组内工具在途时默认展开＋转圈，全部完成自动收起 -->
         <details
-          v-else-if="item.kind === 'tool'"
-          class="bidr-agent-tool"
-          :open="item.status === 'running'"
+          v-else-if="item.kind === 'process'"
+          class="bidr-agent-proc"
+          :open="item.running"
         >
-          <summary class="bidr-agent-tool__head">
+          <summary class="bidr-agent-proc__head">
+            <span class="bidr-agent-proc__chev"></span>
             <LoadingOutlined
-              v-if="item.status === 'running'"
+              v-if="item.running"
               spin
-              class="bidr-agent-tool__spin"
+              class="bidr-agent-proc__spin"
             />
             <CheckCircleFilled
               v-else
-              class="bidr-agent-tool__done"
+              class="bidr-agent-proc__done"
             />
-            <span class="bidr-agent-tool__name">{{ item.label || item.name }}</span>
+            <span class="bidr-agent-proc__label">{{ procLabel(item) }}</span>
             <span
-              v-if="item.digest"
-              class="bidr-agent-tool__digest"
-              :title="item.digest"
-            >{{ item.digest }}</span>
-            <span
-              class="bidr-agent-tool__state"
-              :class="{ 'is-running': item.status === 'running' }"
-            >{{ item.status === 'running' ? '调用中' : '已完成' }}</span>
+              class="bidr-agent-proc__state"
+              :class="item.running ? 'is-running' : 'is-done'"
+            >{{ item.running ? '执行中' : '已完成' }}</span>
           </summary>
-          <div
-            v-if="item.args"
-            class="bidr-agent-tool__section"
-          >
-            <div class="bidr-agent-tool__label">
-              入参
-            </div>
-            <pre class="bidr-agent-tool__pre">{{ item.args }}</pre>
-          </div>
-          <div
-            v-if="item.output"
-            class="bidr-agent-tool__section"
-          >
-            <div class="bidr-agent-tool__label">
-              返回
-            </div>
-            <pre class="bidr-agent-tool__pre">{{ item.output }}</pre>
+          <div class="bidr-agent-proc__body">
+            <template
+              v-for="child in item.children"
+              :key="child.id"
+            >
+              <details
+                v-if="child.kind === 'tool'"
+                class="bidr-agent-tool"
+                :open="child.status === 'running'"
+              >
+                <summary class="bidr-agent-tool__head">
+                  <LoadingOutlined
+                    v-if="child.status === 'running'"
+                    spin
+                    class="bidr-agent-tool__spin"
+                  />
+                  <CheckCircleFilled
+                    v-else
+                    class="bidr-agent-tool__done"
+                  />
+                  <span class="bidr-agent-tool__name">{{ child.label || child.name }}</span>
+                  <span
+                    v-if="child.digest"
+                    class="bidr-agent-tool__digest"
+                    :title="child.digest"
+                  >{{ child.digest }}</span>
+                  <span
+                    class="bidr-agent-tool__state"
+                    :class="{ 'is-running': child.status === 'running' }"
+                  >{{ child.status === 'running' ? '调用中' : '已完成' }}</span>
+                </summary>
+                <div
+                  v-if="child.args"
+                  class="bidr-agent-tool__section"
+                >
+                  <div class="bidr-agent-tool__label">
+                    入参
+                  </div>
+                  <pre class="bidr-agent-tool__pre">{{ child.args }}</pre>
+                </div>
+                <div
+                  v-if="child.output"
+                  class="bidr-agent-tool__section"
+                >
+                  <div class="bidr-agent-tool__label">
+                    返回
+                  </div>
+                  <pre class="bidr-agent-tool__pre">{{ child.output }}</pre>
+                </div>
+              </details>
+              <div
+                v-else-if="child.kind === 'log'"
+                class="bidr-agent-proc__log"
+                :title="child.text"
+              >
+                {{ child.text }}
+              </div>
+            </template>
           </div>
         </details>
 
@@ -238,13 +277,6 @@
           v-else-if="item.kind === 'status'"
           class="bidr-agent-strip"
           :class="[`is-${item.tone}`, `is-${item.type}`]"
-        >
-          {{ item.text }}
-        </div>
-
-        <div
-          v-else
-          class="bidr-agent-log"
         >
           {{ item.text }}
         </div>
@@ -359,7 +391,7 @@ import { marked } from 'marked'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Composer from './composer/Composer.vue'
-import { formatFileSize, AGENT_CAPABILITY, AGENT_HEALTH, type AgentArtifact, type AgentFileRef, type AgentToolItem } from './types'
+import { formatFileSize, AGENT_CAPABILITY, AGENT_HEALTH, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
 import { name } from '@/../package.json'
@@ -601,6 +633,63 @@ const {
   stop,
   refresh
 } = useAgentConversation(sessionIdRef)
+
+// ==================== 过程折叠组（连续工具/日志收纳成可折叠块，正文留主面） ====================
+
+/** 折叠组渲染条目：children 保持事件原顺序（tool/log 混排） */
+interface AgentProcessGroup {
+  kind: 'process'
+  id: string
+  seq: number
+  time: number
+  children: AgentViewItem[]
+  /** 组内任一工具在途＝默认展开＋头部转圈；全部完成自动收起 */
+  running: boolean
+}
+
+type AgentRenderItem = AgentViewItem | AgentProcessGroup
+
+/**
+ * 归组：连续 tool/log 折叠为一个 process 组，text/file/artifact/status 留主面。
+ * 事件流全量重算但 append-only 顺序稳定，组身份随首元素 id，重复渲染不抖动。
+ */
+const groupedItems = computed<AgentRenderItem[]>(() => {
+  const out: AgentRenderItem[] = []
+  let bucket: AgentViewItem[] = []
+  const flush = () => {
+    if (bucket.length === 0) return
+    const first = bucket[0]
+    out.push({
+      kind: 'process',
+      id: `proc-${first.id}`,
+      seq: first.seq,
+      time: first.time,
+      children: bucket,
+      running: bucket.some(i => i.kind === 'tool' && i.status === 'running')
+    })
+    bucket = []
+  }
+  for (const item of items.value) {
+    if (item.kind === 'tool' || item.kind === 'log') {
+      bucket.push(item)
+    } else {
+      flush()
+      out.push(item)
+    }
+  }
+  flush()
+  return out
+})
+
+/** 折叠组标题：按内容计数（工具调用 N 次 · 过程日志 M 条） */
+const procLabel = (group: AgentProcessGroup): string => {
+  const tools = group.children.filter(i => i.kind === 'tool').length
+  const logs = group.children.length - tools
+  const parts: string[] = []
+  if (tools > 0) parts.push(tools === 1 ? '工具调用 1 次' : `工具调用 ${tools} 次`)
+  if (logs > 0) parts.push(`过程日志 ${logs} 条`)
+  return parts.join(' · ')
+}
 
 const statusClass = computed(() => (waitingQuestion.value ? 'waiting' : sessionStatus.value.toLowerCase()))
 
