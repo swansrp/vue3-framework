@@ -646,18 +646,19 @@
   word-break: break-word;
 }
 
+/* 选项单列一行一个：长选项文本横向铺开可读（多列会挤成窄高框） */
 .bidr-agent-question__options {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-bottom: 10px;
 }
 
 .bidr-agent-question__option {
-  padding: 8px 14px;
+  padding: 9px 14px;
   font-family: inherit;
   font-size: 13px;
-  line-height: 20px;
+  line-height: 1.6;
   text-align: left;
   color: var(--text-primary, #333);
   background: var(--bg-base, #fff);
@@ -665,7 +666,7 @@
   border-radius: 8px;
   cursor: pointer;
   word-break: break-word;
-  transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .bidr-agent-question__option:hover:not(:disabled) {

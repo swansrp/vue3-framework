@@ -17,7 +17,7 @@
         v-model:value="text"
         class="bidr-agent-composer__input"
         :placeholder="placeholder"
-        :auto-size="{ minRows: 1, maxRows: 4 }"
+        :auto-size="{ minRows: 3, maxRows: 8 }"
         :disabled="disabled"
         @press-enter="onPressEnter"
       />
@@ -166,10 +166,10 @@ const pausable = computed(() => !props.disabled && props.status === 'RUNNING')
 
 const placeholder = computed(() => {
   if (props.disabled) return '会话已结束'
-  if (props.waitingQuestion) return '回答 AI 的问题，或直接输入你的口径（Enter 发送）'
-  if (props.status === 'PAUSED') return '补充指导语（可空）：恢复后注入下一轮上下文（Enter 发送）'
+  if (props.waitingQuestion) return '回答 AI 的问题，或直接输入你的口径（Enter 发送，Shift+Enter 换行）'
+  if (props.status === 'PAUSED') return '补充指导语（可空）：恢复后注入下一轮上下文（Enter 发送，Shift+Enter 换行）'
   if (props.status === 'RUNNING') return '任务执行中… 可暂停后补充指导；可直接拖入附件'
-  return '输入内容（Enter 发送）'
+  return '输入内容（Enter 发送，Shift+Enter 换行）'
 })
 
 const onSend = () => {
