@@ -258,7 +258,14 @@ export const checkLoginState = async () => {
       // redirect_uri＝authorize 时原串回传（RFC 6749 §4.1.3，从 VITE_ssoLoginUrl 解析同源取值；
       // 2026-11-06 实证：不回传时宿主后端兜底串与 authorize 不一致 ⇒ 墨枢等值闸拒且 code 已烧，
       // 重试报「授权码无效、已过期或已使用」）
-      exchangeLogin(String(queryObject.code), oauth2AuthorizeRedirectUri || undefined).then(res => {
+      // 🔴 兑换链必须 return 给守卫 await（2026-11-14 闪登录修复）：原先兑换只挂起不 await、
+      // 本函数立即 resolve ⇒ 守卫在兑换往返窗口里看到 hasLogin=false 就 next('/login')，
+      // oauth2 宿主（epc-ai 等）每次 authorize 回跳都闪一下框架登录页（pre 真机实证）。
+      // 改为 return 兑换链：成功腿写完 token（hasLogin 已置位）再复原 state 跳转，守卫等到时
+      // 直接进目标路由不落登录页；失败腿 catch 吞掉回落守卫 next('/login')＝原行为（烧码/
+      // 后端异常时停在登录页，URL 保留 ?code 不自动重放，防烧码换码互踢回跳环）。
+      // return 短路语义不变：仍先于下方 getToken/verify 链返回，不并发走 _executeLogin。
+      return exchangeLogin(String(queryObject.code), oauth2AuthorizeRedirectUri || undefined).then(res => {
         const payload = res.payload
         if (payload && payload.accessToken) {
           userStore.name = payload.name
@@ -277,8 +284,7 @@ export const checkLoginState = async () => {
         } else {
           window.location.href = removeURLParameter(removeURLParameter(window.location.href, 'code'), 'state')
         }
-      })
-      return undefined
+      }).catch(() => undefined)
     } else if (acceptsIdToken && isNotEmpty(queryObject.id_token)) {
       userStore.setIdToken(<string>queryObject.id_token).then(() => {
         window.location.href = removeURLParameter(window.location.href, ID_TOKEN)
