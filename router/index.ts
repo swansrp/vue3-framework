@@ -385,7 +385,14 @@ router.beforeEach(async (to, from, next) => {
       next(false)
       return
     }
-    next(loginPath)
+    // 落点 query 必须跟过去（2026-11-14 台账 #69 默认翻 /#/ 的配套）：authorize 未登录回落
+    // 到根路由（login-page-path 默认 /#/）时，?redirect_uri=<原 authorize 地址> 挂在根上，
+    // local 形态登录成功后由登录页按它整页续驾 authorize；裸 next(loginPath) 会把 query
+    // 丢在半路 ⇒ 登录完落门户首页回不到子系统。SPA 路径形态的 redirect_uri 约定（登录页
+    // 自家参数）不受影响；id_token 是 SSO 回跳参数不跟进登录页。
+    const loginQuery: LocationQueryRaw = { ...to.query }
+    delete (loginQuery as Record<string, unknown>).id_token
+    next({ path: loginPath, query: loginQuery })
     return
   }
   loginProbeFailures = 0
