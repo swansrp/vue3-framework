@@ -104,7 +104,6 @@ import {
 import { computed, ref } from 'vue'
 
 import AttachmentTray from './AttachmentTray.vue'
-
 import { AGENT_CAPABILITY, type AttachmentItem } from '../types'
 
 interface Props {
