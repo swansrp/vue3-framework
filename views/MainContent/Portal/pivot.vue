@@ -502,8 +502,12 @@ const toggleSort = (alias: string) => {
   loadData()
 }
 
-/** 表头点击: 可排序列切换排序; pivotRow 度量列打开透视值排序菜单; 纯注释列点了不产生副作用 */
+/** 表头点击: 可排序列切换排序; pivotRow 度量列——无行维度时段内成员行排序、有行维度弹透视值菜单; 纯注释列点了不产生副作用 */
 const onHeaderClick = (key: string) => {
+  if (isPivotRowMemberSortKey(key)) {
+    togglePivotRowMemberSort(key)
+    return
+  }
   if (isPivotRowMeasureKey(key)) {
     pivotRowSortMenuOpen.value = pivotRowSortMenuOpen.value === key ? null : key
     return
@@ -539,7 +543,7 @@ const sortTip = (alias: string) => {
   return locale.triggerAsc
 }
 
-// ==================== pivotRow 度量列排序入口(按透视值×度量下推) ====================
+// ==================== pivotRow 度量列排序入口(有行维度: 按透视值×度量下推 / 无行维度: 段内成员行本地排序) ====================
 /** 多透视值时该布局度量列混装全部透视值、无单一别名 ⇒ 表头点击弹出透视值菜单, 选定后按 ${标识}__${度量} 下推 ORDER BY */
 const isPivotRowMeasureKey = (key: string) =>
   isPivotInRow.value && effectivePivotColumns.value.length > 1 &&
@@ -549,6 +553,50 @@ const isPivotRowMeasureKey = (key: string) =>
 const isPivotRowDirectSortKey = (key: string) =>
   isPivotInRow.value && effectivePivotColumns.value.length === 1 &&
   measures.value.some(m => measureKey(m) === key)
+
+/** 无行维度形态的 pivotRow 度量列: 宽聚合只有一行 ⇒ 透视值菜单空转, 表头点击改排段内成员行 */
+const isPivotRowMemberSortKey = (key: string) =>
+  isPivotRowMeasureKey(key) && visibleGroupFields.value.length === 0
+
+/** 段内成员行排序状态(null=未点): property=度量输出键, type 0=正序 1=倒序; 只作用于前端熔接, 不下发后端 */
+const pivotRowMemberSort = ref<{ property: string; type: number } | null>(null)
+
+/** 点击循环与原生排序列一致: 正序 → 倒序 → 取消(恢复配置原序) */
+const togglePivotRowMemberSort = (mKey: string) => {
+  const cur = pivotRowMemberSort.value
+  if (!cur || cur.property !== mKey) {
+    pivotRowMemberSort.value = { property: mKey, type: 0 }
+  } else if (cur.type === 0) {
+    pivotRowMemberSort.value = { property: mKey, type: 1 }
+  } else {
+    pivotRowMemberSort.value = null
+  }
+}
+
+const isMemberSortAsc = (mKey: string) => {
+  const sort = pivotRowMemberSort.value
+  return !!sort && sort.property === mKey && sort.type === 0
+}
+
+const isMemberSortDesc = (mKey: string) => {
+  const sort = pivotRowMemberSort.value
+  return !!sort && sort.property === mKey && sort.type === 1
+}
+
+/** 段内排序的悬停提示复用原生排序文案: 描述"下一次点击会发生什么" */
+const memberSortTip = (mKey: string) => {
+  const locale = tableLocale.value
+  if (!locale) {
+    return ''
+  }
+  if (isMemberSortDesc(mKey)) {
+    return locale.cancelSort
+  }
+  if (isMemberSortAsc(mKey)) {
+    return locale.triggerDesc
+  }
+  return locale.triggerAsc
+}
 
 /** 菜单候选: 真实透视列(小计列在转行布局是前端再聚合行、不作排序项); 无透视列退化总计列时单项=总计 */
 const pivotRowSortOptions = computed(() =>
@@ -1048,6 +1096,10 @@ const portalColumns = computed(() => {
     }
     // 度量列: 竖排下度量仍是列、有列头可挂 ⇒ 配了父链走壳列出二层表头(叶子标题仍是度量显示名);
     // 全空保持平铺(与 col 分支同一判据, 未配父表头的老报表零变化)
+    // 表头图标带预算: 度量列头常驻排序双箭头(段内排/透视值菜单/直排三形态同款), 有行维度多透视值时菜单末尾另有≈12px小三角,
+    // 配了注释(desc)的标题后另有≈14px问号; 缺这些带标题会被箭头挤到逐行省略(11-16 表头显示不全根因)
+    const headerIconPad = HEADER_ICON_PAD_SORT +
+      (visibleGroupFields.value.length > 0 && effectivePivotColumns.value.length > 1 ? 12 : 0)
     const rowMeasureItems = measures.value.map((m) => {
       const mKey = measureKey(m)
       const mTitle = measureTitle(m.field, m.label)
@@ -1057,7 +1109,7 @@ const portalColumns = computed(() => {
           title: mTitle,
           dataIndex: mKey,
           key: mKey,
-          width: measureColWidth(mTitle, columnDisplayValues(mKey), 120),
+          width: measureColWidth(mTitle, columnDisplayValues(mKey), 120, m.desc ? headerIconPad + 14 : headerIconPad),
           fixed: m.fixed === true ? 'right' : false,
           fieldType: FIELD_TYPE.NUMBER,
           // 表头由库居中，数字右对齐会在列宽收紧后看着与表头错位 ⇒ 同向居中
@@ -1155,6 +1207,8 @@ const dataSource = computed(() => {
     // 小计列(_gt_前缀)是组内叶子的再聚合, 熔进主序列会与叶子行重复 ⇒ 只熔真实透视列
     const pathDepth = pivotPathDepth.value
     const pathKeys = Array.from({ length: pathDepth }, (_, i) => `${PIVOT_PATH_COL}${i}`)
+    // 段内成员行排序入口(仅无行维度形态): 有行维度时排序走宽行序(后端/本地), 段内不重排
+    const memberSort = visibleGroupFields.value.length === 0 ? pivotRowMemberSort.value : null
     const melted: any[] = []
     const lastGroupValues: Record<string, any> = {}
     // 组内小计: 每个原始行的透视列序列按父链全路径分段, 段尾(父链切换或行末)落一行小计;
@@ -1171,6 +1225,36 @@ const dataSource = computed(() => {
       const rows = runRows
       runPvs = []
       runRows = []
+      // 段内成员行按表头点击度量的原始格子值排序; 空值恒末位不随方向翻转(与宽行本地排序同口径);
+      // 排序不出段(段=完整父链=总计口径单位), 总计行在段尾按段内成员重算, 数值与钉住位置均不受影响
+      if (memberSort) {
+        const measure = measures.value.find(m => measureKey(m) === memberSort.property)
+        if (measure) {
+          const mKey = measureKey(measure)
+          const sign = memberSort.type === 1 ? -1 : 1
+          rows.sort((a, b) => {
+            const va = a[RAW_ROW_REF_KEY]?.[`${a[PIVOT_VALUE_COL]}__${mKey}`]
+            const vb = b[RAW_ROW_REF_KEY]?.[`${b[PIVOT_VALUE_COL]}__${mKey}`]
+            const blankA = isBlankSortValue(va)
+            const blankB = isBlankSortValue(vb)
+            if (blankA && blankB) {
+              return 0
+            }
+            if (blankA) {
+              return 1
+            }
+            if (blankB) {
+              return -1
+            }
+            const numA = Number(va)
+            const numB = Number(vb)
+            if (!isNaN(numA) && !isNaN(numB)) {
+              return sign * (numA - numB)
+            }
+            return sign * String(va).localeCompare(String(vb), 'zh-CN')
+          })
+        }
+      }
       // pivotTotalPos='none'(配置「不显示小计」)时整段抑制小计, 行序仍按父链分段伪合并
       const subtotalFirst = props.portalTableConfig.pivotTotalPos === 'first'
       const subtotalOff = props.portalTableConfig.pivotTotalPos === 'none'
@@ -1787,7 +1871,23 @@ onMounted(() => {
               </span>
             </span>
           </a-tooltip>
-          <!-- pivotRow 度量列: 混装全部透视值无单一别名 ⇒ 箭头区作菜单触发, 选透视值后按单元格别名下推 -->
+          <!-- 无行维度 pivotRow 度量列: 宽聚合仅一行, 透视值菜单空转 ⇒ 表头点击改段内成员行排序, 箭头/提示与原生排序列一致 -->
+          <a-tooltip
+            v-else-if="isPivotRowMemberSortKey(key)"
+            :title="memberSortTip(key)"
+          >
+            <span class="surely-table-column-sorter surely-table-column-sorter-full">
+              <span class="surely-table-column-sorter-inner">
+                <caret-up-outlined
+                  :class="['surely-table-column-sorter-up', { active: isMemberSortAsc(key) }]"
+                />
+                <caret-down-outlined
+                  :class="['surely-table-column-sorter-down', { active: isMemberSortDesc(key) }]"
+                />
+              </span>
+            </span>
+          </a-tooltip>
+          <!-- 有行维度 pivotRow 度量列: 混装全部透视值无单一别名 ⇒ 箭头区作菜单触发, 选透视值后按单元格别名下推 -->
           <a-tooltip
             v-else-if="isPivotRowMeasureKey(key)"
             title="按透视值排序"
