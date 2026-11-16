@@ -103,6 +103,7 @@ const formatArgs = (args: unknown): string => {
 const TOOL_LABELS: Record<string, string> = {
   sandbox_run: '沙箱执行',
   sandbox_fetch: '取回沙箱产物',
+  sandbox_put_attachment: '放入沙箱原件',
   read_attachment: '读取附件',
   read_file: '读取附件',
   generate_artifact: '生成产物文件',
@@ -124,6 +125,7 @@ const TOOL_LABELS: Record<string, string> = {
 const TOOL_DIGEST_FIELDS: Record<string, string[]> = {
   sandbox_run: ['command'],
   sandbox_fetch: ['rel_path', 'relPath', 'file_path', 'filePath', 'path'],
+  sandbox_put_attachment: ['path', 'file_id'],
   read_attachment: ['name', 'file_name', 'fileName', 'file_id', 'fileId'],
   read_file: ['name', 'file_name', 'fileName', 'file_id', 'fileId'],
   generate_artifact: ['file_name', 'fileName', 'name', 'format'],

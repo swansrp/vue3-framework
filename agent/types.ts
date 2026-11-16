@@ -34,7 +34,7 @@ export const AGENT_CAPABILITY = {
   ARTIFACTS_DOC: 'artifacts.doc',
   /** 照片/扫描件可 OCR 转写（后端增强转写腿在场＝声明级，探活只观测不影响本位） */
   OCR: 'ocr',
-  /** 模型可在会话沙箱执行命令并取回产出文件（sandbox_run/sandbox_fetch，沙箱端口在场才装配） */
+  /** 模型可在会话沙箱执行命令、放入原件并取回产出文件（sandbox_run/sandbox_fetch/sandbox_put_attachment 三只，沙箱端口在场才装配） */
   EXEC_SANDBOX: 'exec.sandbox'
 } as const
 
