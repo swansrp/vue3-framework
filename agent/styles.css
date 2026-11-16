@@ -802,6 +802,25 @@
   font-size: 14px;
 }
 
+/* 失败项：红色叉＋重试入口（2026-11-16 口径：失败要看得见、能重传） */
+.bidr-agent-chip__icon.is-error {
+  color: var(--error, #ff4d4f);
+}
+
+.bidr-agent-chip__retry {
+  flex-shrink: 0;
+  padding: 0 2px;
+  color: var(--accent, #1677ff);
+  font-size: 11px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.bidr-agent-chip__retry:hover {
+  text-decoration: underline;
+}
+
 .bidr-agent-chip__main {
   min-width: 0;
   max-width: 220px;

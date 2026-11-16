@@ -10,6 +10,7 @@
     <AttachmentTray
       :items="items"
       @remove="emit('remove', $event)"
+      @retry="emit('retry', $event)"
     />
 
     <div class="bidr-agent-composer__row">
@@ -20,6 +21,7 @@
         :auto-size="{ minRows: 3, maxRows: 8 }"
         :disabled="disabled"
         @press-enter="onPressEnter"
+        @paste="onPaste"
       />
 
       <div class="bidr-agent-composer__actions">
@@ -140,6 +142,7 @@ const emit = defineEmits<{
   (e: 'pause'): void
   (e: 'files', files: File[]): void
   (e: 'remove', uid: string): void
+  (e: 'retry', uid: string): void
 }>()
 
 const canUpload = computed(() => props.capabilities.includes(AGENT_CAPABILITY.FILES_UPLOAD))
@@ -204,6 +207,15 @@ const onFileChange = (e: Event) => {
   if (files.length > 0 && dragActiveAllowed()) emit('files', files)
   // 清空 value：同名文件再次选择也能触发 change
   input.value = ''
+}
+
+/** 粘贴上传（Ctrl+V）：截图/文件走剪贴板 FileList 入队，文本粘贴保持原样 */
+const onPaste = (e: ClipboardEvent) => {
+  if (!dragActiveAllowed()) return
+  const files = Array.from(e.clipboardData?.files || [])
+  if (files.length === 0) return
+  e.preventDefault()
+  emit('files', files)
 }
 
 const dragDepth = ref(0)

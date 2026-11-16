@@ -100,18 +100,21 @@ export interface AgentSessionSnapshot {
 export const isTerminalStatus = (status?: string | null) =>
   status === 'FINISHED' || status === 'FAILED' || status === 'STOPPED'
 
-/** 上传队列条目（AttachmentTray 渲染：名称/大小/进度/删除） */
+/** 上传队列条目（AttachmentTray 渲染：名称/大小/进度/删除/失败重试） */
 export interface AttachmentItem {
-  /** 前端本地唯一键（upload-* 为本次上传；srv-* 为回显的历史附件） */
+  /** 前端本地唯一键（stage-* 待发；upload-* 本次上传；srv-* 历史回显） */
   uid: string
   name: string
   size: number
   /** 0-100；上传完成即为 100 */
   progress: number
-  status: 'uploading' | 'done' | 'error'
+  /** staged＝已选待发送（会话启动前暂存，尚未上传）；uploading/done/error 为上传态 */
+  status: 'staged' | 'uploading' | 'done' | 'error'
   /** 上传成功回填的服务端标识（去重/文件卡联动） */
   fileId?: string
   error?: string
+  /** 原始文件（失败重试与发起前暂存用；历史回显条目没有） */
+  file?: File
 }
 
 /** 会话消息流条目（events.ts 归约产出，AgentPane 逐条渲染） */

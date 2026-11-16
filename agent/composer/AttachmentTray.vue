@@ -9,7 +9,14 @@
       class="bidr-agent-chip"
       :class="`is-${item.status}`"
     >
-      <FileTextOutlined class="bidr-agent-chip__icon" />
+      <CloseCircleFilled
+        v-if="item.status === 'error'"
+        class="bidr-agent-chip__icon is-error"
+      />
+      <FileTextOutlined
+        v-else
+        class="bidr-agent-chip__icon"
+      />
       <div class="bidr-agent-chip__main">
         <div class="bidr-agent-chip__line">
           <span
@@ -36,13 +43,27 @@
         </div>
       </div>
       <span
-        v-if="item.status === 'done'"
+        v-if="item.status === 'staged'"
+        class="bidr-agent-chip__state"
+      >待发送</span>
+      <span
+        v-else-if="item.status === 'done'"
         class="bidr-agent-chip__state"
       >已上传</span>
       <span
         v-else-if="item.status === 'uploading'"
         class="bidr-agent-chip__state"
       >{{ item.progress }}%</span>
+      <!-- 失败项：可重试（原始文件仍在队列里）——重传成功即恢复待发 -->
+      <button
+        v-if="item.status === 'error' && item.file"
+        type="button"
+        class="bidr-agent-chip__retry"
+        title="重新上传这个文件"
+        @click.stop="emit('retry', item.uid)"
+      >
+        重试
+      </button>
       <button
         type="button"
         class="bidr-agent-chip__remove"
@@ -57,16 +78,22 @@
 </template>
 
 <script lang="ts" setup>
-import { DeleteOutlined, FileTextOutlined } from '@ant-design/icons-vue'
+import { CloseCircleFilled, DeleteOutlined, FileTextOutlined } from '@ant-design/icons-vue'
 
 import { formatFileSize, type AttachmentItem } from '../types'
 
 interface Props {
-  /** 附件队列（含上传中/已完成/失败；父组件持有数据源） */
+  /** 附件队列（含待发/上传中/已完成/失败；父组件持有数据源） */
   items: AttachmentItem[]
 }
 
 defineProps<Props>()
+
+const emit = defineEmits<{
+  (e: 'remove', uid: string): void
+  (e: 'retry', uid: string): void
+}>()
+</script>
 
 const emit = defineEmits<{
   (e: 'remove', uid: string): void

@@ -41,9 +41,21 @@ export const listRecentManifest = (agentKey?: string, limit?: number) =>
 
 // 发起自主 agent 会话：返回状态快照（sessionId 供控制与轮询）；
 // detachPolicy 可选覆盖（'STOP_ON_DETACH' 断开即停 / 'KEEP_RUNNING' 后台继续可重连），
-// 策略由发起页面按场景定义，不传回落定义层默认
-export const sessionStart = (agentKey: string, payload?: Record<string, any>, detachPolicy?: string) =>
-  post(buildPostApiByType('/session/start', agentApiType), {}, { agentKey, payload, detachPolicy }, false)
+// 策略由发起页面按场景定义，不传回落定义层默认。
+// startPaused=true＝只建会话不起 run 线程（快照直接 PAUSED）：调用方先在暂停窗口内上传
+// 素材附件，再 sessionResume 起跑——首轮提示词由 resume 时组装，附件天然入首轮（无竞态）
+export const sessionStart = (
+  agentKey: string,
+  payload?: Record<string, any>,
+  detachPolicy?: string,
+  startPaused?: boolean
+) =>
+  post(
+    buildPostApiByType('/session/start', agentApiType),
+    {},
+    { agentKey, payload, detachPolicy, startPaused },
+    false
+  )
 
 // 暂停会话（note 暂停说明，事件流展示）；run 线程在下一检查点阻塞
 export const sessionPause = (sessionId: string, note?: string) =>

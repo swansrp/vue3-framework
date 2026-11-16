@@ -255,18 +255,25 @@ export const useAgentConversation = (
    * 服务端大小/数量上限由后端配置校验，前端不硬编码阈值，失败信息原样透出。
    * 绑定发起时会话：切会话后不再对当前会话触发补拉，条目随 reset 的数组替换自然丢弃。
    */
-  const upload = async (file: File): Promise<AgentFileRef | null> => {
+  const upload = async (file: File, existing?: AttachmentItem): Promise<AgentFileRef | null> => {
     const myGen = gen
     const id = sessionId.value
     if (!id) throw new Error('会话尚未开始，无法上传附件')
-    const item = reactive<AttachmentItem>({
+    // 重试传既有条目（保留 uid/原始文件），新选文件则新建条目入队
+    const item = existing ?? reactive<AttachmentItem>({
       uid: newUploadUid(),
       name: file.name,
       size: file.size,
       progress: 0,
       status: 'uploading'
     })
-    attachments.value.push(item)
+    item.file = file
+    item.name = file.name
+    item.size = file.size
+    item.status = 'uploading'
+    item.progress = 0
+    item.error = undefined
+    if (!existing) attachments.value.push(item)
     bumpUploading(myGen, 1)
     try {
       const resp: any = await sessionUpload(id, file, ev => {
@@ -290,6 +297,22 @@ export const useAgentConversation = (
       // 只减发起代：切会话后旧代完成不得清零新会话在途计数
       bumpUploading(myGen, -1)
     }
+  }
+
+  /** 失败重试：原文件还在队列里才可重传（成功即恢复已上传态） */
+  const retryUpload = async (uid: string): Promise<void> => {
+    const target = attachments.value.find(a => a.uid === uid)
+    if (!target || !target.file || target.status === 'uploading') return
+    await upload(target.file, target)
+  }
+
+  /**
+   * 发送后清空「待发队列」：已上传（done）条目不再显示——它们已随本轮进入会话上下文，
+   * 下一条消息不会再携带（2026-11-16 口径：发出去就别再占着输入区）。
+   * 上传中/失败条目保留（还需要用户处理）。
+   */
+  const clearAttachments = () => {
+    attachments.value = attachments.value.filter(a => a.status !== 'done')
   }
 
   /**
@@ -368,6 +391,8 @@ export const useAgentConversation = (
     waitingQuestion,
     start,
     upload,
+    retryUpload,
+    clearAttachments,
     refreshFiles,
     removeAttachment,
     answer,

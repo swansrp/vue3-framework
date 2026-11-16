@@ -359,6 +359,7 @@
       @stop="onStop"
       @pause="onPause"
       @files="onFiles"
+      @retry="onRetryFile"
       @remove="removeAttachment"
     />
 
@@ -616,7 +617,8 @@ const {
   pollError,
   isUploading,
   upload,
-  refreshFiles,
+  retryUpload,
+  clearAttachments,
   removeAttachment,
   answer,
   pause,
@@ -830,6 +832,8 @@ const pausing = ref(false)
  * - PAUSED → 补指导语并恢复（sessionResume）；
  * - RUNNING/终态 → 不发（Composer 已置灰，这里兜底提示）。
  */
+// 发送后清掉已上传的待发附件（2026-11-16 口径：附件已给到模型，不再占输入区）；
+// 上传中/失败条目保留给用户处理
 const onSend = async (text: string) => {
   if (!props.sessionId) return
   sending.value = true
@@ -840,7 +844,9 @@ const onSend = async (text: string) => {
       await resume(text || undefined)
     } else {
       message.info('任务执行中，如需补充指导请先暂停')
+      return
     }
+    clearAttachments()
   } catch (e: any) {
     message.error(e?.message || '发送失败')
   } finally {
@@ -895,6 +901,15 @@ const onFiles = async (files: File[]) => {
     } catch (e: any) {
       message.error(`${file.name}：${e?.message || '上传失败'}`)
     }
+  }
+}
+
+/** 失败重试（chip 上的「重试」）：原文件重传，失败原因仍由 chip 呈现 */
+const onRetryFile = async (uid: string) => {
+  try {
+    await retryUpload(uid)
+  } catch (e: any) {
+    message.error(e?.message || '重试失败')
   }
 }
 
@@ -994,10 +1009,8 @@ const onRefreshStatus = async () => {
   }
 }
 
-// 会话就绪且能力位在场时回显服务端已传清单（刷新/重连恢复 chips）
-watch([() => props.sessionId, capabilityList], ([id, caps]) => {
-  if (id && caps.includes(AGENT_CAPABILITY.FILES_UPLOAD)) void refreshFiles()
-}, { immediate: true })
+// 待发队列只装「本次 UI 选入且尚未发送」的附件：已进会话的附件由事件流文件卡留痕，
+// 不再回填输入区（2026-11-16 口径：发出去的文件不再显示，下一条消息不携带它们）
 
 // ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断） ====================
 
