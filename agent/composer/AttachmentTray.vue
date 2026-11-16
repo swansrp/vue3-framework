@@ -94,8 +94,3 @@ const emit = defineEmits<{
   (e: 'retry', uid: string): void
 }>()
 </script>
-
-const emit = defineEmits<{
-  (e: 'remove', uid: string): void
-}>()
-</script>
