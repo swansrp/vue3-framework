@@ -152,7 +152,7 @@ const clipDigest = (text: string, max = 64): string => {
 
 /**
  * 后端 report 回显日志：与工具卡信息完全重复（名称/参数在 tool_call、返回在 tool_result），
- * 或属 tokens 级噪音——成帧即丢，不进消息流。轮次行（LLM 第 N 轮…）与失败行保留作节奏锚。
+ * 或属 tokens 级噪音——成帧即丢，不进消息流。轮次行（带圈数字 ①②…）与失败行保留作节奏锚。
  */
 const LOG_NOISE_PREFIXES = ['└ 工具调用：', '└ LLM 输出：', 'LLM 响应已收到']
 
