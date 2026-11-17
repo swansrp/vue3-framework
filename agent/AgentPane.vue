@@ -278,7 +278,8 @@
       <details
         v-if="liveText"
         class="bidr-agent-live"
-        open
+        :open="!liveCollapsed"
+        @toggle="onLiveToggle"
       >
         <summary class="bidr-agent-live__head">
           <span class="bidr-agent-live__chev"></span>
@@ -1014,6 +1015,15 @@ const onRefreshStatus = async () => {
 
 // 待发队列只装「本次 UI 选入且尚未发送」的附件：已进会话的附件由事件流文件卡留痕，
 // 不再回填输入区（2026-11-16 口径：发出去的文件不再显示，下一条消息不携带它们）
+
+// ==================== 实时思考卡折叠 ====================
+
+/** 折叠偏好跨「实时内容分段」保留：用户收起后，下一段实时思考仍保持收起（卡头脉冲点仍可见） */
+const liveCollapsed = ref(false)
+const onLiveToggle = (e: Event) => {
+  const el = e.target as HTMLDetailsElement | null
+  if (el) liveCollapsed.value = !el.open
+}
 
 // ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断） ====================
 
