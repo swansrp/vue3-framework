@@ -108,11 +108,19 @@ export interface AttachmentItem {
   size: number
   /** 0-100；上传完成即为 100 */
   progress: number
-  /** staged＝已选待发送（会话启动前暂存，尚未上传）；uploading/done/error 为上传态 */
-  status: 'staged' | 'uploading' | 'done' | 'error'
+  /**
+   * staged＝已选待处理（尚未上传）；uploading＝上传中；parsing＝预解析中（发起前素材校验）；
+   * parsed＝解析通过（可随会话发送）；done＝上传完成（仅上传场景，无预解析）；
+   * error＝上传或解析失败（error 字段为原因，可重试/移除）
+   */
+  status: 'staged' | 'uploading' | 'parsing' | 'parsed' | 'done' | 'error'
   /** 上传成功回填的服务端标识（去重/文件卡联动） */
   fileId?: string
   error?: string
+  /** 解析通过的正文规模（字符数；chips 展示「已解析 · N 字」） */
+  parseChars?: number
+  /** 解析附注（如「文档解析能力未启用，已跳过校验」；chips tooltip/副行展示） */
+  parseNote?: string
   /** 原始文件（失败重试与发起前暂存用；历史回显条目没有） */
   file?: File
 }

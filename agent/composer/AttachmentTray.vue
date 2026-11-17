@@ -13,6 +13,15 @@
         v-if="item.status === 'error'"
         class="bidr-agent-chip__icon is-error"
       />
+      <CheckCircleFilled
+        v-else-if="item.status === 'parsed' && !item.parseNote"
+        class="bidr-agent-chip__icon is-ok"
+      />
+      <LoadingOutlined
+        v-else-if="item.status === 'parsing'"
+        class="bidr-agent-chip__icon is-parsing"
+        spin
+      />
       <FileTextOutlined
         v-else
         class="bidr-agent-chip__icon"
@@ -25,6 +34,7 @@
           >{{ item.name }}</span>
           <span class="bidr-agent-chip__size">{{ formatFileSize(item.size) }}</span>
         </div>
+        <!-- 进度条：上传＝实量进度；解析＝流动条纹（解析进度由服务端任务推进，前端取不到百分比） -->
         <div
           v-if="item.status === 'uploading'"
           class="bidr-agent-chip__progress"
@@ -35,11 +45,24 @@
           ></div>
         </div>
         <div
+          v-else-if="item.status === 'parsing'"
+          class="bidr-agent-chip__progress is-indeterminate"
+        >
+          <div class="bidr-agent-chip__progress-bar"></div>
+        </div>
+        <div
           v-else-if="item.status === 'error'"
           class="bidr-agent-chip__error"
           :title="item.error"
         >
           {{ item.error || '上传失败' }}
+        </div>
+        <div
+          v-else-if="item.parseNote"
+          class="bidr-agent-chip__note"
+          :title="item.parseNote"
+        >
+          {{ item.parseNote }}
         </div>
       </div>
       <span
@@ -54,12 +77,20 @@
         v-else-if="item.status === 'uploading'"
         class="bidr-agent-chip__state"
       >{{ item.progress }}%</span>
+      <span
+        v-else-if="item.status === 'parsing'"
+        class="bidr-agent-chip__state"
+      >解析中</span>
+      <span
+        v-else-if="item.status === 'parsed'"
+        class="bidr-agent-chip__state"
+      >{{ item.parseChars ? `已解析 · ${item.parseChars} 字` : '已解析' }}</span>
       <!-- 失败项：可重试（原始文件仍在队列里）——重传成功即恢复待发 -->
       <button
         v-if="item.status === 'error' && item.file"
         type="button"
         class="bidr-agent-chip__retry"
-        title="重新上传这个文件"
+        title="重新上传并解析这个文件"
         @click.stop="emit('retry', item.uid)"
       >
         重试
@@ -78,12 +109,14 @@
 </template>
 
 <script lang="ts" setup>
-import { CloseCircleFilled, DeleteOutlined, FileTextOutlined } from '@ant-design/icons-vue'
+import {
+  CheckCircleFilled, CloseCircleFilled, DeleteOutlined, FileTextOutlined, LoadingOutlined
+} from '@ant-design/icons-vue'
 
 import { formatFileSize, type AttachmentItem } from '../types'
 
 interface Props {
-  /** 附件队列（含待发/上传中/已完成/失败；父组件持有数据源） */
+  /** 附件队列（含待发/上传中/解析中/已完成/失败；父组件持有数据源） */
   items: AttachmentItem[]
 }
 

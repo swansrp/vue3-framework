@@ -61,9 +61,11 @@ export const sessionStart = (
 export const sessionPause = (sessionId: string, note?: string) =>
   post(buildPostApiByType(`/session/${sessionId}/pause`, agentApiType), {}, { note }, false)
 
-// 恢复会话（guidance 补充指导语注入下一轮上下文）
-export const sessionResume = (sessionId: string, guidance?: string) =>
-  post(buildPostApiByType(`/session/${sessionId}/resume`, agentApiType), {}, { guidance }, false)
+// 恢复会话（guidance 补充指导语注入下一轮上下文）。
+// payload（可选）：仅对「建后未起跑」（startPaused）会话生效——素材会话先建后补指令时，
+// 起跑前把最终业务参数合并进 start payload；普通暂停恢复后端忽略该字段。
+export const sessionResume = (sessionId: string, guidance?: string, payload?: Record<string, any>) =>
+  post(buildPostApiByType(`/session/${sessionId}/resume`, agentApiType), {}, { guidance, payload }, false)
 
 // 作答 LLM 提问（ask_user 阻塞等待中）：answer 与 skipped 至少其一；
 // 作答写入控制键由工具线程消费，问题状态随 status 轮询刷新
@@ -109,14 +111,16 @@ export const sessionRate = (sessionId: string, rating: string, feedback?: string
 export const sessionUpload = (
   sessionId: string,
   file: File,
-  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
+  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
+  /** false＝暂存上传：只落存储不登记 file_attached（发起前素材先上传＋预解析，解析通过后再登记） */
+  attach = true
 ) => {
   const formData = new FormData()
   formData.append('file', file)
   return uploadParts(
     buildPostApiByType(`/session/${sessionId}/files`, agentApiType),
     formData,
-    {},
+    attach ? {} : { attach: false },
     onUploadProgress
   ).then((resp: any) => {
     if (resp?.status && resp.status.code !== 0) {
@@ -125,6 +129,35 @@ export const sessionUpload = (
     return resp
   })
 }
+
+// 登记暂存附件（attach=false 上传的素材，起跑前逐件登记；已登记幂等）
+export const sessionAttachFile = (sessionId: string, fileId: string) =>
+  post(buildPostApiByType(`/session/${sessionId}/files/${fileId}/attach`, agentApiType), {}, {}, false)
+
+// 删除暂存附件（仅限未登记的；前端移除素材 chip 时调用，幂等）
+export const sessionDeleteFile = (sessionId: string, fileId: string) =>
+  post(buildPostApiByType(`/session/${sessionId}/files/${fileId}/delete`, agentApiType), {}, {}, false)
+
+/** 预解析状态（后端异步任务；chips 展示解析中/通过/失败） */
+export interface AgentFileParseView {
+  fileId: string
+  name?: string | null
+  /** PENDING / PARSING / DONE / FAILED / SKIPPED */
+  status: string
+  ok: boolean
+  chars?: number | null
+  seconds?: number | null
+  preview?: string | null
+  error?: string | null
+}
+
+// 受理预解析（批量，幂等）：上传成功后立即调用
+export const sessionParseFiles = (sessionId: string, fileIds: string[]) =>
+  post(buildPostApiByType(`/session/${sessionId}/files/parse`, agentApiType), {}, { fileIds }, false)
+
+// 预解析状态轮询（批量）
+export const sessionParseStatus = (sessionId: string, fileIds: string[]) =>
+  get(buildGetApiByType(`/session/${sessionId}/files/parse`, agentApiType), { fileIds }, {}, false, false, false)
 
 // 本会话附件清单（文件卡回显/刷新恢复的数据源；后端以 file_attached 事件为正源重建）
 export const sessionFiles = (sessionId: string) =>

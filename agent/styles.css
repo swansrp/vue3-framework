@@ -807,6 +807,20 @@
   color: var(--error, #ff4d4f);
 }
 
+/* 解析通过：绿勾（2026-11-17 发起前素材口径：解析通过才允许发起） */
+.bidr-agent-chip__icon.is-ok {
+  color: var(--success, #52c41a);
+}
+
+/* 解析中：主题色旋转图标 */
+.bidr-agent-chip__icon.is-parsing {
+  color: var(--accent, #1677ff);
+}
+
+.bidr-agent-chip.is-parsed {
+  border-color: rgba(82, 196, 26, 0.45);
+}
+
 .bidr-agent-chip__retry {
   flex-shrink: 0;
   padding: 0 2px;
@@ -860,6 +874,23 @@
   transition: width 0.2s;
 }
 
+/* 解析中：百分比取不到，用流动条纹表达「在跑」 */
+.bidr-agent-chip__progress.is-indeterminate .bidr-agent-chip__progress-bar {
+  width: 40%;
+  background: linear-gradient(90deg, rgba(22, 119, 255, 0) 0%, var(--accent, #1677ff) 50%, rgba(22, 119, 255, 0) 100%);
+  animation: bidr-agent-chip-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes bidr-agent-chip-slide {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
 .bidr-agent-chip__error {
   margin-top: 2px;
   overflow: hidden;
@@ -869,13 +900,24 @@
   font-size: 11px;
 }
 
+/* 解析附注（如「解析能力未启用，已跳过校验」）：次要提示，不抢错误态 */
+.bidr-agent-chip__note {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+}
+
 .bidr-agent-chip__state {
   flex-shrink: 0;
   color: var(--text-secondary, #999);
   font-size: 11px;
 }
 
-.bidr-agent-chip.is-done .bidr-agent-chip__state {
+.bidr-agent-chip.is-done .bidr-agent-chip__state,
+.bidr-agent-chip.is-parsed .bidr-agent-chip__state {
   color: var(--success, #52c41a);
 }
 
