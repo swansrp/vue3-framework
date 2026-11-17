@@ -118,12 +118,13 @@
           :open="item.running"
         >
           <summary class="bidr-agent-proc__head">
+            <EyeOutlined class="bidr-agent-proc__eye" />
             <span class="bidr-agent-proc__chev"></span>
             <span class="bidr-agent-proc__label">{{ procLabel(item) }}</span>
             <span
               class="bidr-agent-proc__state"
               :class="item.running ? 'is-running' : 'is-done'"
-            >{{ item.running ? '执行中…' : '已完成' }}</span>
+            >{{ item.running ? '执行中…' : (procDuration(item) !== null ? `共 ${procDuration(item)}s` : '已完成') }}</span>
           </summary>
           <div class="bidr-agent-proc__body">
             <template
@@ -151,10 +152,6 @@
                     class="bidr-agent-tool__digest"
                     :title="child.digest"
                   >{{ child.digest }}</span>
-                  <span
-                    class="bidr-agent-tool__state"
-                    :class="{ 'is-running': child.status === 'running' }"
-                  >{{ child.status === 'running' ? '调用中' : '已完成' }}</span>
                 </summary>
                 <div
                   v-if="child.args"
@@ -173,6 +170,19 @@
                     返回
                   </div>
                   <pre class="bidr-agent-tool__pre">{{ child.output }}</pre>
+                </div>
+              </details>
+              <!-- 思考归档：收成可折叠「深度思考 · N 字」步骤（点开看思考全文），与工具行同语系 -->
+              <details
+                v-else-if="child.kind === 'log' && isThinkingLog(child.text)"
+                class="bidr-agent-tool"
+              >
+                <summary class="bidr-agent-tool__head">
+                  <CheckCircleFilled class="bidr-agent-tool__done" />
+                  <span class="bidr-agent-tool__name">深度思考<template v-if="thinkingChars(child.text)"> · {{ thinkingChars(child.text) }} 字</template></span>
+                </summary>
+                <div class="bidr-agent-tool__section">
+                  <pre class="bidr-agent-tool__pre">{{ thinkingBody(child.text) }}</pre>
                 </div>
               </details>
               <div
@@ -289,7 +299,7 @@
         <summary class="bidr-agent-live__head">
           <span class="bidr-agent-live__chev"></span>
           <span class="bidr-agent-live__dot"></span>
-          <span>实时思考…</span>
+          <span>深度思考…</span>
         </summary>
         <pre class="bidr-agent-live__text">{{ liveText }}</pre>
       </details>
@@ -385,7 +395,7 @@
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CloseCircleFilled, DownloadOutlined, FilePdfOutlined, FileTextOutlined,
+  CheckCircleFilled, CloseCircleFilled, DownloadOutlined, EyeOutlined, FilePdfOutlined, FileTextOutlined,
   FileWordOutlined, LoadingOutlined, RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
@@ -696,14 +706,22 @@ const procDuration = (group: AgentProcessGroup): number | null => {
   return Number.isFinite(sec) && sec > 0 ? sec : null
 }
 
-/** 折叠组标题（参考 IDE agent 流的「执行过程」卡头）：执行过程（N 步 · 共 Xs） */
+/** 折叠组标题（参考 IDE agent 流「查看 N 个步骤」卡头）：步骤数＝组内子条目数 */
 const procLabel = (group: AgentProcessGroup): string => {
-  const tools = group.children.filter(i => i.kind === 'tool').length
-  const span = procDuration(group)
-  const inner: string[] = []
-  if (tools > 0) inner.push(`${tools} 步`)
-  if (span !== null) inner.push(`共 ${span}s`)
-  return inner.length ? `执行过程（${inner.join(' · ')}）` : '执行过程'
+  const n = group.children.length
+  return `查看 ${n} 个步骤`
+}
+
+/** 思考归档日志（后端「【LLM 思考归档】N 字\n正文」）识别与拆分，供折叠「深度思考」步骤渲染 */
+const THINKING_LOG_PREFIX = '【LLM 思考归档】'
+const isThinkingLog = (text: string): boolean => text.startsWith(THINKING_LOG_PREFIX)
+const thinkingChars = (text: string): string => {
+  const m = text.split('\n')[0].match(/(\d+)\s*字/)
+  return m ? m[1] : ''
+}
+const thinkingBody = (text: string): string => {
+  const nl = text.indexOf('\n')
+  return nl >= 0 ? text.slice(nl + 1) : ''
 }
 
 const statusClass = computed(() => (waitingQuestion.value ? 'waiting' : sessionStatus.value.toLowerCase()))
