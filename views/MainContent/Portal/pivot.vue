@@ -10,6 +10,7 @@ import PivotDrillContentDark from './PivotDrillContentDark.vue'
 import { getPortalConfig } from '@/framework/apis/portal/config'
 import {
   getPortalPivotColumnList,
+  getPortalTableByCode,
   pivotQuery,
   PivotMeasureVO,
   PivotReqVO,
@@ -40,10 +41,13 @@ const props = withDefaults(
     condition?: Array<ConditionListType>
     /** 主题: dark=深色外壳(DarkTable)内, light=浅色外壳内(钻取数字等局部颜色跟随浅色) */
     theme?: 'dark' | 'light'
+    /** 钻取链(自外层起的表格编码序列): 嵌套钻取时逐层下传, 目标已在链上则回退明细防环 */
+    drillChain?: string[]
   }>(),
   {
     condition: () => [],
-    theme: 'dark'
+    theme: 'dark',
+    drillChain: () => []
   }
 )
 
@@ -1495,6 +1499,73 @@ const getDownloadFileName = () => router.currentRoute.value.meta.title as string
 const drillOpen = ref(false)
 const drillTitle = ref('')
 const drillCondition = ref<ConditionListType>({ conditionList: [] })
+/** 钻取目标表格配置(本表配了 drillTableCode 且解析成功时非空): 抽屉内容据此改挂下级透视报表 */
+const drillTarget = ref<PortalTableVO | null>(null)
+const drillTargetCache = new Map<string, PortalTableVO>()
+
+/** 下传给抽屉内嵌透视的钻取链 = 外层链 + 本表编码(本表编码缺失时不下传, 防环退化为仅外层链) */
+const nextDrillChain = computed(() => {
+  const selfCode = props.portalTableConfig.tableCode
+  return selfCode ? [...props.drillChain, selfCode] : [...props.drillChain]
+})
+
+/**
+ * 解析整表钻取目标表格配置: 未配 / 指向自己 / 已在钻取链上(防环) / 目标非透视模式 ⇒ null(回退本表明细行)
+ * 目标配置按编码缓存: 同一抽屉链反复钻同一张表不重复请求
+ */
+const resolveDrillTarget = async (): Promise<PortalTableVO | null> => {
+  const code = props.portalTableConfig.drillTableCode?.trim()
+  const selfCode = props.portalTableConfig.tableCode || ''
+  if (!code || code === selfCode || props.drillChain.includes(code)) {
+    return null
+  }
+  const cached = drillTargetCache.get(code)
+  if (cached) {
+    return cached
+  }
+  try {
+    const res = await getPortalTableByCode(code)
+    const target = res?.payload?.[0]
+    if (!target || target.pivotMode !== '1') {
+      return null
+    }
+    drillTargetCache.set(code, target)
+    return target
+  } catch (e) {
+    console.error('加载钻取目标表格配置失败:', e)
+    return null
+  }
+}
+
+/**
+ * 钻取统一出口: 解析目标后开抽屉。目标是透视报表时:
+ * ① 并入其常驻条件(宿主 table.vue withFixedCondition 的等价腿, 抽屉内没有宿主替它合并, 含 ${var} 解析)
+ * ② 标题后缀由"明细"改"下级报表"(内容已是另一张透视表而非明细行)
+ */
+const finishDrill = async () => {
+  const target = await resolveDrillTarget()
+  drillTarget.value = target
+  if (target) {
+    const fixedParsed = parseConditionJsonObject(target.fixedCondition, '钻取目标常驻条件')
+    let fixedList: ConditionListType[] = []
+    if (fixedParsed) {
+      resolveConditionVariables(fixedParsed)
+      // 兼容裸数组与 {conditionList} 两种历史写法(与宿主 table.vue parseFixedCondition 同口径)
+      const list = Array.isArray(fixedParsed)
+        ? fixedParsed
+        : (Array.isArray(fixedParsed?.conditionList)
+          ? fixedParsed.conditionList
+          : (fixedParsed?.property ? [fixedParsed] : []))
+      fixedList = !Array.isArray(fixedParsed) && fixedParsed?.andOr === '1' && list.length > 1
+        ? [{ andOr: '1', conditionList: list }]
+        : list
+    }
+    drillCondition.value = { andOr: '0', conditionList: [...fixedList, ...drillCondition.value.conditionList] }
+    const suffix = target.title ? `下级报表·${target.title}` : '下级报表'
+    drillTitle.value = drillTitle.value.replace(/(明细数据|全部明细|组内明细|全部分类明细)$/, suffix)
+  }
+  drillOpen.value = true
+}
 
 // 抽屉外观随主题: 浅色外壳→antd 默认浅色抽屉, 深色外壳→保持原深色
 const drillDrawerBodyStyle = computed(() => (props.theme === 'light' ? { padding: '16px' } : { backgroundColor: '#023955', padding: '16px' }))
@@ -1632,8 +1703,8 @@ const buildGroupLabel = (rawRow: any) => {
   return visibleGroupFields.value.map((f) => String(translate(f, rawRow?.[f]) ?? '')).filter(Boolean).join(' / ')
 }
 
-/** 点击度量单元格: 打开底部抽屉展示该单元格对应的明细数据 */
-const openDrill = (record: any, index: number, key: string) => {
+/** 点击度量单元格: 打开底部抽屉展示该单元格对应的明细数据(本表配了钻取目标时改挂下级透视报表) */
+const openDrill = async (record: any, index: number, key: string) => {
   // 原始行必须取 record 携带的引用: sortedRows 本地排序后渲染行序 ≠ rows 后端返回序,
   // 按渲染 index 反查 rows 会取错行(点 level 1 的单元格, 钻取条件却拼成 level 3)
   const rawRow = record?.[RAW_ROW_REF_KEY]
@@ -1653,7 +1724,7 @@ const openDrill = (record: any, index: number, key: string) => {
       const pathLabel = pathKeys.map((k) => String(record?.[k] || '')).filter(Boolean).join(' / ')
       drillTitle.value = `${[pathLabel, measureSingleLine(measure.field, measure.label)].filter(Boolean).join(' · ')} - 组内明细`
       drillCondition.value = { conditionList: buildSubtotalDrillCondition(rawRow, runPvs, measure), andOr: '0' }
-      drillOpen.value = true
+      await finishDrill()
       return
     }
     const itemValue = record?.[PIVOT_VALUE_COL]
@@ -1676,7 +1747,7 @@ const openDrill = (record: any, index: number, key: string) => {
       // 无行维度时组标签为空, 过滤后只剩度量名, 标题不出现悬空的 " · " 前缀
       drillTitle.value = `${[buildGroupLabel(rawRow), measureSingleLine(measure.field, measure.label)].filter(Boolean).join(' · ')} - 全部分类明细`
       drillCondition.value = { conditionList: buildDrillCondition(rawRow, undefined, measure), andOr: '0' }
-      drillOpen.value = true
+      await finishDrill()
       return
     }
     const pv = effectivePivotColumns.value.find(p => p.itemValue === key)
@@ -1698,11 +1769,11 @@ const openDrill = (record: any, index: number, key: string) => {
     drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '明细数据')
     drillCondition.value = { conditionList: buildDrillCondition(rawRow, pv, measure), andOr: '0' }
   }
-  drillOpen.value = true
+  await finishDrill()
 }
 
-/** 点击汇总行单元格: 只拼 ①+②(不带行维度), 即该透视列的全部明细 */
-const openSummaryDrill = (key: string) => {
+/** 点击汇总行单元格: 只拼 ①+②(不带行维度), 即该透视列的全部明细(本表配了钻取目标时改挂下级透视报表) */
+const openSummaryDrill = async (key: string) => {
   if (isPivotInRow.value) {
     // pivotRow 模式: 汇总=该度量跨全部透视值的总计, 不对应单一透视列 ⇒ 不带②, 拼 ①+③(+零值)
     const measure = measures.value.find(m => measureKey(m) === key)
@@ -1750,7 +1821,7 @@ const openSummaryDrill = (key: string) => {
     }
     drillCondition.value = { conditionList: summaryConditionList, andOr: '0' }
   }
-  drillOpen.value = true
+  await finishDrill()
 }
 
 // 动态插槽名(bodyCell_${key})无法被 vue-tsc 推断, 回退为全部插槽类型联合, 取参用 any 封装
@@ -1996,18 +2067,24 @@ onMounted(() => {
       :root-class-name="drillDrawerRootClass"
     >
       <!-- 抽屉内容抽到独立组件: 深色外壳用 Dark 变体(scoped 挂 dark.css),
-           浅色外壳用纯浅色变体, 不残留任何深色覆盖 -->
+           浅色外壳用纯浅色变体, 不残留任何深色覆盖;
+           度量配了钻取目标时内容改挂下级透视报表(条件已含本格钻取条件+目标常驻条件) -->
       <pivot-drill-content-dark
         v-if="props.theme !== 'light'"
         :table-id="props.portalTableConfig.portalName || ''"
         :condition="drillCondition"
         :cache-key="drillTitle"
+        :target-table="drillTarget"
+        :drill-chain="nextDrillChain"
       />
       <pivot-drill-content
         v-else
         :table-id="props.portalTableConfig.portalName || ''"
         :condition="drillCondition"
         :cache-key="drillTitle"
+        :target-table="drillTarget"
+        :drill-chain="nextDrillChain"
+        theme="light"
       />
     </a-drawer>
   </div>

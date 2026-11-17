@@ -27,6 +27,12 @@ export interface PortalTableVO {
   status?: string
   /** 表格 code */
   tableCode?: string
+  /** 报表标题(显示用, 空则回落 tableCode) */
+  title?: string
+  /** 报表备注 */
+  remark?: string
+  /** 整表钻取目标表格编码: 点本表任意单元格打开该透视报表并叠加本格条件; 未配/目标失效/成环=本表明细行 */
+  drillTableCode?: string
   /** 要排除显示的列 */
   filterColumns?: string
   /** 是否可以下载 */
@@ -60,6 +66,7 @@ export interface PortalTableVO {
 export const REPORT_TABLE_SYNC_FIELDS = [
   'defaultSort',
   'downloadAble',
+  'drillTableCode',
   'filterColumns',
   'fixedCondition',
   'groupByFields',
@@ -67,7 +74,9 @@ export const REPORT_TABLE_SYNC_FIELDS = [
   'pivotMeasures',
   'pivotMode',
   'pivotSummaryShow',
-  'pivotTotalPos'
+  'pivotTotalPos',
+  'remark',
+  'title'
 ]
 
 export interface PortalPivotColumnVO {

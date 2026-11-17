@@ -5,8 +5,8 @@
       '表格配置' +
         (portalConfig?.displayName ? ' - ' + portalConfig.displayName : '')
     "
-    width="1500px"
-    :body-style="{ height: '75vh', overflow: 'hidden' }"
+    width="100%"
+    wrap-class-name="portal-table-config-full"
     :footer="null"
     @cancel="handleCancel"
   >
@@ -57,19 +57,41 @@
           style="display: none"
           @change="handleAllFileChange"
         />
+        <div class="table-search-row">
+          <a-input
+            v-model:value="tableSearch"
+            placeholder="搜索标题/编码/备注"
+            size="small"
+            allow-clear
+          >
+            <template #prefix>
+              <SearchOutlined />
+            </template>
+          </a-input>
+        </div>
         <div class="panel-content">
           <div
-            v-for="table in tableList"
+            v-for="table in filteredTableList"
             :key="table.id"
             :class="['table-item', { active: selectedTable?.id === table.id }]"
             @click="handleSelectTable(table)"
           >
             <div class="table-item-content">
-              <div class="table-name">
-                {{ table.tableCode || "未命名" }}
+              <div
+                class="table-name"
+                :title="table.title || table.tableCode"
+              >
+                {{ table.title || table.tableCode || "未命名" }}
               </div>
               <div class="table-info">
-                ID: {{ table.id }} | 筛选项: {{ getFilterCount(table.id) }}
+                {{ table.title && table.tableCode ? table.tableCode + " | " : "" }}ID: {{ table.id }}
+              </div>
+              <div
+                v-if="table.remark"
+                class="table-remark"
+                :title="table.remark"
+              >
+                {{ table.remark }}
               </div>
             </div>
             <div class="table-item-actions">
@@ -86,6 +108,10 @@
           <a-empty
             v-if="tableList.length === 0"
             description="暂无配置"
+          />
+          <a-empty
+            v-else-if="filteredTableList.length === 0"
+            description="无匹配配置"
           />
         </div>
       </div>
@@ -124,7 +150,6 @@
                 :columns="columns"
                 :portal-config="portalConfig"
                 :available-fields="availableFields"
-                @count-change="(count) => filterCountMap.set(selectedTable!.id!, count)"
               />
             </a-tab-pane>
 
@@ -201,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
@@ -249,7 +274,14 @@ const visible = ref(false)
 const saving = ref(false)
 const tableList = ref<PortalTableVO[]>([])
 const selectedTable = ref<PortalTableVO | null>(null)
-const filterCountMap = ref<Map<number, number>>(new Map())
+// 列表本地搜索: 标题/编码/备注任一命中即显示(报表多了以后靠它定位)
+const tableSearch = ref('')
+const filteredTableList = computed(() => {
+  const kw = tableSearch.value.trim().toLowerCase()
+  if (!kw) return tableList.value
+  return tableList.value.filter((t) =>
+    [t.title, t.tableCode, t.remark].some((v) => (v || '').toLowerCase().includes(kw)))
+})
 // 导出/导入状态
 const reportExporting = ref(false)
 const reportImporting = ref(false)
@@ -357,23 +389,10 @@ const loadTableList = async () => {
     const res = await getPortalTableList(props.portalName)
     if (res.payload?.records) {
       tableList.value = res.payload.records
-      // 加载每个 table 的筛选项数量
-      for (const table of tableList.value) {
-        if (table.id) {
-          const filterRes = await getPortalTableFilterList(table.id)
-          filterCountMap.value.set(table.id, filterRes.payload?.total || 0)
-        }
-      }
     }
   } catch (error) {
     console.error('加载表格配置失败:', error)
   }
-}
-
-// 获取筛选项数量
-const getFilterCount = (tableId: number | undefined) => {
-  if (!tableId) return 0
-  return filterCountMap.value.get(tableId) || 0
 }
 
 // 选择表格配置(各面板通过 table/tableId prop 变化自行初始化)
@@ -848,7 +867,7 @@ const handleCancel = () => {
 }
 
 .table-list-panel {
-  width: 240px;
+  width: 300px;
   border: 1px solid #e8e8e8;
   border-radius: 8px;
   display: flex;
@@ -887,6 +906,10 @@ const handleCancel = () => {
   padding: 8px;
 }
 
+.table-search-row {
+  padding: 0 8px 4px;
+}
+
 .table-item {
   padding: 10px 12px;
   border-radius: 6px;
@@ -923,6 +946,15 @@ const handleCancel = () => {
   font-size: 12px;
   color: var(--text-tertiary);
   margin-top: 4px;
+}
+
+.table-remark {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .table-item-actions {
@@ -1000,6 +1032,31 @@ const handleCancel = () => {
       margin: 0 auto;
       transform: none;
     }
+  }
+}
+</style>
+
+<style lang="less">
+// 全屏外壳: wrap 挂 body 在 scoped 子树外, 须全局块; body 弹性撑满供内部 height:100% 落地
+.portal-table-config-full {
+  .ant-modal {
+    max-width: 100%;
+    top: 0;
+    margin: 0;
+    padding-bottom: 0;
+  }
+
+  .ant-modal-content {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+  }
+
+  .ant-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 }
 </style>

@@ -48,10 +48,27 @@
         >
           <!-- 4 列网格排布: 两行、标签与控件逐列对齐, 不随窗口宽度换行错乱 -->
           <div class="basic-form-grid">
+            <a-form-item label="标题">
+              <a-input
+                v-model:value="tableForm.title"
+                placeholder="报表标题, 空则显示编码"
+                :maxlength="100"
+              />
+            </a-form-item>
             <a-form-item label="表格编码">
               <a-input
                 v-model:value="tableForm.tableCode"
                 placeholder="请输入表格编码"
+              />
+            </a-form-item>
+            <a-form-item
+              label="备注"
+              class="basic-form-span2"
+            >
+              <a-input
+                v-model:value="tableForm.remark"
+                placeholder="这张报表是干什么的(列表搜索/钻取候选里可见)"
+                :maxlength="500"
               />
             </a-form-item>
             <a-form-item label="筛选栏宽度">
@@ -180,6 +197,45 @@
                   隐藏
                 </a-select-option>
               </a-select>
+            </a-form-item>
+            <!-- 整表钻取目标(仅透视模式): 点任意单元格打开下级透视报表, 未配=本表明细行; 目标长名走悬停回显 -->
+            <a-form-item
+              v-if="tableForm.pivotMode === '1'"
+              label="钻取目标"
+              class="basic-form-span2"
+            >
+              <div class="fixed-condition-row">
+                <a-tooltip>
+                  <template #title>
+                    <span v-if="tableForm.drillTableCode">钻取目标: {{ drillTargetLabel(tableForm.drillTableCode) }}（点开修改）</span>
+                    <span v-else>配置整表钻取目标（未配=点单元格打开本表明细行）</span>
+                  </template>
+                  <a-button
+                    :type="tableForm.drillTableCode ? 'primary' : 'dashed'"
+                    :ghost="!!tableForm.drillTableCode"
+                    @click="openDrillEditor"
+                  >
+                    <template #icon>
+                      <zoom-in-outlined />
+                    </template>
+                    {{ tableForm.drillTableCode ? '已配置' : '配置' }}
+                  </a-button>
+                </a-tooltip>
+                <span
+                  v-if="tableForm.drillTableCode"
+                  class="drill-target-echo"
+                  :title="drillTargetLabel(tableForm.drillTableCode)"
+                >{{ drillTargetLabel(tableForm.drillTableCode) }}</span>
+                <a-button
+                  v-if="tableForm.drillTableCode"
+                  type="link"
+                  size="small"
+                  danger
+                  @click="tableForm.drillTableCode = ''"
+                >
+                  清空
+                </a-button>
+              </div>
             </a-form-item>
             <a-form-item label="状态">
               <a-select
@@ -796,6 +852,80 @@
         </a-button>
       </template>
     </a-modal>
+
+    <!-- 钻取目标选择(表级): 候选=同底表其它透视报表(tableList 已按 portalName 圈定, 天然同数据集), 单选确定才写回本表 -->
+    <a-modal
+      v-model:open="drillModal.open"
+      :title="`钻取目标 · ${tableForm.title || tableForm.tableCode || '未命名报表'}`"
+      :width="640"
+    >
+      <a-input
+        v-model:value="drillModal.search"
+        placeholder="搜索标题/编码/备注"
+        size="small"
+        allow-clear
+        class="drill-target-search"
+      >
+        <template #prefix>
+          <search-outlined />
+        </template>
+      </a-input>
+      <a-radio-group
+        v-model:value="drillModal.draft"
+        class="drill-target-group"
+      >
+        <a-radio
+          value=""
+          class="drill-candidate-radio"
+        >
+          不钻取（默认：点单元格打开本表明细行）
+        </a-radio>
+        <a-radio
+          v-for="t in filteredDrillCandidates"
+          :key="t.tableCode"
+          :value="t.tableCode!"
+          class="drill-candidate-radio"
+        >
+          <span class="drill-candidate-body">
+            <span
+              class="drill-candidate-title"
+              :title="t.title || t.tableCode"
+            >{{ t.title || t.tableCode }}</span>
+            <span
+              class="drill-candidate-info"
+              :title="(t.title ? t.tableCode + ' · ' : '') + drillCandidateDesc(t)"
+            >{{ t.title ? t.tableCode + ' · ' : '' }}{{ drillCandidateDesc(t) }}</span>
+            <span
+              v-if="t.remark"
+              class="drill-candidate-remark"
+              :title="t.remark"
+            >{{ t.remark }}</span>
+          </span>
+        </a-radio>
+      </a-radio-group>
+      <a-empty
+        v-if="drillCandidates.length === 0"
+        description="同底表暂无其它透视报表，请先新建表格配置并开启透视模式"
+      />
+      <a-empty
+        v-else-if="filteredDrillCandidates.length === 0"
+        description="无匹配报表"
+      />
+      <div class="drill-target-tip">
+        点本表任意单元格时打开所选报表，并叠加本格条件（行维度值/透视列条件/度量条件）；所选报表可继续配钻取目标形成链，链尾不配则落到明细行。
+      </div>
+      <template #footer>
+        <a-button @click="drillModal.open = false">
+          取消
+        </a-button>
+        <a-button
+          type="primary"
+          @click="confirmDrillEditor"
+        >
+          确定
+        </a-button>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -809,7 +939,9 @@ import {
   HolderOutlined,
   MessageFilled,
   PlusOutlined,
+  SearchOutlined,
   UploadOutlined,
+  ZoomInOutlined,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, reactive, ref, watch } from 'vue'
@@ -1161,6 +1293,68 @@ const confirmDescEditor = () => {
 const clearDescEditor = () => {
   descModal.draft = ''
   confirmDescEditor()
+}
+
+// ==================== 整表钻取目标 ====================
+// 候选=同底表其它透视模式的表格配置(tableList 与多Tab成员候选同源, 已按 portalName 圈定 ⇒ 天然同数据集闸);
+// 存表格编码而非 id: 报表配置导入导出跨环境可移植; 运行态目标失效/成环时自动回退明细钻取
+const drillCandidates = computed(() =>
+  (props.tableList || []).filter((t) => t.pivotMode === '1' && t.tableCode && t.tableCode !== props.table.tableCode)
+)
+
+// 候选行摘要(行维度/度量显示名): 同底表字段与当前 availableFields 同源, 直接翻中文名
+const drillCandidateDesc = (t: PortalTableVO): string => {
+  let dims: string[] = []
+  const raw = (t.groupByFields || '').trim()
+  if (raw.startsWith('[')) {
+    try {
+      dims = (JSON.parse(raw) as Array<{ field?: string }>).map((g) => g.field || '').filter(Boolean)
+    } catch (e) {
+      console.warn('解析候选表行维度失败:', e)
+    }
+  } else if (raw) {
+    dims = raw.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  let measureNames: string[] = []
+  try {
+    const parsed = JSON.parse(t.pivotMeasures || '[]')
+    measureNames = (Array.isArray(parsed) ? parsed : []).map((m: any) => m.label || m.field).filter(Boolean)
+  } catch (e) {
+    console.warn('解析候选表度量失败:', e)
+  }
+  return `行维度: ${dims.map(fieldChineseName).join(' / ') || '无'} · 度量: ${measureNames.join(' / ') || '无'}`
+}
+
+const drillModal = reactive<{ open: boolean; draft: string; search: string }>({
+  open: false,
+  draft: '',
+  search: ''
+})
+
+// 候选本地搜索: 标题/编码/备注任一命中(报表多了以后靠它定位)
+const filteredDrillCandidates = computed(() => {
+  const kw = drillModal.search.trim().toLowerCase()
+  if (!kw) return drillCandidates.value
+  return drillCandidates.value.filter((t) =>
+    [t.title, t.tableCode, t.remark].some((v) => (v || '').toLowerCase().includes(kw)))
+})
+
+// 钻取按钮 tooltip 回显: 优先目标标题, 附编码便于核对
+const drillTargetLabel = (code: string): string => {
+  const target = (props.tableList || []).find((t) => t.tableCode === code)
+  if (target?.title) return `${target.title} (${code})`
+  return code
+}
+
+const openDrillEditor = () => {
+  drillModal.draft = tableForm.value.drillTableCode || ''
+  drillModal.search = ''
+  drillModal.open = true
+}
+
+const confirmDrillEditor = () => {
+  tableForm.value.drillTableCode = drillModal.draft
+  drillModal.open = false
 }
 
 // ==================== 度量父表头(多层级) ====================
@@ -1803,6 +1997,10 @@ const handleSaveTable = async () => {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px 24px;
 
+  .basic-form-span2 {
+    grid-column: span 2;
+  }
+
   :deep(.ant-form-item) {
     margin: 0;
   }
@@ -1828,6 +2026,16 @@ const handleSaveTable = async () => {
     align-items: center;
     gap: 4px;
     width: 100%;
+  }
+
+  .drill-target-echo {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .fixed-condition-btn {
@@ -2043,6 +2251,76 @@ const handleSaveTable = async () => {
 
 // 度量父表头弹窗里的提示(teleport 到 body, 但 scoped 属性随组件渲染仍在)
 .measure-path-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+// 钻取目标弹窗: 候选一行一条竖排, 摘要弱化小字, 底部说明同父表头弹窗提示风格
+.drill-target-search {
+  margin-bottom: 10px;
+}
+
+.drill-target-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+// 候选行: 左 radio + 右多行内容(标题/编码·形状/备注), 选中底色与配置列表选中同款
+.drill-candidate-radio {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-inline-end: 0;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  &.ant-radio-wrapper-checked {
+    background: var(--accent-soft);
+  }
+
+  :deep(.ant-radio) {
+    margin-top: 3px;
+  }
+
+  :deep(.ant-radio + span) {
+    flex: 1;
+    min-width: 0;
+    padding-inline-end: 0;
+  }
+}
+
+.drill-candidate-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.drill-candidate-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drill-candidate-info,
+.drill-candidate-remark {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drill-target-tip {
   margin-top: 12px;
   font-size: 12px;
   color: var(--text-tertiary);

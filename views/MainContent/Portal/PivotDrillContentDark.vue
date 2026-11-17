@@ -9,6 +9,9 @@
       :table-id="tableId"
       :condition="condition"
       :cache-key="cacheKey"
+      :target-table="targetTable"
+      :drill-chain="drillChain"
+      theme="dark"
     />
   </div>
 </template>
@@ -16,6 +19,7 @@
 <script lang="ts" setup>
 import PivotDrillContent from './PivotDrillContent.vue'
 
+import { PortalTableVO } from '@/framework/apis/portal/table'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 
 /**
@@ -23,14 +27,24 @@ import { ConditionListType } from '@/framework/components/common/AdvancedSearch/
  * dark.css 以 scoped 仅挂在本组件: 深色规则只作用于抽屉内容(teleport 到 body 后仍带本组件 scope),
  * 不泄漏到 pivot 主表格; 浅色外壳直接使用 PivotDrillContent, 不经过本组件
  */
-defineProps<{
-  /** 底层明细表 portalName */
-  tableId: string
-  /** 钻取查询条件 */
-  condition: ConditionListType
-  /** 标题变化时重建表格(对应原 :key="drillTitle") */
-  cacheKey: string
-}>()
+withDefaults(
+  defineProps<{
+    /** 底层明细表 portalName */
+    tableId: string
+    /** 钻取查询条件 */
+    condition: ConditionListType
+    /** 标题变化时重建表格(对应原 :key="drillTitle") */
+    cacheKey: string
+    /** 钻取目标表格配置: 透视模式时内层递归嵌入 pivot */
+    targetTable?: PortalTableVO | null
+    /** 钻取链(表格编码序列): 下传给内嵌透视防环 */
+    drillChain?: string[]
+  }>(),
+  {
+    targetTable: null,
+    drillChain: () => []
+  }
+)
 </script>
 
 <style lang="less" scoped src="@/framework/components/common/Portal/css/dark.css"></style>
