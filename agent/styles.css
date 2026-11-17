@@ -1135,6 +1135,19 @@
   color: var(--text-primary, #262626);
 }
 
+/* 模型正文＝左对齐消息卡片（浅底圆角限宽，不整列顶边）：与右侧用户气泡区分出「谁在说话」。
+   左缘对齐 860 内容列左缘（margin-left=(100%-860)/2，窄屏回落 0）；短消息收小、长消息撑到上限 */
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-msg {
+  width: fit-content;
+  max-width: min(88%, 860px);
+  margin-left: max(0px, calc((100% - 860px) / 2));
+  margin-right: auto;
+  padding: 10px 14px;
+  background: var(--bg-elevated, #fafafa);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 4px 12px 12px 12px;
+}
+
 /* 过程折叠卡在工作台的呼吸感 */
 .bidr-agent-pane.is-workbench .bidr-agent-proc__head {
   padding: 8px 14px;
