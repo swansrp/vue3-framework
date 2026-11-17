@@ -273,17 +273,20 @@
         </div>
       </template>
 
-      <!-- LLM 流式实时内容（替换式最新一帧；终态清空）——实时思考卡：脉冲点＋正文滚动盒 -->
-      <div
+      <!-- LLM 流式实时内容（替换式最新一帧；终态清空）——实时思考卡：脉冲点＋正文滚动盒；
+           可折叠（长思考占屏时可收起，点卡头展开/收起；每段实时内容重新出现默认展开） -->
+      <details
         v-if="liveText"
         class="bidr-agent-live"
+        open
       >
-        <div class="bidr-agent-live__head">
+        <summary class="bidr-agent-live__head">
+          <span class="bidr-agent-live__chev"></span>
           <span class="bidr-agent-live__dot"></span>
           <span>实时思考…</span>
-        </div>
+        </summary>
         <pre class="bidr-agent-live__text">{{ liveText }}</pre>
-      </div>
+      </details>
 
       <!-- 终态结论卡 -->
       <div
