@@ -189,6 +189,8 @@
   gap: 8px;
   padding: 12px;
   overflow-y: auto;
+  /* 滚到尽头不把滚动链给宿主页 */
+  overscroll-behavior: contain;
 }
 
 /* flex 子项禁止收缩：内容超高时应出滚动条，而不是被压扁裁掉 */
@@ -220,6 +222,20 @@
   line-height: 16px;
 }
 
+/* 说话人标签：我（用户）/ AI（模型）——一眼分清谁在说话 */
+.bidr-agent-msg__speaker {
+  margin-bottom: 2px;
+  color: var(--text-tertiary, #bfbfbf);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.bidr-agent-msg.is-user .bidr-agent-msg__speaker {
+  color: var(--accent, #1677ff);
+  text-align: right;
+}
+
 /* ==================== 工具卡（行式，常驻过程折叠组内） ==================== */
 
 .bidr-agent-tool {
@@ -241,8 +257,11 @@
   border-radius: 6px;
 }
 
-.bidr-agent-tool__head:hover {
-  background: rgba(0, 0, 0, 0.03);
+/* 悬停反馈只给有悬停能力的指针（触屏上 :hover 会点一下就黏住） */
+@media (hover: hover) {
+  .bidr-agent-tool__head:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
 }
 
 .bidr-agent-tool__head::-webkit-details-marker {
@@ -289,6 +308,7 @@
   margin: 0;
   max-height: 220px;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 6px 8px;
   font-family: Menlo, Consolas, monospace;
   font-size: 11px;
@@ -303,28 +323,35 @@
 
 /* ==================== 过程折叠卡（工具/日志收纳：正文留主面，过程按需展开） ==================== */
 
-/* 卡片形态（参考「执行过程（N 步 · 共 Xs）」）：白底细边框圆角 */
+/* 无框内联形态：组头就是一行文字（不占整行、不加框），靠字号/深浅区分主次 */
 .bidr-agent-proc {
-  border: 1px solid var(--border-subtle, #f0f0f0);
-  border-radius: 8px;
-  background: var(--bg-base, #fff);
-  overflow: hidden;
+  background: transparent;
 }
 
 .bidr-agent-proc__head {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
-  font-size: 12px;
+  width: fit-content;
+  padding: 2px 0;
+  font-size: 13px;
+  line-height: 20px;
   color: var(--text-secondary, #595959);
   cursor: pointer;
   list-style: none;
   user-select: none;
 }
 
-.bidr-agent-proc__head:hover {
-  background: rgba(0, 0, 0, 0.02);
+/* 组头文字统一行高（13px 主文与 12px 秒数同 20px 行盒）——基线对齐，不再一高一低 */
+.bidr-agent-proc__label,
+.bidr-agent-proc__state {
+  line-height: 20px;
+}
+
+@media (hover: hover) {
+  .bidr-agent-proc__head:hover {
+    color: var(--accent, #1677ff);
+  }
 }
 
 .bidr-agent-proc__head::-webkit-details-marker {
@@ -338,7 +365,7 @@
   font-size: 13px;
 }
 
-/* 折叠指示：CSS 三角，open 时转向 */
+/* 折叠指示：CSS 三角，open 时转向；旋转过渡只在未声明减少动态时启用（reduce 下瞬转） */
 .bidr-agent-proc__chev {
   flex-shrink: 0;
   width: 0;
@@ -347,7 +374,12 @@
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
   opacity: 0.6;
-  transition: transform 0.15s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-proc__chev {
+    transition: transform 0.15s;
+  }
 }
 
 .bidr-agent-proc[open] > .bidr-agent-proc__head .bidr-agent-proc__chev {
@@ -358,9 +390,9 @@
   color: var(--text-secondary, #595959);
 }
 
-/* 状态字：右侧弱化；执行中着 accent */
+/* 状态字（共 Xs）：紧随组头其后，字号更小、颜色更浅（用字号/深浅区分主次）；执行中着 accent */
 .bidr-agent-proc__state {
-  margin-left: auto;
+  margin-left: 8px;
   flex-shrink: 0;
   font-size: 12px;
   color: var(--text-tertiary, #bfbfbf);
@@ -370,15 +402,13 @@
   color: var(--accent, #1677ff);
 }
 
-/* 活动区：组头下方缩进行列（不再用连接线，留白即可） */
+/* 活动区：组头下方缩进行列（无框，留白即可） */
 .bidr-agent-proc__body {
   margin: 0;
-  padding: 2px 12px 10px 26px;
+  padding: 4px 0 6px 22px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-top: 1px solid var(--border-subtle, #f0f0f0);
-  padding-top: 6px;
 }
 
 /* 过程日志行（轮次锚等幸存者）：单行截断＋title 悬浮全文 */
@@ -392,76 +422,74 @@
   color: var(--text-tertiary, #8c8c8c);
 }
 
-/* ==================== 文件卡 ==================== */
+/* ==================== 素材行 ==================== */
 
+/* 附件＝一行摘要（图标＋文件名＋体积/类型＋状态）：无边框无底条，不占整行 */
 .bidr-agent-file {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--accent-mid, #91caff);
-  border-radius: 6px;
-  background: var(--bg-elevated, #fafafa);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
 }
 
+/* 前置状态图标：灰空心对勾＝已上传 / 绿实心对勾＝已读取（文案走 title 悬浮） */
 .bidr-agent-file__icon {
   flex-shrink: 0;
-  color: var(--accent, #1677ff);
-  font-size: 18px;
+  align-self: center;
+  display: inline-flex;
+  font-size: 14px;
 }
 
-.bidr-agent-file__main {
-  flex: 1;
-  min-width: 0;
+.bidr-agent-file__icon.is-uploaded {
+  color: var(--text-tertiary, #8c8c8c);
+}
+
+.bidr-agent-file__icon.is-read {
+  color: var(--success, #52c41a);
 }
 
 .bidr-agent-file__name {
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--text-primary, #333);
   font-size: 12px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bidr-agent-file__meta {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-secondary, #999);
   font-size: 11px;
   line-height: 16px;
-  word-break: break-all;
-}
-
-.bidr-agent-file__state {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--text-secondary, #999);
-}
-
-.bidr-agent-file__read {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  color: var(--success, #52c41a);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ==================== 产物下载卡（P2a） ==================== */
 
+/* 产物下载：一行可点击文件名（无框无底条，不占整行） */
 .bidr-agent-artifact {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  max-width: 100%;
   margin-top: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--accent-mid, #91caff);
-  border-radius: 6px;
-  background: var(--bg-elevated, #fafafa);
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .bidr-agent-artifact__icon {
   flex-shrink: 0;
-  font-size: 20px;
+  font-size: 15px;
 }
 
 .bidr-agent-artifact__icon.is-word {
@@ -472,48 +500,54 @@
   color: #c0392b;
 }
 
-.bidr-agent-artifact__main {
-  flex: 1;
-  min-width: 0;
-}
-
-.bidr-agent-artifact__name {
+.bidr-agent-artifact__link {
   overflow: hidden;
+  color: var(--accent, #1677ff);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-primary, #333);
-  font-size: 12px;
-  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .bidr-agent-artifact__link:hover {
+    text-decoration: underline;
+  }
+}
+
+.bidr-agent-artifact__link.is-missing {
+  color: var(--text-secondary, #999);
+  font-weight: 400;
+  cursor: default;
 }
 
 .bidr-agent-artifact__meta {
+  flex-shrink: 0;
   color: var(--text-secondary, #999);
   font-size: 11px;
   line-height: 16px;
-  word-break: break-all;
+  white-space: nowrap;
 }
 
-.bidr-agent-artifact__download {
-  flex-shrink: 0;
-  text-decoration: none;
-}
-
-.bidr-agent-artifact__state {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--text-secondary, #999);
+/* 工作台：产物行按内容宽度左对齐内容列左缘（不做整行白条） */
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-artifact {
+  width: fit-content;
+  margin-left: max(0px, calc((100% - 860px) / 2));
+  margin-right: auto;
 }
 
 /* ==================== 状态条 / 日志 ==================== */
 
-/* 基底＝系统事件（paused/resumed）：弱化中性信息行，不与正文抢层级 */
+/* 基底＝系统事件（paused/resumed）：一行文字，不做整行灰底条（与过程组头同语系，靠颜色/字号区分） */
 .bidr-agent-strip {
-  padding: 6px 12px;
+  padding: 0;
   font-size: 12px;
   line-height: 20px;
   color: var(--text-secondary, #999);
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 8px;
+  background: transparent;
+  border-radius: 0;
   word-break: break-word;
 }
 
@@ -565,6 +599,25 @@
   text-align: right;
 }
 
+/* 用户发言气泡上方「我」标签（与左侧 AI 条目区分） */
+.bidr-agent-strip__speaker {
+  margin-bottom: 2px;
+  color: var(--accent, #1677ff);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: right;
+}
+
+/* 结论卡上方「AI」标签 */
+.bidr-agent-conclusion__speaker {
+  margin-bottom: 2px;
+  color: var(--text-tertiary, #bfbfbf);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
 /* 错误：红底浅染，正文色加深保证可读 */
 .bidr-agent-strip.is-error {
   padding: 8px 12px;
@@ -600,7 +653,7 @@
   display: none;
 }
 
-/* 折叠指示：CSS 三角（收起朝右，展开朝下） */
+/* 折叠指示：CSS 三角（收起朝右，展开朝下）；旋转过渡只在未声明减少动态时启用 */
 .bidr-agent-live__chev {
   flex-shrink: 0;
   width: 0;
@@ -609,20 +662,30 @@
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
   opacity: 0.6;
-  transition: transform 0.15s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-live__chev {
+    transition: transform 0.15s;
+  }
 }
 
 .bidr-agent-live[open] > .bidr-agent-live__head .bidr-agent-live__chev {
   transform: rotate(90deg);
 }
 
-/* 脉冲点：呼吸闪烁替代旋转图标 */
+/* 脉冲点：呼吸闪烁替代旋转图标；减少动态偏好下不闪烁（静态满亮点仍是「在跑」的可见线索） */
 .bidr-agent-live__dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent, #1677ff);
-  animation: bidr-agent-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-live__dot {
+    animation: bidr-agent-pulse 1.2s ease-in-out infinite;
+  }
 }
 
 @keyframes bidr-agent-pulse {
@@ -630,11 +693,12 @@
   50% { opacity: 0.3; }
 }
 
-/* 正文滚动盒：浅底内嵌，跟手滚动看思路 */
+/* 正文滚动盒：浅底内嵌，跟手滚动看思路；滚到头不外链 */
 .bidr-agent-live__text {
   margin: 0;
   max-height: 200px;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 8px 10px;
   font-family: inherit;
   font-size: 12px;
@@ -691,11 +755,12 @@
 
 /* ==================== AI 决策问题卡（自身可滚，长问题不裁按钮） ==================== */
 
-/* 交互焦点件：白底＋accent 左标＋顶部投影，与流内容拉开一层 */
+/* 交互焦点件：白底＋accent 左标＋顶部投影，与流内容拉开一层；自滚区域滚动不外链 */
 .bidr-agent-question {
   flex-shrink: 0;
   max-height: 50%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 12px 16px;
   background: var(--bg-base, #fff);
   border-top: 1px solid var(--border-subtle, #f0f0f0);
@@ -750,13 +815,22 @@
   border-radius: 8px;
   cursor: pointer;
   word-break: break-word;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.15s ease-out;
 }
 
-.bidr-agent-question__option:hover:not(:disabled) {
-  color: var(--accent, #1677ff);
-  background: var(--accent-tint, #e6f4ff);
-  border-color: var(--accent, #1677ff);
+@media (hover: hover) {
+  .bidr-agent-question__option:hover:not(:disabled) {
+    color: var(--accent, #1677ff);
+    background: var(--accent-tint, #e6f4ff);
+    border-color: var(--accent, #1677ff);
+  }
+}
+
+/* 按压反馈：作答是决策卡的核心动作，按下去要有「点中了」的确认 */
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-question__option:not(:disabled):active {
+    transform: scale(0.96);
+  }
 }
 
 .bidr-agent-question__option:disabled {
@@ -772,29 +846,81 @@
 
 /* ==================== 输入区 ==================== */
 
+/* 输入容器（图3）：整块圆角边框，输入框在上、底部一排小图标按钮 */
 .bidr-agent-composer {
   position: relative;
   flex-shrink: 0;
-  padding: 8px 12px;
-  background: var(--bg-elevated, #fafafa);
-  border-top: 1px solid var(--border-subtle, #f0f0f0);
-  transition: box-shadow 0.2s, background 0.2s;
+  margin: 8px 12px;
+  padding: 8px 8px 6px;
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--border-base, #d9d9d9);
+  border-radius: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bidr-agent-composer:focus-within {
+  border-color: var(--accent, #1677ff);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
 .bidr-agent-composer.is-dragover {
-  background: var(--bg-base, #fff);
+  border-color: var(--accent, #1677ff);
   box-shadow: inset 0 0 0 2px var(--accent, #1677ff);
 }
 
-.bidr-agent-composer__row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+/* 容器内输入框去边框（由容器提供描边），圆角内收 */
+.bidr-agent-composer__input {
+  padding: 2px 6px;
+  background: transparent;
+  box-shadow: none !important;
 }
 
-.bidr-agent-composer__input {
+.bidr-agent-composer__input .ant-input,
+.bidr-agent-composer__input textarea {
+  background: transparent;
+  border: none;
+  box-shadow: none !important;
+  resize: none;
+}
+
+/* 底部按钮排：左侧附件，右侧暂停/停止/小绿方块发送 */
+.bidr-agent-composer__bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.bidr-agent-composer__spacer {
   flex: 1;
-  min-width: 0;
+}
+
+/* 发送：绿色圆角方块＋上箭头（图3口径），去蓝色光晕；按压轻微缩放（与宿主页 composer 同款） */
+.bidr-agent-composer__send.ant-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+  box-shadow: none !important;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s ease-out;
+}
+
+.bidr-agent-composer__send.ant-btn:hover:not(:disabled) {
+  background: #128043 !important;
+  border-color: #128043 !important;
+}
+
+.bidr-agent-composer__send.ant-btn:disabled {
+  background: #d9d9d9 !important;
+  border-color: #d9d9d9 !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-composer__send.ant-btn:not(:disabled):active {
+    transform: scale(0.96);
+  }
 }
 
 .bidr-agent-composer__actions {
@@ -880,8 +1006,10 @@
   cursor: pointer;
 }
 
-.bidr-agent-chip__retry:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .bidr-agent-chip__retry:hover {
+    text-decoration: underline;
+  }
 }
 
 .bidr-agent-chip__main {
@@ -923,11 +1051,16 @@
   transition: width 0.2s;
 }
 
-/* 解析中：百分比取不到，用流动条纹表达「在跑」 */
+/* 解析中：百分比取不到，用流动条纹表达「在跑」；减少动态偏好下静止（40% 渐变条仍是可见线索） */
 .bidr-agent-chip__progress.is-indeterminate .bidr-agent-chip__progress-bar {
   width: 40%;
   background: linear-gradient(90deg, rgba(22, 119, 255, 0) 0%, var(--accent, #1677ff) 50%, rgba(22, 119, 255, 0) 100%);
-  animation: bidr-agent-chip-slide 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-chip__progress.is-indeterminate .bidr-agent-chip__progress-bar {
+    animation: bidr-agent-chip-slide 1.2s ease-in-out infinite;
+  }
 }
 
 @keyframes bidr-agent-chip-slide {
@@ -981,8 +1114,10 @@
   cursor: pointer;
 }
 
-.bidr-agent-chip__remove:hover:not(:disabled) {
-  color: var(--error, #ff4d4f);
+@media (hover: hover) {
+  .bidr-agent-chip__remove:hover:not(:disabled) {
+    color: var(--error, #ff4d4f);
+  }
 }
 
 .bidr-agent-chip__remove:disabled {
@@ -1123,6 +1258,16 @@
   margin-right: max(0px, calc((100% - 860px) / 2));
 }
 
+/* 系统状态行（已暂停/已恢复）与素材行：按内容宽度左对齐内容列左缘——不做整行灰底条 */
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-strip.is-paused,
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-strip.is-resumed,
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-file {
+  width: fit-content;
+  max-width: min(88%, 860px);
+  margin-left: max(0px, calc((100% - 860px) / 2));
+  margin-right: auto;
+}
+
 /* 正文与决策卡排版放大一档 */
 .bidr-agent-pane.is-workbench .bidr-agent-msg__text.is-md {
   font-size: 14px;
@@ -1148,14 +1293,23 @@
   border-radius: 4px 12px 12px 12px;
 }
 
+/* 用户消息：右对齐浅蓝气泡（右缘对齐内容列右缘），与左侧 AI 卡片明确区分 */
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-msg.is-user {
+  margin-left: auto;
+  margin-right: max(0px, calc((100% - 860px) / 2));
+  background: var(--accent-tint, #e6f4ff);
+  border-color: rgba(22, 119, 255, 0.3);
+  border-radius: 12px 4px 12px 12px;
+}
+
 /* 过程折叠卡在工作台的呼吸感 */
 .bidr-agent-pane.is-workbench .bidr-agent-proc__head {
-  padding: 8px 14px;
+  padding: 4px 0;
 }
 
 .bidr-agent-pane.is-workbench .bidr-agent-proc__body {
-  padding-left: 30px;
-  padding-right: 14px;
+  padding-left: 22px;
+  padding-right: 0;
 }
 
 /* 流内容放大：提问回声/用户气泡/错误行在工作台取正文同级字号 */

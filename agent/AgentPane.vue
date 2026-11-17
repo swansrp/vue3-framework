@@ -58,7 +58,7 @@
           v-if="showRestart && isTerminal"
           size="small"
           type="text"
-          @click="emit('restart')"
+          @click="onRestartClick"
         >
           重新发起
         </a-button>
@@ -101,7 +101,12 @@
         <div
           v-if="item.kind === 'text'"
           class="bidr-agent-msg"
+          :class="item.role === 'user' ? 'is-user' : 'is-assistant'"
         >
+          <!-- 说话人标签：我（用户指令/输入）｜AI（模型输出）——一眼分清谁在说话 -->
+          <div class="bidr-agent-msg__speaker">
+            {{ item.role === 'user' ? '我' : 'AI' }}
+          </div>
           <!-- LLM 正文 markdown 渲染（净化后 v-html；流式期仍走 live 区纯文本） -->
           <div
             class="bidr-agent-msg__text is-md"
@@ -124,7 +129,7 @@
             <span
               class="bidr-agent-proc__state"
               :class="item.running ? 'is-running' : 'is-done'"
-            >{{ item.running ? '执行中…' : (procDuration(item) !== null ? `共 ${procDuration(item)}s` : '已完成') }}</span>
+            >{{ item.running ? '执行中…' : (procDuration(item) !== null ? `${procDuration(item)}s` : '已完成') }}</span>
           </summary>
           <div class="bidr-agent-proc__body">
             <template
@@ -196,37 +201,33 @@
           </div>
         </details>
 
+        <!-- 素材行：一行摘要（图标＋文件名＋体积/类型＋状态），无框无整行底条 -->
         <div
           v-else-if="item.kind === 'file'"
           class="bidr-agent-file"
         >
-          <FileTextOutlined class="bidr-agent-file__icon" />
-          <div class="bidr-agent-file__main">
-            <div
-              class="bidr-agent-file__name"
-              :title="item.file.name"
-            >
-              {{ item.file.name || item.file.fileId }}
-            </div>
-            <div class="bidr-agent-file__meta">
-              {{ formatFileSize(item.file.size) }}<template v-if="item.file.mime">
-                · {{ item.file.mime }}
-              </template>
-            </div>
-          </div>
           <span
             v-if="isFileRead(item.file)"
-            class="bidr-agent-file__read"
-          >
-            <CheckCircleFilled /> 已读取
-          </span>
+            class="bidr-agent-file__icon is-read"
+            :title="fileReadTitle(item.file)"
+          ><CheckCircleFilled /></span>
           <span
             v-else
-            class="bidr-agent-file__state"
-          >已上传</span>
+            class="bidr-agent-file__icon is-uploaded"
+            title="已上传"
+          ><CheckCircleOutlined /></span>
+          <span
+            class="bidr-agent-file__name"
+            :title="item.file.name"
+          >
+            {{ item.file.name || item.file.fileId }}
+          </span>
+          <span class="bidr-agent-file__meta">
+            {{ formatFileSize(item.file.size) }}
+          </span>
         </div>
 
-        <!-- 产物下载卡（P2a）：AI 生成的 docx/pdf 产物，点击即下载 -->
+        <!-- 产物下载（P2a）：一行可点击文件名，点了直接下载——无白底整行条 -->
         <div
           v-else-if="item.kind === 'artifact'"
           class="bidr-agent-artifact"
@@ -239,40 +240,25 @@
             v-else
             class="bidr-agent-artifact__icon is-pdf"
           />
-          <div class="bidr-agent-artifact__main">
-            <div
-              class="bidr-agent-artifact__name"
-              :title="item.artifact.name"
-            >
-              {{ item.artifact.name || item.artifact.fileId }}
-            </div>
-            <div class="bidr-agent-artifact__meta">
-              {{ formatFileSize(item.artifact.size) }}
-              <template v-if="artifactFormatLabel(item.artifact)">
-                · {{ artifactFormatLabel(item.artifact) }}
-              </template>
-            </div>
-          </div>
           <a
             v-if="item.artifact.url"
-            class="bidr-agent-artifact__download"
+            class="bidr-agent-artifact__link"
             :href="item.artifact.url"
             :download="item.artifact.name || undefined"
             target="_blank"
             rel="noopener"
-          >
-            <a-button
-              size="small"
-              type="primary"
-              ghost
-            >
-              <DownloadOutlined /> 下载
-            </a-button>
-          </a>
+            :title="`点击下载 ${item.artifact.name || ''}`"
+          >{{ item.artifact.name || item.artifact.fileId }}</a>
           <span
             v-else
-            class="bidr-agent-artifact__state"
-          >链接缺失，可让 AI 重新生成</span>
+            class="bidr-agent-artifact__link is-missing"
+          >{{ item.artifact.name || item.artifact.fileId }}（链接缺失，可让 AI 重新生成）</span>
+          <span class="bidr-agent-artifact__meta">
+            {{ formatFileSize(item.artifact.size) }}
+            <template v-if="artifactFormatLabel(item.artifact)">
+              · {{ artifactFormatLabel(item.artifact) }}
+            </template>
+          </span>
         </div>
 
         <div
@@ -280,6 +266,13 @@
           class="bidr-agent-strip"
           :class="[`is-${item.tone}`, `is-${item.type}`]"
         >
+          <!-- 用户发言（补充/作答）：气泡上方标「我」，与左侧 AI 条目明确区分 -->
+          <div
+            v-if="item.type === 'guidance' || item.type === 'answered'"
+            class="bidr-agent-strip__speaker"
+          >
+            我
+          </div>
           {{ item.text }}
           <span
             v-if="item.type === 'guidance' || item.type === 'answered'"
@@ -299,9 +292,13 @@
         <summary class="bidr-agent-live__head">
           <span class="bidr-agent-live__chev"></span>
           <span class="bidr-agent-live__dot"></span>
-          <span>深度思考…</span>
+          <!-- 只保留一个在变的字数：深度思考（N 字），不显示「已思 N 字」字样 -->
+          <span>{{ livePhase }}<template v-if="liveChars">（{{ liveChars }} 字）</template></span>
         </summary>
-        <pre class="bidr-agent-live__text">{{ liveText }}</pre>
+        <pre
+          v-if="liveBody"
+          class="bidr-agent-live__text"
+        >{{ liveBody }}</pre>
       </details>
 
       <!-- 终态结论卡 -->
@@ -310,6 +307,10 @@
         class="bidr-agent-conclusion"
         :class="`is-${conclusion.kind}`"
       >
+        <!-- 结论＝模型输出：标「AI」，与用户气泡区分 -->
+        <div class="bidr-agent-conclusion__speaker">
+          AI
+        </div>
         <div class="bidr-agent-conclusion__title">
           <CheckCircleFilled v-if="conclusion.kind === 'finish'" />
           <CloseCircleFilled v-else-if="conclusion.kind === 'error'" />
@@ -326,16 +327,16 @@
 
     <!-- AI 决策问题（ask_user waiting）：点选项即作答，自由输入走底部 Composer -->
     <div
-      v-if="waitingQuestion"
+      v-if="activeQuestion"
       class="bidr-agent-question"
     >
       <div class="bidr-agent-question__head">
         <span class="bidr-agent-question__title">AI 需要你的决策</span>
-        <span class="bidr-agent-question__id">#{{ waitingQuestion.id }}</span>
+        <span class="bidr-agent-question__id">#{{ activeQuestion.id }}</span>
       </div>
       <div
         class="bidr-agent-question__text is-md"
-        v-html="markdownOf(waitingQuestion.question)"
+        v-html="markdownOf(activeQuestion.question)"
       ></div>
       <div
         v-if="questionOptions.length > 0"
@@ -368,7 +369,7 @@
       v-if="!readOnly"
       :capabilities="capabilityList"
       :status="sessionStatus"
-      :waiting-question="!!waitingQuestion"
+      :waiting-question="!!activeQuestion"
       :disabled="isTerminal || !sessionId"
       :items="attachments"
       :sending="sending"
@@ -395,7 +396,7 @@
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CloseCircleFilled, DownloadOutlined, EyeOutlined, FilePdfOutlined, FileTextOutlined,
+  CheckCircleFilled, CheckCircleOutlined, CloseCircleFilled, EyeOutlined, FilePdfOutlined,
   FileWordOutlined, LoadingOutlined, RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
@@ -466,11 +467,19 @@ const sanitizeHtml = (html: string): string => {
 /** 渲染缓存（items 全量重算每轮轮询都会重渲染；同文本只 parse 一次） */
 const markdownCache = new Map<string, string>()
 
+/**
+ * 超长 URL 折叠：模型会把工具返回的预签名下载地址复述进正文，长串会把正文撑爆、还很丑。
+ * 去掉包裹用的 markdown 链接括号后，长 URL 统一折成「下载链接见下载卡片」（下载按钮由产物卡提供）。
+ */
+const clampLongUrls = (text: string): string =>
+  text.replace(/\]\((https?:\/\/[^\s)<>）】]{80,})\)/g, ']()')
+    .replace(/https?:\/\/[^\s)<>）】]{80,}/g, '〔下载链接见下方下载卡片〕')
+
 const markdownOf = (text: string): string => {
   if (!text) return ''
   const cached = markdownCache.get(text)
   if (cached !== undefined) return cached
-  const html = sanitizeHtml(marked.parse(text) as string)
+  const html = sanitizeHtml(marked.parse(clampLongUrls(text)) as string)
   if (markdownCache.size > 200) markdownCache.clear()
   markdownCache.set(text, html)
   return html
@@ -652,6 +661,26 @@ const {
 
 // ==================== 过程折叠组（连续工具/日志收纳成可折叠块，正文留主面） ====================
 
+/**
+ * 「重新发起」的统一语义（框架层能力，业务页零感知）：
+ * ① 会话处于**可续跑终态**（STOPPED/FAILED）→ 先试续跑：core/llm 的 resume 对终态支持
+ *    同一 sessionId 追加新 run，并在首轮注入「续跑说明」（已完成不重复、中间产物可复用）；
+ *    成功即留在本会话继续跑，不再回到业务表单。
+ * ② 已完成（FINISHED，继续＝修订应开新会话）/ 老会话无参数快照 / 网络失败 → emit('restart')，
+ *    由业务回落自己的新建流程。
+ */
+const onRestartClick = async () => {
+  if (sessionStatus.value === 'STOPPED' || sessionStatus.value === 'FAILED') {
+    try {
+      await resume('继续完成剩余工作')
+      return
+    } catch {
+      // 后端拒绝（已完成/无快照）或网络异常：回落业务侧
+    }
+  }
+  emit('restart')
+}
+
 /** 折叠组渲染条目：children 保持事件原顺序（tool/log 混排） */
 interface AgentProcessGroup {
   kind: 'process'
@@ -697,19 +726,58 @@ const groupedItems = computed<AgentRenderItem[]>(() => {
   return out
 })
 
-/** 折叠组时长（首尾事件差取整秒；无有效差值返回 null 不展示） */
+/**
+ * 秒级心跳（让时长实时跳）：会话 RUNNING 期间每 1s 刷新 nowTick，暂停/终态即停。
+ * 深度思考时没有工具事件（组 running=false），若仍按「首尾事件差」秒数会冻住。
+ */
+const nowTick = ref(Date.now())
+let durationTimer: ReturnType<typeof setInterval> | null = null
+const hasLiveCounter = computed(() => sessionStatus.value === 'RUNNING')
+watch(hasLiveCounter, active => {
+  if (active && !durationTimer) {
+    durationTimer = setInterval(() => { nowTick.value = Date.now() }, 1000)
+  } else if (!active && durationTimer) {
+    clearInterval(durationTimer)
+    durationTimer = null
+  }
+}, { immediate: true })
+onBeforeUnmount(() => {
+  if (durationTimer) {
+    clearInterval(durationTimer)
+    durationTimer = null
+  }
+})
+
+/** 最后一个过程组 id（运行中只有它按当前时刻实时跳，历史组冻结为最终时长） */
+const lastProcGroupId = computed(() => {
+  const arr = groupedItems.value
+  for (let i = arr.length - 1; i >= 0; i -= 1) {
+    const it = arr[i]
+    if (it.kind === 'process') return it.id
+  }
+  return null
+})
+
+/** 折叠组时长：最后组且会话 RUNNING＝当前时刻−首事件（每秒跳）；其余＝首尾事件差 */
 const procDuration = (group: AgentProcessGroup): number | null => {
   const first = group.children[0]
+  if (!first) return null
   const last = group.children[group.children.length - 1]
-  if (!first || !last) return null
-  const sec = Math.round((last.time - first.time) / 1000)
+  const live = sessionStatus.value === 'RUNNING' && group.id === lastProcGroupId.value
+  const end = live ? nowTick.value : (last ? last.time : first.time)
+  const sec = Math.round((end - first.time) / 1000)
   return Number.isFinite(sec) && sec > 0 ? sec : null
 }
 
-/** 折叠组标题（参考 IDE agent 流「查看 N 个步骤」卡头）：步骤数＝组内子条目数 */
+/**
+ * 折叠组标题：报「组里有几个交互」（工具调用＋深度思考算一次交互，纯日志行不算）——
+ * 参考实现折叠头就是这个口径；轮次序号（第几轮）对用户没有信息量，已由 events 层丢弃。
+ */
 const procLabel = (group: AgentProcessGroup): string => {
-  const n = group.children.length
-  return `查看 ${n} 个步骤`
+  const n = group.children.filter(
+    child => child.kind === 'tool' || (child.kind === 'log' && isThinkingLog(child.text))
+  ).length
+  return n > 0 ? `${n} 个交互` : '执行过程'
 }
 
 /** 思考归档日志（后端「【LLM 思考归档】N 字\n正文」）识别与拆分，供折叠「深度思考」步骤渲染 */
@@ -724,10 +792,25 @@ const thinkingBody = (text: string): string => {
   return nl >= 0 ? text.slice(nl + 1) : ''
 }
 
-const statusClass = computed(() => (waitingQuestion.value ? 'waiting' : sessionStatus.value.toLowerCase()))
+/**
+ * 乐观作答：点选项/发送答案/跳过后立即标记该问题为「已提交」，问题卡与本条 Composer 的作答态
+ * 马上收起（不等轮询/模型返回，避免用户以为没发出去）。轮询追上（问题消失或换新问题）即清标记。
+ */
+const pendingAnswer = ref<number | null>(null)
+const activeQuestion = computed(() => {
+  const q = waitingQuestion.value
+  if (!q) return null
+  return pendingAnswer.value === q.id ? null : q
+})
+watch(waitingQuestion, q => {
+  if (!q || q.id !== pendingAnswer.value) pendingAnswer.value = null
+})
+
+const statusClass = computed(() => (activeQuestion.value ? 'waiting' : sessionStatus.value.toLowerCase()))
 
 const statusText = computed(() => {
-  if (waitingQuestion.value) return '待回答'
+  if (activeQuestion.value) return '待回答'
+  if (pendingAnswer.value !== null) return '已作答'
   switch (sessionStatus.value) {
     case 'RUNNING': return '执行中'
     case 'PAUSED': return '已暂停'
@@ -753,8 +836,22 @@ const readProbeText = computed(() => items.value
   .join('\n'))
 
 const isFileRead = (file: AgentFileRef): boolean => {
+  // 预解析通过（后端随 file_attached 带 parse_chars）：解析正文已在沙箱可直接读，
+  // 模型不会再调 read_attachment——只靠工具探针永远点不亮，这里认「已解析＝可读」
+  if (file.parseChars && file.parseChars > 0) return true
+  return readByToolCall(file)
+}
+
+/** 模型确实调过读取类工具且入参带该文件（历史/运行期直传附件的「已读取」来源） */
+const readByToolCall = (file: AgentFileRef): boolean => {
   if (!canReadFiles.value || !readProbeText.value) return false
   return readProbeText.value.includes(file.fileId) || (!!file.name && readProbeText.value.includes(file.name))
+}
+
+/** 实心对勾悬浮文案：区分「模型读过」与「预解析已就绪」两种来源 */
+const fileReadTitle = (file: AgentFileRef): string => {
+  if (readByToolCall(file)) return '已读取'
+  return file.parseChars ? `已解析 · ${file.parseChars} 字，模型可直接读取` : '已读取'
 }
 
 // ==================== 产物下载卡（P2a） ====================
@@ -825,30 +922,31 @@ const questionOptions = computed(() => (waitingQuestion.value?.options || []).ma
 
 const answering = ref(false)
 
-const onAnswerOption = async (option: string) => {
-  const q = waitingQuestion.value
-  if (!q || answering.value) return
+/** 提交作答的乐观收口（点选项/跳过/发送共用）：立即收起问题卡，失败回滚重新显示 */
+const submitAnswer = async (qid: number, text?: string, skipped?: boolean) => {
+  pendingAnswer.value = qid
   answering.value = true
   try {
-    await answer(q.id, option)
+    await answer(qid, text, skipped)
   } catch (e: any) {
-    message.error(e?.message || '作答失败')
+    pendingAnswer.value = null
+    message.error(e?.message || (skipped ? '操作失败' : '作答失败'))
+    throw e
   } finally {
     answering.value = false
   }
 }
 
+const onAnswerOption = async (option: string) => {
+  const q = waitingQuestion.value
+  if (!q || answering.value) return
+  await submitAnswer(q.id, option).catch(() => { /* 错误已提示 */ })
+}
+
 const onSkipQuestion = async () => {
   const q = waitingQuestion.value
   if (!q || answering.value) return
-  answering.value = true
-  try {
-    await answer(q.id, undefined, true)
-  } catch (e: any) {
-    message.error(e?.message || '操作失败')
-  } finally {
-    answering.value = false
-  }
+  await submitAnswer(q.id, undefined, true).catch(() => { /* 错误已提示 */ })
 }
 
 // ==================== 发送 / 停止 / 上传 ====================
@@ -870,7 +968,12 @@ const onSend = async (text: string) => {
   sending.value = true
   try {
     if (waitingQuestion.value) {
-      await answer(waitingQuestion.value.id, text)
+      // 作答：提交即乐观收起问题卡（失败由 submitAnswer 提示并回滚）
+      try {
+        await submitAnswer(waitingQuestion.value.id, text)
+      } catch {
+        return
+      }
     } else if (sessionStatus.value === 'PAUSED') {
       await resume(text || undefined)
     } else {
@@ -1064,6 +1167,24 @@ const fmtTime = (ms?: number): string => {
     && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
   return sameDay ? hms : `${p(d.getMonth() + 1)}-${p(d.getDate())} ${hms}`
 }
+
+/**
+ * 实时思考卡拆分：liveText 形如「思考中·已思 N 字\n正文」/「应答中·已收 N 字\n正文」。
+ * 卡头只显示阶段＋「（N 字）」（唯一在变），正文去掉首行状态——不再出现「已思 N 字」字样。
+ */
+const livePhase = computed(() => {
+  const first = (liveText.value || '').split('\n')[0] || ''
+  return first.startsWith('应答中') ? '生成中' : '深度思考'
+})
+const liveChars = computed(() => {
+  const m = (liveText.value || '').match(/(\d+)\s*字/)
+  return m ? m[1] : ''
+})
+const liveBody = computed(() => {
+  const text = liveText.value || ''
+  const nl = text.indexOf('\n')
+  return nl >= 0 ? text.slice(nl + 1) : ''
+})
 
 // ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断） ====================
 

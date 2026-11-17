@@ -1,17 +1,23 @@
 /**
  * 框架 AI 会话状态机（自持数据源，不依赖旧对话组件的 hook）
  *
- * 通道：2s 轮询 status + events(sinceSeq) 增量（P0 面板够用；SSE 不是本棒范围）。
+ * 通道：SSE 优先（/session/<id>/stream：status 全量帧＋events 增量帧＋live 帧＋done 收口，
+ * 300ms 级实时；25s 保活），SSE 建连失败/断流时回落 2s 轮询（status + events(sinceSeq)），
+ * 断流 10s 起退避重连（带 sinceSeq，回放自动补齐断档；成功即停轮询）。
+ * 永久回落轮询的两类形态同旧 agentChat：真 HTTP 401/404 与 200＋错误信封（非 text/event-stream）。
  * 职责：
  * - sessionStart：发起自主会话（业务页面也可自持 sessionStart，本 hook 同样支持）；
  * - upload：多附件顺序上传（multipart 字段 file），进度回写 chips；成功后立即补拉一次，
  *   让 file_attached 文件卡尽快上屏（正常也在下一轮轮询到达）；
- * - poll：状态快照 + 事件增量；终态停轮询（不空转）；会话切换/卸载清理定时器；
+ * - poll：轮询兜底通道；终态收口（不空转）；会话切换/卸载清理定时器与在途流；
  * - answer/resume/stop：作答 ask_user、暂停后补指导语恢复、停止会话。
  *
  * 状态归属：sessionId 由调用方持有（ref 传入）；hooks 只消费与清理，不改写父级句柄。
  */
 import { computed, onScopeDispose, reactive, ref, watch, type Ref } from 'vue'
+
+import { name } from '@/../package.json'
+import { getSseStream, readSseStream } from '@/framework/utils/sse'
 
 import { buildAgentViewItems, payloadText } from './events'
 import {
@@ -37,6 +43,13 @@ import {
 } from '@/framework/apis/agent'
 
 const POLL_INTERVAL = 2000
+
+/** SSE 保活间隔（刷新 status 快照＋兼作后端 touchView 在场信号） */
+const KEEPALIVE_INTERVAL = 25000
+
+/** 断流重连基准间隔；连续失败逐级退避至上限，重连成功复位 */
+const RECONNECT_BASE = 10000
+const RECONNECT_MAX = 30000
 
 export interface UseAgentConversationOptions {
   /** 轮询间隔（毫秒），缺省 2000 */
@@ -82,6 +95,19 @@ export const useAgentConversation = (
   let ticking = false
   /** 代际守卫：会话切换/卸载后，在途响应不落新会话 */
   let gen = 0
+
+  // ==================== SSE 通道状态 ====================
+
+  /** SSE 通道是否活跃（建连成功起、终态收口/断流回落止；活跃期轮询已停） */
+  const sse = ref(false)
+  /** 流代际：每次建连/收口/reset 递增，在途流协程据此识别自身已被作废 */
+  let streamGen = 0
+  let streamController: AbortController | null = null
+  let keepaliveTimer: ReturnType<typeof setInterval> | null = null
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let reconnectDelay = RECONNECT_BASE
+  /** 401/404 或错误信封后永久停 SSE（本次会话生命周期内只走轮询；reset 复位） */
+  let sseDisabled = false
 
   /** 按代增减在途上传数；只有当前代的计数投影到 uploadingCount */
   const bumpUploading = (myGen: number, delta: number) => {
@@ -130,6 +156,19 @@ export const useAgentConversation = (
     return false
   }
 
+  /**
+   * 应用服务端状态快照（轮询/保活/SSE status 帧共用）：终态事件先到时，不让并发的旧快照
+   * 把结论回退成“执行中”；快照追平（或终态）后解除控制动作的乐观状态。
+   */
+  const applySnapshot = (snapshot: AgentSessionSnapshot | null, terminalFromEvents = false) => {
+    if (terminalFromEvents && !isTerminalStatus(snapshot?.status)) return
+    status.value = snapshot
+    if (controlStatus.value
+      && (isTerminalStatus(snapshot?.status) || snapshot?.status === controlStatus.value)) {
+      controlStatus.value = null
+    }
+  }
+
   const tick = async () => {
     const myGen = gen
     const id = sessionId.value
@@ -158,16 +197,7 @@ export const useAgentConversation = (
       }
       if (stResult.status === 'fulfilled') {
         const stResp: any = stResult.value
-        const snapshot = (stResp?.payload as AgentSessionSnapshot | undefined) || null
-        // 终态事件先到时，不让并发的旧 status 快照把结论回退成“执行中”
-        if (!(terminalFromEvents && !isTerminalStatus(snapshot?.status))) {
-          status.value = snapshot
-          // 轮询追平（或终态）后解除控制动作的乐观状态，之后以服务端快照为准
-          if (controlStatus.value
-            && (isTerminalStatus(snapshot?.status) || snapshot?.status === controlStatus.value)) {
-            controlStatus.value = null
-          }
-        }
+        applySnapshot((stResp?.payload as AgentSessionSnapshot | undefined) || null, terminalFromEvents)
         if (isTerminalStatus(status.value?.status)) stopPolling()
       } else {
         failed = true
@@ -196,9 +226,187 @@ export const useAgentConversation = (
     timer = setInterval(() => void tick(), pollInterval)
   }
 
+  // ==================== SSE 通道（优先） ====================
+
+  const stopKeepalive = () => {
+    if (keepaliveTimer) {
+      clearInterval(keepaliveTimer)
+      keepaliveTimer = null
+    }
+  }
+
+  const clearReconnect = () => {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+  }
+
+  const abortStream = () => {
+    if (streamController) {
+      streamController.abort()
+      streamController = null
+    }
+  }
+
+  /** 全停（终态收口/会话清空/卸载共用）：作废在途流协程、关流、清保活/重连定时器、停轮询 */
+  const shutdown = () => {
+    streamGen++
+    abortStream()
+    stopKeepalive()
+    clearReconnect()
+    stopPolling()
+    sse.value = false
+  }
+
+  /** SSE 保活：25s 一次 status 快照（兼作后端 touchView 在场信号）＋终态兜底收口；
+   *  活跃期 live 由流帧实时维护，保活整包覆写前保留之（防 live 回退成快照里的旧值） */
+  const startKeepalive = (id: string) => {
+    stopKeepalive()
+    keepaliveTimer = setInterval(async () => {
+      try {
+        const stResp: any = await apiSessionStatus(id)
+        if (sessionId.value !== id) return
+        let snapshot = (stResp?.payload as AgentSessionSnapshot | undefined) || null
+        if (snapshot && sse.value && status.value?.live != null && !isTerminalStatus(snapshot.status)) {
+          snapshot = { ...snapshot, live: status.value.live }
+        }
+        applySnapshot(snapshot)
+        if (isTerminalStatus(status.value?.status)) shutdown()
+      } catch {
+        // 保活失败静默（下轮重试；断流感知由读循环负责）
+      }
+    }, KEEPALIVE_INTERVAL)
+  }
+
+  /** 安排断流重连（带当前 sinceSeq，建连回放自动补齐断档）；已终态/已禁用/已安排则跳过 */
+  const scheduleReconnect = () => {
+    if (sseDisabled || reconnectTimer) return
+    if (!sessionId.value || isTerminalStatus(status.value?.status)) return
+    const delay = reconnectDelay
+    reconnectDelay = Math.min(reconnectDelay + RECONNECT_BASE, RECONNECT_MAX)
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null
+      void startStream()
+    }, delay)
+  }
+
+  /** 通道回落：先起轮询兜底；401/404 与错误信封永久停 SSE，其余安排退避重连 */
+  const fallbackToPolling = (httpStatus?: number) => {
+    if (httpStatus === 401 || httpStatus === 404) sseDisabled = true
+    abortStream()
+    stopKeepalive()
+    sse.value = false
+    startPolling()
+    if (sseDisabled) clearReconnect()
+    else scheduleReconnect()
+  }
+
+  /** SSE 建连＋逐帧分发：live→status.live 局部更新、events→按 seq 去重增量、
+   *  status→快照（终态兜底收口）、done→终态快照＋收口（不再重连） */
+  const startStream = async () => {
+    const id = sessionId.value
+    if (!id) return
+    if (sseDisabled) {
+      startPolling()
+      return
+    }
+    const myGen = ++streamGen
+    const myController = new AbortController()
+    streamController = myController
+    try {
+      const resp = await getSseStream(
+        `${import.meta.env.VITE_baseURL}/${name}/web/api/agent/session/${id}/stream?sinceSeq=${sinceSeq}`,
+        myController.signal
+      )
+      if (myGen !== streamGen) {
+        // 已被 reset/收口作废：取消响应体防连接悬漏（cancel 失败亦静默）
+        resp.body?.cancel().catch(() => { })
+        return
+      }
+      if (!resp.ok || !resp.body) {
+        fallbackToPolling(resp.status)
+        return
+      }
+      // 信封嗅探：SYSTEM/BIZ 型业务错误实返 200＋JSON 信封（非 text/event-stream）——
+      // 取 status.code 后永久回落轮询（过期会话重连只会无限循环）
+      const ct = resp.headers.get('content-type') || ''
+      if (!ct.includes('text/event-stream')) {
+        let code: number | undefined
+        try {
+          code = JSON.parse(await resp.text())?.status?.code
+        } catch {
+          // 非 JSON body（网关异常页等）：同样按错误信封永久回落
+        }
+        console.warn('[agent-sse] 建连收到非 SSE 响应，永久回落轮询（status.code=' + code + '）')
+        sseDisabled = true
+        fallbackToPolling()
+        return
+      }
+      // 建连成功：停轮询（若在兜底）、复位退避、起保活
+      stopPolling()
+      reconnectDelay = RECONNECT_BASE
+      startKeepalive(id)
+      sse.value = true
+      pollFailureCount.value = 0
+      let gotDone = false
+      await readSseStream(resp.body, (event, data) => {
+        if (myGen !== streamGen) return
+        if (event === 'live') {
+          let frame: { text?: string } | null = null
+          try {
+            frame = JSON.parse(data)
+          } catch {
+            return
+          }
+          if (status.value && frame) status.value = { ...status.value, live: frame.text }
+        } else if (event === 'events') {
+          let ev: AgentEventFrame | null = null
+          try {
+            ev = JSON.parse(data) as AgentEventFrame
+          } catch {
+            return
+          }
+          // 按 seq 去重（轮询/SSE 交替窗口防重），只收增量
+          if (ev && typeof ev.seq === 'number' && ev.seq > sinceSeq) {
+            events.value.push(ev)
+            sinceSeq = ev.seq
+            if (applyTerminalEventFallback(id, [ev])) shutdown()
+          }
+        } else if (event === 'status') {
+          let snapshot: AgentSessionSnapshot | null = null
+          try {
+            snapshot = JSON.parse(data)
+          } catch {
+            return
+          }
+          applySnapshot(snapshot)
+          // 终态兜底收口（防 done 帧丢失）
+          if (isTerminalStatus(status.value?.status)) shutdown()
+        } else if (event === 'done') {
+          gotDone = true
+          try {
+            applySnapshot(JSON.parse(data))
+          } catch {
+            // done 帧已到即收口，坏 body 不影响关流
+          }
+          shutdown()
+        }
+      })
+      if (myGen !== streamGen) return
+      // 流自然结束但未收到 done：视为断流，轮询兜底＋安排重连
+      if (!gotDone) fallbackToPolling()
+    } catch {
+      if (myGen !== streamGen) return // 主动 abort（终态收口/reset/卸载）不算异常
+      fallbackToPolling()
+    }
+  }
+
   const reset = () => {
     gen++
-    stopPolling()
+    shutdown()
+    sseDisabled = false
+    reconnectDelay = RECONNECT_BASE
     sinceSeq = 0
     events.value = []
     status.value = null
@@ -212,12 +420,13 @@ export const useAgentConversation = (
 
   watch(sessionId, v => {
     reset()
-    if (v) startPolling()
+    // SSE 优先：建连失败/断流由 startStream 内部回落轮询，不会无数据源
+    if (v) void startStream()
   }, { immediate: true })
 
   onScopeDispose(() => {
     gen++
-    stopPolling()
+    shutdown()
   })
 
   // ==================== 附件 ====================
@@ -381,6 +590,7 @@ export const useAgentConversation = (
     items,
     attachments,
     polling,
+    sse,
     pollFailureCount,
     pollError,
     uploadingCount,

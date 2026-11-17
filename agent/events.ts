@@ -46,16 +46,20 @@ const field = (payload: unknown, key: string): any => {
   return undefined
 }
 
-/** 文件引用归一：事件 payload 是 snake_case（file_id），容错读 camelCase 旧形态 */
+/** 文件引用归一：事件 payload 是 snake_case（file_id），容错读 camelCase 旧形态；
+ *  parse_chars（预解析正文长度）只认正数，缺省/脏值一律 null＝未经预解析 */
 export const fileRefFromEventPayload = (payload: unknown): AgentFileRef | null => {
   const fileId = field(payload, 'file_id') ?? field(payload, 'fileId')
   if (fileId === undefined || fileId === null || String(fileId) === '') return null
   const size = field(payload, 'size')
+  const parseChars = field(payload, 'parse_chars') ?? field(payload, 'parseChars')
+  const parsedChars = Number(parseChars)
   return {
     fileId: String(fileId),
     name: String(field(payload, 'name') ?? ''),
     size: typeof size === 'number' ? size : Number(size) || 0,
     mime: field(payload, 'mime') ?? null,
+    parseChars: Number.isFinite(parsedChars) && parsedChars > 0 ? parsedChars : null,
     key: null
   }
 }
@@ -152,12 +156,26 @@ const clipDigest = (text: string, max = 64): string => {
 
 /**
  * 后端 report 回显日志：与工具卡信息完全重复（名称/参数在 tool_call、返回在 tool_result），
- * 或属 tokens 级噪音——成帧即丢，不进消息流。轮次行（带圈数字 ①②…）与失败行保留作节奏锚。
+ * 或属 tokens 级噪音——成帧即丢，不进消息流。失败行保留（有信息量）。
  */
 const LOG_NOISE_PREFIXES = ['└ 工具调用：', '└ LLM 输出：', 'LLM 响应已收到']
 
 const isNoisyBackendLog = (text: string): boolean =>
   LOG_NOISE_PREFIXES.some(p => text.startsWith(p))
+
+/**
+ * 轮次标记帧（后端每轮只推一个带圈数字：①=1 … ⑳=20 / ㉑…㉟=21…35 / ㊱…㊿=36…50）
+ * 成帧即丢：顺着排「1、2、3…」对用户没有信息量，过程进度由折叠组头的交互数承载。
+ */
+const isRoundMarker = (text: string): boolean => {
+  const t = text.trim()
+  if ([...t].length !== 1) return false
+  const code = t.codePointAt(0)
+  if (code === undefined) return false
+  return (code >= 0x2460 && code <= 0x2473)
+    || (code >= 0x3251 && code <= 0x325F)
+    || (code >= 0x32B1 && code <= 0x32BF)
+}
 
 /**
  * LLM 转述噪声：模型会把工具调用/返回/用户作答复读成单行转述文本，信息与工具卡/作答条
@@ -248,6 +266,12 @@ const STATUS_TONES: Record<string, AgentStatusItem['tone']> = {
 const STATUS_TYPES = new Set<string>(['paused', 'resumed', 'guidance', 'answered', 'question', 'error'])
 
 /**
+ * 素材暂存态（startPaused 建后未起跑）的历史 PAUSED 帧：不是用户暂停，是上传附件前的内部形态——
+ * 新版后端已不再发这条事件，历史会话仍带此帧，成帧即丢（否则流里出现「已暂停：会话已创建…」）。
+ */
+const STAGING_PAUSE_NOTE = '会话已创建，等待素材上传完成后开始'
+
+/**
  * 事件帧数组 → 视图条目数组（全量重算；tool_result 通过回填同批对象完成配对）
  */
 export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] => {
@@ -260,7 +284,18 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
       case 'llm_output': {
         const text = payloadText(ev.payload).trim()
         if (text && !isNarrationNoise(text)) {
-          items.push({ kind: 'text', id: `t-${ev.seq}`, seq: ev.seq, time: ev.time, text })
+          items.push({ kind: 'text', id: `t-${ev.seq}`, seq: ev.seq, time: ev.time, text, role: 'assistant' })
+        }
+        break
+      }
+      case 'run_start': {
+        // 首轮用户指令（payload.payload.instruction）：渲染为用户气泡，会话开场即能分清「我说的」
+        // 与模型后续输出（assistant 卡片）。无指令（纯素材发起）则不出开场气泡。
+        const inner = field(ev.payload, 'payload')
+        const instruction = inner && typeof inner === 'object'
+          ? String((inner as Record<string, unknown>)['instruction'] ?? '').trim() : ''
+        if (instruction) {
+          items.push({ kind: 'text', id: `u-${ev.seq}`, seq: ev.seq, time: ev.time, text: instruction, role: 'user' })
         }
         break
       }
@@ -335,13 +370,17 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
       }
       case 'log': {
         const text = payloadText(ev.payload).trim()
-        if (text && !isNoisyBackendLog(text) && !isNarrationNoise(text)) {
+        if (text && !isNoisyBackendLog(text) && !isNarrationNoise(text) && !isRoundMarker(text)) {
           items.push({ kind: 'log', id: `log-${ev.seq}`, seq: ev.seq, time: ev.time, text })
         }
         break
       }
       default: {
         if (STATUS_TYPES.has(ev.type)) {
+          // 素材暂存态的历史帧丢弃（新版后端已不 emit，见 STAGING_PAUSE_NOTE 注释）
+          if (ev.type === 'paused' && payloadText(ev.payload).includes(STAGING_PAUSE_NOTE)) {
+            break
+          }
           const text = statusEventText(ev.type, ev.payload)
           if (text) {
             items.push({

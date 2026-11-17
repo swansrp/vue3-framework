@@ -13,72 +13,79 @@
       @retry="emit('retry', $event)"
     />
 
-    <div class="bidr-agent-composer__row">
-      <a-textarea
-        v-model:value="text"
-        class="bidr-agent-composer__input"
-        :placeholder="placeholder"
-        :auto-size="{ minRows: 3, maxRows: 8 }"
-        :disabled="disabled"
-        @press-enter="onPressEnter"
-        @paste="onPaste"
-      />
+    <a-textarea
+      v-model:value="text"
+      class="bidr-agent-composer__input"
+      :placeholder="placeholder"
+      :auto-size="{ minRows: 2, maxRows: 8 }"
+      :bordered="false"
+      :disabled="disabled"
+      @press-enter="onPressEnter"
+      @paste="onPaste"
+    />
 
-      <div class="bidr-agent-composer__actions">
-        <!-- 能力位驱动：files.upload 缺席时附件按钮与拖拽落区均不渲染（拖拽仅兜底阻止浏览器打开文件） -->
-        <a-button
-          v-if="canUpload"
-          class="bidr-agent-composer__attach"
-          size="small"
-          :disabled="attachDisabled"
-          :title="attachTitle"
-          @click="openFilePicker"
-        >
-          <template #icon>
-            <PaperClipOutlined />
-          </template>
-        </a-button>
-        <a-button
-          class="bidr-agent-composer__send"
-          size="small"
-          type="primary"
-          :disabled="!canSend"
-          :loading="sending"
-          title="发送"
-          @click="onSend"
-        >
-          <template #icon>
-            <SendOutlined />
-          </template>
-        </a-button>
-        <a-button
-          v-if="pausable"
-          class="bidr-agent-composer__pause"
-          size="small"
-          :loading="pausing"
-          :disabled="stopping"
-          title="暂停会话（暂停后可补充指导并恢复）"
-          @click="emit('pause')"
-        >
-          <template #icon>
-            <PauseOutlined />
-          </template>
-        </a-button>
-        <a-button
-          v-if="stoppable"
-          class="bidr-agent-composer__stop"
-          size="small"
-          danger
-          :loading="stopping"
-          :disabled="pausing"
-          title="停止会话"
-          @click="emit('stop')"
-        >
-          <template #icon>
-            <StopOutlined />
-          </template>
-        </a-button>
-      </div>
+    <!-- 底部按钮排（图3口径）：左侧附件，右侧暂停/停止/小绿方块发送 -->
+    <div class="bidr-agent-composer__bar">
+      <!-- 能力位驱动：files.upload 缺席时附件按钮与拖拽落区均不渲染（拖拽仅兜底阻止浏览器打开文件） -->
+      <a-button
+        v-if="canUpload"
+        class="bidr-agent-composer__attach"
+        size="small"
+        type="text"
+        shape="circle"
+        :disabled="attachDisabled"
+        :title="attachTitle"
+        @click="openFilePicker"
+      >
+        <template #icon>
+          <PaperClipOutlined />
+        </template>
+      </a-button>
+      <span class="bidr-agent-composer__spacer"></span>
+      <a-button
+        v-if="pausable"
+        class="bidr-agent-composer__pause"
+        size="small"
+        type="text"
+        shape="circle"
+        :loading="pausing"
+        :disabled="stopping"
+        title="暂停会话（暂停后可补充指导并恢复）"
+        @click="emit('pause')"
+      >
+        <template #icon>
+          <PauseOutlined />
+        </template>
+      </a-button>
+      <a-button
+        v-if="stoppable"
+        class="bidr-agent-composer__stop"
+        size="small"
+        type="text"
+        shape="circle"
+        danger
+        :loading="stopping"
+        :disabled="pausing"
+        title="停止会话"
+        @click="emit('stop')"
+      >
+        <template #icon>
+          <StopOutlined />
+        </template>
+      </a-button>
+      <a-button
+        class="bidr-agent-composer__send"
+        size="small"
+        type="primary"
+        :disabled="!canSend"
+        :loading="sending"
+        title="发送（Enter）"
+        @click="onSend"
+      >
+        <template #icon>
+          <ArrowUpOutlined />
+        </template>
+      </a-button>
     </div>
 
     <!-- 拖拽提示：仅能力位在场时显示（dragDepth 计数防子元素 dragleave 闪动） -->
@@ -101,7 +108,7 @@
 
 <script lang="ts" setup>
 import {
-  PaperClipOutlined, PauseOutlined, SendOutlined, StopOutlined
+  ArrowUpOutlined, PaperClipOutlined, PauseOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { computed, ref } from 'vue'
 

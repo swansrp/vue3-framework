@@ -17,6 +17,12 @@ export interface AgentFileRef {
   size: number
   /** 内容类型（未知时后端回落 octet-stream） */
   mime?: string | null
+  /**
+   * 预解析正文长度（Markdown 字符数）：仅「发起前素材」链路有——登记时后端已按 read_attachment
+   * 同一条腿解析过、沙箱里放了 parsed/<名>.md，模型读解析正文而不再调 read_attachment；
+   * 前端据此点亮「已解析」（键缺席＝运行期直传，未经预解析）
+   */
+  parseChars?: number | null
   /** 存储层对象键（实现私有；事件重建的引用恒为 null） */
   key?: string | null
 }
@@ -132,6 +138,8 @@ export interface AgentTextItem {
   seq: number
   time: number
   text: string
+  /** 说话人：user＝用户首轮指令/输入；assistant（缺省）＝模型输出。驱动左右/气泡样式区分 */
+  role?: 'user' | 'assistant'
 }
 
 export interface AgentToolItem {
