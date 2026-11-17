@@ -348,8 +348,9 @@
       </div>
     </div>
 
-    <!-- 底部输入区：附件（能力位驱动）+ 发送/暂停/停止 -->
+    <!-- 底部输入区：附件（能力位驱动）+ 发送/暂停/停止；只读回放态隐藏（宿主页另有修订输入条） -->
     <Composer
+      v-if="!readOnly"
       :capabilities="capabilityList"
       :status="sessionStatus"
       :waiting-question="!!waitingQuestion"
@@ -369,7 +370,7 @@
 
     <!-- 面板级文件拖拽落区提示（Composer 内另有自己的高亮，根级只覆盖其余区域） -->
     <div
-      v-if="paneDragActive"
+      v-if="paneDragActive && !readOnly"
       class="bidr-agent-pane__drop-hint"
     >
       松开鼠标上传附件
@@ -408,6 +409,8 @@ interface Props {
   health?: Record<string, string> | null
   /** 终态时是否显示「重新发起」 */
   showRestart?: boolean
+  /** 只读回放态：隐藏底部 Composer 与拖拽落区（历史会话回放由宿主页提供修订输入条，避免双输入框） */
+  readOnly?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -415,7 +418,8 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'sidebar',
   capabilities: () => [],
   health: null,
-  showRestart: true
+  showRestart: true,
+  readOnly: false
 })
 
 const emit = defineEmits<{
