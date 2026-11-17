@@ -107,6 +107,7 @@
             class="bidr-agent-msg__text is-md"
             v-html="markdownOf(item.text)"
           ></div>
+          <div class="bidr-agent-msg__time">{{ fmtTime(item.time) }}</div>
         </div>
 
         <!-- 过程折叠组：连续的工具调用/日志收进一个可折叠块（正文留主面，过程按需展开）；
@@ -270,6 +271,10 @@
           :class="[`is-${item.tone}`, `is-${item.type}`]"
         >
           {{ item.text }}
+          <span
+            v-if="item.type === 'guidance' || item.type === 'answered'"
+            class="bidr-agent-strip__time"
+          >{{ fmtTime(item.time) }}</span>
         </div>
       </template>
 
@@ -1027,6 +1032,19 @@ const liveCollapsed = ref(false)
 const onLiveToggle = (e: Event) => {
   const el = e.target as HTMLDetailsElement | null
   if (el) liveCollapsed.value = !el.open
+}
+
+/** 消息时间戳：当天 HH:mm:ss，跨天补 MM-DD（事件 time 为 epoch 毫秒；缺席回空串不渲染） */
+const fmtTime = (ms?: number): string => {
+  if (!ms) return ''
+  const d = new Date(ms)
+  if (Number.isNaN(d.getTime())) return ''
+  const p = (n: number) => String(n).padStart(2, '0')
+  const hms = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+  const now = new Date()
+  const sameDay = d.getFullYear() === now.getFullYear()
+    && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  return sameDay ? hms : `${p(d.getMonth() + 1)}-${p(d.getDate())} ${hms}`
 }
 
 // ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断） ====================

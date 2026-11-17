@@ -212,6 +212,14 @@
   word-break: break-word;
 }
 
+/* 消息时间戳（模型正文下方，弱化小字） */
+.bidr-agent-msg__time {
+  margin-top: 2px;
+  color: var(--text-tertiary, #bfbfbf);
+  font-size: 11px;
+  line-height: 16px;
+}
+
 /* ==================== 工具卡（行式，常驻过程折叠组内） ==================== */
 
 .bidr-agent-tool {
@@ -538,6 +546,16 @@
 .bidr-agent-strip.is-guidance.is-info,
 .bidr-agent-strip.is-answered.is-info {
   color: var(--text-primary, #333);
+}
+
+/* 用户气泡内时间戳（右下角弱化小字） */
+.bidr-agent-strip__time {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-tertiary, #8c8c8c);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: right;
 }
 
 /* 错误：红底浅染，正文色加深保证可读 */
@@ -1088,13 +1106,14 @@
   padding: 20px 32px;
 }
 
-/* 用户发言气泡不受 860px 限宽约束：收回右缘（聊天气泡语义优先于内容列对齐） */
+/* 用户发言气泡右缘对齐 860px 内容列右缘（不再甩到屏幕最右，与模型正文同列对齐）：
+   margin-right 取「内容列右侧留白」=(100%-860)/2，窄屏（<860）回落 0 */
 .bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-strip.is-guidance,
 .bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-strip.is-answered {
   width: fit-content;
-  max-width: 78%;
+  max-width: min(78%, 860px);
   margin-left: auto;
-  margin-right: 0;
+  margin-right: max(0px, calc((100% - 860px) / 2));
 }
 
 /* 正文与决策卡排版放大一档 */
