@@ -333,6 +333,7 @@
   align-items: center;
   gap: 6px;
   width: fit-content;
+  max-width: 100%;
   padding: 2px 0;
   font-size: 13px;
   line-height: 20px;
@@ -358,15 +359,26 @@
   display: none;
 }
 
-/* 组头眼睛图标（「查看 N 个步骤」语义） */
-.bidr-agent-proc__eye {
+/* 眼位＝开关＝计数（U67）：折叠显示交互数（数字本身就是展开按钮），点开后该位置变箭头 */
+.bidr-agent-proc__toggle {
   flex-shrink: 0;
-  color: var(--text-secondary, #8c8c8c);
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
 }
 
-/* 折叠指示：CSS 三角，open 时转向；旋转过渡只在未声明减少动态时启用（reduce 下瞬转） */
+/* 折叠态：交互数（25 这类一眼可读的数字）；无框素数字，靠 hover 变 accent 表态可点 */
+.bidr-agent-proc__count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #8c8c8c);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 展开态箭头：默认隐藏，open 时顶替计数位（收起引导） */
 .bidr-agent-proc__chev {
+  display: none;
   flex-shrink: 0;
   width: 0;
   height: 0;
@@ -374,6 +386,7 @@
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
   opacity: 0.6;
+  transform: rotate(90deg);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -382,15 +395,23 @@
   }
 }
 
+.bidr-agent-proc[open] > .bidr-agent-proc__head .bidr-agent-proc__count {
+  display: none;
+}
+
 .bidr-agent-proc[open] > .bidr-agent-proc__head .bidr-agent-proc__chev {
-  transform: rotate(90deg);
+  display: block;
 }
 
 .bidr-agent-proc__label {
   color: var(--text-secondary, #595959);
 }
 
-/* 状态字（共 Xs）：紧随组头其后，字号更小、颜色更浅（用字号/深浅区分主次）；执行中着 accent */
+.bidr-agent-proc__label.is-running {
+  color: var(--accent, #1677ff);
+}
+
+/* 状态字（用时 X分X秒）：紧随组头其后，字号更小、颜色更浅（用字号/深浅区分主次）；运行中着 accent */
 .bidr-agent-proc__state {
   margin-left: 8px;
   flex-shrink: 0;
@@ -400,6 +421,23 @@
 
 .bidr-agent-proc__state.is-running {
   color: var(--accent, #1677ff);
+}
+
+/* 折叠态一行实时预览（U65）：跟当前内容不停刷，长文省略号；展开后隐藏（明细已在眼下） */
+.bidr-agent-proc__preview {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: 8px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--text-tertiary, #bfbfbf);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bidr-agent-proc[open] > .bidr-agent-proc__head .bidr-agent-proc__preview {
+  display: none;
 }
 
 /* 活动区：组头下方缩进行列（无框，留白即可） */
@@ -693,6 +731,15 @@
   50% { opacity: 0.3; }
 }
 
+/* 卡头本段计时（U64：执行中秒数常显）：小一号浅灰，与字数并列但不抢戏 */
+.bidr-agent-live__elapsed {
+  flex-shrink: 0;
+  margin-left: 2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary, #bfbfbf);
+}
+
 /* 正文滚动盒：浅底内嵌，跟手滚动看思路；滚到头不外链 */
 .bidr-agent-live__text {
   margin: 0;
@@ -842,6 +889,45 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 自由作答输入位（U66）：决策卡旁明确的写字地方——圆角容器＋无边框输入，口径同 Composer */
+.bidr-agent-question__write {
+  margin-bottom: 10px;
+  padding: 6px 8px 4px;
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--border-base, #d9d9d9);
+  border-radius: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bidr-agent-question__write:focus-within {
+  border-color: var(--accent, #1677ff);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.bidr-agent-question__write-input {
+  padding: 2px 4px;
+  font-size: 13px;
+  resize: none;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.bidr-agent-question__write-input :deep(.ant-input),
+.bidr-agent-question__write-input textarea {
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.bidr-agent-question__write-bar {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.bidr-agent-question__write-spacer {
+  flex: 1;
 }
 
 /* ==================== 输入区 ==================== */

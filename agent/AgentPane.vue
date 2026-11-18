@@ -94,6 +94,20 @@
         会话启动中…
       </div>
 
+      <!-- 发起即显我说的话（U63）：会话启动期事件未到，先乐观渲染用户气泡，
+           run_start 事件到达后自然切换成正式气泡（条件互斥，不会重复） -->
+      <div
+        v-if="showOptimisticInstruction"
+        class="bidr-agent-msg is-user"
+      >
+        <div class="bidr-agent-msg__speaker">
+          我
+        </div>
+        <div class="bidr-agent-msg__text is-md">
+          {{ initialInstruction }}
+        </div>
+      </div>
+
       <template
         v-for="item in groupedItems"
         :key="item.id"
@@ -115,21 +129,37 @@
           <div class="bidr-agent-msg__time">{{ fmtTime(item.time) }}</div>
         </div>
 
-        <!-- 过程折叠组：连续的工具调用/日志收进一个可折叠块（正文留主面，过程按需展开）；
-             组内工具在途时默认展开＋转圈，全部完成自动收起 -->
+        <!-- 过程折叠组：连续的工具调用/日志收进一个可折叠块（正文留主面，过程按需展开）。
+             开合只由用户点击控制（不自开不自关，U64）；折叠头＝计数徽标（折叠显示交互数、
+             点开变箭头，U67）＋「工作中」状态字（U68）＋实时计时（时分秒，U68）＋
+             一行当前内容预览（折叠态显示、展开隐藏，U65） -->
         <details
           v-else-if="item.kind === 'process'"
           class="bidr-agent-proc"
-          :open="item.running"
         >
           <summary class="bidr-agent-proc__head">
-            <EyeOutlined class="bidr-agent-proc__eye" />
-            <span class="bidr-agent-proc__chev"></span>
-            <span class="bidr-agent-proc__label">{{ procLabel(item) }}</span>
+            <span class="bidr-agent-proc__toggle">
+              <span class="bidr-agent-proc__count">{{ procCount(item) }}</span>
+              <span class="bidr-agent-proc__chev"></span>
+            </span>
             <span
+              v-if="item.running"
+              class="bidr-agent-proc__label is-running"
+            >工作中</span>
+            <span
+              v-else-if="procCount(item) === 0"
+              class="bidr-agent-proc__label"
+            >执行过程</span>
+            <span
+              v-if="procDurationText(item)"
               class="bidr-agent-proc__state"
-              :class="item.running ? 'is-running' : 'is-done'"
-            >{{ item.running ? '执行中…' : (procDuration(item) !== null ? `${procDuration(item)}s` : '已完成') }}</span>
+              :class="{ 'is-running': item.running }"
+            >{{ procDurationText(item) }}</span>
+            <span
+              v-if="procPreview(item)"
+              class="bidr-agent-proc__preview"
+              :title="procPreview(item)"
+            >{{ procPreview(item) }}</span>
           </summary>
           <div class="bidr-agent-proc__body">
             <template
@@ -139,7 +169,6 @@
               <details
                 v-if="child.kind === 'tool'"
                 class="bidr-agent-tool"
-                :open="child.status === 'running'"
               >
                 <summary class="bidr-agent-tool__head">
                   <LoadingOutlined
@@ -294,6 +323,11 @@
           <span class="bidr-agent-live__dot"></span>
           <!-- 只保留一个在变的字数：深度思考（N 字），不显示「已思 N 字」字样 -->
           <span>{{ livePhase }}<template v-if="liveChars">（{{ liveChars }} 字）</template></span>
+          <!-- 本段实时内容的实时计时（U64：执行中秒数常显），随 nowTick 每秒走 -->
+          <span
+            v-if="liveElapsedText"
+            class="bidr-agent-live__elapsed"
+          >{{ liveElapsedText }}</span>
         </summary>
         <pre
           v-if="liveBody"
@@ -353,6 +387,31 @@
           {{ opt.label }}
         </button>
       </div>
+      <!-- 自由作答输入位（U66）：决策卡旁就有一个明确的写字地方，不用去找底部输入框；
+           点选项仍是单击即答，这里给想自己组织语言的用户 -->
+      <div class="bidr-agent-question__write">
+        <a-textarea
+          v-model:value="questionInput"
+          class="bidr-agent-question__write-input"
+          :auto-size="{ minRows: 2, maxRows: 6 }"
+          :bordered="false"
+          :disabled="answering"
+          placeholder="或直接输入你的口径回答（Enter 发送，Shift+Enter 换行）"
+          @press-enter="onQuestionInputEnter"
+        />
+        <div class="bidr-agent-question__write-bar">
+          <span class="bidr-agent-question__write-spacer"></span>
+          <a-button
+            size="small"
+            type="primary"
+            :disabled="!questionInput.trim() || answering"
+            :loading="answering"
+            @click="onQuestionInputSend"
+          >
+            提交作答
+          </a-button>
+        </div>
+      </div>
       <div class="bidr-agent-question__actions">
         <a-button
           size="small"
@@ -396,7 +455,7 @@
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CheckCircleOutlined, CloseCircleFilled, EyeOutlined, FilePdfOutlined,
+  CheckCircleFilled, CheckCircleOutlined, CloseCircleFilled, FilePdfOutlined,
   FileWordOutlined, LoadingOutlined, RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
@@ -427,6 +486,9 @@ interface Props {
   showRestart?: boolean
   /** 只读回放态：隐藏底部 Composer 与拖拽落区（历史会话回放由宿主页提供修订输入条，避免双输入框） */
   readOnly?: boolean
+  /** 发起指令（宿主页在起跑时传入）：会话启动期事件未到，先乐观渲染用户气泡（U63），
+   *  run_start 事件到达后自动让位给正式气泡 */
+  initialInstruction?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -435,7 +497,8 @@ const props = withDefaults(defineProps<Props>(), {
   capabilities: () => [],
   health: null,
   showRestart: true,
-  readOnly: false
+  readOnly: false,
+  initialInstruction: ''
 })
 
 const emit = defineEmits<{
@@ -659,6 +722,12 @@ const {
   refresh
 } = useAgentConversation(sessionIdRef)
 
+// ==================== 发起即显用户消息（U63 乐观气泡） ====================
+
+/** 事件流里还没出现正式的用户气泡（run_start 未到/缺席）时，用宿主页传入的发起指令顶上 */
+const hasUserText = computed(() => items.value.some(i => i.kind === 'text' && i.role === 'user'))
+const showOptimisticInstruction = computed(() => !!props.initialInstruction && !hasUserText.value)
+
 // ==================== 过程折叠组（连续工具/日志收纳成可折叠块，正文留主面） ====================
 
 /**
@@ -770,14 +839,33 @@ const procDuration = (group: AgentProcessGroup): number | null => {
 }
 
 /**
- * 折叠组标题：报「组里有几个交互」（工具调用＋深度思考算一次交互，纯日志行不算）——
- * 参考实现折叠头就是这个口径；轮次序号（第几轮）对用户没有信息量，已由 events 层丢弃。
+ * 折叠组交互数（工具调用＋深度思考各算 1，纯日志行不算）——计数就是折叠头的展开按钮
+ * （折叠显示数字、点开变箭头，U67）；轮次序号（第几轮）对用户没有信息量，已由 events 层丢弃。
  */
-const procLabel = (group: AgentProcessGroup): string => {
-  const n = group.children.filter(
-    child => child.kind === 'tool' || (child.kind === 'log' && isThinkingLog(child.text))
-  ).length
-  return n > 0 ? `${n} 个交互` : '执行过程'
+const procCount = (group: AgentProcessGroup): number => group.children.filter(
+  child => child.kind === 'tool' || (child.kind === 'log' && isThinkingLog(child.text))
+).length
+
+/**
+ * 时长人话化（U68）：裸秒数退役——<60s 显示「N 秒」、<1h 显示「N 分 N 秒」、
+ * 再往上「N 时 N 分 N 秒」（132s → 2分12秒）。
+ */
+const fmtDuration = (sec: number): string => {
+  const s = sec % 60
+  const m = Math.floor(sec / 60) % 60
+  const h = Math.floor(sec / 3600)
+  if (h > 0) return `${h}时${m}分${s}秒`
+  if (m > 0) return `${m}分${s}秒`
+  return `${s}秒`
+}
+
+/** 折叠组时长文案：运行中只报当前耗时，已完结加「用时」前缀；不足 1 秒不出（避免闪 0秒） */
+const procDurationText = (group: AgentProcessGroup): string => {
+  const sec = procDuration(group)
+  if (sec === null) return ''
+  const text = fmtDuration(sec)
+  if (!text) return ''
+  return group.running ? text : `用时 ${text}`
 }
 
 /** 思考归档日志（后端「【LLM 思考归档】N 字\n正文」）识别与拆分，供折叠「深度思考」步骤渲染 */
@@ -947,6 +1035,34 @@ const onSkipQuestion = async () => {
   const q = waitingQuestion.value
   if (!q || answering.value) return
   await submitAnswer(q.id, undefined, true).catch(() => { /* 错误已提示 */ })
+}
+
+// ==================== 决策卡自由作答（U66） ====================
+
+/** 卡内自由输入：问题换人/收口即清空，避免上一问的草稿串到下一问 */
+const questionInput = ref('')
+watch(() => activeQuestion.value?.id, () => {
+  questionInput.value = ''
+})
+
+const onQuestionInputSend = async () => {
+  const q = activeQuestion.value
+  const text = questionInput.value.trim()
+  if (!q || !text || answering.value) return
+  try {
+    await submitAnswer(q.id, text)
+    questionInput.value = ''
+  } catch {
+    // 失败已提示，输入保留可重试
+  }
+}
+
+const onQuestionInputEnter = (e: KeyboardEvent) => {
+  // 中文输入法回车用于确认候选词，不应发送
+  if (e.isComposing || e.keyCode === 229) return
+  if (e.shiftKey) return
+  e.preventDefault()
+  void onQuestionInputSend()
 }
 
 // ==================== 发送 / 停止 / 上传 ====================
@@ -1148,12 +1264,27 @@ const onRefreshStatus = async () => {
 
 // ==================== 实时思考卡折叠 ====================
 
-/** 折叠偏好跨「实时内容分段」保留：用户收起后，下一段实时思考仍保持收起（卡头脉冲点仍可见） */
-const liveCollapsed = ref(false)
+/**
+ * 实时卡默认收起（U64：用户不打开就保持关闭），开合只由用户点击控制＋阶段驱动（watch 挂在
+ * 下方 livePhase 定义之后）：「生成中」自动展开、「深度思考」自动收起，同阶段内用户手动
+ * 开合不被自动翻转。
+ */
+const liveCollapsed = ref(true)
 const onLiveToggle = (e: Event) => {
   const el = e.target as HTMLDetailsElement | null
   if (el) liveCollapsed.value = !el.open
 }
+
+/** 本段实时内容起点（liveText 出现即计时）：给卡头「秒数常显」（U64），终态清零 */
+const liveStartAt = ref<number | null>(null)
+watch(() => !!liveText.value, present => {
+  liveStartAt.value = present ? Date.now() : null
+})
+const liveElapsedText = computed(() => {
+  if (!liveStartAt.value || sessionStatus.value !== 'RUNNING') return ''
+  const sec = Math.max(0, Math.round((nowTick.value - liveStartAt.value) / 1000))
+  return sec > 0 ? fmtDuration(sec) : ''
+})
 
 /** 消息时间戳：当天 HH:mm:ss，跨天补 MM-DD（事件 time 为 epoch 毫秒；缺席回空串不渲染） */
 const fmtTime = (ms?: number): string => {
@@ -1176,6 +1307,11 @@ const livePhase = computed(() => {
   const first = (liveText.value || '').split('\n')[0] || ''
   return first.startsWith('应答中') ? '生成中' : '深度思考'
 })
+// 阶段驱动的开合（U64/U68）：「生成中」＝模型正文流式，必须看得见→自动展开；
+// 「深度思考」＝过程细节→自动收起（折叠头的实时预览行已能看到当前内容）
+watch(livePhase, phase => {
+  liveCollapsed.value = phase !== '生成中'
+})
 const liveChars = computed(() => {
   const m = (liveText.value || '').match(/(\d+)\s*字/)
   return m ? m[1] : ''
@@ -1185,6 +1321,35 @@ const liveBody = computed(() => {
   const nl = text.indexOf('\n')
   return nl >= 0 ? text.slice(nl + 1) : ''
 })
+
+/** 单行截断（U65 预览行用）：压平空白，超长 …（CSS 省略号兜底，这里控制 title 全文长度） */
+const clipOneLine = (text: string, max = 120): string => {
+  const one = (text || '').replace(/\s+/g, ' ').trim()
+  return one.length > max ? `${one.slice(0, max)}…` : one
+}
+
+/** 实时流当前内容（首行）：运行中折叠头的预览跟它走，「不停地刷」的来源 */
+const livePreviewLine = computed(() => clipOneLine((liveBody.value || '').split('\n')[0]))
+
+/**
+ * 折叠头一行实时预览（U65）：运行中的最后一组优先跟实时流（思考/生成的当前内容），
+ * 其余取组内最后一个孩子的单行摘要（工具＝名称＋参数摘要、思考＝正文首行、日志＝原文）。
+ * 展开态由 CSS 隐藏（展开即看完整明细，预览行功成身退）。
+ */
+const procPreview = (group: AgentProcessGroup): string => {
+  if (sessionStatus.value === 'RUNNING' && group.id === lastProcGroupId.value && livePreviewLine.value) {
+    return livePreviewLine.value
+  }
+  const last = group.children[group.children.length - 1]
+  if (!last) return ''
+  if (last.kind === 'tool') {
+    return clipOneLine([last.label, last.digest].filter(Boolean).join(' '))
+  }
+  if (last.kind === 'log') {
+    return isThinkingLog(last.text) ? clipOneLine(thinkingBody(last.text)) : clipOneLine(last.text)
+  }
+  return ''
+}
 
 // ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断） ====================
 

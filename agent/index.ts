@@ -12,6 +12,7 @@ import './styles.css'
 
 export { default as AgentPane } from './AgentPane.vue'
 export { default as AttachmentTray } from './composer/AttachmentTray.vue'
+export { default as Composer } from './composer/Composer.vue'
 export { useAgentConversation } from './useAgentConversation'
 export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventText } from './events'
 export {
