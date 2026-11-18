@@ -158,6 +158,8 @@ interface Props {
   placeholder?: string
   /** 发送语义接管（U69 业务页复用）：会话态语义（作答/恢复）不适用时的「普通发送」模式 */
   sendable?: boolean
+  /** 运行中插话（排队/插话功能）：RUNNING 态也出发送钮，文本经 interject 排队下一轮注入 */
+  interjectable?: boolean
   /** 外部发送闸（sendable 模式）：如素材未解析通过时置灰 */
   sendDisabled?: boolean
   /** 输入框最小行数（缺省 2；业务页地面态 3） */
@@ -183,6 +185,7 @@ const props = withDefaults(defineProps<Props>(), {
   uploading: false,
   placeholder: '',
   sendable: false,
+  interjectable: false,
   sendDisabled: false,
   minRows: 2,
   hideAttach: false,
@@ -230,7 +233,8 @@ const inputMinRows = computed(() => (props.minRows > 0 ? props.minRows : 2))
 
 /** 可发送语义：sendable 接管（业务页普通发送：有字或有附件、外部闸放行）｜作答问题｜暂停后补指导语 */
 const canSendText = computed(() =>
-  props.sendable || props.waitingQuestion || props.status === 'PAUSED')
+  props.sendable || props.waitingQuestion || props.status === 'PAUSED'
+  || (props.status === 'RUNNING' && props.interjectable))
 /** PAUSED 且无待作答问题：允许空指导语恢复（后端按默认指导语处理，与占位文案「可空」一致） */
 const allowEmptySend = computed(() => !props.waitingQuestion && props.status === 'PAUSED')
 const canSend = computed(() => {
@@ -250,7 +254,11 @@ const placeholder = computed(() => {
   if (props.disabled) return '会话已结束'
   if (props.waitingQuestion) return '回答 AI 的问题，或直接输入你的口径（Enter 发送，Shift+Enter 换行）'
   if (props.status === 'PAUSED') return '补充指导语（可空）：恢复后注入下一轮上下文（Enter 发送，Shift+Enter 换行）'
-  if (props.status === 'RUNNING') return '任务执行中… 可暂停后补充指导；可直接拖入附件'
+  if (props.status === 'RUNNING') {
+    return props.interjectable
+      ? '任务执行中… 可直接插话（Enter 发送，下一轮生效）；也可拖入附件'
+      : '任务执行中… 可暂停后补充指导；可直接拖入附件'
+  }
   return '输入内容（Enter 发送，Shift+Enter 换行）'
 })
 

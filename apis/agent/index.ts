@@ -74,6 +74,11 @@ export const sessionPause = (sessionId: string, note?: string) =>
 // 恢复会话（guidance 补充指导语注入下一轮上下文）。
 // payload（可选）：仅对「建后未起跑」（startPaused）会话生效——素材会话先建后补指令时，
 // 起跑前把最终业务参数合并进 start payload；普通暂停恢复后端忽略该字段。
+/** 运行期插话（排队/插话功能）：文本写入控制键，引擎下一轮循环头作为用户消息注入；
+ *  GUIDANCE 事件即时发布，对话流立刻可见。仅 RUNNING 可插。 */
+export const sessionInterject = (sessionId: string, text: string) =>
+  post(buildPostApiByType(`/session/${sessionId}/interject`, agentApiType), {}, { text }, false)
+
 export const sessionResume = (sessionId: string, guidance?: string, payload?: Record<string, any>) =>
   post(buildPostApiByType(`/session/${sessionId}/resume`, agentApiType), {}, { guidance, payload }, false)
 

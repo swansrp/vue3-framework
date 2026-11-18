@@ -230,13 +230,10 @@
           v-else-if="item.kind === 'artifact'"
           class="bidr-agent-artifact"
         >
-          <FileWordOutlined
-            v-if="isWordArtifact(item.artifact)"
-            class="bidr-agent-artifact__icon is-word"
-          />
-          <FilePdfOutlined
-            v-else
-            class="bidr-agent-artifact__icon is-pdf"
+          <component
+            :is="artifactIcon(item.artifact).icon"
+            class="bidr-agent-artifact__icon"
+            :class="artifactIcon(item.artifact).cls"
           />
           <a
             v-if="item.artifact.url"
@@ -308,7 +305,7 @@
         <div
           v-if="conclusion.text"
           class="bidr-agent-conclusion__text is-md"
-          v-html="markdownOf(conclusion.text)"
+          v-html="markdownOf(breakBeforeCircledItems(conclusion.text))"
         ></div>
       </div>
     </div>
@@ -388,6 +385,7 @@
       :sending="sending"
       :stopping="stopping"
       :pausing="pausing"
+      interjectable
       :uploading="isUploading"
       show-health
       :health="health"
@@ -412,16 +410,22 @@
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CheckCircleOutlined, CloseCircleFilled, FilePdfOutlined,
+  CheckCircleFilled, CheckCircleOutlined, CloseCircleFilled, FileExcelOutlined,
+  FileImageOutlined, FilePdfOutlined, FilePptOutlined, FileTextOutlined,
   FileWordOutlined, LoadingOutlined, RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { marked } from 'marked'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 
 import Composer from './composer/Composer.vue'
+import { configureAgentMarkdown } from './markdown'
 import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
+import { sessionInterject } from '@/framework/apis/agent'
 import { useAgentConversation } from './useAgentConversation'
+
+// 语气波浪号防误伤（marked 全局装配，模块级守卫只跑一次）：单 ~ 不再吞成删除线
+configureAgentMarkdown()
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */
@@ -500,6 +504,14 @@ const clampLongUrls = (text: string): string =>
  */
 const unescapeText = (text: string): string =>
   text.replace(/\\r\\n|\\n/g, '\n').replace(/\\t/g, '\t')
+
+/**
+ * 圈号分条兜底（2026-11-18）：存量结论摘要是收口排版纪律之前落的库，①②③ 全挤一段
+ * （Redis 实查无换行）。渲染前在圈号前补换行——圈号在这类简报里就是条目标记，视觉分行、
+ * 不改写落库内容；圈号前已是行首/换行时不重复插（免出空行）。新会话自带换行，本兜底无感。
+ */
+const breakBeforeCircledItems = (text: string): string =>
+  text.replace(/([^\n])([①-⑳])/g, '$1\n$2')
 
 const markdownOf = (text: string): string => {
   if (!text) return ''
@@ -799,16 +811,30 @@ const fileReadTitle = (file: AgentFileRef): string => {
 
 // ==================== 产物下载卡（P2a） ====================
 
-/** 格式图标判定：docx/doc 走 Word 图标，其余（pdf 等）走 PDF 图标 */
-const isWordArtifact = (artifact: AgentArtifact): boolean =>
-  /\.docx?$/i.test(artifact.name || '') || artifact.format?.toLowerCase() === 'docx'
+/** 格式图标判定（2026-11-18）：此前只有 Word/其它＝PDF 两套，Excel/PPT/图片会误挂红 PDF 图标；
+ *  现按扩展名（回落 format 字段）分派——docx→Word、pdf→PDF、xls/csv→Excel、ppt→PPT、
+ *  图片→图片图标，未知回落通用文档图标 */
+const artifactIcon = (artifact: AgentArtifact): { icon: Component; cls: string } => {
+  const name = artifact.name || ''
+  const ext = (name.match(/\.([a-z0-9]+)$/i)?.[1] || artifact.format || '').toLowerCase()
+  if (ext === 'doc' || ext === 'docx') return { icon: FileWordOutlined, cls: 'is-word' }
+  if (ext === 'pdf') return { icon: FilePdfOutlined, cls: 'is-pdf' }
+  if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return { icon: FileExcelOutlined, cls: 'is-excel' }
+  if (ext === 'ppt' || ext === 'pptx') return { icon: FilePptOutlined, cls: 'is-ppt' }
+  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) return { icon: FileImageOutlined, cls: 'is-img' }
+  return { icon: FileTextOutlined, cls: 'is-text' }
+}
 
-/** 格式徽标文案：docx→Word 文档、pdf→PDF 文档，其余回落大写格式串 */
+/** 格式徽标文案：与 artifactIcon 同一张扩展名表 */
 const artifactFormatLabel = (artifact: AgentArtifact): string => {
-  const fmt = (artifact.format || '').toLowerCase()
-  if (fmt === 'docx') return 'Word 文档'
-  if (fmt === 'pdf') return 'PDF 文档'
-  return fmt ? fmt.toUpperCase() : ''
+  const name = artifact.name || ''
+  const ext = (name.match(/\.([a-z0-9]+)$/i)?.[1] || artifact.format || '').toLowerCase()
+  if (ext === 'doc' || ext === 'docx') return 'Word 文档'
+  if (ext === 'pdf') return 'PDF 文档'
+  if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'Excel 表格'
+  if (ext === 'ppt' || ext === 'pptx') return 'PPT 演示'
+  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) return '图片'
+  return (artifact.format || '').toLowerCase() ? (artifact.format as string).toUpperCase() : ''
 }
 
 // ==================== 终态结论 ====================
@@ -945,10 +971,13 @@ const onSend = async (text: string) => {
       } catch {
         return
       }
+    } else if (sessionStatus.value === 'RUNNING') {
+      // 运行期插话（排队/插话功能）：文本入队，模型下一轮循环头消费；GUIDANCE 事件即时上屏
+      await sessionInterject(props.sessionId, text)
     } else if (sessionStatus.value === 'PAUSED') {
       await resume(text || undefined)
     } else {
-      message.info('任务执行中，如需补充指导请先暂停')
+      message.info('任务已结束，请点「重新发起」开启新会话')
       return
     }
     clearAttachments()

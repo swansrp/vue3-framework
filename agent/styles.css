@@ -197,7 +197,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding: 12px;
   overflow-y: auto;
   /* 滚到尽头不把滚动链给宿主页 */
@@ -429,8 +429,11 @@
   color: var(--text-secondary, #595959);
 }
 
+/* 工作台「运行中」不再用蓝字（2026-11-18 用户口径「蓝色不好看」）：
+   用加深的中性色表态，活性由脉冲点/计时承担，颜色不负责任 */
 .bidr-agent-proc__label.is-running {
-  color: var(--accent, #1677ff);
+  color: var(--text-primary, #262626);
+  font-weight: 600;
 }
 
 /* 状态字（用时 X分X秒）：紧随组头其后，字号更小、颜色更浅（用字号/深浅区分主次）；运行中着 accent */
@@ -442,7 +445,7 @@
 }
 
 .bidr-agent-proc__state.is-running {
-  color: var(--accent, #1677ff);
+  color: var(--text-secondary, #8c8c8c);
 }
 
 /* 折叠态一行实时预览（U65）：跟当前内容不停刷，长文省略号；展开后隐藏（明细已在眼下） */
@@ -535,10 +538,12 @@
 
 /* ==================== 产物下载卡（P2a） ==================== */
 
-/* 产物下载：一行可点击文件名（无框无底条，不占整行） */
+/* 产物下载：一行可点击文件名（无框无底条，不占整行）。
+   文字间基线对齐（文件名 13px/600 与体积 meta 11px 同一基线），图标单独几何居中——
+   素材行（.bidr-agent-file）已验证的对齐组合（2026-11-18 真机截图：图标浮在文件名上方） */
 .bidr-agent-artifact {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
   max-width: 100%;
   margin-top: 8px;
@@ -549,6 +554,8 @@
 
 .bidr-agent-artifact__icon {
   flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
   font-size: 15px;
 }
 
@@ -558,6 +565,22 @@
 
 .bidr-agent-artifact__icon.is-pdf {
   color: #c0392b;
+}
+
+.bidr-agent-artifact__icon.is-excel {
+  color: #217346;
+}
+
+.bidr-agent-artifact__icon.is-ppt {
+  color: #d24726;
+}
+
+.bidr-agent-artifact__icon.is-img {
+  color: #722ed1;
+}
+
+.bidr-agent-artifact__icon.is-text {
+  color: var(--text-secondary, #8c8c8c);
 }
 
 .bidr-agent-artifact__link {
@@ -616,14 +639,18 @@
 .bidr-agent-strip.is-error { color: var(--error, #ff4d4f); }
 .bidr-agent-strip.is-info { color: var(--text-secondary, #999); }
 
-/* AI 提问回声：奶黄 callout＋warning 左标（与底部决策卡同语系，流内只作历史留痕） */
+/* AI 提问回声：白卡＋warning 左标（2026-11-18 用户拍板去掉奶黄底，与结论卡同一卡片语言；
+   流内只作历史留痕，正式作答走底部决策卡） */
 .bidr-agent-strip.is-question {
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 13px;
-  color: var(--text-primary, #333);
-  background: #fffbe6;
+  line-height: 1.7;
+  color: var(--text-primary, #262626);
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
   border-left: 3px solid var(--warning, #faad14);
-  border-radius: 4px 8px 8px 4px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 35, 80, 0.04);
 }
 
 .bidr-agent-strip.is-question.is-warn,
@@ -671,13 +698,15 @@
 
 /* 结论卡「AI」标签样式已退役（U73） */
 
-/* 错误：红底浅染，正文色加深保证可读 */
+/* 错误：白卡＋error 左标（与提问回声/结论卡同语系），正文保持警示红 */
 .bidr-agent-strip.is-error {
-  padding: 8px 12px;
+  padding: 10px 14px;
   color: var(--error, #ff4d4f);
-  background: #fff2f0;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
   border-left: 3px solid var(--error, #ff4d4f);
-  border-radius: 4px 8px 8px 4px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 35, 80, 0.04);
 }
 
 /* ==================== 实时思考卡（流式实时块）：脉冲点＋正文滚动盒 ==================== */
@@ -696,7 +725,8 @@
   padding: 0 0 6px;
   margin: 0;
   font-size: 12px;
-  color: var(--accent, #1677ff);
+  /* 深度思考头用中性深灰（2026-11-18：整片蓝字太扎眼），活性由左侧脉冲点提示 */
+  color: var(--text-secondary, #595959);
   cursor: pointer;
   list-style: none;
   user-select: none;
@@ -779,51 +809,66 @@
 
 /* ==================== 终态结论 ==================== */
 
+/* 白卡＋状态色左标（2026-11-18 用户美化：去掉旧「浅染底＋彩边」的 alert 味）——
+   状态色只落在左标与图标上，卡底与正文保持中性，整卡不抢戏；卡片语言与决策卡（白底＋左标）统一 */
 .bidr-agent-conclusion {
-  padding: 12px 14px;
+  padding: 13px 16px;
+  background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-subtle, #f0f0f0);
-  border-radius: 10px;
-  background: var(--bg-elevated, #fafafa);
+  border-left: 3px solid var(--border-base, #d9d9d9);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 35, 80, 0.04);
+}
+
+.bidr-agent-conclusion.is-finish {
+  border-left-color: var(--success, #52c41a);
+}
+
+.bidr-agent-conclusion.is-error {
+  border-left-color: var(--error, #ff4d4f);
 }
 
 .bidr-agent-conclusion__title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--text-primary, #333);
+  gap: 7px;
+  color: var(--text-primary, #262626);
   font-size: 14px;
   font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* 状态色给图标：标题文字保持中性深色，绿字标题像按钮、太抢 */
+.bidr-agent-conclusion.is-finish .bidr-agent-conclusion__title .anticon {
+  color: var(--success, #52c41a);
+}
+
+.bidr-agent-conclusion.is-error .bidr-agent-conclusion__title .anticon {
+  color: var(--error, #ff4d4f);
+}
+
+.bidr-agent-conclusion.is-stopped .bidr-agent-conclusion__title .anticon {
+  color: var(--text-secondary, #999);
 }
 
 .bidr-agent-conclusion__text {
-  margin-top: 6px;
-  color: var(--text-primary, #333);
+  margin-top: 7px;
+  color: var(--text-primary, #262626);
   font-size: 13px;
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-/* 终态分色：成功浅绿 / 失败浅红，浅染底＋同系描边 */
-.bidr-agent-conclusion.is-finish {
-  background: #f6ffed;
-  border-color: #b7eb8f;
-}
-
-.bidr-agent-conclusion.is-error {
-  background: #fff2f0;
-  border-color: #ffccc7;
-}
-
-.bidr-agent-conclusion.is-finish .bidr-agent-conclusion__title { color: var(--success, #52c41a); }
-.bidr-agent-conclusion.is-error .bidr-agent-conclusion__title { color: var(--error, #ff4d4f); }
-.bidr-agent-conclusion.is-stopped .bidr-agent-conclusion__title { color: var(--text-secondary, #999); }
-
 /* ==================== AI 决策问题卡（自身可滚，长问题不裁按钮） ==================== */
 
-/* 交互焦点件：白底＋accent 左标＋顶部投影，与流内容拉开一层；自滚区域滚动不外链 */
+/* 交互焦点件：白底＋accent 左标＋顶部投影，与流内容拉开一层；自滚区域滚动不外链。
+   限宽居中（2026-11-18 用户口径「不左右顶到头」）：与工作台 860px 内容列同列，窄面板自然占满 */
 .bidr-agent-question {
   flex-shrink: 0;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
   max-height: 50%;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -861,15 +906,18 @@
   word-break: break-word;
 }
 
-/* 选项单列一行一个：长选项文本横向铺开可读（多列会挤成窄高框） */
+/* 选项单列一行一个、按内容收宽（2026-11-18 用户口径「没必要左右顶到头」）：
+   短选项不拉成整行长条，长选项仍可在列宽内换行（多列会挤成窄高框，故仍单列） */
 .bidr-agent-question__options {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 10px;
 }
 
 .bidr-agent-question__option {
+  max-width: 100%;
   padding: 9px 14px;
   font-family: inherit;
   font-size: 13px;
@@ -1006,13 +1054,13 @@
   flex: 1;
 }
 
-/* 当前模型名（右下角按钮区左侧）：小字弱化，长名省略，不参与压缩 */
+/* 当前模型名（右下角按钮区左侧）：小字弱化，长名省略，不参与压缩（与按钮留 8px 间距） */
 .bidr-agent-composer__model {
   flex: 0 0 auto;
-  max-width: 160px;
-  margin-right: 2px;
+  max-width: 176px;
+  margin-right: 8px;
   overflow: hidden;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 20px;
   color: var(--text-tertiary, #bfbfbf);
   white-space: nowrap;
@@ -1413,8 +1461,21 @@
   color: var(--text-primary, #262626);
 }
 
-/* 模型正文＝左对齐消息卡片（浅底圆角限宽，不整列顶边）：与右侧用户气泡区分出「谁在说话」。
-   左缘对齐 860 内容列左缘（margin-left=(100%-860)/2，窄屏回落 0）；短消息收小、长消息撑到上限 */
+/* 模型正文＝裸文本（2026-11-18 用户拍板「不要框」）：去底色/边框/内边距，像正文排版一样
+   直接铺在页面上，左缘对齐 860 内容列；「谁在说话」由对照面区分——用户仍是右侧浅蓝气泡，
+   AI 的话不再装框。仅工作台形态生效（侧栏窄列仍用卡片分隔） */
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-msg.is-assistant {
+  width: 100%;
+  max-width: 860px;
+  margin-left: max(0px, calc((100% - 860px) / 2));
+  margin-right: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+/* 用户消息兜底形态（is-assistant 覆写后仍生效）：右对齐浅蓝气泡占位 */
 .bidr-agent-pane.is-workbench .bidr-agent-pane__body > .bidr-agent-msg {
   width: fit-content;
   max-width: min(88%, 860px);
@@ -1454,6 +1515,19 @@
   line-height: 1.7;
 }
 
+/* 组头分隔感（2026-11-18 用户：已完成 X分X秒 下加浅浅的分隔线）：组头占满内容列宽＋
+   底部发丝线，与下方正文拉开一层（外部「已工作」折叠条同款节奏）；可点区随行变宽，无副作用 */
+.bidr-agent-pane.is-workbench .bidr-agent-proc__head {
+  width: 100%;
+  padding: 4px 0 9px;
+  border-bottom: 1px solid var(--border-subtle, #f0f0f0);
+}
+
+/* 分段呼吸感同步放大：正文/卡片/组头之间留足一拍（模型正文去框后靠间距分节） */
+.bidr-agent-pane.is-workbench .bidr-agent-pane__body {
+  gap: 18px;
+}
+
 .bidr-agent-pane.is-workbench .bidr-agent-conclusion__text.is-md {
   font-size: 14px;
   line-height: 1.8;
@@ -1461,6 +1535,11 @@
 
 .bidr-agent-pane.is-workbench .bidr-agent-question {
   padding: 12px 20px;
+}
+
+/* 结论卡工作台形态：内边距随内容列放松一档（与决策卡同拍） */
+.bidr-agent-pane.is-workbench .bidr-agent-conclusion {
+  padding: 14px 20px;
 }
 
 .bidr-agent-pane.is-workbench .bidr-agent-question__text.is-md {
