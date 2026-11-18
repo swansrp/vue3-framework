@@ -51,6 +51,9 @@ const KEEPALIVE_INTERVAL = 25000
 const RECONNECT_BASE = 10000
 const RECONNECT_MAX = 30000
 
+/** SSE 终态兜底收口延后：给 done 帧与建连回放的历史 events 帧留出处理窗（见 scheduleTerminalFallback） */
+const TERMINAL_FALLBACK_DELAY = 2000
+
 export interface UseAgentConversationOptions {
   /** 轮询间隔（毫秒），缺省 2000 */
   pollInterval?: number
@@ -249,6 +252,29 @@ export const useAgentConversation = (
     }
   }
 
+  /**
+   * 终态兜底收口的延后闸（防 done 帧丢失的面板挂死）：🔴 建连回放里 status 帧先于全量
+   * events 帧到达（hub.open 先发 status 再逐条回放事件），终态会话若在 status 帧当场
+   * shutdown，会把紧随其后的历史事件回放整段 abort 掉——回放只剩结论卡的元凶。故终态
+   * 先起 2s 延后闸：期间任何 events/done 帧都取消它（done 正常必到）；真丢了 done 帧
+   * （断流且未重连）才由闸收口，轮询兜底照样能补拉。
+   */
+  let terminalFallbackTimer: ReturnType<typeof setTimeout> | null = null
+  const clearTerminalFallback = () => {
+    if (terminalFallbackTimer) {
+      clearTimeout(terminalFallbackTimer)
+      terminalFallbackTimer = null
+    }
+  }
+  const scheduleTerminalFallback = () => {
+    const myGen = gen
+    if (terminalFallbackTimer) return
+    terminalFallbackTimer = setTimeout(() => {
+      terminalFallbackTimer = null
+      if (myGen === gen && sessionId.value && isTerminalStatus(status.value?.status)) shutdown()
+    }, TERMINAL_FALLBACK_DELAY)
+  }
+
   /** 全停（终态收口/会话清空/卸载共用）：作废在途流协程、关流、清保活/重连定时器、停轮询 */
   const shutdown = () => {
     streamGen++
@@ -256,6 +282,7 @@ export const useAgentConversation = (
     stopKeepalive()
     clearReconnect()
     stopPolling()
+    clearTerminalFallback()
     sse.value = false
   }
 
@@ -371,7 +398,9 @@ export const useAgentConversation = (
           if (ev && typeof ev.seq === 'number' && ev.seq > sinceSeq) {
             events.value.push(ev)
             sinceSeq = ev.seq
-            if (applyTerminalEventFallback(id, [ev])) shutdown()
+            // 回放仍在推进＝流没死：终态兜底闸继续等 done 帧（若有挂起的闸则解除）
+            clearTerminalFallback()
+            if (applyTerminalEventFallback(id, [ev])) scheduleTerminalFallback()
           }
         } else if (event === 'status') {
           let snapshot: AgentSessionSnapshot | null = null
@@ -381,8 +410,10 @@ export const useAgentConversation = (
             return
           }
           applySnapshot(snapshot)
-          // 终态兜底收口（防 done 帧丢失）
-          if (isTerminalStatus(status.value?.status)) shutdown()
+          // 终态兜底收口（防 done 帧丢失）：🔴 不能当场 shutdown——建连回放里 status 帧
+          // 先于全量 events 帧，终态会话当场收口会把后面的历史回放整段 abort 掉
+          // （回放只剩结论卡的元凶）；延后 2s，期间 done/events 帧照常处理
+          if (isTerminalStatus(status.value?.status)) scheduleTerminalFallback()
         } else if (event === 'done') {
           gotDone = true
           try {

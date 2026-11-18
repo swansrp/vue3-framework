@@ -31,6 +31,8 @@ const KEEPALIVE_INTERVAL = 25000
 /** 断流重连基准间隔；连续失败逐级退避（+BASE）至 RECONNECT_MAX，重连成功复位 */
 const RECONNECT_BASE = 10000
 const RECONNECT_MAX = 30000
+/** SSE 终态兜底收口延后：给 done 帧与建连回放的历史 events 帧留出处理窗（见 scheduleTerminalFallback） */
+const TERMINAL_FALLBACK_DELAY = 2000
 
 export const useAgentSession = (sessionId: Ref<string | null>) => {
   const status = ref<AgentSessionStateT | null>(null)
@@ -120,6 +122,30 @@ export const useAgentSession = (sessionId: Ref<string | null>) => {
     }
   }
 
+  /**
+   * 终态兜底收口的延后闸（防 done 帧丢失时面板挂死）：🔴 建连回放里 status 帧先于全量
+   * events 帧到达（hub.open 先发 status 再逐条回放事件），终态会话若在 status 帧当场
+   * shutdown，会把紧随其后的历史事件回放整段 abort 掉——回放只剩结论卡的元凶
+   * （与 agent/useAgentConversation 同源缺陷，2026-11-18 同批修）。故终态先起 2s 延后
+   * 闸：期间任何 events/done 帧都取消它；真丢了 done 帧（断流未重连）才由闸收口＋
+   * 流自然结束走 fallbackToPolling 兜底。
+   */
+  let terminalFallbackTimer: ReturnType<typeof setTimeout> | null = null
+  const clearTerminalFallback = () => {
+    if (terminalFallbackTimer) {
+      clearTimeout(terminalFallbackTimer)
+      terminalFallbackTimer = null
+    }
+  }
+  const scheduleTerminalFallback = () => {
+    const myGen = gen
+    if (terminalFallbackTimer) return
+    terminalFallbackTimer = setTimeout(() => {
+      terminalFallbackTimer = null
+      if (myGen === gen && sessionId.value && isTerminalStatus(status.value?.status)) shutdown()
+    }, TERMINAL_FALLBACK_DELAY)
+  }
+
   /** 全停（终态收口/会话清空/卸载共用）：作废在途流协程、关流、清保活/重连定时器、停轮询 */
   const shutdown = () => {
     gen++
@@ -127,6 +153,7 @@ export const useAgentSession = (sessionId: Ref<string | null>) => {
     stopKeepalive()
     clearReconnect()
     stopPolling()
+    clearTerminalFallback()
     sse.value = false
   }
 
@@ -252,6 +279,8 @@ export const useAgentSession = (sessionId: Ref<string | null>) => {
           if (ev && ev.seq > sinceSeq) {
             events.value.push(ev)
             sinceSeq = ev.seq
+            // 回放仍在推进＝流没死：终态兜底闸继续等 done 帧（若有挂起的闸则解除）
+            clearTerminalFallback()
           }
         } else if (event === 'status') {
           try {
@@ -259,8 +288,10 @@ export const useAgentSession = (sessionId: Ref<string | null>) => {
           } catch {
             return
           }
-          // 终态兜底收口（防 done 帧丢失）
-          if (isTerminalStatus(status.value?.status)) shutdown()
+          // 终态兜底收口（防 done 帧丢失）：🔴 不能当场 shutdown——建连回放里 status 帧
+          // 先于全量 events 帧，终态会话当场收口会把后面的历史回放整段 abort 掉；
+          // 延后 2s，期间 done/events 帧照常处理
+          if (isTerminalStatus(status.value?.status)) scheduleTerminalFallback()
         } else if (event === 'done') {
           gotDone = true
           try {
