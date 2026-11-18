@@ -175,7 +175,9 @@ const isBetweenRelation = computed(() =>
 )
 
 const onPlaceholderRangeChange = () => {
-  emit('update:conditionContentValue', [valueArray.value[0], valueArray.value[1]])
+  // 清空过的格子留下 ''，与未填同义：剔除后再回传，避免把空槽存进条件值
+  const slots = [valueArray.value[0], valueArray.value[1]].filter((v: any) => v !== '' && v !== undefined && v !== null)
+  emit('update:conditionContentValue', slots)
 }
 
 const onRangeChange = (day: [any, any]) => {

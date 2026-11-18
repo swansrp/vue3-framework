@@ -287,6 +287,28 @@ const requiredValueCount = (relation: any): number => {
   return 1
 }
 
+// 条件值占位符（$1/$2…）展开为筛选项当前选中值
+// - 仅单个 '$1'：展开为全部选中值（多选字典的 EQUAL/IN 须吃下整个数组，多值时调用方转 IN）
+// - 其余（between 两槽 [$1,$2] 等）：按位置取第 N 个选中值，取不到的位置丢弃，
+//   丢弃后个数不足由 normalizeCondition 兜底整条跳过，不会把字面 '$2' 发给后端
+// - 占位符条件里的空串/null 槽位＝没填的格子（输入框清空后残留 ''），按未填剔除；
+//   无占位符的条件不走这里，空串仍按合法维度值原样下发
+const CONDITION_PLACEHOLDER_RE = /^\$\d+$/
+const expandConditionPlaceholders = (valuesField: any[], value: any): any[] | null => {
+  const hasPlaceholder = valuesField.some((v: any) => typeof v === 'string' && CONDITION_PLACEHOLDER_RE.test(v))
+  if (!hasPlaceholder) {
+    return null
+  }
+  const slots = valuesField.filter((v: any) => v !== '' && v !== null && v !== undefined)
+  const actualValues = Array.isArray(value) ? value : [value]
+  if (slots.length === 1 && slots[0] === '$1') {
+    return actualValues
+  }
+  return slots
+    .map((v: any) => (typeof v === 'string' && CONDITION_PLACEHOLDER_RE.test(v) ? actualValues[Number(v.slice(1)) - 1] : v))
+    .filter((v: any) => v !== undefined)
+}
+
 /**
  * 下发前归一单条条件：清洗条件值并按关系类型校验个数
  * 筛选项配置(sys_portal_table_filter.condition)里的脏值（如 value:[[]]）会让后端拼出
@@ -387,21 +409,24 @@ const condition = computed(() => {
           }
           
           if (conditionArray.length > 0) {
-            // 替换占位符 $1 为实际值
+            // 替换条件值中的 $1/$2 占位符为筛选项当前选中值
             conditionArray.forEach((cond) => {
               // 注意：condition 配置中可能是 value 或 values 字段
               const valuesField = cond.values || cond.value
-              if (valuesField && Array.isArray(valuesField) && valuesField.includes('$1')) {
+              const expanded = valuesField && Array.isArray(valuesField)
+                ? expandConditionPlaceholders(valuesField, value)
+                : null
+              if (expanded !== null) {
                 const newCond = { ...cond }
-                newCond.values = valuesField.flatMap(v => v === '$1' ? (Array.isArray(value) ? value : [value]) : [v])
-                // 多选展开后为多值时 EQUAL 需转为 IN：后端 EQUAL 只取 value[0]，会丢失其余选中值
-                if (String(newCond.relation) === String(FILTER_TYPE.EQUAL) && newCond.values.length > 1) {
-                  newCond.relation = FILTER_TYPE.IN
+                // 占位符写在哪个字段（value/values）就回填哪个字段
+                if (cond.values !== undefined) {
+                  newCond.values = expanded
+                } else {
+                  newCond.value = expanded
                 }
-                // 如果原始配置用的是 value 字段，保持使用 value
-                if (cond.value && !cond.values) {
-                  newCond.value = newCond.values
-                  delete newCond.values
+                // 多选展开后为多值时 EQUAL 需转为 IN：后端 EQUAL 只取 value[0]，会丢失其余选中值
+                if (String(newCond.relation) === String(FILTER_TYPE.EQUAL) && expanded.length > 1) {
+                  newCond.relation = FILTER_TYPE.IN
                 }
                 pushCondition(newCond)
               } else {
