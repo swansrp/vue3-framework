@@ -24,10 +24,15 @@
       @paste="onPaste"
     />
 
-    <!-- 底部按钮排（图3口径）：左侧附件（或业务页槽位按钮），右侧暂停/停止/小绿方块发送。
-         槽位设计（U69 复用）：业务页地面态复用同一输入框，素材/文件夹按钮走 bar-left 槽、
-         解析状态走 bar-right 槽，输入框/发送钮/拖拽粘贴逻辑全部共享 -->
+    <!-- 底部按钮排（图3口径）：左侧附件组（探活点＋附件/槽位按钮），右侧暂停/停止/小绿方块发送。
+         探活点（2026-11-18 用户口径）：探活价值在发起前，放在左下角按钮堆里；运行中
+         （AgentPane 内）不显示——已经跑起来了看到没意义 -->
     <div class="bidr-agent-composer__bar">
+      <CapabilityHealthDot
+        v-if="showHealth"
+        :capabilities="capabilities"
+        :health="health"
+      />
       <!-- 能力位驱动：files.upload 缺席时附件按钮与拖拽落区均不渲染（拖拽仅兜底阻止浏览器打开文件）；
            hideAttach＝业务页自带素材按钮（bar-left 槽），隐藏默认回形针 -->
       <a-button
@@ -47,6 +52,12 @@
       <slot name="bar-left"></slot>
       <span class="bidr-agent-composer__spacer"></span>
       <slot name="bar-right"></slot>
+      <!-- 当前模型名（右下角按钮区左侧，2026-11-18 用户要求）：让用户知道这次跑的是哪个模型 -->
+      <span
+        v-if="model"
+        class="bidr-agent-composer__model"
+        :title="`当前模型：${model}`"
+      >{{ model }}</span>
       <a-button
         v-if="pausable"
         class="bidr-agent-composer__pause"
@@ -78,7 +89,10 @@
           <StopOutlined />
         </template>
       </a-button>
+      <!-- 发送钮只在有发送语义时渲染（U71 图：暂停/停止/发送三者不同排）：
+           RUNNING 无提问＝只有暂停+停止；PAUSED＝停止+发送；提问态＝停止+发送；地面态＝发送 -->
       <a-button
+        v-if="canSendText"
         class="bidr-agent-composer__send"
         size="small"
         type="primary"
@@ -118,6 +132,7 @@ import {
 import { computed, ref, watch } from 'vue'
 
 import AttachmentTray from './AttachmentTray.vue'
+import CapabilityHealthDot from './CapabilityHealthDot.vue'
 import { AGENT_CAPABILITY, type AttachmentItem } from '../types'
 
 interface Props {
@@ -153,6 +168,12 @@ interface Props {
   text?: string
   /** 文件收集钩子（可选）：业务页可注入文件夹递归收集（webkitGetAsEntry）；缺省取 dt.files 平面文件 */
   collectFiles?: (dt: DataTransfer | null) => File[] | Promise<File[]>
+  /** 显示能力探活点（发起前可用性）：地面态传 true，运行中不传（看到没意义） */
+  showHealth?: boolean
+  /** 能力位运行级健康快照（/agents 条目 health；探活点数据源初值，SSE 后实时翻转） */
+  health?: Record<string, string> | null
+  /** 当前模型名（右下角按钮区左侧小字；空/缺省不渲染） */
+  model?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -166,7 +187,10 @@ const props = withDefaults(defineProps<Props>(), {
   minRows: 2,
   hideAttach: false,
   text: undefined,
-  collectFiles: undefined
+  collectFiles: undefined,
+  showHealth: false,
+  health: null,
+  model: ''
 })
 
 const emit = defineEmits<{
@@ -218,8 +242,8 @@ const canSend = computed(() => {
   return text.value.trim().length > 0 || allowEmptySend.value
 })
 const stoppable = computed(() => !props.disabled && (props.status === 'RUNNING' || props.status === 'PAUSED'))
-/** 暂停入口：仅 RUNNING 有意义（PAUSED 分支已是恢复语义） */
-const pausable = computed(() => !props.disabled && props.status === 'RUNNING')
+/** 暂停入口：仅 RUNNING 且无待答问题时渲染（提问态模型在等用户，暂停无意义；也避免三按钮同排） */
+const pausable = computed(() => !props.disabled && props.status === 'RUNNING' && !props.waitingQuestion)
 
 const placeholder = computed(() => {
   if (props.placeholder) return props.placeholder

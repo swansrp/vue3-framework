@@ -14,7 +14,7 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-subtle, #f0f0f0);
   border-radius: 8px;
 }
@@ -108,15 +108,18 @@
   flex-shrink: 0;
 }
 
-/* 能力健康点（原逐项徽标收敛为一个点＋点开清单）：绿＝声明能力全部可用、红＝有不可用；
-   health 字段缺席（旧后端）＝全绿兼容；点开清单逐项 ✓/✕＋一句话状态说明 */
-.bidr-agent-pane__capwrap {
+/* 能力健康点（CapabilityHealthDot）：绿＝声明能力全部可用、红＝有不可用；
+   health 字段缺席（旧后端）＝全绿兼容；点开清单逐项 ✓/✕＋一句话状态说明。
+   挂在 Composer 输入条里（地面态发起前），清单默认向上弹（up）——底部条下方没有空间 */
+.bidr-agent-health {
   position: relative;
-  display: flex;
+  flex: 0 0 auto;
+  display: inline-flex;
   align-items: center;
+  margin-right: 2px;
 }
 
-.bidr-agent-pane__capdot {
+.bidr-agent-health__dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -124,34 +127,42 @@
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
 }
 
-.bidr-agent-pane__capdot.is-ok {
+.bidr-agent-health__dot.is-ok {
   background: #52c41a;
 }
 
-.bidr-agent-pane__capdot.is-bad {
+.bidr-agent-health__dot.is-bad {
   background: #ff4d4f;
 }
 
-.bidr-agent-pane__caplist {
+.bidr-agent-health__list {
   position: absolute;
-  top: 18px;
-  right: 0;
   min-width: 200px;
   padding: 8px 12px;
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-base, #d9d9d9);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   z-index: 30;
 }
 
-.bidr-agent-pane__caplist-head {
+.bidr-agent-health.is-up .bidr-agent-health__list {
+  bottom: 18px;
+  left: 0;
+}
+
+.bidr-agent-health.is-down .bidr-agent-health__list {
+  top: 18px;
+  right: 0;
+}
+
+.bidr-agent-health__head {
   margin-bottom: 4px;
   font-size: 11px;
   color: var(--text-secondary, #999);
 }
 
-.bidr-agent-pane__capitem {
+.bidr-agent-health__item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -160,21 +171,21 @@
   white-space: nowrap;
 }
 
-.bidr-agent-pane__capitem-mark.is-ok {
+.bidr-agent-health__mark.is-ok {
   color: #52c41a;
   font-weight: 600;
 }
 
-.bidr-agent-pane__capitem-mark.is-bad {
+.bidr-agent-health__mark.is-bad {
   color: #ff4d4f;
   font-weight: 600;
 }
 
-.bidr-agent-pane__capitem-label {
+.bidr-agent-health__label {
   color: var(--text-primary, #333);
 }
 
-.bidr-agent-pane__capitem-note {
+.bidr-agent-health__note {
   margin-left: auto;
   padding-left: 12px;
   font-size: 11px;
@@ -198,11 +209,7 @@
   flex-shrink: 0;
 }
 
-.bidr-agent-pane__empty {
-  margin: auto;
-  color: var(--text-secondary, #999);
-  font-size: 13px;
-}
+/* 空态占位已退役（会话启动期直接渲染乐观用户气泡，见 AgentPane：用户口径「不要显示启动中」） */
 
 /* ==================== 助手正文 ==================== */
 
@@ -222,19 +229,7 @@
   line-height: 16px;
 }
 
-/* 说话人标签：我（用户）/ AI（模型）——一眼分清谁在说话 */
-.bidr-agent-msg__speaker {
-  margin-bottom: 2px;
-  color: var(--text-tertiary, #bfbfbf);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-}
-
-.bidr-agent-msg.is-user .bidr-agent-msg__speaker {
-  color: var(--accent, #1677ff);
-  text-align: right;
-}
+/* 说话人标签样式已退役（U71/U73：「我」「AI」都不要；左右气泡/卡片本身可辨识） */
 
 /* ==================== 工具卡（行式，常驻过程折叠组内） ==================== */
 
@@ -246,7 +241,8 @@
 
 .bidr-agent-tool__head {
   display: flex;
-  align-items: center;
+  /* 文字基线对齐（U73）：名称 12px 与耗时 11px 字号不同，居中会错位；图标单独居中 */
+  align-items: baseline;
   gap: 8px;
   padding: 3px 8px;
   font-size: 12px;
@@ -255,6 +251,12 @@
   list-style: none;
   user-select: none;
   border-radius: 6px;
+}
+
+/* 行内图标件保持几何居中 */
+.bidr-agent-tool__done,
+.bidr-agent-tool__spin {
+  align-self: center;
 }
 
 /* 悬停反馈只给有悬停能力的指针（触屏上 :hover 会点一下就黏住） */
@@ -274,8 +276,8 @@
 .bidr-agent-tool__name {
   color: var(--text-primary, #333);
   font-weight: 500;
-  word-break: break-all;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* 状态徽标：中性灰胶囊；运行中着 accent 色（一眼分辨在途/完成） */
@@ -330,7 +332,9 @@
 
 .bidr-agent-proc__head {
   display: flex;
-  align-items: center;
+  /* 文字基线对齐（U73）：主文 13px 与耗时 12px 字号不同，居中对齐会视觉错位；
+     图标类（绿勾/计数箭头）单独 align-self:center 保持几何居中 */
+  align-items: baseline;
   gap: 6px;
   width: fit-content;
   max-width: 100%;
@@ -343,10 +347,26 @@
   user-select: none;
 }
 
-/* 组头文字统一行高（13px 主文与 12px 秒数同 20px 行盒）——基线对齐，不再一高一低 */
+/* 组头图标件保持几何居中（不参与基线对齐） */
+.bidr-agent-proc__done,
+.bidr-agent-proc__toggle {
+  align-self: center;
+}
+
+/* 组头文字统一行高（13px 主文与 12px 秒数同 20px 行盒）——基线对齐，不再一高一低；
+   nowrap 防中文被挤压逐字换行（U71 图1：交互数大时「工作中」竖排断字） */
 .bidr-agent-proc__label,
 .bidr-agent-proc__state {
+  flex-shrink: 0;
   line-height: 20px;
+  white-space: nowrap;
+}
+
+/* 已完成组的绿勾（U71）：终态不再显示交互数徽标与预览行，一个对勾＋已完成＋耗时即可 */
+.bidr-agent-proc__done {
+  flex-shrink: 0;
+  color: #52c41a;
+  font-size: 13px;
 }
 
 @media (hover: hover) {
@@ -370,10 +390,12 @@
 
 /* 折叠态：交互数（25 这类一眼可读的数字）；无框素数字，靠 hover 变 accent 表态可点 */
 .bidr-agent-proc__count {
+  flex-shrink: 0;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary, #8c8c8c);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* 展开态箭头：默认隐藏，open 时顶替计数位（收起引导） */
@@ -647,14 +669,7 @@
   text-align: right;
 }
 
-/* 结论卡上方「AI」标签 */
-.bidr-agent-conclusion__speaker {
-  margin-bottom: 2px;
-  color: var(--text-tertiary, #bfbfbf);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-}
+/* 结论卡「AI」标签样式已退役（U73） */
 
 /* 错误：红底浅染，正文色加深保证可读 */
 .bidr-agent-strip.is-error {
@@ -671,7 +686,7 @@
   padding: 8px 12px;
   border: 1px solid var(--border-subtle, #f0f0f0);
   border-radius: 8px;
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
 }
 
 .bidr-agent-live__head {
@@ -731,13 +746,17 @@
   50% { opacity: 0.3; }
 }
 
-/* 卡头本段计时（U64：执行中秒数常显）：小一号浅灰，与字数并列但不抢戏 */
-.bidr-agent-live__elapsed {
+/* 卡头本段计时已退役（U71：该计时跨思考段不清零，观感像「所有深度思考总时长」，用户不需要；
+   进度时间统一由过程组头承担） */
+
+/* 工具/思考行的耗时小字（U71：每条深度思考后面跟本次耗时） */
+.bidr-agent-tool__meta {
   flex-shrink: 0;
   margin-left: 2px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--text-tertiary, #bfbfbf);
+  white-space: nowrap;
 }
 
 /* 正文滚动盒：浅底内嵌，跟手滚动看思路；滚到头不外链 */
@@ -809,7 +828,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 12px 16px;
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
   border-top: 1px solid var(--border-subtle, #f0f0f0);
   border-left: 3px solid var(--accent, #1677ff);
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
@@ -857,7 +876,7 @@
   line-height: 1.6;
   text-align: left;
   color: var(--text-primary, #333);
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-base, #d9d9d9);
   border-radius: 8px;
   cursor: pointer;
@@ -895,7 +914,7 @@
 .bidr-agent-question__write {
   margin-bottom: 10px;
   padding: 6px 8px 4px;
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-base, #d9d9d9);
   border-radius: 10px;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -914,7 +933,7 @@
   box-shadow: none !important;
 }
 
-.bidr-agent-question__write-input :deep(.ant-input),
+.bidr-agent-question__write-input .ant-input,
 .bidr-agent-question__write-input textarea {
   background: transparent;
   box-shadow: none !important;
@@ -938,7 +957,7 @@
   flex-shrink: 0;
   margin: 8px 12px;
   padding: 8px 8px 6px;
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-base, #d9d9d9);
   border-radius: 12px;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -978,24 +997,52 @@
   padding: 0 2px;
 }
 
+/* 排内图标按钮一律不参与压缩：空间不足时该收缩的是文字提示（spacer/省略号），不是按钮 */
+.bidr-agent-composer__bar > .ant-btn {
+  flex: 0 0 auto;
+}
+
 .bidr-agent-composer__spacer {
   flex: 1;
 }
 
-/* 发送：绿色圆角方块＋上箭头（图3口径），去蓝色光晕；按压轻微缩放（与宿主页 composer 同款） */
+/* 当前模型名（右下角按钮区左侧）：小字弱化，长名省略，不参与压缩 */
+.bidr-agent-composer__model {
+  flex: 0 0 auto;
+  max-width: 160px;
+  margin-right: 2px;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 20px;
+  color: var(--text-tertiary, #bfbfbf);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 发送：蓝色圆角方块＋上箭头（2026-11-18 用户改蓝色）；按压轻微缩放（与宿主页 composer 同款）。
+   必须是正方：flex 容器里默认 flex-shrink:1 会被挤窄成竖长条，故锁 flex/min-width/padding/
+   aspect-ratio——宽度不再由内容或剩余空间决定 */
 .bidr-agent-composer__send.ant-btn {
+  flex: 0 0 auto;
   width: 30px;
+  min-width: 30px;
   height: 30px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   border-radius: 8px;
-  background: #16a34a !important;
-  border-color: #16a34a !important;
+  background: #1677ff !important;
+  border-color: #1677ff !important;
   box-shadow: none !important;
   transition: background-color 0.15s, border-color 0.15s, transform 0.15s ease-out;
 }
 
 .bidr-agent-composer__send.ant-btn:hover:not(:disabled) {
-  background: #128043 !important;
-  border-color: #128043 !important;
+  background: #0958d9 !important;
+  border-color: #0958d9 !important;
 }
 
 .bidr-agent-composer__send.ant-btn:disabled {
@@ -1048,7 +1095,7 @@
   gap: 6px;
   max-width: 100%;
   padding: 4px 8px;
-  background: var(--bg-base, #fff);
+  background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-subtle, #f0f0f0);
   border-radius: 6px;
 }

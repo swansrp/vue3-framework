@@ -18,6 +18,16 @@ const agentApiType = '/api/agent'
 export const listAgents = () =>
   get(buildGetApiByType('/agents', agentApiType), {}, {}, false, false, false)
 
+/**
+ * 当前生效模型名（框架级通用：输入条展示「这次跑的是哪个模型」）。
+ * 后端按 AGENT 用途取 sys_config/yaml 覆盖后的实际值；老后端无该端点时静默空串（showErr=false）。
+ */
+export const getAgentModelName = async (): Promise<string> => {
+  const resp: any = await get(buildGetApiByType('/model', agentApiType), {}, {}, false, false, false)
+  const p = resp?.payload
+  return typeof p === 'string' ? p : (p?.model ?? '')
+}
+
 // 统一注册中心清单（三类归一：flow/autonomous/dynamic，agentCode/displayName/kind/skillCode；
 // 历史/评价按 agentCode 归组的展示名数据源）
 export const getAgentRegistry = () =>

@@ -20,40 +20,8 @@
         >{{ statusText }}</span>
       </div>
       <div class="bidr-agent-pane__meta">
-        <!-- 能力健康点（原逐项徽标收敛为一个点）：绿＝声明能力全部可用、红＝有不可用；
-             点开列清单逐项 ✓/✕，SSE 探活变化实时翻转（healthMap 同源） -->
-        <div
-          v-if="capabilityItems.length"
-          ref="capWrapRef"
-          class="bidr-agent-pane__capwrap"
-        >
-          <span
-            class="bidr-agent-pane__capdot"
-            :class="`is-${capDotState}`"
-            :title="capDotTitle"
-            @click.stop="capListOpen = !capListOpen"
-          ></span>
-          <div
-            v-if="capListOpen"
-            class="bidr-agent-pane__caplist"
-          >
-            <div class="bidr-agent-pane__caplist-head">
-              能力状态
-            </div>
-            <div
-              v-for="item in capabilityItems"
-              :key="item.label"
-              class="bidr-agent-pane__capitem"
-            >
-              <span
-                class="bidr-agent-pane__capitem-mark"
-                :class="item.ok ? 'is-ok' : 'is-bad'"
-              >{{ item.ok ? '✓' : '✕' }}</span>
-              <span class="bidr-agent-pane__capitem-label">{{ item.label }}</span>
-              <span class="bidr-agent-pane__capitem-note">{{ item.note }}</span>
-            </div>
-          </div>
-        </div>
+        <!-- 能力探活点已迁至 Composer（地面态发起前显示）：运行中看到探活没有决策价值
+             （2026-11-18 用户口径），见 composer/CapabilityHealthDot.vue -->
         <a-button
           v-if="showRestart && isTerminal"
           size="small"
@@ -87,15 +55,8 @@
       class="bidr-agent-pane__body"
       @scroll="onBodyScroll"
     >
-      <div
-        v-if="!status && items.length === 0"
-        class="bidr-agent-pane__empty"
-      >
-        会话启动中…
-      </div>
-
-      <!-- 发起即显我说的话（U63）：会话启动期事件未到，先乐观渲染用户气泡，
-           run_start 事件到达后自然切换成正式气泡（条件互斥，不会重复） -->
+      <!-- 会话启动期不放占位文案（2026-11-18 用户口径「不要显示启动中」）：
+           直接乐观渲染用户气泡，事件流到达后自然接上 -->
       <div
         v-if="showOptimisticInstruction"
         class="bidr-agent-msg is-user"
@@ -117,10 +78,8 @@
           class="bidr-agent-msg"
           :class="item.role === 'user' ? 'is-user' : 'is-assistant'"
         >
-          <!-- 说话人标签：我（用户指令/输入）｜AI（模型输出）——一眼分清谁在说话 -->
-          <div class="bidr-agent-msg__speaker">
-            {{ item.role === 'user' ? '我' : 'AI' }}
-          </div>
+          <!-- 说话人标签已全部退役（U71/U73：用户「我」与 AI 侧「AI」都不要，
+               左右气泡/卡片本身已能辨识谁在说话） -->
           <!-- LLM 正文 markdown 渲染（净化后 v-html；流式期仍走 live 区纯文本） -->
           <div
             class="bidr-agent-msg__text is-md"
@@ -130,40 +89,45 @@
         </div>
 
         <!-- 过程折叠组：连续的工具调用/日志收进一个可折叠块（正文留主面，过程按需展开）。
-             开合只由用户点击控制（不自开不自关，U64）；折叠头＝计数徽标（折叠显示交互数、
-             点开变箭头，U67）＋「工作中」状态字（U68）＋实时计时（时分秒，U68）＋
-             一行当前内容预览（折叠态显示、展开隐藏，U65） -->
+             开合只由用户点击控制（不自开不自关）；组头两态（U71）：
+             · 运行中＝计数徽标（折叠显数字、点开变箭头）＋「工作中」＋实时时分秒＋一行最新内容预览
+             · 已完结＝绿勾＋「已完成」＋耗时（不再显示交互数与预览）；PAUSED 最后一组＝「已暂停」 -->
         <details
           v-else-if="item.kind === 'process'"
           class="bidr-agent-proc"
         >
-          <summary class="bidr-agent-proc__head">
-            <span class="bidr-agent-proc__toggle">
+          <summary
+            class="bidr-agent-proc__head"
+            :class="`is-${procPhase(item)}`"
+          >
+            <template v-if="procPhase(item) === 'done'">
+              <CheckCircleFilled class="bidr-agent-proc__done" />
+            </template>
+            <span
+              v-else
+              class="bidr-agent-proc__toggle"
+            >
               <span class="bidr-agent-proc__count">{{ procCount(item) }}</span>
               <span class="bidr-agent-proc__chev"></span>
             </span>
             <span
-              v-if="item.running"
-              class="bidr-agent-proc__label is-running"
-            >工作中</span>
-            <span
-              v-else-if="procCount(item) === 0"
               class="bidr-agent-proc__label"
-            >执行过程</span>
+              :class="{ 'is-running': procPhase(item) === 'live' }"
+            >{{ procPhaseLabel(item) }}</span>
             <span
               v-if="procDurationText(item)"
               class="bidr-agent-proc__state"
-              :class="{ 'is-running': item.running }"
+              :class="{ 'is-running': procPhase(item) === 'live' }"
             >{{ procDurationText(item) }}</span>
             <span
-              v-if="procPreview(item)"
+              v-if="procPhase(item) === 'live' && procPreview(item)"
               class="bidr-agent-proc__preview"
               :title="procPreview(item)"
             >{{ procPreview(item) }}</span>
           </summary>
           <div class="bidr-agent-proc__body">
             <template
-              v-for="child in item.children"
+              v-for="(child, ci) in item.children"
               :key="child.id"
             >
               <details
@@ -214,6 +178,11 @@
                 <summary class="bidr-agent-tool__head">
                   <CheckCircleFilled class="bidr-agent-tool__done" />
                   <span class="bidr-agent-tool__name">深度思考<template v-if="thinkingChars(child.text)"> · {{ thinkingChars(child.text) }} 字</template></span>
+                  <!-- 本次思考耗时（U71，近似口径）：归档事件 time − 组内上一事件 time -->
+                  <span
+                    v-if="thinkingDuration(item, ci)"
+                    class="bidr-agent-tool__meta"
+                  >{{ thinkingDuration(item, ci) }}</span>
                 </summary>
                 <div class="bidr-agent-tool__section">
                   <pre class="bidr-agent-tool__pre">{{ thinkingBody(child.text) }}</pre>
@@ -295,13 +264,7 @@
           class="bidr-agent-strip"
           :class="[`is-${item.tone}`, `is-${item.type}`]"
         >
-          <!-- 用户发言（补充/作答）：气泡上方标「我」，与左侧 AI 条目明确区分 -->
-          <div
-            v-if="item.type === 'guidance' || item.type === 'answered'"
-            class="bidr-agent-strip__speaker"
-          >
-            我
-          </div>
+          <!-- 用户发言（补充/作答）：右蓝气泡已足够辨识，不再加「我」标签（U71） -->
           {{ item.text }}
           <span
             v-if="item.type === 'guidance' || item.type === 'answered'"
@@ -323,11 +286,6 @@
           <span class="bidr-agent-live__dot"></span>
           <!-- 只保留一个在变的字数：深度思考（N 字），不显示「已思 N 字」字样 -->
           <span>{{ livePhase }}<template v-if="liveChars">（{{ liveChars }} 字）</template></span>
-          <!-- 本段实时内容的实时计时（U64：执行中秒数常显），随 nowTick 每秒走 -->
-          <span
-            v-if="liveElapsedText"
-            class="bidr-agent-live__elapsed"
-          >{{ liveElapsedText }}</span>
         </summary>
         <pre
           v-if="liveBody"
@@ -335,16 +293,12 @@
         >{{ liveBody }}</pre>
       </details>
 
-      <!-- 终态结论卡 -->
+      <!-- 终态结论卡（U73：不再标「AI」说话人，卡片本身即模型输出） -->
       <div
         v-if="conclusion"
         class="bidr-agent-conclusion"
         :class="`is-${conclusion.kind}`"
       >
-        <!-- 结论＝模型输出：标「AI」，与用户气泡区分 -->
-        <div class="bidr-agent-conclusion__speaker">
-          AI
-        </div>
         <div class="bidr-agent-conclusion__title">
           <CheckCircleFilled v-if="conclusion.kind === 'finish'" />
           <CloseCircleFilled v-else-if="conclusion.kind === 'error'" />
@@ -435,6 +389,9 @@
       :stopping="stopping"
       :pausing="pausing"
       :uploading="isUploading"
+      show-health
+      :health="health"
+      :model="model"
       @send="onSend"
       @stop="onStop"
       @pause="onPause"
@@ -463,11 +420,8 @@ import { marked } from 'marked'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import Composer from './composer/Composer.vue'
-import { formatFileSize, AGENT_CAPABILITY, AGENT_HEALTH, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
+import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
-
-import { name } from '@/../package.json'
-import { getSseStream, readSseStream } from '@/framework/utils/sse'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */
@@ -479,9 +433,10 @@ interface Props {
   variant?: 'sidebar' | 'workbench'
   /** 能力位（/agents 条目 capabilities；决定附件入口与文件卡「已读取」提示） */
   capabilities?: string[]
-  /** 能力位运行级健康快照（/agents 条目 health；探活件上报，key=能力位名，value=up/down/unconfigured）。
-   *  缺席/undefined＝旧后端＝徽标全亮（兼容） */
+  /** 能力位运行级健康快照：**兼容保留**——探活点已迁至 Composer（见 composer/CapabilityHealthDot.vue） */
   health?: Record<string, string> | null
+  /** 当前模型名（宿主页从系统参数读取后传入；显示在 Composer 右下角按钮区左侧） */
+  model?: string
   /** 终态时是否显示「重新发起」 */
   showRestart?: boolean
   /** 只读回放态：隐藏底部 Composer 与拖拽落区（历史会话回放由宿主页提供修订输入条，避免双输入框） */
@@ -496,6 +451,7 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'sidebar',
   capabilities: () => [],
   health: null,
+  model: '',
   showRestart: true,
   readOnly: false,
   initialInstruction: ''
@@ -538,11 +494,18 @@ const clampLongUrls = (text: string): string =>
   text.replace(/\]\((https?:\/\/[^\s)<>）】]{80,})\)/g, ']()')
     .replace(/https?:\/\/[^\s)<>）】]{80,}/g, '〔下载链接见下方下载卡片〕')
 
+/**
+ * 字面转义还原：落库的 summary / 某些工具返回会把换行存成两个字符「\n」，
+ * 直接进 markdown 会整段挤成一行还带 \n 字样（U73 截图）。渲染前还原成真换行。
+ */
+const unescapeText = (text: string): string =>
+  text.replace(/\\r\\n|\\n/g, '\n').replace(/\\t/g, '\t')
+
 const markdownOf = (text: string): string => {
   if (!text) return ''
   const cached = markdownCache.get(text)
   if (cached !== undefined) return cached
-  const html = sanitizeHtml(marked.parse(clampLongUrls(text)) as string)
+  const html = sanitizeHtml(marked.parse(clampLongUrls(unescapeText(text))) as string)
   if (markdownCache.size > 200) markdownCache.clear()
   markdownCache.set(text, html)
   return html
@@ -558,147 +521,8 @@ const canReadFiles = computed(() => capabilityList.value.includes(AGENT_CAPABILI
 /** 工作台形态（主区）：样式按 .is-workbench 分支放大排版密度；缺省 sidebar 保持窄列密度 */
 const isWorkbench = computed(() => props.variant === 'workbench')
 
-/**
- * 徽标健康两态判定：SSE 实时值（sseHealth）优先，缺席回落 props.health（首屏初始值）；
- * 两者都缺席（旧后端）＝全亮；down/unconfigured＝灰。
- */
-const sseHealth = ref<Record<string, string> | null>(null)
-const healthMap = computed<Record<string, string> | null>(() => sseHealth.value ?? (props.health || null))
-const healthDimmed = (capability: string): boolean => {
-  const value = healthMap.value?.[capability]
-  return value === AGENT_HEALTH.DOWN || value === AGENT_HEALTH.UNCONFIGURED
-}
-
-// ==================== 能力健康点（原逐项徽标收敛为一个点＋点开清单） ====================
-
-/** 能力清单行：ok＝可用（探活 up 或无探活腿＝声明即可用）；note＝一句话状态说明 */
-interface CapabilityItem {
-  label: string
-  ok: boolean
-  note: string
-}
-
-/** 探活值→一句话状态说明（health 缺席＝旧后端＝按可用处理） */
-const healthNote = (capability: string): string => {
-  const value = healthMap.value?.[capability]
-  if (value === AGENT_HEALTH.DOWN) return '服务不可达'
-  if (value === AGENT_HEALTH.UNCONFIGURED) return '未配置'
-  return '正常'
-}
-
-/** 能力清单（绿点下拉消费；与 /agents 契约 capabilities 推导同源） */
-const capabilityItems = computed<CapabilityItem[]>(() => {
-  const items: CapabilityItem[] = []
-  // 附件上传（files.upload）/文件可读（files.read）无探活腿，声明即可用
-  if (capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD)) items.push({ label: '附件上传', ok: true, note: '随会话可用' })
-  if (canReadFiles.value) items.push({ label: '文件可读', ok: true, note: '随会话可用' })
-  if (capabilityList.value.includes(AGENT_CAPABILITY.ARTIFACTS_DOC)) {
-    items.push({ label: '产物导出', ok: !healthDimmed(AGENT_CAPABILITY.ARTIFACTS_DOC), note: healthNote(AGENT_CAPABILITY.ARTIFACTS_DOC) })
-  }
-  if (capabilityList.value.includes(AGENT_CAPABILITY.OCR)) {
-    items.push({ label: '文字识别', ok: !healthDimmed(AGENT_CAPABILITY.OCR), note: healthNote(AGENT_CAPABILITY.OCR) })
-  }
-  if (capabilityList.value.includes(AGENT_CAPABILITY.EXEC_SANDBOX)) {
-    items.push({ label: '沙箱执行', ok: !healthDimmed(AGENT_CAPABILITY.EXEC_SANDBOX), note: healthNote(AGENT_CAPABILITY.EXEC_SANDBOX) })
-  }
-  return items
-})
-
-/** 绿点两态：任一声明能力不可用＝红，否则绿（health 缺席＝全绿兼容） */
-const capDotState = computed<'ok' | 'bad'>(() =>
-  capabilityItems.value.some(item => !item.ok) ? 'bad' : 'ok')
-
-const capDotTitle = computed(() => {
-  const bad = capabilityItems.value.filter(item => !item.ok).length
-  return bad === 0 ? '能力全部可用（点开查看清单）' : `有 ${bad} 项能力不可用（点开查看）`
-})
-
-/** 清单开合＋点外部收起（document 级监听，挂载/卸载随既有钩子） */
-const capListOpen = ref(false)
-const capWrapRef = ref<HTMLElement | null>(null)
-const onDocClickForCapList = (e: MouseEvent) => {
-  if (capListOpen.value && capWrapRef.value && !capWrapRef.value.contains(e.target as Node)) {
-    capListOpen.value = false
-  }
-}
-
-// ==================== 健康度实时通道（SSE，探活状态变化即翻转徽标） ====================
-
-/**
- * SSE 直连地址：agentChat 会话流（useAgentSession）同款拼法——VITE_baseURL＋应用名前缀
- * ＋/web/api/agent/**（epc 部署在 /epc-ai/ 下，裸写 /web/api 会 404）；鉴权头由
- * getSseStream 注入（Bearer，与 request.ts 拦截器同口径），不走 request 封装。
- */
-const HEALTH_STREAM_URL = `${import.meta.env.VITE_baseURL}/${name}/web/api/agent/health/stream`
-
-/** 断流重连上限与间隔：超额降级 props.health（现状行为）；建连失败（旧后端 404 等）不重试 */
-const HEALTH_SSE_MAX_ATTEMPTS = 3
-const HEALTH_SSE_RETRY_MS = 5000
-
-let healthAbortController: AbortController | null = null
-/** 本生命周期内通道不可用（建连失败或重连超额）：不再尝试，徽标回落 props.health */
-let healthSseDead = false
-let healthSseAttempts = 0
-let healthSseRetryTimer: ReturnType<typeof setTimeout> | null = null
-
-const closeHealthSse = () => {
-  if (healthSseRetryTimer) {
-    clearTimeout(healthSseRetryTimer)
-    healthSseRetryTimer = null
-  }
-  healthAbortController?.abort()
-  healthAbortController = null
-}
-
-const retryHealthSse = () => {
-  healthSseAttempts += 1
-  if (healthSseAttempts > HEALTH_SSE_MAX_ATTEMPTS) {
-    healthSseDead = true
-    sseHealth.value = null
-    return
-  }
-  healthSseRetryTimer = setTimeout(() => {
-    healthSseRetryTimer = null
-    void connectHealthSse()
-  }, HEALTH_SSE_RETRY_MS)
-}
-
-const connectHealthSse = async () => {
-  if (healthSseDead || healthAbortController) return
-  healthAbortController = new AbortController()
-  const { signal } = healthAbortController
-  try {
-    const resp = await getSseStream(HEALTH_STREAM_URL, signal)
-    // 传输层嗅探（站内信流同款）：ok＋text/event-stream＋有 body 才算建连；
-    // 旧后端 404／错误信封 200+JSON＝不满足 → 本生命周期降级 props.health 不再重试
-    const contentType = resp.headers.get('content-type') || ''
-    if (!resp.ok || !contentType.includes('text/event-stream') || !resp.body) {
-      resp.body?.cancel().catch(() => { })
-      healthAbortController = null
-      healthSseDead = true
-      return
-    }
-    healthSseAttempts = 0
-    await readSseStream(resp.body, (event, data) => {
-      if (event === 'health') {
-        try {
-          sseHealth.value = JSON.parse(data)
-        } catch {
-          // 坏帧忽略：快照以最近一帧合法 JSON 为准
-        }
-      }
-      // connected 帧＝通道就绪确认；:ping 注释行 readSseStream 已过滤，均无需处理
-    })
-    // 读流正常退出＝断流（后端重启/代理斩断）：有限次重连，超额降级
-    healthAbortController = null
-    retryHealthSse()
-  } catch {
-    healthAbortController = null
-    if (!signal.aborted) {
-      retryHealthSse()
-    }
-  }
-}
+// 能力探活点（绿点＋清单＋SSE 健康帧）已整体迁至 composer/CapabilityHealthDot.vue：
+// 挂在 Composer（地面态发起前）显示，运行中不再显示（2026-11-18 用户口径）
 
 const sessionIdRef = computed(() => props.sessionId)
 const {
@@ -757,8 +581,6 @@ interface AgentProcessGroup {
   seq: number
   time: number
   children: AgentViewItem[]
-  /** 组内任一工具在途＝默认展开＋头部转圈；全部完成自动收起 */
-  running: boolean
 }
 
 type AgentRenderItem = AgentViewItem | AgentProcessGroup
@@ -778,8 +600,7 @@ const groupedItems = computed<AgentRenderItem[]>(() => {
       id: `proc-${first.id}`,
       seq: first.seq,
       time: first.time,
-      children: bucket,
-      running: bucket.some(i => i.kind === 'tool' && i.status === 'running')
+      children: bucket
     })
     bucket = []
   }
@@ -797,7 +618,7 @@ const groupedItems = computed<AgentRenderItem[]>(() => {
 
 /**
  * 秒级心跳（让时长实时跳）：会话 RUNNING 期间每 1s 刷新 nowTick，暂停/终态即停。
- * 深度思考时没有工具事件（组 running=false），若仍按「首尾事件差」秒数会冻住。
+ * 深度思考时没有工具事件，若仍按「首尾事件差」秒数会冻住。
  */
 const nowTick = ref(Date.now())
 let durationTimer: ReturnType<typeof setInterval> | null = null
@@ -827,12 +648,35 @@ const lastProcGroupId = computed(() => {
   return null
 })
 
-/** 折叠组时长：最后组且会话 RUNNING＝当前时刻−首事件（每秒跳）；其余＝首尾事件差 */
+/**
+ * 组相位（U71，取代旧的「组内有工具在途」判据——那个在工具间隙会翻转，导致
+ * 「工作中」消失、组头文案来回跳）：
+ * · live   ＝会话 RUNNING 且该组是最后一个过程组（模型思考期间也算，天然不抖）
+ * · paused ＝会话 PAUSED 且是最后一组
+ * · done   ＝其余，全部按已完成展示（绿勾＋已完成＋耗时）
+ */
+type ProcPhase = 'live' | 'paused' | 'done'
+const procPhase = (group: AgentProcessGroup): ProcPhase => {
+  if (group.id !== lastProcGroupId.value) return 'done'
+  if (sessionStatus.value === 'RUNNING') return 'live'
+  if (sessionStatus.value === 'PAUSED') return 'paused'
+  return 'done'
+}
+
+/** 组头状态字：运行中「工作中」/ 暂停「已暂停」/ 终态「已完成」 */
+const procPhaseLabel = (group: AgentProcessGroup): string => {
+  const phase = procPhase(group)
+  if (phase === 'live') return '工作中'
+  if (phase === 'paused') return '已暂停'
+  return '已完成'
+}
+
+/** 折叠组时长：运行/暂停中的最后一组按当前时刻算；其余＝首尾事件差 */
 const procDuration = (group: AgentProcessGroup): number | null => {
   const first = group.children[0]
   if (!first) return null
   const last = group.children[group.children.length - 1]
-  const live = sessionStatus.value === 'RUNNING' && group.id === lastProcGroupId.value
+  const live = procPhase(group) !== 'done' && sessionStatus.value === 'RUNNING'
   const end = live ? nowTick.value : (last ? last.time : first.time)
   const sec = Math.round((end - first.time) / 1000)
   return Number.isFinite(sec) && sec > 0 ? sec : null
@@ -859,13 +703,24 @@ const fmtDuration = (sec: number): string => {
   return `${s}秒`
 }
 
-/** 折叠组时长文案：运行中只报当前耗时，已完结加「用时」前缀；不足 1 秒不出（避免闪 0秒） */
+/** 折叠组时长文案：状态字后直接跟时间（「工作中 1分44秒」/「已完成 1分42秒」）；不足 1 秒不出 */
 const procDurationText = (group: AgentProcessGroup): string => {
   const sec = procDuration(group)
   if (sec === null) return ''
-  const text = fmtDuration(sec)
-  if (!text) return ''
-  return group.running ? text : `用时 ${text}`
+  return fmtDuration(sec)
+}
+
+/**
+ * 单次深度思考耗时（U71，近似口径）：思考归档事件在**思考结束**时刻推送，
+ * 与组内上一事件的差值≈本次思考耗时；组内第一条无前序事件，不出（宁缺不编）。
+ */
+const thinkingDuration = (group: AgentProcessGroup, index: number): string => {
+  if (index <= 0) return ''
+  const prev = group.children[index - 1]
+  const child = group.children[index]
+  if (!prev || !child) return ''
+  const sec = Math.round((child.time - prev.time) / 1000)
+  return Number.isFinite(sec) && sec > 0 ? fmtDuration(sec) : ''
 }
 
 /** 思考归档日志（后端「【LLM 思考归档】N 字\n正文」）识别与拆分，供折叠「深度思考」步骤渲染 */
@@ -1233,16 +1088,12 @@ onMounted(() => {
   window.addEventListener('dragend', onWindowDragEnd)
   window.addEventListener('drop', onWindowDragEnd)
   window.addEventListener('dragleave', onWindowDragLeave)
-  document.addEventListener('click', onDocClickForCapList)
-  void connectHealthSse()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('dragend', onWindowDragEnd)
   window.removeEventListener('drop', onWindowDragEnd)
   window.removeEventListener('dragleave', onWindowDragLeave)
-  document.removeEventListener('click', onDocClickForCapList)
-  closeHealthSse()
 })
 
 // ==================== 轮询失败手动刷新 ====================
@@ -1274,17 +1125,6 @@ const onLiveToggle = (e: Event) => {
   const el = e.target as HTMLDetailsElement | null
   if (el) liveCollapsed.value = !el.open
 }
-
-/** 本段实时内容起点（liveText 出现即计时）：给卡头「秒数常显」（U64），终态清零 */
-const liveStartAt = ref<number | null>(null)
-watch(() => !!liveText.value, present => {
-  liveStartAt.value = present ? Date.now() : null
-})
-const liveElapsedText = computed(() => {
-  if (!liveStartAt.value || sessionStatus.value !== 'RUNNING') return ''
-  const sec = Math.max(0, Math.round((nowTick.value - liveStartAt.value) / 1000))
-  return sec > 0 ? fmtDuration(sec) : ''
-})
 
 /** 消息时间戳：当天 HH:mm:ss，跨天补 MM-DD（事件 time 为 epoch 毫秒；缺席回空串不渲染） */
 const fmtTime = (ms?: number): string => {
@@ -1328,13 +1168,17 @@ const clipOneLine = (text: string, max = 120): string => {
   return one.length > max ? `${one.slice(0, max)}…` : one
 }
 
-/** 实时流当前内容（首行）：运行中折叠头的预览跟它走，「不停地刷」的来源 */
-const livePreviewLine = computed(() => clipOneLine((liveBody.value || '').split('\n')[0]))
+/** 实时流当前内容（最后一个非空行）：折叠头预览跟它走＝跟着模型最新一笔思考/输出刷，
+ *  不再固定显示开头一句（U71：取首行时长思考看着像卡住） */
+const livePreviewLine = computed(() => {
+  const lines = (liveBody.value || '').split('\n').map(line => line.trim()).filter(Boolean)
+  return clipOneLine(lines[lines.length - 1] || '')
+})
 
 /**
- * 折叠头一行实时预览（U65）：运行中的最后一组优先跟实时流（思考/生成的当前内容），
- * 其余取组内最后一个孩子的单行摘要（工具＝名称＋参数摘要、思考＝正文首行、日志＝原文）。
- * 展开态由 CSS 隐藏（展开即看完整明细，预览行功成身退）。
+ * 折叠头一行实时预览（U65）：运行中的最后一组优先跟实时流，
+ * 其余取组内最后一个孩子的单行摘要（工具＝名称＋参数摘要、思考＝正文尾行、日志＝原文）。
+ * 只有运行态显示（终态组头改绿勾＋已完成，不再挂预览）。
  */
 const procPreview = (group: AgentProcessGroup): string => {
   if (sessionStatus.value === 'RUNNING' && group.id === lastProcGroupId.value && livePreviewLine.value) {
@@ -1346,7 +1190,9 @@ const procPreview = (group: AgentProcessGroup): string => {
     return clipOneLine([last.label, last.digest].filter(Boolean).join(' '))
   }
   if (last.kind === 'log') {
-    return isThinkingLog(last.text) ? clipOneLine(thinkingBody(last.text)) : clipOneLine(last.text)
+    if (!isThinkingLog(last.text)) return clipOneLine(last.text)
+    const lines = thinkingBody(last.text).split('\n').map(line => line.trim()).filter(Boolean)
+    return clipOneLine(lines[lines.length - 1] || '')
   }
   return ''
 }
