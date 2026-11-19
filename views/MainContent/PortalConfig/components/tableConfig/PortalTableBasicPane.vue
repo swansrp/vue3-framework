@@ -270,29 +270,63 @@
               </div>
             </a-form-item>
             <!-- 报表默认排序: 普通报表把 JSON 下发给查询接口当 sortList,
-                 透视模式在聚合结果行上排(候选=行维度字段+聚合度量, 与「行维度顺序」里的逐字段排序并存) -->
-            <a-form-item label="排序字段">
-              <a-select
-                v-model:value="sortColumn"
-                :options="sortFieldOptions"
-                placeholder="不排序"
-                allow-clear
-                show-search
-                :filter-option="filterOption"
-              />
-            </a-form-item>
-            <a-form-item label="排序方向">
-              <a-select
-                v-model:value="sortType"
-                :disabled="!sortColumn"
-              >
-                <a-select-option :value="0">
-                  正序
-                </a-select-option>
-                <a-select-option :value="1">
-                  倒序
-                </a-select-option>
-              </a-select>
+                 透视模式在聚合结果行上排(候选=行维度字段+聚合度量, 与「行维度顺序」里的逐字段排序并存);
+                 多字段按列表自上而下顺序生效(先按第 1 条排, 值相同再顺延), 拖动手柄调优先级 -->
+            <a-form-item label="排序">
+              <div class="default-sort-rules">
+                <div
+                  v-for="(rule, index) in sortRules"
+                  :key="index"
+                  class="default-sort-rule-item"
+                  draggable="true"
+                  :class="{ 'default-sort-rule-dragging': sortDragIndex === index }"
+                  @dragstart="onSortRuleDragStart(index, $event)"
+                  @dragover.prevent="onSortRuleDragOver(index)"
+                  @dragend="onSortRuleDragEnd"
+                >
+                  <HolderOutlined class="default-sort-rule-handle" />
+                  <span class="measure-index">{{ index + 1 }}</span>
+                  <a-select
+                    v-model:value="rule.property"
+                    class="default-sort-rule-field"
+                    :options="sortFieldOptions"
+                    placeholder="选择字段"
+                    show-search
+                    :filter-option="filterOption"
+                  />
+                  <a-select
+                    v-model:value="rule.type"
+                    class="default-sort-rule-type"
+                  >
+                    <a-select-option :value="0">
+                      正序
+                    </a-select-option>
+                    <a-select-option :value="1">
+                      倒序
+                    </a-select-option>
+                  </a-select>
+                  <a-button
+                    type="text"
+                    size="small"
+                    danger
+                    @click="removeSortRule(index)"
+                  >
+                    <template #icon>
+                      <DeleteOutlined />
+                    </template>
+                  </a-button>
+                </div>
+                <a-button
+                  size="small"
+                  type="dashed"
+                  @click="addSortRule"
+                >
+                  <template #icon>
+                    <PlusOutlined />
+                  </template>
+                  添加排序
+                </a-button>
+              </div>
             </a-form-item>
           </div>
         </a-form>
@@ -933,6 +967,7 @@
 import {
   ApartmentOutlined,
   CopyOutlined,
+  DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
   FilterOutlined,
@@ -1462,9 +1497,34 @@ const pivotSummaryShowModel = computed<string>({
 
 // ==================== 报表默认排序 ====================
 // 落库结构同 sys_portal.default_sort: [{property, type}] type 0=正序 1=倒序
-const sortColumn = ref<string | undefined>(undefined)
-// 默认正序: 只选字段不改方向时得到 ASC, 方向下拉在未按字段前置灰
-const sortType = ref<number>(0)
+// 多字段排序: 数组序即优先级序(先按第 1 条排, 值相同再顺延), 界面拖动行调整
+const sortRules = ref<Array<{ property: string | undefined; type: number }>>([])
+const addSortRule = () => {
+  sortRules.value.push({ property: undefined, type: 0 })
+}
+const removeSortRule = (index: number) => {
+  sortRules.value.splice(index, 1)
+}
+
+// 排序规则行拖拽: 与行维度顺序同一套"拖过即让位"模式, 行序即优先级
+const sortDragIndex = ref<number | null>(null)
+const onSortRuleDragStart = (index: number, e: DragEvent) => {
+  sortDragIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+const onSortRuleDragOver = (index: number) => {
+  const from = sortDragIndex.value
+  if (from === null || from === index || index < 0) return
+  const [item] = sortRules.value.splice(from, 1)
+  sortRules.value.splice(index, 0, item)
+  sortDragIndex.value = index
+}
+const onSortRuleDragEnd = () => {
+  sortDragIndex.value = null
+}
 
 /**
  * 排序字段候选
@@ -1500,17 +1560,16 @@ const sortFieldOptions = computed(() => {
 const isSortableInPivot = (property: string) =>
   pivotGroupFields.value.includes(property) || measureKeysPreview.value.includes(property)
 
-// 解析 defaultSort JSON 到编辑状态(仅取第一项, 与 portal 级默认排序同约束)
+// 解析 defaultSort JSON 到编辑状态(全量条目, 老单条数据自动成为一条规则)
 const parseDefaultSort = (json: string | undefined) => {
-  sortColumn.value = undefined
-  sortType.value = 0
+  sortRules.value = []
   if (!json) return
   try {
     const parsed = JSON.parse(json)
-    const first = Array.isArray(parsed) ? parsed[0] : undefined
-    if (first?.property) {
-      sortColumn.value = first.property
-      sortType.value = first.type === 1 ? 1 : 0
+    if (Array.isArray(parsed)) {
+      sortRules.value = parsed
+        .filter((item: any) => item?.property)
+        .map((item: any) => ({ property: String(item.property), type: item.type === 1 ? 1 : 0 }))
     }
   } catch (e) {
     console.warn('解析默认排序配置失败:', e)
@@ -1855,14 +1914,15 @@ const handleSaveTable = async () => {
     table.filterColumns =
       excludedColumns.length > 0 ? excludedColumns.join(',') : ''
 
-    // 默认排序: 未选字段写 '[]' 而非 null —— update 接口非 strict 模式会跳过 null, 无法清掉旧值
-    // 透视模式下字段必须落在当前行维度/度量内, 否则渲染时命不中排序列(切模式残留的选择按不排序处理)
-    let sortProperty: string | undefined = sortColumn.value
-    if (sortProperty && table.pivotMode === '1' && !isSortableInPivot(sortProperty)) {
-      sortProperty = undefined
-    }
-    table.defaultSort = sortProperty
-      ? JSON.stringify([{ property: sortProperty, type: sortType.value }])
+    // 默认排序: 空列表写 '[]' 而非 null —— update 接口非 strict 模式会跳过 null, 无法清掉旧值
+    // 多字段按列表顺序落库(顺序即优先级); 透视模式下字段必须落在当前行维度/度量内,
+    // 否则渲染时命不中排序列(切模式残留的选择按不排序处理), 残留条目直接滤掉
+    const validSortRules = sortRules.value.filter(
+      (rule): rule is { property: string; type: number } =>
+        !!rule.property && (table.pivotMode !== '1' || isSortableInPivot(rule.property))
+    )
+    table.defaultSort = validSortRules.length > 0
+      ? JSON.stringify(validSortRules.map((rule) => ({ property: rule.property, type: rule.type })))
       : '[]'
 
     // 透视模式：序列化行维度与度量列配置
@@ -2193,6 +2253,53 @@ const handleSaveTable = async () => {
       font-size: 12px;
       color: var(--accent, #1677ff);
     }
+  }
+}
+
+// 默认排序规则列表(行=一条排序, 自上而下即优先级; 字段列伸缩、方向列固定宽)
+.default-sort-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+
+  .default-sort-rule-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &[draggable='true'] {
+      cursor: grab;
+    }
+
+    .default-sort-rule-handle {
+      flex-shrink: 0;
+      color: var(--text-tertiary);
+      cursor: grab;
+    }
+
+    &.default-sort-rule-dragging {
+      opacity: 0.6;
+    }
+
+    .default-sort-rule-field {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .default-sort-rule-type {
+      width: 88px;
+      flex-shrink: 0;
+    }
+
+    .measure-index {
+      flex-shrink: 0;
+    }
+  }
+
+  > .ant-btn {
+    flex-shrink: 0;
+    width: fit-content;
   }
 }
 

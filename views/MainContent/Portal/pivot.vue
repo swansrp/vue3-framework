@@ -303,19 +303,23 @@ const aggregateByMeasure = (measure: PivotMeasureVO | undefined, nums: number[])
 }
 
 // ==================== 报表默认排序(sys_portal_table.default_sort) ====================
-/** 排序配置(取 JSON 首项): type 0=正序 1=倒序, 空/'[]'/解析失败=不排序 */
-const defaultSort = computed<{ property: string, type: number } | null>(() => {
+/** 排序配置(数组序即优先级序): type 0=正序 1=倒序, 空/'[]'/解析失败=不排序 */
+const defaultSortList = computed<{ property: string, type: number }[]>(() => {
   const raw = (props.portalTableConfig.defaultSort || '').trim()
   if (!raw) {
-    return null
+    return []
   }
   try {
     const parsed = JSON.parse(raw)
-    const first = Array.isArray(parsed) ? parsed[0] : undefined
-    return first?.property ? { property: first.property, type: first.type === 1 ? 1 : 0 } : null
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return parsed
+      .filter((item: any) => item?.property)
+      .map((item: any) => ({ property: String(item.property), type: item.type === 1 ? 1 : 0 }))
   } catch (e) {
     console.error('解析报表默认排序失败:', e)
-    return null
+    return []
   }
 })
 
@@ -343,51 +347,64 @@ const sortValueOf = (row: any, property: string): any => {
 const isBlankSortValue = (value: any) => value === null || value === undefined || value === ''
 
 /**
+ * 单键比较: 空值恒排末位(不随方向翻转); 数值按大小、其余按中文 locale
+ */
+const compareSortValues = (va: any, vb: any, type: number): number => {
+  const blankA = isBlankSortValue(va)
+  const blankB = isBlankSortValue(vb)
+  if (blankA && blankB) {
+    return 0
+  }
+  if (blankA) {
+    return 1
+  }
+  if (blankB) {
+    return -1
+  }
+  const sign = type === 1 ? -1 : 1
+  const numA = Number(va)
+  const numB = Number(vb)
+  if (!isNaN(numA) && !isNaN(numB)) {
+    return sign * (numA - numB)
+  }
+  return sign * String(va).localeCompare(String(vb), 'zh-CN')
+}
+
+/**
  * 聚合结果行本地排序(仅在排序键无法下推后端时兜底)
  * 外层 ORDER BY 只认 group by 列与 ${透视列}__${度量} 别名: 度量跨多个透视列时同一度量有 N 个别名、
  * 没有"跨列合计"这一列可排, 此时才落到本地按聚合值排
- * 空值恒排末位(不随方向翻转); avg/countDistinct 多透视列不可推导时各项均为空→稳定排序自然回退后端原序
+ * 多字段按 defaultSortList 顺序逐键比较(第 1 键相同再顺延); avg/countDistinct 多透视列不可推导时
+ * 各项均为空→稳定排序自然回退后端原序
  */
 const sortedRows = computed<any[]>(() => {
-  const sort = defaultSort.value
-  if (!sort) {
+  const sortRules = defaultSortList.value
+  if (sortRules.length === 0) {
     return rows.value
   }
-  // 后端已按本次输出的别名排好序(表头点击 或 默认排序命中可排别名)时不再本地重排:
+  // 后端已按本次输出的别名排好序(表头点击 或 默认排序整链可下推)时不再本地重排:
   // 本地按"跨透视列聚合值"排, 后端按"单元格列"排, 口径不同, 双排会让后端结果失效
-  if (backendSort.value) {
+  if (backendSortList.value.length > 0) {
     return rows.value
   }
-  const sign = sort.type === 1 ? -1 : 1
   return [...rows.value].sort((a, b) => {
-    const va = sortValueOf(a, sort.property)
-    const vb = sortValueOf(b, sort.property)
-    const blankA = isBlankSortValue(va)
-    const blankB = isBlankSortValue(vb)
-    if (blankA && blankB) {
-      return 0
+    for (const rule of sortRules) {
+      const result = compareSortValues(sortValueOf(a, rule.property), sortValueOf(b, rule.property), rule.type)
+      if (result !== 0) {
+        return result
+      }
     }
-    if (blankA) {
-      return 1
-    }
-    if (blankB) {
-      return -1
-    }
-    const numA = Number(va)
-    const numB = Number(vb)
-    if (!isNaN(numA) && !isNaN(numB)) {
-      return sign * (numA - numB)
-    }
-    return sign * String(va).localeCompare(String(vb), 'zh-CN')
+    return 0
   })
 })
 
 /** 下推后端的排序(聚合后外层 ORDER BY): 表头点击/默认排序为主序, 行维度配置排序退为次序 */
 const pushDownSortList = computed<{ property: string; type: number }[]>(() => {
   const list = [...sortList.value]
-  const bs = backendSort.value
-  if (bs && !list.some((s) => s.property === bs.property)) {
-    list.unshift(bs)
+  for (const bs of [...backendSortList.value].reverse()) {
+    if (!list.some((s) => s.property === bs.property)) {
+      list.unshift(bs)
+    }
   }
   return list
 })
@@ -436,19 +453,26 @@ const resolveSortAlias = (property: string): string | null => {
   return null
 }
 
-/** 主排序键: 表头点击优先, 其次能被后端表达的默认排序; 两者都无则回退 sortedRows 本地排 */
-const backendSort = computed<{ property: string, type: number } | null>(() => {
+/** 下推后端的主序键列表: 表头点击优先(单键), 其次默认排序整链映射为本次输出别名后按配置序下发;
+ *  默认排序中只要有一条映射不了(多透视列的度量裸键没有唯一别名)就整链退本地排 ——
+ *  本地对度量取跨列聚合值、行维度取原值, 每条键都按序生效, 不做"能推的推、推不了的丢"的混排 */
+const backendSortList = computed<{ property: string, type: number }[]>(() => {
   if (headerSort.value) {
     // 点击键可能是裸度量键(单透视列 pivotRow), 下推前映射为单元格别名
     const alias = resolveSortAlias(headerSort.value.property)
-    return alias ? { property: alias, type: headerSort.value.type } : null
+    return alias ? [{ property: alias, type: headerSort.value.type }] : []
   }
-  const sort = defaultSort.value
-  if (!sort) {
-    return null
+  const list: { property: string, type: number }[] = []
+  for (const rule of defaultSortList.value) {
+    const alias = resolveSortAlias(rule.property)
+    if (!alias) {
+      return []
+    }
+    if (!list.some((s) => s.property === alias)) {
+      list.push({ property: alias, type: rule.type })
+    }
   }
-  const alias = resolveSortAlias(sort.property)
-  return alias ? { property: alias, type: sort.type } : null
+  return list
 })
 
 /** 度量列注释: col 模式键与列生成同口径(${透视列标识}__${度量字段}), pivotRow 模式度量列独占表头键=度量输出键; row 模式度量熔进行里, 没有列头可挂注释 */
