@@ -1,38 +1,11 @@
 /**
- * 框架 AI 会话模块入口（新面板，零依赖旧对话组件）
+ * 🔴 兼容 shim（勿在此新增代码）——旧路径 `@/framework/agent` 已于 2026-11-19 物理迁移：
+ * 正源＝`@/framework/components/common/agent`（framework 双 agent 栈融合 P1，搬家保历史）。
  *
- * 用法：
- *   import { AgentPane } from '@/framework/agent'
- *   <AgentPane :session-id="id" :capabilities="caps" @finished="onFinished" @restart="onRestart" />
+ * 新代码一律从新路径引入：
+ *   import { AgentPane } from '@/framework/components/common/agent'
  *
- * 能力位由 /agents 清单条目 capabilities 驱动（files.upload/files.read）；
- * 入口文件同时加载模块样式（.bidr-agent-* 前缀，不影响宿主页面）。
+ * 本文件只做全量转发，导出面与正源 index.ts 完全一致；待全部宿主切换到新路径后
+ * 由后续棒统一退役（届时删除本目录即可）。
  */
-import './styles.css'
-
-export { default as AgentPane } from './AgentPane.vue'
-export { default as AttachmentTray } from './composer/AttachmentTray.vue'
-export { default as Composer } from './composer/Composer.vue'
-export { useAgentConversation } from './useAgentConversation'
-export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventText } from './events'
-export {
-  AGENT_CAPABILITY,
-  AGENT_HEALTH,
-  formatFileSize,
-  isTerminalStatus
-} from './types'
-export type {
-  AgentEventFrame,
-  AgentFileRef,
-  AgentLogItem,
-  AgentQuestionT,
-  AgentSessionSnapshot,
-  AgentStatusItem,
-  AgentSummary,
-  AgentTextItem,
-  AgentToolItem,
-  AgentViewItem,
-  AttachmentItem,
-  FileRef
-} from './types'
-export type { UseAgentConversationOptions } from './useAgentConversation'
+export * from '../components/common/agent'

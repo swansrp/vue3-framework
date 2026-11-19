@@ -4,7 +4,7 @@
  * 通道：SSE 优先（/session/<id>/stream：status 全量帧＋events 增量帧＋live 帧＋done 收口，
  * 300ms 级实时；25s 保活），SSE 建连失败/断流时回落 2s 轮询（status + events(sinceSeq)），
  * 断流 10s 起退避重连（带 sinceSeq，回放自动补齐断档；成功即停轮询）。
- * 永久回落轮询的两类形态同旧 agentChat：真 HTTP 401/404 与 200＋错误信封（非 text/event-stream）。
+ * 永久回落轮询的两类形态同旧对话栈：真 HTTP 401/404 与 200＋错误信封（非 text/event-stream）。
  * 职责：
  * - sessionStart：发起自主会话（业务页面也可自持 sessionStart，本 hook 同样支持）；
  * - upload：多附件顺序上传（multipart 字段 file），进度回写 chips；成功后立即补拉一次，
@@ -640,6 +640,7 @@ export const useAgentConversation = (
     pause,
     resume,
     stop,
+    reset,
     refresh: tick
   }
 }

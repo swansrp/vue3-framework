@@ -1,9 +1,11 @@
 /**
- * 框架 AI 会话面板类型契约（后端 core/llm agent session 对应结构）
+ * 框架 AI 会话面板类型契约（后端 core/llm agent session 对应结构）——🔴 会话域类型唯一正源
  *
- * 与旧对话组件的类型定义平级、互不依赖：本模块是独立的新面板，
- * 只认后端 HTTP/事件协议，不 import 旧对话组件（旧件仍被 epc/InkHub/agent-console 共用）。
- * 字段口径：文件引用跨模块契约 fileId/name/size/mime/key（后端 FileRef），
+ * P1 数据层统一（2026-11-19）：旧对话栈（components/common 下同域旧件）的会话域类型
+ * （AgentStageT/AgentPlanItemT/AgentQuestionT/AgentConfirmationT/
+ * AgentSessionStateT→AgentSessionSnapshot/isTerminalStatus/AgentEventX→AgentEventFrame）
+ * 与通用候选项契约（ChatOptionView/parseChatOption）已迁入本文件，
+ * 旧对话组件侧改为 re-export 本模块（引用方向恒为旧栈 → 本模块，反向禁止）。
  * 事件 payload 用 snake_case（file_id），组装视图时在 events.ts 内归一。
  */
 
@@ -87,19 +89,77 @@ export interface AgentQuestionT {
   answeredAt?: number | null
 }
 
-/** 会话状态快照（只声明本面板消费的字段，其余透传） */
+/** 执行阶段（后端 AgentStage；迁自旧对话栈 types.ts，P1 归一正源） */
+export interface AgentStageT {
+  key: string
+  title: string
+  status: 'pending' | 'running' | 'ok' | 'error' | 'skipped' | 'stopped'
+  startedAt?: number | null
+  endedAt?: number | null
+  detail?: string | null
+  estimatedSecs?: number | null
+}
+
+/** 计划待办条目（后端 AgentPlanItem：LLM 开局 submit_plan 提交、start_plan_item 标记执行中、done_plan_item 挑勾；
+ *  会话终态时 running 由后端收口置位：FINISHED→done 补挑勾 / 其余→stopped。迁自旧对话栈 types.ts） */
+export interface AgentPlanItemT {
+  id: number
+  text: string
+  status: 'pending' | 'running' | 'done' | 'stopped'
+  note?: string | null
+}
+
+/** 待确认口径条目（后端 AgentConfirmation：ask_user 超时/跳过后 LLM 自决的口径，finish 前逐条登记，
+ *  会话终态后由用户在确认页裁决——确认（认可自决口径）或改口径（新口径说明交由业务重算）。
+ *  迁自旧对话栈 types.ts，P1 归一正源） */
+export interface AgentConfirmationT {
+  id: number
+  /** 疑点描述 */
+  question: string
+  /** LLM 采纳的口径（自决结论） */
+  adopted: string
+  /** 证据链（采样数据/工具返回等依据） */
+  evidence?: string | null
+  /** 影响的产出（资产项名，多个逗号分隔） */
+  impact?: string | null
+  status: 'pending' | 'confirmed' | 'revised'
+  reportedAt: number
+  resolvedAt?: number | null
+  /** 收口说明（改口径时为用户输入的新口径） */
+  resolveNote?: string | null
+}
+
+/**
+ * 会话状态快照（P1 归一后同时承接旧对话栈 AgentSessionStateT 口径）：
+ * 旧 StateT 独有字段（operator/skillCode/heartbeat/traceId）与阶段/计划/确认清单
+ * （stages/plan/confirmations，D15-17 前置）一律收为可选——新面板不消费、旧组件照常读写。
+ */
 export interface AgentSessionSnapshot {
   sessionId?: string
   agentKey?: string
   displayName?: string
+  /** 操作人（旧对话栈 StateT 独有；本面板不消费） */
+  operator?: string
+  /** 技能编码（flow 型会话；旧对话栈 StateT 独有） */
+  skillCode?: string | null
   status: 'RUNNING' | 'PAUSED' | 'FINISHED' | 'FAILED' | 'STOPPED' | string
   startedAt?: number
   endedAt?: number | null
+  /** 保活时间戳（旧对话栈 StateT 独有；本面板不消费） */
+  heartbeat?: number
   summary?: string | null
   error?: string | null
+  /** 链路追踪标识（旧对话栈 StateT 独有；本面板不消费） */
+  traceId?: string | null
   /** LLM 流式实时内容（替换式最新一帧；终态清空） */
   live?: string | null
+  /** 执行阶段清单（D15 前置：阶段条渲染依据） */
+  stages?: AgentStageT[]
+  /** 计划待办清单（D16 前置：计划勾选清单渲染依据） */
+  plan?: AgentPlanItemT[]
   questions?: AgentQuestionT[]
+  /** 待确认口径清单（D17 前置：终态确认页渲染依据） */
+  confirmations?: AgentConfirmationT[]
 }
 
 /** 终态判定（FINISHED/FAILED/STOPPED 三态不再轮询） */
@@ -228,4 +288,40 @@ export const formatFileSize = (size?: number | null): string => {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
   if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
+// ==================== 通用聊天契约（迁自旧对话栈 types.ts，P1 归一正源） ====================
+
+/** 候选项展示视图：选项可能是纯文本，或 LLM 序列化的 JSON 对象串（{"key","label","desc"}），统一解析分层渲染 */
+export interface ChatOptionView {
+  /** 选项编号（A/B 等，可空） */
+  key: string
+  /** 主文本（label；缺失回落 desc/原文） */
+  label: string
+  /** 补充说明（次行小字，可空） */
+  desc: string
+  /** 原始文本（选中与作答提交的身份，保证回传 LLM 无损） */
+  raw: string
+}
+
+/** 候选项解析：JSON 对象串取 key/label/desc 分层渲染；纯文本或解析失败回落原文直排 */
+export const parseChatOption = (opt: string): ChatOptionView => {
+  const raw = opt || ''
+  const t = raw.trim()
+  if (t.startsWith('{')) {
+    try {
+      const o = JSON.parse(t)
+      if (o && typeof o === 'object') {
+        const key = typeof o.key === 'string' ? o.key.trim() : ''
+        const label = typeof o.label === 'string' ? o.label.trim() : ''
+        const desc = typeof o.desc === 'string' ? o.desc.trim() : ''
+        if (label || desc) {
+          return { key, label: label || desc, desc: label ? desc : '', raw }
+        }
+      }
+    } catch {
+      // 非合法 JSON，回落原文
+    }
+  }
+  return { key: '', label: raw, desc: '', raw }
 }

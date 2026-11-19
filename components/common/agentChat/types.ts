@@ -1,15 +1,46 @@
 /**
  * agent 会话类型（后端 com.bidr.llm.agent.session 对应结构）
+ *
+ * 🔴 P1 数据层统一（2026-11-19）：会话域类型正源已迁至 components/common/agent
+ * （引擎模块 types.ts），本文件只保留旧符号名 re-export 兼容＋AgentChatPanel
+ * 通用聊天契约（AgentEventType/ChatMsgBase 等本域件）。
+ * 引用方向恒为 agentChat → common/agent（反向禁止）。
  */
 import type { AssistantView } from './processTree'
 
-/** 会话过程事件（seq 会话内单调递增，增量轮询依据） */
-export interface AgentEventX {
-  seq: number
-  type: string
-  payload: any
-  time: number
-}
+// ==================== 会话域类型（正源：../agent/types，旧名转发） ====================
+
+/** 会话过程事件（seq 会话内单调递增，增量轮询依据；字段与引擎 AgentEventFrame 全同） */
+export type { AgentEventFrame as AgentEventX } from '../agent/types'
+
+/** 会话状态（后端 AgentSessionState；正源 AgentSessionSnapshot——旧 StateT 独有字段
+ *  operator/skillCode/heartbeat/traceId 与 stages/plan/confirmations 已补齐为可选） */
+export type { AgentSessionSnapshot as AgentSessionStateT } from '../agent/types'
+
+/** 执行阶段（后端 AgentStage） */
+export type { AgentStageT } from '../agent/types'
+
+/** 计划待办条目（后端 AgentPlanItem：submit_plan 提交、start_plan_item 执行中、done_plan_item 挑勾；
+ *  会话终态时 running 由后端收口置位：FINISHED→done 补挑勾 / 其余→stopped） */
+export type { AgentPlanItemT } from '../agent/types'
+
+/** 用户决策问题条目（后端 AgentQuestion；askedAt 归一为可选口径——引擎正源定义） */
+export type { AgentQuestionT } from '../agent/types'
+
+/** 待确认口径条目（后端 AgentConfirmation：ask_user 超时/跳过后 LLM 自决的口径，finish 前逐条登记，
+ *  会话终态后由用户在确认页裁决——确认（认可自决口径）或改口径（新口径说明交由业务重算）） */
+export type { AgentConfirmationT } from '../agent/types'
+
+/** 终态判定（FINISHED/FAILED/STOPPED 三态不再轮询；引擎正源实现） */
+export { isTerminalStatus } from '../agent/types'
+
+/** 候选项展示视图（引擎正源定义）：选项可能是纯文本，或 LLM 序列化的 JSON 对象串（{"key","label","desc"}） */
+export type { ChatOptionView } from '../agent/types'
+
+/** 候选项解析（引擎正源实现）：JSON 对象串取 key/label/desc 分层渲染；纯文本或解析失败回落原文直排 */
+export { parseChatOption } from '../agent/types'
+
+// ==================== 本域件（AgentChatPanel 消费，正源留此） ====================
 
 /** 事件类型常量（与后端 AgentEvent 一致） */
 export const AgentEventType = {
@@ -42,83 +73,6 @@ export const THINK_EVENT_TYPES = new Set<string>([
 
 /** 阶段事件（阶段条消费，不进消息流） */
 export const STAGE_EVENT_TYPES = new Set<string>([AgentEventType.STAGE])
-
-/** 会话状态（后端 AgentSessionState） */
-export interface AgentSessionStateT {
-  sessionId: string
-  agentKey: string
-  skillCode?: string
-  displayName?: string
-  operator?: string
-  status: 'RUNNING' | 'PAUSED' | 'FINISHED' | 'FAILED' | 'STOPPED'
-  startedAt: number
-  endedAt?: number | null
-  heartbeat: number
-  summary?: string | null
-  error?: string | null
-  traceId?: string | null
-  /** LLM 流式实时内容（替换式：思考/应答状态行+累积全文，与问数链 live 同口径；终态清空） */
-  live?: string | null
-  stages?: AgentStageT[]
-  plan?: AgentPlanItemT[]
-  /** 用户决策问题清单（ask_user 提问；waiting 条目渲染可交互卡片） */
-  questions?: AgentQuestionT[]
-  /** 待确认口径清单（report_unconfirmed 登记；终态确认页逐条裁决：一键确认/改口径重算） */
-  confirmations?: AgentConfirmationT[]
-}
-
-/** 执行阶段（后端 AgentStage） */
-export interface AgentStageT {
-  key: string
-  title: string
-  status: 'pending' | 'running' | 'ok' | 'error' | 'skipped' | 'stopped'
-  startedAt?: number | null
-  endedAt?: number | null
-  detail?: string | null
-  estimatedSecs?: number | null
-}
-
-/** 计划待办条目（后端 AgentPlanItem：LLM 开局 submit_plan 提交、start_plan_item 标记执行中、done_plan_item 挑勾；
- *  会话终态时 running 由后端收口置位：FINISHED→done 补挑勾 / 其余→stopped） */
-export interface AgentPlanItemT {
-  id: number
-  text: string
-  status: 'pending' | 'running' | 'done' | 'stopped'
-  note?: string | null
-}
-
-/** 用户决策问题条目（后端 AgentQuestion：LLM 经 ask_user 提问、用户选择/输入/跳过作答） */
-export interface AgentQuestionT {
-  id: number
-  question: string
-  options?: string[] | null
-  status: 'waiting' | 'answered' | 'skipped' | 'expired'
-  answer?: string | null
-  askedAt: number
-  answeredAt?: number | null
-}
-
-/** 待确认口径条目（后端 AgentConfirmation：ask_user 超时/跳过后 LLM 自决的口径，finish 前逐条登记，
- *  会话终态后由用户在确认页裁决——确认（认可自决口径）或改口径（新口径说明交由业务重算） */
-export interface AgentConfirmationT {
-  id: number
-  /** 疑点描述 */
-  question: string
-  /** LLM 采纳的口径（自决结论） */
-  adopted: string
-  /** 证据链（采样数据/工具返回等依据） */
-  evidence?: string | null
-  /** 影响的产出（资产项名，多个逗号分隔） */
-  impact?: string | null
-  status: 'pending' | 'confirmed' | 'revised'
-  reportedAt: number
-  resolvedAt?: number | null
-  /** 收口说明（改口径时为用户输入的新口径） */
-  resolveNote?: string | null
-}
-
-export const isTerminalStatus = (status?: string | null) =>
-  status === 'FINISHED' || status === 'FAILED' || status === 'STOPPED'
 
 // ==================== 通用聊天契约（AgentChatPanel 消费，自 smartQueryAsk 上提） ====================
 
@@ -157,40 +111,6 @@ export interface ChatClarifyQuestion {
 
 /** 歧义确认「交由 AI 决定」哨兵（历史恢复重放时区分空作答与未作答） */
 export const CLARIFY_ANSWER_SKIPPED = '（交由 AI 决定）'
-
-/** 候选项展示视图：选项可能是纯文本，或 LLM 序列化的 JSON 对象串（{"key","label","desc"}），统一解析分层渲染 */
-export interface ChatOptionView {
-  /** 选项编号（A/B 等，可空） */
-  key: string
-  /** 主文本（label；缺失回落 desc/原文） */
-  label: string
-  /** 补充说明（次行小字，可空） */
-  desc: string
-  /** 原始文本（选中与作答提交的身份，保证回传 LLM 无损） */
-  raw: string
-}
-
-/** 候选项解析：JSON 对象串取 key/label/desc 分层渲染；纯文本或解析失败回落原文直排 */
-export const parseChatOption = (opt: string): ChatOptionView => {
-  const raw = opt || ''
-  const t = raw.trim()
-  if (t.startsWith('{')) {
-    try {
-      const o = JSON.parse(t)
-      if (o && typeof o === 'object') {
-        const key = typeof o.key === 'string' ? o.key.trim() : ''
-        const label = typeof o.label === 'string' ? o.label.trim() : ''
-        const desc = typeof o.desc === 'string' ? o.desc.trim() : ''
-        if (label || desc) {
-          return { key, label: label || desc, desc: label ? desc : '', raw }
-        }
-      }
-    } catch {
-      // 非合法 JSON，回落原文
-    }
-  }
-  return { key: '', label: raw, desc: '', raw }
-}
 
 /** 思考过程步骤（工具循环过程日志 / 阶段进度，实时上屏） */
 export interface ChatStep {
