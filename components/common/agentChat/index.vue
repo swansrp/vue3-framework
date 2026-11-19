@@ -108,72 +108,19 @@
       </div>
     </div>
 
-    <!-- AI 决策问题卡片（ask_user 提问等待用户选择；存在 waiting 条目时渲染） -->
+    <!-- AI 决策问题卡片（ask_user 提问等待用户选择；存在 waiting 条目时渲染）——
+         AskDecisionCard 单源（S10，规格 §05）：单击即答＋卡内自由输入＋跳过，
+         重放态由卡内按 question.status 推导；作答仍经 sessionAnswer 写控制键唤醒后端阻塞 -->
     <div
       v-if="waitingQuestion"
       class="chat-question"
     >
-      <div class="question-header">
-        <QuestionCircleFilled class="question-icon" />
-        <span class="question-title">AI 需要你的决策</span>
-        <span class="question-id">#{{ waitingQuestion.id }}</span>
-      </div>
-      <div class="question-text">
-        {{ waitingQuestion.question }}
-      </div>
-      <div
-        v-if="questionOptionViews.length > 0"
-        class="question-options"
-      >
-        <div
-          v-for="(view, oi) in questionOptionViews"
-          :key="oi"
-          class="question-option"
-          :class="{ 'is-selected': selectedOption === view.raw }"
-          @click="selectedOption = selectedOption === view.raw ? '' : view.raw"
-        >
-          <div class="question-option-main">
-            <span
-              v-if="view.key"
-              class="question-option-key"
-            >{{ view.key }}</span>
-            <span class="question-option-label">{{ view.label }}</span>
-          </div>
-          <div
-            v-if="view.desc"
-            class="question-option-desc"
-          >
-            {{ view.desc }}
-          </div>
-        </div>
-      </div>
-      <a-textarea
-        v-model:value="customAnswer"
-        class="question-input"
-        placeholder="或直接输入你的口径/选择（优先于选中的候选项）"
-        :auto-size="{ minRows: 1, maxRows: 3 }"
+      <AskDecisionCard
+        :question="waitingQuestion"
+        show-skip
+        :busy="answering"
+        @answer="onAskAnswer"
       />
-      <div class="question-actions">
-        <a-button
-          size="small"
-          type="primary"
-          :loading="answering"
-          :disabled="!selectedOption && !customAnswer.trim()"
-          @click="onAnswerQuestion"
-        >
-          <template #icon>
-            <CheckCircleFilled />
-          </template>
-          提交回答
-        </a-button>
-        <a-button
-          size="small"
-          :loading="answering"
-          @click="onSkipQuestion"
-        >
-          交由 AI 决定
-        </a-button>
-      </div>
     </div>
 
     <!-- 事件流 -->
@@ -464,17 +411,18 @@
 import {
   CheckCircleFilled, CheckSquareOutlined, ClockCircleOutlined,
   CopyOutlined, DislikeOutlined, ExclamationCircleFilled, LikeOutlined, LoadingOutlined, MinusOutlined,
-  PauseCircleOutlined, PlayCircleOutlined, QuestionCircleFilled, RedoOutlined,
+  PauseCircleOutlined, PlayCircleOutlined, RedoOutlined,
   RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
 import AgentConclusionCard from '../agent/AgentConclusionCard.vue'
+import AskDecisionCard from '../agent/AskDecisionCard.vue'
 import AgentProcessArchives from './AgentProcessArchives.vue'
 import AgentProcessFlow from './AgentProcessFlow.vue'
 import {
-  isTerminalStatus, parseChatOption, type AgentConfirmationT, type AgentEventX, type AgentPlanItemT
+  isTerminalStatus, type AgentConfirmationT, type AgentEventX, type AgentPlanItemT
 } from './types'
 import { useAgentSession } from './useAgentSession'
 import { useStickScroll } from './useStickScroll'
@@ -540,44 +488,24 @@ const planItems = computed<AgentPlanItemT[]>(() => {
 })
 const planDoneCount = computed(() => planItems.value.filter(i => i.status === 'done').length)
 
-// ===== AI 决策问题卡片（ask_user 提问：waiting 条目可交互，作答后随轮询刷新隐去） =====
+// ===== AI 决策问题卡片（ask_user 提问：waiting 条目可交互，作答后随轮询刷新隐去；
+//      渲染归 AskDecisionCard 单源 S10，本面板只留守问题取值与作答接线） =====
 
 const waitingQuestion = computed(() =>
   (status.value?.questions || []).find(q => q.status === 'waiting') || null
 )
 
-// 候选项分层渲染视图（JSON 对象串解析 key/label/desc；选中/作答仍以 raw 为身份）
-const questionOptionViews = computed(() => (waitingQuestion.value?.options || []).map(parseChatOption))
-
 const answering = ref(false)
-const selectedOption = ref('')
-const customAnswer = ref('')
 
-// 新问题到达时重置本地选择（轮询刷新后 waiting 条目切换）
-watch(() => waitingQuestion.value?.id, () => {
-  selectedOption.value = ''
-  customAnswer.value = ''
-})
-
-const onAnswerQuestion = async () => {
+/** 决策卡作答（S10 统一签名）：接线等价旧「提交回答/交由 AI 决定」两入口——
+ *  文本（选项 raw/自由输入）走 sessionAnswer(text)，跳过走 sessionAnswer(undefined, true) */
+const onAskAnswer = async (payload: { text: string; skipped?: boolean }) => {
   const q = waitingQuestion.value
-  if (!props.sessionId || !q) return
-  const answer = customAnswer.value.trim() || selectedOption.value
-  if (!answer) return
+  if (!props.sessionId || !q || answering.value) return
+  if (!payload.skipped && !payload.text) return
   answering.value = true
   try {
-    await sessionAnswer(props.sessionId, q.id, answer)
-  } finally {
-    answering.value = false
-  }
-}
-
-const onSkipQuestion = async () => {
-  const q = waitingQuestion.value
-  if (!props.sessionId || !q) return
-  answering.value = true
-  try {
-    await sessionAnswer(props.sessionId, q.id, undefined, true)
+    await sessionAnswer(props.sessionId, q.id, payload.text || undefined, payload.skipped)
   } finally {
     answering.value = false
   }
@@ -931,94 +859,13 @@ watch(conclusion, v => {
   }
 }
 
-// ===== AI 决策问题卡片 =====
+// ===== AI 决策问题卡片（内容渲染归 AskDecisionCard 单源 S10；这里只留容器定位） =====
 
 .chat-question {
   flex-shrink: 0;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-elevated);
-
-  .question-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-    font-size: 12px;
-
-    .question-icon { color: var(--warning, #faad14); }
-    .question-title { color: var(--text-primary); font-weight: 600; }
-    .question-id { color: var(--text-secondary); }
-  }
-
-  .question-text {
-    margin-bottom: 8px;
-    color: var(--text-primary);
-    font-size: 13px;
-    line-height: 20px;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  .question-options {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 8px;
-  }
-
-  .question-option {
-    padding: 6px 10px;
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    color: var(--text-primary);
-    font-size: 12px;
-    line-height: 18px;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-
-    &:hover { border-color: var(--accent-mid); }
-
-    &.is-selected {
-      border-color: var(--accent);
-      background: var(--bg-base);
-      color: var(--accent);
-    }
-
-    .question-option-main {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-    }
-
-    .question-option-key {
-      flex-shrink: 0;
-      padding: 0 5px;
-      border: 1px solid currentColor;
-      border-radius: 4px;
-      font-size: 11px;
-      line-height: 16px;
-    }
-
-    .question-option-label { word-break: break-all; }
-
-    .question-option-desc {
-      margin-top: 2px;
-      font-size: 11px;
-      line-height: 16px;
-      color: var(--text-secondary);
-    }
-  }
-
-  .question-input {
-    margin-bottom: 8px;
-  }
-
-  .question-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
 }
 
 // ===== 事件流 =====

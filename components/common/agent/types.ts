@@ -89,6 +89,13 @@ export interface AgentQuestionT {
   answeredAt?: number | null
 }
 
+/**
+ * 「交由 AI 决定」哨兵（历史恢复重放时区分空作答与未作答）。
+ * 正源在此（S10：AskDecisionCard 重放态消费）；agentChat/types.ts 旧位改 re-export
+ * （引用方向恒为 agentChat → agent，反向禁止）。
+ */
+export const CLARIFY_ANSWER_SKIPPED = '（交由 AI 决定）'
+
 /** 执行阶段（后端 AgentStage；迁自旧对话栈 types.ts，P1 归一正源） */
 export interface AgentStageT {
   key: string
@@ -219,6 +226,8 @@ export interface AgentToolItem {
   /** 返回（未配对前为空） */
   output: string
   status: 'running' | 'done'
+  /** 回包时刻（tool_result 配对时回填；单步耗时＝endedAt − time，未配对缺席） */
+  endedAt?: number
 }
 
 export interface AgentFileCardItem {

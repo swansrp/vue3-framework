@@ -109,8 +109,9 @@ export interface ChatClarifyQuestion {
   options: string[]
 }
 
-/** 歧义确认「交由 AI 决定」哨兵（历史恢复重放时区分空作答与未作答） */
-export const CLARIFY_ANSWER_SKIPPED = '（交由 AI 决定）'
+/** 歧义确认「交由 AI 决定」哨兵（历史恢复重放时区分空作答与未作答）——
+ *  正源已迁 common/agent/types（S10：AskDecisionCard 重放态消费），此处旧名转发 */
+export { CLARIFY_ANSWER_SKIPPED } from '../agent/types'
 
 /** 思考过程步骤（工具循环过程日志 / 阶段进度，实时上屏） */
 export interface ChatStep {

@@ -309,6 +309,8 @@ export const buildAgentViewItems = (
         if (target) {
           target.output = output
           target.status = 'done'
+          // 单步耗时端点（§02 工具行右对齐耗时）：配对成功即回填回包时刻
+          target.endedAt = ev.time
         } else if (!toolCallId && running.length > 1) {
           items.push({
             kind: 'log',

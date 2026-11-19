@@ -12,6 +12,7 @@ import './styles.css'
 
 export { default as AgentConclusionCard } from './AgentConclusionCard.vue'
 export { default as AgentPane } from './AgentPane.vue'
+export { default as AskDecisionCard } from './AskDecisionCard.vue'
 export { default as PlanCapsule } from './PlanCapsule.vue'
 export { default as AttachmentTray } from './composer/AttachmentTray.vue'
 export { default as Composer } from './composer/Composer.vue'
@@ -28,6 +29,7 @@ export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventT
 export {
   AGENT_CAPABILITY,
   AGENT_HEALTH,
+  CLARIFY_ANSWER_SKIPPED,
   formatFileSize,
   isTerminalStatus,
   parseChatOption
