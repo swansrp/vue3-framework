@@ -25,6 +25,7 @@ export {
   unescapeText
 } from './markdown'
 export { useAgentConversation } from './useAgentConversation'
+export { useStickScroll } from './useStickScroll'
 export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventText, toolDigest } from './events'
 export { THINK_ARCHIVE_PREFIX, isNoiseLogLine, isThinkArchiveLine } from './processLines'
 export {

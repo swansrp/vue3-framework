@@ -1306,7 +1306,7 @@
   color: var(--success, #52c41a);
 }
 
-/* 工作台形态：卡内正文随内容列放大一档（与 .bidr-agent-question__text 同拍） */
+/* 工作台形态：卡内正文随内容列放大一档（与结论卡正文同拍） */
 .bidr-agent-pane.is-workbench .bidr-agent-ask__text.is-md {
   font-size: 14px;
   line-height: 1.7;
@@ -1331,138 +1331,6 @@
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
 }
 
-.bidr-agent-question__head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.bidr-agent-question__title {
-  color: var(--accent, #1677ff);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.bidr-agent-question__id {
-  color: var(--text-secondary, #999);
-  font-size: 11px;
-}
-
-.bidr-agent-question__text {
-  margin-bottom: 10px;
-  color: var(--text-primary, #333);
-  font-size: 13px;
-  line-height: 20px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* 选项单列一行一个、按内容收宽（2026-11-18 用户口径「没必要左右顶到头」）：
-   短选项不拉成整行长条，长选项仍可在列宽内换行（多列会挤成窄高框，故仍单列） */
-.bidr-agent-question__options {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.bidr-agent-question__option {
-  max-width: 100%;
-  padding: 9px 14px;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.6;
-  text-align: left;
-  color: var(--text-primary, #333);
-  background: var(--bg-elevated, #fff);
-  border: 1px solid var(--border-base, #d9d9d9);
-  border-radius: 8px;
-  cursor: pointer;
-  word-break: break-word;
-  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.15s ease-out;
-}
-
-@media (hover: hover) {
-  .bidr-agent-question__option:hover:not(:disabled) {
-    color: var(--accent, #1677ff);
-    background: var(--accent-tint, #e6f4ff);
-    border-color: var(--accent, #1677ff);
-  }
-}
-
-/* 按压反馈：作答是决策卡的核心动作，按下去要有「点中了」的确认 */
-@media (prefers-reduced-motion: no-preference) {
-  .bidr-agent-question__option:not(:disabled):active {
-    transform: scale(0.96);
-  }
-}
-
-.bidr-agent-question__option:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* 候选项三层解析（S4，规格 §05）：编号 key＝行内 accent 色（tabular-nums 对齐），
-   desc＝次行小字弱化；纯文本选项两层不渲染，视觉不变 */
-.bidr-agent-question__option-key {
-  margin-right: 8px;
-  color: var(--accent, #1677ff);
-  font-variant-numeric: tabular-nums;
-}
-
-.bidr-agent-question__option-desc {
-  display: block;
-  margin-top: 2px;
-  font-size: 11.5px;
-  color: var(--text-secondary, #999);
-}
-
-.bidr-agent-question__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* 自由作答输入位（U66）：决策卡旁明确的写字地方——圆角容器＋无边框输入，口径同 Composer */
-.bidr-agent-question__write {
-  margin-bottom: 10px;
-  padding: 6px 8px 4px;
-  background: var(--bg-elevated, #fff);
-  border: 1px solid var(--border-base, #d9d9d9);
-  border-radius: 10px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.bidr-agent-question__write:focus-within {
-  border-color: var(--accent, #1677ff);
-  box-shadow: 0 0 0 2px var(--accent-mid, rgba(22, 119, 255, 0.1));
-}
-
-.bidr-agent-question__write-input {
-  padding: 2px 4px;
-  font-size: 13px;
-  resize: none;
-  background: transparent;
-  box-shadow: none !important;
-}
-
-.bidr-agent-question__write-input .ant-input,
-.bidr-agent-question__write-input textarea {
-  background: transparent;
-  box-shadow: none !important;
-}
-
-.bidr-agent-question__write-bar {
-  display: flex;
-  align-items: center;
-  margin-top: 2px;
-}
-
-.bidr-agent-question__write-spacer {
-  flex: 1;
-}
 
 /* ==================== 输入区 ==================== */
 
@@ -1777,8 +1645,7 @@
 
 /* markdown 渲染后交给块级排版，禁用继承的 pre-wrap */
 .bidr-agent-msg__text.is-md,
-.bidr-agent-conclusion__text.is-md,
-.bidr-agent-question__text.is-md {
+.bidr-agent-conclusion__text.is-md {
   white-space: normal;
   line-height: 1.7;
 }
@@ -2007,11 +1874,6 @@
 /* 结论卡工作台形态：内边距随内容列放松一档（与决策卡同拍） */
 .bidr-agent-pane.is-workbench .bidr-agent-conclusion {
   padding: 14px 20px;
-}
-
-.bidr-agent-pane.is-workbench .bidr-agent-question__text.is-md {
-  font-size: 14px;
-  line-height: 1.7;
 }
 
 .bidr-agent-pane.is-workbench .bidr-agent-live {

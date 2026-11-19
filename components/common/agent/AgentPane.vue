@@ -392,7 +392,7 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 
-import { useStickScroll } from '../agentChat/useStickScroll'
+import { useStickScroll } from './useStickScroll'
 
 import AgentConclusionCard from './AgentConclusionCard.vue'
 import AskDecisionCard from './AskDecisionCard.vue'
