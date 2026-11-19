@@ -25,7 +25,8 @@ export {
   unescapeText
 } from './markdown'
 export { useAgentConversation } from './useAgentConversation'
-export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventText } from './events'
+export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventText, toolDigest } from './events'
+export { THINK_ARCHIVE_PREFIX, isNoiseLogLine, isThinkArchiveLine } from './processLines'
 export {
   AGENT_CAPABILITY,
   AGENT_HEALTH,
