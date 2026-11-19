@@ -69,6 +69,18 @@
         </div>
       </div>
 
+      <!-- 启动空窗 live 卡（U77）：发起后到首个事件前这段「首响延迟」里只有用户气泡＝点了没反应；
+           补一张带真实秒表的轻卡（11-18 口径拒绝的是无信息量静态占位，这里秒数是真的），
+           首个事件/流式正文到达即整体消失，不与过程卡并存 -->
+      <div
+        v-if="showStartupCard"
+        class="bidr-agent-startup"
+      >
+        <span class="bidr-agent-startup__dot"></span>
+        <span class="bidr-agent-startup__text">已受理 · 模型思考中{{ startupSeconds > 0 ? ` ${fmtDuration(startupSeconds)}` : '' }}</span>
+        <span class="bidr-agent-startup__sub">首轮通读素材较慢，有进展会在这里实时显示</span>
+      </div>
+
       <template
         v-for="item in groupedItems"
         :key="item.id"
@@ -107,7 +119,10 @@
               v-else
               class="bidr-agent-proc__toggle"
             >
-              <span class="bidr-agent-proc__count">{{ procCount(item) }}</span>
+              <span
+                class="bidr-agent-proc__count"
+                :class="`is-d${Math.min(3, String(procCount(item)).length)}`"
+              >{{ procCount(item) }}</span>
               <span class="bidr-agent-proc__chev"></span>
             </span>
             <span
@@ -281,7 +296,7 @@
         <summary class="bidr-agent-live__head">
           <span class="bidr-agent-live__chev"></span>
           <span class="bidr-agent-live__dot"></span>
-          <!-- 只保留一个在变的字数：深度思考（N 字），不显示「已思 N 字」字样 -->
+          <!-- 只保留一个在变的字数：正在思考（N 字），不显示「已思 N 字」字样 -->
           <span>{{ livePhase }}<template v-if="liveChars">（{{ liveChars }} 字）</template></span>
         </summary>
         <pre
@@ -374,13 +389,17 @@
       </div>
     </div>
 
-    <!-- 底部输入区：附件（能力位驱动）+ 发送/暂停/停止；只读回放态隐藏（宿主页另有修订输入条） -->
+    <!-- 底部输入区：附件（能力位驱动）+ 发送/暂停/停止；只读回放态隐藏（宿主页另有修订输入条）。
+         终态续写（U83）：FINISHED 不再置灰输入——发字上抛 followup 由宿主开修订会话；
+         附件在终态单独禁用（传给已终态会话必失败） -->
     <Composer
       v-if="!readOnly"
       :capabilities="capabilityList"
       :status="sessionStatus"
       :waiting-question="!!activeQuestion"
-      :disabled="isTerminal || !sessionId"
+      :disabled="!sessionId"
+      :attach-disabled="isTerminal"
+      terminal-continue
       :items="attachments"
       :sending="sending"
       :stopping="stopping"
@@ -464,6 +483,8 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'finished', kind: 'finish' | 'error' | 'stopped'): void
   (e: 'restart'): void
+  /** 终态续写（U83）：FINISHED 态用户发字，宿主携该版底稿开新修订会话 */
+  (e: 'followup', text: string): void
 }>()
 
 // ==================== 正文 Markdown 渲染（marked＋本地净化，口径同 AiChat） ====================
@@ -563,6 +584,20 @@ const {
 /** 事件流里还没出现正式的用户气泡（run_start 未到/缺席）时，用宿主页传入的发起指令顶上 */
 const hasUserText = computed(() => items.value.some(i => i.kind === 'text' && i.role === 'user'))
 const showOptimisticInstruction = computed(() => !!props.initialInstruction && !hasUserText.value)
+
+// ==================== 启动空窗 live 卡（U77） ====================
+
+/** 挂会话时刻（秒表起点）；只在「事件流全空＋RUNNING」窗口显示，首事件到达即消失 */
+const startupAt = ref(0)
+watch(() => props.sessionId, (id) => {
+  startupAt.value = id ? Date.now() : 0
+})
+const showStartupCard = computed(() =>
+  sessionStatus.value === 'RUNNING'
+  && items.value.length === 0
+  && !liveText.value
+  && startupAt.value > 0)
+const startupSeconds = computed(() => Math.max(0, Math.floor((nowTick.value - startupAt.value) / 1000)))
 
 // ==================== 过程折叠组（连续工具/日志收纳成可折叠块，正文留主面） ====================
 
@@ -956,7 +991,7 @@ const pausing = ref(false)
  * 发送语义按会话状态路由（自主会话没有"追加用户消息"端点）：
  * - 有 waiting 问题 → 作答（sessionAnswer）；
  * - PAUSED → 补指导语并恢复（sessionResume）；
- * - RUNNING/终态 → 不发（Composer 已置灰，这里兜底提示）。
+ * - RUNNING → 插话；可续跑终态 → 续跑；FINISHED → 上抛 followup 开修订会话（U83）。
  */
 // 发送后清掉已上传的待发附件（2026-11-16 口径：附件已给到模型，不再占输入区）；
 // 上传中/失败条目保留给用户处理
@@ -976,9 +1011,18 @@ const onSend = async (text: string) => {
       await sessionInterject(props.sessionId, text)
     } else if (sessionStatus.value === 'PAUSED') {
       await resume(text || undefined)
+    } else if (sessionStatus.value === 'STOPPED' || sessionStatus.value === 'FAILED') {
+      // 可续跑终态（core resumeTerminal 支持同 sessionId 追加 run）：输入文字就地作续跑指导语；
+      // 续跑不可用（无快照/后端拒绝）回落业务修订链
+      try {
+        await resume(text || '继续完成剩余工作')
+      } catch {
+        emit('followup', text)
+      }
     } else {
-      message.info('任务已结束，请点「重新发起」开启新会话')
-      return
+      // FINISHED（已完成＝修订应开新会话，core 设计如此）：文字上抛宿主开修订会话（U83，
+      // 2026-11-19 用户「会话结束了别不能写字」）——不再弹「请点重新发起」打断手
+      emit('followup', text)
     }
     clearAttachments()
   } catch (e: any) {
@@ -1146,7 +1190,7 @@ const onRefreshStatus = async () => {
 
 /**
  * 实时卡默认收起（U64：用户不打开就保持关闭），开合只由用户点击控制＋阶段驱动（watch 挂在
- * 下方 livePhase 定义之后）：「生成中」自动展开、「深度思考」自动收起，同阶段内用户手动
+ * 下方 livePhase 定义之后）：「生成中」自动展开、「正在思考」自动收起，同阶段内用户手动
  * 开合不被自动翻转。
  */
 const liveCollapsed = ref(true)
@@ -1171,13 +1215,14 @@ const fmtTime = (ms?: number): string => {
 /**
  * 实时思考卡拆分：liveText 形如「思考中·已思 N 字\n正文」/「应答中·已收 N 字\n正文」。
  * 卡头只显示阶段＋「（N 字）」（唯一在变），正文去掉首行状态——不再出现「已思 N 字」字样。
+ * 阶段名（U79 用户定稿）：思考段＝「正在思考」；过程组内的思考归档步骤仍叫「深度思考」（历史名词）。
  */
 const livePhase = computed(() => {
   const first = (liveText.value || '').split('\n')[0] || ''
-  return first.startsWith('应答中') ? '生成中' : '深度思考'
+  return first.startsWith('应答中') ? '生成中' : '正在思考'
 })
 // 阶段驱动的开合（U64/U68）：「生成中」＝模型正文流式，必须看得见→自动展开；
-// 「深度思考」＝过程细节→自动收起（折叠头的实时预览行已能看到当前内容）
+// 「正在思考」＝过程细节→自动收起（折叠头的实时预览行已能看到当前内容）
 watch(livePhase, phase => {
   liveCollapsed.value = phase !== '生成中'
 })

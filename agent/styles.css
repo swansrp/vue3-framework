@@ -388,14 +388,44 @@
   min-width: 16px;
 }
 
-/* 折叠态：交互数（25 这类一眼可读的数字）；无框素数字，靠 hover 变 accent 表态可点 */
+/* 折叠态：交互数带圈徽标（U77 用户「带个圈精致一点」）：细描边圆片。
+   U82 勘正：min-width+padding 在两位/三位数时把圈拉成椭圆——改定宽定高 18×18 正圆
+   （border-radius:50%），字号按位数分级（模板挂 is-d1/d2/d3）保证数字不出圈。
+   运行中着琥珀活动色（与「工作中」同族）；已暂停回落中性灰。绿勾组不渲染计数。 */
 .bidr-agent-proc__count {
+  display: inline-flex;
   flex-shrink: 0;
-  font-size: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   font-weight: 600;
-  color: var(--text-secondary, #8c8c8c);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  color: var(--text-secondary, #8c8c8c);
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border-subtle, #e8e8e8);
+  border-radius: 50%;
+}
+
+.bidr-agent-proc__count.is-d1 {
+  font-size: 11px;
+}
+
+.bidr-agent-proc__count.is-d2 {
+  font-size: 10px;
+}
+
+/* 三位数：9px 等宽数字（≈5.4px/位 ≈16px）＋-0.5px 字距，恰收进 16px 内圈 */
+.bidr-agent-proc__count.is-d3 {
+  font-size: 9px;
+  letter-spacing: -0.5px;
+}
+
+.bidr-agent-proc__head.is-live .bidr-agent-proc__count {
+  color: #d46b08;
+  background: #fff7e6;
+  border-color: #ffd591;
 }
 
 /* 展开态箭头：默认隐藏，open 时顶替计数位（收起引导） */
@@ -429,10 +459,10 @@
   color: var(--text-secondary, #595959);
 }
 
-/* 工作台「运行中」不再用蓝字（2026-11-18 用户口径「蓝色不好看」）：
-   用加深的中性色表态，活性由脉冲点/计时承担，颜色不负责任 */
+/* 「工作中」着琥珀活动色（U77 用户「黑色太朴素了」）：与计数圈同族，正在干活一目了然；
+   11-18「蓝色不好看」口径仍避开——本次用琥珀而非蓝，绿勾「已完成」照旧 */
 .bidr-agent-proc__label.is-running {
-  color: var(--text-primary, #262626);
+  color: #fa8c14;
   font-weight: 600;
 }
 
@@ -720,12 +750,16 @@
 
 .bidr-agent-live__head {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
   padding: 0 0 6px;
   margin: 0;
   font-size: 12px;
-  /* 深度思考头用中性深灰（2026-11-18：整片蓝字太扎眼），活性由左侧脉冲点提示 */
+  /* 显式行盒（U79：点/箭头/文字不在一条水平线上——继承行高被中英数字混排撑高，基线漂移）；
+     三件套同处 16px 线盒，flex 垂直居中即水平对齐 */
+  line-height: 16px;
+  /* 「正在思考」头用中性深灰（2026-11-18：整片蓝字太扎眼），活性由左侧脉冲点提示 */
   color: var(--text-secondary, #595959);
   cursor: pointer;
   list-style: none;
@@ -757,12 +791,15 @@
   transform: rotate(90deg);
 }
 
-/* 脉冲点：呼吸闪烁替代旋转图标；减少动态偏好下不闪烁（静态满亮点仍是「在跑」的可见线索） */
+/* 脉冲点（U79 用户定稿：绿色＋光晕）：实心点呼吸＋外圈光晕向外扩散淡出；
+   减少动态偏好下不闪，静置半透明光晕仍是「在跑」的可见线索 */
 .bidr-agent-live__dot {
+  position: relative;
+  flex-shrink: 0;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent, #1677ff);
+  background: #52c41a;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -771,9 +808,79 @@
   }
 }
 
+/* 光晕层：两处活动点共用（实时思考卡＋启动空窗卡） */
+.bidr-agent-live__dot::after,
+.bidr-agent-startup__dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(82, 196, 26, 0.45);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-live__dot::after,
+  .bidr-agent-startup__dot::after {
+    animation: bidr-agent-halo 1.6s ease-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .bidr-agent-live__dot::after,
+  .bidr-agent-startup__dot::after {
+    opacity: 0.3;
+    transform: scale(1.7);
+  }
+}
+
+/* 启动空窗 live 卡（U77）：发起→首事件之间挂用户气泡后的轻反馈行；视觉同 live 卡家族 */
+.bidr-agent-startup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 8px 28px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: 8px;
+}
+
+.bidr-agent-startup__dot {
+  position: absolute;
+  top: 13px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #52c41a;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-startup__dot {
+    animation: bidr-agent-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+.bidr-agent-startup__text {
+  font-size: 12px;
+  color: var(--text-secondary, #595959);
+}
+
+.bidr-agent-startup__sub {
+  font-size: 11px;
+  color: var(--text-tertiary, #b9c3d6);
+}
+
 @keyframes bidr-agent-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* 光晕（U79 用户「要点光晕效果」）：活动点外圈由内向外扩散淡出，1.6s 一轮 */
+@keyframes bidr-agent-halo {
+  0% { transform: scale(1); opacity: 0.55; }
+  70%, 100% { transform: scale(2.8); opacity: 0; }
 }
 
 /* 卡头本段计时已退役（U71：该计时跨思考段不清零，观感像「所有深度思考总时长」，用户不需要；

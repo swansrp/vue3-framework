@@ -160,6 +160,10 @@ interface Props {
   sendable?: boolean
   /** 运行中插话（排队/插话功能）：RUNNING 态也出发送钮，文本经 interject 排队下一轮注入 */
   interjectable?: boolean
+  /** 终态续写（U83）：FINISHED/STOPPED/FAILED 也保持输入可写可发——发送交宿主开修订会话 */
+  terminalContinue?: boolean
+  /** 附件按钮单独禁用（终态续写时输入可写但附件不可再传——传给已终态会话必失败） */
+  attachDisabled?: boolean
   /** 外部发送闸（sendable 模式）：如素材未解析通过时置灰 */
   sendDisabled?: boolean
   /** 输入框最小行数（缺省 2；业务页地面态 3） */
@@ -186,6 +190,8 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   sendable: false,
   interjectable: false,
+  terminalContinue: false,
+  attachDisabled: false,
   sendDisabled: false,
   minRows: 2,
   hideAttach: false,
@@ -207,9 +213,10 @@ const emit = defineEmits<{
 }>()
 
 const canUpload = computed(() => props.capabilities.includes(AGENT_CAPABILITY.FILES_UPLOAD))
-const attachDisabled = computed(() => props.disabled || props.uploading)
+const attachDisabled = computed(() => props.attachDisabled || props.disabled || props.uploading)
 const attachTitle = computed(() => {
   if (props.disabled) return '会话已结束'
+  if (props.attachDisabled) return '会话已结束，附件不可再传；修订所需素材在新会话发起后再上传'
   if (props.uploading) return '附件上传中，请稍候'
   return '上传附件（也可拖拽文件到面板）'
 })
@@ -231,10 +238,15 @@ watch(() => props.text, (value) => {
 /** 输入框最小行数（props 透传给 auto-size） */
 const inputMinRows = computed(() => (props.minRows > 0 ? props.minRows : 2))
 
-/** 可发送语义：sendable 接管（业务页普通发送：有字或有附件、外部闸放行）｜作答问题｜暂停后补指导语 */
+/** 终态集合（Composer 不知道终态枚举，本地判定只服务 terminalContinue 口径） */
+const TERMINAL_STATUSES = ['FINISHED', 'STOPPED', 'FAILED']
+
+/** 可发送语义：sendable 接管（业务页普通发送：有字或有附件、外部闸放行）｜作答问题｜暂停后补指导语
+ *  ｜终态续写（U83：输入交宿主开修订会话） */
 const canSendText = computed(() =>
   props.sendable || props.waitingQuestion || props.status === 'PAUSED'
-  || (props.status === 'RUNNING' && props.interjectable))
+  || (props.status === 'RUNNING' && props.interjectable)
+  || (props.terminalContinue && TERMINAL_STATUSES.includes(props.status)))
 /** PAUSED 且无待作答问题：允许空指导语恢复（后端按默认指导语处理，与占位文案「可空」一致） */
 const allowEmptySend = computed(() => !props.waitingQuestion && props.status === 'PAUSED')
 const canSend = computed(() => {
@@ -258,6 +270,9 @@ const placeholder = computed(() => {
     return props.interjectable
       ? '任务执行中… 可直接插话（Enter 发送，下一轮生效）；也可拖入附件'
       : '任务执行中… 可暂停后补充指导；可直接拖入附件'
+  }
+  if (props.terminalContinue && TERMINAL_STATUSES.includes(props.status)) {
+    return '会话已结束：输入修改要求，Enter 发起修订继续改（历史记录保留）'
   }
   return '输入内容（Enter 发送，Shift+Enter 换行）'
 })
