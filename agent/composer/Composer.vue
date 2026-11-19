@@ -160,10 +160,8 @@ interface Props {
   sendable?: boolean
   /** 运行中插话（排队/插话功能）：RUNNING 态也出发送钮，文本经 interject 排队下一轮注入 */
   interjectable?: boolean
-  /** 终态续写（U83）：FINISHED/STOPPED/FAILED 也保持输入可写可发——发送交宿主开修订会话 */
+  /** 终态续写：FINISHED/STOPPED/FAILED 保持输入与附件可用——就地续跑（2026-11-19「没有结束的概念」），宿主修订链只作续跑失败兜底 */
   terminalContinue?: boolean
-  /** 附件按钮单独禁用（终态续写时输入可写但附件不可再传——传给已终态会话必失败） */
-  attachDisabled?: boolean
   /** 外部发送闸（sendable 模式）：如素材未解析通过时置灰 */
   sendDisabled?: boolean
   /** 输入框最小行数（缺省 2；业务页地面态 3） */
@@ -191,7 +189,6 @@ const props = withDefaults(defineProps<Props>(), {
   sendable: false,
   interjectable: false,
   terminalContinue: false,
-  attachDisabled: false,
   sendDisabled: false,
   minRows: 2,
   hideAttach: false,
@@ -213,10 +210,9 @@ const emit = defineEmits<{
 }>()
 
 const canUpload = computed(() => props.capabilities.includes(AGENT_CAPABILITY.FILES_UPLOAD))
-const attachDisabled = computed(() => props.attachDisabled || props.disabled || props.uploading)
+const attachDisabled = computed(() => props.disabled || props.uploading)
 const attachTitle = computed(() => {
   if (props.disabled) return '会话已结束'
-  if (props.attachDisabled) return '会话已结束，附件不可再传；修订所需素材在新会话发起后再上传'
   if (props.uploading) return '附件上传中，请稍候'
   return '上传附件（也可拖拽文件到面板）'
 })
@@ -240,13 +236,16 @@ const inputMinRows = computed(() => (props.minRows > 0 ? props.minRows : 2))
 
 /** 终态集合（Composer 不知道终态枚举，本地判定只服务 terminalContinue 口径） */
 const TERMINAL_STATUSES = ['FINISHED', 'STOPPED', 'FAILED']
+/** 终态续写生效中：就地续跑；附件也可带（登记在会话事件流，由续跑 run 消费） */
+const terminalContinueActive = computed(() =>
+  props.terminalContinue && TERMINAL_STATUSES.includes(props.status))
 
 /** 可发送语义：sendable 接管（业务页普通发送：有字或有附件、外部闸放行）｜作答问题｜暂停后补指导语
- *  ｜终态续写（U83：输入交宿主开修订会话） */
+ *  ｜终态续写（就地续跑） */
 const canSendText = computed(() =>
   props.sendable || props.waitingQuestion || props.status === 'PAUSED'
   || (props.status === 'RUNNING' && props.interjectable)
-  || (props.terminalContinue && TERMINAL_STATUSES.includes(props.status)))
+  || terminalContinueActive.value)
 /** PAUSED 且无待作答问题：允许空指导语恢复（后端按默认指导语处理，与占位文案「可空」一致） */
 const allowEmptySend = computed(() => !props.waitingQuestion && props.status === 'PAUSED')
 const canSend = computed(() => {
@@ -256,6 +255,7 @@ const canSend = computed(() => {
     return text.value.trim().length > 0 || props.items.length > 0
   }
   return text.value.trim().length > 0 || allowEmptySend.value
+    || (terminalContinueActive.value && props.items.length > 0)
 })
 const stoppable = computed(() => !props.disabled && (props.status === 'RUNNING' || props.status === 'PAUSED'))
 /** 暂停入口：仅 RUNNING 且无待答问题时渲染（提问态模型在等用户，暂停无意义；也避免三按钮同排） */
@@ -271,8 +271,8 @@ const placeholder = computed(() => {
       ? '任务执行中… 可直接插话（Enter 发送，下一轮生效）；也可拖入附件'
       : '任务执行中… 可暂停后补充指导；可直接拖入附件'
   }
-  if (props.terminalContinue && TERMINAL_STATUSES.includes(props.status)) {
-    return '会话已结束：输入修改要求，Enter 发起修订继续改（历史记录保留）'
+  if (terminalContinueActive.value) {
+    return '输入修改要求或补充附件，Enter 就地继续（历史记录保留）'
   }
   return '输入内容（Enter 发送，Shift+Enter 换行）'
 })
@@ -280,8 +280,10 @@ const placeholder = computed(() => {
 const onSend = () => {
   const value = text.value.trim()
   if (!canSend.value) return
-  // 空文本仅在 PAUSED 恢复语义（后端默认指导语）或 sendable＋有附件（有素材可空字发起）下放行
-  if (!value && !allowEmptySend.value && !(props.sendable && props.items.length > 0)) return
+  // 空文本仅在 PAUSED 恢复语义（后端默认指导语）、sendable＋有附件（有素材可空字发起）、
+  // 或终态续写＋有附件（空字＝直接续跑消费已登记附件）下放行
+  if (!value && !allowEmptySend.value && !(props.sendable && props.items.length > 0)
+    && !(terminalContinueActive.value && props.items.length > 0)) return
   emit('send', value)
   text.value = ''
 }

@@ -392,15 +392,14 @@
     </div>
 
     <!-- 底部输入区：附件（能力位驱动）+ 发送/暂停/停止；只读回放态隐藏（宿主页另有修订输入条）。
-         终态续写（U83）：FINISHED 不再置灰输入——发字上抛 followup 由宿主开修订会话；
-         附件在终态单独禁用（传给已终态会话必失败） -->
+         终态续写（U83 起步、2026-11-19 用户终裁「没有结束的概念」收口）：文字与附件在终态
+         全部可用——就地续跑（core resumeTerminal 已放开 FINISHED），修订链只作续跑失败兜底 -->
     <Composer
       v-if="!readOnly"
       :capabilities="capabilityList"
       :status="sessionStatus"
       :waiting-question="!!activeQuestion"
       :disabled="!sessionId"
-      :attach-disabled="isTerminal"
       terminal-continue
       :items="attachments"
       :sending="sending"
@@ -486,7 +485,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'finished', kind: 'finish' | 'error' | 'stopped'): void
   (e: 'restart'): void
-  /** 终态续写（U83）：FINISHED 态用户发字，宿主携该版底稿开新修订会话 */
+  /** 终态续写兜底：就地续跑失败（老会话无快照/后端拒绝）时上抛宿主，携该版底稿开新修订会话 */
   (e: 'followup', text: string): void
 }>()
 
@@ -606,11 +605,12 @@ const startupSeconds = computed(() => Math.max(0, Math.floor((nowTick.value - st
 
 /**
  * 「重新发起」的统一语义（框架层能力，业务页零感知）：
- * ① 会话处于**可续跑终态**（STOPPED/FAILED）→ 先试续跑：core/llm 的 resume 对终态支持
+ * ① 会话处于被中断终态（STOPPED/FAILED）→ 先试续跑：core/llm 的 resume 对终态支持
  *    同一 sessionId 追加新 run，并在首轮注入「续跑说明」（已完成不重复、中间产物可复用）；
  *    成功即留在本会话继续跑，不再回到业务表单。
- * ② 已完成（FINISHED，继续＝修订应开新会话）/ 老会话无参数快照 / 网络失败 → emit('restart')，
- *    由业务回落自己的新建流程。
+ * ② 已完成（FINISHED）＝用户明确要另起一份 → 直接 emit('restart')，由业务走自己的新建流程
+ *    （想继续加工走输入条即可——FINISHED 就地续跑已放开，2026-11-19「没有结束的概念」）；
+ *    老会话无参数快照 / 网络失败同样回落 emit('restart')。
  */
 const onRestartClick = async () => {
   if (sessionStatus.value === 'STOPPED' || sessionStatus.value === 'FAILED') {
@@ -618,7 +618,7 @@ const onRestartClick = async () => {
       await resume('继续完成剩余工作')
       return
     } catch {
-      // 后端拒绝（已完成/无快照）或网络异常：回落业务侧
+      // 后端拒绝（无快照）或网络异常：回落业务侧
     }
   }
   emit('restart')
@@ -894,13 +894,17 @@ const conclusion = computed(() => {
   return { kind: 'stopped' as const, title: '已停止', text: status.value?.error || '已完成部分保留，可重新发起继续' }
 })
 
-// 终态回调只发一次（同一 sessionId）；切换会话复位
+// 终态回调只发一次（同一 sessionId）；切换会话复位；离开终态（续跑）也复位——
+// 就地续跑再收口时 host 需要再次收到 finished（列表刷新拿到更新后的记录）
 const finishedFor = ref<string | null>(null)
 watch(() => props.sessionId, () => {
   finishedFor.value = null
 })
 watch([() => props.sessionId, isTerminal], () => {
-  if (!props.sessionId || !isTerminal.value) return
+  if (!props.sessionId || !isTerminal.value) {
+    if (!isTerminal.value) finishedFor.value = null
+    return
+  }
   if (finishedFor.value === props.sessionId) return
   finishedFor.value = props.sessionId
   emit('finished', terminalKind.value)
@@ -994,7 +998,7 @@ const pausing = ref(false)
  * 发送语义按会话状态路由（自主会话没有"追加用户消息"端点）：
  * - 有 waiting 问题 → 作答（sessionAnswer）；
  * - PAUSED → 补指导语并恢复（sessionResume）；
- * - RUNNING → 插话；可续跑终态 → 续跑；FINISHED → 上抛 followup 开修订会话（U83）。
+ * - RUNNING → 插话；终态（含 FINISHED）→ 就地续跑，失败回落 followup 修订链。
  */
 // 发送后清掉已上传的待发附件（2026-11-16 口径：附件已给到模型，不再占输入区）；
 // 上传中/失败条目保留给用户处理
@@ -1014,18 +1018,15 @@ const onSend = async (text: string) => {
       await sessionInterject(props.sessionId, text)
     } else if (sessionStatus.value === 'PAUSED') {
       await resume(text || undefined)
-    } else if (sessionStatus.value === 'STOPPED' || sessionStatus.value === 'FAILED') {
-      // 可续跑终态（core resumeTerminal 支持同 sessionId 追加 run）：输入文字就地作续跑指导语；
-      // 续跑不可用（无快照/后端拒绝）回落业务修订链
+    } else {
+      // 终态（STOPPED/FAILED/FINISHED）就地续跑（2026-11-19 用户终裁「没有结束的概念」，
+      // core resumeTerminal 已放开 FINISHED）：输入文字作续跑指导语，附件已在会话事件流中；
+      // 续跑不可用（老会话无快照/后端拒绝）回落业务修订链
       try {
-        await resume(text || '继续完成剩余工作')
+        await resume(text || (sessionStatus.value === 'FINISHED' ? '继续加工既有成果' : '继续完成剩余工作'))
       } catch {
         emit('followup', text)
       }
-    } else {
-      // FINISHED（已完成＝修订应开新会话，core 设计如此）：文字上抛宿主开修订会话（U83，
-      // 2026-11-19 用户「会话结束了别不能写字」）——不再弹「请点重新发起」打断手
-      emit('followup', text)
     }
     clearAttachments()
   } catch (e: any) {
@@ -1111,8 +1112,8 @@ const isComposerTarget = (e: DragEvent): boolean => {
   return !!target && typeof target.closest === 'function' && !!target.closest('.bidr-agent-composer')
 }
 
-/** 根级是否接收文件：能力位在场、非终态、无上传在途 */
-const paneDropAllowed = () => canUpload.value && !isTerminal.value && !isUploading.value
+/** 根级是否接收文件：能力位在场、无上传在途（终态也放行——续跑消费，2026-11-19「没有结束的概念」） */
+const paneDropAllowed = () => canUpload.value && !isUploading.value
 
 const resetPaneDrag = () => {
   paneDragDepth.value = 0
@@ -1143,7 +1144,7 @@ const onPaneDragLeave = (e: DragEvent) => {
 const onPaneDrop = (e: DragEvent) => {
   resetPaneDrag()
   if (isComposerTarget(e) || !hasFileDrag(e)) return
-  if (!canUpload.value || isTerminal.value) return
+  if (!canUpload.value) return
   if (isUploading.value) {
     message.info('附件上传中，请稍候再拖入')
     return
