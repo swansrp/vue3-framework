@@ -1674,3 +1674,226 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ==================== 计划胶囊 dock（S7，规格稿 §01） ==================== */
+
+/* dock 容器：占满一行让展开卡能以面板宽居中（420px 卡宽于胶囊），胶囊水平居中、不进对话流 */
+.bidr-agent-plan {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  margin: 8px 12px 0;
+}
+
+/* 展开卡：向上浮层（底部 dock 下方无空间），420px、白底、卡片圆角/投影（--radius-card 同族） */
+.bidr-agent-plan__card {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 420px;
+  max-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  /* 滚到尽头不把滚动链给宿主页 */
+  overscroll-behavior: contain;
+  padding: 8px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: var(--radius-card, 14px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.06));
+  z-index: 20;
+}
+
+/* 计划行：状态图标＋文本 13px；完成项压暗（text-secondary，不加删除线）、进行中琥珀底＋「进行中」小字 */
+.bidr-agent-plan__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary, #595959);
+}
+
+/* 待办最弱（text-tertiary）；stopped 同 done 压暗（图标灰圈区分） */
+.bidr-agent-plan__row.is-pending {
+  color: var(--text-tertiary, #bfbfbf);
+}
+
+/* 进行中：琥珀软底（--activity-soft 同族）＋正文主色 */
+.bidr-agent-plan__row.is-running {
+  color: var(--text-primary, #333);
+  background: var(--activity-soft, #fff7e6);
+}
+
+.bidr-agent-plan__row-txt {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 「进行中」小字：琥珀，随行右挂不换行 */
+.bidr-agent-plan__row-now {
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--activity, #d46b08);
+  white-space: nowrap;
+}
+
+/* 完成行绿勾（14px 位内 11px 勾），与行首 ring 同一列位 */
+.bidr-agent-plan__ok {
+  flex-shrink: 0;
+  display: inline-flex;
+  justify-content: center;
+  width: 14px;
+  margin-top: 3px;
+  color: var(--success, #52c41a);
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 状态环（胶囊/行共用）：18px 圆、1.6px currentColor 描边、内嵌 10px svg；
+   默认＝success 描边圆勾；is-amber＝琥珀 spinner 点（去描边）；is-gray＝灰空心圈；is-error＝红环 ✕ */
+.bidr-agent-plan__ring {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 1.6px solid currentColor;
+  border-radius: 50%;
+  color: var(--success, #52c41a);
+}
+
+.bidr-agent-plan__ring > svg {
+  width: 10px;
+  height: 10px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 琥珀（执行中）：去外描边只留 spinner 点，与过程组头「工作中」同族（不用 AI 蓝） */
+.bidr-agent-plan__ring.is-amber {
+  border-color: transparent;
+  color: var(--activity, #d46b08);
+}
+
+/* spinner：8px 双边弧；减少动态偏好下停转（弧仍在＝可见线索） */
+.bidr-agent-plan__ring.is-amber::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.6px solid transparent;
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-plan__ring.is-amber::after {
+    animation: bidr-agent-plan-spin 0.8s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bidr-agent-plan__ring.is-amber::after {
+    opacity: 0.9;
+  }
+}
+
+@keyframes bidr-agent-plan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 灰空心圈（pending/stopped 行）：比 text-tertiary 更轻的固定灰 */
+.bidr-agent-plan__ring.is-gray {
+  color: rgba(0, 0, 0, 0.22);
+}
+
+/* 红环（有失败/已停止胶囊） */
+.bidr-agent-plan__ring.is-error {
+  color: var(--error, #ff4d4f);
+}
+
+/* 胶囊（收起态常驻）：高 34、圆角 999、白底＋浅描边＋shadow-sm＋顶部内高光 */
+.bidr-agent-plan__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px 0 12px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-primary, #333);
+  background: var(--bg-elevated, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 #fff, var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.05));
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.15s var(--ease-out, cubic-bezier(0.2, 0, 0, 1)), background-color 0.15s var(--ease-out, cubic-bezier(0.2, 0, 0, 1)), transform 0.15s ease-out;
+}
+
+/* 悬停反馈只给有悬停能力的指针（触屏 :hover 会黏住） */
+@media (hover: hover) {
+  .bidr-agent-plan__pill:hover {
+    border-color: rgba(0, 0, 0, 0.14);
+  }
+}
+
+/* 按压反馈：0.96/150ms ease-out（减少动态偏好下不动） */
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-plan__pill:active {
+    transform: scale(0.96);
+  }
+}
+
+.bidr-agent-plan__pill-label {
+  font-weight: 600;
+}
+
+/* 执行中标签着琥珀（与过程组头「工作中」同族）；已停止标签着 error 红 */
+.bidr-agent-plan__pill.is-running .bidr-agent-plan__pill-label {
+  color: var(--activity, #d46b08);
+}
+
+.bidr-agent-plan__pill.is-stopped .bidr-agent-plan__pill-label {
+  color: var(--error, #ff4d4f);
+}
+
+.bidr-agent-plan__pill-count {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  font-variant-numeric: tabular-nums;
+}
+
+/* chev：CSS 三角（收起朝下＝还有下方内容；展开翻朝上） */
+.bidr-agent-plan__pill-chev {
+  width: 0;
+  height: 0;
+  border-top: 4px solid var(--text-tertiary, #bfbfbf);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+}
+
+.bidr-agent-plan__pill-chev.is-up {
+  border-top: none;
+  border-bottom: 4px solid var(--text-tertiary, #bfbfbf);
+}

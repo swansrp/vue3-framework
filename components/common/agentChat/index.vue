@@ -468,7 +468,7 @@ import {
   RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import AgentConclusionCard from '../agent/AgentConclusionCard.vue'
 import AgentProcessArchives from './AgentProcessArchives.vue'
@@ -477,6 +477,7 @@ import {
   isTerminalStatus, parseChatOption, type AgentConfirmationT, type AgentEventX, type AgentPlanItemT
 } from './types'
 import { useAgentSession } from './useAgentSession'
+import { useStickScroll } from './useStickScroll'
 
 import {
   sessionAnswer, sessionPause, sessionRate, sessionResolveConfirmation, sessionResume, sessionStop
@@ -773,7 +774,7 @@ const onCopyAll = () => {
   )
 }
 
-// ===== 滚动跟随 =====
+// ===== 滚动跟随（S8 单源 useStickScroll；原内联实现的 __AGENT_CHAT_SCROLL_DEBUG__ 诊断随之一并退役） =====
 
 const formatTime = (t?: number) => {
   if (!t) return ''
@@ -782,42 +783,9 @@ const formatTime = (t?: number) => {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-// 滚动诊断日志（排查内滚贴底失效临时开关）：控制台执行 __AGENT_CHAT_SCROLL_DEBUG__ = false 可关；
-// 只记异常/关键决策点，正常跟随帧不打扰（每秒一帧，全量打会刷屏）
-const scrollDebug = () => (window as any).__AGENT_CHAT_SCROLL_DEBUG__ !== false
-const geom = (el: HTMLElement | null) => el
-  ? { st: el.scrollTop, sh: el.scrollHeight, ch: el.clientHeight }
-  : null
-
-const scrollBottom = async (force = false) => {
-  await nextTick()
-  const el = bodyRef.value
-  if (!el) return
-  const before = geom(el)
-  if (force || nearBottom.value) {
-    el.scrollTop = el.scrollHeight
-    if (scrollDebug() && !nearBottom.value) {
-      console.warn('[AgentChat scroll] 外层强制滚底（终态/结论）', { before, after: geom(el) })
-    }
-  } else if (scrollDebug() && el.scrollHeight > el.clientHeight) {
-    // 关键异常候选：有滚动条但 nearBottom=false 导致外层不跟随——打出几何供定位阈值/回写问题
-    console.warn('[AgentChat scroll] 外层未滚底：nearBottom=false', before)
-  }
-}
-
 // 滚动跟随：新事件到达仅当用户贴近底部时才自动滚底；
 // 用户手动上滚阅读历史不打断（滚回底部附近恢复跟随）
-const nearBottom = ref(true)
-
-const onBodyScroll = () => {
-  const el = bodyRef.value
-  if (!el) return
-  const v = el.scrollHeight - el.scrollTop - el.clientHeight < 48
-  if (v !== nearBottom.value && scrollDebug()) {
-    console.warn(`[AgentChat scroll] 外层 nearBottom → ${v}`, geom(el))
-  }
-  nearBottom.value = v
-}
+const { onScroll: onBodyScroll, scrollBottom } = useStickScroll(() => bodyRef.value, 48)
 
 watch(() => events.value.length, () => scrollBottom(false))
 // 流式 live 块高度变化的外层跟随（贴近底部才跟随；live 块内滚由 AgentProcessFlow 自持）

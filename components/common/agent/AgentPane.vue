@@ -391,6 +391,14 @@
       </div>
     </div>
 
+    <!-- 计划胶囊 dock（S7，规格 §01）：输入条正上方、水平居中、不进对话流；堆叠自上而下＝
+         展开卡（胶囊内向上浮层）→胶囊→Composer；无计划整条隐藏（组件内控）；
+         只读回放态无输入条，dock 一并隐藏（不悬空挂在回放正文下） -->
+    <PlanCapsule
+      v-if="!readOnly"
+      :items="planItems"
+    />
+
     <!-- 底部输入区：附件（能力位驱动）+ 发送/暂停/停止；只读回放态隐藏（宿主页另有修订输入条）。
          终态续写（U83 起步、2026-11-19 用户终裁「没有结束的概念」收口）：文字与附件在终态
          全部可用——就地续跑（core resumeTerminal 已放开 FINISHED），修订链只作续跑失败兜底 -->
@@ -435,10 +443,13 @@ import {
   FileWordOutlined, LoadingOutlined, RobotOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
+
+import { useStickScroll } from '../agentChat/useStickScroll'
 
 import AgentConclusionCard from './AgentConclusionCard.vue'
 import Composer from './composer/Composer.vue'
+import PlanCapsule from './PlanCapsule.vue'
 import { markdownOf } from './markdown'
 import { THINK_ARCHIVE_PREFIX } from './processLines'
 import { formatFileSize, AGENT_CAPABILITY, parseChatOption, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
@@ -528,6 +539,11 @@ const {
   stop,
   refresh
 } = useAgentConversation(sessionIdRef, { toolLabels: props.toolLabels })
+
+// ==================== 计划胶囊数据源（S7） ====================
+
+/** status 快照的 plan 清单（D16 契约位；缺省回落空数组＝无计划，PlanCapsule 整条隐藏） */
+const planItems = computed(() => status.value?.plan || [])
 
 // ==================== 发起即显用户消息（U63 乐观气泡） ====================
 
@@ -1208,26 +1224,14 @@ const procPreview = (group: AgentProcessGroup): string => {
   return ''
 }
 
-// ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断） ====================
+// ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断；S8 单源 useStickScroll） ====================
 
 const bodyRef = ref<HTMLDivElement | null>(null)
-const nearBottom = ref(true)
+const { onScroll: onBodyScroll, scrollBottom: stickBottom } = useStickScroll(() => bodyRef.value, 48)
 
-const onBodyScroll = () => {
-  const el = bodyRef.value
-  if (!el) return
-  nearBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 48
-}
-
-const scrollBottom = async () => {
-  await nextTick()
-  const el = bodyRef.value
-  if (el && nearBottom.value) el.scrollTop = el.scrollHeight
-}
-
-watch(() => items.value.length, () => void scrollBottom())
-watch(liveText, () => void scrollBottom())
+watch(() => items.value.length, () => stickBottom())
+watch(liveText, () => stickBottom())
 watch(conclusion, v => {
-  if (v) void scrollBottom()
+  if (v) stickBottom()
 })
 </script>

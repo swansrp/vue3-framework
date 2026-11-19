@@ -258,7 +258,7 @@ import {
   RobotOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 
 
 import AgentProcessTree from './AgentProcessTree.vue'
@@ -267,6 +267,7 @@ import AskPlanChecklist from './AskPlanChecklist.vue'
 import AskSteps from './AskSteps.vue'
 import AskThinking from './AskThinking.vue'
 import type { ChatMsgBase } from './types'
+import { useStickScroll } from './useStickScroll'
 
 import { deleteConversation, getAgentRegistry, getConversation, listConversations, rateConversationMessage } from '@/framework/apis/agent'
 import pinia from '@/framework/store'
@@ -342,23 +343,10 @@ const onNewConversation = () => {
   emit('new-conversation')
 }
 
-// ==================== 智能滚动（贴底 <48px 跟随，发送强制滚底） ====================
+// ==================== 智能滚动（贴底 <48px 跟随，发送强制滚底；S8 单源 useStickScroll） ====================
 
 const msgAreaRef = ref<HTMLElement | null>(null)
-const nearBottom = ref(true)
-
-const onMsgScroll = () => {
-  const el = msgAreaRef.value
-  if (!el) return
-  nearBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 48
-}
-
-const scrollBottom = (force = false) => {
-  nextTick(() => {
-    const el = msgAreaRef.value
-    if (el && (force || nearBottom.value)) el.scrollTop = el.scrollHeight
-  })
-}
+const { onScroll: onMsgScroll, scrollBottom } = useStickScroll(() => msgAreaRef.value, 48)
 
 // 消息增长跟随滚动（过程步骤/产物上屏时保持贴底可见）
 watch(
