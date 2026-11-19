@@ -23,6 +23,8 @@ import type {
   AgentToolItem,
   AgentViewItem
 } from './types'
+import { isNoiseLogLine } from './processLines'
+import { FRAMEWORK_TOOL_DIGEST_FIELDS, FRAMEWORK_TOOL_LABELS } from './labels'
 
 /** payload 取文本：字符串原样；对象 JSON 化（人读）；空值空串 */
 export const payloadText = (payload: unknown): string => {
@@ -103,48 +105,11 @@ const formatArgs = (args: unknown): string => {
   }
 }
 
-/** 工具名 → 人话名（框架工具＋epc/InkHub 常见业务工具的摘要口径；未知工具回落原名） */
-const TOOL_LABELS: Record<string, string> = {
-  sandbox_run: '沙箱执行',
-  sandbox_fetch: '取回沙箱产物',
-  sandbox_put_attachment: '放入沙箱原件',
-  read_attachment: '读取附件',
-  read_file: '读取附件',
-  generate_artifact: '生成产物文件',
-  upload_file: '上传产物文件',
-  save_supervision_log: '保存监理日志',
-  askUser: '向用户提问',
-  finish: '收口',
-  submitExternalTask: '委托外部执行',
-  waitExternalTask: '等待外部结果',
-  queryExternalTask: '查询外部任务',
-  readExternalTaskResult: '读取外部结果',
-  cancelExternalTask: '终止外部任务',
-  search_docs: '知识库检索',
-  fetch_document: '知识库取文',
-  grep_document: '知识库深搜'
-}
-
-/** 各工具的关键参数字段（按序取第一个非空值作摘要；均缺省回落全文摘要） */
-const TOOL_DIGEST_FIELDS: Record<string, string[]> = {
-  sandbox_run: ['command'],
-  sandbox_fetch: ['rel_path', 'relPath', 'file_path', 'filePath', 'path'],
-  sandbox_put_attachment: ['path', 'file_id'],
-  read_attachment: ['name', 'file_name', 'fileName', 'file_id', 'fileId'],
-  read_file: ['name', 'file_name', 'fileName', 'file_id', 'fileId'],
-  generate_artifact: ['file_name', 'fileName', 'name', 'format'],
-  upload_file: ['object_name', 'objectName', 'name'],
-  save_supervision_log: ['log_date', 'logDate'],
-  askUser: ['question'],
-  submitExternalTask: ['title', 'task', 'prompt'],
-  waitExternalTask: ['task_id', 'taskId'],
-  queryExternalTask: ['task_id', 'taskId'],
-  readExternalTaskResult: ['task_id', 'taskId'],
-  cancelExternalTask: ['task_id', 'taskId'],
-  search_docs: ['query', 'keyword', 'q'],
-  fetch_document: ['doc_id', 'docId', 'file_id', 'fileId'],
-  grep_document: ['keyword', 'pattern', 'query']
-}
+/**
+ * 工具名 → 人话名：框架表正源＝labels.ts（FRAMEWORK_TOOL_LABELS，只认框架工具）；
+ * 业务工具的人话名由宿主经 toolDigest 第三参 / buildAgentViewItems opts.toolLabels 注入
+ * （注入表优先）。未知工具回落原名。
+ */
 
 /** 摘要截断：一句话收口，超长省略号（不换行渲染由样式兜底） */
 const clipDigest = (text: string, max = 64): string => {
@@ -157,11 +122,8 @@ const clipDigest = (text: string, max = 64): string => {
 /**
  * 后端 report 回显日志：与工具卡信息完全重复（名称/参数在 tool_call、返回在 tool_result），
  * 或属 tokens 级噪音——成帧即丢，不进消息流。失败行保留（有信息量）。
+ * 前缀词汇＝processLines 单源（两栈发射文案并集），本文件不再自持副本。
  */
-const LOG_NOISE_PREFIXES = ['└ 工具调用：', '└ LLM 输出：', 'LLM 响应已收到']
-
-const isNoisyBackendLog = (text: string): boolean =>
-  LOG_NOISE_PREFIXES.some(p => text.startsWith(p))
 
 /**
  * 轮次标记帧（后端每轮只推一个带圈数字：①=1 … ⑳=20 / ㉑…㉟=21…35 / ㊱…㊿=36…50）
@@ -197,16 +159,21 @@ const isNarrationNoise = (text: string): boolean => {
 /**
  * 工具卡摘要（工作台形态 summary 行用）：人话名＋关键参数一句话。
  * 纯函数——args 解析失败/字段缺失一律回落「人话名＋空摘要」，绝不抛。
+ * 第三参 extraLabels＝宿主注入的业务工具人话名（优先于框架标签表命中）。
  */
-export const toolDigest = (name: string, argsText: string): { label: string; digest: string } => {
-  const label = TOOL_LABELS[name] || name
+export const toolDigest = (
+  name: string,
+  argsText: string,
+  extraLabels?: Record<string, string>
+): { label: string; digest: string } => {
+  const label = (extraLabels && extraLabels[name]) || FRAMEWORK_TOOL_LABELS[name] || name
   let digest = ''
   try {
     const parsed = typeof argsText === 'string' && argsText.trim()
       ? JSON.parse(argsText)
       : argsText
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const keys = TOOL_DIGEST_FIELDS[name] || []
+      const keys = FRAMEWORK_TOOL_DIGEST_FIELDS[name] || []
       for (const key of keys) {
         const value = (parsed as Record<string, any>)[key]
         if (value !== undefined && value !== null && String(value) !== '') {
@@ -271,10 +238,19 @@ const STATUS_TYPES = new Set<string>(['paused', 'resumed', 'guidance', 'answered
  */
 const STAGING_PAUSE_NOTE = '会话已创建，等待素材上传完成后开始'
 
+/** buildAgentViewItems 可选项（缺省行为与无参调用完全一致） */
+export interface BuildAgentViewItemsOptions {
+  /** 业务工具的人话名（宿主注入，键＝工具注册名；优先于框架标签表命中） */
+  toolLabels?: Record<string, string>
+}
+
 /**
  * 事件帧数组 → 视图条目数组（全量重算；tool_result 通过回填同批对象完成配对）
  */
-export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] => {
+export const buildAgentViewItems = (
+  events: AgentEventFrame[],
+  opts?: BuildAgentViewItemsOptions
+): AgentViewItem[] => {
   const items: AgentViewItem[] = []
   const tools: AgentToolItem[] = []
 
@@ -303,7 +279,7 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
         const toolCallId = String(field(ev.payload, 'tool_call_id') ?? '')
         const name = String(field(ev.payload, 'tool_name') ?? (typeof ev.payload === 'string' ? ev.payload : '工具调用'))
         const args = formatArgs(field(ev.payload, 'arguments'))
-        const digest = toolDigest(name, args)
+        const digest = toolDigest(name, args, opts?.toolLabels)
         const tool: AgentToolItem = {
           kind: 'tool',
           id: `tool-${ev.seq}`,
@@ -370,7 +346,7 @@ export const buildAgentViewItems = (events: AgentEventFrame[]): AgentViewItem[] 
       }
       case 'log': {
         const text = payloadText(ev.payload).trim()
-        if (text && !isNoisyBackendLog(text) && !isNarrationNoise(text) && !isRoundMarker(text)) {
+        if (text && !isNoiseLogLine(text) && !isNarrationNoise(text) && !isRoundMarker(text)) {
           items.push({ kind: 'log', id: `log-${ev.seq}`, seq: ev.seq, time: ev.time, text })
         }
         break

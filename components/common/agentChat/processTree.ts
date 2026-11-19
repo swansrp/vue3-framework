@@ -22,7 +22,7 @@ export interface UiErrorInfo {
 }
 
 export interface ToolStep {
-  /** tool_call_id（旧数据可缺省；缺省时配对回退位置法） */
+  /** tool_call_id（旧数据可缺省；缺省时仅在唯一在途工具时回退配对，见 matchStepIndex） */
   id: string
   name: string
   args?: any
@@ -131,18 +131,15 @@ export function updateStream(msg: UiMessage, path: string[], fn: (s: SubStream) 
   return { ...msg, subStreams: { ...streams, [key]: fn(current) } }
 }
 
-/** 工具步定位（直播/历史两路共用）：同 id 未完成 → 同 id 任意 → 最后未完成（旧服务端兼容） */
+/**
+ * 工具步定位（直播/历史两路共用，保守口径——与 events.ts tool_result 配对语义对齐）：
+ * 有 id 只配「在途（未完成）」同 id；无 id 仅唯一在途回退；多工具并行不猜。
+ * 配不上返回 -1：调用方落日志行保留原文（见 agentEventsToView），宁可不配也不错配。
+ */
 export function matchStepIndex(tools: ToolStep[], id: string): number {
-  if (id) {
-    const pending = tools.findIndex(t => t.id === id && !t.completed)
-    if (pending >= 0) return pending
-    const reuse = tools.findIndex(t => t.id === id)
-    if (reuse >= 0) return reuse
-  }
-  for (let i = tools.length - 1; i >= 0; i--) {
-    if (!tools[i].completed) return i
-  }
-  return -1
+  if (id) return tools.findIndex(t => t.id === id && !t.completed)
+  const running = tools.filter(t => !t.completed)
+  return running.length === 1 ? tools.indexOf(running[0]) : -1
 }
 
 export function completeStep(tools: ToolStep[], id: string, output: string): ToolStep[] {

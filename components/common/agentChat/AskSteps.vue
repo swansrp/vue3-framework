@@ -59,6 +59,7 @@
 <script lang="ts" setup>
 import { CheckOutlined } from '@ant-design/icons-vue'
 
+import { THINK_ARCHIVE_PREFIX } from './processLines'
 import type { ChatStep } from './types'
 
 /** 单条步骤（契约上提 types.ts，保留旧名别名兼容存量调用方） */
@@ -83,9 +84,8 @@ const fmtTime = (t: number) => {
 
 // 思考归档行（后端 StreamingProgressChatModel onComplete 推「【LLM 思考归档】N 字\n全文」，
 // 经 step 清单永久留存）：识别前缀并拆标题/正文，渲染为可闭合折叠块不丢失不占屏
-const ARCHIVE_PREFIX = '【LLM 思考归档】'
-
-const isArchive = (text: string) => text.startsWith(ARCHIVE_PREFIX)
+// （前缀词汇＝processLines 单源，本目录为薄 re-export）
+const isArchive = (text: string) => text.startsWith(THINK_ARCHIVE_PREFIX)
 
 const archiveHead = (text: string) => {
   const nl = text.indexOf('\n')

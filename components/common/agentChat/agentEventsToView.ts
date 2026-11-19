@@ -19,6 +19,7 @@
 import { isNoiseLogLine } from './processLines'
 import {
   completeStep,
+  matchStepIndex,
   newAssistantMessage,
   SPAWN_TOOL
 } from './processTree'
@@ -78,7 +79,18 @@ export function agentEventsToView(
         const output = ev.type === 'error'
           ? asText(field(ev.payload, 'error') ?? ev.payload)
           : String(field(ev.payload, 'output') ?? asText(ev.payload))
-        tools = completeStep(tools, id, output)
+        // 保守配对（matchStepIndex 同口径，与 events.ts tool_result 分支语义对齐）：
+        // 配不上不猜——落思考日志行保留原文（文案对齐 events.ts），不错配也不丢信息
+        if (matchStepIndex(tools, id) >= 0) {
+          tools = completeStep(tools, id, output)
+        } else {
+          const running = tools.filter(t => !t.completed).length
+          thinks.push(id
+            ? `工具结果未匹配到在途调用（tool_call_id=${id}）：${output}`
+            : (running > 1
+              ? `工具结果缺少 tool_call_id，当前 ${running} 个工具执行中，无法确定配对：${output}`
+              : output))
+        }
       } else if (TEXT_TYPES.has(ev.type)) {
         const text = asText(ev.payload)
         if (text) outputs.push(text)

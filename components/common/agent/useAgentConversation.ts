@@ -57,6 +57,9 @@ const TERMINAL_FALLBACK_DELAY = 2000
 export interface UseAgentConversationOptions {
   /** 轮询间隔（毫秒），缺省 2000 */
   pollInterval?: number
+  /** 业务工具的人话名（宿主注入，键＝工具注册名）：透传 buildAgentViewItems → toolDigest，
+   *  优先于框架标签表命中——框架仓只认框架工具，业务名由宿主供给 */
+  toolLabels?: Record<string, string>
 }
 
 /** 本地上传条目唯一键（时间戳+随机尾，避免同名文件冲突） */
@@ -120,7 +123,7 @@ export const useAgentConversation = (
     uploadingCount.value = uploadingGenCounts.get(gen) || 0
   }
 
-  const items = computed<AgentViewItem[]>(() => buildAgentViewItems(events.value))
+  const items = computed<AgentViewItem[]>(() => buildAgentViewItems(events.value, { toolLabels: options.toolLabels }))
   const sessionStatus = computed(() => controlStatus.value || status.value?.status || 'RUNNING')
   const isTerminal = computed(() => isTerminalStatus(sessionStatus.value))
   const liveText = computed(() => (isTerminal.value ? '' : status.value?.live || ''))

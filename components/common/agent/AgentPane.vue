@@ -440,6 +440,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Compon
 
 import Composer from './composer/Composer.vue'
 import { configureAgentMarkdown } from './markdown'
+import { THINK_ARCHIVE_PREFIX } from './processLines'
 import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
@@ -469,6 +470,9 @@ interface Props {
   /** 发起指令（宿主页在起跑时传入）：会话启动期事件未到，先乐观渲染用户气泡（U63），
    *  run_start 事件到达后自动让位给正式气泡 */
   initialInstruction?: string
+  /** 业务工具的人话名（宿主注入，键＝工具注册名）：工具卡标签优先于框架标签表命中；
+   *  框架仓只认框架工具，业务名不进框架表（反向耦合已拔除） */
+  toolLabels?: Record<string, string>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -579,7 +583,7 @@ const {
   resume,
   stop,
   refresh
-} = useAgentConversation(sessionIdRef)
+} = useAgentConversation(sessionIdRef, { toolLabels: props.toolLabels })
 
 // ==================== 发起即显用户消息（U63 乐观气泡） ====================
 
@@ -773,9 +777,9 @@ const thinkingDuration = (group: AgentProcessGroup, index: number): string => {
   return Number.isFinite(sec) && sec > 0 ? fmtDuration(sec) : ''
 }
 
-/** 思考归档日志（后端「【LLM 思考归档】N 字\n正文」）识别与拆分，供折叠「深度思考」步骤渲染 */
-const THINKING_LOG_PREFIX = '【LLM 思考归档】'
-const isThinkingLog = (text: string): boolean => text.startsWith(THINKING_LOG_PREFIX)
+/** 思考归档日志（后端「【LLM 思考归档】N 字\n正文」）识别与拆分，供折叠「深度思考」步骤渲染
+ *  （前缀词汇＝processLines 单源，与 agentChat 两栈共用一份并集） */
+const isThinkingLog = (text: string): boolean => text.startsWith(THINK_ARCHIVE_PREFIX)
 const thinkingChars = (text: string): string => {
   const m = text.split('\n')[0].match(/(\d+)\s*字/)
   return m ? m[1] : ''
