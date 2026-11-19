@@ -202,35 +202,25 @@
       />
       <AgentProcessArchives :events="events" />
 
-      <!-- 状态条（暂停/恢复/指导语，按事件顺序平铺） -->
+      <!-- 状态条（暂停/恢复/指导语，按事件顺序平铺）——文案单源（S9）：statusEventText
+           与 AgentPane 同口径（events.ts），本面板不再自持 emoji 文案表 -->
       <div
         v-for="ev in statusEvents"
         :key="`s-${ev.seq}`"
         class="status-strip"
         :class="`strip-${ev.type}`"
       >
-        {{ statusText2(ev) }}
+        {{ statusEventText(ev.type, ev.payload) }}
       </div>
 
-      <!-- 终态结论卡 -->
-      <div
+      <!-- 终态结论卡（两栈单源组件，S5：与 AgentPane 同款渲染——白卡＋状态色左标＋
+           正文 markdown（共享管线，含圈号分行兜底），原本纯文本插值处现在同源） -->
+      <AgentConclusionCard
         v-if="conclusion"
-        class="conclusion"
-        :class="`is-${conclusion.kind}`"
-      >
-        <div class="conclusion-title">
-          <CheckCircleFilled v-if="conclusion.kind === 'finish'" />
-          <CloseCircleFilled v-else-if="conclusion.kind === 'error'" />
-          <StopFilled v-else />
-          <span>{{ conclusion.title }}</span>
-        </div>
-        <div
-          v-if="conclusion.text"
-          class="conclusion-text"
-        >
-          {{ conclusion.text }}
-        </div>
-      </div>
+        :kind="conclusion.kind"
+        :title="conclusion.title"
+        :text="conclusion.text || ''"
+      />
 
       <!-- 待确认口径清单（LLM 自决口径经 report_unconfirmed 登记，登记即可见；终态后逐条裁决：
            一键确认（认可自决口径）/改口径重算（会话侧标状态，业务壳监听 confirmation-revised 触发重算） -->
@@ -472,14 +462,15 @@
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CheckSquareOutlined, ClockCircleOutlined, CloseCircleFilled,
+  CheckCircleFilled, CheckSquareOutlined, ClockCircleOutlined,
   CopyOutlined, DislikeOutlined, ExclamationCircleFilled, LikeOutlined, LoadingOutlined, MinusOutlined,
   PauseCircleOutlined, PlayCircleOutlined, QuestionCircleFilled, RedoOutlined,
-  RobotOutlined, StopFilled, StopOutlined
+  RobotOutlined, StopOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, nextTick, ref, watch } from 'vue'
 
+import AgentConclusionCard from '../agent/AgentConclusionCard.vue'
 import AgentProcessArchives from './AgentProcessArchives.vue'
 import AgentProcessFlow from './AgentProcessFlow.vue'
 import {
@@ -490,6 +481,7 @@ import { useAgentSession } from './useAgentSession'
 import {
   sessionAnswer, sessionPause, sessionRate, sessionResolveConfirmation, sessionResume, sessionStop
 } from '@/framework/apis/agent'
+import { statusEventText } from '@/framework/components/common/agent/events'
 import AgentStages from '@/framework/components/common/agentStages/index.vue'
 import type { AgentStageItem } from '@/framework/components/common/agentStages/types'
 
@@ -601,18 +593,6 @@ const statusEvents = computed(() => events.value.filter(ev => STATUS_TYPES.has(e
 // ===== LLM 流式实时内容（替换式：会话 status.live，每秒覆盖的最新一帧；终态后端清空自然隐藏） =====
 // 屏显与跟随归 AgentProcessFlow 实时块；此处保留取值供「复制全体」带走执行中思考全文
 const liveText = computed(() => status.value?.live || '')
-
-const statusText2 = (ev: AgentEventX): string => {
-  const text = typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)
-  if (ev.type === 'paused') return `⏸ 已暂停：${text}`
-  if (ev.type === 'resumed') return `▶ ${text || '已恢复'}`
-  if (ev.type === 'question') {
-    const q = ev.payload as { question?: string } | null
-    return `❓ AI 提问：${q && typeof ev.payload === 'object' ? (q.question || text) : text}`
-  }
-  if (ev.type === 'answered') return `🙋 用户作答：${text}`
-  return `💬 用户补充：${text}`
-}
 
 // ===== 终态结论卡 =====
 
@@ -781,7 +761,7 @@ const onCopyAll = () => {
   }
   for (const ev of events.value) {
     if (THINK_TYPES.has(ev.type)) lines.push(`【${lineTag(ev.type)}】${fullText(ev)}`)
-    else if (STATUS_TYPES.has(ev.type)) lines.push(statusText2(ev))
+    else if (STATUS_TYPES.has(ev.type)) lines.push(statusEventText(ev.type, ev.payload))
   }
   // 流式实时帧在替换式通道（不进事件流防膨胀），须单独带走——否则执行中点复制会丢失屏幕上可见的思考全文；
   // 终态后端清空后此处自然为空，历史留痕以事件流中的轮末归档行为准
@@ -1118,35 +1098,7 @@ watch(conclusion, v => {
   &.strip-guidance { color: var(--accent); }
 }
 
-// 终态结论卡
-.conclusion {
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
-
-  .conclusion-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .conclusion-text {
-    margin-top: 6px;
-    color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 20px;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  &.is-finish .conclusion-title { color: var(--success, #52c41a); }
-  &.is-error .conclusion-title { color: var(--error, #ff4d4f); }
-  &.is-stopped .conclusion-title { color: var(--text-secondary); }
-}
+// 终态结论卡样式已随单源组件 AgentConclusionCard 走（S5，bidr-agent-conclusion* 全局类）
 
 // 待确认口径清单（结论卡后：LLM 自决口径登记，用户逐条裁决）
 .confirmations {

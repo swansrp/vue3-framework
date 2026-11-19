@@ -10,16 +10,26 @@
  */
 import './styles.css'
 
+export { default as AgentConclusionCard } from './AgentConclusionCard.vue'
 export { default as AgentPane } from './AgentPane.vue'
 export { default as AttachmentTray } from './composer/AttachmentTray.vue'
 export { default as Composer } from './composer/Composer.vue'
+export {
+  breakBeforeCircledItems,
+  clampLongUrls,
+  configureAgentMarkdown,
+  markdownOf,
+  sanitizeAgentHtml,
+  unescapeText
+} from './markdown'
 export { useAgentConversation } from './useAgentConversation'
 export { buildAgentViewItems, fileRefFromEventPayload, payloadText, statusEventText } from './events'
 export {
   AGENT_CAPABILITY,
   AGENT_HEALTH,
   formatFileSize,
-  isTerminalStatus
+  isTerminalStatus,
+  parseChatOption
 } from './types'
 export type {
   AgentEventFrame,

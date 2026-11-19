@@ -307,24 +307,14 @@
         >{{ liveBody }}</pre>
       </details>
 
-      <!-- 终态结论卡（U73：不再标「AI」说话人，卡片本身即模型输出） -->
-      <div
+      <!-- 终态结论卡（U73：不再标「AI」说话人，卡片本身即模型输出）——
+           两栈单源组件（agentChat 同款，S5），正文走共享 markdown 管线（含圈号分行兜底） -->
+      <AgentConclusionCard
         v-if="conclusion"
-        class="bidr-agent-conclusion"
-        :class="`is-${conclusion.kind}`"
-      >
-        <div class="bidr-agent-conclusion__title">
-          <CheckCircleFilled v-if="conclusion.kind === 'finish'" />
-          <CloseCircleFilled v-else-if="conclusion.kind === 'error'" />
-          <StopOutlined v-else />
-          <span>{{ conclusion.title }}</span>
-        </div>
-        <div
-          v-if="conclusion.text"
-          class="bidr-agent-conclusion__text is-md"
-          v-html="markdownOf(breakBeforeCircledItems(conclusion.text))"
-        ></div>
-      </div>
+        :kind="conclusion.kind"
+        :title="conclusion.title"
+        :text="conclusion.text || ''"
+      />
     </div>
 
     <!-- AI 决策问题（ask_user waiting）：点选项即作答，自由输入走底部 Composer -->
@@ -352,7 +342,17 @@
           :disabled="answering"
           @click="onAnswerOption(opt.raw)"
         >
-          {{ opt.label }}
+          <!-- 候选项三层解析单源（S4，规格 §05）：key 编号 accent 色＋label 主文本＋desc 次行小字；
+               JSON 对象串与纯文本选项统一走 parseChatOption，作答回传仍用 raw 保证无损 -->
+          <span
+            v-if="opt.key"
+            class="bidr-agent-question__option-key"
+          >{{ opt.key }}</span>
+          <span class="bidr-agent-question__option-label">{{ opt.label }}</span>
+          <span
+            v-if="opt.desc"
+            class="bidr-agent-question__option-desc"
+          >{{ opt.desc }}</span>
         </button>
       </div>
       <!-- 自由作答输入位（U66）：决策卡旁就有一个明确的写字地方，不用去找底部输入框；
@@ -430,24 +430,21 @@
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CheckCircleOutlined, CloseCircleFilled, FileExcelOutlined,
+  CheckCircleFilled, CheckCircleOutlined, FileExcelOutlined,
   FileImageOutlined, FilePdfOutlined, FilePptOutlined, FileTextOutlined,
-  FileWordOutlined, LoadingOutlined, RobotOutlined, StopOutlined
+  FileWordOutlined, LoadingOutlined, RobotOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { marked } from 'marked'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 
+import AgentConclusionCard from './AgentConclusionCard.vue'
 import Composer from './composer/Composer.vue'
-import { configureAgentMarkdown } from './markdown'
+import { markdownOf } from './markdown'
 import { THINK_ARCHIVE_PREFIX } from './processLines'
-import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
+import { formatFileSize, AGENT_CAPABILITY, parseChatOption, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
 import { sessionInterject } from '@/framework/apis/agent'
-
-// 语气波浪号防误伤（marked 全局装配，模块级守卫只跑一次）：单 ~ 不再吞成删除线
-configureAgentMarkdown()
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */
@@ -493,62 +490,9 @@ const emit = defineEmits<{
   (e: 'followup', text: string): void
 }>()
 
-// ==================== 正文 Markdown 渲染（marked＋本地净化，口径同 AiChat） ====================
-
-// marked v17：gfm 已含 tables，独立 tables 键已移除（TypeScript 选项校验）
-marked.setOptions({ breaks: true, gfm: true })
-
-/** 剥离脚本载体：script/iframe 等标签、on* 事件属性、javascript: 链接（LLM 输出不可信） */
-const sanitizeHtml = (html: string): string => {
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  doc.body.querySelectorAll('script,style,iframe,object,embed,link,meta,base').forEach(el => el.remove())
-  doc.body.querySelectorAll('*').forEach(el => {
-    // getAttributeNames 返回 string[]（NamedNodeMap 不可直接迭代）
-    for (const name of el.getAttributeNames()) {
-      const lower = name.toLowerCase()
-      if (lower.startsWith('on') || ((lower === 'href' || lower === 'src') && (el.getAttribute(name) || '').trim().toLowerCase().startsWith('javascript:'))) {
-        el.removeAttribute(name)
-      }
-    }
-  })
-  return doc.body.innerHTML
-}
-
-/** 渲染缓存（items 全量重算每轮轮询都会重渲染；同文本只 parse 一次） */
-const markdownCache = new Map<string, string>()
-
-/**
- * 超长 URL 折叠：模型会把工具返回的预签名下载地址复述进正文，长串会把正文撑爆、还很丑。
- * 去掉包裹用的 markdown 链接括号后，长 URL 统一折成「下载链接见下载卡片」（下载按钮由产物卡提供）。
- */
-const clampLongUrls = (text: string): string =>
-  text.replace(/\]\((https?:\/\/[^\s)<>）】]{80,})\)/g, ']()')
-    .replace(/https?:\/\/[^\s)<>）】]{80,}/g, '〔下载链接见下方下载卡片〕')
-
-/**
- * 字面转义还原：落库的 summary / 某些工具返回会把换行存成两个字符「\n」，
- * 直接进 markdown 会整段挤成一行还带 \n 字样（U73 截图）。渲染前还原成真换行。
- */
-const unescapeText = (text: string): string =>
-  text.replace(/\\r\\n|\\n/g, '\n').replace(/\\t/g, '\t')
-
-/**
- * 圈号分条兜底（2026-11-18）：存量结论摘要是收口排版纪律之前落的库，①②③ 全挤一段
- * （Redis 实查无换行）。渲染前在圈号前补换行——圈号在这类简报里就是条目标记，视觉分行、
- * 不改写落库内容；圈号前已是行首/换行时不重复插（免出空行）。新会话自带换行，本兜底无感。
- */
-const breakBeforeCircledItems = (text: string): string =>
-  text.replace(/([^\n])([①-⑳])/g, '$1\n$2')
-
-const markdownOf = (text: string): string => {
-  if (!text) return ''
-  const cached = markdownCache.get(text)
-  if (cached !== undefined) return cached
-  const html = sanitizeHtml(marked.parse(clampLongUrls(unescapeText(text))) as string)
-  if (markdownCache.size > 200) markdownCache.clear()
-  markdownCache.set(text, html)
-  return html
-}
+// ==================== 正文 Markdown 渲染 ====================
+// 管线已抽单源至 ./markdown（S6：unescape→clampUrl→parse→sanitize＋缓存，marked 装配
+// 在模块级守卫一次）；本组件只 import markdownOf，epc AiChat 等业务页同源消费。
 
 /**
  * 能力位显式解构（computed）：模板不直接裸引用 props 数组/父级 store 字段，
@@ -916,24 +860,9 @@ watch([() => props.sessionId, isTerminal], () => {
 
 // ==================== 决策问题作答 ====================
 
-/** 候选项展示：JSON 对象串取 label/desc，提交仍用 raw（保证回传无损） */
-const questionOptions = computed(() => (waitingQuestion.value?.options || []).map(raw => {
-  const text = raw || ''
-  const trimmed = text.trim()
-  if (trimmed.startsWith('{')) {
-    try {
-      const obj = JSON.parse(trimmed)
-      if (obj && typeof obj === 'object') {
-        const label = typeof obj.label === 'string' ? obj.label : ''
-        const desc = typeof obj.desc === 'string' ? obj.desc : ''
-        if (label || desc) return { label: label || desc, raw }
-      }
-    } catch {
-      // 非合法 JSON：回落原文
-    }
-  }
-  return { label: text, raw }
-}))
+/** 候选项展示：三层解析单源（S4，parseChatOption——key/label/desc；agentChat 同源），
+ *  提交仍用 raw（保证回传 LLM 无损） */
+const questionOptions = computed(() => (waitingQuestion.value?.options || []).map(parseChatOption))
 
 const answering = ref(false)
 
