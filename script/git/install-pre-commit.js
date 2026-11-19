@@ -3,9 +3,9 @@
  * 安装统一 pre-commit 钩子，自动调用 hooks-runner.js
  */
 
+import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
-import { execSync } from 'child_process'
 
 const gitHookPath = path.resolve('.git/hooks/pre-commit')
 // 使用相对路径，避免项目移动后绝对路径失效

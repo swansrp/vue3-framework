@@ -16,8 +16,6 @@
  */
 import { computed, onScopeDispose, reactive, ref, watch, type Ref } from 'vue'
 
-import { name } from '@/../package.json'
-import { getSseStream, readSseStream } from '@/framework/utils/sse'
 
 import { buildAgentViewItems, payloadText } from './events'
 import {
@@ -30,6 +28,7 @@ import {
   type AttachmentItem
 } from './types'
 
+import { name } from '@/../package.json'
 import {
   sessionAnswer as apiSessionAnswer,
   sessionEvents as apiSessionEvents,
@@ -41,6 +40,7 @@ import {
   sessionStop as apiSessionStop,
   sessionUpload
 } from '@/framework/apis/agent'
+import { getSseStream, readSseStream } from '@/framework/utils/sse'
 
 const POLL_INTERVAL = 2000
 

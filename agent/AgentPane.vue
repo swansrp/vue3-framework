@@ -97,7 +97,9 @@
             class="bidr-agent-msg__text is-md"
             v-html="markdownOf(item.text)"
           ></div>
-          <div class="bidr-agent-msg__time">{{ fmtTime(item.time) }}</div>
+          <div class="bidr-agent-msg__time">
+            {{ fmtTime(item.time) }}
+          </div>
         </div>
 
         <!-- 过程折叠组：连续的工具调用/日志收进一个可折叠块（正文留主面，过程按需展开）。
@@ -440,8 +442,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Compon
 import Composer from './composer/Composer.vue'
 import { configureAgentMarkdown } from './markdown'
 import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
-import { sessionInterject } from '@/framework/apis/agent'
 import { useAgentConversation } from './useAgentConversation'
+
+import { sessionInterject } from '@/framework/apis/agent'
 
 // 语气波浪号防误伤（marked 全局装配，模块级守卫只跑一次）：单 ~ 不再吞成删除线
 configureAgentMarkdown()
