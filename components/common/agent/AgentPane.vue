@@ -429,6 +429,10 @@ interface Props {
   /** 业务工具的人话名（宿主注入，键＝工具注册名）：工具卡标签优先于框架标签表命中；
    *  框架仓只认框架工具，业务名不进框架表（反向耦合已拔除） */
   toolLabels?: Record<string, string>
+  /** 上传端口注入（P3-1）：宿主自持附件链路时传入（如 InkHub 素材通道），缺省走框架 sessionUpload。
+   *  签名＝(file, onProgress?) => Promise<AgentFileRef|null>；onProgress 0-100（留 1% 收尾口径由引擎统一处理，
+   *  handler 只报真实进度）。注入即视为附件能力在场（capabilityList 据此放行 canUpload）。 */
+  uploadAttachment?: (file: File, onProgress?: (percent: number) => void) => Promise<AgentFileRef | null>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -457,7 +461,15 @@ const emit = defineEmits<{
  * 能力位显式解构（computed）：模板不直接裸引用 props 数组/父级 store 字段，
  * 避免 Vue 3 setup 模板裸引用在运行时才炸（项目钉子教训）。
  */
-const capabilityList = computed<string[]>(() => props.capabilities || [])
+const capabilityList = computed<string[]>(() => {
+  const list = props.capabilities || []
+  // 能力位＝声明 ∪ 注入（P3-1）：宿主传 uploadAttachment 即视为附件能力在场，
+  // 声明里已有 files.upload 则不重复追加；canUpload/附件按钮/拖拽落区由 Composer 既有闸门自动放行
+  if (props.uploadAttachment && !list.includes(AGENT_CAPABILITY.FILES_UPLOAD)) {
+    return [...list, AGENT_CAPABILITY.FILES_UPLOAD]
+  }
+  return list
+})
 const canUpload = computed(() => capabilityList.value.includes(AGENT_CAPABILITY.FILES_UPLOAD))
 const canReadFiles = computed(() => capabilityList.value.includes(AGENT_CAPABILITY.FILES_READ))
 /** 工作台形态（主区）：样式按 .is-workbench 分支放大排版密度；缺省 sidebar 保持窄列密度 */
@@ -486,7 +498,7 @@ const {
   resume,
   stop,
   refresh
-} = useAgentConversation(sessionIdRef, { toolLabels: props.toolLabels })
+} = useAgentConversation(sessionIdRef, { toolLabels: props.toolLabels, uploadAttachment: props.uploadAttachment })
 
 // ==================== 计划胶囊数据源（S7） ====================
 

@@ -60,6 +60,10 @@ export interface UseAgentConversationOptions {
   /** 业务工具的人话名（宿主注入，键＝工具注册名）：透传 buildAgentViewItems → toolDigest，
    *  优先于框架标签表命中——框架仓只认框架工具，业务名由宿主供给 */
   toolLabels?: Record<string, string>
+  /** 上传端口注入（P3-1）：宿主自持附件链路时传入（如 InkHub 素材通道），缺省走框架 sessionUpload。
+   *  签名＝(file, onProgress?) => Promise<AgentFileRef|null>；onProgress 0-100（留 1% 收尾口径由引擎统一处理，
+   *  handler 只报真实进度）。注入即视为附件能力在场（AgentPane 据此放行 canUpload）。 */
+  uploadAttachment?: (file: File, onProgress?: (percent: number) => void) => Promise<AgentFileRef | null>
 }
 
 /** 本地上传条目唯一键（时间戳+随机尾，避免同名文件冲突） */
@@ -519,11 +523,17 @@ export const useAgentConversation = (
     if (!existing) attachments.value.push(item)
     bumpUploading(myGen, 1)
     try {
-      const resp: any = await sessionUpload(id, file, ev => {
-        if (myGen !== gen) return
-        // 留 1% 给服务端收尾（axios 进度到 100 时后端可能仍在落存储）
-        item.progress = ev.total ? Math.min(99, Math.round((ev.loaded / ev.total) * 100)) : 0
-      })
+      const resp: any = options.uploadAttachment
+        ? { payload: await options.uploadAttachment(file, percent => {
+            if (myGen !== gen) return
+            // 注入端口 handler 只报真实进度：引擎统一 clamp 到 0-99（防宿主传小数/负数/超 100 透传 chips）
+            item.progress = Math.max(0, Math.min(99, Math.round(percent)))
+          }) }
+        : await sessionUpload(id, file, ev => {
+            if (myGen !== gen) return
+            // 留 1% 给服务端收尾（axios 进度到 100 时后端可能仍在落存储）
+            item.progress = ev.total ? Math.min(99, Math.round((ev.loaded / ev.total) * 100)) : 0
+          })
       const ref = (resp?.payload as AgentFileRef | undefined) || null
       item.status = 'done'
       item.progress = 100
