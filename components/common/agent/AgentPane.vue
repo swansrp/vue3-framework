@@ -116,122 +116,19 @@
         </div>
 
         <!-- 过程折叠组：连续的工具调用/日志收进一个可折叠块（正文留主面，过程按需展开）。
-             开合只由用户点击控制（不自开不自关）；组头两态（U71）：
-             · 运行中＝计数徽标（折叠显数字、点开变箭头）＋「工作中」＋实时时分秒＋一行最新内容预览
-             · 已完结＝绿勾＋「已完成」＋耗时（不再显示交互数与预览）；PAUSED 最后一组＝「已暂停」 -->
-        <details
+             单组展示件 AgentProcessGroup（棒2 自本文件原样抽出）：§02 行模型/组头相位/计数/
+             耗时/实时预览全在组件内，类名与 DOM 结构不变；本面板只做多组编排——归组循环＋
+             谁是当前组（lastProcGroupId）＋会话态（running/paused），InkHubChat 多轮对话线
+             （棒3）按轮各喂一组复用同件，两壳观感统一 -->
+        <AgentProcessGroup
           v-else-if="item.kind === 'process'"
-          class="bidr-agent-proc"
-        >
-          <summary
-            class="bidr-agent-proc__head"
-            :class="`is-${procPhase(item)}`"
-          >
-            <template v-if="procPhase(item) === 'done'">
-              <CheckCircleFilled class="bidr-agent-proc__done" />
-            </template>
-            <span
-              v-else
-              class="bidr-agent-proc__toggle"
-            >
-              <span
-                class="bidr-agent-proc__count"
-                :class="`is-d${Math.min(3, String(procCount(item)).length)}`"
-              >{{ procCount(item) }}</span>
-              <span class="bidr-agent-proc__chev"></span>
-            </span>
-            <span
-              class="bidr-agent-proc__label"
-              :class="{ 'is-running': procPhase(item) === 'live' }"
-            >{{ procPhaseLabel(item) }}</span>
-            <span
-              v-if="procDurationText(item)"
-              class="bidr-agent-proc__state"
-              :class="{ 'is-running': procPhase(item) === 'live' }"
-            >{{ procDurationText(item) }}</span>
-            <span
-              v-if="procPhase(item) === 'live' && procPreview(item)"
-              class="bidr-agent-proc__preview"
-              :title="procPreview(item)"
-            >{{ procPreview(item) }}</span>
-          </summary>
-          <!-- 组内行（§02 规格）：工具/思考行＝18px 编号圈＋名称（500）＋摘要＋单步耗时右缘对齐，
-               进行中整行琥珀＋「执行中…」，点行展开入参/返回明细；log 行＝编号位灰点不占编号；
-               等待族连续轮询并成一行（「进度检查 N 次」） -->
-          <div class="bidr-agent-proc__body">
-            <template
-              v-for="row in item.rows"
-              :key="row.key"
-            >
-              <details
-                v-if="row.kind !== 'log'"
-                class="bidr-agent-proc__rowitem"
-              >
-                <summary
-                  class="bidr-agent-proc__row"
-                  :class="{ 'is-run': isProcRowRunning(row) }"
-                >
-                  <span class="bidr-agent-proc__row-n">{{ row.ord }}</span>
-                  <span class="bidr-agent-proc__row-main">
-                    <span class="bidr-agent-proc__row-line">
-                      <span class="bidr-agent-proc__row-name">{{ row.label }}</span>
-                      <span
-                        v-if="row.kind === 'tool' && row.digest"
-                        class="bidr-agent-proc__row-digest"
-                        :title="row.digest"
-                      >{{ row.digest }}</span>
-                      <span
-                        v-if="row.kind === 'tool' && row.polls > 1"
-                        class="bidr-agent-proc__row-polls"
-                      >进度检查 {{ row.polls }} 次</span>
-                      <span
-                        v-if="isProcRowRunning(row)"
-                        class="bidr-agent-proc__row-hint"
-                      >执行中…</span>
-                      <span
-                        v-if="procRowDurText(row)"
-                        class="bidr-agent-proc__row-dur"
-                      >{{ procRowDurText(row) }}</span>
-                    </span>
-                  </span>
-                </summary>
-                <!-- 点行展开明细：入参/返回（工具行）或思考全文（思考行），#fafafa 底 11px mono 限高 220px -->
-                <div
-                  v-if="row.kind === 'tool' && row.args"
-                  class="bidr-agent-tool__section"
-                >
-                  <div class="bidr-agent-tool__label">
-                    入参
-                  </div>
-                  <pre class="bidr-agent-proc__row-pre">{{ row.args }}</pre>
-                </div>
-                <div
-                  v-if="row.kind === 'tool' && row.output"
-                  class="bidr-agent-tool__section"
-                >
-                  <div class="bidr-agent-tool__label">
-                    返回
-                  </div>
-                  <pre class="bidr-agent-proc__row-pre">{{ row.output }}</pre>
-                </div>
-                <div
-                  v-if="row.kind === 'think' && row.body"
-                  class="bidr-agent-tool__section"
-                >
-                  <pre class="bidr-agent-proc__row-pre">{{ row.body }}</pre>
-                </div>
-              </details>
-              <div
-                v-else
-                class="bidr-agent-proc__row is-log"
-                :title="row.text"
-              >
-                <span class="bidr-agent-proc__row-n is-dot">·</span>
-                <span class="bidr-agent-proc__row-main">{{ row.text }}</span>
-              </div>
-            </template>
-          </div>
-        </details>
+          :items="item.children"
+          :running="sessionStatus === 'RUNNING'"
+          :paused="sessionStatus === 'PAUSED'"
+          :current="item.id === lastProcGroupId"
+          :live="livePreviewLine"
+          :now="nowTick"
+        />
 
         <!-- 素材行：一行摘要（图标＋文件名＋体积/类型＋状态），无框无整行底条 -->
         <div
@@ -467,11 +364,11 @@ import { useStickScroll } from './useStickScroll'
 
 import AgentConfirmCard from './AgentConfirmCard.vue'
 import AgentConclusionCard from './AgentConclusionCard.vue'
+import AgentProcessGroup from './AgentProcessGroup.vue'
 import AskDecisionCard from './AskDecisionCard.vue'
 import Composer from './composer/Composer.vue'
 import PlanCapsule from './PlanCapsule.vue'
 import { markdownOf } from './markdown'
-import { THINK_ARCHIVE_PREFIX } from './processLines'
 import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentConfirmationT, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
@@ -693,129 +590,17 @@ const onRestartClick = async () => {
   emit('restart')
 }
 
-/** 折叠组渲染条目：children 保持事件原顺序（tool/log 混排），rows 为 §02 行模型视图 */
-interface AgentProcessGroup {
+/** 折叠组渲染条目：children 保持事件原顺序（tool/log 混排）；§02 行模型（rows 视图）
+ *  已随 AgentProcessGroup 组件内建（棒2 抽出），本面板只管归组编排 */
+interface ProcGroupItem {
   kind: 'process'
   id: string
   seq: number
   time: number
   children: AgentViewItem[]
-  rows: ProcRow[]
 }
 
-type AgentRenderItem = AgentViewItem | AgentProcessGroup
-
-/* ==================== 过程组行模型（§02 规格：编号圈/摘要/耗时右对齐/log 灰点/等待折叠） ==================== */
-
-/** 工具行（等待族连续轮询折叠成一行：polls 计数；to＝最新回包时刻，running＝仍在途） */
-interface ProcToolRow {
-  kind: 'tool'
-  key: string
-  ord: number
-  label: string
-  digest: string
-  args: string
-  output: string
-  polls: number
-  from: number
-  to: number | null
-  running: boolean
-  /** 等待族折叠判据签名（同族＋同入参＝同一次等待的连续轮询） */
-  wait: boolean
-  sig: string
-}
-
-/** 思考归档行（深度思考 · N 字；耗时＝归档事件与组内上一事件的差值近似口径） */
-interface ProcThinkRow {
-  kind: 'think'
-  key: string
-  ord: number
-  label: string
-  body: string
-  dur: string
-}
-
-/** 过程日志行（灰点不占编号、text-secondary、单行截断） */
-interface ProcLogRow {
-  kind: 'log'
-  key: string
-  text: string
-}
-
-type ProcRow = ProcToolRow | ProcThinkRow | ProcLogRow
-
-/** 等待类工具族（同族连续轮询折叠；判据与 agentChat/processFlow 同口径，框架基础集） */
-const WAIT_TOOL_KEYS = new Set(['waitexternaltask'])
-const normToolKey = (name: string): string => name.replace(/_/g, '').toLowerCase()
-
-/**
- * 单步耗时人话化（§02 行级口径）：不足 1 秒不出；<60s 一位小数（整数不带小数点）；
- * ≥60s「1m 05s」紧凑形态（组头总耗时仍走中文 fmtDuration，两套口径各司其职）
- */
-const fmtStepDur = (sec: number): string => {
-  if (!Number.isFinite(sec) || sec <= 0) return ''
-  if (sec < 60) {
-    const r = Math.round(sec * 10) / 10
-    return `${r}s`
-  }
-  const m = Math.floor(sec / 60)
-  const s = Math.round(sec % 60)
-  return `${m}m ${String(s).padStart(2, '0')}s`
-}
-
-/**
- * 组内 children → 行模型：工具行带编号与耗时（endedAt 由 events 层配对回填）、
- * 思考归档行同编号语系、log 行灰点不占编号；等待族连续轮询并成一行（polls 累计、
- * 显示信息随最新回包刷新）。纯函数，append-only 事件流下重复构建稳定。
- */
-const buildProcRows = (children: AgentViewItem[]): ProcRow[] => {
-  const rows: ProcRow[] = []
-  let ord = 0
-  for (let i = 0; i < children.length; i += 1) {
-    const child = children[i]
-    if (child.kind === 'tool') {
-      const wait = WAIT_TOOL_KEYS.has(normToolKey(child.name))
-      const prev = rows[rows.length - 1]
-      if (wait && prev && prev.kind === 'tool' && prev.wait && prev.sig === child.args) {
-        prev.polls += 1
-        prev.label = child.label || child.name
-        prev.digest = child.digest || ''
-        prev.output = child.output
-        prev.running = child.status === 'running'
-        prev.to = child.endedAt ?? null
-        continue
-      }
-      rows.push({
-        kind: 'tool',
-        key: `tool-${child.id}`,
-        ord: ++ord,
-        label: child.label || child.name,
-        digest: child.digest || '',
-        args: child.args,
-        output: child.output,
-        polls: 1,
-        from: child.time,
-        to: child.endedAt ?? null,
-        running: child.status === 'running',
-        wait,
-        sig: child.args
-      })
-    } else if (child.kind === 'log' && isThinkingLog(child.text)) {
-      const prevChild = children[i - 1]
-      rows.push({
-        kind: 'think',
-        key: `think-${child.id}`,
-        ord: ++ord,
-        label: `深度思考${thinkingChars(child.text) ? ` · ${thinkingChars(child.text)} 字` : ''}`,
-        body: thinkingBody(child.text),
-        dur: prevChild ? fmtStepDur((child.time - prevChild.time) / 1000) : ''
-      })
-    } else if (child.kind === 'log') {
-      rows.push({ kind: 'log', key: `log-${child.id}`, text: child.text })
-    }
-  }
-  return rows
-}
+type AgentRenderItem = AgentViewItem | ProcGroupItem
 
 /**
  * 归组：连续 tool/log 折叠为一个 process 组，text/file/artifact/status 留主面。
@@ -832,8 +617,7 @@ const groupedItems = computed<AgentRenderItem[]>(() => {
       id: `proc-${first.id}`,
       seq: first.seq,
       time: first.time,
-      children: bucket,
-      rows: buildProcRows(bucket)
+      children: bucket
     })
     bucket = []
   }
@@ -881,45 +665,8 @@ const lastProcGroupId = computed(() => {
   return null
 })
 
-/**
- * 组相位（U71，取代旧的「组内有工具在途」判据——那个在工具间隙会翻转，导致
- * 「工作中」消失、组头文案来回跳）：
- * · live   ＝会话 RUNNING 且该组是最后一个过程组（模型思考期间也算，天然不抖）
- * · paused ＝会话 PAUSED 且是最后一组
- * · done   ＝其余，全部按已完成展示（绿勾＋已完成＋耗时）
- */
-type ProcPhase = 'live' | 'paused' | 'done'
-const procPhase = (group: AgentProcessGroup): ProcPhase => {
-  if (group.id !== lastProcGroupId.value) return 'done'
-  if (sessionStatus.value === 'RUNNING') return 'live'
-  if (sessionStatus.value === 'PAUSED') return 'paused'
-  return 'done'
-}
-
-/** 组头状态字：运行中「工作中」/ 暂停「已暂停」/ 终态「已完成」 */
-const procPhaseLabel = (group: AgentProcessGroup): string => {
-  const phase = procPhase(group)
-  if (phase === 'live') return '工作中'
-  if (phase === 'paused') return '已暂停'
-  return '已完成'
-}
-
-/** 折叠组时长：运行/暂停中的最后一组按当前时刻算；其余＝首尾事件差 */
-const procDuration = (group: AgentProcessGroup): number | null => {
-  const first = group.children[0]
-  if (!first) return null
-  const last = group.children[group.children.length - 1]
-  const live = procPhase(group) !== 'done' && sessionStatus.value === 'RUNNING'
-  const end = live ? nowTick.value : (last ? last.time : first.time)
-  const sec = Math.round((end - first.time) / 1000)
-  return Number.isFinite(sec) && sec > 0 ? sec : null
-}
-
-/**
- * 折叠组交互数（工具调用＋深度思考各算 1，纯日志行不算；等待折叠族整段算 1）——
- * 计数就是折叠头的展开按钮（折叠显示数字、点开变箭头，U67），与组内编号行同源（行模型）。
- */
-const procCount = (group: AgentProcessGroup): number => group.rows.filter(row => row.kind !== 'log').length
+/* 组头相位/计数/组耗时/实时预览的推导已随 AgentProcessGroup 组件内建（棒2 抽出）：
+ * 本面板只按「谁是最后一组＋会话态」给每个组传 current/running/paused/live（模板消费处） */
 
 /**
  * 时长人话化（U68）：裸秒数退役——<60s 显示「N 秒」、<1h 显示「N 分 N 秒」、
@@ -932,44 +679,6 @@ const fmtDuration = (sec: number): string => {
   if (h > 0) return `${h}时${m}分${s}秒`
   if (m > 0) return `${m}分${s}秒`
   return `${s}秒`
-}
-
-/** 折叠组时长文案：状态字后直接跟时间（「工作中 1分44秒」/「已完成 1分42秒」）；不足 1 秒不出 */
-const procDurationText = (group: AgentProcessGroup): string => {
-  const sec = procDuration(group)
-  if (sec === null) return ''
-  return fmtDuration(sec)
-}
-
-/**
- * 单次深度思考耗时已在行模型构建时算好（think.dur，归档事件与组内上一事件差值近似口径；
- * 组内第一条无前序事件不出，宁缺不编）。
- */
-
-/** 行级单步耗时：执行中按本地钟实时跳（nowTick 每秒推），终态定格＝首发起→最新回包 */
-const procRowDurText = (row: ProcRow): string => {
-  if (row.kind === 'think') return row.dur
-  if (row.kind === 'log') return ''
-  const live = row.running && sessionStatus.value === 'RUNNING'
-  const end = live ? nowTick.value : row.to
-  if (end == null) return ''
-  return fmtStepDur((end - row.from) / 1000)
-}
-
-/** 行执行中（整行琥珀＋「执行中…」）：工具在途且会话 RUNNING（PAUSED 下不当在跑） */
-const isProcRowRunning = (row: ProcRow): boolean =>
-  row.kind === 'tool' && row.running && sessionStatus.value === 'RUNNING'
-
-/** 思考归档日志（后端「【LLM 思考归档】N 字\n正文」）识别与拆分，供折叠「深度思考」步骤渲染
- *  （前缀词汇＝processLines 单源，与 agentChat 两栈共用一份并集） */
-const isThinkingLog = (text: string): boolean => text.startsWith(THINK_ARCHIVE_PREFIX)
-const thinkingChars = (text: string): string => {
-  const m = text.split('\n')[0].match(/(\d+)\s*字/)
-  return m ? m[1] : ''
-}
-const thinkingBody = (text: string): string => {
-  const nl = text.indexOf('\n')
-  return nl >= 0 ? text.slice(nl + 1) : ''
 }
 
 /**
@@ -1422,34 +1131,12 @@ const clipOneLine = (text: string, max = 120): string => {
   return one.length > max ? `${one.slice(0, max)}…` : one
 }
 
-/** 实时流当前内容（最后一个非空行）：折叠头预览跟它走＝跟着模型最新一笔思考/输出刷，
- *  不再固定显示开头一句（U71：取首行时长思考看着像卡住） */
+/** 实时流当前内容（最后一个非空行）：过程组头预览（经 :live 传给 AgentProcessGroup）跟它走＝
+ *  跟着模型最新一笔思考/输出刷，不再固定显示开头一句（U71：取首行时长思考看着像卡住） */
 const livePreviewLine = computed(() => {
   const lines = (liveBody.value || '').split('\n').map(line => line.trim()).filter(Boolean)
   return clipOneLine(lines[lines.length - 1] || '')
 })
-
-/**
- * 折叠头一行实时预览（U65）：运行中的最后一组优先跟实时流，
- * 其余取组内最后一个孩子的单行摘要（工具＝名称＋参数摘要、思考＝正文尾行、日志＝原文）。
- * 只有运行态显示（终态组头改绿勾＋已完成，不再挂预览）。
- */
-const procPreview = (group: AgentProcessGroup): string => {
-  if (sessionStatus.value === 'RUNNING' && group.id === lastProcGroupId.value && livePreviewLine.value) {
-    return livePreviewLine.value
-  }
-  const last = group.children[group.children.length - 1]
-  if (!last) return ''
-  if (last.kind === 'tool') {
-    return clipOneLine([last.label, last.digest].filter(Boolean).join(' '))
-  }
-  if (last.kind === 'log') {
-    if (!isThinkingLog(last.text)) return clipOneLine(last.text)
-    const lines = thinkingBody(last.text).split('\n').map(line => line.trim()).filter(Boolean)
-    return clipOneLine(lines[lines.length - 1] || '')
-  }
-  return ''
-}
 
 // ==================== 滚动跟随（贴近底部才自动滚，用户上翻阅读不打断；S8 单源 useStickScroll） ====================
 
