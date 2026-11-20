@@ -5,6 +5,30 @@
  * 组件内部不写 scoped 样式，统一在本文件维护，便于跨组件复用同一套视觉。
  */
 
+/* ==================== 海洋蓝固化（规格稿 §八，2026-11-20）====================
+   面板域令牌覆写：只作用于 .bidr-agent-* 组件树，不动宿主全局主题（宿主仍走自己的
+   design-tokens 缺省主题）。覆盖面＝面板根（composer/胶囊/过程组经继承吃到）＋两枚
+   共享卡（结论卡/决策卡——会被 agentChat 宿主独立消费，不在 .bidr-agent-pane 内）。
+   色值＝规格稿 agent-panel-spec-light.html 的 :root 终稿（海洋蓝 #2563eb 单色系）。 */
+.bidr-agent-pane,
+.bidr-agent-conclusion,
+.bidr-agent-ask {
+  --accent: #2563eb;
+  --accent-light: #60a5fa;
+  --accent-strong: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --accent-subtle: rgba(37, 99, 235, 0.04);
+  --accent-mid: rgba(37, 99, 235, 0.2);
+  --accent-tint: #e8f1fe;
+  --accent-glow: rgba(37, 99, 235, 0.35);
+  --activity: #d46b08;
+  --activity-bright: #fa8c14;
+  --activity-soft: #fff7e6;
+  --activity-mid: #ffd591;
+  --radius-card: 14px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(37, 99, 235, 0.07);
+}
+
 /* ==================== 面板骨架 ==================== */
 
 .bidr-agent-pane {
@@ -14,7 +38,12 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: var(--bg-elevated, #fff);
+  /* 环境光渐变底（规格稿 §8.1）：三层 radial 光晕叠 #f4f7fb 基底，替代纯白面板底 */
+  background:
+    radial-gradient(900px 480px at 6% -8%, rgba(37, 99, 235, 0.10), transparent 62%),
+    radial-gradient(760px 420px at 98% 2%, rgba(34, 197, 94, 0.08), transparent 60%),
+    radial-gradient(1100px 620px at 50% 110%, rgba(37, 99, 235, 0.06), transparent 62%),
+    #f4f7fb;
   border: 1px solid var(--border-subtle, #f0f0f0);
   border-radius: 8px;
 }
@@ -1087,8 +1116,8 @@
   background: var(--bg-elevated, #fff);
   border: 1px solid var(--border-subtle, #f0f0f0);
   border-left: 3px solid var(--border-base, #d9d9d9);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(15, 35, 80, 0.04);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(15, 35, 80, 0.04));
 }
 
 .bidr-agent-conclusion.is-finish {
@@ -1416,16 +1445,24 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  border-radius: 8px;
-  background: var(--accent, #1677ff) !important;
-  border-color: var(--accent, #1677ff) !important;
-  box-shadow: none !important;
-  transition: background-color 0.15s, border-color 0.15s, transform 0.15s ease-out;
+  /* 规格 §07：30×30 圆角 9、accent→accent-light 渐变＋同色 glow 投影（海洋蓝固化域内取值） */
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent, #1677ff), var(--accent-light, #1677ff)) !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px var(--accent-glow, rgba(37, 99, 235, 0.35)) !important;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.15s ease-out;
 }
 
 .bidr-agent-composer__send.ant-btn:hover:not(:disabled) {
-  background: var(--accent-strong, #0958d9) !important;
-  border-color: var(--accent-strong, #0958d9) !important;
+  background: linear-gradient(135deg, var(--accent-strong, #0958d9), var(--accent, #1677ff)) !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 16px var(--accent-glow, rgba(37, 99, 235, 0.4)) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bidr-agent-composer__send.ant-btn:not(:disabled):active {
+    transform: scale(0.96);
+  }
 }
 
 .bidr-agent-composer__send.ant-btn:disabled {
