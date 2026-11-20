@@ -11,6 +11,7 @@
 import './styles.css'
 
 export { default as AgentConclusionCard } from './AgentConclusionCard.vue'
+export { default as AgentConfirmCard } from './AgentConfirmCard.vue'
 export { default as AgentPane } from './AgentPane.vue'
 export { default as AskDecisionCard } from './AskDecisionCard.vue'
 export { default as PlanCapsule } from './PlanCapsule.vue'

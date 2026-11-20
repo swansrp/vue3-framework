@@ -17,7 +17,7 @@
         <span
           class="bidr-agent-pane__status"
           :class="`is-${statusClass}`"
-        >{{ statusText }}</span>
+        >{{ statusText }}<template v-if="runningElapsedText"> · 已 {{ runningElapsedText }}</template></span>
       </div>
       <div class="bidr-agent-pane__meta">
         <!-- 能力探活点已迁至 Composer（地面态发起前显示）：运行中看到探活没有决策价值
@@ -55,6 +55,19 @@
       class="bidr-agent-pane__body"
       @scroll="onBodyScroll"
     >
+      <!-- 阶段条（AgentStages 复用件，棒1）：自主规划边执行边跳动，对话流顶部展示全局进度；
+           运行中/终态都显示（终态保留回看，对齐 agentChat）；未声明阶段的 agent 不渲染 -->
+      <div
+        v-if="stageItems.length > 0"
+        class="bidr-agent-stages"
+      >
+        <AgentStages
+          :stages="stageItems"
+          :plan="planItems"
+          :started-at="status?.startedAt"
+        />
+      </div>
+
       <!-- 会话启动期不放占位文案（2026-11-18 用户口径「不要显示启动中」）：
            直接乐观渲染用户气泡，事件流到达后自然接上 -->
       <div
@@ -312,14 +325,53 @@
         >{{ liveBody }}</pre>
       </details>
 
+      <!-- 待确认口径卡（棒1）：LLM 自决口径经 report_unconfirmed 登记，pending 条目非空即渲染
+           （对话流内、结论卡之前）；裁决接线归 AgentConfirmCard（终态两钮/运行中只提示），
+           裁决成功本地收走该条（轮询快照同步兜底），改口径向上透传业务壳触发重算 -->
+      <AgentConfirmCard
+        v-if="pendingConfirmations.length > 0"
+        :session-id="sessionId || ''"
+        :items="pendingConfirmations"
+        :terminal="isTerminal"
+        @resolved="onConfirmationResolved"
+        @confirmation-revised="onConfirmationRevised"
+      />
+
       <!-- 终态结论卡（U73：不再标「AI」说话人，卡片本身即模型输出）——
-           两栈单源组件（agentChat 同款，S5），正文走共享 markdown 管线（含圈号分行兜底） -->
+           两栈单源组件（agentChat 同款，S5），正文走共享 markdown 管线（含圈号分行兜底）；
+           totalText＝全程三口径之一（startedAt→endedAt，棒1） -->
       <AgentConclusionCard
         v-if="conclusion"
         :kind="conclusion.kind"
         :title="conclusion.title"
         :text="conclusion.text || ''"
+        :total-text="totalText"
       />
+
+      <!-- 终态评价区（规格 §10，棒1）：like/dislike 方钮（同值再点＝取消，对齐 agentChat）；
+           status 快照无 rating 回显字段（M-5 取证），本会话内存态——刷新后不回显为已知项 -->
+      <div
+        v-if="conclusion && !readOnly"
+        class="bidr-agent-rate"
+      >
+        <span class="bidr-agent-rate__label">本次会话：</span>
+        <span
+          class="bidr-agent-rate__btn"
+          :class="{ 'is-active': rating === 'like' }"
+          title="有帮助"
+          @click="onRate('like')"
+        >
+          <LikeOutlined />
+        </span>
+        <span
+          class="bidr-agent-rate__btn is-dislike"
+          :class="{ 'is-active': rating === 'dislike' }"
+          title="没帮助"
+          @click="onRate('dislike')"
+        >
+          <DislikeOutlined />
+        </span>
+      </div>
     </div>
 
     <!-- AI 决策问题（ask_user waiting）：AskDecisionCard 单源（S10，规格 §05）——
@@ -381,30 +433,49 @@
     >
       松开鼠标上传附件
     </div>
+
+    <!-- 点踩反馈收集弹层（对齐 agentChat：首点 dislike 先收集反馈再提交） -->
+    <a-modal
+      v-model:open="feedbackOpen"
+      title="感谢反馈，请告诉我们哪里没帮助"
+      ok-text="提交"
+      cancel-text="取消"
+      @ok="submitFeedback"
+    >
+      <a-textarea
+        v-model:value="feedbackText"
+        :rows="4"
+        placeholder="例如：生成的指标口径不对 / 缺少 XX 维度 / 速度太慢…"
+      />
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
 import {
-  CheckCircleFilled, CheckCircleOutlined, FileExcelOutlined,
+  CheckCircleFilled, CheckCircleOutlined, DislikeOutlined, FileExcelOutlined,
   FileImageOutlined, FilePdfOutlined, FilePptOutlined, FileTextOutlined,
-  FileWordOutlined, RobotOutlined
+  FileWordOutlined, LikeOutlined, RobotOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 
+import AgentStages from '@/framework/components/common/agentStages/index.vue'
+import type { AgentStageItem } from '@/framework/components/common/agentStages/types'
+
 import { useStickScroll } from './useStickScroll'
 
+import AgentConfirmCard from './AgentConfirmCard.vue'
 import AgentConclusionCard from './AgentConclusionCard.vue'
 import AskDecisionCard from './AskDecisionCard.vue'
 import Composer from './composer/Composer.vue'
 import PlanCapsule from './PlanCapsule.vue'
 import { markdownOf } from './markdown'
 import { THINK_ARCHIVE_PREFIX } from './processLines'
-import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
+import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentConfirmationT, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
-import { sessionArtifactUrl, sessionInterject } from '@/framework/apis/agent'
+import { sessionArtifactUrl, sessionInterject, sessionRate } from '@/framework/apis/agent'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */
@@ -452,6 +523,8 @@ const emit = defineEmits<{
   (e: 'restart'): void
   /** 终态续写兜底：就地续跑失败（老会话无快照/后端拒绝）时上抛宿主，携该版底稿开新修订会话 */
   (e: 'followup', text: string): void
+  /** 待确认口径改口径（棒1）：签名与 agentChat 一致，业务壳监听后触发受影响产出重算 */
+  (e: 'confirmation-revised', item: AgentConfirmationT, note: string): void
 }>()
 
 // ==================== 正文 Markdown 渲染 ====================
@@ -505,6 +578,77 @@ const {
 
 /** status 快照的 plan 清单（D16 契约位；缺省回落空数组＝无计划，PlanCapsule 整条隐藏） */
 const planItems = computed(() => status.value?.plan || [])
+
+// ==================== 阶段条 / 待确认口径（棒1 能力补齐，交互对齐 agentChat） ====================
+
+/** status 快照的 stages 清单（AgentStages 复用件数据源；浅拷贝避免视图直写快照） */
+const stageItems = computed<AgentStageItem[]>(() =>
+  (status.value?.stages || []).map(s => ({ ...s })))
+
+/** 待确认口径 pending 集合：快照 pending 条目再剔除本地已裁决（裁决成功即收走，不等 2s 轮询） */
+const resolvedConfirmIds = ref(new Set<number>())
+const pendingConfirmations = computed<AgentConfirmationT[]>(() =>
+  (status.value?.confirmations || []).filter(c =>
+    c.status === 'pending' && !resolvedConfirmIds.value.has(c.id)))
+
+/** 单条裁决成功（确认/改口径皆发）：本地收走该条，轮询快照把状态改写后自然一致 */
+const onConfirmationResolved = (id: number) => {
+  const next = new Set(resolvedConfirmIds.value)
+  next.add(id)
+  resolvedConfirmIds.value = next
+}
+
+/** 改口径向上透传（签名与 agentChat 一致）：会话侧已标 revised，业务写回归业务壳 */
+const onConfirmationRevised = (item: AgentConfirmationT, note: string) => {
+  emit('confirmation-revised', item, note)
+}
+
+// ==================== 终态评价（棒1，规格 §10；对齐 agentChat） ====================
+
+// status 快照无 rating 回显字段（M-5 取证：评价落 skill 底座 SkillRatingRecord，
+// status VO 无该字段），本会话内存态；换会话即重置（刷新后不回显＝已知项）
+const rating = ref<'like' | 'dislike' | null>(null)
+const feedbackOpen = ref(false)
+const feedbackText = ref('')
+
+/** 评价接线（同值再点＝取消，空串提交；首次点踩先弹反馈收集再提交） */
+const onRate = async (value: 'like' | 'dislike') => {
+  const sid = props.sessionId
+  if (!sid) return
+  if (value === 'dislike' && rating.value !== 'dislike') {
+    feedbackOpen.value = true
+    return
+  }
+  const next = rating.value === value ? '' : value
+  try {
+    await sessionRate(sid, next)
+    rating.value = (next || null) as 'like' | 'dislike' | null
+  } catch (e: any) {
+    message.error(e?.message || '评价失败')
+  }
+}
+
+const submitFeedback = async () => {
+  const sid = props.sessionId
+  if (!sid) return
+  try {
+    await sessionRate(sid, 'dislike', feedbackText.value.trim() || undefined)
+    rating.value = 'dislike'
+  } catch (e: any) {
+    message.error(e?.message || '评价失败')
+  } finally {
+    feedbackOpen.value = false
+    feedbackText.value = ''
+  }
+}
+
+// 换会话即复位：口径裁决遮罩/评价态不跨会话残留
+watch(() => props.sessionId, () => {
+  resolvedConfirmIds.value = new Set()
+  rating.value = null
+  feedbackOpen.value = false
+  feedbackText.value = ''
+})
 
 // ==================== 发起即显用户消息（U63 乐观气泡） ====================
 
@@ -953,6 +1097,26 @@ const conclusion = computed(() => {
     return { kind: 'error' as const, title: '任务失败', text: status.value?.error || '' }
   }
   return { kind: 'stopped' as const, title: '已停止', text: status.value?.error || '已完成部分保留，可重新发起继续' }
+})
+
+// ==================== 全程三口径（棒1）：结论卡全程＋头部运行秒表 ====================
+
+/** 结论卡全程时长：startedAt→endedAt（终态快照双戳齐全才算；不足 1 秒不出） */
+const totalText = computed(() => {
+  const { startedAt, endedAt } = status.value || {}
+  if (!isTerminal.value || !startedAt || !endedAt) return ''
+  const sec = Math.round((endedAt - startedAt) / 1000)
+  return sec >= 1 ? fmtDuration(sec) : ''
+})
+
+/** 头部运行秒表：RUNNING（非只读回放）时状态文案后「· 已 X」，nowTick 每秒驱动；
+ *  起点＝后端 startedAt（缺席回落挂载时刻 startupAt）；不足 1 秒不出 */
+const runningElapsedText = computed(() => {
+  if (sessionStatus.value !== 'RUNNING' || props.readOnly) return ''
+  const start = status.value?.startedAt || startupAt.value
+  if (!start) return ''
+  const sec = Math.floor((nowTick.value - start) / 1000)
+  return sec >= 1 ? fmtDuration(sec) : ''
 })
 
 // 终态回调只发一次（同一 sessionId）；切换会话复位；离开终态（续跑）也复位——

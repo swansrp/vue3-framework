@@ -2141,3 +2141,239 @@
   border-top: none;
   border-bottom: 4px solid var(--text-tertiary, #bfbfbf);
 }
+
+/* ==================== 待确认口径卡（AgentConfirmCard，规格 §05 决策卡同族） ==================== */
+
+/* 列表容器：气泡栈内容件（条间距自持，body gap 不叠加） */
+.bidr-agent-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 卡头：疑点图标（warning，对齐 agentChat confirmations-icon 色）＋标题＋待裁决计数 */
+.bidr-agent-confirm__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bidr-agent-confirm__icon {
+  color: var(--warning, #faad14);
+  font-size: 14px;
+}
+
+.bidr-agent-confirm__title {
+  color: var(--text-primary, #262626);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bidr-agent-confirm__count {
+  margin-left: auto;
+  color: var(--text-secondary, #999);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* 每条一张白卡：白底细边＋左 3px 标（§05/结论卡同族）；pending 左标琥珀（待裁决语义），
+   已裁决左标回 accent 并整卡压暗（历史留痕只读） */
+.bidr-agent-confirm__card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-left: 3px solid var(--accent, #1677ff);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(15, 35, 80, 0.04));
+}
+
+.bidr-agent-confirm__card.is-pending {
+  border-left-color: var(--warning, #faad14);
+}
+
+.bidr-agent-confirm__card.is-confirmed,
+.bidr-agent-confirm__card.is-revised {
+  opacity: 0.82;
+}
+
+/* top 行：#id＋疑点＋状态 tag（兼容带已裁决条目复用时可见） */
+.bidr-agent-confirm__top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bidr-agent-confirm__id {
+  flex-shrink: 0;
+  color: var(--text-secondary, #999);
+  font-size: 12px;
+}
+
+.bidr-agent-confirm__question {
+  color: var(--text-primary, #262626);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  word-break: break-all;
+}
+
+.bidr-agent-confirm__tag {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* 行：标签弱化＋值正文 */
+.bidr-agent-confirm__row {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.bidr-agent-confirm__label {
+  flex-shrink: 0;
+  color: var(--text-secondary, #999);
+}
+
+.bidr-agent-confirm__value {
+  color: var(--text-primary, #333);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 收口说明（新口径）accent 色 */
+.bidr-agent-confirm__note {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--accent, #1677ff);
+  word-break: break-all;
+}
+
+/* 动作行：确认＝实心（accent 族 primary）/改口径＝描边（antd small 缺省） */
+.bidr-agent-confirm__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.bidr-agent-confirm__hint {
+  color: var(--text-secondary, #999);
+  font-size: 12px;
+}
+
+/* 行内改口径输入（同决策卡 write 位：圆角容器＋无边框输入＋focus accent ring） */
+.bidr-agent-confirm__write {
+  margin-top: 2px;
+  padding: 6px 8px 4px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-base, #d9d9d9);
+  border-radius: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bidr-agent-confirm__write:focus-within {
+  border-color: var(--accent, #1677ff);
+  box-shadow: 0 0 0 2px var(--accent-mid, rgba(22, 119, 255, 0.1));
+}
+
+.bidr-agent-confirm__write-input {
+  padding: 2px 4px;
+  font-size: 13px;
+  resize: none;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.bidr-agent-confirm__write-input .ant-input,
+.bidr-agent-confirm__write-input textarea {
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.bidr-agent-confirm__write-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.bidr-agent-confirm__write-hint {
+  flex: 1;
+  color: var(--text-tertiary, #bfbfbf);
+  font-size: 11px;
+}
+
+/* ==================== 终态评价区（规格 §10：26px 方钮、细边、选中 soft 底色字） ==================== */
+
+.bidr-agent-rate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bidr-agent-rate__label {
+  color: var(--text-secondary, #999);
+  font-size: 12px;
+}
+
+.bidr-agent-rate__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  color: var(--text-secondary, #999);
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-base, #d9d9d9);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+@media (hover: hover) {
+  .bidr-agent-rate__btn:hover {
+    color: var(--accent, #1677ff);
+    border-color: var(--accent, #1677ff);
+  }
+}
+
+/* 选中＝soft 底＋族色字：like 走 accent、dislike 走 error（语义族色，agentChat 同拍） */
+.bidr-agent-rate__btn.is-active {
+  color: var(--accent, #1677ff);
+  background: var(--accent-soft, rgba(22, 119, 255, 0.08));
+  border-color: var(--accent, #1677ff);
+}
+
+.bidr-agent-rate__btn.is-dislike.is-active {
+  color: var(--error, #ff4d4f);
+  background: rgba(255, 77, 79, 0.08);
+  border-color: var(--error, #ff4d4f);
+}
+
+/* ==================== 阶段条容器（AgentStages 复用件在对话流顶部的宿主壳） ==================== */
+
+.bidr-agent-stages {
+  padding: 10px 12px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #f0f0f0);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(15, 35, 80, 0.04));
+}
+
+/* ==================== 结论卡全程时长（标题行右侧 11px tertiary，棒1 全程三口径） ==================== */
+
+.bidr-agent-conclusion__total {
+  margin-left: auto;
+  color: var(--text-tertiary, #bfbfbf);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
