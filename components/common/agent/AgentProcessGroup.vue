@@ -136,6 +136,8 @@ import './styles.css'
 import { THINK_ARCHIVE_PREFIX } from './processLines'
 import type { AgentViewItem } from './types'
 
+import { clipOneLine, fmtDuration } from './fmt'
+
 interface Props {
   /** 本组事件（连续 tool/log 混排，归组产物；行模型在组件内构建） */
   items: AgentViewItem[]
@@ -286,12 +288,7 @@ const thinkingBody = (text: string): string => {
   return nl >= 0 ? text.slice(nl + 1) : ''
 }
 
-/** 单行截断（U65 预览行用）：压平空白，超长 …（CSS 省略号兜底，这里控制 title 全文长度）。
- *  与 AgentPane 的 livePreviewLine 同一份口径（行级 3 行小助手，随组件就近维护） */
-const clipOneLine = (text: string, max = 120): string => {
-  const one = (text || '').replace(/\s+/g, ' ').trim()
-  return one.length > max ? `${one.slice(0, max)}…` : one
-}
+// clipOneLine/fmtDuration 已单源到 ./fmt（棒3：与 AgentPane 同一份口径，行为逐字不变）
 
 /* ==================== 心跳（耗时跳秒） ==================== */
 
@@ -348,19 +345,6 @@ const phaseLabel = computed(() => {
  * 计数就是折叠头的展开按钮（折叠显示数字、点开变箭头，U67），与组内编号行同源（行模型）。
  */
 const count = computed(() => rows.value.filter(row => row.kind !== 'log').length)
-
-/**
- * 时长人话化（U68）：裸秒数退役——<60s 显示「N 秒」、<1h 显示「N 分 N 秒」、
- * 再往上「N 时 N 分 N 秒」（132s → 2分12秒）。
- */
-const fmtDuration = (sec: number): string => {
-  const s = sec % 60
-  const m = Math.floor(sec / 60) % 60
-  const h = Math.floor(sec / 3600)
-  if (h > 0) return `${h}时${m}分${s}秒`
-  if (m > 0) return `${m}分${s}秒`
-  return `${s}秒`
-}
 
 /** 组耗时：live（当前组＋运行中）按当前时刻算；其余＝首尾事件差（startedAt 缺省取首条 item.time） */
 const duration = computed<number | null>(() => {

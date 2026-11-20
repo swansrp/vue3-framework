@@ -1,8 +1,8 @@
 /**
  * agent 过程事件 → 过程流视图（平铺步骤行/思考归档/整轮耗时端点）的归约正源
  *
- * 与 agentEventsToView（→ AssistantView，供 AgentProcessTree 渲染）平级的第二条归约路：
- * 本文件产出"平铺步骤流"形态（log 行弱化不占编号、等待轮询折叠成一行、轮末思考归档单列），
+ * （原与 agentEventsToView→AssistantView／AgentProcessTree 归约路并行；该路已于 2026-11-20
+ * 棒3 退役删除，本文件成为过程归约单源）产出"平铺步骤流"形态（log 行弱化不占编号、等待轮询折叠成一行、轮末思考归档单列），
  * 由 AgentProcessFlow／AgentProcessArchives 渲染。归约只认 core/llm 会话协议（AgentEventX），
  * 不依赖任何业务表/业务工具——业务工具的人话名与摘要经 labels/summarize 注入。
  */

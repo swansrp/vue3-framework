@@ -134,7 +134,7 @@ export function updateStream(msg: UiMessage, path: string[], fn: (s: SubStream) 
 /**
  * 工具步定位（直播/历史两路共用，保守口径——与 events.ts tool_result 配对语义对齐）：
  * 有 id 只配「在途（未完成）」同 id；无 id 仅唯一在途回退；多工具并行不猜。
- * 配不上返回 -1：调用方落日志行保留原文（见 agentEventsToView），宁可不配也不错配。
+ * 配不上返回 -1：调用方落日志行保留原文，宁可不配也不错配。
  */
 export function matchStepIndex(tools: ToolStep[], id: string): number {
   if (id) return tools.findIndex(t => t.id === id && !t.completed)

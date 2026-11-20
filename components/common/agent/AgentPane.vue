@@ -367,6 +367,7 @@ import AgentConclusionCard from './AgentConclusionCard.vue'
 import AgentProcessGroup from './AgentProcessGroup.vue'
 import AskDecisionCard from './AskDecisionCard.vue'
 import Composer from './composer/Composer.vue'
+import { clipOneLine, fmtDuration } from './fmt'
 import PlanCapsule from './PlanCapsule.vue'
 import { markdownOf } from './markdown'
 import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentConfirmationT, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
@@ -668,18 +669,7 @@ const lastProcGroupId = computed(() => {
 /* 组头相位/计数/组耗时/实时预览的推导已随 AgentProcessGroup 组件内建（棒2 抽出）：
  * 本面板只按「谁是最后一组＋会话态」给每个组传 current/running/paused/live（模板消费处） */
 
-/**
- * 时长人话化（U68）：裸秒数退役——<60s 显示「N 秒」、<1h 显示「N 分 N 秒」、
- * 再往上「N 时 N 分 N 秒」（132s → 2分12秒）。
- */
-const fmtDuration = (sec: number): string => {
-  const s = sec % 60
-  const m = Math.floor(sec / 60) % 60
-  const h = Math.floor(sec / 3600)
-  if (h > 0) return `${h}时${m}分${s}秒`
-  if (m > 0) return `${m}分${s}秒`
-  return `${s}秒`
-}
+// fmtDuration/clipOneLine 已单源到 ./fmt（棒3：与 AgentProcessGroup 同一份口径，行为逐字不变）
 
 /**
  * 乐观作答（S10 起与 AskDecisionCard 分工）：卡片自持视觉锁定（optimistic＝作答即 pending 态，
@@ -1124,12 +1114,6 @@ const liveBody = computed(() => {
   const nl = text.indexOf('\n')
   return nl >= 0 ? text.slice(nl + 1) : ''
 })
-
-/** 单行截断（U65 预览行用）：压平空白，超长 …（CSS 省略号兜底，这里控制 title 全文长度） */
-const clipOneLine = (text: string, max = 120): string => {
-  const one = (text || '').replace(/\s+/g, ' ').trim()
-  return one.length > max ? `${one.slice(0, max)}…` : one
-}
 
 /** 实时流当前内容（最后一个非空行）：过程组头预览（经 :live 传给 AgentProcessGroup）跟它走＝
  *  跟着模型最新一笔思考/输出刷，不再固定显示开头一句（U71：取首行时长思考看着像卡住） */
