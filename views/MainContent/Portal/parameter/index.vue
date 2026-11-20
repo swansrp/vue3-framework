@@ -73,7 +73,7 @@
 import { CloudSyncOutlined } from '@ant-design/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 
-import { queryParams, refreshParams } from '@/framework/apis/params'
+import { refreshParams, statisticParamGroups } from '@/framework/apis/params'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
 import { FILTER_TYPE } from '@/framework/components/common/Portal/type'
 
@@ -87,19 +87,31 @@ const activeGroup = ref(ALL_GROUP)
 const groupList = ref<ParamGroup[]>([{ name: ALL_GROUP, count: 0 }])
 const loading = ref(true)
 
+// 后端按 configGroup GROUP BY + count(1) 返回分组计数；NULL/空串统一并入「未分组」。
+// 每个参数只会落进一个分组，statistic 相加即总数，不需要再查一次 count。
+const normalizeGroupName = (metric: unknown) => {
+  const name = metric == null ? '' : String(metric).trim()
+  return !name || name === 'NULL' ? '未分组' : name
+}
+
 const loadGroups = () => {
   loading.value = true
-  return queryParams([], [], 10000, 1).then(res => {
-    const records: any[] = res.payload?.records || []
+  return statisticParamGroups().then(res => {
+    const rows: any[] = Array.isArray(res.payload) ? res.payload : []
     const counts = new Map<string, number>()
-    records.forEach(item => {
-      const group = (item.configGroup || '').trim() || '未分组'
-      counts.set(group, (counts.get(group) || 0) + 1)
+    let total = 0
+    rows.forEach(row => {
+      const name = normalizeGroupName(row.metric)
+      const count = Number(row.statistic) || 0
+      total += count
+      counts.set(name, (counts.get(name) || 0) + count)
     })
     const sorted = [...counts.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-CN'))
       .map(([name, count]) => ({ name, count }))
-    groupList.value = [{ name: ALL_GROUP, count: records.length }, ...sorted]
+    groupList.value = [{ name: ALL_GROUP, count: total }, ...sorted]
+  }).catch(error => {
+    console.error('[parameter] 参数分组统计失败', error)
   }).finally(() => {
     loading.value = false
   })
