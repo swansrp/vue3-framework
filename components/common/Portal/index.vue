@@ -424,15 +424,23 @@
               </template>
               <!-- endregion -->
               <!-- region 下拉搜索样式（列已挂自定义筛选下拉时，触发器就是放大镜，菜单里不再叠一个同功能的漏斗） -->
+              <!-- 表头降噪：壳 span（普通元素，class 必落 DOM）默认透明，hover 表头才显现；生效筛选常驻蓝色并带值个数角标（见非 scoped 段 .portal-header-ctl） -->
               <template #menuIcon="{ column, filtered }">
-                <bars-outlined
+                <span
                   v-if="column.dataIndex === 'index'"
+                  class="portal-header-ctl"
                   :class="filtered && 'filter-active'"
-                />
-                <filter-outlined
+                >
+                  <bars-outlined />
+                </span>
+                <span
                   v-else-if="column.filterAble && !column.customFilterDropdown"
+                  class="portal-header-ctl"
                   :class="filtered && 'filter-active'"
-                />
+                  :data-cnt="getFilterCount(column.dataIndex) || undefined"
+                >
+                  <filter-outlined />
+                </span>
               </template>
               <template
                 #menuPopup="{ column }"
@@ -487,8 +495,14 @@
               </template>
               <!-- endregion -->
               <!-- region 列搜索 -->
+              <!-- 列搜索放大镜：同表头降噪，壳 span 承载 class（见 .portal-header-ctl），筛选生效常驻 -->
               <template #customFilterIcon="{ filtered }">
-                <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }" />
+                <span
+                  class="portal-header-ctl"
+                  :class="filtered && 'filter-active'"
+                >
+                  <search-outlined :style="{ fontSize: '15px', color: filtered ? '#108ee9' : undefined }" />
+                </span>
               </template>
               <template
                 #customFilterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }"
@@ -1805,6 +1819,19 @@ const getGeneralCondition = () => {
 }
 const queryConditionMap = reactive(new Map<string, ConditionListType>())
 const querySortMap = reactive(new Map<string, QuerySortType>())
+// 表头筛选角标：该列生效筛选值的个数（BETWEEN 拆键 dataIndex+'0'/'1' 各计 1）
+const getFilterCount = (dataIndex: any): number => {
+  if (!dataIndex) return 0
+  const condition = queryConditionMap.get(dataIndex)
+  if (condition) {
+    const value = condition.value as unknown
+    return Array.isArray(value) && value.length > 0 ? value.length : 1
+  }
+  let count = 0
+  if (queryConditionMap.has(dataIndex + '0')) count++
+  if (queryConditionMap.has(dataIndex + '1')) count++
+  return count
+}
 // 用于通知列筛选器清空的信号
 const clearFilterColumns = reactive(new Set<string>())
 const initQueryCondition = () => {
@@ -3441,6 +3468,73 @@ defineExpose({
       color-mix(in srgb, var(--accent, #4f6cf7) 8%, var(--bg-elevated, #ffffff)),
       var(--bg-hover, #ececf0)
     ) !important;
+  }
+}
+
+// ============ 表头降噪（better-ui ①）：图标淡显常驻，hover 增强聚焦，生效高亮带角标 ============
+// 不用 opacity:0 藏图标——占位仍在，每列头恒定空一块（留白洞）；改「淡显」：占位可见但不吵
+// menuIcon/customFilterIcon 插槽用壳 span 承载 class（ant-design-vue 图标 inheritAttrs=false，icon 上绑 class 不可靠）
+.portal-header-ctl {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.45;
+  transition: opacity 0.15s ease-out;
+}
+
+// hover 表头：所悬列图标聚焦变实（含 th / surely 表头 cell / 表头容器三层命中兜底）
+.portal-table-space th:hover .portal-header-ctl,
+.portal-table-space .surely-table-header-cell:hover .portal-header-ctl,
+.portal-table-space .surely-table-header-container:hover .portal-header-ctl,
+.portal-table-space .surely-table-header:hover .portal-header-ctl {
+  opacity: 1;
+}
+
+// 触屏无 hover：保持常显满透明度，不丢入口
+@media (hover: none) {
+  .portal-header-ctl {
+    opacity: 1;
+  }
+}
+
+// 生效筛选：颜色见 scoped .filter-active（蓝 + opacity 1 !important）；此处补值个数角标
+// data-cnt 由模板 :data-cnt 绑定，0/无筛选时不渲染属性 → 角标不出现
+.portal-header-ctl.filter-active[data-cnt]::after {
+  content: attr(data-cnt);
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--accent, #1677ff);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+// surely 内置排序箭头同规则（淡显常驻，hover 聚焦）；激活排序列（.surely-table-column-sort）常驻
+.portal-table-space .surely-table-column-sorter {
+  opacity: 0.45;
+  transition: opacity 0.15s ease-out;
+}
+
+.portal-table-space th:hover .surely-table-column-sorter,
+.portal-table-space .surely-table-header-cell:hover .surely-table-column-sorter,
+.portal-table-space .surely-table-header-container:hover .surely-table-column-sorter,
+.portal-table-space .surely-table-header:hover .surely-table-column-sorter,
+.portal-table-space .surely-table-column-sort .surely-table-column-sorter {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .portal-table-space .surely-table-column-sorter {
+    opacity: 1;
   }
 }
 </style>

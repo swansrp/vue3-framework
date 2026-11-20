@@ -206,5 +206,34 @@ const { config, advancedCondition } = toRefs(prop)
   display: flex;
   justify-content: space-between;
   margin: 3px 20px 3px 15px;
+
+  // 浮球质感升级（better-ui ⑤）：功能与左右位置不动，纯视觉层
+  // 常驻柔光让浮球从表格背景里浮出来；颜色走 design-tokens 的 --accent 随主题自适应
+  :deep(.ant-btn-circle.ant-btn-primary) {
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent, #1677ff) 45%, transparent);
+    transition: box-shadow 150ms ease-out, transform 150ms ease-out;
+  }
+
+  // hover：光环向外扩散一圈，按钮轻微放大
+  @media (hover: hover) {
+    :deep(.ant-btn-circle.ant-btn-primary:hover) {
+      box-shadow:
+        0 4px 14px color-mix(in srgb, var(--accent, #1677ff) 55%, transparent),
+        0 0 0 4px color-mix(in srgb, var(--accent, #1677ff) 15%, transparent);
+      transform: scale(1.06);
+    }
+  }
+
+  :deep(.ant-btn-circle.ant-btn-primary:active) {
+    transform: scale(0.96);
+  }
+
+  // 减弱动效偏好：保留柔光底，去掉位移类反馈
+  @media (prefers-reduced-motion: reduce) {
+    :deep(.ant-btn-circle.ant-btn-primary),
+    :deep(.ant-btn-circle.ant-btn-primary:hover) {
+      transform: none;
+    }
+  }
 }
 </style>
