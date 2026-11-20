@@ -1,5 +1,5 @@
 /**
- * 框架 AI 会话模块入口（2026-11-19 自 `framework/agent/` 物理迁入，旧路径留 shim 转发）
+ * 框架 AI 会话模块入口（2026-11-19 自 `framework/agent/` 物理迁入；2026-11-20 旧路径 shim 已退役）
  *
  * 用法：
  *   import { AgentPane } from '@/framework/components/common/agent'

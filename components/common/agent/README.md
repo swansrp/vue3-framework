@@ -107,7 +107,7 @@ const items = buildAgentViewItems(events, { toolLabels: { /* 业务工具名→�
 `AgentProcessFlow/AgentProcessArchives`（平铺过程件，AgentChat 消费）、`useAgentSession`
 （32 行薄适配，委托本目录引擎；AgentChat 消费）、`AgentChatPanel/askPoll`
 （smartAgent/relay 另一协议，不属于 core 会话体系）。已退役：`agentEventsToView`（2026-11-20 删）。
-旧 import 路径 `@/framework/agent` 仍是可用 shim（re-export 本目录），新代码请直写新路径。
+旧 import 路径 `@/framework/agent` 的兼容 shim 已于 2026-11-20 退役（两宿主业务层均已直写新路径）。
 
 ## 6. 样式纪律
 
