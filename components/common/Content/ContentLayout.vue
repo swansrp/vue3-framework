@@ -1,5 +1,8 @@
 <template>
-  <a-layout :style="{width: '100%', overflow:'auto', height: props.height}">
+  <a-layout
+    :class="{ 'layout-collapsed': collapsed }"
+    :style="{width: '100%', overflow:'auto', height: props.height}"
+  >
     <a-layout-sider
       id="side"
       :width="_width"
@@ -14,39 +17,31 @@
       class="resize-container"
     >
       <!-- 拖拽控制条 -->
-      <div class="drag-handle">
-        <div class="drag-indicator">
-          <div class="drag-dot"></div>
-          <div class="drag-dot"></div>
-          <div class="drag-dot"></div>
-        </div>
-      </div>
-      
+      <div class="drag-handle"></div>
+
       <!-- 折叠/展开按钮 -->
-      <div class="collapse-button-wrapper">
-        <a-button
-          v-if="collapsed"
-          class="collapse-button collapse-button-expand"
-          type="text"
-          size="small"
-          @click="toggleCollapsed"
+      <div
+        class="collapse-button-wrapper"
+        :class="{ 'is-collapsed': collapsed }"
+      >
+        <a-tooltip
+          :title="collapsed ? '展开侧栏' : '收起侧栏'"
+          placement="right"
         >
-          <RightOutlined />
-        </a-button>
-        <a-button
-          v-else
-          class="collapse-button collapse-button-collapse"
-          type="text"
-          size="small"
-          @click="toggleCollapsed"
-        >
-          <LeftOutlined />
-        </a-button>
+          <a-button
+            class="collapse-button"
+            type="text"
+            size="small"
+            :aria-label="collapsed ? '展开侧栏' : '收起侧栏'"
+            @click="toggleCollapsed"
+          >
+            <RightOutlined v-if="collapsed" />
+            <LeftOutlined v-else />
+          </a-button>
+        </a-tooltip>
       </div>
     </div>
-    <a-layout-content
-      style="margin-left: 10px; margin-right: 10px; height: 100%; overflow: auto"
-    >
+    <a-layout-content class="content-panel">
       <slot name="content"></slot>
     </a-layout-content>
   </a-layout>
@@ -194,20 +189,32 @@ onMounted(() => {
   background-color: var(--bg-elevated);
   box-sizing: border-box;
   overflow: auto;
+  overscroll-behavior: contain;
   height: calc(100% - 20px);
-  box-shadow: var(--shadow-md);
   margin: 10px 15px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 
 .side-panel {
-  margin: 10px;
-  height: calc(100% - 20px);
+  box-sizing: border-box;
+  height: 100%;
+  padding: 10px;
   display: flex;
   flex-direction: column;
 }
 
+// 收起后侧栏宽度为 0：隐藏卡片边框/阴影，避免 0 宽元素在左缘留下一道竖线
+.layout-collapsed .side-wrapper {
+  border-width: 0;
+  box-shadow: none;
+  visibility: hidden;
+}
+
 .resize-container {
   position: relative;
+  flex: none;
   width: 8px;
   height: 100%;
   display: flex;
@@ -218,60 +225,21 @@ onMounted(() => {
 
 .drag-handle {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   cursor: w-resize;
   background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s ease;
-  will-change: background-color, transform;
-  
-  &:hover {
-    background: var(--accent-soft);
-    
-    .drag-indicator {
-      opacity: 1;
-      transform: scale(1.1);
+  transition: background-color var(--transition-fast);
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--accent-soft);
     }
   }
-  
+
   &.dragging {
     background: var(--accent-mid);
     transition: none;
-    
-    .drag-indicator {
-      opacity: 1;
-      transform: scale(1.2);
-      transition: none;
-    }
   }
-}
-
-.drag-indicator {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  opacity: 0.4;
-  transition: all 0.15s ease;
-  will-change: opacity, transform;
-}
-
-.drag-dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  transition: background-color 0.15s ease;
-  will-change: background-color;
-}
-
-.drag-handle:hover .drag-dot,
-.drag-handle.dragging .drag-dot {
-  background: var(--accent);
 }
 
 .collapse-button-wrapper {
@@ -280,50 +248,58 @@ onMounted(() => {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10;
+  display: flex;
+
+  // 收起后侧栏宽度为 0，按钮整体右移，避免半个按钮被裁掉
+  &.is-collapsed {
+    left: calc(50% + 12px);
+  }
 }
 
-.collapse-button {
-  width: 24px;
-  height: 40px;
-  border-radius: 0 8px 8px 0;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-hover);
-  box-shadow: var(--shadow-sm);
-  display: flex;
+.collapse-button-wrapper .collapse-button {
+  width: 20px;
+  height: 48px;
+  min-width: 20px;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hover);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
   color: var(--text-secondary);
-  will-change: color, border-color, box-shadow, transform;
-  
-  &:hover {
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+
+  :deep(.anticon) {
+    font-size: 11px;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--accent);
+      border-color: var(--accent-mid);
+      background: var(--bg-elevated);
+      box-shadow: var(--shadow-glow);
+    }
+  }
+
+  &:active {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  &:focus-visible {
     color: var(--accent);
     border-color: var(--accent);
-    box-shadow: var(--shadow-glow);
-    transform: translateX(2px);
-  }
-  
-  &:active {
-    transform: translateX(1px);
-    transition: transform 0.1s ease;
   }
 }
 
-.collapse-button-expand {
-  border-radius: 8px 0 0 8px;
-  left: -24px;
-  
-  &:hover {
-    transform: translateX(-2px);
-  }
-  
-  &:active {
-    transform: translateX(-1px);
-    transition: transform 0.1s ease;
-  }
-}
-
-.collapse-button-collapse {
-  left: 0;
+.content-panel {
+  margin-left: 10px;
+  margin-right: 10px;
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 </style>
