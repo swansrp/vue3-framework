@@ -264,6 +264,7 @@
             target="_blank"
             rel="noopener"
             :title="`点击下载 ${item.artifact.name || ''}`"
+            @click.prevent="onArtifactClick(item.artifact)"
           >{{ item.artifact.name || item.artifact.fileId }}</a>
           <span
             v-else
@@ -403,7 +404,7 @@ import { THINK_ARCHIVE_PREFIX } from './processLines'
 import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
 
-import { sessionInterject } from '@/framework/apis/agent'
+import { sessionArtifactUrl, sessionInterject } from '@/framework/apis/agent'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */
@@ -836,6 +837,28 @@ const pendingAnswer = ref<number | null>(null)
 watch(waitingQuestion, q => {
   if (!q || q.id !== pendingAnswer.value) pendingAnswer.value = null
 })
+
+/** 产物打开防抖标记（续签在途防重复点） */
+const artifactOpening = ref('')
+/**
+ * 产物点击续签（2026-11-20 真机反馈）：artifact 事件携带的预签名地址仅生成时刻约 1h 有效，
+ * 历史回放/隔天点击必过期（OSS 403）——先调后端续签口取新鲜地址再跳转；续签失败（旧后端/
+ * 能力未装配）回落事件自带地址（新会话内仍然有效）。
+ */
+const onArtifactClick = async (artifact: AgentArtifact) => {
+  const sid = props.sessionId
+  if (!sid || artifactOpening.value) return
+  artifactOpening.value = artifact.fileId
+  try {
+    const fresh = (await sessionArtifactUrl(sid, artifact.fileId))?.payload as { url?: string } | undefined
+    const url = fresh?.url || artifact.url
+    if (url) window.open(url, '_blank', 'noopener')
+  } catch {
+    if (artifact.url) window.open(artifact.url, '_blank', 'noopener')
+  } finally {
+    artifactOpening.value = ''
+  }
+}
 
 const statusClass = computed(() => (waitingQuestion.value ? 'waiting' : sessionStatus.value.toLowerCase()))
 

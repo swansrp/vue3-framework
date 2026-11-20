@@ -178,6 +178,10 @@ export const sessionParseStatus = (sessionId: string, fileIds: string[]) =>
 export const sessionFiles = (sessionId: string) =>
   get(buildGetApiByType(`/session/${sessionId}/files`, agentApiType), {}, {}, false, false, false)
 
+// 会话产物读址续签（点击产物卡先取新鲜预签名地址；事件自带地址仅生成时刻约 1h 有效，历史回放必过期）
+export const sessionArtifactUrl = (sessionId: string, fileId: string) =>
+  get(buildGetApiByType(`/session/${sessionId}/artifact/${fileId}/url`, agentApiType), {}, {}, false, false, false)
+
 // ==================== 通用评价（flow/autonomous 两型统一，skill 底座） ====================
 
 // 回答评价（like/dislike，空=取消）：ratingId 业务自定（如 conversationId:messageId / sessionId）；
