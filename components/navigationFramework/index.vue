@@ -3,6 +3,7 @@
     v-if="isNeedNav"
     class="top"
     :minimal="isSubSystem"
+    :chrome="chrome"
   >
     <!-- 透传 header-extra 插槽，让业务层可以注入自定义内容 -->
     <template
@@ -69,6 +70,10 @@ import { useNavigationStore } from '@/framework/store/navigation'
 import { useWindowStore } from '@/framework/store/window'
 
 const route = useRoute()
+
+// chrome: 框架壳变体（透传 TopHeader），缺省 full=完整壳、未传时行为零变化；
+// nav=本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b
+withDefaults(defineProps<{ chrome?: 'full' | 'nav' }>(), { chrome: 'full' })
 
 
 const slots = useSlots()

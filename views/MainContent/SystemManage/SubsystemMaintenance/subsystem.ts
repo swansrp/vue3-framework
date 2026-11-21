@@ -1,5 +1,12 @@
 import { ColumnsType } from 'ant-design-vue/es/table/interface'
 
+// 嵌入形态字段契约（embed_chrome → embedChrome）：管理页行/表单共用；
+// 服务端 AcSubsystem.embedChrome 直收（BaseAdminController 既有 CRUD 通道，无新端点）。
+// 取值口径：''/none = embedded=1 壳全隐藏（缺省，存量空值同义）；nav = 子页去身份条保留 topnav/左栏；宿主 AppFrame 装载消费
+export interface SubsystemEmbedChrome {
+  embedChrome?: string
+}
+
 // 应用管理（子系统注册表）列配置——行字段契约对齐 QuerySubsystemRes（含服务端带出的 partnerAppKey）
 const surelyTableColumns = [
   { title: '序号', dataIndex: 'index', width: 70 },
@@ -7,6 +14,7 @@ const surelyTableColumns = [
   { title: '名称', dataIndex: 'name', minWidth: 160 },
   { title: '渠道标识', dataIndex: 'partnerAppKey', width: 140 },
   { title: '入口类型', dataIndex: 'entryType', width: 100 },
+  { title: '嵌入形态', dataIndex: 'embedChrome', width: 140 },
   { title: '入口地址', dataIndex: 'entryUrl', minWidth: 200 },
   { title: '有效性', dataIndex: 'status', width: 90 },
   { title: '全租户可见', dataIndex: 'visibleToAllTenant', width: 110 },

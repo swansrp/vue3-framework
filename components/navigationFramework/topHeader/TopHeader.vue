@@ -1,6 +1,8 @@
 <template>
   <div id="top">
+    <!-- chrome=nav 变体：本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b —— 隐藏 logo/标题区 -->
     <div
+      v-if="!isNavChrome"
       :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'"
       :style="{
         width: tabStore.isNeedLeftNav ? (tabStore.leftNavCollapsed ? '50px' : `${tabStore.leftNavWidth}px`) : '250px',
@@ -35,7 +37,11 @@
       <slot name="header-extra"></slot>
     </div>
     <div class="top_user">
-      <div class="user-avatar-wrapper">
+      <!-- chrome=nav 变体：隐藏用户头像/身份段（正源 plan-local-debug-subsystem 3.2b） -->
+      <div
+        v-if="!isNavChrome"
+        class="user-avatar-wrapper"
+      >
         <a-avatar
           v-if="isNotEmpty(userStore.avatar)"
           class="user-avatar"
@@ -54,7 +60,11 @@
         </a-avatar>
         <div class="user-status-indicator"></div>
       </div>
-      <div class="user-info">
+      <!-- chrome=nav 变体：隐藏用户身份段（姓名/部门） -->
+      <div
+        v-if="!isNavChrome"
+        class="user-info"
+      >
         <div class="user-name">
           <marquee
             :content="userStore.name"
@@ -197,7 +207,11 @@
       >
         <slot name="header-actions"></slot>
       </div>
-      <div class="top_user_setting">
+      <!-- chrome=nav 变体：隐藏齿轮设置下拉（正源 plan-local-debug-subsystem 3.2b） -->
+      <div
+        v-if="!isNavChrome"
+        class="top_user_setting"
+      >
         <a-dropdown
           trigger="click"
           @open-change="onSettingDropdownOpen"
@@ -428,7 +442,12 @@ import { AUTHORIZATION_TOKEN, REFRESH_TOKEN, SYSTEM_MANAGE_MENU_TITLE } from '@/
 import { validatePassword } from '@/framework/utils/passwordValidator'
 
 // minimal: 子系统形态的极简顶部条（隐藏顶部菜单，标题显示当前子系统名）
-defineProps<{ minimal?: boolean }>()
+// chrome: 框架壳变体，缺省 full=完整壳（未传时行为零变化）；
+// nav=本地调试子系统形态——去 logo/用户头像/身份段/齿轮设置下拉，保留 topnav 导航区、
+// header-extra 插槽（epc 项目切换器经此注入）等导航件，正源 plan-local-debug-subsystem 3.2b
+const props = withDefaults(defineProps<{ minimal?: boolean, chrome?: 'full' | 'nav' }>(), { chrome: 'full' })
+// chrome=nav 变体判定：本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b
+const isNavChrome = computed(() => props.chrome === 'nav')
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)

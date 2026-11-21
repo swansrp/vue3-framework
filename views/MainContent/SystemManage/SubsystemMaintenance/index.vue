@@ -23,6 +23,9 @@
         <template v-else-if="column.dataIndex === 'entryType'">
           {{ entryTypeText(record.entryType) }}
         </template>
+        <template v-else-if="column.dataIndex === 'embedChrome'">
+          {{ embedChromeText(record.embedChrome) }}
+        </template>
         <template v-else-if="column.dataIndex === 'status'">
           <a-switch
             :checked="record.status === '1'"
@@ -111,6 +114,14 @@
             placeholder="选了入口类型则必填"
           />
         </a-form-item>
+        <a-form-item label="嵌入形态">
+          <a-select
+            v-model:value="editForm.embedChrome"
+            :options="embedChromeOptions"
+            placeholder="嵌入时壳的形态"
+          />
+          <span class="subsystem-page__hint">none=壳全隐藏（缺省）；nav=保留子页导航</span>
+        </a-form-item>
         <a-form-item label="归属渠道">
           <a-select
             v-model:value="editForm.partnerId"
@@ -180,7 +191,7 @@ import {
 } from '@/framework/apis/admin/subsystem'
 import DeletePopConfirm from '@/framework/components/common/deletePopConfirm/DeletePopConfirm.vue'
 import DialogBox from '@/framework/components/common/dialogBox/DialogBox.vue'
-import surelyTableColumns from '@/framework/views/MainContent/SystemManage/SubsystemMaintenance/subsystem'
+import surelyTableColumns, { SubsystemEmbedChrome } from '@/framework/views/MainContent/SystemManage/SubsystemMaintenance/subsystem'
 
 
 const { currentRoute, push } = useRouter()
@@ -220,6 +231,14 @@ const entryTypeOptions = [
 ]
 const entryTypeText = (value: string) => entryTypeOptions.find((item) => item.value === value)?.label || value || '-'
 
+// 嵌入形态取值口径与 AcSubsystem.embedChrome 注释一致（subsystem.ts SubsystemEmbedChrome 契约）：
+// ''/none=embedded=1 壳全隐藏（缺省，存量空值同义）；nav=子页去身份条保留 topnav/左栏
+const embedChromeOptions = [
+  { value: 'none', label: 'none（壳全隐藏）' },
+  { value: 'nav', label: 'nav（保留子页导航）' }
+]
+const embedChromeText = (value: string) => (value === 'nav' ? 'nav（保留子页导航）' : 'none（壳全隐藏）')
+
 // ==================== 归属渠道下拉（/partner-options，显示 appKey 存 id） ====================
 
 const partnerOptions: Ref<any[]> = ref([])
@@ -242,7 +261,7 @@ const loadPartnerOptions = async () => {
 
 // ==================== 新增/编辑 ====================
 
-interface SubsystemForm {
+interface SubsystemForm extends SubsystemEmbedChrome {
   appCode: string
   name: string
   icon: string
@@ -264,6 +283,7 @@ const editForm: Ref<SubsystemForm> = ref({
   icon: '',
   entryType: undefined,
   entryUrl: '',
+  embedChrome: 'none',
   partnerId: undefined,
   visibleToAllTenant: false,
   status: true,
@@ -286,6 +306,7 @@ const openAddBox = () => {
     icon: '',
     entryType: undefined,
     entryUrl: '',
+    embedChrome: 'none',
     partnerId: undefined,
     visibleToAllTenant: false,
     status: true,
@@ -305,6 +326,7 @@ const openEditBox = (record: any) => {
     icon: record.icon || '',
     entryType: record.entryType || undefined,
     entryUrl: record.entryUrl || '',
+    embedChrome: record.embedChrome === 'nav' ? 'nav' : 'none',
     partnerId: record.partnerId ?? undefined,
     visibleToAllTenant: record.visibleToAllTenant === '1',
     status: record.status === '1',
@@ -336,6 +358,7 @@ const submitEdit = async () => {
       icon: editForm.value.icon.trim(),
       entryType: editForm.value.entryType || '',
       entryUrl: editForm.value.entryUrl.trim(),
+      embedChrome: editForm.value.embedChrome || 'none',
       partnerId: editForm.value.partnerId ?? null,
       visibleToAllTenant: editForm.value.visibleToAllTenant ? '1' : '0',
       status: editForm.value.status ? '1' : '0',

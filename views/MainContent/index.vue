@@ -4,7 +4,7 @@
     :locale="zhCN"
     :theme="antTheme"
   >
-    <navigation-framework>
+    <navigation-framework :chrome="chrome">
       <!-- header-extra 插槽供业务层注入自定义内容 -->
       <template
         v-if="$slots['header-extra']"
@@ -56,6 +56,10 @@ import { useRouteStore } from '@/framework/store/route'
 import { useThemeStore } from '@/framework/store/theme'
 
 const themeStore = useThemeStore()
+
+// chrome: 框架壳变体（转挂层透传给 NavigationFramework），缺省 full=完整壳、未传时行为零变化；
+// nav=本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b
+withDefaults(defineProps<{ chrome?: 'full' | 'nav' }>(), { chrome: 'full' })
 
 // 当前是否停留在根路径(Root 无子路由匹配), 此时内容区显示业务层注册的默认内容
 const route = useRoute()
