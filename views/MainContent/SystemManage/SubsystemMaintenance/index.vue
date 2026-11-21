@@ -120,7 +120,7 @@
             :options="embedChromeOptions"
             placeholder="嵌入时壳的形态"
           />
-          <span class="subsystem-page__hint">none=壳全隐藏（缺省）；nav=保留子页导航</span>
+          <span class="subsystem-page__hint">none=壳全隐藏（缺省）；nav=保留子页导航；仅入口类型=iframe 时生效</span>
         </a-form-item>
         <a-form-item label="归属渠道">
           <a-select
