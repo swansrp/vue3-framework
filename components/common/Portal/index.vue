@@ -176,8 +176,52 @@
         />
       </div>
       <!-- endregion 树形配置 -->
+      <!-- region 筛选面板（左侧模式）：root 直下的全高左栏，同 menu-tree 左右布局 -->
+      <aside
+        v-if="panelInlineLeft"
+        class="portal-filter-left-col"
+      >
+        <portal-filter-panel
+          :fields="panelFields"
+          :values="panelDisplayValues"
+          :expanded="true"
+          position="left"
+          :has-user-default="panelHasUserDefault"
+          :customizable="true"
+          :available-options="panelAvailableOptions"
+          @value-change="onPanelValueChange"
+          @search="onPanelSearch"
+          @reset="onPanelReset"
+          @save-default="onPanelSaveDefault"
+          @reset-default="onPanelResetDefault"
+          @add-field="onPanelAddField"
+          @remove-field="onPanelRemoveField"
+          @manage="panelManageOpen = true"
+          @update:position="onPanelPositionChange"
+        />
+      </aside>
+      <!-- endregion -->
+      <!-- region 我的筛选项管理弹窗：复用配置端筛选面板编辑器（local 模式），字段+关系+默认值一体编辑 -->
+      <a-modal
+        v-model:open="panelManageOpen"
+        title="我的筛选项"
+        :width="860"
+        destroy-on-close
+        :footer="null"
+      >
+        <portal-filter-panel-pane
+          v-if="panelManageOpen"
+          mode="local"
+          :initial-fields="panelFields.map((f) => ({ column: f.column, label: f.label, relation: f.relation, defaultValue: [...(f.defaultValue || [])] }))"
+          :available-fields="panelManageAvailableFields"
+          @save-local="onPanelSaveLocal"
+        />
+      </a-modal>
+      <!-- endregion -->
       <!-- region 数据 -->
-      <div style="width: 100%;">
+      <div
+        style="width: 100%;"
+      >
         <!-- region 按钮区 -->
         <portal-button-action
           :advanced-condition="advancedCondition"
@@ -197,8 +241,58 @@
           </template>
           <template #right-btns>
             <slot name="right-btns"></slot>
+            <!-- 筛选面板入口：左键=展开/收起；右键=切换位置（上方/左侧） -->
+            <a-dropdown :trigger="['contextmenu']">
+              <a-button
+                v-if="panelEnabled && panelFields.length"
+                :type="panelExpanded ? 'primary' : 'default'"
+                style="margin-left: 6px"
+                title="左键展开/收起；右键切换位置"
+                @click="togglePanelExpanded"
+              >
+                <template #icon>
+                  <FunnelPlotOutlined />
+                </template>
+                筛选
+                <span
+                  v-if="panelConditionList.length"
+                  class="portal-panel-count"
+                >{{ panelConditionList.length }}</span>
+              </a-button>
+              <template #overlay>
+                <a-menu @click="onPositionMenu">
+                  <a-menu-item key="top">筛选条在上方</a-menu-item>
+                  <a-menu-item key="left">筛选面板在左侧</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
         </portal-button-action>
+        <!-- endregion -->
+        <!-- region 筛选面板（顶部模式：嵌在 button 区下方的横条；左侧模式见下方左右布局） -->
+        <div
+          v-if="panelInlineTop"
+          class="portal-filter-panel-top-wrap"
+        >
+          <portal-filter-panel
+            :fields="panelFields"
+            :values="panelDisplayValues"
+            :expanded="true"
+            position="top"
+            :has-user-default="panelHasUserDefault"
+            :customizable="true"
+            :available-options="panelAvailableOptions"
+            @value-change="onPanelValueChange"
+            @search="onPanelSearch"
+            @reset="onPanelReset"
+            @save-default="onPanelSaveDefault"
+            @reset-default="onPanelResetDefault"
+            @add-field="onPanelAddField"
+            @remove-field="onPanelRemoveField"
+            @manage="panelManageOpen = true"
+            @update:position="onPanelPositionChange"
+          />
+        </div>
         <!-- endregion -->
         <!-- region 搜索条件标签 -->
         <portal-search-tags
@@ -757,6 +851,7 @@ import {
   CaretRightOutlined,
   ExclamationCircleOutlined,
   FilterOutlined,
+  FunnelPlotOutlined,
   PieChartOutlined,
   RedoOutlined,
   SearchOutlined
@@ -808,6 +903,9 @@ import { db } from '@/framework/components/common/Portal/db'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 import PortalGridMode from '@/framework/components/common/Portal/mode/PortalGridMode.vue'
 import PortalSearchTags from '@/framework/components/common/Portal/table/PortalSearchTags.vue'
+import PortalFilterPanel from '@/framework/components/common/Portal/PortalFilterPanel.vue'
+import PortalFilterPanelPane from '@/framework/components/common/Portal/PortalFilterPanelPane.vue'
+import { useUserStore } from '@/framework/store/user'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import {
   ColumnType,
@@ -823,6 +921,7 @@ import {
 import { buildSummaryExportRow, headerColumnWidth, parse } from '@/framework/components/common/Portal/utils'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import bus, { PORTAL_RESIZE } from '@/framework/mitt'
+import { getRelation } from '@/framework/components/common/AdvancedSearch/funs'
 import { dictStore, useTreeStore } from '@/framework/store/common'
 import {
   doFunctions,
@@ -830,7 +929,10 @@ import {
   getBrotherNodes,
   isEmpty,
   isNotEmpty,
+  localStorageMethods,
   log,
+  monthRangeToDatetime,
+  resolveDynamicVariable,
   // 递归解析条件内置时间变量的工具已提升至 utils/common(透视 pivot.vue 共用), 别名保持原调用点不变
   resolveConditionVariables as resolve,
   updateTableSize,
@@ -975,6 +1077,12 @@ const props = withDefaults(defineProps<{
     rowKeyField?: string
     /** 外部直传的 Portal 配置(smart-query plan 推导等): 跳过按 tableId 拉取 sys_portal_table */
     portalConfig?: any
+    /** 筛选面板显隐覆盖(配置 enabled 之上): true/false 强制, 不传按配置 */
+    showFilterPanel?: boolean
+    /** 筛选面板位置覆盖: 'top' | 'left'; 用户本地偏好优先级更高 */
+    filterPanelPosition?: 'top' | 'left'
+    /** 筛选面板展开态覆盖: 用户本地偏好优先级更高 */
+    filterPanelExpanded?: boolean
   }>(),
   {
     baseDomain: '/' + name,
@@ -1038,7 +1146,11 @@ const props = withDefaults(defineProps<{
     summaryData: undefined,
     summaryVisible: undefined,
     rowKeyField: undefined,
-    portalConfig: undefined
+    portalConfig: undefined,
+    // 🔴 布尔 prop 不传时 Vue 会置 false（布尔 casting），必须显式默认 undefined，
+    // 否则「未传即用配置」的三态覆盖逻辑会永远拿到 false 而忽略后端配置
+    showFilterPanel: undefined as unknown as boolean,
+    filterPanelExpanded: undefined as unknown as boolean
   })
 const emit = defineEmits<{
   (e: 'configLoaded', config: any, columnArray: any, columns: any, bindTabs: any): void
@@ -1819,6 +1931,246 @@ const getGeneralCondition = () => {
 }
 const queryConditionMap = reactive(new Map<string, ConditionListType>())
 const querySortMap = reactive(new Map<string, QuerySortType>())
+
+// ==================== 筛选面板(方案B) ====================
+const userStore = useUserStore()
+// 报表级配置(sys_portal_table.filter_panel JSON)
+const panelConfig = computed<any>(() => {
+  const raw = config.filterPanel
+  if (!raw) return null
+  try { return JSON.parse(raw) } catch { return null }
+})
+// 显隐：prop 优先 > 配置 enabled（缺省不启用）
+const panelEnabled = computed(() => {
+  if (props.showFilterPanel !== undefined) return props.showFilterPanel
+  return !!panelConfig.value?.enabled
+})
+// 用户在运行态自己增删的筛选项（存本机默认；空 = 跟随配置端 fields）
+const panelUserFields = ref<any[]>([])
+// 某字段类型默认取哪个关系（优先等于，否则该类型第一个）
+const filterPanelFirstRelation = (fieldType: any): number => {
+  const allowed: number[] = getRelation(fieldType ?? '')
+  return allowed.includes(FILTER_TYPE.EQUAL) ? FILTER_TYPE.EQUAL : (allowed[0] ?? FILTER_TYPE.EQUAL)
+}
+// 配置字段 + 列元数据（类型/字典）对齐
+const panelFields = computed(() => {
+  // 依赖字典加载 tick：字典选项异步挂列，完成后重算才能取到 referenceDictOption
+  void panelDictTick.value
+  // 用户在运行态自己增删过的字段（存本机默认）优先；没有则用配置端 fields
+  const userFields = panelUserFields.value
+  const srcFields: any[] = (Array.isArray(userFields) && userFields.length > 0)
+    ? userFields
+    : (Array.isArray(panelConfig.value?.fields) ? panelConfig.value.fields : [])
+  if (srcFields.length === 0) return []
+  return srcFields.map((f: any) => {
+    const col: any = (columns.value || []).find((c: any) => c.dataIndex === f.column)
+    return {
+      column: f.column,
+      label: f.label || col?.title || f.column,
+      relation: typeof f.relation === 'number' ? f.relation : filterPanelFirstRelation(col?.fieldType),
+      fieldType: col?.fieldType || FIELD_TYPE.INPUT,
+      reference: col?.referenceDictOption || [],
+      defaultValue: Array.isArray(f.defaultValue) ? f.defaultValue : (f.defaultValue ? [f.defaultValue] : [])
+    }
+  })
+})
+// 可添加的字段候选（排除已加过的 + 排除表格自带行号列 index；带类型/字典供添加表单配关系与默认值）
+const panelAvailableOptions = computed(() => {
+  const used = new Set(panelFields.value.map((f: any) => f.column))
+  return (columns.value || [])
+    .filter((c: any) => !used.has(c.dataIndex) && c.dataIndex !== 'index')
+    .map((c: any) => ({ value: c.dataIndex, label: c.title || c.dataIndex, fieldType: c.fieldType, reference: c.referenceDictOption || [] }))
+})
+// 用户本地偏好：localStorageMethods 自带项目名前缀；key 含 customerNumber + tableId
+const panelLocalKey = computed(() => `portal:filter:${userStore.customerNumber || 'anon'}:${config.tableId || props.tableId}`)
+const readPanelLocal = () => {
+  try {
+    return JSON.parse(localStorageMethods.getLocalStorage(panelLocalKey.value, '{}') || '{}')
+  } catch {
+    return {}
+  }
+}
+const writePanelLocal = (patch: Record<string, any>) => {
+  const cur = readPanelLocal()
+  localStorageMethods.setLocalStorage(panelLocalKey.value, JSON.stringify({ ...cur, ...patch, updatedAt: Date.now() }))
+}
+const panelPositionLocal = ref<'top' | 'left' | null>(null)
+const panelExpandedLocal = ref<boolean | null>(null)
+// 位置：用户本地 > prop > 配置 > 'top'（左侧仅无左栏时可选，容器侧判断）
+const panelPosition = computed<'top' | 'left'>(() =>
+  panelPositionLocal.value ?? props.filterPanelPosition ?? panelConfig.value?.position ?? 'top'
+)
+// 展开：用户本地 > prop > 配置 > false
+const panelExpanded = computed(() =>
+  panelExpandedLocal.value ?? props.filterPanelExpanded ?? !!panelConfig.value?.expanded
+)
+// 左侧模式（面板已启用+在展开态+位置=left）：外层走 grid 左栏
+const panelInlineLeft = computed(() =>
+  panelEnabled.value && panelExpanded.value && panelPosition.value === 'left' && panelFields.value.length > 0
+)
+// 左栏出现/消失 = 表格可用宽度变化（同树形折叠），通知 s-table 重算列宽
+watch(panelInlineLeft, () => {
+  bus.emit(PORTAL_RESIZE)
+})
+const panelInlineTop = computed(() =>
+  panelEnabled.value && panelExpanded.value && panelPosition.value === 'top' && panelFields.value.length > 0
+)
+const panelValues = ref<Record<string, any[]>>({})
+const panelHasUserDefault = ref(false)
+// 字典选项是异步挂到列对象上的（且赋在原始对象上，不触发响应式）——字典加载完后 bump 此 tick 让 panelFields 重算拿到选项
+const panelDictTick = ref(0)
+// 用用户默认条件(有) / 配置默认值(无) 填充面板
+const initPanelValues = (force = false) => {
+  // 已在用/用户已编辑过就不覆盖；force=true 仅在配置切换时重置
+  if (!force && Object.keys(panelValues.value || {}).length > 0) return
+  const local = readPanelLocal()
+  const hasUser = local && typeof local.defaultConditions === 'object' && local.defaultConditions !== null
+  panelHasUserDefault.value = !!hasUser
+  const src: any = hasUser ? local.defaultConditions : {}
+  const vals: Record<string, any[]> = {}
+  panelFields.value.forEach((f: any) => {
+    const sv = src[f.column]
+    vals[f.column] = Array.isArray(sv) ? sv : (sv !== undefined && sv !== null && sv !== '' ? [sv] : [...f.defaultValue])
+  })
+  panelValues.value = vals
+}
+watch([() => config.filterPanel, () => config.tableId], () => {
+  const local = readPanelLocal()
+  if (local.position === 'top' || local.position === 'left') panelPositionLocal.value = local.position
+  if (typeof local.expanded === 'boolean') panelExpandedLocal.value = local.expanded
+  // 用户自定义字段清单：有则用它覆盖配置端 fields
+  panelUserFields.value = Array.isArray(local.userFields) ? local.userFields : []
+  initPanelValues(true)
+}, { immediate: true })
+// 🔴 panelFields 依赖的列/字典是异步就绪的：配置 watch 首次跑时字段可能为空，
+// 此时 panelValues 会是空对象 → 面板显示但条件不生效。字段数量变化时补一次初始化（不覆盖用户已编辑值）
+watch(() => panelFields.value.length, () => initPanelValues())
+// 面板条件（并入查询，独立于 search-tag）
+const panelConditionList = computed<ConditionListType[]>(() => {
+  if (!panelEnabled.value) return []
+  const list: any[] = []
+  panelFields.value.forEach((f: any) => {
+    const v = panelValues.value[f.column]
+    if (Array.isArray(v) && v.length > 0 && v.some((x: any) => x !== undefined && x !== null && x !== '')) {
+      list.push({ property: f.column, value: expandMonthRange(f.relation, v), relation: f.relation })
+    }
+  })
+  return list as ConditionListType[]
+})
+// 月份区间边界归一化：BETWEEN 且两侧都是 yyyyMM → 起始月第一天 00:00:00 ~ 结束月最后一天 23:59:59.999
+// （DB 存 datetime，结束月若只到月首 00:00:00 会丢最后一天整天）
+const expandMonthRange = (relation: any, v: any[]) => {
+  const isRange = relation === FILTER_TYPE.BETWEEN || relation === FILTER_TYPE.NOT_BETWEEN
+  if (isRange && v.length === 2 && v.every((x: any) => /^\d{6}$/.test(String(x)))) {
+    return monthRangeToDatetime(String(v[0]), String(v[1])) || v
+  }
+  return v
+}
+const onPanelExpandedChange = (v: boolean) => {
+  panelExpandedLocal.value = v
+  writePanelLocal({ expanded: v })
+}
+// 工具栏开关：展开/收起
+const togglePanelExpanded = () => onPanelExpandedChange(!panelExpanded.value)
+// 右键菜单切换位置（上方/左侧）
+const onPositionMenu = ({ key }: { key: string }) => onPanelPositionChange(key as 'top' | 'left')
+// 位置切换（顶栏分段控件调用）；左侧布局接入后生效
+// 右键菜单切换位置：切换后展开面板（让用户看到结果）并通知表格重算宽度
+const onPanelPositionChange = (v: 'top' | 'left') => {
+  panelPositionLocal.value = v
+  panelExpandedLocal.value = true
+  writePanelLocal({ position: v, expanded: true })
+  bus.emit(PORTAL_RESIZE)
+}
+// 使用态展示副本：panelValues 里的 ${} 变量在前端能解析的换成真值给胶囊显示
+// （用户看到 202611 这样的值、可改任意字面值，而不是改占位符）；
+// panelValues 始终保持原 token——查询交后端解析、存默认不把月份固死
+const panelDisplayValues = computed<Record<string, any[]>>(() => {
+  const out: Record<string, any[]> = {}
+  Object.entries(panelValues.value || {}).forEach(([k, arr]) => {
+    out[k] = Array.isArray(arr)
+      ? arr.map((x: any) => {
+        if (typeof x === 'string') {
+          const t = x.trim()
+          if (t.startsWith('${') && t.endsWith('}')) {
+            const r = resolveDynamicVariable(t)
+            if (r && r !== t) return r
+          }
+        }
+        return x
+      })
+      : arr
+  })
+  return out
+})
+// 胶囊单字段编辑：只落改动列（展示副本里未动的列仍是 token，不会被冲掉）
+const onPanelValueChange = (column: string, v: any[]) => {
+  panelValues.value = { ...panelValues.value, [column]: v }
+}
+// 「我的筛选项」管理弹窗（复用配置端筛选面板编辑器 local 模式）
+const panelManageOpen = ref(false)
+// 弹窗可选字段 = 全部真实列（排除行号列 index），带类型与列上已挂的字典/树选项
+const panelManageAvailableFields = computed(() => (columns.value || [])
+  .filter((c: any) => c.dataIndex !== 'index')
+  .map((c: any) => ({ property: c.dataIndex, title: c.title, fieldType: c.fieldType, referenceOptions: c.referenceDictOption || [] })))
+// local 编辑器保存：清单落「我的字段」，有默认值的字段直接预填进当前值（使用态即见）；
+// 同时直接持久化本机（清单+当前值）——弹窗保存即生效可刷新，恢复默认/绿点随之点亮
+const onPanelSaveLocal = (fields: Array<{ column: string, label: string, relation: number, defaultValue: string[] }>) => {
+  panelUserFields.value = (fields || []).map(f => ({
+    column: f.column,
+    label: f.label,
+    relation: f.relation,
+    defaultValue: Array.isArray(f.defaultValue) ? f.defaultValue : []
+  }))
+  const vals = { ...panelValues.value }
+  panelUserFields.value.forEach((f: any) => {
+    if (Array.isArray(f.defaultValue) && f.defaultValue.length > 0) vals[f.column] = [...f.defaultValue]
+    else if (vals[f.column] === undefined) vals[f.column] = []
+  })
+  panelValues.value = vals
+  writePanelLocal({ userFields: panelUserFields.value, defaultConditions: panelValues.value })
+  panelHasUserDefault.value = true
+  panelManageOpen.value = false
+  message.success('已保存我的筛选项')
+}
+// 快捷移除（胶囊行尾 ×）：userFields 为空时先把配置清单物化成「我的字段」再删，
+// 否则删的是空数组、配置字段删不掉
+const onPanelRemoveField = (column: string) => {
+  const base = (panelUserFields.value && panelUserFields.value.length > 0)
+    ? panelUserFields.value.map((f: any) => ({ ...f }))
+    : (Array.isArray(panelConfig.value?.fields) ? panelConfig.value!.fields : []).map((f: any) => ({ ...f }))
+  panelUserFields.value = base.filter((f: any) => f.column !== column)
+  const vals = { ...panelValues.value }
+  delete vals[column]
+  panelValues.value = vals
+}
+const onPanelSearch = () => {
+  config.currentPage = 1
+  queryData()
+}
+const onPanelReset = () => {
+  const vals: Record<string, any[]> = {}
+  panelFields.value.forEach((f: any) => { vals[f.column] = [...f.defaultValue] })
+  panelValues.value = vals
+  config.currentPage = 1
+  queryData()
+}
+const onPanelSaveDefault = () => {
+  // 同时保存「我的字段清单」和当前值
+  writePanelLocal({ defaultConditions: panelValues.value, userFields: panelUserFields.value })
+  panelHasUserDefault.value = true
+  message.success('已存为本机默认')
+}
+const onPanelResetDefault = () => {
+  const cur = readPanelLocal()
+  delete cur.defaultConditions
+  delete cur.userFields
+  localStorageMethods.setLocalStorage(panelLocalKey.value, JSON.stringify(cur))
+  panelHasUserDefault.value = false
+  panelUserFields.value = []
+  initPanelValues(true)
+  message.success('已恢复配置默认')
+}
 // 表头筛选角标：该列生效筛选值的个数（BETWEEN 拆键 dataIndex+'0'/'1' 各计 1）
 const getFilterCount = (dataIndex: any): number => {
   if (!dataIndex) return 0
@@ -2062,6 +2414,22 @@ const queryCondition = () => {
   } else {
     query = getGeneralCondition()
     resolve(query.conditionList)
+  }
+
+  // 筛选面板条件并入（独立于 search-tag；面板值可能含 ${} 变量，交后端解析）
+  if (isNotEmpty(panelConditionList.value)) {
+    resolve(panelConditionList.value)
+    // 🔴 通道不能混：advancedQuery 只读 query.condition，generalQuery 只读 query.conditionList。
+    // 高级模式下即使原 condition 为空也要塞进 condition，写 conditionList 会被静默丢弃（曾因此点查询不生效）
+    if (config.advancedSearchAble) {
+      const existing = isNotEmpty(query.condition) ? [query.condition as ConditionListType] : []
+      query.condition = {
+        conditionList: [...existing, ...panelConditionList.value],
+        andOr: '0'
+      }
+    } else {
+      query.conditionList = [...(query.conditionList || []), ...panelConditionList.value]
+    }
   }
   
   if (isNotEmpty(props.selectColumnCondition)) {
@@ -2421,7 +2789,9 @@ const initConfig = async () => {
       url: res.payload.url,
       readOnly: res.payload.readOnly,
       idColumn: res.payload.idColumn,
-      columns: res.payload.columns?.length || 0
+      columns: res.payload.columns?.length || 0,
+      // 诊断筛选面板：确认运行态是否拿到 filter_panel（json 字符串）
+      filterPanel: res.payload.filterPanel
     })
     dictColumnArray.length = 0
     columnArray.value.length = 0
@@ -2450,6 +2820,15 @@ const initConfig = async () => {
       config.readOnly = true
     }
     config.url = tableConfig.url
+    // 筛选面板配置(sys_portal.filter_panel JSON 字符串)：initConfig 是逐字段白名单拷贝，漏了就不渲染
+    config.filterPanel = tableConfig.filterPanel
+    console.log('[Portal DEBUG] 筛选面板:', {
+      raw: config.filterPanel,
+      enabled: panelEnabled.value,
+      fields: panelFields.value.length,
+      position: panelPosition.value,
+      treeMode: config.treeMode
+    })
     // 汇总行显隐: 外部 summaryVisible 三态覆盖(透视表按自身配置决定), 未传时按 sys_portal.summary 与 summaryData 判定
     config.summary = props.summaryVisible ?? (tableConfig.summary === '1' || isNotEmpty(props.summaryData))
     if (isNotEmpty(props.summaryData)) {
@@ -2682,7 +3061,11 @@ const initConfig = async () => {
     config.key = config.key + 1
     console.debug(config, columnArray.value, columns.value, bindTabs.value)
     emit('configLoaded', config, columnArray.value, columns.value, bindTabs.value)
-    return await Promise.all(promiseList)
+    // 等字典选项全部挂到列上后，再 bump 面板 tick（否则面板字段的字典下拉拿到空选项、只显示原始编码）
+    return await Promise.all(promiseList).then((r) => {
+      panelDictTick.value++
+      return r
+    })
   })
 }
 
@@ -2861,6 +3244,15 @@ defineExpose({
 })
 </script>
 <style lang="less" scoped>
+// 筛选面板（顶部模式）：与工具栏同左右边距，浅色条
+.portal-filter-panel-top-wrap {
+  margin: 0 20px 6px 15px;
+  border-radius: 8px;
+  background: var(--bg-hover, #f5f7fa);
+}
+// 🔴 左侧 grid 的摆放规则不能写在 scoped 块——portal-button-space 是多根子组件
+// （button区 + 高级搜索弹窗），其根元素拿不到父 scope id，scoped 选择器匹配不上。
+// 已移至文末非 scoped 块。
 // ============ 全局动画关键帧 ============
 @keyframes fadeSlideIn {
   from {
@@ -3536,5 +3928,27 @@ defineExpose({
   .portal-table-space .surely-table-column-sorter {
     opacity: 1;
   }
+}
+
+// ============ 筛选面板：左侧模式 = 左右布局（aside 是 .root 直下子级，同 menu-tree 全高左栏） ============
+// 必须放非 scoped 块：aside 是多根模板的子级，拿不到父 scope id。
+// 左栏放筛选面板（panelInlineLeft 时出现）；顶栏模式下面板在 button 区（portal-filter-panel-top-wrap）。
+// 视觉对齐 .menu-tree（渐变底+描边+圆角+投影），成为同一套「左栏」语言。
+.portal-filter-left-col {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 5px 0 5px 15px;
+  background: linear-gradient(145deg, var(--bg-elevated), var(--bg-hover));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.portal-filter-left-col .pfp {
+  flex: 1;
+  min-height: 0;
 }
 </style>

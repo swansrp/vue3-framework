@@ -362,6 +362,7 @@
         v-if="showDataPreviewDrawer && tableConfig.name"
         :table-id="tableConfig.name"
         :action-width="0"
+        :show-search-tags="true"
       />
     </a-modal>
     <!-- endregion -->
@@ -442,6 +443,19 @@
           >
             报表配置
           </a-button>
+          <a-badge
+            :dot="!!tableConfig.filterPanel"
+            :offset="[-2, 6]"
+            color="#52c41a"
+            style="margin-right: 10px"
+          >
+            <a-button
+              type="primary"
+              @click="filterPanelModal.show = true"
+            >
+              筛选面板
+            </a-button>
+          </a-badge>
           <!-- 权限配置：数据权限仅低代码 Portal（DATASET/MATRIX）生效；显示权限对所有 Portal 可配（普通 portal 仅前端隐藏） -->
           <a-button
             style="margin-right: 10px"
@@ -1525,7 +1539,7 @@
               :span="1"
               label="默认值"
             >
-              <a-input
+              <condition-variable-input
                 :disabled="columnMap.get(selectedColumnId).enable !== '1'"
                 :value="columnMap.get(selectedColumnId).defaultValue"
                 placeholder="默认值"
@@ -1729,6 +1743,22 @@
       :advanced-condition="defaultCondition"
       @confirm="saveDefaultCondition"
     />
+
+    <!-- 筛选面板配置（portal 表格级，存 sys_portal.filter_panel） -->
+    <a-modal
+      v-model:visible="filterPanelModal.show"
+      title="筛选面板配置"
+      :footer="null"
+      :width="860"
+      destroy-on-close
+    >
+      <portal-table-filter-panel-pane
+        v-if="filterPanelModal.show"
+        :table="tableConfig"
+        :available-fields="filterPanelAvailableFields"
+        @saved="onSearch(true)"
+      />
+    </a-modal>
     
     <!-- 字段排序弹框 -->
     <ColumnOrderModal
@@ -2093,6 +2123,7 @@ import { nextTick, onMounted, Ref, watch } from 'vue'
 import ColumnOrderModal from './components/ColumnOrderModal.vue'
 import FolderComponent from './components/FolderComponent.vue'
 import PortalTableConfigModal from './components/PortalTableConfigModal.vue'
+import PortalTableFilterPanelPane from '@/framework/components/common/Portal/PortalFilterPanelPane.vue'
 import IndicatorModal from './indicatorModal.vue'
 import SqlDraw from './sqlDraw.vue'
 
@@ -2301,6 +2332,18 @@ const getEntityConfig = (tableId: string) => {
 }
 
 const tableConfig = ref({} as any)
+
+// ==================== 筛选面板配置 ====================
+const filterPanelModal = reactive({ show: false })
+// 面板可选字段：兼容 sys_portal 列(itemValue/itemName) 与已映射列(property/displayName)
+const filterPanelAvailableFields = computed(() =>
+  (tableConfig.value.columns || []).map((c: any) => ({
+    property: c.itemValue ?? c.property,
+    title: c.itemName ?? c.displayName ?? c.itemValue ?? c.property,
+    fieldType: c.fieldType,
+    reference: c.reference
+  }))
+)
 const fieldRecords = ref([] as Array<any>)
 // 行级策略编辑器可用的列集合（全量列，不像 defaultCondition.columnArray 那样按 filterAble 收窄）
 const policyColumnArray = ref([] as Array<any>)

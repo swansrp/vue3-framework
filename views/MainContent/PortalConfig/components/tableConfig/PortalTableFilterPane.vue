@@ -170,7 +170,7 @@
                       style="width: 100%"
                       allow-clear
                     />
-                    <a-input
+                    <condition-variable-input
                       v-else
                       v-model:value="selectedFilter.defaultValue"
                       placeholder="请输入默认值"

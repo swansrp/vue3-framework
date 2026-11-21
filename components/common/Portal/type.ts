@@ -72,6 +72,8 @@ export type TableConfigType = {
   defaultCondition: ConditionListType,
   // 默认排序
   defaultSort: Array<QuerySortType>,
+  // 筛选面板配置JSON: {enabled,position,expanded,andOr,fields:[{column,label,relation,defaultValue}]}
+  filterPanel?: string,
   // 隐藏刷新按钮
   hideRefresh: boolean,
   // 外部传入数据 不支持查询排序的朴素表格
@@ -260,6 +262,27 @@ export enum FILTER_TYPE {
   CONTAIN_IN_OR,
   CONTAIN_IN_AND,
   SELECT_APPLY = 99
+}
+
+// 关系枚举 → 中文（共享单源：配置端筛选面板 + 运行态胶囊；全集防下拉出裸数字）
+export const FILTER_RELATION_LABELS: Record<number, string> = {
+  [FILTER_TYPE.EQUAL]: '等于',
+  [FILTER_TYPE.NOT_EQUAL]: '不等于',
+  [FILTER_TYPE.GREATER]: '大于',
+  [FILTER_TYPE.GREATER_EQUAL]: '大于等于',
+  [FILTER_TYPE.LESS]: '小于',
+  [FILTER_TYPE.LESS_EQUAL]: '小于等于',
+  [FILTER_TYPE.NULL]: '为空',
+  [FILTER_TYPE.NOT_NULL]: '不为空',
+  [FILTER_TYPE.LIKE]: '模糊匹配',
+  [FILTER_TYPE.NOT_LIKE]: '不模糊匹配',
+  [FILTER_TYPE.IN]: '在列表内',
+  [FILTER_TYPE.NOT_IN]: '不在列表内',
+  [FILTER_TYPE.BETWEEN]: '区间',
+  [FILTER_TYPE.NOT_BETWEEN]: '不在区间内',
+  [FILTER_TYPE.CONTAIN]: '包含',
+  [FILTER_TYPE.CONTAIN_IN_OR]: '包含任一',
+  [FILTER_TYPE.CONTAIN_IN_AND]: '包含全部'
 }
 
 export enum FIELD_TYPE {

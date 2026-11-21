@@ -311,6 +311,17 @@ const formatNow = (pattern: string, d: Date): string => {
   return pattern.replace(/yyyy|yy|MM|M|dd|d|HH|H|mm|m|ss|s/g, (t) => tokens[t] ?? t)
 }
 
+// 同期日：今天平移 N 个月（年按 12 个月），日粒度对齐；目标月天数不足时钳制到月末
+// （如 3-31 上月=2-28、闰年 2-29 去年=2-28），与后端 LocalDate.minusMonths/minusYears 的钳制行为一致
+const sameDayShifted = (monthDelta: number): string => {
+  const d = gmt8Date(0)
+  const day = d.getUTCDate()
+  const shifted = shiftMonth(d.getUTCFullYear(), d.getUTCMonth() + 1, monthDelta)
+  // Date.UTC(y, m, 0) 的 day=0 即 m 月（1-based）的最后一天
+  const maxDay = new Date(Date.UTC(shifted.y, shifted.m, 0)).getUTCDate()
+  return `${shifted.y}-${pad2(shifted.m)}-${pad2(Math.min(day, maxDay))}`
+}
+
 // 解析内置时间变量并返回实际时间值（兜底+专项双模式）
 const resolveDynamicVariable = (value: string | undefined): string | undefined => {
   if (!value || value === '' || value === null || value === undefined) {
@@ -334,6 +345,10 @@ const resolveDynamicVariable = (value: string | undefined): string | undefined =
     '${nextMonth}': fmtMonth(nextMonth.y, nextMonth.m),
     '${lastDay}': fmtDay(gmt8Date(-1)),
     '${nextDay}': fmtDay(gmt8Date(1)),
+    '${lastMonthDay}': sameDayShifted(-1),
+    '${nextMonthDay}': sameDayShifted(1),
+    '${lastYearDay}': sameDayShifted(-12),
+    '${nextYearDay}': sameDayShifted(12),
   }
 
   // 检查是否是内置时间变量
@@ -377,6 +392,41 @@ const resolveConditionVariables = (condition: any) => {
       return v
     })
   }
+}
+
+// ============ 月份区间边界归一化 ============
+// 背景：DB 多存 datetime。选「起始月 ~ 结束月」若结束取月首 00:00:00，会漏掉结束月最后一天整天。
+// 约定：起始月 → 当月第一天 00:00:00；结束月 → 当月最后一天 23:59:59。
+// 注意：结束边界不能带 .999 —— 该值走 JSON 传后端，日期格式 yyyy-MM-dd HH:mm:ss 无毫秒位，会解析失败。
+// 前端把月份展开成具体 datetime 边界再发条件，后端按普通 datetime 比较即可，无需改后端。
+// 注：.999 适配 DATETIME(3)；若列是秒精度 DATETIME(0)，23:59:59 已含全天，.999 比较亦安全。
+const parseMonth = (month: string): { y: number, m: number } | null => {
+  if (!month) return null
+  const mm = String(month).trim().match(/^(\d{4})-?(\d{2})/)
+  if (!mm) return null
+  const y = +mm[1]
+  const m = +mm[2]
+  if (m < 1 || m > 12) return null
+  return { y, m }
+}
+/** 指定月第一天 00:00:00（入参 yyyyMM / yyyy-MM） */
+const monthStartBoundary = (month: string): string | undefined => {
+  const p = parseMonth(month)
+  if (!p) return undefined
+  return `${p.y}-${pad2(p.m)}-01 00:00:00`
+}
+/** 指定月最后一天 23:59:59（入参 yyyyMM / yyyy-MM） */
+const monthEndBoundary = (month: string): string | undefined => {
+  const p = parseMonth(month)
+  if (!p) return undefined
+  const maxDay = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate()
+  return `${p.y}-${pad2(p.m)}-${pad2(maxDay)} 23:59:59`
+}
+/** 月份区间 → [起始月第一天 00:00:00, 结束月最后一天 23:59:59]；任一非法返回 undefined */
+const monthRangeToDatetime = (startMonth: string, endMonth: string): [string, string] | undefined => {
+  const s = monthStartBoundary(startMonth)
+  const e = monthEndBoundary(endMonth)
+  return s && e ? [s, e] : undefined
 }
 
 const getTextWidth = (text: string, split = true, size = 1.6) => {
@@ -436,5 +486,8 @@ export {
   getTextWidth,
   resolveDynamicVariable,
   resolveConditionVariables,
-  normalizeNameSeparators
+  normalizeNameSeparators,
+  monthStartBoundary,
+  monthEndBoundary,
+  monthRangeToDatetime
 }

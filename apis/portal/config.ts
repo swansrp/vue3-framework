@@ -4,6 +4,13 @@ import { download, get, post, upload } from '@/framework/network/request'
 const buildGetApi = (url: string, domain: string = baseDomain) => buildGetApiByType(url, apiType.portal + '/admin', domain)
 const buildPostApi = (url: string, domain: string = baseDomain) => buildPostApiByType(url, apiType.portal + '/admin', domain)
 
+/**
+ * 条件动态变量清单（「插入变量」下拉唯一正源，后端 ConditionVariableUtil.catalog()）。
+ * 路径走 /admin/portal 前缀（type=''），与 table/filter 同映射；仅需登录。静默请求，失败由前端兜底表承接。
+ */
+export const getConditionVariableCatalog = () =>
+  get(buildGetApiByType('/admin/portal/condition-variable/catalog', ''), {}, {}, false, false) as Promise<any>
+
 export const getPortalList = (name: string, roleId: any, dataMode?: string, referenceId?: any) => get(buildGetApi('/list'), {
   name,
   roleId,
