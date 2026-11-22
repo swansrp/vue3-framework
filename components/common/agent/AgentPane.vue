@@ -17,7 +17,7 @@
         <span
           class="bidr-agent-pane__status"
           :class="`is-${statusClass}`"
-        >{{ statusText }}<template v-if="runningElapsedText"> · 已 {{ runningElapsedText }}</template></span>
+        >{{ statusText }}<template v-if="runningElapsedText"> · {{ runningElapsedText }}</template></span>
       </div>
       <div class="bidr-agent-pane__meta">
         <!-- 能力探活点已迁至 Composer（地面态发起前显示）：运行中看到探活没有决策价值
@@ -808,7 +808,7 @@ const totalText = computed(() => {
   return sec >= 1 ? fmtDuration(sec) : ''
 })
 
-/** 头部运行秒表：RUNNING（非只读回放）时状态文案后「· 已 X」，nowTick 每秒驱动；
+/** 头部运行秒表：RUNNING（非只读回放）时状态文案后「· X分X秒」，nowTick 每秒驱动；
  *  起点＝后端 startedAt（缺席回落挂载时刻 startupAt）；不足 1 秒不出 */
 const runningElapsedText = computed(() => {
   if (sessionStatus.value !== 'RUNNING' || props.readOnly) return ''
