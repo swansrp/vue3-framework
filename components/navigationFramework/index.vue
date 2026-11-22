@@ -2,6 +2,7 @@
   <top-header
     v-if="isNeedNav"
     class="top"
+    :left-nav-auto-hidden="!leftNavVisible"
     :minimal="isSubSystem"
     :chrome="chrome"
   >
@@ -26,6 +27,7 @@
     :style="{display: isNeedNav ? 'flex' : 'auto'}"
   >
     <left-nav
+      v-if="leftNavVisible"
       class="left-nav"
       :style="{display: isNeedNav ? 'block' : 'none'}"
     />
@@ -67,6 +69,7 @@ import LeftNav from '@/framework/components/navigationFramework/navMenu/leftNav/
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
 import { useNavigationStore } from '@/framework/store/navigation'
+import { useRouteStore } from '@/framework/store/route'
 import { useWindowStore } from '@/framework/store/window'
 
 const route = useRoute()
@@ -87,6 +90,26 @@ const showDefaultContent = computed(() => {
 const tabStore = useTabStore(pinia)
 const { isNeedNav } = toRefs(tabStore)
 const navigationStore = useNavigationStore(pinia)
+const routeStore = useRouteStore(pinia)
+
+// 左侧整列自动隐藏：当前顶级导航下只剩一个叶子入口时，整列只挂一个与顶部导航重复的入口
+// （点顶部导航即可直达），没有保留价值；唯一子项自身还有下级时保留整列——左侧才是它逐级
+// 展开的层级。菜单未加载／尚未进入业务路由时按原样展示，避免首屏一缩一展的抖动。
+// （2026-11-22 重放：U101 首版实现随 11-20 的 git stash 搁置未随版，iframe/full 两形态都缺）
+const leftNavVisible = computed(() => {
+  if (routeStore.dynamicRoute.length === 0) return true
+  if (!navigationStore.activeTopNavPath) return true
+  const topNode = routeStore.dynamicRoute.find(
+    node => node.path === navigationStore.activeTopNavPath
+  )
+  const children = topNode?.children ?? []
+  if (children.length > 1) return true
+  if (children.length === 1) {
+    const only = children[0]
+    return !!(only.children && only.children.length > 0)
+  }
+  return false
+})
 // 是否为子系统形态（极简顶部条 + 作用域左侧菜单）
 const isSubSystem = computed(() => navigationStore.layoutMode === 'subSystem')
 const store = useWindowStore(pinia)

@@ -3,22 +3,22 @@
     <!-- chrome=nav 变体：本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b —— 隐藏 logo/标题区 -->
     <div
       v-if="!isNavChrome"
-      :class="tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav'"
+      :class="[tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav', { 'title-inline': leftNavAutoHidden }]"
       :style="{
-        width: tabStore.isNeedLeftNav ? (tabStore.leftNavCollapsed ? '50px' : `${tabStore.leftNavWidth}px`) : '250px',
-        padding: tabStore.leftNavCollapsed ? '0' : '0 20px'
+        width: leftNavAutoHidden ? 'auto' : (tabStore.isNeedLeftNav ? (tabStore.leftNavCollapsed ? '50px' : `${tabStore.leftNavWidth}px`) : '250px'),
+        padding: leftNavAutoHidden ? '0 16px' : (tabStore.leftNavCollapsed ? '0' : '0 20px')
       }"
       class="top_title"
       title="点击返回工作台"
       @click="goHome"
     >
       <img
-        v-if="tabStore.isNeedLeftNav && !tabStore.leftNavCollapsed"
+        v-if="leftNavAutoHidden || (tabStore.isNeedLeftNav && !tabStore.leftNavCollapsed)"
         alt="公司标志"
         src="../../../../../public/icon.png"
         style="margin-right: 5px"
       />
-      <span v-if="!tabStore.leftNavCollapsed">{{ minimal ? subSystemTitle : projectName }}</span>
+      <span v-if="leftNavAutoHidden || !tabStore.leftNavCollapsed">{{ minimal ? subSystemTitle : projectName }}</span>
     </div>
     <top-nav
       v-if="!minimal"
@@ -445,7 +445,9 @@ import { validatePassword } from '@/framework/utils/passwordValidator'
 // chrome: 框架壳变体，缺省 full=完整壳（未传时行为零变化）；
 // nav=本地调试子系统形态——去 logo/用户头像/身份段/齿轮设置下拉，保留 topnav 导航区、
 // header-extra 插槽（epc 项目切换器经此注入）等导航件，正源 plan-local-debug-subsystem 3.2b
-const props = withDefaults(defineProps<{ minimal?: boolean, chrome?: 'full' | 'nav' }>(), { chrome: 'full' })
+// leftNavAutoHidden: 左侧整列因「只有一个叶子入口」自动隐藏——品牌区随之内联进顶栏，
+// 不再撑出与左列对齐的深色方块（否则左列消失后剩一条无依无靠的深色竖条）
+const props = withDefaults(defineProps<{ minimal?: boolean, chrome?: 'full' | 'nav', leftNavAutoHidden?: boolean }>(), { chrome: 'full' })
 // chrome=nav 变体判定：本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b
 const isNavChrome = computed(() => props.chrome === 'nav')
 
@@ -614,6 +616,23 @@ onMounted(() => {
   &:hover {
     filter: brightness(1.15);
   }
+}
+
+/* 左列自动隐藏（单入口顶级导航）：品牌区并入顶栏——透明底、内容宽，与顶部菜单连成一条。
+   文字改吃 --text-primary：--header-title-color 在 classic 等主题里是「深色品牌块上的白字」，
+   透明后白字落在浅色顶栏上就隐形了 */
+.top_title.title-inline {
+  background: transparent;
+  justify-content: flex-start;
+  color: var(--text-primary);
+}
+
+.top_title.title-inline::before {
+  display: none;
+}
+
+.top_title.title-inline:hover {
+  filter: none;
 }
 
 /* Logo区域右侧柔和分隔 - 用伪元素替代border-right，更精致 */
