@@ -8,7 +8,7 @@ import {
   RouteRecordRaw
 } from 'vue-router'
 
-import { getQueryObject } from '@/framework/network/utils'
+import { getQueryObject, normalizeGluedIdTokenInHash } from '@/framework/network/utils'
 import { enterFirstDynamicRoute, getFirstVisibleTopNav } from '@/framework/router/utils'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
@@ -72,6 +72,13 @@ const staticRoutes: Array<RouteRecordRaw> = [
     component: NotFound
   }
 ]
+
+// 🔴 SSO 回跳「粘连 token」修正必须早于 createRouter（2026-11-24 pre 真机）：
+// 平台 SSO 落地页把 `?id_token=` 拼在整串 target_url 末尾，token 会粘在 hash query 最后一个
+// 参数值上（#/app-frame?app=epc-ai-local?id_token=…）⇒ route.query.app 变脏、守卫再把它写回
+// 地址栏，页面报「未找到子系统注册信息」。这里在首屏路由解析前把粘连点拆成独立参数，
+// 之后走的仍是 checkLoginState 的既有 id_token 分支（换票＋清参）。详见 utils 注释。
+normalizeGluedIdTokenInHash()
 
 const router = createRouter({
   history: createWebHashHistory(),

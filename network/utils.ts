@@ -40,6 +40,47 @@ const normalizeSearch = (url?: string): string => {
     : search.replace(/\?/g, '&')
 }
 
+/**
+ * 平台 SSO 回跳的「粘连 token」修复（2026-11-24 pre 真机）。
+ *
+ * 主系统 SSO 落地页（portal.bidr.com.cn/sso）把 `?id_token=` 直接拼在 target_url 末尾，
+ * 而本族 SPA 是 hash 路由、参数在 `#` 之后 ⇒ token 会粘在 hash query 最后一个参数值上：
+ *   #/app-frame?app=epc-ai-local?id_token=eyJ...
+ * Vue Router 解析时 `?` 既不编码也不是分隔符 ⇒ route.query.app＝'epc-ai-local?id_token=eyJ...'，
+ * 守卫随后 next({ path, query }) 又把它原样写回地址栏：登录其实已成功（checkLoginState 靠
+ * getQueryObject 的 ?→& 兜底换到了票），页面却拿脏 appCode 查子系统注册表，报
+ * 「未找到子系统注册信息（appCode=epc-ai-local?id_token=…）」。
+ *
+ * 修法：路由解析前把粘连点拆成独立参数（`?id_token=` → `&id_token=`），之后走的仍是既有
+ * id_token 分支（换本地会话＋清参）。幂等；只认 id_token 这一个平台回跳固定键，不做全局
+ * `?`→`&` 替换（会误伤值里合法带 `?` 的参数）。
+ * 🔴 必须在 createRouter/首屏导航之前调用（见 framework/router/index.ts 模块顶部）。
+ */
+export const normalizeGluedIdTokenInHash = (): void => {
+  if (typeof window === 'undefined') return
+  const href = window.location.href
+  const hashIdx = href.indexOf('#')
+  if (hashIdx === -1) return
+  const hash = href.substring(hashIdx)
+  const firstQ = hash.indexOf('?')
+  const GLUED = '?id_token='
+  // 第一个 ? 之后才可能是粘连（第一个 ? 就是 id_token 自己＝本就合法，无需修）
+  if (firstQ === -1 || hash.indexOf(GLUED, firstQ + 1) === -1) return
+  let repaired = hash
+  let glued = repaired.indexOf(GLUED, firstQ + 1)
+  while (glued !== -1) {
+    // `?`→`&` 等长替换，下标不需要重算
+    repaired = repaired.substring(0, glued) + '&id_token=' + repaired.substring(glued + GLUED.length)
+    glued = repaired.indexOf(GLUED, firstQ + 1)
+  }
+  try {
+    // replaceState：不新增历史、不触发导航（路由随后按修好的 hash 解析）
+    window.history.replaceState(window.history.state, '', href.substring(0, hashIdx) + repaired)
+  } catch {
+    // 极端环境不支持时按原 URL 继续：换票仍靠 getQueryObject 的字符串兜底，只是 route.query 会脏
+  }
+}
+
 const parseQueryString = (search: string, options: ParseQueryOptions = {}): Record<string, string | string[]> => {
   const params: Record<string, string | string[]> = {}
   const splitComma = options.splitComma ?? true
