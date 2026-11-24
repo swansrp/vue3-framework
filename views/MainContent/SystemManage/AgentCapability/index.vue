@@ -82,7 +82,7 @@
           type="info"
           show-icon
           message="一场会话一行，记的是工具面定形那一刻"
-          description="工具面＝真的发给模型的那份清单，含引擎按上下文治理追加的回捞工具，不是业务代码里声明的那份；技能与提示词段由业务贡献者在同一线程现读，与那次装配同源。快照只记录本功能上线之后发起的会话，更早的历史会话查出来是空的。提示词原文与对话原文默认不下发，点「展开」才取，且服务端只认发起人本人与平台管理员。本页不提供增删改。"
+          description="工具面＝真的发给模型的那份清单，含引擎按上下文治理追加的回捞工具，不是业务代码里声明的那份；技能与提示词段由业务贡献者在同一线程现读，与那次装配同源。快照只记录本功能上线之后发起的会话，更早的历史会话查出来是空的。提示词原文、对话原文与会话进程原文默认不下发，点「展开」才取，且服务端只认发起人本人与平台管理员。本页不提供增删改。"
         />
 
         <div class="toolbar">
@@ -187,7 +187,7 @@
                   <span
                     v-else
                     class="desc"
-                  >这场会话没接历史对话层（纯后台型 agent 只落会话，不落对话）</span>
+                  >这场会话没有历史对话行（纯后台型 agent 不落对话档案）；内容点下方「展开会话进程」查看</span>
                 </a-descriptions-item>
                 <a-descriptions-item
                   label="业务标注"
@@ -294,7 +294,7 @@
 
               <div class="block">
                 <div class="block-title">
-                  <span>对话全文</span>
+                  <span>会话内容</span>
                   <a-button
                     v-if="current.conversationId"
                     size="small"
@@ -304,43 +304,83 @@
                   >
                     {{ convo ? '收起对话' : '展开对话' }}
                   </a-button>
-                </div>
-                <div
-                  v-if="!current.conversationId"
-                  class="desc"
-                >
-                  这场会话没接历史对话层（纯后台型 agent 只留装配快照，不留对话）
-                </div>
-                <div
-                  v-else-if="convoExpired"
-                  class="warn-line"
-                >
-                  对话原文已超过保留期——定位 id 永久留着，正文按保留天数滚窗，过期就是过期了。
-                </div>
-                <template v-else-if="convo">
-                  <div
-                    v-for="(message, idx) in convo.messages || []"
-                    :key="idx"
-                    class="convo-line"
+                  <a-button
+                    v-else
+                    size="small"
+                    :loading="expandLoading"
+                    class="block-action"
+                    @click.stop="toggleExpand('events')"
                   >
-                    <a-tag :color="message.role === 'user' ? 'blue' : 'green'">
-                      {{ message.role === 'user' ? '人' : '助手' }}
-                    </a-tag>
-                    <a-tag
-                      v-if="message.status && message.status !== 'done'"
-                      color="red"
-                    >
-                      {{ STATUS_LABELS[message.status] || message.status }}
-                    </a-tag>
-                    <div class="convo-body">
-                      {{ message.content }}
-                    </div>
-                  </div>
+                    {{ sessionEvents ? '收起会话进程' : '展开会话进程' }}
+                  </a-button>
+                </div>
+
+                <!-- 有历史对话行：对话档案（一问一答） -->
+                <template v-if="current.conversationId">
                   <div
-                    v-if="!(convo.messages || []).length"
+                    v-if="convoExpired"
+                    class="warn-line"
+                  >
+                    对话原文已超过保留期——定位 id 永久留着，正文按保留天数滚窗，过期就是过期了。
+                  </div>
+                  <template v-else-if="convo">
+                    <div
+                      v-for="(message, idx) in convo.messages || []"
+                      :key="idx"
+                      class="convo-line"
+                    >
+                      <a-tag :color="message.role === 'user' ? 'blue' : 'green'">
+                        {{ message.role === 'user' ? '人' : '助手' }}
+                      </a-tag>
+                      <a-tag
+                        v-if="message.status && message.status !== 'done'"
+                        color="red"
+                      >
+                        {{ STATUS_LABELS[message.status] || message.status }}
+                      </a-tag>
+                      <div class="convo-body">
+                        {{ message.content }}
+                      </div>
+                    </div>
+                    <div
+                      v-if="!(convo.messages || []).length"
+                      class="desc"
+                    >
+                      这条对话没有消息明细
+                    </div>
+                  </template>
+                </template>
+
+                <!-- 纯后台型会话：内容正源是会话事件流（core/llm 对每个会话无条件写入，业务 agent 零声明） -->
+                <template v-else>
+                  <div
+                    v-if="sessionEvents === null"
                     class="desc"
                   >
-                    这条对话没有消息明细
+                    这场会话没有历史对话行（纯后台型 agent 不落对话档案）——对话与工具过程都在会话事件流里，点「展开会话进程」看原样回放。
+                  </div>
+                  <div
+                    v-else-if="!sessionEvents.length"
+                    class="warn-line"
+                  >
+                    没读到会话事件流——会话已过保留期（按会话存储 TTL 滚动回收）或未留存。
+                  </div>
+                  <div
+                    v-else
+                    class="event-list"
+                  >
+                    <div
+                      v-for="ev in sessionEvents"
+                      :key="ev.seq"
+                      class="convo-line"
+                    >
+                      <a-tag :color="eventTagColor(ev.type)">
+                        {{ eventTypeLabel(ev.type) }}
+                      </a-tag>
+                      <div class="convo-body event-body">
+                        {{ eventText(ev) }}
+                      </div>
+                    </div>
                   </div>
                 </template>
               </div>
@@ -385,6 +425,40 @@ const STATUS_LABELS: Record<string, string> = {
   stopped: '已停止'
 }
 
+/** 会话事件类型 → 人话（与后端 AgentEvent 常量一一对应；未知类型原样露出，不猜） */
+const EVENT_LABELS: Record<string, string> = {
+  run_start: '发起',
+  round_start: '轮次',
+  tool_call: '调用',
+  tool_result: '返回',
+  llm_output: '模型',
+  log: '日志',
+  stage: '阶段',
+  paused: '暂停',
+  resumed: '恢复',
+  guidance: '补充',
+  question: '提问',
+  answered: '作答',
+  file_attached: '附件',
+  artifact: '产物',
+  confirmation: '确认',
+  finish: '完成',
+  error: '失败',
+  stopped: '停止'
+}
+
+const EVENT_COLORS: Record<string, string> = {
+  llm_output: 'green',
+  tool_call: 'blue',
+  tool_result: 'blue',
+  artifact: 'purple',
+  finish: 'green',
+  error: 'red',
+  stopped: 'orange',
+  guidance: 'cyan',
+  answered: 'cyan'
+}
+
 const columns = [
   { title: '能力包', key: 'name', dataIndex: 'name', width: 170 },
   { title: '来源模块', key: 'module', dataIndex: 'module', width: 120 },
@@ -413,11 +487,13 @@ const agentKey = ref<string>()
 const manifestLoading = ref(false)
 const queried = ref(false)
 
-// 两件重载荷（棒 2 增量）：默认不随装配单下发，展开才按 include 现取，切行走 watch 收回
+// 重载荷：默认不随装配单下发，展开才按 include 现取，切行走 watch 收回
 const expandLoading = ref(false)
 const promptText = ref('')
 const convo = ref<any>(null)
 const convoExpired = ref(false)
+/** 纯后台型会话的事件流；null＝未展开，[]＝展开但没读到（保留期外/未留存） */
+const sessionEvents = ref<any[] | null>(null)
 
 const tagLabel = (tag: string) => TAG_LABELS[tag] || tag
 const tagColor = (tag: string) => TAG_COLORS[tag] || 'default'
@@ -460,6 +536,58 @@ const toolHint = (tool: string) => {
     return '未入册：没有能力包登记这只工具'
   }
   return `${pkg.name}（${pkg.tags.map(tagLabel).join('·')}）`
+}
+
+const eventTypeLabel = (type: string) => EVENT_LABELS[type] || type || '事件'
+const eventTagColor = (type: string) => EVENT_COLORS[type] || 'default'
+
+const eventPayloadText = (payload: any): string => {
+  if (payload === null || payload === undefined) {
+    return ''
+  }
+  if (typeof payload === 'string') {
+    return payload
+  }
+  try {
+    return JSON.stringify(payload, null, 2)
+  } catch {
+    return String(payload)
+  }
+}
+
+/**
+ * 事件 → 一行可读文本：run_start 取首轮 instruction（会话发起参数在 payload.payload 里），
+ * tool_call 取工具名与入参，tool_result 取返回，其余直出；未知类型原样 JSON，不丢信息
+ */
+const eventText = (ev: any): string => {
+  const payload = ev?.payload
+  switch (ev?.type) {
+    case 'run_start': {
+      const inner = payload?.payload || {}
+      const instruction = String(inner.instruction ?? '').trim()
+      return instruction ? `用户指令：${instruction}` : `会话发起（${payload?.agentKey || ''}）`
+    }
+    case 'guidance':
+      return `用户补充：${eventPayloadText(payload)}`
+    case 'question':
+      return `AI 提问：${String(payload?.question ?? eventPayloadText(payload))}`
+    case 'answered':
+      return `用户作答：${eventPayloadText(payload)}`
+    case 'tool_call': {
+      const args = payload?.arguments
+      return `${payload?.tool_name || '工具'}：${typeof args === 'string' ? args : eventPayloadText(args ?? {})}`
+    }
+    case 'tool_result':
+      return eventPayloadText(payload?.output ?? payload)
+    case 'error':
+      return eventPayloadText(payload?.error ?? payload)
+    case 'artifact':
+      return `${payload?.name || '产物'}${payload?.format ? `（${payload.format}）` : ''}`
+    case 'file_attached':
+      return `${payload?.name || '附件'}`
+    default:
+      return eventPayloadText(payload)
+  }
 }
 
 const agentOptions = computed(() =>
@@ -548,13 +676,17 @@ const manifestPagination = computed(() => ({
  * 展开／收起原文（棒 2 增量）：已有就收起，没有才发一次带 include 的读请求。
  * 服务端只给发起人本人与平台管理员返回原文，被拒时框架信封直接报错、这里不留半成品状态
  */
-const toggleExpand = async (kind: 'prompt' | 'conversation') => {
+const toggleExpand = async (kind: 'prompt' | 'conversation' | 'events') => {
   if (kind === 'prompt' && promptText.value) {
     promptText.value = ''
     return
   }
   if (kind === 'conversation' && convo.value) {
     convo.value = null
+    return
+  }
+  if (kind === 'events' && sessionEvents.value) {
+    sessionEvents.value = null
     return
   }
   const id = current.value?.sessionId
@@ -567,6 +699,8 @@ const toggleExpand = async (kind: 'prompt' | 'conversation') => {
     const payload: any = resp?.payload || {}
     if (kind === 'prompt') {
       promptText.value = payload.promptText || ''
+    } else if (kind === 'events') {
+      sessionEvents.value = payload.sessionEvents || []
     } else {
       convo.value = payload.conversation || null
       // 有定位 id 却读不回正文＝原文已过保留期，与"这场会话压根没对话"是两件事
@@ -582,6 +716,7 @@ watch(current, () => {
   promptText.value = ''
   convo.value = null
   convoExpired.value = false
+  sessionEvents.value = null
 })
 
 const loadAgents = async () => {
@@ -711,6 +846,18 @@ onMounted(() => {
   flex: 1;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 会话进程：事件可能很多、单条返回可能很长，整块限高滚动，避免把装配单页撑成无限长 */
+.event-list {
+  max-height: 560px;
+  overflow: auto;
+}
+
+.event-body {
+  font-size: 12px;
+  max-height: 260px;
+  overflow: auto;
 }
 
 .line {
