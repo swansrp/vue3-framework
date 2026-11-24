@@ -616,7 +616,16 @@ export const useAgentConversation = (
     const id = sessionId.value
     if (!id) return Promise.reject(new Error('会话尚未开始'))
     return apiSessionResume(id, guidance).then(resp => {
-      if (myGen === gen) controlStatus.value = 'RUNNING'
+      if (myGen === gen) {
+        controlStatus.value = 'RUNNING'
+        // 终态续跑（2026-11-19「没有结束的概念」）：上一轮收口时 SSE 已随 done 收口、
+        // 轮询也停了——不重新挂通道，新一轮的事件与 askUser 问题卡全都收不到，界面只剩
+        // 乐观 RUNNING（2026-11-24 pre 实测「续跑后静默卡住」）。SSE 优先，失败内部回落轮询；
+        // PAUSED→RESUME 时通道仍在，不重复建连
+        if (!sse.value && !polling.value) {
+          void startStream()
+        }
+      }
       return resp
     })
   }
