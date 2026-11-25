@@ -1,6 +1,8 @@
 <template>
+  <!-- 顶栏只在 full 壳显示：nav＝嵌入态（墨枢 iframe），父系统已有 topnav＝唯一导航入口，
+       子应用再挂自家顶栏＝双 topnav（2026-11-25 用户拍板）；左栏保留供应用内逐级展开 -->
   <top-header
-    v-if="isNeedNav"
+    v-if="isNeedNav && chrome === 'full'"
     class="top"
     :left-nav-auto-hidden="!leftNavVisible"
     :minimal="isSubSystem"
@@ -76,8 +78,8 @@ import { useWindowStore } from '@/framework/store/window'
 
 const route = useRoute()
 
-// chrome: 框架壳变体（透传 TopHeader），缺省 full=完整壳、未传时行为零变化；
-// nav=本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b
+// chrome: 框架壳变体，缺省 full=完整壳、未传时行为零变化；
+// nav=嵌入态（墨枢 iframe）：无顶栏无页签、保留左栏，菜单权威源＝墨枢中央管控
 withDefaults(defineProps<{ chrome?: 'full' | 'nav' }>(), { chrome: 'full' })
 
 
