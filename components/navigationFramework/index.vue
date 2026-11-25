@@ -35,7 +35,9 @@
       class="content-body"
       :style="{ backgroundColor: isNeedNav ? 'var(--bg-base)' : 'transparent'}"
     >
-      <history-tab v-if="isNeedNav && !showDefaultContent" />
+      <!-- 路由页签只在 full 壳显示：nav＝嵌入态（墨枢 iframe），菜单权威源＝墨枢中央管控，
+           子应用内再挂页签＝与父页签双权威错位（2026-11-25 用户拍板） -->
+      <history-tab v-if="isNeedNav && !showDefaultContent && chrome === 'full'" />
       <!-- 默认内容插槽：当访问根路径且有 default-content 插槽时显示 -->
       <slot
         v-if="showDefaultContent"
