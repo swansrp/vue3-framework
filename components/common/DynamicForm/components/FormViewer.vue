@@ -48,7 +48,8 @@ interface Props {
   
   // 方法
   getGroupRows: (sectionInstanceId: string, groupId: string) => any[]
-  getGroupAttributes: (sectionId: string, groupId: string) => any[]
+  // sectionId 允许 number: 递归渲染时上层实例 id 可能是数字
+  getGroupAttributes: (sectionId: string | number, groupId: string) => any[]
   translateDictValue: (dictName: string, value: string) => Promise<string>
   getSectionProgress?: (instanceId: string) => SectionProgress
   getMutualExclusiveGroups?: (sectionId: string) => MutualExclusiveGroup[]
@@ -712,7 +713,7 @@ defineExpose({
                         :placeholder="`请选择${attribute.label}`"
                         :disabled="isReadonly"
                         style="width: 100%"
-                        @update:value="updateValue"
+                        @update:value="(v: any) => updateValue(v)"
                       />
                     </slot>
                   </template>
@@ -751,7 +752,7 @@ defineExpose({
                         :max-tag-count="2"
                         :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
                         style="width: 100%"
-                        @update:value="updateValue"
+                        @update:value="(v: any) => updateValue(v)"
                       />
                     </slot>
                   </template>
@@ -766,7 +767,7 @@ defineExpose({
                       tree-default-expand-all
                       tree-node-filter-prop="label"
                       style="width: 100%"
-                      @update:value="updateValue"
+                      @update:value="(v: any) => updateValue(v)"
                     />
                   </template>
 
@@ -783,7 +784,7 @@ defineExpose({
                       :max-tag-count="2"
                       :max-tag-placeholder="(omittedValues: any[]) => `+${omittedValues.length}...`"
                       style="width: 100%"
-                      @update:value="updateValue"
+                      @update:value="(v: any) => updateValue(v)"
                     />
                   </template>
                 </GroupForm>

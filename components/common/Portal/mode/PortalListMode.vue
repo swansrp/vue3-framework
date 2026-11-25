@@ -142,7 +142,8 @@ const prop = defineProps<{
   config: TableConfigType,
   titleColumn: ColumnType,
   dataSource: Array<any>,
-  paginationChange: Function,
+  // 分页回调: antd Pagination @change 的签名(当前页, 每页条数)
+  paginationChange: (page: number, pageSize: number) => void,
   rowSelection: any,
   singleSelect?: boolean,
   rowAllowSelect?: (record: any) => boolean

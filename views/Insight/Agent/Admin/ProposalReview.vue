@@ -175,7 +175,8 @@ const loadProposals = () => {
     })
 }
 
-const onSelectChange = (keys: number[]) => {
+// antd 行选择回调给 Key[], 本表主键是数字/id 混用 ⇒ 收成宽松数组后存
+const onSelectChange = (keys: any[], _rows?: any[]) => {
   selectedKeys.value = keys
 }
 

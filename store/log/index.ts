@@ -12,7 +12,8 @@ export const useLogStore = defineStore('log', {
       moduleId: JSON.parse(localStorageMethods.getLocalStorage(MODULE_ID, JSON.stringify([]))),
       envType: localStorageMethods.getLocalStorage(ENV_TYPE, 'prod'),
       logLevel: JSON.parse(localStorageMethods.getLocalStorage(LOG_LEVEL, JSON.stringify(['DEBUG', 'INFO', 'WARN', 'ERROR']))),
-      timeRange: [null as Dayjs | null, null as Dayjs | null]
+      // 范围值由 a-range-picker 直接 v-model 写入(元组/undefined 两种形态), 读侧只做空判断与格式化
+      timeRange: undefined as any
     }
   },
   getters: {

@@ -635,7 +635,7 @@ const autoSaveSortOrder = async () => {
         }
         updatePromises.push(
           systemBizDictUpdateEnterpriseDict(
-            { bizId: bizId as string | null },
+            { bizId: bizId as string },
             updatedItem
           )
         )

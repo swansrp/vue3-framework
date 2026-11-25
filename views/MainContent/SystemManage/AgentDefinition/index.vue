@@ -421,24 +421,27 @@ const packageColor = (name: string) => {
 
 const REGISTER_ONLY_METAS = COLUMN_METAS.filter(meta => !meta.runtime)
 
-const allRegisterOnlyUnset = (record: AgentDefinitionView) =>
+// 表格 record 是 Record<string, any>(a-table 插槽口径), 与 AgentDefinitionView 结构兼容, 取参放宽
+const allRegisterOnlyUnset = (record: any) =>
   REGISTER_ONLY_METAS.every(meta => isUnset((record as any)[meta.key]))
 
 /** 四栏压成一行小徽标：只露"动过的那几栏"，都未启用时给一句 muted，免得五列各占一行读不动 */
-const registerOnlyChips = (record: AgentDefinitionView) => {
+const registerOnlyChips = (record: any) => {
   const chips: { key: string, label: string, state: string, color: string, hint: string }[] = []
   REGISTER_ONLY_METAS.forEach(meta => {
     const names = (record as any)[meta.key] as SelectionNames
     if (isUnset(names)) {
       return
     }
-    const empty = !names.length
+    // isUnset 只是普通判断, 这里再收敛一次非空(isUnset 为 false 时 names 必有值)
+    const list = names || []
+    const empty = !list.length
     chips.push({
       key: meta.key,
       label: meta.label,
-      state: empty ? '全不给' : `${names.length} 项`,
+      state: empty ? '全不给' : `${list.length} 项`,
       color: empty ? 'red' : 'default',
-      hint: empty ? `${meta.label}：勾了零个＝这一维登记过的全不给` : `${meta.label}：${names.join('、')}`
+      hint: empty ? `${meta.label}：勾了零个＝这一维登记过的全不给` : `${meta.label}：${list.join('、')}`
     })
   })
   return chips
@@ -481,7 +484,7 @@ const load = async () => {
   }
 }
 
-const openEdit = (record: AgentDefinitionView) => {
+const openEdit = (record: any) => {
   current.value = record
   const state = emptyDraft()
   COLUMN_METAS.forEach(meta => {

@@ -91,6 +91,46 @@
             <CloseCircleFilled /> 检测到语法错误
           </span>
         </a-tooltip>
+        <a-dropdown
+          v-model:open="portalMenuOpen"
+          :trigger="['click']"
+          :disabled="!props.dataset?.id || writebackLoading"
+          @open-change="handlePortalMenuOpenChange"
+        >
+          <a-button
+            size="small"
+            :loading="writebackLoading"
+          >
+            回写列名
+            <DownOutlined />
+          </a-button>
+          <template #overlay>
+            <a-menu @click="handlePortalWriteback">
+              <a-menu-item
+                v-if="portalLoading"
+                key="__loading"
+                disabled
+              >
+                加载Portal...
+              </a-menu-item>
+              <template v-else>
+                <a-menu-item
+                  v-for="portal in portalOptions"
+                  :key="portal.value"
+                >
+                  {{ portal.label }}
+                </a-menu-item>
+                <a-menu-item
+                  v-if="!portalOptions.length"
+                  key="__empty"
+                  disabled
+                >
+                  暂无Portal配置
+                </a-menu-item>
+              </template>
+            </a-menu>
+          </template>
+        </a-dropdown>
         <a-button
           size="small"
           @click="handleAddAsAliases"
@@ -305,9 +345,9 @@
 </template>
 
 <script setup lang="ts">
-import { CheckCircleFilled, CloseCircleFilled, HistoryOutlined, LoadingOutlined, SaveOutlined } from '@ant-design/icons-vue'
+import { CheckCircleFilled, CloseCircleFilled, DownOutlined, HistoryOutlined, LoadingOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import type { FormInstance } from 'ant-design-vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 // @ts-ignore
 import BAceEditor from 'bin-editor-next'
 import 'brace/ext/language_tools'
@@ -321,7 +361,8 @@ import { computed, onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue
 import type { DatasetInfo, DatasetTableInfo, DatasetColumnInfo } from '../types'
 
 import { listDataSourceNames } from '@/framework/apis/dataSource'
-import { getSql, getSqlSnapshot, getSqlSnapshotList, parseSql, parseSqlAndSave } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
+import { getPortalList } from '@/framework/apis/portal/config'
+import { getSql, getSqlSnapshot, getSqlSnapshotList, parseSql, parseSqlAndSave, writeBackPortalColumnNames } from '@/framework/views/MainContent/dynamic/apis/datasetConfigController'
 
 const props = defineProps<{
   // null 表示新建模式
@@ -344,6 +385,14 @@ const previewResult = ref<{ tables: DatasetTableInfo[], columns: DatasetColumnIn
 const editorKey = ref(0)
 // 避免快速切换dataset时，旧请求回写覆盖新内容
 const sqlLoadSeq = ref(0)
+// Portal列名回写：下拉按当前dataset拉取 DATASET 模式、默认配置角色(0) 的Portal
+const portalMenuOpen = ref(false)
+const portalLoading = ref(false)
+const portalLoadFailed = ref(false)
+const portalOptions = ref<Array<{ label: string, value: string }>>([])
+const writebackLoading = ref(false)
+// 最近一次从后端载入的SQL（含格式化），用于判断编辑器是否有未保存修改
+const lastLoadedSql = ref('')
 
 const joinTypeMap: Record<string, string> = {
   '0': '内联 (INNER)',
@@ -540,6 +589,18 @@ const formatSqlText = (sql: string): string => {
     console.warn('SQL自动格式化失败，按原文展示:', error)
     return sql
   }
+}
+
+// 后端返回的SQL（含备注注释）统一走这里回显：拼回常驻条件并刷新ace
+const applyServerSql = (sql: string | undefined, baseFilter?: string) => {
+  if (typeof sql !== 'string') return false
+  // 外层 WHERE 不进表/列配置（保存时转存了常驻条件），回显时随响应拼回去，
+  // 再次保存才不会把已转存的常驻条件清掉
+  const where = baseFilter ? `\nWHERE ${baseFilter}` : ''
+  formState.sql = formatSqlText(sql + where)
+  lastLoadedSql.value = formState.sql
+  editorKey.value++
+  return true
 }
 
 // ==================== 一键加 AS ====================
@@ -773,6 +834,8 @@ watch(() => props.dataset, (dataset) => {
     formState.remark = ''
     formState.dataSource = 'master'
     formState.sql = ''
+    lastLoadedSql.value = ''
+    portalOptions.value = []
     editorKey.value++
     return
   }
@@ -784,6 +847,8 @@ watch(() => props.dataset, (dataset) => {
   formState.remark = dataset.remark || ''
   formState.dataSource = dataset.dataSource || 'master'
   formState.sql = ''
+  lastLoadedSql.value = ''
+  portalOptions.value = []
   editorKey.value++
 
   if (dataset.id) {
@@ -793,13 +858,8 @@ watch(() => props.dataset, (dataset) => {
         if (curSeq !== sqlLoadSeq.value) return
         const sql = res?.payload?.sql
         if (res?.status?.code === 0 && typeof sql === 'string') {
-          // 外层 WHERE 不进表/列配置（保存时转存了常驻条件），回显时随 /sql 响应拼回去，
-          // 再次保存才不会把已转存的常驻条件清掉（必须同源取，列表接口不带该字段）
-          const baseFilter = res?.payload?.baseFilter
-          const where = baseFilter ? `\nWHERE ${baseFilter}` : ''
-          // 点开自动格式化展示
-          formState.sql = formatSqlText(sql + where)
-          editorKey.value++
+          // 常驻条件必须与 SQL 同源取（列表接口不带该字段），否则再次保存会被清掉
+          applyServerSql(sql, res?.payload?.baseFilter)
         }
       })
       .catch(() => {
@@ -871,6 +931,101 @@ const handleAddAsAliases = () => {
   } catch (error) {
     console.error('加AS失败:', error)
     message.error('加AS失败，请检查SQL语法')
+  }
+}
+
+// ==================== Portal 列名回写 ====================
+const loadPortalOptions = async (datasetId: number) => {
+  portalLoading.value = true
+  portalLoadFailed.value = false
+  try {
+    const res = await getPortalList('', '0', 'DATASET', datasetId)
+    if (res?.status?.code === 0) {
+      portalOptions.value = (res.payload || []).map((item: any) => ({
+        label: item.label || item.value,
+        value: item.value,
+      }))
+    } else {
+      portalOptions.value = []
+      portalLoadFailed.value = true
+    }
+  } catch (error) {
+    console.error('加载Portal列表失败:', error)
+    portalOptions.value = []
+    portalLoadFailed.value = true
+  } finally {
+    portalLoading.value = false
+  }
+}
+
+const handlePortalMenuOpenChange = async (open: boolean) => {
+  if (!open) return
+  const datasetId = props.dataset?.id
+  if (!datasetId) {
+    portalMenuOpen.value = false
+    message.warning('请先保存Dataset，再回写列名')
+    return
+  }
+  await loadPortalOptions(datasetId)
+  if (!portalOptions.value.length) {
+    portalMenuOpen.value = false
+    if (portalLoadFailed.value) {
+      message.error('Portal列表加载失败')
+    } else {
+      message.info('该Dataset还没有Portal配置，请先到「Portal配置」页签生成')
+    }
+  }
+}
+
+const handlePortalWriteback = async ({ key }: { key: string | number }) => {
+  portalMenuOpen.value = false
+  if (portalLoading.value || writebackLoading.value) return
+  const portal = portalOptions.value.find((item) => item.value === String(key))
+  const datasetId = props.dataset?.id
+  if (!portal || !datasetId) return
+
+  // 回写重建设用的是已保存配置；编辑器有未保存修改时先确认，避免静默覆盖
+  if (lastLoadedSql.value && formState.sql !== lastLoadedSql.value) {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Modal.confirm({
+        title: '当前SQL有未保存的修改',
+        content: '回写会用已保存的Dataset配置重建SQL，编辑器里未保存的内容将被替换。是否继续？',
+        okText: '继续回写',
+        cancelText: '取消',
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+      })
+    })
+    if (!confirmed) return
+  }
+
+  writebackLoading.value = true
+  try {
+    const res = await writeBackPortalColumnNames({
+      datasetId,
+      portalName: portal.value,
+    }, false, false, true)
+    if (res?.status?.code !== 0) return
+
+    const payload: any = res.payload || {}
+    if (!applyServerSql(payload.sql, payload.baseFilter)) {
+      message.error('回写成功但SQL回显失败，请刷新页面查看')
+      return
+    }
+
+    const updated = payload.updatedCount || 0
+    const unmatched = payload.unmatchedCount || 0
+    const unmatchedSuffix = unmatched > 0 ? `，${unmatched} 列未匹配` : ''
+    const portalName = payload.portalDisplayName || portal.label
+    if (updated > 0) {
+      message.success(`已从「${portalName}」回写 ${updated} 列列名${unmatchedSuffix}`)
+    } else {
+      message.info(`「${portalName}」没有需要回写的列名（${payload.unchangedCount || 0} 列已一致${unmatchedSuffix}）`)
+    }
+  } catch (error: any) {
+    if (error?.message) message.error(error.message)
+  } finally {
+    writebackLoading.value = false
   }
 }
 

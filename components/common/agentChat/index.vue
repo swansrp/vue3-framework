@@ -417,8 +417,6 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, ref, watch } from 'vue'
 
-import AgentConclusionCard from '../agent/AgentConclusionCard.vue'
-import AskDecisionCard from '../agent/AskDecisionCard.vue'
 import AgentProcessArchives from './AgentProcessArchives.vue'
 import AgentProcessFlow from './AgentProcessFlow.vue'
 import {
@@ -426,6 +424,8 @@ import {
 } from './types'
 import { useAgentSession } from './useAgentSession'
 import { useStickScroll } from './useStickScroll'
+import AgentConclusionCard from '../agent/AgentConclusionCard.vue'
+import AskDecisionCard from '../agent/AskDecisionCard.vue'
 
 import {
   sessionAnswer, sessionPause, sessionRate, sessionResolveConfirmation, sessionResume, sessionStop

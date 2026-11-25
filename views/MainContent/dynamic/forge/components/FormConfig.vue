@@ -341,7 +341,9 @@ const handleCancel = () => {
   formRef.value?.resetFields()
 }
 
-const handleColumnChange = (columnId: string) => {
+// select 的 change 值是 SelectValue(可能出现数组/undefined), 这里统一收成字符串列 id
+const handleColumnChange = (value: any) => {
+  const columnId = value == null ? '' : String(value)
   const selectedColumn = columnList.value.find(col => col.id === columnId)
   if (selectedColumn && !formData.id) {
     // 只在新增时自动填充标签

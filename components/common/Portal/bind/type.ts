@@ -39,5 +39,9 @@ export type PortalBindType = {
   /**
    * 递归tab页
    */
-  bindTabs?: Array<PortalBindType>
+  bindTabs?: Array<PortalBindType>,
+  /**
+   * 是否展示绑定区(字典页配置用; 缺省=展示)
+   */
+  showBind?: boolean
 }

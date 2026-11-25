@@ -141,6 +141,7 @@ const emit = defineEmits<{
    */
   (e: 'afterClose'): void
 }>()
+// 初值补齐 startTime/estimatedTime(UploadModalType 必填; 未开始时为 0)
 const config = reactive({
   show: false,
   type: 'INIT',
@@ -149,7 +150,9 @@ const config = reactive({
   total: 0,
   loaded: 0,
   percent: 0,
-  failedReason: []
+  failedReason: [],
+  startTime: 0,
+  estimatedTime: 0
 } as UploadModalType)
 const stepTitle = ['上传', '校验', '保存']
 let needRefresh = false

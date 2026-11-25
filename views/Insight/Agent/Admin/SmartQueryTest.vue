@@ -197,7 +197,7 @@
             <!-- metric → 图表（复用 chatbi 渲染容器，取数走 /advanced/statistic） -->
             <chat-bi-chart
               v-if="(msg as TestMsg).charts"
-              :charts="(msg as TestMsg).charts"
+              :charts="(msg as TestMsg).charts || []"
               :portal-config="(msg as TestMsg).portalConfig"
               :grid-columns="12"
             />

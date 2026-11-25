@@ -556,12 +556,13 @@ const isSortDesc = (alias: string) => {
   return !!sort && sort.property === alias && sort.type === 1
 }
 
-/** s-table 原生 sorter 的提示文案正源(ConfigProvider 注入), 不另起一套中文 */
+/** s-table 原生 sorter 的提示文案正源(ConfigProvider 注入), 不另起一套中文;
+ *  useLocaleReceiver 恒以 en_US.Table 打底并与 ConfigProvider 合并 ⇒ 运行时一定有值(类型声明上是可选) */
 const [tableLocale] = useLocaleReceiver('Table')
 
 /** 悬停提示与原生排序列同语义: 描述"下一次点击会发生什么" */
 const sortTip = (alias: string) => {
-  const locale = tableLocale.value
+  const locale = tableLocale.value!
   if (isSortDesc(alias)) {
     return locale.cancelSort
   }
@@ -1177,8 +1178,11 @@ const portalColumns = computed(() => {
         // 父链拼接(自外向内): 透视列父链 → 透视列名(多度量时叶子让位给度量名, 补进链里保层级) → 度量父链;
         // 任一层配了路径就走壳列通路, 全空才平铺并让 displayGroupName 接管单层分组
         const useExplicitPath = gp.length > 0 || mp.length > 0
+        // 透视列名段: itemName/itemValue 类型上均可选(真实透视列必有 itemValue), 都空就不出这一段,
+        // 不往父链里塞空串层级(空段会被壳列当成一层空分组)
+        const pvLabel = pv.itemName || pv.itemValue || ''
         const path = useExplicitPath
-          ? [...gp, ...(multiMeasure ? [pv.itemName || pv.itemValue] : []), ...mp]
+          ? [...gp, ...(multiMeasure && pvLabel ? [pvLabel] : []), ...mp]
           : []
         colItems.push({
           path,
@@ -1534,26 +1538,26 @@ const nextDrillChain = computed(() => {
 })
 
 /**
- * 解析整表钻取目标表格配置: 未配 / 指向自己 / 已在钻取链上(防环) / 目标非透视模式 ⇒ null(回退本表明细行)
+ * 按表格编码解析钻取目标配置: 未配 / 指向自己 / 已在钻取链上(防环) / 目标非透视模式 ⇒ null(回退本表明细行)
  * 目标配置按编码缓存: 同一抽屉链反复钻同一张表不重复请求
  */
-const resolveDrillTarget = async (): Promise<PortalTableVO | null> => {
-  const code = props.portalTableConfig.drillTableCode?.trim()
+const resolveDrillTargetByCode = async (code?: string): Promise<PortalTableVO | null> => {
+  const targetCode = code?.trim()
   const selfCode = props.portalTableConfig.tableCode || ''
-  if (!code || code === selfCode || props.drillChain.includes(code)) {
+  if (!targetCode || targetCode === selfCode || props.drillChain.includes(targetCode)) {
     return null
   }
-  const cached = drillTargetCache.get(code)
+  const cached = drillTargetCache.get(targetCode)
   if (cached) {
     return cached
   }
   try {
-    const res = await getPortalTableByCode(code)
+    const res = await getPortalTableByCode(targetCode)
     const target = res?.payload?.[0]
     if (!target || target.pivotMode !== '1') {
       return null
     }
-    drillTargetCache.set(code, target)
+    drillTargetCache.set(targetCode, target)
     return target
   } catch (e) {
     console.error('加载钻取目标表格配置失败:', e)
@@ -1562,12 +1566,31 @@ const resolveDrillTarget = async (): Promise<PortalTableVO | null> => {
 }
 
 /**
+ * 单元格列级钻取目标编码: 透视列 > 度量列(同一格两处都配了时以透视列为准), 空=跟随整表配置
+ */
+const cellDrillCode = (pv?: PortalPivotColumnVO, measure?: PivotMeasureVO): string =>
+  pv?.drillTableCode?.trim() || measure?.drillTableCode?.trim() || ''
+
+/**
+ * 解析本格的钻取目标: 列级配置优先(失效/成环/目标非透视 ⇒ 继续回退), 最后回落整表 drillTableCode;
+ * 全部分支都解析不到 ⇒ null(回退本表明细行)
+ */
+const resolveDrillTarget = async (columnCode?: string): Promise<PortalTableVO | null> => {
+  const byColumn = await resolveDrillTargetByCode(columnCode)
+  if (byColumn) {
+    return byColumn
+  }
+  return resolveDrillTargetByCode(props.portalTableConfig.drillTableCode)
+}
+
+/**
  * 钻取统一出口: 解析目标后开抽屉。目标是透视报表时:
  * ① 并入其常驻条件(宿主 table.vue withFixedCondition 的等价腿, 抽屉内没有宿主替它合并, 含 ${var} 解析)
  * ② 标题后缀由"明细"改"下级报表"(内容已是另一张透视表而非明细行)
+ * columnCode: 本格的列级钻取目标(透视列/度量配置), 空=只用整表配置
  */
-const finishDrill = async () => {
-  const target = await resolveDrillTarget()
+const finishDrill = async (columnCode?: string) => {
+  const target = await resolveDrillTarget(columnCode)
   drillTarget.value = target
   if (target) {
     const fixedParsed = parseConditionJsonObject(target.fixedCondition, '钻取目标常驻条件')
@@ -1727,11 +1750,14 @@ const buildGroupLabel = (rawRow: any) => {
   return visibleGroupFields.value.map((f) => String(translate(f, rawRow?.[f]) ?? '')).filter(Boolean).join(' / ')
 }
 
-/** 点击度量单元格: 打开底部抽屉展示该单元格对应的明细数据(本表配了钻取目标时改挂下级透视报表) */
+/** 点击度量单元格: 打开底部抽屉展示该单元格对应的明细数据(本格配了钻取目标时改挂下级透视报表) */
 const openDrill = async (record: any, index: number, key: string) => {
   // 原始行必须取 record 携带的引用: sortedRows 本地排序后渲染行序 ≠ rows 后端返回序,
   // 按渲染 index 反查 rows 会取错行(点 level 1 的单元格, 钻取条件却拼成 level 3)
   const rawRow = record?.[RAW_ROW_REF_KEY]
+  // 列级钻取目标: 单格分支按「透视列 > 度量」取; 组内小计/合计列跨多透视列、透视列口径不唯一,
+  // 但所属度量是唯一的 ⇒ 只认度量配的钻取目标, 再回落整表
+  let columnCode = ''
   if (isPivotInRow.value) {
     // pivotRow 模式: key=度量输出键, 透视列从熔接行携带的字段反查
     const measure = measures.value.find(m => measureKey(m) === key)
@@ -1748,7 +1774,7 @@ const openDrill = async (record: any, index: number, key: string) => {
       const pathLabel = pathKeys.map((k) => String(record?.[k] || '')).filter(Boolean).join(' / ')
       drillTitle.value = `${[pathLabel, measureSingleLine(measure.field, measure.label)].filter(Boolean).join(' · ')} - 组内明细`
       drillCondition.value = { conditionList: buildSubtotalDrillCondition(rawRow, runPvs, measure), andOr: '0' }
-      await finishDrill()
+      await finishDrill(cellDrillCode(undefined, measure))
       return
     }
     const itemValue = record?.[PIVOT_VALUE_COL]
@@ -1758,6 +1784,7 @@ const openDrill = async (record: any, index: number, key: string) => {
     }
     drillTitle.value = buildDrillTitle(pv, itemValue, measure, measure.field, '明细数据')
     drillCondition.value = { conditionList: buildDrillCondition(rawRow, pv, measure), andOr: '0' }
+    columnCode = cellDrillCode(pv, measure)
   } else if (isMeasureInRow.value) {
     // row 模式: key=pv.itemValue(或合计列), index是熔接后的行号, 仅用于定位当前度量
     const measureCount = measures.value.length
@@ -1771,7 +1798,7 @@ const openDrill = async (record: any, index: number, key: string) => {
       // 无行维度时组标签为空, 过滤后只剩度量名, 标题不出现悬空的 " · " 前缀
       drillTitle.value = `${[buildGroupLabel(rawRow), measureSingleLine(measure.field, measure.label)].filter(Boolean).join(' · ')} - 全部分类明细`
       drillCondition.value = { conditionList: buildDrillCondition(rawRow, undefined, measure), andOr: '0' }
-      await finishDrill()
+      await finishDrill(cellDrillCode(undefined, measure))
       return
     }
     const pv = effectivePivotColumns.value.find(p => p.itemValue === key)
@@ -1780,6 +1807,7 @@ const openDrill = async (record: any, index: number, key: string) => {
     }
     drillTitle.value = `${pv.itemName || key} · ${measureSingleLine(measure.field, measure.label)} - 明细数据`
     drillCondition.value = { conditionList: buildDrillCondition(rawRow, pv, measure), andOr: '0' }
+    columnCode = cellDrillCode(pv, measure)
   } else {
     // col 模式: key=${itemValue}__${度量输出键}
     const sepIdx = key.indexOf('__')
@@ -1792,12 +1820,15 @@ const openDrill = async (record: any, index: number, key: string) => {
     }
     drillTitle.value = buildDrillTitle(pv, itemValue, measure, measureField, '明细数据')
     drillCondition.value = { conditionList: buildDrillCondition(rawRow, pv, measure), andOr: '0' }
+    columnCode = cellDrillCode(pv, measure)
   }
-  await finishDrill()
+  await finishDrill(columnCode)
 }
 
-/** 点击汇总行单元格: 只拼 ①+②(不带行维度), 即该透视列的全部明细(本表配了钻取目标时改挂下级透视报表) */
+/** 点击汇总行单元格: 只拼 ①+②(不带行维度), 即该透视列的全部明细(本格配了钻取目标时改挂下级透视报表) */
 const openSummaryDrill = async (key: string) => {
+  // 列级钻取目标同单元格口径: pivotRow 总计只对应度量, row 布局汇总只对应透视列, col 布局两者都有
+  let columnCode = ''
   if (isPivotInRow.value) {
     // pivotRow 模式: 汇总=该度量跨全部透视值的总计, 不对应单一透视列 ⇒ 不带②, 拼 ①+③(+零值)
     const measure = measures.value.find(m => measureKey(m) === key)
@@ -1814,6 +1845,7 @@ const openSummaryDrill = async (key: string) => {
       summaryConditionList.push(zeroCond)
     }
     drillCondition.value = { conditionList: summaryConditionList, andOr: '0' }
+    columnCode = cellDrillCode(undefined, measure)
   } else if (isMeasureInRow.value) {
     // row 模式: key=pv.itemValue
     const pv = effectivePivotColumns.value.find(p => p.itemValue === key)
@@ -1823,6 +1855,7 @@ const openSummaryDrill = async (key: string) => {
     drillTitle.value = `${pv.itemName || key} - 全部明细`
     // row 模式下汇总行单元格不对应单一度量, 无法确定按哪个度量列滤零, 故不附加零值条件
     drillCondition.value = { conditionList: [...props.condition, ...parsePivotColumnCondition(pv)], andOr: '0' }
+    columnCode = cellDrillCode(pv, undefined)
   } else {
     // col 模式: key=${itemValue}__${度量输出键}
     const sepIdx = key.indexOf('__')
@@ -1844,12 +1877,15 @@ const openSummaryDrill = async (key: string) => {
       summaryConditionList.push(zeroCond)
     }
     drillCondition.value = { conditionList: summaryConditionList, andOr: '0' }
+    columnCode = cellDrillCode(pv, measure)
   }
-  await finishDrill()
+  await finishDrill(columnCode)
 }
 
 // 动态插槽名(bodyCell_${key})无法被 vue-tsc 推断, 回退为全部插槽类型联合, 取参用 any 封装
 const cellRecord = (slot: any) => slot?.record
+/** 表头插槽(headerCell_${key})同理: 标题即该列表头 title, 取参用 any 封装 */
+const headerCellTitle = (slot: any): string => String(slot?.title ?? '')
 const cellIndex = (slot: any) => slot?.index
 const cellValue = (slot: any) => slot?.value
 /** 统计格对齐：自定义 bodyCell 插槽会整格接管，不显式写对齐就退回默认左对齐（口径取列配置的 contentAlign） */
@@ -1920,7 +1956,7 @@ onMounted(() => {
       <template
         v-for="key in headerSlotKeys"
         :key="`header-${key}`"
-        #[`headerCell_${key}`]="{ title }"
+        #[`headerCell_${key}`]="headerSlot"
       >
         <span
           :class="['pivot-sort-header', { 'pivot-sort-static': !isSortableHeader(key) && !isPivotRowMeasureKey(key) }]"
@@ -1929,18 +1965,18 @@ onMounted(() => {
           <span class="pivot-sort-label">
             <!-- 标题含 \n(含字面)时逐行渲染, 与 Portal 普通表头同语义; 单行保持原有整串截断 -->
             <span
-              v-if="headerTitleLines(title).length > 1"
+              v-if="headerTitleLines(headerCellTitle(headerSlot)).length > 1"
               class="pivot-sort-title pivot-sort-title-multi"
             >
               <div
-                v-for="(line, i) in headerTitleLines(title)"
+                v-for="(line, i) in headerTitleLines(headerCellTitle(headerSlot))"
                 :key="i"
               >{{ line }}</div>
             </span>
             <span
               v-else
               class="pivot-sort-title"
-            >{{ title }}</span>
+            >{{ headerCellTitle(headerSlot) }}</span>
             <a-tooltip
               v-if="measureDesc(key)"
               :title="measureDesc(key)"

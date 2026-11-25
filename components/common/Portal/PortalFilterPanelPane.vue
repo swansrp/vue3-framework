@@ -29,8 +29,12 @@
             v-model:value="form.position"
             :disabled="!form.enabled"
           >
-            <a-radio value="top">表格上方</a-radio>
-            <a-radio value="left">左侧</a-radio>
+            <a-radio value="top">
+              表格上方
+            </a-radio>
+            <a-radio value="left">
+              左侧
+            </a-radio>
           </a-radio-group>
         </a-form-item>
         <a-form-item label="默认展开">
@@ -44,8 +48,12 @@
             v-model:value="form.andOr"
             :disabled="!form.enabled"
           >
-            <a-radio value="0">且</a-radio>
-            <a-radio value="1">或</a-radio>
+            <a-radio value="0">
+              且
+            </a-radio>
+            <a-radio value="1">
+              或
+            </a-radio>
           </a-radio-group>
         </a-form-item>
       </a-form>
@@ -85,7 +93,7 @@
           placeholder="选择字段"
           show-search
           style="width: 180px"
-          @change="(v) => onColumnChange(f, v)"
+          @change="(v: any) => onColumnChange(f, v == null ? '' : String(v))"
         />
         <a-select
           v-model:value="f.relation"
@@ -159,11 +167,11 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
+import { updatePortalConfig } from '@/framework/apis/portal/config'
+import { getRelation } from '@/framework/components/common/AdvancedSearch/funs'
 import ConditionVariableInput from '@/framework/components/common/ConditionVariableInput.vue'
 import { FILTER_TYPE, FIELD_TYPE, FILTER_RELATION_LABELS } from '@/framework/components/common/Portal/type'
-import { getRelation } from '@/framework/components/common/AdvancedSearch/funs'
-import { updatePortalConfig } from '@/framework/apis/portal/config'
-import { dictStore } from '@/framework/store/common'
+import { dictStore, useTreeStore } from '@/framework/store/common'
 
 // 关系枚举 → 中文走共享单源（type.ts FILTER_RELATION_LABELS，全集防裸数字）
 const RELATION_LABELS = FILTER_RELATION_LABELS
@@ -238,7 +246,8 @@ const loadFieldOptions = async (f: PanelField) => {
     const ref = dictRef(f)
     if (!ref) return
     if (kind === 'dict' && !dictOptsMap[ref]) dictOptsMap[ref] = (await dict.getDict(ref)) || []
-    if (kind === 'tree' && !treeOptsMap[ref]) treeOptsMap[ref] = (await dict.getTree(ref)) || []
+    // 树字典在 treeStore 上(与 dictStore 分开), dictStore 没有 getTree —— 原先会走到 TypeError
+    if (kind === 'tree' && !treeOptsMap[ref]) treeOptsMap[ref] = (await treeDict().getTree(ref)) || []
   } catch (e) {
     console.warn('[筛选面板] 字典加载失败', dictRef(f), e)
   }
@@ -251,6 +260,8 @@ const dictOptsMap = reactive<Record<string, any[]>>({})
 const treeOptsMap = reactive<Record<string, any[]>>({})
 // dictStore 是 defineStore 返回的工厂，必须调用取实例
 const dict = dictStore()
+// 树字典 store 同款: 工厂调用取实例(treeStore 与 dictStore 是两份独立 store)
+const treeDict = useTreeStore
 
 // 模板取选项：local 走列上下发，config 走字典缓存
 const optionsFor = (f: PanelField) => props.mode === 'local' ? inlineOpts(f) : dictOpts(dictRef(f))

@@ -205,10 +205,12 @@ watch(
 watch(
   () => excelParseUrl.value,
   () => {
-      if (excelParseUrl.value) {
-        _progress.value = _progress.value ? _progress.value : () => getUploadParseProgress(excelParseUrl.value)
-        _upload.value = _upload.value ? _upload.value : uploadParse(excelParseUrl.value)
-        _template.value = _template.value ? _template.value : downloadTemplate(excelParseUrl.value)
+      // 收进局部常量: 闭包里再读 ref 会丢失 if 的非空收窄
+      const parseUrl = excelParseUrl.value
+      if (parseUrl) {
+        _progress.value = _progress.value ? _progress.value : () => getUploadParseProgress(parseUrl)
+        _upload.value = _upload.value ? _upload.value : uploadParse(parseUrl)
+        _template.value = _template.value ? _template.value : downloadTemplate(parseUrl)
       }
   },
   {

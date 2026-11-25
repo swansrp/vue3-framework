@@ -21,9 +21,9 @@
         >
           暂无数据
         </div>
-        <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式-->
+        <!--使用treeData作为a-tree的key，实现在数据更新时，正确渲染a-tree的样式(key 只能是 string/number)-->
         <a-tree
-          :key="treeData"
+          :key="treeData.length"
           v-model:expanded-keys="treeExpandedKeys"
           v-model:selected-keys="treeSelectKey"
           :show-line="true"
@@ -432,7 +432,8 @@ const menuNameList = ['顶部导航菜单', '左侧导航菜单']
 let menuName = ref(menuNameList[menuNameListIndex.value])
 let disableDeleteBtn = ref(false)
 
-const selectTreeNode = (_: string, info: any) => {
+// 树回调给 Key[] (string|number), 本处只用 info.node
+const selectTreeNode = (_: any, info: any) => {
   canEnterSubMenuFlag.value = true
   const { node } = info // 获取当前的节点信息
   menuId.value = node.menuId

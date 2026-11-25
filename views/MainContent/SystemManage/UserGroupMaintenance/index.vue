@@ -342,7 +342,8 @@ let exporting: Ref<boolean> = ref(false)
 
 // 权限树相关变量
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
-let groupTreeCheckedKeys: Ref<string[] | { checked: string[]; halfChecked: string[] }> = ref([])
+// 树 v-model 回传形态随 checkStrictly 变化(Key[] 或 {checked,halfChecked}) ⇒ 宽松承接
+let groupTreeCheckedKeys: Ref<any> = ref([])
 let groupPermissionTreeData: Ref<Array<DataNode>> = ref([])
 
 

@@ -13,7 +13,6 @@
 import type { Ref } from 'vue'
 
 import type { AgentEventX, AgentSessionStateT } from './types'
-
 import { useAgentConversation } from '../agent'
 
 export const useAgentSession = (sessionId: Ref<string | null>): {

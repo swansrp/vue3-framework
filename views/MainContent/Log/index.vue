@@ -72,7 +72,7 @@
           v-model:value="searchText"
           placeholder="输入关键字进行搜索"
           style="width: 1500px;"
-          @press-enter="getLog"
+          @press-enter="() => getLog()"
         />
         <!-- 第二行：时间查询和查询按钮 -->
         <div class="time-query-row">
@@ -364,14 +364,14 @@ const expandAll = ref(false)
 
 // 下载弹框相关状态
 const showDownloadModal = ref(false)
-const downloadTimeRange = ref<[Dayjs | null, Dayjs | null]>([null, null])
+// 范围值与 a-range-picker 的元组契约对齐(清空时为 [null,null])
+const downloadTimeRange = ref<any>([null, null])
 const downloadLoading = ref(false)
 
-// 配置 marked 支持 GFM 表格
+// 配置 marked 支持 GFM 表格(tables 是 gfm 的默认能力, 新版 marked 已无该选项, 显式传会被类型拒)
 marked.setOptions({
   breaks: true,
-  gfm: true,
-  tables: true
+  gfm: true
 })
 
 const expandAllLog = () => {

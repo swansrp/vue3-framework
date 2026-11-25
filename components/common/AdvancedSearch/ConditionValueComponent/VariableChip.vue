@@ -56,7 +56,8 @@ onMounted(() => {
   loadConditionVariableGroups().then(g => { groups.value = g })
 })
 
-const onPick = ({ key }: { key: string }) => emit('update:value', key)
+// 菜单项 key 在 antdv 里是 Key(string|number), 变量 token 恒为字符串 ⇒ 统一转字符串下发
+const onPick = ({ key }: { key: string | number }) => emit('update:value', String(key))
 </script>
 
 <style lang="less" scoped>

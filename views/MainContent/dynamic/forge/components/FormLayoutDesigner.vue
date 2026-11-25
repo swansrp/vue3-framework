@@ -23,8 +23,8 @@ const emit = defineEmits<{
   (e: 'delete', item: FormConfigInfo): void
 }>()
 
-// 将 FormConfigInfo 转换为 GridItem
-interface FormGridItem extends GridItem, FormConfigInfo {}
+// 将 FormConfigInfo 转换为 GridItem(两类型有同名异构字段, 只能取交叉而非 extends)
+type FormGridItem = GridItem & FormConfigInfo
 
 const gridItems = ref<FormGridItem[]>([])
 
@@ -65,12 +65,13 @@ const handleItemClick = (item: FormGridItem) => {
 
 // 处理编辑字段
 const handleEditItem = (item: FormGridItem) => {
-  emit('edit', item)
+  // 交叉类型比 FormConfigInfo 多布局字段, 事件契约只要配置部分
+  emit('edit', item as unknown as FormConfigInfo)
 }
 
 // 处理删除字段
 const handleDeleteItem = (item: FormGridItem) => {
-  emit('delete', item)
+  emit('delete', item as unknown as FormConfigInfo)
 }
 
 // 添加字段
@@ -118,7 +119,7 @@ const handleAddField = () => {
         <!-- 自定义字段内容 -->
         <template #item="{ item }">
           <DynamicFormItem
-            :attribute="item"
+            :attribute="item as any"
             :readonly="false"
           >
             <!-- 操作按钮 -->

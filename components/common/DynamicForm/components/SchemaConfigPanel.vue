@@ -98,7 +98,16 @@ const sectionFormData = ref({
   sort: 0
 })
 
-const groupFormData = ref({
+// pid=父分组 id(嵌套分组用, 空=顶层); 后端字段可缺省, 表单里用 null 表示
+const groupFormData = ref<{
+  id: string;
+  sectionId: string;
+  pid?: number | null;
+  title: string;
+  description: string;
+  multi: string;
+  sort: number
+}>({
   id: '',
   sectionId: '',
   title: '',
@@ -528,6 +537,9 @@ const handleAddAttribute = (sectionId: string, groupId?: string) => {
     positionY: newPositionY,
     labelWidth: 120,  // 默认标签宽度
     validationRule: '',
+    // 与表单数据结构对齐的两个可选字段(新建时清空)
+    parentAttributeId: '',
+    visibilityCondition: undefined,
     sort: attrs.length + 1
   }
   attributeModalVisible.value = true
@@ -847,21 +859,21 @@ watch(() => props.formId, () => {
           :dict-code="attribute.dict"
           :parent-code="parentValue"
           :disabled="isReadonly"
-          :model-value="value"
+          :model-value="value as any"
           :placeholder="`请选择${attribute.label}`"
           :is-manage-mode="true"
           :show-manage-btn="false"
           multiple
-          @update:model-value="updateValue"
+          @update:model-value="(v: any) => updateValue(v)"
         />
         <a-select
           v-else
           :disabled="isReadonly"
           :placeholder="`请选择${attribute.label}`"
-          :value="value"
+          :value="value as any"
           mode="multiple"
           style="width: 100%"
-          @update:value="updateValue"
+          @update:value="(v: any) => updateValue(v)"
         />
       </template>
 

@@ -82,7 +82,7 @@
             </div>
           </div>
           <template #overlay>
-            <a-menu @click="({ key: menuKey }) => handleQuickConfig(element, menuKey)">
+            <a-menu @click="({ key: menuKey }: any) => handleQuickConfig(element, String(menuKey))">
               <a-menu-item key="displayNone">
                 不显示
               </a-menu-item>

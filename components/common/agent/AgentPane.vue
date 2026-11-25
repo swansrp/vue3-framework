@@ -357,23 +357,23 @@ import {
 import { message } from 'ant-design-vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 
-import AgentStages from '@/framework/components/common/agentStages/index.vue'
-import type { AgentStageItem } from '@/framework/components/common/agentStages/types'
 
-import { useStickScroll } from './useStickScroll'
 
-import AgentConfirmCard from './AgentConfirmCard.vue'
 import AgentConclusionCard from './AgentConclusionCard.vue'
+import AgentConfirmCard from './AgentConfirmCard.vue'
 import AgentProcessGroup from './AgentProcessGroup.vue'
 import AskDecisionCard from './AskDecisionCard.vue'
 import Composer from './composer/Composer.vue'
 import { clipOneLine, fmtDuration } from './fmt'
-import PlanCapsule from './PlanCapsule.vue'
 import { markdownOf } from './markdown'
+import PlanCapsule from './PlanCapsule.vue'
 import { formatFileSize, AGENT_CAPABILITY, type AgentArtifact, type AgentConfirmationT, type AgentFileRef, type AgentToolItem, type AgentViewItem } from './types'
 import { useAgentConversation } from './useAgentConversation'
+import { useStickScroll } from './useStickScroll'
 
 import { sessionArtifactUrl, sessionInterject, sessionRate } from '@/framework/apis/agent'
+import AgentStages from '@/framework/components/common/agentStages/index.vue'
+import type { AgentStageItem } from '@/framework/components/common/agentStages/types'
 
 interface Props {
   /** 会话标识（父组件 sessionStart 后传入；变化即重置轮询与视图） */

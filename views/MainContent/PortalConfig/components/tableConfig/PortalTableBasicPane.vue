@@ -486,7 +486,7 @@
               <a-button
                 type="primary"
                 size="small"
-                @click="pivotMeasureRows.push({ field: '', key: '', condition: '', groupPath: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, ratioPercent: true, numerator: '', denominator: '', numeratorAgg: 'sum', denominatorAgg: 'sum' })"
+                @click="pivotMeasureRows.push({ field: '', key: '', condition: '', groupPath: '', label: '', desc: '', agg: 'sum', fixed: false, hideZero: false, ratioPercent: true, numerator: '', denominator: '', numeratorAgg: 'sum', denominatorAgg: 'sum', drillTableCode: '' })"
               >
                 <template #icon>
                   <PlusOutlined />
@@ -503,7 +503,7 @@
             />
           </div>
           <div class="measure-config-tip">
-            每个聚合字段可单独配条件，与透视列条件按「且」叠加；同一字段配多条不同条件会各自成列；「父表头」可把度量列挂到多层级表头下。导出的 JSON 可在其它表格配置里导入（需目标数据集存在同名字段）。
+            每个聚合字段可单独配条件，与透视列条件按「且」叠加；同一字段配多条不同条件会各自成列；「父表头」可把度量列挂到多层级表头下；「钻取」可给该度量列单独指定穿透目标（优先于整表配置，留空跟随整表）。导出的 JSON 可在其它表格配置里导入（需目标数据集存在同名字段）。
           </div>
           <div class="measure-rows">
             <a-empty
@@ -627,6 +627,25 @@
               </a-checkbox>
               <!-- 行尾操作区: 整体贴右且宽度由内容固定, 各行按钮起点对齐成一条竖线 -->
               <div class="measure-row-actions">
+                <!-- 度量列级钻取目标: 优先于整表配置(同一格透视列也配了时以透视列为准), 留空跟随整表 -->
+                <a-tooltip>
+                  <template #title>
+                    <span v-if="measure.drillTableCode">钻取目标: {{ drillTargetLabel(measure.drillTableCode) }}（点开修改）</span>
+                    <span v-else>为该度量列单独指定钻取目标（留空=跟随整表）</span>
+                  </template>
+                  <a-button
+                    class="measure-drill-btn"
+                    :type="measure.drillTableCode ? 'primary' : 'dashed'"
+                    :ghost="!!measure.drillTableCode"
+                    size="small"
+                    @click="openMeasureDrillEditor(index)"
+                  >
+                    <template #icon>
+                      <zoom-in-outlined />
+                    </template>
+                    钻取
+                  </a-button>
+                </a-tooltip>
                 <!-- 父表头: 给度量列加多层级表头(叶子标题仍是显示名), 与透视列父链叠加 -->
                 <a-tooltip>
                   <template #title>
@@ -887,10 +906,10 @@
       </template>
     </a-modal>
 
-    <!-- 钻取目标选择(表级): 候选=同底表其它透视报表(tableList 已按 portalName 圈定, 天然同数据集), 单选确定才写回本表 -->
+    <!-- 钻取目标选择(表级/度量列级共用): 候选=同底表其它透视报表(tableList 已按 portalName 圈定, 天然同数据集), 单选确定才写回 -->
     <a-modal
       v-model:open="drillModal.open"
-      :title="`钻取目标 · ${tableForm.title || tableForm.tableCode || '未命名报表'}`"
+      :title="drillModalTitle"
       :width="640"
     >
       <a-input
@@ -912,7 +931,7 @@
           value=""
           class="drill-candidate-radio"
         >
-          不钻取（默认：点单元格打开本表明细行）
+          {{ drillModal.scope === 'measure' ? '不单独配置（跟随整表钻取目标）' : '不钻取（默认：点单元格打开本表明细行）' }}
         </a-radio>
         <a-radio
           v-for="t in filteredDrillCandidates"
@@ -946,7 +965,12 @@
         description="无匹配报表"
       />
       <div class="drill-target-tip">
-        点本表任意单元格时打开所选报表，并叠加本格条件（行维度值/透视列条件/度量条件）；所选报表可继续配钻取目标形成链，链尾不配则落到明细行。
+        <template v-if="drillModal.scope === 'measure'">
+          仅该度量列（无论配了几条条件各成一列）的单元格优先打开所选报表，并叠加本格条件；留空=跟随整表钻取目标。同一格透视列也配了钻取目标时以透视列为准；该度量的组内小计/合计列/总计行同样认这里配的目标。点「保存基础配置」生效。
+        </template>
+        <template v-else>
+          点本表任意单元格时打开所选报表，并叠加本格条件（行维度值/透视列条件/度量条件）；透视列/度量列可另配列级钻取目标覆盖本设置，列级悬空时回落到这里；所选报表可继续配钻取目标形成链，链尾不配则落到明细行。
+        </template>
       </div>
       <template #footer>
         <a-button @click="drillModal.open = false">
@@ -988,6 +1012,8 @@ import { PivotMeasureVO, PortalTableVO, updatePortalTable } from '@/framework/ap
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import PortalAdvancedSearchModal from '@/framework/components/common/Portal/modal/PortalAdvancedSearchModal.vue'
 import { strRemoveLF } from '@/framework/utils/common'
+// 聚合字段导出/导入用的 JSON 下载与读取(同报表配置导出导入同一套工具函数)
+import { downloadJsonConfig, readJsonFile } from '@/framework/utils/configTransfer'
 
 
 const props = defineProps<{
@@ -1360,10 +1386,30 @@ const drillCandidateDesc = (t: PortalTableVO): string => {
   return `行维度: ${dims.map(fieldChineseName).join(' / ') || '无'} · 度量: ${measureNames.join(' / ') || '无'}`
 }
 
-const drillModal = reactive<{ open: boolean; draft: string; search: string }>({
+// scope: table=整表钻取目标 / measure=单个度量列的列级钻取目标(留空跟随整表);
+// measure 存行对象引用而非下标: 弹窗开着时行被拖拽排序/删除也不会写错行
+const drillModal = reactive<{
+  open: boolean;
+  draft: string;
+  search: string;
+  scope: 'table' | 'measure';
+  measure: PivotMeasureVO | null;
+  measureLabel: string;
+}>({
   open: false,
   draft: '',
-  search: ''
+  search: '',
+  scope: 'table',
+  measure: null,
+  measureLabel: ''
+})
+
+// 弹窗标题随配置对象切换: 整表复用报表标题, 度量列点名显示名(未填显示名回落字段中文名)
+const drillModalTitle = computed(() => {
+  if (drillModal.scope === 'measure') {
+    return `钻取目标 · 度量列「${drillModal.measureLabel || '未命名'}」`
+  }
+  return `钻取目标 · ${tableForm.value.title || tableForm.value.tableCode || '未命名报表'}`
 })
 
 // 候选本地搜索: 标题/编码/备注任一命中(报表多了以后靠它定位)
@@ -1382,13 +1428,35 @@ const drillTargetLabel = (code: string): string => {
 }
 
 const openDrillEditor = () => {
+  drillModal.scope = 'table'
+  drillModal.measure = null
+  drillModal.measureLabel = ''
   drillModal.draft = tableForm.value.drillTableCode || ''
   drillModal.search = ''
   drillModal.open = true
 }
 
+// 度量列级钻取目标: 该行单独穿透到某张透视报表(优先于整表); 点「保存基础配置」才随 pivotMeasures 落库
+const openMeasureDrillEditor = (index: number) => {
+  const measure = pivotMeasureRows.value[index]
+  if (!measure) return
+  drillModal.scope = 'measure'
+  drillModal.measure = measure
+  drillModal.measureLabel = measure.label || fieldChineseName(measure.field)
+  drillModal.draft = measure.drillTableCode || ''
+  drillModal.search = ''
+  drillModal.open = true
+}
+
 const confirmDrillEditor = () => {
-  tableForm.value.drillTableCode = drillModal.draft
+  const code = (drillModal.draft || '').trim()
+  if (drillModal.scope === 'measure') {
+    if (drillModal.measure) {
+      drillModal.measure.drillTableCode = code
+    }
+  } else {
+    tableForm.value.drillTableCode = code
+  }
   drillModal.open = false
 }
 
@@ -1707,6 +1775,8 @@ const normalizeMeasureRow = (m: any) => ({
   denominator: m.denominator || '',
   numeratorAgg: m.numeratorAgg || 'sum',
   denominatorAgg: m.denominatorAgg || 'sum',
+  // 列级钻取目标(空=跟随整表): 归一成空串, 与"未配置"同义
+  drillTableCode: m.drillTableCode || '',
 })
 
 // 解析 pivotMeasures JSON 到编辑行
@@ -1975,7 +2045,9 @@ const handleSaveTable = async () => {
           // 防呆: % 形式开关仅对 ratio 有意义(缺省 true, 显式落值保持行编辑所见即所得)
           ratioPercent: m.agg === 'ratio' ? m.ratioPercent !== false : undefined,
           // 空注释不落库(JSON.stringify 会丢掉 undefined 键)
-          desc: m.desc?.trim() || undefined
+          desc: m.desc?.trim() || undefined,
+          // 列级钻取目标: 空=跟随整表, 不落库(JSON.stringify 丢 undefined 键)
+          drillTableCode: m.drillTableCode?.trim() || undefined
         }))
       table.pivotMeasures =
         validMeasures.length > 0 ? JSON.stringify(validMeasures) : '[]'

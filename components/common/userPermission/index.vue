@@ -193,7 +193,7 @@ const api = computed(() => {
 })
 
 let permissionList: Ref<ValueLabelArray> = ref([])
-getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList).then(() => currentPermission.value = permissionList.value[0].value)
+getDictListByDictName('DATA_PERMIT_SCOPE_DICT', permissionList).then(() => currentPermission.value = String(permissionList.value[0].value))
 
 let searchUserName: Ref<string> = ref('')
 const userList: Ref<UserDataType[]> = ref([])

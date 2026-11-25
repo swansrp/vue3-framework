@@ -1,6 +1,6 @@
 <template>
   <a-tree
-    :key="treeData"
+    :key="String(treeData.length)"
     v-model:checked-keys="selectedData"
     :check-strictly="props.checkStrictly"
     :disabled="disable"
@@ -49,7 +49,8 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
   (e: 'change', value: any, label: any): void
 }>()
-const checkTreeNode = (_: string, e:{checked: boolean, node: DataNode}) => {
+// 树 @check 回调给 Key[] / 半选结构, 这里只用事件里的 node
+const checkTreeNode = (_: any, e: { checked: boolean, node: DataNode }) => {
   if(e.checked && !multi.value) {
     selectedData.value = []
     selectedData.value.push(e.node.key)

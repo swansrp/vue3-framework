@@ -151,7 +151,8 @@ const selectedFilterItemsArray = ref<string[][]>([[]])
 const treeDictOptions = ref<{ dictName: string; property: string; fieldType: string; displayName: string }[]>([])
 
 // 数据配置
-const dataMetrics = ref<DataMetricUI[]>([
+// 初始配置里 chartType/dateFormat 等是字面量联合, 与配置面板入参的字段约束不完全同型 ⇒ 按宽松数组承接
+const dataMetrics = ref<any[]>([
   {
     id: 'default_001',
     dataName: '分布统计',

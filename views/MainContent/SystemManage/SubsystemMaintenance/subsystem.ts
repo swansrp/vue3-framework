@@ -21,6 +21,7 @@ const surelyTableColumns = [
   { title: '排序', dataIndex: 'orderNo', width: 80 },
   { title: '说明', dataIndex: 'description', minWidth: 160 },
   { title: '操作', dataIndex: 'operation', fixed: 'right', width: 260 }
-] as unknown as ColumnsType[]
+// ColumnsType 本身就是「列数组」类型, 再套一层 [] 会变成二维数组(运行时是平铺的)
+] as unknown as ColumnsType
 surelyTableColumns.forEach((item: any) => {item.align = 'center';item.resizable = true})
 export default surelyTableColumns

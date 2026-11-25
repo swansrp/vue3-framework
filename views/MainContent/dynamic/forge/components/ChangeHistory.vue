@@ -158,7 +158,8 @@ const loadData = async () => {
     const res = await sysMatrixChangeLogGeneralSelect(
       {
         conditionList: [
-          buildCondition('matrixId', FILTER_TYPE.EQUAL, [props.matrix.id])
+          // buildCondition 返回条件列表节点, 这里的通用查询接口类型声明成了单条件 VO, 结构兼容, 断言对齐
+          buildCondition('matrixId', FILTER_TYPE.EQUAL, [props.matrix.id]) as any
         ],
       },
       false,
@@ -212,7 +213,8 @@ const handleExport = async () => {
   exportLoading.value = true
   try {
     const res = await exportChangeLog(
-      { id: props.matrix.id },
+      // 前端 id 一律字符串保存, 导出接口声明成 number ⇒ 转一次数字(库主键)
+      { id: Number(props.matrix.id) },
       false,
       false
     )

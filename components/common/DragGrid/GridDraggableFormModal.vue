@@ -119,7 +119,7 @@ defineExpose({
       <a-spin :spinning="loading">
         <GridDraggableForm
           ref="formRef"
-          :fields="formFields"
+          :items="formFields"
           :grid-size="60"
           :gap="12"
           :min-height="400"

@@ -7,7 +7,7 @@
           :key="getTabKey(item)"
           class="tab-item"
           :class="{ 'tab-active': getTabKey(item) === activeKey }"
-          :style="getTabStyle(index)"
+          :style="getTabStyle(index) as any"
           @click="changeActivateKey(getTabKey(item))"
         >
           <span class="tab-title">{{ item.title }}</span>

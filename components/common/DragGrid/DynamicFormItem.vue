@@ -207,16 +207,18 @@ watch(
       props.dictTranslateFn
     ) {
       try {
+        // hasValidDict 只是布尔判断, 这里再收一次非空(翻译函数要求字符串)
+        const dictName = props.attribute.dict || ''
         // 对于多选类型，需要翻译每个值
         if (props.attribute.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE ||
             props.attribute.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE) {
           const values = String(currentValue.value).split(',').filter(v => v !== '')
           const translatedValues = await Promise.all(
-            values.map(v => props.dictTranslateFn!(props.attribute.dict, v))
+            values.map(v => props.dictTranslateFn!(dictName, v))
           )
           translatedDisplayValue.value = translatedValues.join(',')
         } else {
-          translatedDisplayValue.value = await props.dictTranslateFn(props.attribute.dict, String(currentValue.value))
+          translatedDisplayValue.value = await props.dictTranslateFn(dictName, String(currentValue.value))
         }
       } catch (error) {
         console.error('翻译失败:', error)

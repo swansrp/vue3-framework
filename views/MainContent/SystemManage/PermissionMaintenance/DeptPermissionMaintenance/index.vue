@@ -186,8 +186,9 @@ watch(deptMultiSelect, (newVal, oldVal) => {
 let deptCheckStrictly: Ref<boolean> = ref(false)
 let deptTreeKey: Ref<number> = ref(0)
 let completePermissionTreeData: Ref<Array<DataNode>> = ref([])
-let deptTreeCheckedKeys: Ref<Array<string | number>> = ref([])
-let halfCheckedKeys: Ref<Array<string | number>> = ref([])
+// 绑定树组件要求 string[] | number[] 二者其一, 权限键本项目恒为字符串 ⇒ 统一 string[]
+let deptTreeCheckedKeys: Ref<string[]> = ref([])
+let halfCheckedKeys: Ref<string[]> = ref([])
 let deptPermissionTreeData: Ref<Array<DataNode>> = ref([])
 let showPermissionTreeTab: Ref<boolean> = ref(false)
 let renderBindUserFlag: Ref<number> = ref(0)
@@ -323,9 +324,10 @@ const loadTabData = (deptId: string) => {
 }
 
 // 多选模式下勾选部门节点
-const onCheckDeptNode = (checked: string[] | { checked: string[]; halfChecked: string[] }, _e: { checked: boolean, node: DataNode }) => {
+// 树组件回调给 Key[](string|number) 或半选结构, 两种形态都收
+const onCheckDeptNode = (checked: any, _e: any) => {
   // 根据 check-strictly 模式获取实际的 checked 数组
-  const checkedArr = Array.isArray(checked) ? checked : checked.checked
+  const checkedArr: any[] = Array.isArray(checked) ? checked : checked.checked
 
   selectedDeptKeys.value = checked
 
@@ -358,13 +360,14 @@ const loadMultipleDeptPermissions = async (deptIds: string[]) => {
 
   // 计算选中状态：所有部门都有的权限
   // 计算半选状态：部分部门有的权限
-  const allPermissionKeys = new Set<number>()
+  // 权限键是字符串(与 deptPermissionMap 的值同型)
+  const allPermissionKeys = new Set<string>()
   deptPermissionMap.value.forEach(keys => {
     keys.forEach(key => allPermissionKeys.add(key))
   })
 
-  const checkedKeys: (string | number)[] = []
-  const halfKeys: (string | number)[] = []
+  const checkedKeys: string[] = []
+  const halfKeys: string[] = []
   const deptCount = deptIds.length
 
   allPermissionKeys.forEach(key => {

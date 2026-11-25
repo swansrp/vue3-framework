@@ -18,7 +18,7 @@
         <PortalConfig
           v-if="currentMatrix && currentMatrix.id"
           data-mode="MATRIX"
-          :reference-id="currentMatrix.id"
+          :reference-id="Number(currentMatrix.id)"
           :custom-refresh-fn="handleRefreshPortal"
           :generate-portal-fn="handleGeneratePortal"
         />

@@ -27,11 +27,18 @@
 import { WarningFilled } from '@ant-design/icons-vue'
 import { Ref } from 'vue'
 
-const props = defineProps<{size?: string, btnContent?: string, popContent?: string, type?: string}>()
-const size: Ref<string> = ref(props.size || 'small')
+// size/type 直接透传给 a-button, 用其枚举类型(宽 string 不被库接受)
+const props = defineProps<{
+  size?: 'small' | 'middle' | 'large'
+  btnContent?: string
+  popContent?: string
+  type?: 'default' | 'primary' | 'ghost' | 'dashed' | 'link' | 'text'
+}>()
+// 局部副本沿用 props 的枚举类型(声明成宽 string 会让 a-button 的 size/type 类型不通过)
+const size = ref<'small' | 'middle' | 'large'>(props.size || 'small')
 const btnContent: Ref<string> = ref(props.btnContent || '删除')
 const popContent: Ref<string> = ref(props.popContent || '确定要删除这条数据吗？')
-const type: Ref<string> = ref(props.type || 'primary')
+const type = ref<'default' | 'primary' | 'ghost' | 'dashed' | 'link' | 'text'>(props.type || 'primary')
 const emit = defineEmits(['deleteEvent'])
 const handleDeleteEvent = () => emit('deleteEvent')
 </script>

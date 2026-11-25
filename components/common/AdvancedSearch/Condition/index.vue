@@ -25,7 +25,6 @@
 </template>
 
 <script lang="ts" setup>
-import { SelectValue } from 'ant-design-vue/es/select'
 import { Ref } from 'vue'
 
 
@@ -52,8 +51,9 @@ const propertyValue: Ref<any> = ref()
 // 字段下拉列表
 const { propertySelectOptions } = toRefs(props)
 
-// 关系选择值
-const relationValue: Ref<number | string | undefined | null> = ref()
+// 关系选择值: antdv 的 SelectValue 不含 null, 而本组件用 null 表示"未选择"(与 ConditionValueComponent 的 relation 口径一致)
+// ⇒ 用 any 架桥, 取值/下发仍是 string|number|null 三态
+const relationValue: Ref<any> = ref()
 // 关系下拉列表内容
 const conditionSelectOptions: Ref<ValueLabel[]> = ref([])
 
@@ -71,7 +71,8 @@ const propertySelectMap = computed(() => {
   return map
 })
 
-const onPropertyChange = (_property: SelectValue, option: any) => {
+// 选中值不用(只关心选中项元数据), 类型按事件签名放宽
+const onPropertyChange = (_property: any, option: any) => {
   console.log('onPropertyChange', option)
   const { fieldType, referenceDictOption } = option
   const relations = getRelation(fieldType)

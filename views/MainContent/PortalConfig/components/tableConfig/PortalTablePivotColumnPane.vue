@@ -91,6 +91,13 @@
               </div>
               <div class="filter-item-type">
                 {{ column.itemValue }}
+                <a-tag
+                  v-if="column.drillTableCode"
+                  color="blue"
+                  class="pivot-item-drill-tag"
+                >
+                  钻取
+                </a-tag>
               </div>
             </div>
             <div class="filter-item-actions">
@@ -185,6 +192,25 @@
                       v-model:value="groupPathText"
                       placeholder="如: 一级部门 / 二级部门"
                       allow-clear
+                    />
+                  </a-form-item>
+                </a-col>
+                <!-- 列级钻取目标: 优先于整表配置, 留空跟随整表; 组内小计/合计列/总计行跨多列, 透视列这一档不参与(只认度量列) -->
+                <a-col :span="24">
+                  <a-form-item
+                    label="钻取目标"
+                    :label-col="{ span: 3 }"
+                    :wrapper-col="{ span: 21 }"
+                    extra="本列单元格优先跳它; 留空=跟随整表钻取目标。同一格透视列与度量列都配了时以透视列为准; 组内小计/合计列/总计行跨多列、透视列口径不唯一, 只认度量列与整表配置; 需点「保存配置」生效"
+                  >
+                    <a-select
+                      :value="selectedPivotColumn.drillTableCode || ''"
+                      :options="drillTargetOptions"
+                      allow-clear
+                      show-search
+                      :filter-option="filterDrillTargetOption"
+                      placeholder="留空 = 跟随整表钻取目标"
+                      @change="setColumnDrillTarget"
                     />
                   </a-form-item>
                 </a-col>
@@ -340,6 +366,7 @@ import {
   getPortalPivotColumnList,
   IdOrderReqVO,
   PortalPivotColumnVO,
+  PortalTableVO,
   updatePortalPivotColumn,
   updatePortalPivotColumnOrder,
 } from '@/framework/apis/portal/table'
@@ -359,12 +386,36 @@ const props = defineProps<{
     reference: string;
   }>;
   portalName?: string;
+  /** 同底表下全部表格配置(列级钻取目标候选与表级钻取同源) */
+  tableList?: PortalTableVO[];
+  /** 当前表格编码(排除自指候选) */
+  tableCode?: string;
 }>()
 
 // 透视列(父表头条件列)列表
 const pivotColumnList = ref<PortalPivotColumnVO[]>([])
 const selectedPivotColumn = ref<PortalPivotColumnVO | null>(null)
 const savingPivotColumn = ref(false)
+
+// ==================== 列级钻取目标 ====================
+// 候选=同 portalName 下其它透视模式表格(与表级钻取目标同闸: 同底表字段才能接得住本格条件);
+// 存表格编码而非 id: 报表配置导入导出跨环境可移植; 留空=跟随整表配置
+const drillTargetOptions = computed(() =>
+  (props.tableList || [])
+    .filter((t) => t.pivotMode === '1' && t.tableCode && t.tableCode !== props.tableCode)
+    .map((t) => ({
+      label: t.title ? `${t.title} (${t.tableCode})` : (t.tableCode as string),
+      value: t.tableCode as string,
+    }))
+)
+const filterDrillTargetOption = (input: string, option: any): boolean =>
+  String(option?.label ?? '').toLowerCase().includes(String(input ?? '').toLowerCase())
+
+// 清空(allow-clear 给 undefined)统一落空串: 后端 update 非 strict 跳过 null, 只有空串能清掉旧值
+const setColumnDrillTarget = (val: any) => {
+  if (!selectedPivotColumn.value) return
+  selectedPivotColumn.value.drillTableCode = String(val || '').trim()
+}
 
 // 解析透视列 condition 中的 conditionList
 const parsePivotConditionList = (conditionStr: string | undefined): any[] => {
@@ -864,6 +915,14 @@ const openPivotConditionModal = async () => {
 
 .pivot-config-section {
   flex: 0 0 600px;
+}
+
+// 左列表"已配列级钻取目标"小标签: 跟列标识同一行, 不换行占高
+.pivot-item-drill-tag {
+  margin-left: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 16px;
 }
 
 // 透视列条件 JSON 编辑区

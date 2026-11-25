@@ -12,7 +12,7 @@
       <a-button
         size="small"
         :loading="treeLoading"
-        @click="loadTree"
+        @click="() => loadTree()"
       >
         刷新
       </a-button>
@@ -366,7 +366,8 @@ const updateTime = ref('')
 const currentDs = ref('')
 const currentTable = ref('')
 
-const onTreeSelect = (keys: Array<string>, info: any) => {
+// 树回调给 Key[] (string|number), 本处只用首个 key 与节点元信息
+const onTreeSelect = (keys: any[], info: any) => {
   const node = info.node
   if (!node?.isLeaf) return
   if (!keys.length) return

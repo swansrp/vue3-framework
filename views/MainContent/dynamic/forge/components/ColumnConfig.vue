@@ -449,7 +449,8 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const columns = [
+// 列定义用宽松类型: 行内 minWidth/fixed/align 混写时联合推断与 a-table 列类型不兼容
+const columns: any[] = [
   { title: '排序', dataIndex: 'sort', key: 'sort', width: 80 },
   { title: '字段名', dataIndex: 'columnName', key: 'columnName', width: 150 },
   { title: '字段注释', dataIndex: 'columnComment', key: 'columnComment', width: 150 },
@@ -582,7 +583,7 @@ const handleAdd = () => {
   modalVisible.value = true
 }
 
-const handleEdit = (record: ColumnInfo) => {
+const handleEdit = (record: any) => {
   modalTitle.value = '编辑字段'
   Object.assign(formData, record)
   modalVisible.value = true
@@ -612,7 +613,7 @@ const handleCancel = () => {
   formRef.value?.resetFields()
 }
 
-const handleDelete = async (record: ColumnInfo) => {
+const handleDelete = async (record: any) => {
   try {
     const res = await sysMatrixColumnDeleteItem({ id: record.id })
     if (res.status?.code === 0) {
@@ -624,7 +625,7 @@ const handleDelete = async (record: ColumnInfo) => {
   }
 }
 
-const handleMoveUp = async (record: ColumnInfo) => {
+const handleMoveUp = async (record: any) => {
   const index = dataSource.value.findIndex(item => item.id === record.id)
   if (index > 0) {
     // 使用splice确保响应式更新
@@ -638,7 +639,7 @@ const handleMoveUp = async (record: ColumnInfo) => {
   }
 }
 
-const handleMoveDown = async (record: ColumnInfo) => {
+const handleMoveDown = async (record: any) => {
   const index = dataSource.value.findIndex(item => item.id === record.id)
   if (index < dataSource.value.length - 1) {
     // 使用splice确保响应式更新
@@ -681,7 +682,8 @@ const handleColumnTypeChange = () => {
   }
 }
 
-const handleReferenceMatrixChange = (value: string) => {
+// select 的 change 值是 SelectValue(含数组/LabeledValue), 本处只关心"有没有选中"
+const handleReferenceMatrixChange = (value: any) => {
   if (value) {
     // 选择了关联矩阵，清空关联字典
     formData.referenceDict = ''

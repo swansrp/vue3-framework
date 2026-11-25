@@ -6,7 +6,7 @@
 // ============================================================
 
 import type { IdReqVO } from './types/common'
-import type { DatasetColumnReq, DatasetConfigReq } from './types/datasetConfigControllerTypes'
+import type { DatasetColumnReq, DatasetConfigReq, DatasetPortalWritebackReq } from './types/datasetConfigControllerTypes'
 
 import { buildGetApiByType, buildPostApiByType } from '@/framework/apis'
 import { request } from '@/framework/network/request'
@@ -142,6 +142,17 @@ export const getSql = (params?: {
 }, showSuccess = true, showLoading = false, showErr = true) => {
   const api = buildGetApiByType('/dataset/config/sql', '')
   return request(api, params || ({} as any), {}, showSuccess, showLoading, showErr)
+}
+
+/**
+ * 把Dataset关联Portal的列中文名回写为SQL注释
+ * @api POST /dataset/config/portal/writeback
+ * @dataType DatasetPortalWritebackReq
+ * @responseTypes DatasetPortalWritebackRes
+ */
+export const writeBackPortalColumnNames = (data: DatasetPortalWritebackReq, showSuccess = false, showLoading = false, showErr = true) => {
+  const api = buildPostApiByType('/dataset/config/portal/writeback', '')
+  return request(api, {}, data, showSuccess, showLoading, showErr)
 }
 
 /**

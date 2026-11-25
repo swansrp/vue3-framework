@@ -50,6 +50,9 @@ const isSystemDict = (item: BizDictVO) => {
   return !item[props.entityIdField as keyof BizDictVO]
 }
 
+// entityIdField 是可配字段名(默认 bizId), BizDictVO 没有索引签名 ⇒ 模板里统一走这个取值助手
+const entityIdOf = (item: BizDictVO): any => (item as any)?.[props.entityIdField]
+
 // 拖动开始
 const handleDragStart = (index: number) => {
   if (props.sortMode !== 'drag') return
@@ -157,10 +160,10 @@ const getParentValueLabel = (parentDictCode: string, parentValue: string): strin
       :key="item.id || index"
       :class="[
         'dict-item',
-        { 'system-item': item[entityIdField] == null },
-        { 'no-drag': !isManageMode && item[entityIdField] == null }
+        { 'system-item': entityIdOf(item) == null },
+        { 'no-drag': !isManageMode && entityIdOf(item) == null }
       ]"
-      :draggable="sortMode === 'drag' && (isManageMode || item[entityIdField] != null)"
+      :draggable="sortMode === 'drag' && (isManageMode || entityIdOf(item) != null)"
       @dragstart="handleDragStart(index)"
       @dragover.prevent
       @drop="handleDrop(index)"
@@ -184,7 +187,7 @@ const getParentValueLabel = (parentDictCode: string, parentValue: string): strin
           ← {{ item.parentValue }}
         </span>
         <span
-          v-if="item[entityIdField] == null"
+          v-if="entityIdOf(item) == null"
           class="item-tag system"
         >系统</span>
       </div>
@@ -212,7 +215,7 @@ const getParentValueLabel = (parentDictCode: string, parentValue: string): strin
         <!-- 编辑按钮 -->
         <a-button
           size="small"
-          :disabled="isManageMode ? false : (sortMode === 'buttons' && (!item[entityIdField] || item[entityIdField] == null))"
+          :disabled="isManageMode ? false : (sortMode === 'buttons' && (!entityIdOf(item) || entityIdOf(item) == null))"
           @click="handleEdit(item)"
         >
           编辑
@@ -222,7 +225,7 @@ const getParentValueLabel = (parentDictCode: string, parentValue: string): strin
         <a-button
           size="small"
           danger
-          :disabled="isManageMode ? false : (item[entityIdField] == null)"
+          :disabled="isManageMode ? false : (entityIdOf(item) == null)"
           @click="handleDelete(item)"
         >
           <template #icon>

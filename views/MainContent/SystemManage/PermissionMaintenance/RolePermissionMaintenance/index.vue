@@ -170,7 +170,7 @@
                   color="blue"
                   closable
                   style="margin-top: 5px"
-                  @close="handleUnbindRoleUser(user.value)"
+                  @close="handleUnbindRoleUser(String(user.value))"
                 >
                   {{ user.label }}
                 </a-tag>
@@ -406,7 +406,9 @@ const handleEditRole = (role: RoleDataType) =>
     .then(initAndUpdateRoleList)
     .then(() => (editRoleBoxVisible.value = false))
 
-const tabChange = (key: string) => {
+// tab 的 activeKey 是 Key(string|number), 本页 tab 恒定字符串
+const tabChange = (key: any) => {
+  key = String(key)
   if (key === VIEW) renderRolePermissionTree()
   else if (key === EDIT) renderEditRolePermissionTree()
   else if (key === LINK) renderRoleUserList()

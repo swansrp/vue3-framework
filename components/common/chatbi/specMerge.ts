@@ -311,7 +311,8 @@ export function forgeChartItem(
   seq = 0
 ): DashboardItem | null {
   const bp = chartSpec.config || {}
-  const chartType = VALID_CHART_TYPES.includes(bp.chartType) ? bp.chartType : CHART_TYPE.BAR
+  // 先判空再 includes: 同时把 chartType 收窄成 string(缺省/非法值回落柱状)
+  const chartType = bp.chartType && VALID_CHART_TYPES.includes(bp.chartType) ? bp.chartType : CHART_TYPE.BAR
   const metrics = resolveMetrics(catalog, bp.metrics)
   if (metrics.length === 0) {
     console.warn('chatbi 自造图表缺少合法指标，跳过:', bp.title || bp.chartType)
@@ -388,8 +389,9 @@ export function forgeChartItem(
     const dimItems = resolveItems(dimField, bp.dimensionItems)
     cfg.firstDimension = forgeDimensionGroup(dimField, dimItems)
     const secondField = findField(catalog, bp.secondDimensionField)
-    const secondItems = secondField?.values?.length ? resolveItems(secondField, bp.secondDimensionItems) : []
-    cfg.secondDimension = secondItems.length > 0 ? forgeDimensionGroup(secondField, secondItems) : null
+    // 显式短路 secondField: 同一表达式里先判空再取 values, 才能把非空收窄带进 resolveItems/forgeDimensionGroup
+    const secondItems = secondField && secondField.values?.length ? resolveItems(secondField, bp.secondDimensionItems) : []
+    cfg.secondDimension = secondField && secondItems.length > 0 ? forgeDimensionGroup(secondField, secondItems) : null
     cfg.dataMetrics = forgeMetricRows(chartType, metrics, catalog, dimItems)
   }
 

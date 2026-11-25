@@ -95,13 +95,29 @@ const emit = defineEmits<{
 
 const slots = useSlots()
 
-// 获取所有 field: 开头的 slot 名称
-const fieldSlotNames = computed(() => {
-  return Object.keys(slots).filter(name => name.startsWith('field:'))
+// 获取所有 field: 开头的 slot 名称; 类型收紧成模板字面量,
+// 才能通过 Partial<Record<`field:${string}`, ...>> 的索引签名(宽 string 会被 vue-tsc 拒)
+const fieldSlotNames = computed<Array<`field:${string}`>>(() => {
+  return Object.keys(slots).filter((name): name is `field:${string}` => name.startsWith('field:'))
+})
+
+/**
+ * 递归子分组的插槽透传表(动态 field:xxx + 四个具名槽)。
+ * 用 v-slots 对象传而非逐个 <template #x>: 递归组件用模板写槽会让 vue-tsc 陷入自指类型推断(TS7022)。
+ */
+const childGroupSlots = computed<Record<string, any>>(() => {
+  const out: Record<string, any> = {}
+  const names = [...fieldSlotNames.value, 'select', 'selectMulti', 'tree', 'treeMulti']
+  for (const name of names) {
+    const fn = (slots as Record<string, any>)[name]
+    // 父组件没传的槽不往子组件挂(与原先 v-if="$slots[x]" 等价)
+    if (typeof fn === 'function') out[name] = (slotProps: any) => fn(slotProps)
+  }
+  return out
 })
 
 // 从父组件 inject 方法（用于递归渲染子 Group）
-const injectedGetGroupAttributes = inject<(sectionId: string, groupId: string) => any[]>('getGroupAttributes', () => [])
+const injectedGetGroupAttributes = inject<(sectionId: string | number, groupId: string) => any[]>('getGroupAttributes', () => [])
 const injectedGetGroupRows = inject<(sectionInstanceId: string, groupId: string) => any[]>('getGroupRows', () => [])
 const injectedSetChildGroupRef = inject<(groupId: string) => (el: any) => void>('setChildGroupRef', () => () => {})
 const injectedActiveChildGroupId = inject<any>('activeChildGroupId', null)
@@ -752,7 +768,7 @@ defineExpose({
           :readonly="readonly"
           :dict-translate-fn="dictTranslateFn"
           :has-child-groups="hasChildGroups"
-          @field-change="(attributeId: string, value: any) => handleFieldChange(singleGroupInstanceId, attributeId, value)"
+          @field-change="(attributeId: string | number, value: any) => handleFieldChange(singleGroupInstanceId, String(attributeId), value)"
         >
           <!-- 动态透传 field:xxx 插槽 -->
           <template
@@ -844,7 +860,7 @@ defineExpose({
             :readonly="readonly"
             :dict-translate-fn="dictTranslateFn"
             :has-child-groups="hasChildGroups"
-            @field-change="(attributeId: string, value: any) => handleFieldChange(row.groupInstanceId, attributeId, value)"
+            @field-change="(attributeId: string | number, value: any) => handleFieldChange(row.groupInstanceId, String(attributeId), value)"
           >
             <!-- 动态透传 field:xxx 插槽 -->
             <template
@@ -952,67 +968,12 @@ defineExpose({
         :get-group-attributes-fn="getGroupAttributes"
         :get-group-rows-fn="getGroupRows"
         :enterprise-id="enterpriseId"
+        v-slots="childGroupSlots"
         @add-row="() => $emit('addRow')"
         @delete-row="(rowIndex) => $emit('deleteRow', rowIndex)"
         @update-data="(groupInstanceId, attributeId, value) => $emit('updateData', groupInstanceId, attributeId, value)"
         @save-group="(groupId, rowsData) => $emit('saveGroup', groupId, rowsData)"
-      >
-        <!-- 动态透传 field:xxx 插槽 -->
-        <template
-          v-for="slotName in fieldSlotNames"
-          :key="slotName"
-          #[slotName]="slotProps"
-        >
-          <slot
-            :name="slotName"
-            v-bind="slotProps"
-          ></slot>
-        </template>
-
-        <!-- 传递 select 插槽 -->
-        <template
-          v-if="$slots['select']"
-          #select="slotProps"
-        >
-          <slot
-            name="select"
-            v-bind="slotProps"
-          ></slot>
-        </template>
-
-        <!-- 传递 selectMulti 插槽 -->
-        <template
-          v-if="$slots['selectMulti']"
-          #selectMulti="slotProps"
-        >
-          <slot
-            name="selectMulti"
-            v-bind="slotProps"
-          ></slot>
-        </template>
-
-        <!-- 传递 tree 插槽 -->
-        <template
-          v-if="$slots['tree']"
-          #tree="slotProps"
-        >
-          <slot
-            name="tree"
-            v-bind="slotProps"
-          ></slot>
-        </template>
-
-        <!-- 传递 treeMulti 插槽 -->
-        <template
-          v-if="$slots['treeMulti']"
-          #treeMulti="slotProps"
-        >
-          <slot
-            name="treeMulti"
-            v-bind="slotProps"
-          ></slot>
-        </template>
-      </GroupForm>
+      />
     </div>
   </div>
 </template>

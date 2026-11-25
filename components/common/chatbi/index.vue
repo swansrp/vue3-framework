@@ -85,8 +85,8 @@
         <!-- 图表生成物（tableId 优先消息级：历史恢复的消息可能来自其它看板） -->
         <ChatBiChart
           v-if="(msg as PanelMsg).charts && (msg as PanelMsg).charts!.length > 0"
-          :charts="(msg as PanelMsg).charts"
-          :table-id="(msg as PanelMsg).tableId || activeTableId"
+          :charts="(msg as PanelMsg).charts || []"
+          :table-id="(msg as PanelMsg).tableId || activeTableId || undefined"
           :grid-columns="gridColumns"
           :loading="!!(msg as PanelMsg).specLoading"
         />
@@ -104,7 +104,7 @@
             {{ t.title }}
           </div>
           <ChatBiTable
-            :table-id="(msg as PanelMsg).tableId || activeTableId"
+            :table-id="(msg as PanelMsg).tableId || activeTableId || ''"
             :condition="t.condition"
             :height="tableHeight"
           />
@@ -234,7 +234,8 @@ const send = async (question: string) => {
 
   // 全局模式每次提问都重新路由（结合对话上下文与当前看板判断话题延续还是切板）；
   // 单看板模式锁定 props.tableId 不路由
-  let tableId = activeTableId.value
+  // 声明为非空 string: 两路来源(单看板 props / 全局模式路由)都必落到具体看板, 下面的早退分支兜住未命中
+  let tableId = activeTableId.value ?? ''
   if (!props.tableId) {
     reply.content = '正在匹配看板…'
     let route: ChatBiRouteRes | null = null
@@ -419,6 +420,10 @@ const applySpec = async (msg: PanelMsg, spec: ChatBiSpec, boardId?: string) => {
           }
           const item = forgeChartItem(cs, catalog, tableId, i)
           if (item) items.push(item)
+          return
+        }
+        // indicatorId 类型上可缺省(自造图表形态用 config 代替), 无 id 的生成物本就无卡片可取
+        if (cs.indicatorId == null) {
           return
         }
         const node = findIndicatorNode(tree, cs.indicatorId)

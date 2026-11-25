@@ -90,7 +90,8 @@ watch(staffListValue, (user) => {
   }
   else {
     hasSelectUser.value = false
-    const userId = user[0].value
+    // 人员选择项的值类型是 string | number, 这两个接口收字符串工号/ID
+    const userId = String(user[0].value)
     getUserRoleList(userId)
       .then(res => staffRoleList.value = res.payload.map((role: {roleId: string, roleName: string}) => role.roleName))
     getUserPermissionTree(userId)

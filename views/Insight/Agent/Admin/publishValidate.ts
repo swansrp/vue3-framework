@@ -115,7 +115,8 @@ const showErrorsWithAutoFix = (agentCode: string, baseDomain: string | undefined
       width: 620,
       content: h(ErrorPanel),
       okText: '关闭',
-      cancelButtonProps: { style: 'display: none;' },
+      // cancelButtonProps 类型没有 style(vnode props 白名单), 隐藏取消按钮的写法运行期有效
+      cancelButtonProps: { style: 'display: none;' } as any,
       onOk: () => resolve(false)
     })
   })

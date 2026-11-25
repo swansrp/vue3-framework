@@ -69,19 +69,21 @@ const { record, rowKey, bindTabs } = toRefs(prop)
 const isSelectedEntity = computed(() => {
   return isNotEmpty(record.value)
 })
+// 取值统一走这条腿: 未选中记录(null)时按空对象读, 与"取不到值"同语义(原先会在 watch 里直接 IndexError)
+const recordData = computed<{ [key: string]: any }>(() => record.value || {})
 const isReadOnly = (item: any) => {
   return ((item.bindType === '2' || item.treeMode !== false) && !isSelectedEntity.value)
 }
 const checkedKeys: Ref<Array<any>> = ref([])
 const checkedKeysMap = new Map<string, any>()
 watch(checkedKeys, (newValue: Array<any>) => {
-  let oldValue = checkedKeysMap.get(activeKey.value + record.value[rowKey.value])
+  let oldValue = checkedKeysMap.get(activeKey.value + recordData.value[rowKey.value])
   console.log(oldValue !== undefined || !_.isEqual(newValue, oldValue), checkedKeysMap, newValue, activeKey.value)
   if (oldValue === undefined) {
-    checkedKeysMap.set(activeKey.value + record.value[rowKey.value], newValue)
+    checkedKeysMap.set(activeKey.value + recordData.value[rowKey.value], newValue)
   } else if (!_.isEqual(newValue, oldValue)) {
-    checkedKeysMap.set(activeKey.value + record.value[rowKey.value], newValue)
-    bindReplaceBatchAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], newValue, prop.baseDomain)
+    checkedKeysMap.set(activeKey.value + recordData.value[rowKey.value], newValue)
+    bindReplaceBatchAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, recordData.value[rowKey.value], newValue, prop.baseDomain)
       .then(getBindList)
   }
 })
@@ -105,25 +107,25 @@ const refresh = () => {
         baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.EQUAL,
-          value: [record.value[rowKey.value]]
+          value: [recordData.value[rowKey.value]]
         } as ConditionListType
       } else if (bindTabs.value[activeKey.value].bindType === '3') {
         baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.CONTAIN,
-          value: [record.value[rowKey.value]]
+          value: [recordData.value[rowKey.value]]
         } as ConditionListType
       } else if (bindTabs.value[activeKey.value].bindType === '1') {
         baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.EQUAL,
-          value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
+          value: [recordData.value[bindTabs.value[activeKey.value].bindFieldProperty as string]]
         } as ConditionListType
       } else if (bindTabs.value[activeKey.value].bindType === '4') {
         baseBindCondition.value = {
           property: bindTabs.value[activeKey.value].bindFieldProperty,
           relation: FILTER_TYPE.CONTAIN,
-          value: [record.value[bindTabs.value[activeKey.value].bindFieldProperty]]
+          value: [recordData.value[bindTabs.value[activeKey.value].bindFieldProperty as string]]
         } as ConditionListType
       }
       bindConditionMap.value.set(activeKey.value, {
@@ -148,8 +150,8 @@ const bindAll = () => {
     title: '将所有' + bindTabs.value[activeKey.value].title + '进行绑定',
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      console.log(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value])
-      bindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], {}, prop.baseDomain)
+      console.log(prop.entityName, bindTabs.value[activeKey.value].tableId, recordData.value[rowKey.value])
+      bindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, recordData.value[rowKey.value], undefined, prop.baseDomain)
         .then(getBindList)
     },
     onCancel() {
@@ -164,7 +166,7 @@ const unbindAll = () => {
     icon: createVNode(ExclamationCircleOutlined),
     content: createVNode('div', { style: 'color:red;' }, '注意: 所有授权信息将被清除'),
     onOk() {
-      unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], prop.baseDomain)
+      unbindAllAttach(prop.entityName, bindTabs.value[activeKey.value].tableId, recordData.value[rowKey.value], prop.baseDomain)
         .then(getBindList)
     },
     onCancel() {
@@ -174,7 +176,7 @@ const unbindAll = () => {
 }
 
 const getBindList = () => {
-  getAllBindList(prop.entityName, bindTabs.value[activeKey.value].tableId, record.value[rowKey.value], prop.baseDomain).then(res => {
+  getAllBindList(prop.entityName, bindTabs.value[activeKey.value].tableId, recordData.value[rowKey.value], prop.baseDomain).then(res => {
     let rowKey = bindPortalRefMap.get(activeKey.value).getConfig().rowKey
     checkedKeys.value = res.payload?.map((value: any) => {
       return value[rowKey]

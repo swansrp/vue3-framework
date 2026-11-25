@@ -546,8 +546,9 @@ const handleAddGroupRow = async (sectionInstanceId: string, groupId: string|numb
 
     await formDataGroupInstanceAdd({
       historyId: sectionInstance.historyId,
+      // 该接口实体字段类型声明与页面 id 形态(字符串)不一致, 运行期按原值透传
       sectionInstanceId, groupId, rowIndex: newRowIndex, valid: '1'
-    }, false, false, true)
+    } as any, false, false, true)
 
     await loadGroupInstances(sectionInstanceId)
     message.success('添加成功')
@@ -726,7 +727,8 @@ const validateRequiredFields = (sectionInstanceId: string): { valid: boolean; me
 
   for (const group of getGroupTree(sectionId)) {
     const result = validateGroupRecursively(group)
-    if (!result.valid) return { ...result, sectionInstanceId }
+    // 校验结果附带板块实例 id, 供上层定位首个出错的板块(返回类型固定三字段, 这里扩一项)
+    if (!result.valid) return { ...result, sectionInstanceId } as any
   }
 
   return { valid: true, message: '' }
@@ -1101,10 +1103,10 @@ const handleSaveAll = async (options?: { skipValidation?: boolean }) => {
             await formDataGroupInstanceAdd({
               historyId: newHistoryId,
               sectionInstanceId: realInstanceId,
-              groupId: localGi.groupId,
+              groupId: Number(localGi.groupId),
               rowIndex: localGi.rowIndex,
               valid: '1'
-            }, false, false, true)
+            } as any, false, false, true)
           }
           
           // 重新加载 group instances 获取真实 ID
@@ -1581,7 +1583,7 @@ onMounted(async () => {
         <template v-if="showLazySaveButton">
           <a-button
             style="margin-left: 16px"
-            @click="handleSaveAll"
+            @click="() => handleSaveAll()"
           >
             <template #icon>
               <SaveOutlined />

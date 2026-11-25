@@ -126,6 +126,7 @@ import { DownOutlined, PlusOutlined, ReloadOutlined, SafetyCertificateOutlined, 
 import { message } from 'ant-design-vue'
 import { computed, onMounted, ref } from 'vue'
 
+import type { DatasetColumnReq } from '../../apis/types/datasetConfigControllerTypes'
 import type { DatasetColumnInfo, DatasetInfo } from '../types'
 import ColumnEditModal from './ColumnEditModal.vue'
 
@@ -147,7 +148,8 @@ const emit = defineEmits<{
   (e: 'refresh'): void
 }>()
 
-const columns = [
+// 列定义用宽松类型: 行内 dataIndex/ellipsis/width 混写时联合推断与 a-table 列类型不兼容
+const columns: any[] = [
   { title: '顺序', key: 'displayOrder', width: 120, align: 'center' },
   // 不设固定宽度自适应剩余空间，超长省略号+悬停查看全文，避免出现横向滚动条
   { title: 'SQL表达式', dataIndex: 'columnSql', key: 'columnSql', ellipsis: true },
@@ -222,10 +224,12 @@ const handleSubmit = async (data: DatasetColumnInfo) => {
     if (props.dataset.id) {
       data.datasetId = props.dataset.id
       
+      // 表单对象是 DatasetColumnInfo(读模型), 保存接口要 DatasetColumnReq(写模型), 结构兼容只差类型名
+      const req = data as unknown as DatasetColumnReq
       if (currentColumn.value?.id) {
-        await datasetConfigUpdateColumn(data, true, false)
+        await datasetConfigUpdateColumn(req, true, false)
       } else {
-        await datasetConfigAddColumn(data, true, false)
+        await datasetConfigAddColumn(req, true, false)
       }
       
       modalVisible.value = false

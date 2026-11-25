@@ -2,7 +2,7 @@
   <div class="entity-wrapper">
     <ConditionList
       v-model:condition="_condition"
-      :advanced="advanced"
+      :advanced="advanced ?? false"
       :index="-1"
     />
   </div>
@@ -14,8 +14,11 @@ import { Ref } from 'vue'
 import ConditionList from '../ConditionList/index.vue'
 import { ConditionType } from '../type'
 
+import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+
 const props = defineProps<{condition: ConditionType, advanced?: boolean}>()
-const _condition:Ref<ConditionType|undefined> = ref()
+// ConditionList 的 condition 是必填(不接受 undefined) ⇒ 初值取传入条件, 不再声明 undefined
+const _condition: Ref<ConditionType | ConditionListType> = ref(props.condition)
 
 watch(() => props.condition, () => _condition.value = props.condition, { immediate: true })
 

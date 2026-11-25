@@ -736,7 +736,7 @@ export interface SkillRatingQuery {
   extEquals?: Record<string, string>
 }
 
-// 后端薄封装适配器（api 返回 {payload} 包装，组件统一 resp?.payload 取值）
+// 后端薄封装适配器（api 返回 {payload} 包装，组件统一 (resp as any)?.payload 取值）
 export interface SkillWorkbenchApi {
   getRegistry: (skillCode: string) => Promise<unknown>
   getFlow: (flowKey: string) => Promise<unknown>
@@ -881,13 +881,16 @@ const flowTagColor = computed(() => {
 })
 
 const selectedNodeVM = computed(() => {
-  if (!selection.value || selection.value.kind !== 'node') return null
-  return flowNodes.value.find(n => n.id === selection.value.id) || null
+  // 先把选中态收进局部常量: 回调里再读 selection.value 会丢失上面的非空收窄
+  const sel = selection.value
+  if (!sel || sel.kind !== 'node') return null
+  return flowNodes.value.find(n => n.id === sel.id) || null
 })
 
 const selectedEdgeVM = computed(() => {
-  if (!selection.value || selection.value.kind !== 'edge') return null
-  return flowEdges.value.find(e => e.id === selection.value.id) || null
+  const sel = selection.value
+  if (!sel || sel.kind !== 'edge') return null
+  return flowEdges.value.find(e => e.id === sel.id) || null
 })
 
 // 选中结点的 config 引用（v-model 直写其属性，对象本身是响应式代理）
@@ -1047,12 +1050,12 @@ function removeOutputRow(index: number) {
 // skill 注册表（链清单 + 结点类型 schema；启动时拉一次，是画布渲染的数据前提）
 async function loadRegistry() {
   const resp = await props.api.getRegistry(props.skillCode)
-  registry.value = (resp?.payload as SkillRegistry | undefined) || null
+  registry.value = ((resp as any)?.payload as SkillRegistry | undefined) || null
 }
 
 async function loadFlow() {
   const resp = await props.api.getFlow(flowKey.value)
-  const detail = resp?.payload as SkillFlowDetail | undefined
+  const detail = (resp as any)?.payload as SkillFlowDetail | undefined
   if (!detail?.graph) {
     flowNodes.value = []
     flowEdges.value = []
@@ -1180,7 +1183,7 @@ async function loadTraces() {
   tracesLoading.value = true
   try {
     const resp = await props.api.getTraces(flowKey.value)
-    traces.value = (resp?.payload as SkillTraceRecord[] | undefined) || []
+    traces.value = ((resp as any)?.payload as SkillTraceRecord[] | undefined) || []
   } finally {
     tracesLoading.value = false
   }
@@ -1188,7 +1191,7 @@ async function loadTraces() {
 
 async function openTrace(t: SkillTraceRecord) {
   const resp = await props.api.getTraceDetail(t.traceId)
-  currentTrace.value = (resp?.payload as SkillTraceRecord | undefined) || t
+  currentTrace.value = ((resp as any)?.payload as SkillTraceRecord | undefined) || t
   expandedDetails.value = []
 }
 
@@ -1199,7 +1202,8 @@ function toggleDetail(index: number) {
   else list.push(index)
 }
 
-function traceStatusText(status: string): string {
+// status 类型上可缺省(执行中/历史数据无终态), 缺省按"执行中"展示
+function traceStatusText(status?: string): string {
   if (status === 'success') return '成功'
   if (status === 'error') return '失败'
   return '执行中'
@@ -1245,7 +1249,7 @@ async function loadRatings() {
       keyword: f.keyword.trim() || undefined,
       extEquals: props.ratingExtEquals
     })
-    ratingStat.value = (resp?.payload as SkillRatingStatRes | undefined) || null
+    ratingStat.value = ((resp as any)?.payload as SkillRatingStatRes | undefined) || null
   } finally {
     ratingLoading.value = false
   }

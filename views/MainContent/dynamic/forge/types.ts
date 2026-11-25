@@ -79,6 +79,8 @@ export interface LinkageInfo {
   priority?: number
   isEnabled?: string
   showOrder?: number
+  // 界面上的排序号(表单里叫 sort, 与 showOrder 并存: 一个给面板排序, 一个给保存口径)
+  sort?: number
 }
 
 // 表结构变更历史

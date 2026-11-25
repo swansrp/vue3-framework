@@ -36,7 +36,8 @@ let formData = reactive({
   captcha: ''
 })
 
-const handleSubmit = (data: any) => {
+// 表单 finish 契约要求返回 Promise, 这里只转抛事件, 用 async 对齐
+const handleSubmit = async (data: any) => {
   emit('submit', data)
 }
 </script>

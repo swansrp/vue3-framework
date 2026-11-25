@@ -133,10 +133,10 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import './styles.css'
 
+import { clipOneLine, fmtDuration } from './fmt'
 import { THINK_ARCHIVE_PREFIX } from './processLines'
 import type { AgentViewItem } from './types'
 
-import { clipOneLine, fmtDuration } from './fmt'
 
 interface Props {
   /** 本组事件（连续 tool/log 混排，归组产物；行模型在组件内构建） */

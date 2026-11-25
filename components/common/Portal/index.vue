@@ -261,8 +261,12 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="onPositionMenu">
-                  <a-menu-item key="top">筛选条在上方</a-menu-item>
-                  <a-menu-item key="left">筛选面板在左侧</a-menu-item>
+                  <a-menu-item key="top">
+                    筛选条在上方
+                  </a-menu-item>
+                  <a-menu-item key="left">
+                    筛选面板在左侧
+                  </a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -889,6 +893,7 @@ import {
 } from '@/framework/apis/portal'
 import { getPortalConfig } from '@/framework/apis/portal/config'
 import { ConditionListType } from '@/framework/components/common/AdvancedSearch/ConditionList/type'
+import { getRelation } from '@/framework/components/common/AdvancedSearch/funs'
 import { ConditionType } from '@/framework/components/common/AdvancedSearch/type'
 import { PortalBindType } from '@/framework/components/common/Portal/bind/type'
 import {
@@ -902,10 +907,9 @@ import DashboardModal from '@/framework/components/common/Portal/dashboard/dashb
 import { db } from '@/framework/components/common/Portal/db'
 import PortalAssociationModal from '@/framework/components/common/Portal/modal/PortalAssociationModal.vue'
 import PortalGridMode from '@/framework/components/common/Portal/mode/PortalGridMode.vue'
-import PortalSearchTags from '@/framework/components/common/Portal/table/PortalSearchTags.vue'
 import PortalFilterPanel from '@/framework/components/common/Portal/PortalFilterPanel.vue'
 import PortalFilterPanelPane from '@/framework/components/common/Portal/PortalFilterPanelPane.vue'
-import { useUserStore } from '@/framework/store/user'
+import PortalSearchTags from '@/framework/components/common/Portal/table/PortalSearchTags.vue'
 import PortalTextAreaExpanded from '@/framework/components/common/Portal/table/PortalTextAreaExpanded.vue'
 import {
   ColumnType,
@@ -921,8 +925,8 @@ import {
 import { buildSummaryExportRow, headerColumnWidth, parse } from '@/framework/components/common/Portal/utils'
 import { getDroppedData } from '@/framework/hooks/antTreeDropSort'
 import bus, { PORTAL_RESIZE } from '@/framework/mitt'
-import { getRelation } from '@/framework/components/common/AdvancedSearch/funs'
 import { dictStore, useTreeStore } from '@/framework/store/common'
+import { useUserStore } from '@/framework/store/user'
 import {
   doFunctions,
   getAllParentNodes,
@@ -2073,7 +2077,8 @@ const onPanelExpandedChange = (v: boolean) => {
 // 工具栏开关：展开/收起
 const togglePanelExpanded = () => onPanelExpandedChange(!panelExpanded.value)
 // 右键菜单切换位置（上方/左侧）
-const onPositionMenu = ({ key }: { key: string }) => onPanelPositionChange(key as 'top' | 'left')
+// 菜单 key 在 antdv 里是 Key(string|number), 位置只认 'top'/'left' 两个字符串
+const onPositionMenu = ({ key }: { key: string | number }) => onPanelPositionChange(String(key) as 'top' | 'left')
 // 位置切换（顶栏分段控件调用）；左侧布局接入后生效
 // 右键菜单切换位置：切换后展开面板（让用户看到结果）并通知表格重算宽度
 const onPanelPositionChange = (v: 'top' | 'left') => {
@@ -2132,6 +2137,27 @@ const onPanelSaveLocal = (fields: Array<{ column: string, label: string, relatio
   panelHasUserDefault.value = true
   panelManageOpen.value = false
   message.success('已保存我的筛选项')
+}
+// 快捷添加（面板「添加筛选项」）：与移除同口径——userFields 为空时先把配置清单物化成「我的字段」再追加；
+// 关系缺省按该字段类型允许项取「等于」(与面板首选项同规则)
+const onPanelAddField = (column: string, relation?: number, defaultValue?: any[]) => {
+  if (!column) return
+  const base = (panelUserFields.value && panelUserFields.value.length > 0)
+    ? panelUserFields.value.map((f: any) => ({ ...f }))
+    : (Array.isArray(panelConfig.value?.fields) ? panelConfig.value!.fields : []).map((f: any) => ({ ...f }))
+  if (!base.some((f: any) => f.column === column)) {
+    const meta = panelManageAvailableFields.value.find((f: any) => f.property === column)
+    base.push({
+      column,
+      label: meta?.title || column,
+      relation: relation ?? FILTER_TYPE.EQUAL,
+      defaultValue: Array.isArray(defaultValue) ? [...defaultValue] : []
+    })
+  }
+  panelUserFields.value = base
+  if (panelValues.value[column] === undefined) {
+    panelValues.value = { ...panelValues.value, [column]: Array.isArray(defaultValue) ? [...defaultValue] : [] }
+  }
 }
 // 快捷移除（胶囊行尾 ×）：userFields 为空时先把配置清单物化成「我的字段」再删，
 // 否则删的是空数组、配置字段删不掉
@@ -2751,7 +2777,8 @@ const applyElasticColumn = () => {
     const previous = collectLeafColumns(columnArray.value).find(column => column.dataIndex === elasticColumnKey)
     if (previous && isNotEmpty(previous.minWidth)) {
       previous.width = previous.minWidth
-      delete previous.minWidth
+      // ColumnType 上 minWidth/width 是必填声明, 但运行期要"删掉"交还库算宽 ⇒ 走宽松视图
+      delete (previous as any).minWidth
     }
     elasticColumnKey = undefined
   }
@@ -2765,7 +2792,7 @@ const applyElasticColumn = () => {
     return
   }
   elastic.minWidth = elastic.width
-  delete elastic.width
+  delete (elastic as any).width
   elasticColumnKey = elastic.dataIndex
 }
 

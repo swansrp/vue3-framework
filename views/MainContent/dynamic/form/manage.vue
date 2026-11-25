@@ -27,8 +27,8 @@ const defaultFormFields = {
   sort: 0
 }
 
-// 表单校验规则
-const formRules = {
+// 表单校验规则(antd 的 RuleObject 类型对 trigger 等字段要求字面量, 这里按对象声明, 交给运行时校验)
+const formRules: Record<string, any> = {
   code: [
     { required: true, message: '请输入模板编码', trigger: 'blur' },
     { pattern: /^[a-z][a-z_]*$/, message: '编码必须以字母开头，只能包含小写字母和下划线', trigger: 'blur' }
@@ -122,7 +122,7 @@ const getStatusText = (status: string) => {
                 <a-input
                   :value="formData.code"
                   placeholder="请输入模板编码（如：form_code）"
-                  @input="(e: InputEvent) => handleCodeInput(formData, (e.target as HTMLInputElement).value)"
+                  @input="(e: any) => handleCodeInput(formData, e.target.value)"
                   @change="(e: any) => handleCodeInput(formData, e.target.value)"
                 />
               </a-form-item>

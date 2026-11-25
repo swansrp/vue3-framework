@@ -10,7 +10,7 @@
       <a-list-item
         :class="{'activate-item':
           labelInValue ?
-            selectedData.findIndex(data=>data.value === item[valueField]) !== -1
+            selectedData.findIndex((data: any)=>data.value === item[valueField]) !== -1
             : selectedData.indexOf(item[valueField]) !== -1}"
         @click="checkListNode(item)"
       >

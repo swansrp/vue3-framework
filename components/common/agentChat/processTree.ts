@@ -185,7 +185,8 @@ export function spawnErrorText(result?: string): string | null {
 export interface RenderTool {
   step: ToolStep
   status: RunStatus
-  sub?: { agentCode: string; text: string; tools: RenderTool[] }
+  /** 子代理运行态: 渲染伪视图时按它算终局态(缺省按进行中) */
+  sub?: { agentCode: string; status?: RunStatus; text: string; tools: RenderTool[] }
 }
 
 export interface AssistantView {

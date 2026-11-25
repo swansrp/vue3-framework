@@ -140,9 +140,10 @@ import { CheckCircleFilled, ExclamationCircleFilled } from '@ant-design/icons-vu
 import { message } from 'ant-design-vue'
 import { ref } from 'vue'
 
+import type { AgentConfirmationT } from './types'
+
 import { sessionResolveConfirmation } from '@/framework/apis/agent'
 
-import type { AgentConfirmationT } from './types'
 
 import './styles.css'
 

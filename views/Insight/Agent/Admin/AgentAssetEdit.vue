@@ -332,7 +332,7 @@
             </a-button>
             <a-button
               size="small"
-              @click="saveToTemplate"
+              @click="() => saveToTemplate()"
             >
               保存到模板
             </a-button>
@@ -1012,7 +1012,7 @@ const aiCompleter = computed<((form: any, guidance: string, onEvent?: (event: st
   if (!['metrics', 'relations', 'concepts'].includes(assetTab.value)) return undefined
   return (form: any, guidance: string, onEvent?: (event: string, text: string) => void) =>
     aiCompleteAgentAssetStream(
-      { agentCode: props.agentCode, assetType: assetTab.value, form, guidance }, onEvent, baseDomain)
+      { agentCode: props.agentCode, assetType: assetTab.value, form, guidance }, onEvent!, baseDomain)
 })
 
 // 资产 tab 分组（顺序即配置顺序：事实层先行 → 红线人工闸 → AI 语义产出；标签样式区分口径）：
@@ -1231,7 +1231,7 @@ const loadGroupOptions = () => {
     })
     .catch(() => [] as string[])
   Promise.all([dictP, hierarchyP]).then(([dictNames, hierarchyNames]) => {
-    groupNames.value = [...dictNames, ...hierarchyNames.filter(n => !dictNames.includes(n))]
+    groupNames.value = [...dictNames, ...hierarchyNames.filter((n: string) => !dictNames.includes(n))]
   })
 }
 

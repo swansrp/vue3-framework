@@ -160,10 +160,12 @@
             >
               <portal-table-pivot-column-pane
                 :table-id="selectedTable.id"
+                :table-code="selectedTable.tableCode"
                 :pivot-mode="selectedTable.pivotMode"
                 :columns="columns"
                 :available-fields="availableFields"
                 :portal-name="portalName"
+                :table-list="tableList"
               />
             </a-tab-pane>
 

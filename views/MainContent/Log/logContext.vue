@@ -125,11 +125,10 @@ import { isNotEmpty, scrollToBottom, strLF2HtmlLF } from '@/framework/utils/comm
 const [messageApi, contextHolder] = message.useMessage()
 const logContainer = ref()
 
-// 配置 marked 支持 GFM 表格
+// 配置 marked 支持 GFM 表格(tables 是 gfm 的默认能力, 新版 marked 已无该选项, 显式传会被类型拒)
 marked.setOptions({
   breaks: true,
-  gfm: true,
-  tables: true
+  gfm: true
 })
 
 const props = withDefaults(

@@ -9,7 +9,7 @@
           v-model:value="localDepartmentListValue"
           :style="{width: inputWidth}"
           :options="departmentListOption"
-          :show-search="{ cascaderFilter }"
+          :show-search="{ filter: cascaderFilter }"
           max-tag-count="responsive"
           multiple
           placeholder="请选择公司部门"
@@ -224,7 +224,8 @@ const handleInputChange = _.debounce((value: string) => queryStaffList(departmen
 // 比如，我输入了孟，选择了某个姓孟的人，然后输入王，选择了一个姓王的人，那么我获取到的staffListValue，只能获取到姓王的人的option中的信息
 const staffKey2StaffNumberMap:{[key: string]: string | number} = {}
 // 当职工名称对应的select发生改变，向外部更新staffListValue
-const handleStaffChange = (option?: any[]) => {
+// select 的 change 载荷是 SelectValue(单选时是选中项数组), 按宽松形态收
+const handleStaffChange = (option?: any) => {
   if (isMultiple.value) {
     localStaffListValue.value.forEach((item: any) => item.option && (staffKey2StaffNumberMap[item.key || item.value] = _.cloneDeep(item.option)))
     let copyData = _.cloneDeep(localStaffListValue.value)

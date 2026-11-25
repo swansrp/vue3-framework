@@ -96,6 +96,8 @@ export interface PortalPivotColumnVO {
   status?: string
   /** 父链路径JSON(叶子列多层父表头 label 链, 自外向内; 仅 row 树形表头使用) */
   groupPath?: string
+  /** 列级钻取目标表格编码(空=跟随整表 drillTableCode); 单格优先级: 透视列 > 度量列 > 整表 */
+  drillTableCode?: string
 }
 
 /** 透视度量列 */
@@ -132,6 +134,8 @@ export interface PivotMeasureVO {
    * 其余聚合(count/countDistinct/avg/min/max)过滤会破坏与单元格数字的对齐, 配置了也不生效
    */
   hideZero?: boolean
+  /** 钻取目标表格编码(空=跟随整表 drillTableCode): 该度量列单元格优先跳此透视报表; 同格透视列也有配置时以透视列为准 */
+  drillTableCode?: string
 }
 
 /** 透视聚合查询请求 */

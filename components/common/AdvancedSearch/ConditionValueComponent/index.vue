@@ -387,10 +387,11 @@
 import locale from 'ant-design-vue/es/date-picker/locale/zh_CN'
 import { Ref } from 'vue'
 
+import VariableChip from './VariableChip.vue'
+
 import { FIELD_TYPE, FILTER_TYPE } from '@/framework/components/common/Portal/type'
 import { ValueLabel } from '@/framework/utils/type'
 
-import VariableChip from './VariableChip.vue'
 
 
 const value: Ref = ref()

@@ -665,7 +665,8 @@ const manifestExpandable = computed(() => ({
 // 服务端一次回 100 场，这里做前端分页：装配单是诊断面，不给它加翻页参数（后端只有 limit）
 const manifestPagination = computed(() => ({
   pageSize: 10,
-  size: 'small',
+  // 字面量收窄: 宽 string 不满足 TablePaginationConfig 的 size 枚举
+  size: 'small' as const,
   showSizeChanger: true,
   pageSizeOptions: ['10', '20', '50', '100'],
   hideOnSinglePage: false,

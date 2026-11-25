@@ -181,7 +181,7 @@ const loadAllData = async () => {
           section.allAttributes = allAttributes
 
           // 构建分组树
-          section.groupTree = buildGroupTree(allGroups, allGroups)
+          section.groupTree = buildGroupTree(allGroups)
           
           // 为每个分组关联属性
           const assignAttributesToGroups = (groups: any[]) => {
@@ -288,13 +288,14 @@ const stats = computed(() => {
 })
 
 // 右键菜单处理
-const handleContextMenu = (e: MouseEvent, item: any, type: 'module' | 'section' | 'group' | 'attribute') => {
+// 子组件抛上来的 type 是宽 string, 这里按上下文菜单的四种目标收窄
+const handleContextMenu = (e: MouseEvent, item: any, type: string) => {
   e.preventDefault()
   e.stopPropagation()
-  
+
   contextMenuPosition.value = { x: e.clientX, y: e.clientY }
   contextMenuTarget.value = item
-  contextMenuType.value = type
+  contextMenuType.value = type as 'module' | 'section' | 'group' | 'attribute'
   contextMenuVisible.value = true
   
   // 点击其他地方关闭菜单

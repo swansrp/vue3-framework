@@ -3,7 +3,7 @@
     <a-select
       v-if="column.fieldType === FIELD_TYPE.SELECT || column.fieldType === FIELD_TYPE.SELECT_MULTI_IN_ONE"
       :filter-option="filterOption"
-      :get-popup-container="(triggerNode) => triggerNode.parentNode"
+      :get-popup-container="(triggerNode: any) => triggerNode.parentNode"
       :options="column.referenceDictOption"
       :placeholder="'选择' + strRemoveLF(column.title)"
       :value="_selectedKeysRef"
@@ -13,7 +13,7 @@
     />
     <a-tree-select
       v-else-if="column.fieldType === FIELD_TYPE.TREE || column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
-      :get-popup-container="(triggerNode) => triggerNode.parentNode"
+      :get-popup-container="(triggerNode: any) => triggerNode.parentNode"
       :placeholder="'选择' + strRemoveLF(column.title)"
       :show-checked-strategy="TreeSelect.SHOW_ALL"
       :tree-data="column.referenceDictOption"
@@ -28,10 +28,10 @@
     <a-range-picker
       v-else-if="column.fieldType === FIELD_TYPE.DATE"
       v-model:value="_selectedKeysRef"
-      :get-popup-container="(triggerNode) => triggerNode.parentNode"
+      :get-popup-container="(triggerNode: any) => triggerNode.parentNode"
       style="width: 250px; margin-bottom: 8px; display: flex"
       value-format="YYYY-MM-DD HH:mm:ss"
-      @change="e => {
+      @change="(e: any) => {
         if(e) {
           e[0] = e[0].split(' ')[0] + ' 00:00:00'
           e[1] = e[1].split(' ')[0] + ' 23:59:59'
@@ -42,7 +42,7 @@
     <a-range-picker
       v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
       v-model::value="_selectedKeysRef"
-      :get-popup-container="(triggerNode) => triggerNode.parentNode"
+      :get-popup-container="(triggerNode: any) => triggerNode.parentNode"
       show-time
       style="width: 330px; margin-bottom: 8px; display: flex"
       value-format="YYYY-MM-DD HH:mm:ss"
@@ -114,7 +114,7 @@
           搜索
         </a-button>
         <template #overlay>
-          <a-menu @click="({ key: menuKey }) => handleNullSearch(menuKey, column)">
+          <a-menu @click="({ key: menuKey }: any) => handleNullSearch(String(menuKey), column)">
             <a-menu-item key="1">
               查询为空
             </a-menu-item>

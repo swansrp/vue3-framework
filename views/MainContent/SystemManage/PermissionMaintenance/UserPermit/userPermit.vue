@@ -280,7 +280,9 @@ const selectedMenuKeys = ref<string[]>([])
 const permitExplanation = ref<UserPermitRes[]>([])
 const userPermissionTreeData = ref<DataNode[]>([])
 const completePermissionTreeData = ref<DataNode[]>([])
-const userTreeCheckedKeys = ref<string[] | { checked: string[]; halfChecked: string[] }>([])
+// 树 v-model 的回传形态随 checkStrictly 变化(Key[] 或 {checked,halfChecked}); BindTree 只收 string[]|number[]
+// ⇒ 这里按宽松类型承接, 落库前由调用点自己映射
+const userTreeCheckedKeys = ref<any>([])
 
 // 计算属性
 const canRefresh = computed(() => {

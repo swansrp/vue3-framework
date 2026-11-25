@@ -37,7 +37,8 @@ interface Props {
 
 interface Emits {
   (e: 'update:modelValue', value: string | number | undefined): void
-  (e: 'change', value: string | number | undefined, option: BizDictVO | undefined): void
+  // 多选模式回传整组选中项, 单选回传单项
+  (e: 'change', value: string | number | undefined, option: BizDictVO | BizDictVO[] | undefined): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -123,7 +124,7 @@ const loadDictData = async () => {
     const res = await getEnterpriseDictByCode(
       { 
         dictCode: props.dictCode,
-        bizId: bizId as string | null,
+        bizId: bizId as string,
         ...(props.parentCode ? { parentValue: props.parentCode } : {})
       },
       false,
@@ -146,7 +147,8 @@ const loadDictData = async () => {
 }
 
 // 处理选择变化
-const handleChange = (value: string | number | undefined | (string | number)[]) => {
+// select 的 change 载荷是 SelectValue(含 LabeledValue), 内部再归一成值数组/标量
+const handleChange = (value: any) => {
   internalValue.value = value
   
   if (props.multiple) {
@@ -222,7 +224,7 @@ const deleteDictItem = async (item: BizDictVO) => {
           }
           await deleteEnterpriseDict({ 
             id: item.id,
-            bizId: bizId as string | null
+            bizId: bizId as string
           })
           message.success('删除成功')
           await loadDictData()
@@ -261,14 +263,14 @@ const saveEditItem = async (item: BizDictVO) => {
     if (item.id) {
       // 更新
       await systemBizDictUpdateEnterpriseDict(
-        { bizId: bizId as string | null },
+        { bizId: bizId as string },
         item
       )
       message.success('更新成功')
     } else {
       // 新增
       await systemBizDictAddDict(
-        { bizId: bizId as string | null },
+        { bizId: bizId as string },
         item
       )
       message.success('添加成功')
@@ -323,7 +325,7 @@ const autoSaveSortOrder = async () => {
         
         updatePromises.push(
           systemBizDictUpdateEnterpriseDict(
-            { bizId: bizId as string | null },
+            { bizId: bizId as string },
             updatedItem
           )
         )

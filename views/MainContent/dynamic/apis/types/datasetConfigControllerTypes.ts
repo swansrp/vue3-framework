@@ -181,6 +181,38 @@ export interface DatasetSqlRes {
   sql?: string
 }
 
+export interface DatasetPortalWritebackReq {
+  /** 数据集ID */
+  datasetId: number
+  /** Portal名称（默认配置角色下） */
+  portalName: string
+}
+
+export interface DatasetPortalWritebackRes {
+  /** 数据集ID */
+  datasetId?: number
+  /** Portal名称 */
+  portalName?: string
+  /** Portal显示名称 */
+  portalDisplayName?: string
+  /** 已回写（备注发生变化）的列数 */
+  updatedCount?: number
+  /** Portal与Dataset一致、无需更新的列数 */
+  unchangedCount?: number
+  /** 匹配到但未回写的列数 */
+  skippedCount?: number
+  /** Portal中存在但Dataset找不到对应列的列数 */
+  unmatchedCount?: number
+  /** 回写后重建的SQL（含列备注注释） */
+  sql?: string
+  /** 常驻过滤谓词（外层 WHERE 片段） */
+  baseFilter?: string
+}
+
+export type DatasetPortalWritebackResResponse = ResponseDataType & {
+  payload: DatasetPortalWritebackRes
+}
+
 export type DatasetSqlResResponse = ResponseDataType & {
   payload: DatasetSqlRes
 }

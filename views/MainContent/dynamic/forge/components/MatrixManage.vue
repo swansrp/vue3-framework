@@ -220,7 +220,8 @@ const emit = defineEmits<{
   (e: 'select', matrix: MatrixInfo | null): void
 }>()
 
-const columns = [
+// 用 a-table 的列类型: 行内固定列/可缺省对齐等写法在联合推断下与库要求不兼容, 显式标注意图
+const columns: any[] = [
   { title: '状态', dataIndex: 'status', key: 'status', width: 150, align: 'center' },
   { title: '表名', dataIndex: 'tableName', key: 'tableName', width: 350, align: 'center'  },
   { title: '表注释', dataIndex: 'tableComment', key: 'tableComment', align: 'center'  },
@@ -337,7 +338,7 @@ const handleAdd = () => {
   modalVisible.value = true
 }
 
-const handleEditMatrix = (record: MatrixInfo) => {
+const handleEditMatrix = (record: any) => {
   modalTitle.value = '查看矩阵'
   modalReadonly.value = true
   // 移除 biz_ 前缀用于显示
@@ -349,7 +350,7 @@ const handleEditMatrix = (record: MatrixInfo) => {
   modalVisible.value = true
 }
 
-const handleEditComment = (record: MatrixInfo) => {
+const handleEditComment = (record: any) => {
   editingKey.value = record.id
   editingComment.value = record.tableComment || ''
   // 使用 nextTick 确保输入框渲染后再聚焦
@@ -358,7 +359,7 @@ const handleEditComment = (record: MatrixInfo) => {
   }, 100)
 }
 
-const handleSaveComment = async (record: MatrixInfo) => {
+const handleSaveComment = async (record: any) => {
   if (editingComment.value === record.tableComment) {
     editingKey.value = undefined
     return
@@ -410,7 +411,7 @@ const handleCancel = () => {
   modalVisible.value = false
 }
 
-const handleDelete = async (record: MatrixInfo) => {
+const handleDelete = async (record: any) => {
   const res = await sysMatrixDeleteItem({ id: record.id })
   if (res.status?.code === 0) {
     message.success('删除成功')
@@ -423,7 +424,7 @@ const handleDelete = async (record: MatrixInfo) => {
   }
 }
 
-const handleTruncateTable = async (record: MatrixInfo) => {
+const handleTruncateTable = async (record: any) => {
   const res = await truncateTable({ id: Number(record.id) })
   if (res.status?.code === 0) {
     message.success('清空表数据成功')
@@ -431,7 +432,7 @@ const handleTruncateTable = async (record: MatrixInfo) => {
   }
 }
 
-const handleConfig = (record: MatrixInfo) => {
+const handleConfig = (record: any) => {
   currentMatrix.value = record
   columnDrawerVisible.value = true
 }
@@ -441,7 +442,9 @@ const handleColumnDrawerClose = () => {
   loadData()
 }
 
-const handleSelectChange = (selectedKeys: string[]) => {
+// antd 行选择回调给的是 Key[](string|number), 本表 id 恒为字符串
+const handleSelectChange = (keys: (string | number)[], _rows?: any[]) => {
+  const selectedKeys = keys.map(k => String(k))
   selectedRowKeys.value = selectedKeys
   if (selectedKeys.length > 0) {
     const selected = dataSource.value.find(item => item.id === selectedKeys[0])
@@ -494,7 +497,7 @@ const checkPrimaryKey = async (matrixId: number): Promise<boolean> => {
   }
 }
 
-const handleCreateTable = async (record: MatrixInfo) => {
+const handleCreateTable = async (record: any) => {
   // 检查是否有主键
   const hasPrimaryKey = await checkPrimaryKey(Number(record.id))
   
@@ -513,7 +516,7 @@ const handleCreateTable = async (record: MatrixInfo) => {
   }
 }
 
-const executeCreateTable = async (record: MatrixInfo) => {
+const executeCreateTable = async (record: any) => {
   try {
     const res = await createPhysicalTable({ id: Number(record.id) })
     if (res.status?.code === 0) {
@@ -525,7 +528,7 @@ const executeCreateTable = async (record: MatrixInfo) => {
   }
 }
 
-const handleSyncTable = async (record: MatrixInfo) => {
+const handleSyncTable = async (record: any) => {
   // 检查是否有主键
   const hasPrimaryKey = await checkPrimaryKey(Number(record.id))
   
@@ -544,7 +547,7 @@ const handleSyncTable = async (record: MatrixInfo) => {
   }
 }
 
-const executeSyncTable = async (record: MatrixInfo) => {
+const executeSyncTable = async (record: any) => {
   try {
     const res = await syncTableStructure({ id: Number(record.id) })
     if (res.status?.code === 0) {
@@ -556,7 +559,7 @@ const executeSyncTable = async (record: MatrixInfo) => {
   }
 }
 
-const handleViewHistory = (record: MatrixInfo) => {
+const handleViewHistory = (record: any) => {
   currentMatrix.value = record
   historyDrawerVisible.value = true
 }

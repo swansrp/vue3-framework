@@ -188,7 +188,7 @@
           <template v-if="column.dataIndex === 'isAdmin'">
             <a-switch
               :checked="!!record.isAdmin"
-              @change="(checked: boolean) => handleToggleAdmin(record, checked)"
+              @change="(checked: any) => handleToggleAdmin(record, !!checked)"
             />
           </template>
           <template v-else-if="column.dataIndex === 'operation'">
@@ -413,7 +413,8 @@ const handleCreateTenant = () => {
   })
 }
 
-const openEditDialog = (record: TenantRow) => {
+// a-table 插槽 record 是 Record<string, any>, 与行 VO 结构兼容 ⇒ 取参放宽
+const openEditDialog = (record: any) => {
   editForm.value = { id: record.id, name: record.name, code: record.code || '' }
   editDialogVisible.value = true
 }
@@ -425,11 +426,11 @@ const handleUpdateTenant = () => {
       .then(renderTenantList)
 }
 
-const handleDisableTenant = (record: TenantRow) =>
+const handleDisableTenant = (record: any) =>
   disableTenant(record.id).then(renderTenantList)
 
 // 启用（对称 disable；未勾「显示已停用」时操作不可达=行为零变化）
-const handleEnableTenant = (record: TenantRow) =>
+const handleEnableTenant = (record: any) =>
   enableTenant(record.id).then(renderTenantList)
 
 const renderMemberList = () => {
@@ -439,7 +440,7 @@ const renderMemberList = () => {
       .finally(() => memberLoading.value = false)
 }
 
-const openMemberDialog = (record: TenantRow) => {
+const openMemberDialog = (record: any) => {
   currentTenantId.value = record.id
   memberDialogTitle.value = `成员管理 - ${record.name}`
   // 每次打开都是干净加成员表单（照 MemberAddModal.resetFields）；顺带切断上一弹窗的迟到查找
@@ -506,10 +507,10 @@ const handleAddMember = () => {
       .finally(() => memberAdding.value = false)
 }
 
-const handleRemoveMember = (record: MemberRow) =>
+const handleRemoveMember = (record: any) =>
   removeMyTenantMember(currentTenantId.value, record.userId).then(renderMemberList)
 
-const handleToggleAdmin = (record: MemberRow, checked: boolean) =>
+const handleToggleAdmin = (record: any, checked: boolean) =>
   setMyTenantMemberAdmin(currentTenantId.value, record.userId, checked).then(renderMemberList)
 
 // ==================== 应用授权（/web/admin/tenant-app/*，弹窗打开时才拉数据） ====================
@@ -549,7 +550,7 @@ const loadAppGrant = () => {
   })
 }
 
-const openAppGrantDialog = (record: TenantRow) => {
+const openAppGrantDialog = (record: any) => {
   appGrantTenantId.value = record.id
   appGrantDialogTitle.value = `应用授权 - ${record.name}`
   appGrantRows.value = []

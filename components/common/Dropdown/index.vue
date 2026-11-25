@@ -83,7 +83,9 @@ const props = defineProps({
 
 const { options, value } = toRefs(props)
 const emit = defineEmits<{
-  (e: 'update:value', value: Value): void;
+  // 事件载荷按 any 声明: 各页面 @update:value 处理器的入参宽窄不一(年份 number / 模式 string / 数组),
+  // 组件侧只透传选中项, 由调用方各自收窄
+  (e: 'update:value', value: any): void;
 }>()
 
 let selectedItem = ref(options.value[0])

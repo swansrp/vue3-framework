@@ -83,7 +83,7 @@ onBeforeMount(async () => {
   })) as any
   useAdvancedSearchStore.setConditionLabelValueTypeOption(filterColumns)
   const conditionDict = await dict.getDict('PORTAL_CONDITION_DICT')
-  conditionDict.forEach((item: ValueLabel) => useAdvancedSearchStore.setSelectConditionMap(item.value, item))
+  conditionDict.forEach((item: ValueLabel) => useAdvancedSearchStore.setSelectConditionMap(String(item.value), item))
   updateAdvancedConditionFromProps()
 })
 

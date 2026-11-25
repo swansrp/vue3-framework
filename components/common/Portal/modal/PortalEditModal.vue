@@ -9,7 +9,7 @@
     :z-index="999"
     @cancel="() => emit('cancel')"
     @close="() => emit('close')"
-    @ok="() => editModalRef.validate().then(() => emit('confirm')).catch(() => {})"
+    @ok="() => editModalRef?.validate().then(() => emit('confirm')).catch(() => {})"
   >
     <a-form
       ref="editModalRef"
@@ -35,7 +35,7 @@
             style="margin-top: 20px"
           >
             <template
-              v-for="column in value[1].filter(item => { return config.modal.type === 'add' ? item.addShow : item.editShow })"
+              v-for="column in value[1].filter((item: any) => { return config.modal.type === 'add' ? item.addShow : item.editShow })"
               :key="column.dataIndex"
             >
               <a-descriptions-item
@@ -99,7 +99,7 @@
                     :options="column.referenceDictOption || []"
                     :value="getMultiSelectValue(config.modal.data[column.dataIndex])"
                     mode="multiple"
-                    @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
+                    @update:value=" (v: any) => config.modal.data[column.dataIndex] = (v || []).join(',')"
                   />
                   <a-tree-select
                     v-else-if="column.fieldType === FIELD_TYPE.TREE"
@@ -110,7 +110,7 @@
                     allow-clear
                     tree-default-expand-all
                     tree-node-filter-prop="label"
-                    @select="v => config.modal.data[column.dataIndex] = v"
+                    @select="(v: any) => config.modal.data[column.dataIndex] = v"
                   />
                   <a-tree-select
                     v-else-if="column.fieldType === FIELD_TYPE.TREE_MULTI_IN_ONE"
@@ -122,24 +122,24 @@
                     multiple
                     tree-default-expand-all
                     tree-node-filter-prop="label"
-                    @update:value=" v => config.modal.data[column.dataIndex] = v.join(',')"
+                    @update:value=" (v: any) => config.modal.data[column.dataIndex] = (v || []).join(',')"
                   />
                   <a-date-picker
                     v-else-if="column.fieldType === FIELD_TYPE.DATE"
                     :allow-clear="false"
                     :bordered="false"
                     :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                    :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
-                    @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
+                    :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : undefined"
+                    @update:value=" (v: any) => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
                   />
                   <a-date-picker
                     v-else-if="column.fieldType === FIELD_TYPE.DATETIME"
                     :allow-clear="false"
                     :bordered="false"
                     :disabled="config.modal.type === 'add' ? column.addDisabled : column.editDisabled"
-                    :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : null"
+                    :value="config.modal.data[column.dataIndex] ? dayjs(config.modal.data[column.dataIndex]) : undefined"
                     show-time
-                    @update:value=" v => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
+                    @update:value=" (v: any) => config.modal.data[column.dataIndex] = v?.format('YYYY-MM-DD HH:mm:ss') ?? ''"
                   />
                   <a-textarea
                     v-else-if="column.fieldType === FIELD_TYPE.HREF

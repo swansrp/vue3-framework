@@ -16,7 +16,7 @@
       <a-dropdown :trigger="config.detailAble !== false || !config.readOnly ? ['contextmenu'] : []">
         <span>{{ dataRef.title }}</span>
         <template #overlay>
-          <a-menu @click="({ key: menuKey }) => handleMenuContext(dataRef, menuKey)">
+          <a-menu @click="({ key: menuKey }: any) => handleMenuContext(dataRef, String(menuKey))">
             <a-menu-item
               v-if="config.detailAble !== false"
               key="1"

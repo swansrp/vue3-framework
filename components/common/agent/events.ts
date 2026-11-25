@@ -15,6 +15,8 @@
  * 注意：本文件自持一份映射，不 import 旧对话组件的事件适配器（旧件是另一套视图模型
  * AssistantView，两模块无耦合）。
  */
+import { FRAMEWORK_TOOL_DIGEST_FIELDS, FRAMEWORK_TOOL_LABELS } from './labels'
+import { isNoiseLogLine } from './processLines'
 import type {
   AgentArtifact,
   AgentEventFrame,
@@ -23,8 +25,6 @@ import type {
   AgentToolItem,
   AgentViewItem
 } from './types'
-import { isNoiseLogLine } from './processLines'
-import { FRAMEWORK_TOOL_DIGEST_FIELDS, FRAMEWORK_TOOL_LABELS } from './labels'
 
 /** payload 取文本：字符串原样；对象 JSON 化（人读）；空值空串 */
 export const payloadText = (payload: unknown): string => {

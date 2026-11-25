@@ -28,7 +28,7 @@
       :max="column.max"
       :min="column.min"
       :value="modelValue"
-      string-mode="true"
+      :string-mode="true"
       style="width: 100%"
       @blur="doFunctions(save, closeEditor)"
       @keydown.esc="closeEditor"
@@ -71,7 +71,7 @@
       :value="modelValue"
       open
       style="width: 120px"
-      @select="v => {
+      @select="(v: any) => {
         cellUpdate(recordIndexs[0], column.dataIndex, v)
         modelValue = v;
         save();
@@ -91,14 +91,14 @@
       mode="multiple"
       open
       style="width: 200px"
-      @deselect="v => {
+      @deselect="(v: any) => {
         const currentValues = modelValue ? modelValue.split(',').filter(Boolean) : [];
-        const newValues = currentValues.filter(item => item !== v);
+        const newValues = currentValues.filter((item: any) => item !== v);
         const newValue = newValues.join(',');
         cellUpdate(recordIndexs[0], column.dataIndex, newValue);
         modelValue = newValue;
       }"
-      @select="v => {
+      @select="(v: any) => {
         const currentValues = modelValue ? modelValue.split(',').filter(Boolean) : [];
         const newValues = [...currentValues, v];
         const newValue = newValues.join(',');
@@ -122,7 +122,7 @@
       style="width: 300px;"
       tree-default-expand-all
       tree-node-filter-prop="label"
-      @select="v => {
+      @select="(v: any) => {
         cellUpdate(recordIndexs[0], column.dataIndex, v)
         modelValue = v;
         save();
@@ -145,7 +145,7 @@
       tree-checkable
       tree-default-expand-all
       tree-node-filter-prop="label"
-      @change="v => {
+      @change="(v: any) => {
         const newValue = Array.isArray(v) ? v.join(',') : '';
         cellUpdate(recordIndexs[0], column.dataIndex, newValue);
         modelValue = newValue;
@@ -160,12 +160,12 @@
       :allow-clear="false"
       :bordered="false"
       :get-popup-container="getPopupContainer"
-      :value="modelValue ? dayjs(modelValue) : null"
+      :value="modelValue ? dayjs(modelValue) : undefined"
       open
       style="width: 100%"
       @blur="closeEditor"
       @update:value="
-        v => {
+        (v: any) => {
           cellUpdate(recordIndexs[0], column.dataIndex, v)
           modelValue = v?.format('YYYY-MM-DD HH:mm:ss') ?? '';
           save();
@@ -182,12 +182,12 @@
       :bordered="false"
       :get-popup-container="getPopupContainer"
       :show-time="true"
-      :value="modelValue ? dayjs(modelValue) : null"
+      :value="modelValue ? dayjs(modelValue) : undefined"
       open
       style="width: 100%"
       @blur="closeEditor"
       @update:value="
-        v => {
+        (v: any) => {
           cellUpdate(recordIndexs[0], column.dataIndex, v)
           modelValue = v?.format('YYYY-MM-DD HH:mm:ss') ?? '';
           save();

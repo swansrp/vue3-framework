@@ -157,8 +157,9 @@ export const useNavigationStore = defineStore('navigation', {
           const partialPath = pathSegments.slice(0, i + 1).join('/')
           const routeNode = routeStore.dynamicRouteMap[partialPath]
           if (routeNode) {
-            openKeys.push(routeNode.key)
-            titlePath.push(routeNode.title)
+            // 动态路由节点上 key/title 类型可选(菜单配置缺省时跳过, 不塞空串占位)
+            if (routeNode.key) openKeys.push(routeNode.key)
+            if (routeNode.title) titlePath.push(routeNode.title)
           }
         }
       }

@@ -4,7 +4,7 @@
        仅作本页一处 accent（login-mode-btn hover 边框），不接管 antd token -->
   <div
     class="login-box fullscreen-bg"
-    :style="{ '--brand-primary': brandStore.themePrimary }"
+    :style="{ '--brand-primary': brandStore.themePrimary || '' }"
   >
     <div class="login-container">
       <div class="login-logo">
@@ -485,7 +485,7 @@ const afterLogin = (res: any) => {
   // 2.5秒后开始退场动画，完成后再跳转页面
   setTimeout(() => {
     const finish = () => {
-      if (isBackendPath(redirect_uri)) {
+      if (redirect_uri && isBackendPath(redirect_uri)) {
         window.location.href = redirect_uri
         return
       }

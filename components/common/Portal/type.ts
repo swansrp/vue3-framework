@@ -89,20 +89,23 @@ export type ModalType = {
   type: 'view' | 'add' | 'modify' | 'association' | undefined,
   data: { [key: string]: any },
   // 当前修改的rowId
-  editRowIndex: any
+  editRowIndex: any,
+  // 弹框标题(可选, 空则按 type 回落新增/编辑)
+  title?: string
 }
 
 export type UploadModalType = {
   show: boolean,
   type: 'INIT' | 'UPLOAD' | 'VALIDATE' | 'SAVE' | 'SUCCESS' | 'FAILED'
-  step: Number,
+  // 注意用原始类型 number/string: 写成 Number/String 是装箱对象类型, 会让算术/索引全部报错
+  step: number,
   file: Array<any>,
-  total: Number,
-  loaded: Number,
-  percent: Number,
-  failedReason: Array<String>
-  startTime: Number,
-  estimatedTime: Number,
+  total: number,
+  loaded: number,
+  percent: number,
+  failedReason: Array<string>
+  startTime: number,
+  estimatedTime: number,
   // 过程日志（可选）：后端异步任务逐条追加，进度窗滚动展示
   logs?: Array<string>
 }

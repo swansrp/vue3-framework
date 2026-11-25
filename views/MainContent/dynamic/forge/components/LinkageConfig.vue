@@ -255,7 +255,8 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const columns = [
+// 列定义用宽松类型: 行内 fixed/dataIndex 混写时联合推断与 a-table 列类型不兼容
+const columns: any[] = [
   { title: '排序', dataIndex: 'sort', key: 'sort', width: 80 },
   { title: '联动名称', dataIndex: 'linkageName', key: 'linkageName', width: 150 },
   { title: '触发事件', dataIndex: 'triggerEvent', key: 'triggerEvent', width: 100 },
@@ -336,7 +337,7 @@ const handleAdd = () => {
   modalVisible.value = true
 }
 
-const handleEdit = (record: LinkageInfo) => {
+const handleEdit = (record: any) => {
   modalTitle.value = '编辑联动规则'
   Object.assign(formData, record)
   modalVisible.value = true
@@ -366,7 +367,7 @@ const handleCancel = () => {
   formRef.value?.resetFields()
 }
 
-const handleDelete = async (record: LinkageInfo) => {
+const handleDelete = async (record: any) => {
   try {
     const res = await sysFormLinkageDeleteItem({ id: record.id })
     if (res.status?.code === 0) {
@@ -378,7 +379,7 @@ const handleDelete = async (record: LinkageInfo) => {
   }
 }
 
-const handleToggle = async (record: LinkageInfo) => {
+const handleToggle = async (record: any) => {
   try {
     await sysFormLinkageUpdate({}, record as any)
     message.success(record.isEnabled === '1' ? '已启用' : '已禁用')
@@ -389,7 +390,7 @@ const handleToggle = async (record: LinkageInfo) => {
   }
 }
 
-const handleTest = (record: LinkageInfo) => {
+const handleTest = (record: any) => {
   currentTestConfig.value = record
   // 初始化测试数据
   props.formConfigs.forEach(config => {

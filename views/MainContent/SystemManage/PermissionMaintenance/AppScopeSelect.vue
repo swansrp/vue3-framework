@@ -59,7 +59,9 @@ const loadApps = () => {
   })
 }
 
-const onSelect = (value: string) => {
+// select 的 change 载荷是 SelectValue(含数组/LabeledValue), 这里只取字符串 appCode
+const onSelect = (value: any) => {
+  value = value == null ? '' : String(value)
   // appCode 置空时移除该 query 键（undefined 不会被序列化进 URL）
   router.replace({ query: { ...route.query, appCode: value || undefined } })
 }

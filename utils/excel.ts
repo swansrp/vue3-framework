@@ -86,7 +86,8 @@ const buildWorksheet = (dataSource: any, columns: any, rawColumns: any) => {
   const leafCols = walkLeafColumns(cols)
   // 配置宽起底(缺失给 60 保表头可读), 数据实测宽在 aoa_to_sheet 里再取 max
   const columnWidthArray = leafCols.map((col: any) => ({ wpx: Math.max(col.width || 0, 60) }))
-  const ws = aoa_to_sheet(header, columnHeight, leafCols, columnWidthArray)
+  // 工作表对象上挂的 !cols/!merges/!freeze/!ref 与单元格坐标键都是 xlsx 约定, 工具函数返回类型没有这些索引
+  const ws: any = aoa_to_sheet(header, columnHeight, leafCols, columnWidthArray)
   // 列宽
   ws['!cols'] = [...columnWidthArray]
   ws['!merges'] = mergeRecord
@@ -111,7 +112,8 @@ export const excel = (dataSource: any, columns: any, rawColumns: any) => {
   return wb
 }
 const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray: Array<any>) => {
-  const ws = {}
+  // 工作表上挂 !ref/!cols/!merges 与单元格坐标键是 xlsx 约定, 普通对象字面量没有这些索引签名
+  const ws: any = {}
   const range = { s: { c: 10000000, r: 10000000 }, e: { c: 0, r: 0 } }
   // 遍历步骤1里面的二维数组数据
   for (let R = 0; R !== data.length; ++R) {
@@ -128,8 +130,8 @@ const aoa_to_sheet = (data: any, headerRows: any, columns: any, columnWidthArray
       if (range.e.c < C) {
         range.e.c = C
       }
-      /// 构造cell对象，对所有excel单元格使用如下样式
-      let cell
+      /// 构造cell对象，对所有excel单元格使用如下样式(样式字段按分支增补, 声明成宽松类型)
+      let cell: any
       // console.log(data[R][C], C, columns[C])
       if (typeof data[R][C] === 'object') { // 此处预留了自定义设置样式的功能，通过重写recursiveChildrenData方法，可为每一个单元格传入样式属性
         cell = data[R][C]

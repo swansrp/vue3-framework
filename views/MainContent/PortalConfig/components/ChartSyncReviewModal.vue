@@ -127,11 +127,11 @@
                 class="dimension-group"
               >
                 <div class="dimension-title">
-                  第一维度：{{ getChartViewData(chart.id).firstDimension.groupName }}
+                  第一维度：{{ getChartViewData(chart.id).firstDimension?.groupName }}
                 </div>
                 <div class="dimension-tags">
                   <a-tag
-                    v-for="item in getChartViewData(chart.id).firstDimension.items"
+                    v-for="item in (getChartViewData(chart.id).firstDimension?.items || [])"
                     :key="item.label"
                     :color="item.visible ? 'blue' : undefined"
                   >
@@ -149,11 +149,11 @@
                 class="dimension-group"
               >
                 <div class="dimension-title">
-                  第二维度：{{ getChartViewData(chart.id).secondDimension.groupName }}
+                  第二维度：{{ getChartViewData(chart.id).secondDimension?.groupName }}
                 </div>
                 <div class="dimension-tags">
                   <a-tag
-                    v-for="item in getChartViewData(chart.id).secondDimension.items"
+                    v-for="item in (getChartViewData(chart.id).secondDimension?.items || [])"
                     :key="item.label"
                     :color="item.visible ? 'blue' : undefined"
                   >

@@ -154,7 +154,7 @@ export const evaluateConditionList = (
   // 单个条件
   if (condition.property) {
     const fieldValue = allFieldsValue[condition.property]
-    return evaluateCondition(fieldValue, condition.relation ?? 0, condition.value)
+    return evaluateCondition(fieldValue, condition.relation ?? 0, condition.value ?? undefined)
   }
 
   // 无效条件，默认返回 true
@@ -187,6 +187,8 @@ export const evaluateVisibility = (
     parsedCondition = condition
   }
 
+  // 解析失败/空配置(JSON.parse 可能返回 null)按无条件处理
+  if (!parsedCondition) return true
   // 无条件列表，默认显示
   if (!parsedCondition.conditionList || parsedCondition.conditionList.length === 0) return true
 

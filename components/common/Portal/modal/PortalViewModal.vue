@@ -1,6 +1,6 @@
 <template>
   <a-modal
-    :cancel-button-props="{style:{display: 'none'}}"
+    :cancel-button-props="{ style: { display: 'none' } } as any"
     :open="config.modal.show"
     :width="config.detailWidth"
     :wrap-class-name="config.detailWidth==='100%' ? 'full-modal' : ''"
@@ -20,7 +20,7 @@
       style="margin-top: 20px"
     >
       <template
-        v-for="column in value[1].filter(item => item.detailShow)"
+        v-for="column in value[1].filter((item: any) => item.detailShow)"
         :key="column.dataIndex"
       >
         <a-descriptions-item

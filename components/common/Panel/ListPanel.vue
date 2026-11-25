@@ -513,7 +513,7 @@ watch(
 
             <!-- 右键菜单 -->
             <template #overlay>
-              <a-menu @click="({ key: menuKey }) => handleContextMenu(item, menuKey)">
+              <a-menu @click="({ key: menuKey }: any) => handleContextMenu(item, String(menuKey))">
                 <slot
                   name="contextMenu"
                   :item="item"

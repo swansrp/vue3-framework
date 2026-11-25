@@ -86,7 +86,8 @@ onMounted(() => {
 })
 
 const onInput = (e: any) => emit('update:value', e?.target?.value ?? '')
-const onPick = ({ key }: { key: string }) => emit('update:value', key)
+// 菜单项 key 在 antdv 里是 Key(string|number), 变量 token 恒为字符串
+const onPick = ({ key }: { key: string | number }) => emit('update:value', String(key))
 
 // 回显提示：时间/now 变量给实时预览；主体变量标注后端解析；未登记的 ${} 给警告
 const preview = computed(() => {

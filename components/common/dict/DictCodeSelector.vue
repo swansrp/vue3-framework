@@ -63,7 +63,9 @@ const buildDictRequest = (keyword: string) => {
 }
 
 // 处理选择变化
-const handleChange = (value: string | undefined) => {
+// 底层选择器回传 SelectValue(含 number), 统一收成字符串编码
+const handleChange = (value: any) => {
+  value = value == null || value === '' ? undefined : String(value)
   internalValue.value = value
   emit('update:modelValue', value)
   emit('change', value)
