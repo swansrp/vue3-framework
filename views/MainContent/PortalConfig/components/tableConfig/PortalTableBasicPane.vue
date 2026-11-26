@@ -119,11 +119,11 @@
                 </a-select-option>
               </a-select>
             </a-form-item>
-            <!-- 锁定方向(仅透视模式, pivotRow 布局除外): s-table 两边同时锁定会异常, 只能选一边;
+            <!-- 锁定方向(仅透视模式, pivotRow 布局及 row 多层行表头除外): s-table 两边同时锁定会异常, 只能选一边;
                  左锁→行维度字段逐个勾选左锁定, 右锁→度量列逐个勾选右锁定;
-                 pivotRow 布局无此项: 透视列部分(行维度+层级列+名目列)恒左冻结(行标识常驻), 度量不右锁 -->
+                 pivotRow/row多层 布局无此项: 行表头(行维度+层级列+名目/指标列)恒左冻结(行标识常驻), 度量不右锁 -->
             <a-form-item
-              v-if="tableForm.pivotMode === '1' && tableForm.pivotMeasureLayout !== 'pivotRow'"
+              v-if="tableForm.pivotMode === '1' && tableForm.pivotMeasureLayout !== 'pivotRow' && !rowHeaderFrozenConfig"
               label="锁定方向"
             >
               <a-select
@@ -272,7 +272,10 @@
             <!-- 报表默认排序: 普通报表把 JSON 下发给查询接口当 sortList,
                  透视模式在聚合结果行上排(候选=行维度字段+聚合度量, 与「行维度顺序」里的逐字段排序并存);
                  多字段按列表自上而下顺序生效(先按第 1 条排, 值相同再顺延), 拖动手柄调优先级 -->
-            <a-form-item label="排序">
+            <a-form-item
+              label="排序"
+              class="basic-form-span4"
+            >
               <div class="default-sort-rules">
                 <div
                   v-for="(rule, index) in sortRules"
@@ -467,8 +470,33 @@
           class="filter-columns-config measure-config-section"
         >
           <div class="filter-columns-header">
-            <span class="filter-columns-title">聚合字段（度量列）</span>
+            <a-space :size="8">
+              <span class="filter-columns-title">聚合字段（度量列）</span>
+              <a-checkbox
+                v-if="pivotMeasureRows.length > 0"
+                :checked="allMeasureRowsSelected"
+                :indeterminate="someMeasureRowsSelected"
+                @change="(e: any) => toggleAllMeasureRows(e.target.checked)"
+              >
+                全选{{ selectedMeasureRows.length ? ` (${selectedMeasureRows.length})` : '' }}
+              </a-checkbox>
+            </a-space>
             <a-space :size="4">
+              <a-button
+                size="small"
+                :disabled="selectedMeasureRows.length === 0"
+                @click="copySelectedMeasureRows"
+              >
+                复制选中
+              </a-button>
+              <a-button
+                size="small"
+                danger
+                :disabled="selectedMeasureRows.length === 0"
+                @click="removeSelectedMeasureRows"
+              >
+                删除选中
+              </a-button>
               <a-button
                 size="small"
                 @click="handleExportMeasures"
@@ -523,6 +551,11 @@
                 class="pivot-measure-row-handle"
                 draggable="true"
                 @dragstart="onMeasureDragStart(index, $event)"
+              />
+              <a-checkbox
+                class="measure-row-check"
+                :checked="measureRowSelected.has(measure)"
+                @change="(e: any) => toggleMeasureRowSelected(measure, e.target.checked)"
               />
               <span class="measure-index">{{ index + 1 }}</span>
               <!-- 字段格: 吃掉行内剩余宽度("字段"列), 普通行放聚合字段下拉, 比率行放分子/分母竖排分数;
@@ -710,34 +743,45 @@
                     </template>
                   </a-button>
                 </a-tooltip>
-                <!-- 复制/删除收进「更多」下拉: 复制=整行深拷贝追加(输出键保存时按行序自动加 _2/_3), 删除=直接移除本行 -->
-                <a-tooltip title="更多：复制 / 删除">
-                  <a-dropdown
-                    trigger="click"
-                    placement="bottomRight"
-                  >
+                <!-- 复制/删除直接平铺(图标已收成方块, 不再收进「更多」): 左键复制=追加到末尾, 右键可选插到原行之后;
+                     删除=直接移除本行。复制为整行深拷贝, 输出键保存时按行序自动加 _2/_3 -->
+                <a-dropdown
+                  trigger="contextmenu"
+                  placement="bottomRight"
+                >
+                  <a-tooltip title="复制该聚合字段（右键可选插入位置）">
                     <a-button
                       class="measure-icon-btn"
                       size="small"
+                      @click="copyMeasureRow(index)"
                     >
                       <template #icon>
-                        <more-outlined />
+                        <copy-outlined />
                       </template>
                     </a-button>
-                    <template #overlay>
-                      <a-menu @click="({ key }: any) => onMeasureMoreAction(index, String(key))">
-                        <a-menu-item key="copy">
-                          <copy-outlined /> 复制
-                        </a-menu-item>
-                        <a-menu-item
-                          key="delete"
-                          danger
-                        >
-                          <delete-outlined /> 删除
-                        </a-menu-item>
-                      </a-menu>
+                  </a-tooltip>
+                  <template #overlay>
+                    <a-menu @click="({ key }: any) => onCopyMenuAction(index, String(key))">
+                      <a-menu-item key="after">
+                        紧挨着复制
+                      </a-menu-item>
+                      <a-menu-item key="end">
+                        复制到末尾
+                      </a-menu-item>
+                    </a-menu>
+                  </template>
+                </a-dropdown>
+                <a-tooltip title="删除该聚合字段">
+                  <a-button
+                    class="measure-icon-btn"
+                    size="small"
+                    danger
+                    @click="removeMeasureRow(index)"
+                  >
+                    <template #icon>
+                      <delete-outlined />
                     </template>
-                  </a-dropdown>
+                  </a-button>
                 </a-tooltip>
               </div>
             </div>
@@ -1014,7 +1058,6 @@ import {
   FilterOutlined,
   HolderOutlined,
   MessageFilled,
-  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
   UploadOutlined,
@@ -1263,20 +1306,94 @@ const handleRatioFieldChange = (measure: PivotMeasureVO) => {
   }
 }
 
-// 复制度量行: 整行深拷贝(值全为原始类型/JSON串)追加到列表末尾; 输出键保存时按行序自动加 _2/_3 后缀, 无需处理
-const copyMeasureRow = (index: number) => {
-  pivotMeasureRows.value.push(JSON.parse(JSON.stringify(pivotMeasureRows.value[index])))
-}
-
-/** 行尾「更多」下拉: 复制整行(深拷贝追加) / 删除本行(原「删除」直删, 保持无二次确认) */
-const onMeasureMoreAction = (index: number, key: string) => {
-  if (!pivotMeasureRows.value[index]) return
-  if (key === 'copy') {
-    copyMeasureRow(index)
-  } else if (key === 'delete') {
-    pivotMeasureRows.value.splice(index, 1)
+// 复制度量行: 整行深拷贝(值全为原始类型/JSON串); 输出键保存时按行序自动加 _2/_3 后缀, 无需处理
+// placement: end=追加到列表末尾(左键默认), after=插到原行正下方(右键菜单)
+const copyMeasureRow = (index: number, placement: 'end' | 'after' = 'end') => {
+  const rows = pivotMeasureRows.value
+  if (!rows[index]) return
+  const clone = JSON.parse(JSON.stringify(rows[index]))
+  if (placement === 'after') {
+    rows.splice(index + 1, 0, clone)
+  } else {
+    rows.push(clone)
   }
 }
+
+const onCopyMenuAction = (index: number, key: string) => {
+  copyMeasureRow(index, key === 'after' ? 'after' : 'end')
+}
+
+// ==================== 聚合字段多选(批量复制/删除) ====================
+// 选中状态存行对象引用: 拖拽排序不重建对象, 引用稳定; 行被删除/列表被替换时统一清空
+const measureRowSelected = ref<Set<PivotMeasureVO>>(new Set())
+const selectedMeasureRows = computed(() =>
+  pivotMeasureRows.value.filter((row) => measureRowSelected.value.has(row)))
+const allMeasureRowsSelected = computed(() =>
+  pivotMeasureRows.value.length > 0 && selectedMeasureRows.value.length === pivotMeasureRows.value.length)
+const someMeasureRowsSelected = computed(() =>
+  selectedMeasureRows.value.length > 0 && !allMeasureRowsSelected.value)
+
+const toggleMeasureRowSelected = (row: PivotMeasureVO, checked: boolean) => {
+  const next = new Set(measureRowSelected.value)
+  if (checked) {
+    next.add(row)
+  } else {
+    next.delete(row)
+  }
+  measureRowSelected.value = next
+}
+
+const toggleAllMeasureRows = (checked: boolean) => {
+  measureRowSelected.value = checked ? new Set(pivotMeasureRows.value) : new Set()
+}
+
+// 批量复制选中行: 按当前行序深拷贝追加到末尾(与单行左键复制同为末尾追加), 输出键保存时自动加后缀
+const copySelectedMeasureRows = () => {
+  const picked = selectedMeasureRows.value
+  if (!picked.length) {
+    message.warning('请先勾选要复制的聚合字段')
+    return
+  }
+  picked.forEach((row) => pivotMeasureRows.value.push(JSON.parse(JSON.stringify(row))))
+  measureRowSelected.value = new Set()
+  message.success(`已复制 ${picked.length} 个聚合字段（追加到末尾）`)
+}
+
+// 批量删除选中行(与单行删除一致, 无二次确认; 点「保存基础配置」才落库)
+const removeSelectedMeasureRows = () => {
+  const picked = measureRowSelected.value
+  if (!picked.size) {
+    return
+  }
+  pivotMeasureRows.value = pivotMeasureRows.value.filter((row) => !picked.has(row))
+  measureRowSelected.value = new Set()
+}
+
+// 单行删除: 同步清掉该行的选中态, 防止集合里残留已移除的引用
+const removeMeasureRow = (index: number) => {
+  const row = pivotMeasureRows.value[index]
+  if (!row) return
+  pivotMeasureRows.value.splice(index, 1)
+  if (measureRowSelected.value.has(row)) {
+    const next = new Set(measureRowSelected.value)
+    next.delete(row)
+    measureRowSelected.value = next
+  }
+}
+
+// row 布局且度量配了父表头(多层行表头): 行表头(行维度+父链层级列+指标列)恒左冻结,
+// 锁定方向在该形态无意义(右锁在 row 布局本就不生效) ⇒ 隐藏该项, 与 pivotRow 同处理
+const rowHeaderFrozenConfig = computed(() => {
+  if (tableForm.value.pivotMeasureLayout !== 'row') return false
+  return pivotMeasureRows.value.some((m) => {
+    try {
+      const p = JSON.parse(m.groupPath || '[]')
+      return Array.isArray(p) && p.length > 0
+    } catch {
+      return false
+    }
+  })
+})
 
 // ==================== 聚合字段条件(度量自身条件) ====================
 // 与透视列条件按「且」叠加: 透视列圈定表头切片, 度量条件圈定该度量自己的口径
@@ -1809,6 +1926,8 @@ const normalizeMeasureRow = (m: any) => ({
 
 // 解析 pivotMeasures JSON 到编辑行
 const parsePivotMeasures = (json: string | undefined) => {
+  // 行对象整体重建, 旧的选中引用全部失效
+  measureRowSelected.value = new Set()
   if (!json) {
     pivotMeasureRows.value = []
     return
@@ -1864,6 +1983,7 @@ const handleImportMeasuresFile = async (event: Event) => {
       return
     }
     pivotMeasureRows.value = imported
+    measureRowSelected.value = new Set()
     message.success(`已导入 ${imported.length} 个聚合字段，请确认字段在目标数据集存在，点「保存基础配置」生效`)
   } catch (e) {
     console.error('导入聚合字段失败:', e)
@@ -1976,6 +2096,12 @@ watch(
     if (tableForm.value.pivotMeasureLayout === 'pivotRow') {
       pivotLockSide.value = ''
     }
+    // row 多层行表头恒左冻结, 锁定方向无意义: 回落 ''(勾选区不出现), 旧数据遗留勾选一并清空
+    if (rowHeaderFrozenConfig.value) {
+      pivotLockSide.value = ''
+      pivotGroupFixedFields.value = []
+      pivotMeasureRows.value.forEach((m) => { m.fixed = false })
+    }
   },
   { immediate: true }
 )
@@ -1998,6 +2124,14 @@ const handleReportFileChange = (event: Event) => {
 // 保存表格配置
 const handleSaveTable = async () => {
   if (!props.table) return
+  // 编码是表格的机器键(运行态页面/钻取/Tab成员按它匹配)且库上有唯一约束, 空串只能存在一条,
+  // 必须挡住空编码保存, 否则会写回空串把后续新增全部堵死
+  const trimmedCode = tableForm.value.tableCode?.trim()
+  if (!trimmedCode) {
+    message.warning('请填写表格编码（运行态页面与钻取按它匹配报表）')
+    return
+  }
+  tableForm.value.tableCode = trimmedCode
   saving.value = true
   // 经 tableForm 别名写入同一对象，避免直接对 prop 赋值
   const table = tableForm.value
@@ -2081,6 +2215,8 @@ const handleSaveTable = async () => {
         validMeasures.length > 0 ? JSON.stringify(validMeasures) : '[]'
       // 保存后同步移除空行，界面与落库数据一致
       pivotMeasureRows.value = validMeasures
+      // 行对象已替换, 旧的选中引用全部失效
+      measureRowSelected.value = new Set()
     }
 
     // Tab 成员: 按合并序列(拖拽后的显示顺序)落库, 宿主按 tableId 识别、可落在任意位置;
@@ -2159,6 +2295,11 @@ const handleSaveTable = async () => {
 
   .basic-form-span2 {
     grid-column: span 2;
+  }
+
+  // 排序规则行: 拖动柄+序号+字段+方向+删除 固定占宽较大, 占满整行避免字段下拉被压成 0 宽
+  .basic-form-span4 {
+    grid-column: 1 / -1;
   }
 
   :deep(.ant-form-item) {

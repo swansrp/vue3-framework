@@ -825,6 +825,8 @@ watch(() => props.condition, () => {
 // ==================== 度量布局模式 ====================
 /** 合成列 dataIndex: 度量名称列(仅 row 模式) */
 const MEASURE_NAME_COL = '_measure_name'
+/** 合成列 dataIndex 前缀: 度量父链层级列(仅 row 模式, 配置端「父表头」逐层转成行表头列) */
+const MEASURE_PATH_COL = '_measure_path_'
 /** 合成列 dataIndex: 透视值名目列(仅 pivotRow 模式, 行标识=透视列显示名) */
 const PIVOT_NAME_COL = '_pivot_name'
 /** 合成字段: 熔接行携带的透视列 itemValue(钻取定位用, 不渲染) */
@@ -881,6 +883,25 @@ const pivotPathDepth = computed(() => {  if (!hasPivotColumns.value) {
   }
   return max
 })
+
+/** 度量父链最大深度(row 布局的父表头逐层展开为行表头列): 全部度量路径长度的最大值 */
+const measurePathDepth = computed(() => {
+  if (!isMeasureInRow.value) {
+    return 0
+  }
+  let max = 0
+  for (const m of measures.value) {
+    const len = parseGroupPath(m).length
+    if (len > max) {
+      max = len
+    }
+  }
+  return max
+})
+
+/** row 布局多层行表头恒左冻结(同 pivotRow 行标识常驻先例): 行维度+父链层级列+指标列是行标识,
+ *  横向滚动部门列时必须常驻; 该形态下锁定方向无意义(右锁在 row 布局本就不生效), 配置端隐藏该项 */
+const rowHeaderFrozen = computed(() => isMeasureInRow.value && measurePathDepth.value > 0)
 
 /**
  * 按父链组装树形多层表头(row 模式无度量层, 列头即纯树)
@@ -986,8 +1007,8 @@ const portalColumns = computed(() => {
             width: Math.max(meta?.width || 140, measured)
           }),
       // fixed 归一化为 'left': surely-vue 粘性定位按字符串比较("left"===fixed), 布尔 true 在部分路径不参与冻结计算;
-      // pivotRow 布局行维度恒左冻结(透视列部分=行标识)
-      fixed: isPivotInRow.value ? 'left' : (cfg.fixed ? 'left' : false),
+      // pivotRow 布局行维度恒左冻结(透视列部分=行标识); row 布局多层行表头同恒左冻结
+      fixed: (isPivotInRow.value || rowHeaderFrozen.value) ? 'left' : (cfg.fixed ? 'left' : false),
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
       order: order++,
@@ -1002,13 +1023,38 @@ const portalColumns = computed(() => {
   }
 
   if (isMeasureInRow.value) {
-    // === row 模式: 行维度 + 指标名称 + 透视列 ===
+    // === row 模式: 行维度 + 度量父链层级列 + 指标名称 + 透视列 ===
+    // 度量父链(配置端「父表头」)逐层转成行表头列, 紧挨指标列(行维度之后):
+    // 各层伪合并后呈现「一级经营 → 合同额 → 传统牵头业务 → 度量」的多级行头;
+    // 全部度量未配父链时不生成列, 老报表零变化
+    const pathCols: ColumnType[] = []
+    for (let level = 0; level < measurePathDepth.value; level++) {
+      const pathKey = `${MEASURE_PATH_COL}${level}`
+      pathCols.push({
+        title: '',
+        dataIndex: pathKey,
+        key: pathKey,
+        width: measureColWidth('', columnDisplayValues(pathKey), 120),
+        // 与行维度同侧锁定: 行维度左锁时层级列贴着一起固定, 避免滚动后行头断在半截; 多层行表头恒左冻结
+        fixed: (rowHeaderFrozen.value || visibleGroupFieldConfigs.value.some(c => c.fixed)) ? 'left' : false,
+        fieldType: FIELD_TYPE.INPUT,
+        tooltip: false,
+        order: order++,
+        editable: false,
+        sorter: false,
+        filterAble: false,
+        addShow: false,
+        editShow: false,
+        detailShow: false
+      } as ColumnType)
+    }
+    cols.push(...pathCols)
     cols.push({
       title: '指标',
       dataIndex: MEASURE_NAME_COL,
       key: MEASURE_NAME_COL,
       width: measureColWidth('指标', columnDisplayValues(MEASURE_NAME_COL), 120),
-      fixed: visibleGroupFieldConfigs.value.some(c => c.fixed) ? 'left' : false,
+      fixed: (rowHeaderFrozen.value || visibleGroupFieldConfigs.value.some(c => c.fixed)) ? 'left' : false,
       fieldType: FIELD_TYPE.INPUT,
       tooltip: false,
       order: order++,
@@ -1401,6 +1447,11 @@ const dataSource = computed(() => {
   const melted: any[] = []
   // 记录每个行维度字段上一次的值, 用于判断是否首行
   const lastGroupValues: Record<string, any> = {}
+  // 父链层级列伪合并状态: 按「路径前缀」判重, 不随原始行重置——
+  // 父表头要横跨多个行维度分组持续合并(如「采购合同额」跨一级/二级经营的全部度量行)
+  const pathDepth = measurePathDepth.value
+  const pathKeys = Array.from({ length: pathDepth }, (_, i) => `${MEASURE_PATH_COL}${i}`)
+  const lastPathPrefix: string[] = []
   for (const row of sortedRows.value) {
     for (const m of measures.value) {
       const item: any = {}
@@ -1415,6 +1466,19 @@ const dataSource = computed(() => {
           item[f] = translated
         }
         lastGroupValues[f] = translated
+      }
+      // 度量父链层级列: 同一路径前缀只在首个度量行显示文字
+      if (pathDepth > 0) {
+        const mPath = parseGroupPath(m)
+        for (let level = 0; level < pathDepth; level++) {
+          const prefix = mPath.slice(0, level + 1).join('\u0001')
+          if (lastPathPrefix[level] === prefix) {
+            item[pathKeys[level]] = ''
+          } else {
+            item[pathKeys[level]] = mPath[level] || ''
+            lastPathPrefix[level] = prefix
+          }
+        }
       }
       // 指标名称列
       item[MEASURE_NAME_COL] = measureSingleLine(m.field, m.label)

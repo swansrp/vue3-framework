@@ -402,6 +402,18 @@ const handleSelectTable = (table: PortalTableVO) => {
   selectedTable.value = table
 }
 
+// 新增时的占位编码: table_code 是全局唯一键, 空串也只能存在一条,
+// 若以空编码落库, 第二条未命名配置就会唯一键冲突, 堵死后续所有人的新增;
+// 先给唯一占位值, 用户在「基础配置」里改成正式编码
+const buildDraftTableCode = () => {
+  const existing = new Set(tableList.value.map((t) => t.tableCode))
+  let code = ''
+  do {
+    code = `tmp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  } while (existing.has(code))
+  return code
+}
+
 // 新增表格配置
 const handleAddTable = async () => {
   if (!props.portalName) {
@@ -410,7 +422,7 @@ const handleAddTable = async () => {
   }
   const newTable: PortalTableVO = {
     portalName: props.portalName,
-    tableCode: '',
+    tableCode: buildDraftTableCode(),
     filterWidth: 260,
     paddingTh: 2,
     paddingTd: 7,
@@ -422,10 +434,10 @@ const handleAddTable = async () => {
     if (res.payload) {
       message.success('新增成功')
       await loadTableList()
-      // 选中新创建的配置
-      const newRecord = tableList.value.find(
-        (t) => t.tableCode === '' && t.portalName === props.portalName
-      )
+      // 选中新创建的配置: 优先按接口返回 id, 兼容 payload 直接是 id 的形态, 兜底按占位编码定位
+      const newId = res.payload?.id || res.payload
+      const newRecord = tableList.value.find((t) => t.id === newId)
+        || tableList.value.find((t) => t.tableCode === newTable.tableCode && t.portalName === props.portalName)
       if (newRecord) {
         handleSelectTable(newRecord)
       }
