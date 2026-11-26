@@ -525,60 +525,64 @@
                 @dragstart="onMeasureDragStart(index, $event)"
               />
               <span class="measure-index">{{ index + 1 }}</span>
-              <!-- ratio(比率加权): field 仅作输出键, 取数走分子/分母两列, 各自聚合后相除 -->
-              <template v-if="measure.agg === 'ratio'">
+              <!-- 字段格: 吃掉行内剩余宽度("字段"列), 普通行放聚合字段下拉, 比率行放分子/分母竖排分数;
+               其余列(显示名/聚合/选项/操作)固定宽度 ⇒ 所有行的这几列起点一致、行尾不留空隙 -->
+              <div class="measure-field-cell">
+                <!-- ratio(比率加权): field 仅作输出键, 取数走分子/分母两列, 各自聚合后相除 -->
+                <template v-if="measure.agg === 'ratio'">
+                  <div class="measure-ratio-fraction">
+                    <div class="ratio-leg ratio-leg-num">
+                      <a-select
+                        v-model:value="measure.numerator"
+                        :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
+                        placeholder="分子"
+                        show-search
+                        :filter-option="filterOption"
+                        style="width: 100%; min-width: 88px"
+                        @change="handleRatioFieldChange(measure)"
+                      />
+                      <!-- 腿聚合缺省 sum; 分母配 max 服务组内恒定目标值(达成率=sum(实际)/max(目标)) -->
+                      <a-select
+                        v-model:value="measure.numeratorAgg"
+                        :options="ratioLegAggOptions"
+                        style="width: 78px; flex: 0 0 78px"
+                      />
+                    </div>
+                    <div class="ratio-leg">
+                      <a-select
+                        v-model:value="measure.denominator"
+                        :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
+                        placeholder="分母"
+                        show-search
+                        :filter-option="filterOption"
+                        style="width: 100%; min-width: 88px"
+                        @change="handleRatioFieldChange(measure)"
+                      />
+                      <a-select
+                        v-model:value="measure.denominatorAgg"
+                        :options="ratioLegAggOptions"
+                        style="width: 78px; flex: 0 0 78px"
+                      />
+                    </div>
+                  </div>
+                </template>
                 <a-select
-                  v-model:value="measure.numerator"
+                  v-else
+                  v-model:value="measure.field"
                   :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
-                  placeholder="分子字段"
+                  placeholder="聚合字段"
                   show-search
                   :filter-option="filterOption"
-                  style="width: 180px; min-width: 120px"
-                  @change="handleRatioFieldChange(measure)"
+                  style="width: 100%"
                 />
-                <!-- 腿聚合缺省 sum; 分母配 max 服务组内恒定目标值(达成率=sum(实际)/max(目标)) -->
-                <a-select
-                  v-model:value="measure.numeratorAgg"
-                  :options="ratioLegAggOptions"
-                  style="width: 92px"
-                />
-                <span
-                  class="measure-index"
-                  style="margin: 0 2px"
-                >/</span>
-                <a-select
-                  v-model:value="measure.denominator"
-                  :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
-                  placeholder="分母字段"
-                  show-search
-                  :filter-option="filterOption"
-                  style="width: 180px; min-width: 120px"
-                  @change="handleRatioFieldChange(measure)"
-                />
-                <a-select
-                  v-model:value="measure.denominatorAgg"
-                  :options="ratioLegAggOptions"
-                  style="width: 92px"
-                />
-              </template>
-              <a-select
-                v-else
-                v-model:value="measure.field"
-                :options="availableFields.map((f) => ({ label: `${strRemoveLF(f.displayName)} (${f.property})`, value: f.property }))"
-                placeholder="聚合字段"
-                show-search
-                :filter-option="filterOption"
-                style="width: 300px; min-width: 200px"
-              />
+              </div>
               <a-input
                 v-model:value="measure.label"
                 placeholder="显示名"
-                style="width: 180px; min-width: 120px"
               />
               <!-- 聚合方式与勾选框紧跟取值控件, 注释按钮贴到删除左侧成"行尾操作区" -->
               <a-select
                 v-model:value="measure.agg"
-                style="width: 120px"
               >
                 <a-select-option value="sum">
                   求和
@@ -602,30 +606,36 @@
                   比率(加权)
                 </a-select-option>
               </a-select>
-              <!-- ratio 显示形式: 勾选×100加%(达成率类), 取消直接显示商(除出来即值的分值/单耗类) -->
-              <a-tooltip v-if="measure.agg === 'ratio'">
-                <template #title>
-                  勾选=×100 显示为百分比（达成率类）；取消=直接显示分子÷分母的商（除出来即值的分值/单耗类）
-                </template>
-                <a-checkbox v-model:checked="measure.ratioPercent">
-                  按%显示
+              <!-- 行内选项独立成格: 与"字段/显示名/聚合/操作"同为网格列, 各行的列起点严格对齐 -->
+              <div class="measure-row-options">
+                <!-- ratio 显示形式: 勾选×100加%(达成率类), 取消直接显示商(除出来即值的分值/单耗类) -->
+                <a-tooltip v-if="measure.agg === 'ratio'">
+                  <template #title>
+                    勾选=×100 显示为百分比（达成率类）；取消=直接显示分子÷分母的商（除出来即值的分值/单耗类）
+                  </template>
+                  <a-checkbox v-model:checked="measure.ratioPercent">
+                    按%显示
+                  </a-checkbox>
+                </a-tooltip>
+                <!-- 仅求和项开放: sum 去掉 0/NULL 行合计仍恒等, 其余聚合滤零行会与单元格数字对不上 -->
+                <a-tooltip v-if="measure.agg === 'sum'">
+                  <template #title>
+                    钻取明细时隐藏该列 0 / 空值的行（仅求和生效，合计与单元格仍一致）
+                  </template>
+                  <a-checkbox v-model:checked="measure.hideZero">
+                    隐藏零值
+                  </a-checkbox>
+                </a-tooltip>
+                <!-- 右锁定方向下逐度量勾选锁定 -->
+                <a-checkbox
+                  v-if="pivotLockSide === 'right'"
+                  v-model:checked="measure.fixed"
+                >
+                  锁定
                 </a-checkbox>
-              </a-tooltip>
-              <!-- 仅求和项开放: sum 去掉 0/NULL 行合计仍恒等, 其余聚合滤零行会与单元格数字对不上 -->
-              <a-checkbox
-                v-if="measure.agg === 'sum'"
-                v-model:checked="measure.hideZero"
-              >
-                钻取隐藏零值
-              </a-checkbox>
-              <!-- 右锁定方向下逐度量勾选锁定 -->
-              <a-checkbox
-                v-if="pivotLockSide === 'right'"
-                v-model:checked="measure.fixed"
-              >
-                锁定
-              </a-checkbox>
-              <!-- 行尾操作区: 整体贴右且宽度由内容固定, 各行按钮起点对齐成一条竖线 -->
+              </div>
+              <!-- 行尾操作区: 贴右、单行、图标按钮(文案进 tooltip)。
+                   文字按钮在 ratio 行(两套分子/分母)会被挤出容器; 图标版整体宽度减半, 所有行都能单行放下 -->
               <div class="measure-row-actions">
                 <!-- 度量列级钻取目标: 优先于整表配置(同一格透视列也配了时以透视列为准), 留空跟随整表 -->
                 <a-tooltip>
@@ -634,7 +644,7 @@
                     <span v-else>为该度量列单独指定钻取目标（留空=跟随整表）</span>
                   </template>
                   <a-button
-                    class="measure-drill-btn"
+                    class="measure-icon-btn"
                     :type="measure.drillTableCode ? 'primary' : 'dashed'"
                     :ghost="!!measure.drillTableCode"
                     size="small"
@@ -643,7 +653,6 @@
                     <template #icon>
                       <zoom-in-outlined />
                     </template>
-                    钻取
                   </a-button>
                 </a-tooltip>
                 <!-- 父表头: 给度量列加多层级表头(叶子标题仍是显示名), 与透视列父链叠加 -->
@@ -653,7 +662,7 @@
                     <span v-else>设置多层级父表头（叶子标题仍是显示名）</span>
                   </template>
                   <a-button
-                    class="measure-path-btn"
+                    class="measure-icon-btn"
                     :type="measure.groupPath ? 'primary' : 'dashed'"
                     :ghost="!!measure.groupPath"
                     size="small"
@@ -662,7 +671,6 @@
                     <template #icon>
                       <apartment-outlined />
                     </template>
-                    父表头
                   </a-button>
                 </a-tooltip>
                 <!-- 度量自身条件: 与透视列条件按「且」叠加, 每个聚合字段各配各的 -->
@@ -672,7 +680,7 @@
                     <span v-else>给该聚合字段单独加条件，与透视列条件按「且」叠加</span>
                   </template>
                   <a-button
-                    class="measure-cond-btn"
+                    class="measure-icon-btn"
                     :type="measure.condition ? 'primary' : 'dashed'"
                     :ghost="!!measure.condition"
                     size="small"
@@ -681,7 +689,6 @@
                     <template #icon>
                       <filter-outlined />
                     </template>
-                    条件
                   </a-button>
                 </a-tooltip>
                 <!-- 注释文本长, 不放窄输入框: 走按钮＋宽弹框, 按钮只区分"有/无"(虚线待填 vs 蓝色已填), 内容悬停回显 -->
@@ -691,7 +698,7 @@
                     <span v-else>未填写列注释</span>
                   </template>
                   <a-button
-                    class="measure-desc-btn"
+                    class="measure-icon-btn"
                     :type="measure.desc ? 'primary' : 'dashed'"
                     :ghost="!!measure.desc"
                     size="small"
@@ -701,27 +708,37 @@
                       <message-filled v-if="measure.desc" />
                       <edit-outlined v-else />
                     </template>
-                    注释
                   </a-button>
                 </a-tooltip>
-                <!-- 复制: 整行深拷贝追加到列表末尾(含条件/父表头/注释), 输出键保存时按行序自动加 _2/_3 不用改 -->
-                <a-button
-                  size="small"
-                  @click="copyMeasureRow(index)"
-                >
-                  <template #icon>
-                    <copy-outlined />
-                  </template>
-                  复制
-                </a-button>
-                <a-button
-                  type="link"
-                  danger
-                  size="small"
-                  @click="pivotMeasureRows.splice(index, 1)"
-                >
-                  删除
-                </a-button>
+                <!-- 复制/删除收进「更多」下拉: 复制=整行深拷贝追加(输出键保存时按行序自动加 _2/_3), 删除=直接移除本行 -->
+                <a-tooltip title="更多：复制 / 删除">
+                  <a-dropdown
+                    trigger="click"
+                    placement="bottomRight"
+                  >
+                    <a-button
+                      class="measure-icon-btn"
+                      size="small"
+                    >
+                      <template #icon>
+                        <more-outlined />
+                      </template>
+                    </a-button>
+                    <template #overlay>
+                      <a-menu @click="({ key }: any) => onMeasureMoreAction(index, String(key))">
+                        <a-menu-item key="copy">
+                          <copy-outlined /> 复制
+                        </a-menu-item>
+                        <a-menu-item
+                          key="delete"
+                          danger
+                        >
+                          <delete-outlined /> 删除
+                        </a-menu-item>
+                      </a-menu>
+                    </template>
+                  </a-dropdown>
+                </a-tooltip>
               </div>
             </div>
           </div>
@@ -997,6 +1014,7 @@ import {
   FilterOutlined,
   HolderOutlined,
   MessageFilled,
+  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
   UploadOutlined,
@@ -1248,6 +1266,16 @@ const handleRatioFieldChange = (measure: PivotMeasureVO) => {
 // 复制度量行: 整行深拷贝(值全为原始类型/JSON串)追加到列表末尾; 输出键保存时按行序自动加 _2/_3 后缀, 无需处理
 const copyMeasureRow = (index: number) => {
   pivotMeasureRows.value.push(JSON.parse(JSON.stringify(pivotMeasureRows.value[index])))
+}
+
+/** 行尾「更多」下拉: 复制整行(深拷贝追加) / 删除本行(原「删除」直删, 保持无二次确认) */
+const onMeasureMoreAction = (index: number, key: string) => {
+  if (!pivotMeasureRows.value[index]) return
+  if (key === 'copy') {
+    copyMeasureRow(index)
+  } else if (key === 'delete') {
+    pivotMeasureRows.value.splice(index, 1)
+  }
 }
 
 // ==================== 聚合字段条件(度量自身条件) ====================
@@ -2380,15 +2408,17 @@ const handleSaveTable = async () => {
   .measure-rows {
     padding: 12px 16px;
     border-top: 1px solid var(--border-subtle);
+    // 极窄窗口的兜底: 宁可出横向滚动条, 也不让行尾按钮被容器裁掉
+    overflow-x: auto;
   }
 
+  // 度量行: 「字段格吃掉剩余宽度」+ 其余列定宽。
+  // 字段格外的四列固定宽 ⇒ 所有行列起点一致、行尾不留空隙; ratio 行的分子/分母跟着字段格一起变长
   .pivot-measure-row {
     display: flex;
     align-items: center;
-    // 行不换行: 宽度压力全部由可收缩的取值/显示名控件(带 min-width 下限)吸收,
-    // 行尾操作区(父表头/条件/注释/复制/删除)加了按钮也不会把删除顶到第二行
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 6px;
 
     .pivot-measure-row-handle {
       flex-shrink: 0;
@@ -2405,16 +2435,70 @@ const handleSaveTable = async () => {
     &.pivot-measure-row-dragging {
       opacity: 0.6;
     }
+
+    // 字段格: 唯一可伸缩列(最小 172px); 普通行放字段下拉, ratio 行放分子/分母分数
+    .measure-field-cell {
+      flex: 1 1 0;
+      min-width: 172px;
+      display: flex;
+      align-items: center;
+    }
+
+    // 显示名 / 聚合方式: 定宽(不参与伸缩), 各行列对齐由此保证
+    > .ant-input {
+      flex: 0 0 150px;
+      width: 150px;
+    }
+
+    > .ant-select {
+      flex: 0 0 110px;
+      width: 110px;
+    }
   }
 
-  // 行尾操作区(父表头/条件/注释/复制/删除)整体贴右: 宽度由内容决定且不收缩 ⇒
-  // 无论左侧控件多少(ratio 行有两套分子/分母), 各行的按钮起点都在同一条竖线上
-  .pivot-measure-row .measure-row-actions {
+  // 行内选项组: 定宽(最宽组合: 隐藏零值 + 锁定), 多选项横向排列
+  .measure-row-options {
+    flex: 0 0 158px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    margin-left: auto;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  // ratio 行的「分子 / 分母」竖排成两行(虚线作分数栏): 宽度与普通行"字段"一格相当,
+  // 行尾操作因此能与其他行落在同一列; 行高略高, 其余控件保持垂直居中
+  .measure-ratio-fraction {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+
+    .ratio-leg {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .ratio-leg-num {
+      padding-bottom: 4px;
+      border-bottom: 1px dashed var(--border-subtle);
+    }
+  }
+
+  // 行尾操作区(钻取/父表头/条件/注释/更多): 定宽贴右, 各行按钮右缘严格对齐
+  .pivot-measure-row .measure-row-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    // 纯图标按钮: 去掉横向内边距收成方块, 语义由 tooltip 承担(已配置态仍是蓝色实心)
+    .measure-icon-btn {
+      width: 28px;
+      padding-inline: 0;
+    }
   }
 
   .pivot-measure-row + .pivot-measure-row {

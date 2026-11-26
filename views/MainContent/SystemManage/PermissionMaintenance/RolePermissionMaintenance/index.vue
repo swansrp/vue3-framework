@@ -12,7 +12,6 @@
           :data-source="roleData"
           bordered
           class="role-list"
-          style="height: 100%"
         >
           <template #header>
             <a-input
@@ -448,20 +447,34 @@ watch(() => route.query.appCode, () => {
   padding: 8px 0 4px;
 }
 
+.role-permission-user-maintenance {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 左侧角色列表：固定占满高度，列表自身滚动（不随右侧内容变高变矮） */
 .role-list-wrap {
   background: var(--bg-elevated);
+  height: 100%;
+  overflow: hidden;
+}
+
+:deep(.role-list-wrap .ant-layout-sider-children) {
+  height: 100%;
+  overflow: auto;
 }
 
 .role-list {
   width: 400px;
 }
-.role-permission-user-maintenance {
-  flex: 1 1 auto;
-  min-height: 0;
-}
+
+/* 右侧权限树等内容：自身滚动，不再把整个布局撑高 */
 :deep(.role-permission-user-maintenance .ant-layout-content) {
   height: 100%;
   padding: 20px;
+  overflow: auto;
 }
 
 :deep(.role-list-wrap .ant-spin-container) {
