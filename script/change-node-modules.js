@@ -36,6 +36,31 @@ const crackSurely = () => {
 }
 // endregion
 
+// region 分页每页条数下拉(2026-11-27 对账单): vc-pagination 给 size-changer 硬编码
+// getPopupContainer=triggerNode=>triggerNode.parentNode(props 优先于 ConfigProvider context,
+// 顶不掉), 弹层内联挂载; 在 dark-dialog 的 v-scale-screen/.dialog-info transform 祖先里
+// 定位飞出视口+进场动画卡死(恒 opacity:0), 穿透框「每页X条」看着像"点了没反应"。
+// 删掉这行让弹层走 context: 普通页面=document.body 默认, dark-dialog=#dark-popup-root
+const antdOptionsFileArray = [
+  './node_modules/ant-design-vue/es/vc-pagination/Options.js',
+  './node_modules/ant-design-vue/lib/vc-pagination/Options.js'
+]
+const crackPaginationDropdown = () => {
+  antdOptionsFileArray.forEach(file => {
+    fs.readFile(file, 'utf8', (err, data) => {
+      if (err) throw err
+      const target = '"getPopupContainer": triggerNode => triggerNode.parentNode'
+      if (data.includes(target)) {
+        fs.writeFile(file, data.replace(target + ',', '').replace(target, ''), 'utf8', err => {
+          if (err) throw err
+          console.log(file + ' 分页size-changer硬编码getPopupContainer已移除!')
+        })
+      }
+    })
+  })
+}
+// endregion
+
 
 const getCurrentTime = () => {
   const dateDigitToString = num => num < 10 ? '0' + num : num
@@ -57,3 +82,4 @@ const printCompileTime = () => {
 
 printCompileTime()
 crackSurely()
+crackPaginationDropdown()

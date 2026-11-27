@@ -20,7 +20,32 @@
           </template>
         </a-button>
       </a-tooltip>
+      <a-tooltip title="导入数据集（JSON 导出文件，按名称对账：已存在则更新，不存在则新建）">
+        <a-button @click="fileInput?.click()">
+          <template #icon>
+            <UploadOutlined />
+          </template>
+        </a-button>
+      </a-tooltip>
+      <a-tooltip title="导出选中数据集（基本信息+常驻条件+SQL 反拼为 JSON）">
+        <a-button
+          :disabled="!selectedId"
+          @click="emit('export')"
+        >
+          <template #icon>
+            <DownloadOutlined />
+          </template>
+        </a-button>
+      </a-tooltip>
     </div>
+    <!-- 隐藏上传框：导入走 .json 文件；清空 value 允许连续导入同名文件 -->
+    <input
+      ref="fileInput"
+      type="file"
+      accept=".json,application/json"
+      style="display: none"
+      @change="handleFileChange"
+    />
 
     <a-spin
       :spinning="loading"
@@ -99,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { CaretRightOutlined, DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { CaretRightOutlined, DeleteOutlined, DownloadOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { Empty } from 'ant-design-vue'
 import { computed, reactive, ref } from 'vue'
 
@@ -115,7 +140,22 @@ const emit = defineEmits<{
   (e: 'select', dataset: DatasetInfo): void
   (e: 'create'): void
   (e: 'delete', dataset: DatasetInfo): void
+  (e: 'export'): void
+  (e: 'import', payload: { fileName: string, text: string }): void
 }>()
+
+// 导入：读文件文本上抛，校验/确认/保存由父组件做（要对账名称、调保存接口）
+const fileInput = ref<HTMLInputElement | null>(null)
+const handleFileChange = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => emit('import', { fileName: file.name, text: String(reader.result || '') })
+  reader.onerror = () => reader.abort()
+  reader.readAsText(file, 'utf-8')
+}
 
 const searchText = ref('')
 // 默认全闭合，手动展开的目录记入白名单；搜索时强制全展开，命中条目才可见

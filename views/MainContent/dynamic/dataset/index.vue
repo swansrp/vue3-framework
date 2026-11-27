@@ -12,6 +12,8 @@
         @select="handleSelect"
         @create="handleCreate"
         @delete="handleDelete"
+        @export="handleExportDataset"
+        @import="handleImportDataset"
       />
     </div>
     <div
@@ -90,13 +92,15 @@
 
 <script setup lang="ts">
 import { DoubleLeftOutlined, DoubleRightOutlined, PlusOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
-import { onMounted, ref, watch } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import dayjs from 'dayjs'
+import { h, onMounted, ref, watch } from 'vue'
 
 import ColumnConfig from './components/ColumnConfig.vue'
 import DatasetList from './components/DatasetList.vue'
 import DatasetSqlEditor from './components/DatasetSqlEditor.vue'
 import type { DatasetInfo } from './types'
+import { getConfig, getSql, parseSqlAndSave } from '../apis/datasetConfigController'
 import { refreshPortalForDataset, generatePortalForDataset } from '../apis/portalGenerateController'
 import { sysDatasetGeneralSelect, sysDatasetDeleteItem } from '../apis/sysDatasetPortalController'
 
@@ -209,6 +213,97 @@ const handleGeneratePortal = (params: { portalName: string, displayName: string,
     portalName: finalPortalName,
     displayName: params.displayName,
     datasetId: params.referenceId
+  })
+}
+
+// ==================== 数据集导出/导入 ====================
+// 导出＝选中树节点的基本信息 + 常驻条件(getConfig) + 反拼SQL含列注释(getSql)；
+// ⚠ sql 为 buildFromSql 反拼的等价形式：仓侧文件头的大段头注注释不在其中（头注以仓侧正源为权威）
+const handleExportDataset = async () => {
+  const ds = currentDataset.value
+  if (!ds?.id) return
+  try {
+    const [cfg, sq] = await Promise.all([
+      getConfig({ datasetId: ds.id }, false, false, false),
+      getSql({ datasetId: ds.id, includeRemarks: true }, false, false, false)
+    ])
+    const out = {
+      type: 'dataset',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      datasetName: ds.datasetName,
+      dataSource: ds.dataSource,
+      remark: ds.remark,
+      baseFilter: cfg?.payload?.baseFilter || '',
+      // 反拼版不含外层 WHERE（常驻条件单独放 baseFilter 字段）
+      sql: sq?.payload?.sql || ''
+    }
+    if (!out.sql) {
+      message.error('该数据集没有可导出的 SQL')
+      return
+    }
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${ds.datasetName}-dataset-${dayjs().format('YYYYMMDDHHmmss')}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    message.success('已导出')
+  } catch (error: any) {
+    console.error('导出失败:', error)
+    message.error(error?.message || '导出失败')
+  }
+}
+
+// 导入＝按 datasetName 对账：存在则更新（datasetId），不存在则新建。
+// SQL 拼回外层 WHERE、baseFilter 恒空提交——与 SQL 编辑器保存完全同语义（后端重新转存常驻条件）；
+// 更新会重新解析 SQL 并重刷列配置（手改显示名/字段类型被覆盖），SQL 有变化时后端自动留版本快照
+const handleImportDataset = async (payload: { fileName: string, text: string }) => {
+  let data: any
+  try {
+    data = JSON.parse(payload.text)
+  } catch {
+    message.error(`文件不是有效 JSON：${payload.fileName}`)
+    return
+  }
+  if (data?.type !== 'dataset' || !data.datasetName || !String(data.sql || '').trim()) {
+    message.error('不是有效的数据集导出文件（缺 type=dataset / datasetName / sql）')
+    return
+  }
+  const existing = datasetList.value.find(item => item.datasetName === data.datasetName)
+  const sqlText = String(data.sql) + (data.baseFilter ? `\nWHERE ${data.baseFilter}` : '')
+  Modal.confirm({
+    title: '导入数据集',
+    width: 560,
+    content: () => h('div', [
+      h('p', `名称：${data.datasetName}`),
+      h('p', existing ? `环境中已存在（id=${existing.id}），将更新其 SQL 与基本信息` : '环境中不存在，将新建数据集'),
+      h('p', `SQL：${sqlText.split('\n').length} 行`),
+      data.remark ? h('p', `备注：${data.remark}`) : null,
+      h('p', { style: 'color:#faad14;margin-top:8px' }, existing
+        ? '更新会重新解析 SQL 并重刷列配置：手改的列显示名/字段类型会被覆盖；SQL 有变化时自动留版本快照'
+        : '新建完成后可在「列配置 / Portal配置」页签继续配置')
+    ]),
+    okText: existing ? '确认更新' : '确认新建',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        const res = await parseSqlAndSave({
+          datasetId: existing?.id,
+          datasetName: data.datasetName,
+          sql: sqlText,
+          dataSource: data.dataSource || 'master',
+          remark: data.remark || '',
+          baseFilter: ''
+        } as any, false, false, false)
+        message.success(existing ? '导入更新成功' : '导入新建成功')
+        await handleSaved(res?.payload?.datasetId ?? existing?.id)
+      } catch (error: any) {
+        console.error('导入失败:', error)
+        message.error(error?.message || '导入失败')
+      }
+    }
   })
 }
 
