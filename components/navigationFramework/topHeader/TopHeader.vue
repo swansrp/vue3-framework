@@ -675,12 +675,17 @@ onMounted(() => {
 }
 
 .top_nav {
-  flex: 1 0 auto;
+  /* flex-shrink 必须为 1 且 min-width:0：原「1 0 auto」不收缩，窗口窄时会把右侧用户区
+     顶出视口（1280 宽实测顶栏内容 1533 > 容器 1265，整页出横向滚动条，2026-11-27 用户反馈）；
+     允许收缩后 antdv Menu 的 overflow 机制会把放不下的顶级菜单收进「…」 */
+  flex: 1 1 auto;
+  min-width: 0;
   margin-left: 0;
   position: relative;
   display: flex;
   align-items: center;
   height: 100%;
+  overflow: hidden;
 }
 
 /* 子系统形态：无顶部菜单时的弹性占位，将右侧用户区推到最右 */

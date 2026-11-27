@@ -446,6 +446,9 @@ onMounted(() => {
   min-height: 0;
   height: auto;
   overflow-y: auto;
+  /* 纵向滚动条占掉 ~12px 后可用宽度变窄，菜单项仍按容器宽排版会溢出，
+     Windows 上表现为菜单里多出一条横向滚动条（2026-11-27 用户反馈）；裁掉即可 */
+  overflow-x: hidden;
   background: transparent !important;
 }
 

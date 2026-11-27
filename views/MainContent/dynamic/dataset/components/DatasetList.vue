@@ -12,6 +12,7 @@
       </a-input>
       <a-tooltip title="新建Dataset">
         <a-button
+          class="create-btn"
           type="primary"
           @click="emit('create')"
         >
@@ -20,23 +21,26 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tooltip title="导入数据集（JSON 导出文件，按名称对账：已存在则更新，不存在则新建）">
-        <a-button @click="fileInput?.click()">
-          <template #icon>
-            <UploadOutlined />
-          </template>
-        </a-button>
-      </a-tooltip>
-      <a-tooltip title="导出选中数据集（基本信息+常驻条件+SQL 反拼为 JSON）">
-        <a-button
-          :disabled="!selectedId"
-          @click="emit('export')"
-        >
-          <template #icon>
-            <DownloadOutlined />
-          </template>
-        </a-button>
-      </a-tooltip>
+      <!-- 导入/导出并成一组：与主按钮（新建）拉开层次，避免三枚图标按钮各说各话 -->
+      <a-button-group class="io-group">
+        <a-tooltip title="导入数据集（JSON，按名称对账：已存在则更新）">
+          <a-button @click="fileInput?.click()">
+            <template #icon>
+              <UploadOutlined />
+            </template>
+          </a-button>
+        </a-tooltip>
+        <a-tooltip title="导出选中数据集（基本信息+常驻条件+SQL）">
+          <a-button
+            :disabled="!selectedId"
+            @click="emit('export')"
+          >
+            <template #icon>
+              <DownloadOutlined />
+            </template>
+          </a-button>
+        </a-tooltip>
+      </a-button-group>
     </div>
     <!-- 隐藏上传框：导入走 .json 文件；清空 value 允许连续导入同名文件 -->
     <input
@@ -270,6 +274,23 @@ const toggleGroup = (pathKey: string) => {
     gap: 8px;
     padding: 12px;
     border-bottom: 1px solid var(--border-subtle, #f0f0f0);
+    // 左树可折叠到 0 宽：工具栏必须能横向裁掉，否则按钮会顶出面板把页面撑出横滚
+    overflow: hidden;
+
+    :deep(.ant-input-affix-wrapper) {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .create-btn,
+    .io-group :deep(.ant-btn) {
+      flex-shrink: 0;
+    }
+
+    // 导入/导出连体组：接缝不重复画边框，避免与「新建」主按钮抢视觉
+    .io-group :deep(.ant-btn) + :deep(.ant-btn) {
+      border-left: none;
+    }
   }
 
   :deep(.list-spin) {
