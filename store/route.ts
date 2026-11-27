@@ -7,6 +7,7 @@ import router from '@/framework/router'
 import pinia from '@/framework/store/index'
 import { setField } from '@/framework/utils/common'
 import { SYSTEM_MANAGE_MENU_PATH, SYSTEM_MANAGE_MENU_TITLE } from '@/framework/utils/constant'
+import { isEmbeddedChrome } from '@/framework/utils/embed'
 
 /**
  * 「系统管理」顶级节点判定（魔法值统一收口）：path 为主、title 兜底——历史数据里该树的
@@ -15,19 +16,6 @@ import { SYSTEM_MANAGE_MENU_PATH, SYSTEM_MANAGE_MENU_TITLE } from '@/framework/u
 const isSystemManageTop = (node: any): boolean => {
   const title = node?.meta?.title || node?.title || node?.name
   return node?.path === SYSTEM_MANAGE_MENU_PATH || title === SYSTEM_MANAGE_MENU_TITLE
-}
-
-/**
- * 嵌入壳判定（框架本地实现，🔴 不引业务侧 @/utils/embedded——framework 是 epc/InkHub 双宿主
- * 共享件，业务侧模块在别的宿主里可能根本不存在，import 会把对方构建带崩）：
- * URL 带 embedded=1（none 无壳）或 embedded=nav（nav 壳）即嵌入态；search 与 hash 双查。
- */
-const isEmbeddedChrome = (): boolean => {
-  if (typeof window === 'undefined') return false
-  const search = window.location.search || ''
-  const hash = window.location.hash || ''
-  return /[?&]embedded=(?:1|nav)(?:$|[&#])/.test(search)
-    || /[?&]embedded=(?:1|nav)(?:$|[&#])/.test(hash)
 }
 
 export const getComponent = (component: string) => {

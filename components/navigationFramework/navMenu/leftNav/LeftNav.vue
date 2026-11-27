@@ -3,6 +3,45 @@
     class="left-nav-container"
     :style="{width: collapsed ? '50px' : `${menuWidth}px`}"
   >
+    <!-- 嵌入态（墨枢 iframe / embedded=nav|1）专用：轻量「切换页面」入口（2026-11-27 用户拍板 A）。
+         嵌入态无自家 topnav（11-25 拍板撤，防双条）、也无齿轮入口 ⇒ 顶级菜单之间没有切换通道
+         （U117 连带缺口）。这里复用 topnav 数据源（routeStore.dynamicRoute 顶级节点，嵌入态已
+         剥离「系统管理」树）做一个下拉切换器，只落在左栏顶部一行，不是完整 topnav。
+         只有一个顶级时不渲染（无切换必要）；左栏收起时隐藏（空间不足）。
+         🔴 共享件：InkHub 宿主无 embedded 参数 ⇒ isEmbeddedChrome() 恒 false，渲染面为零变化。 -->
+    <div
+      v-if="isEmbedded && !collapsed && topNodes.length > 1"
+      class="left-switcher"
+    >
+      <a-dropdown
+        :trigger="['click']"
+        placement="bottomLeft"
+      >
+        <button
+          type="button"
+          class="left-switcher__btn"
+          :title="`切换到其他页面（当前：${currentTopTitle}）`"
+        >
+          <SwapOutlined class="left-switcher__icon" />
+          <span class="left-switcher__label">切换页面</span>
+          <span class="left-switcher__current">{{ currentTopTitle }}</span>
+          <DownOutlined class="left-switcher__arrow" />
+        </button>
+        <template #overlay>
+          <a-menu
+            :selected-keys="currentTopPath ? [currentTopPath] : []"
+            @click="onSwitchTop"
+          >
+            <a-menu-item
+              v-for="node in topNodes"
+              :key="node.path"
+            >
+              {{ node.meta?.title || node.title || node.name }}
+            </a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
+    </div>
     <a-menu
       v-if="tabStore.isNeedLeftNav"
       v-model:open-keys="keys.openKeys"
@@ -81,6 +120,7 @@
 </template>
 
 <script lang="ts" setup>
+import { DownOutlined, SwapOutlined } from '@ant-design/icons-vue'
 import { LocationQueryRaw, useRouter } from 'vue-router'
 
 
@@ -91,12 +131,41 @@ import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
 import { useNavigationStore } from '@/framework/store/navigation'
 import { useRouteStore } from '@/framework/store/route'
+import { isEmbeddedChrome } from '@/framework/utils/embed'
 
 
 const router = useRouter()
 const navigationStore = useNavigationStore(pinia)
 const tabStore = useTabStore(pinia)
 const routeStore = useRouteStore(pinia)
+
+// 嵌入态（墨枢 iframe）：左栏顶部渲染「切换页面」下拉（U119，2026-11-27 用户拍板 A）。
+// 判定取框架公共件（双宿主共享，不引业务侧模块）；非嵌入态恒 false ⇒ 渲染面零变化。
+const isEmbedded = isEmbeddedChrome()
+// 可切换的页面＝顶级节点全集（嵌入态 dynamicRoute 已剥离「系统管理」树，见 store/route.ts）
+const topNodes = computed(() => routeStore.dynamicRoute || [])
+const currentTopPath = computed(() => navigationStore.activeTopNavPath || '')
+const currentTopTitle = computed(() => {
+  const node = topNodes.value.find((n: any) => n.path === currentTopPath.value)
+  return node?.meta?.title || node?.title || node?.name || '选择页面'
+})
+
+/** 切到另一页面：落入该顶级第一个叶子（与 enterFirstDynamicRoute 同构的逐层下钻） */
+const onSwitchTop = ({ key }: { key: string | number }) => {
+  const node = topNodes.value.find((n: any) => n.path === key)
+  if (!node) return
+  let cursor: any = node
+  const pathArray = [node.path]
+  while (cursor.children && cursor.children.length > 0) {
+    cursor = cursor.children[0]
+    pathArray.push(cursor.path)
+  }
+  const leafPath = pathArray.join('/')
+  navigationStore.setActiveTopNav(node.path)
+  const queryStr = routeStore.dynamicRouteMap[leafPath]?.query
+  const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
+  router.push({ path: `/${leafPath}`, query })
+}
 
 // 响应式计算菜单列表 - 替代 initLeftNavList
 const navList = computed(() => {
@@ -359,6 +428,9 @@ onMounted(() => {
 .left-nav-container {
   position: relative;
   height: 100%;
+  /* 纵向 flex：顶部「切换页面」条 + 菜单区吃剩余高度（U119；无切换条时菜单仍吃满，视觉零变化） */
+  display: flex;
+  flex-direction: column;
   background: var(--left-nav-bg);
   backdrop-filter: var(--left-nav-blur);
   -webkit-backdrop-filter: var(--left-nav-blur);
@@ -369,8 +441,67 @@ onMounted(() => {
 }
 
 :deep(.ant-menu) {
-  height: 100%;
+  /* 原 height:100% 在 flex 容器里会与顶部切换条叠加溢出；改 flex 吃剩余并可滚动 */
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
   background: transparent !important;
+}
+
+/* 嵌入态「切换页面」入口：白底菜单主题下的一行轻量胶囊（U119 用户拍板 A） */
+.left-switcher {
+  flex-shrink: 0;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--nav-line, #d5e0ee);
+}
+
+.left-switcher__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--nav-text, #4d5361);
+  cursor: pointer;
+  background: var(--nav-bg-hover, rgba(255, 255, 255, 0.65));
+  border: 1px solid var(--nav-line, #d5e0ee);
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.left-switcher__btn:hover {
+  color: var(--nav-text-hover, #20242c);
+  background: #fff;
+}
+
+.left-switcher__icon {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--nav-text-tertiary, #878e9c);
+}
+
+.left-switcher__label {
+  flex-shrink: 0;
+  color: var(--nav-text-tertiary, #878e9c);
+}
+
+.left-switcher__current {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left-switcher__arrow {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--nav-text-tertiary, #878e9c);
 }
 
 .left-menu {
