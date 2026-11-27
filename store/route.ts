@@ -6,6 +6,29 @@ import { NavListType } from '@/framework/components/navigationFramework/navMenu/
 import router from '@/framework/router'
 import pinia from '@/framework/store/index'
 import { setField } from '@/framework/utils/common'
+import { SYSTEM_MANAGE_MENU_PATH, SYSTEM_MANAGE_MENU_TITLE } from '@/framework/utils/constant'
+
+/**
+ * 「系统管理」顶级节点判定（魔法值统一收口）：path 为主、title 兜底——历史数据里该树的
+ * 标题/路径都可能被管理页改过，两键任一命中即认。
+ */
+const isSystemManageTop = (node: any): boolean => {
+  const title = node?.meta?.title || node?.title || node?.name
+  return node?.path === SYSTEM_MANAGE_MENU_PATH || title === SYSTEM_MANAGE_MENU_TITLE
+}
+
+/**
+ * 嵌入壳判定（框架本地实现，🔴 不引业务侧 @/utils/embedded——framework 是 epc/InkHub 双宿主
+ * 共享件，业务侧模块在别的宿主里可能根本不存在，import 会把对方构建带崩）：
+ * URL 带 embedded=1（none 无壳）或 embedded=nav（nav 壳）即嵌入态；search 与 hash 双查。
+ */
+const isEmbeddedChrome = (): boolean => {
+  if (typeof window === 'undefined') return false
+  const search = window.location.search || ''
+  const hash = window.location.hash || ''
+  return /[?&]embedded=(?:1|nav)(?:$|[&#])/.test(search)
+    || /[?&]embedded=(?:1|nav)(?:$|[&#])/.test(hash)
+}
 
 export const getComponent = (component: string) => {
   const modules = import.meta.glob('@/**/*.vue')
@@ -33,8 +56,16 @@ export const useRouteStore = defineStore('routeStore', {
     async getDynamicRouteAction() {
       return getRouteTree().then((res) => {
         const routeTree = res.payload
-        // this.dynamicRoute = _.cloneDeep(routeTree)
-        this.dynamicRoute = res.payload
+        // 🔴 嵌入态（墨枢 iframe：embedded=nav/none）不暴露「系统管理」顶级（2026-11-27 U117）：
+        // 该树是子系统本地的参数/字典/Agent 管理页，嵌入态既无自家 topnav（11-25 拍板撤）
+        // 也无齿轮入口——首屏 auto 落地一旦命中它（rootPathMode=auto 取第一棵可见顶级），
+        // 用户就卡在管理页且没有切回业务页的入口（用户原话「进去就是系统管理的页面 没法切」）。
+        // 导航面用剥离后的树（dynamicRoute＝topnav/左栏/落地判定同源）；路由注册/按钮映射
+        // 仍用全树（直输 URL 不 404，独立访问 full 形态行为零变化）。
+        const navTree = isEmbeddedChrome() ? routeTree.filter((n: any) => !isSystemManageTop(n)) : routeTree
+        // 🔴 兜底：账号权限只有系统管理一棵树时不能把导航剥成空（否则落地无目标）；
+        // 此时保留原树，退回 11-25 前口径
+        this.dynamicRoute = navTree.length > 0 ? navTree : routeTree
         this.travelRouteTree(routeTree)
         this.clearButtonNode(routeTree)
         
