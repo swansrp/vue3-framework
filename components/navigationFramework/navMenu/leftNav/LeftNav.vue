@@ -142,7 +142,6 @@
           <span class="ln-switcher__text">
             <span class="ln-switcher__name">
               <span class="ln-switcher__label">{{ topTitle(activeTopNode) }}</span>
-              <DownOutlined class="ln-switcher__arrow" />
             </span>
             <span class="ln-switcher__sub">{{ switcherCount }} 个功能入口</span>
           </span>
@@ -1046,13 +1045,7 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.ln-switcher__arrow {
-  flex-shrink: 0;
-  margin-left: 5px;
-  font-size: 10px;
-  color: var(--ln-text-muted);
-}
+
 
 .ln-switcher__sub {
   margin-top: 2px;
