@@ -58,55 +58,82 @@
           v-for="top in visibleTops"
           :key="top.path"
         >
-          <button
-            type="button"
-            class="ln-group"
-            :title="`进入 ${topTitle(top)}`"
-            @click="onGroupClick(top)"
+          <!-- 无子级的顶级直接当条目（点按直达，不再渲染空折叠节） -->
+          <a
+            v-if="!top.children || top.children.length === 0"
+            class="ln-item"
+            :class="{ 'is-active': isActive(top, top) }"
+            href="javascript:;"
+            :title="topTitle(top)"
+            @click="navigateTo(top, top)"
           >
-            {{ topTitle(top) }}
-          </button>
-          <template
-            v-for="child in top.children || []"
-            :key="child.key || child.path"
-          >
-            <!-- 有下级的子节点降级为二级组标签（演示壳无此层，取小节标签同款弱化态） -->
-            <template v-if="child.children && child.children.length > 0">
-              <div class="ln-group ln-group--sub">
-                {{ topTitle(child) }}
-              </div>
-              <a
-                v-for="gc in child.children"
-                :key="gc.key || gc.path"
-                class="ln-item ln-item--sub"
-                :class="{ 'is-active': isActive(gc, top) }"
-                href="javascript:;"
-                :title="topTitle(gc)"
-                @click="navigateTo(top, gc)"
-              >
-                <Icon
-                  v-if="gc.icon"
-                  :icon="gc.icon"
-                  class="ln-item__icon"
-                />
-                <span class="ln-item__label">{{ topTitle(gc) }}</span>
-              </a>
-            </template>
-            <a
-              v-else
-              class="ln-item"
-              :class="{ 'is-active': isActive(child, top) }"
-              href="javascript:;"
-              :title="topTitle(child)"
-              @click="navigateTo(top, child)"
+            <Icon
+              v-if="iconOf(top)"
+              :icon="iconOf(top)"
+              class="ln-item__icon"
+            />
+            <span class="ln-item__label">{{ topTitle(top) }}</span>
+          </a>
+          <template v-else>
+            <!-- U131 折叠组：顶级组标签＝展开/收起节（chevron 朝向随开合），多开允许，
+                 导航/切模块自动展开当前顶级（watch activeTopNavPath）；当前组常驻主色定位 -->
+            <button
+              type="button"
+              class="ln-group"
+              :class="{ 'is-open': isOpen(top), 'is-current': isCurrentTop(top) }"
+              :title="isOpen(top) ? '收起该模块' : '展开该模块'"
+              @click="toggleGroup(top)"
             >
-              <Icon
-                v-if="child.icon"
-                :icon="child.icon"
-                class="ln-item__icon"
-              />
-              <span class="ln-item__label">{{ topTitle(child) }}</span>
-            </a>
+              <span class="ln-group__text">{{ topTitle(top) }}</span>
+              <DownOutlined class="ln-group__chevron" />
+            </button>
+            <div
+              v-show="isOpen(top)"
+              class="ln-group__body"
+            >
+              <template
+                v-for="child in top.children || []"
+                :key="child.key || child.path"
+              >
+                <!-- 有下级的子节点降级为二级组标签（演示壳无此层，取小节标签同款弱化态） -->
+                <template v-if="child.children && child.children.length > 0">
+                  <div class="ln-group ln-group--sub">
+                    {{ topTitle(child) }}
+                  </div>
+                  <a
+                    v-for="gc in child.children"
+                    :key="gc.key || gc.path"
+                    class="ln-item ln-item--sub"
+                    :class="{ 'is-active': isActive(gc, top) }"
+                    href="javascript:;"
+                    :title="topTitle(gc)"
+                    @click="navigateTo(top, gc)"
+                  >
+                    <Icon
+                      v-if="gc.icon"
+                      :icon="gc.icon"
+                      class="ln-item__icon"
+                    />
+                    <span class="ln-item__label">{{ topTitle(gc) }}</span>
+                  </a>
+                </template>
+                <a
+                  v-else
+                  class="ln-item"
+                  :class="{ 'is-active': isActive(child, top) }"
+                  href="javascript:;"
+                  :title="topTitle(child)"
+                  @click="navigateTo(top, child)"
+                >
+                  <Icon
+                    v-if="child.icon"
+                    :icon="child.icon"
+                    class="ln-item__icon"
+                  />
+                  <span class="ln-item__label">{{ topTitle(child) }}</span>
+                </a>
+              </template>
+            </div>
           </template>
         </template>
       </nav>
@@ -344,11 +371,36 @@ const onPickModule = (node: any) => {
 
 const iconOf = (n: any) => n?.icon || n?.meta?.icon || ''
 
-/** 从顶级节点向下找目标叶子，返回 root→…→leaf 链（找不到返回 null） */
+// ── U131 折叠组：顶级组标签＝展开/收起节 ────────────────
+// 多开允许（成熟系统模块多，用户自控）；导航/切模块自动展开当前顶级——保证选中 pill 始终可见
+const expandedTops = ref<Set<string>>(new Set())
+watch(
+  () => navigationStore.activeTopNavPath,
+  (p) => {
+    if (p && !expandedTops.value.has(String(p))) {
+      const next = new Set(expandedTops.value)
+      next.add(String(p))
+      expandedTops.value = next
+    }
+  },
+  { immediate: true }
+)
+const isOpen = (top: any) => expandedTops.value.has(String(top.path))
+const toggleGroup = (top: any) => {
+  const next = new Set(expandedTops.value)
+  if (next.has(String(top.path))) next.delete(String(top.path))
+  else next.add(String(top.path))
+  expandedTops.value = next
+}
+const isCurrentTop = (top: any) => navigationStore.activeTopNavPath === top.path
+
+/** 从顶级节点向下找目标叶子，返回 root→…→leaf 链（找不到返回 null；
+    key 缺省的节点按 path 兜底匹配——无子级顶级直接当条目时走这条腿） */
 const findChainByKey = (root: any, targetKey: any): any[] | null => {
   const walk = (cur: any, chain: any[]): any[] | null => {
     const next = [...chain, cur]
-    if (cur.key != null && String(cur.key) === String(targetKey)) return next
+    if ((cur.key != null && String(cur.key) === String(targetKey)) ||
+        (cur.key == null && String(cur.path) === String(targetKey))) return next
     for (const c of cur.children || []) {
       const hit = walk(c, next)
       if (hit) return hit
@@ -364,7 +416,8 @@ const navigateTo = (top: any, leaf: any) => {
   const chain = findChainByKey(top, leaf.key ?? leaf.path)
   if (!chain) return
   navigationStore.setActiveTopNav(top.path)
-  navigationStore.activeLeftNavKey = String(chain[chain.length - 1].key)
+  const last = chain[chain.length - 1]
+  navigationStore.activeLeftNavKey = String(last.key ?? last.path)
   const fullPath = `/${chain.map((n) => n.path).join('/')}`
   const queryStr = leaf.query || ''
   const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
@@ -382,18 +435,10 @@ const navigateTo = (top: any, leaf: any) => {
   }
 }
 
-/** 父级组标签点击＝下钻到该顶级第一个叶子（与嵌入态 onSwitchTop 同构） */
-const onGroupClick = (top: any) => {
-  let cursor: any = top
-  while (cursor.children && cursor.children.length > 0) cursor = cursor.children[0]
-  navigateTo(top, cursor)
-}
-
-/** 选中判定：顶级＋叶子键双对齐（跨顶级同 key 不会串） */
+/** 选中判定：顶级＋叶子键双对齐（跨顶级同 key 不会串；key 缺省按 path 兜底） */
 const isActive = (node: any, top: any) =>
   navigationStore.activeTopNavPath === top.path &&
-  node.key != null &&
-  String(navigationStore.activeLeftNavKey) === String(node.key)
+  String(node.key ?? node.path) === String(navigationStore.activeLeftNavKey)
 
 // 响应式计算选中状态
 const selectedKeys = computed(() => 
@@ -1114,10 +1159,11 @@ onMounted(() => {
   color: #1a63a8;
 }
 
-/* 父级组标签：小节标签语言（可点击＝下钻该顶级首个叶子） */
+/* 父级组标签（U131 折叠节）：label＋chevron，点击展开/收起；当前组主色定位 */
 .ln-group {
-  display: block;
+  display: flex;
   width: 100%;
+  align-items: center;
   padding: 12px 10px 6px;
   border: none;
   background: none;
@@ -1131,6 +1177,41 @@ onMounted(() => {
 
 .ln-group:hover {
   color: var(--ln-accent);
+}
+
+.ln-group__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ln-group__chevron {
+  flex-shrink: 0;
+  margin-left: 6px;
+  font-size: 9px;
+  color: var(--ln-text-muted);
+  transition: transform 0.15s;
+  transform: rotate(-90deg);
+}
+
+.ln-group.is-open .ln-group__chevron {
+  transform: rotate(0);
+}
+
+.ln-group:hover .ln-group__chevron {
+  color: var(--ln-accent);
+}
+
+/* 当前组（无论开合）主色常驻＝「我在哪个模块」定位 */
+.ln-group.is-current {
+  color: var(--ln-accent);
+  font-weight: 550;
+}
+
+.ln-group__body {
+  /* 展开体：仅承载，无额外观感 */
 }
 
 /* 二级组标签（有下级的子节点降级展示）：弱化＋不可点 */
