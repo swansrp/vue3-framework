@@ -764,7 +764,8 @@ onMounted(() => {
 }
 
 .top_user:hover {
-  background: var(--header-hover-bg);
+  /* U126：右上角融入海蓝工作台——悬停海蓝薄纱（与侧栏条目/页签 hover 同款） */
+  background: rgba(26, 99, 168, 0.08);
 }
 
 /* 用户头像区域 */
@@ -774,15 +775,15 @@ onMounted(() => {
 }
 
 .user-avatar {
-  border: 2px solid var(--header-avatar-border);
-  box-shadow: var(--header-avatar-shadow);
+  border: 2px solid rgba(26, 99, 168, 0.45);
+  box-shadow: 0 1px 4px rgba(26, 99, 168, 0.18);
   transition: all var(--transition-fast);
 }
 
 .user-avatar:hover {
-  border-color: var(--accent-mid);
-  box-shadow: var(--header-avatar-hover-shadow);
-  transform: var(--header-avatar-hover-transform);
+  border-color: #1a63a8;
+  box-shadow: 0 2px 10px rgba(26, 99, 168, 0.35);
+  transform: translateY(-1px);
 }
 
 /* 在线状态指示器 */
@@ -792,9 +793,10 @@ onMounted(() => {
   right: 1px;
   width: 8px;
   height: 8px;
-  background: var(--header-status-bg);
+  background: #52d88a;
   border: 2px solid var(--bg-elevated);
   border-radius: 50%;
+  box-shadow: 0 0 6px rgba(82, 216, 138, 0.5);
   animation: var(--header-status-animation);
 }
 
@@ -807,23 +809,24 @@ onMounted(() => {
 .user-name {
   font-size: var(--header-user-name-size);
   font-weight: var(--header-user-name-weight);
-  color: var(--header-user-text);
+  color: var(--text-primary, #20242c);
   line-height: 1.3;
 }
 
 .user-role {
   font-size: 11px;
-  color: var(--header-user-text-secondary);
+  color: #1a63a8;
   line-height: 1;
   display: inline-block;
   max-width: 100px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: var(--header-role-bg);
-  border: var(--header-role-border);
-  border-radius: var(--header-role-radius);
-  padding: var(--header-role-padding);
+  background: rgba(26, 99, 168, 0.08);
+  border: none;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-top: 2px;
 }
 
 /* 设置按钮区域 */
@@ -847,32 +850,32 @@ onMounted(() => {
 }
 
 .theme-toggle-btn {
-  color: var(--header-icon-color) !important;
+  color: var(--text-secondary, #4d5361) !important;
   transition: all var(--transition-fast) !important;
 }
 
 .theme-toggle-btn:hover {
-  color: var(--header-btn-hover-color) !important;
-  background: var(--header-btn-hover-bg) !important;
+  color: #1a63a8 !important;
+  background: rgba(26, 99, 168, 0.08) !important;
 }
 
 .setting-button {
-  background: var(--header-setting-bg) !important;
-  border: var(--header-setting-border) !important;
-  box-shadow: var(--header-setting-shadow);
-  color: var(--header-icon-color) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none;
+  color: var(--text-secondary, #4d5361) !important;
   transition: all var(--transition-fast) !important;
 }
 
 .setting-button:hover {
-  background: var(--header-btn-hover-bg) !important;
-  color: var(--header-btn-hover-color) !important;
-  box-shadow: var(--header-setting-hover-shadow) !important;
-  transform: var(--header-setting-hover-transform);
+  background: rgba(26, 99, 168, 0.08) !important;
+  color: #1a63a8 !important;
+  box-shadow: none !important;
+  transform: none;
 }
 
 .setting-button:active {
-  transform: var(--header-setting-active-transform);
+  transform: scale(0.95);
 }
 
 /* 下拉菜单 - 深色主题 */
@@ -892,8 +895,8 @@ onMounted(() => {
 }
 
 :deep(.user-dropdown-menu .ant-menu-item:hover) {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: rgba(26, 99, 168, 0.08);
+  color: #1a63a8;
 }
 
 :deep(.top_user_setting .ant-btn-circle) {
