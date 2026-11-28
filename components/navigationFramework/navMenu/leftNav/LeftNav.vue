@@ -256,6 +256,7 @@ import { LocationQueryRaw, useRouter } from 'vue-router'
 
 import SubNav from '@/framework/components/navigationFramework/navMenu/subNav/SubNav.vue'
 import { getTitlePathByKey } from '@/framework/hooks/initKeysAndRouteInNav'
+import { isBareExternalTop } from '@/framework/router/utils'
 import { getQueryObject } from '@/framework/network/utils'
 import pinia from '@/framework/store'
 import { useTabStore } from '@/framework/store/nav'
@@ -310,9 +311,10 @@ const navList = computed(() => {
 // ── U124 统一侧栏（非嵌入态）────────────────────────────
 const topTitle = (n: any) => n?.meta?.title || n?.title || n?.name || ''
 
-/** 可见顶级＝过滤外链勾选（isFrame）模块——切换器下拉与侧栏组标签同一口径，不暴露外链模块存在 */
+/** 可见顶级＝过滤**裸**外链模块（U136-d 语义细化：外链勾选但子级是内部页面的目录型
+    顶级不过滤——否则墨枢误勾会让整树「拿不到」）；与 U125 切换器同一口径 */
 const visibleTops = computed(() =>
-  routeStore.dynamicRoute.filter((n: any) => !routeStore.routePathIsFrameMap[n.path])
+  routeStore.dynamicRoute.filter((n: any) => !isBareExternalTop(routeStore, n))
 )
 
 // U125 模块切换器（左栏顶部）：当前顶级展示＋下拉切换
