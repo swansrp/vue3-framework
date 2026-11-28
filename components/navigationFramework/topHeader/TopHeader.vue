@@ -782,14 +782,17 @@ onMounted(() => {
 }
 
 .user-avatar {
-  border: 2px solid rgba(26, 99, 168, 0.45);
-  box-shadow: 0 1px 4px rgba(26, 99, 168, 0.18);
+  /* U133 头像瓦片化：品牌族渐变底＋白图标（与 logo/模块瓦片同族，退役 antd 默认灰圆） */
+  background: linear-gradient(135deg, #1e6cb4, #114d83) !important;
+  color: #fff !important;
+  border: 2px solid rgba(26, 99, 168, 0.35);
+  box-shadow: 0 2px 8px rgba(26, 99, 168, 0.3);
   transition: all var(--transition-fast);
 }
 
 .user-avatar:hover {
   border-color: #1a63a8;
-  box-shadow: 0 2px 10px rgba(26, 99, 168, 0.35);
+  box-shadow: 0 3px 12px rgba(26, 99, 168, 0.4);
   transform: translateY(-1px);
 }
 
@@ -882,40 +885,27 @@ onMounted(() => {
 }
 
 .setting-button:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
-/* 下拉菜单 - 深色主题 */
-:deep(.user-dropdown-menu) {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: 4px;
+.theme-toggle-btn:active {
+  transform: scale(0.96);
 }
 
-:deep(.user-dropdown-menu .ant-menu-item) {
-  border-radius: var(--radius-md);
-  margin: 2px 0;
-  transition: all var(--transition-fast);
-  color: var(--text-secondary);
-}
-
-:deep(.user-dropdown-menu .ant-menu-item:hover) {
-  background: rgba(26, 99, 168, 0.08);
-  color: #1a63a8;
-}
+/* 🔴 齿轮下拉菜单样式不可写在 scoped/:deep——overlay 被 teleport 到 body，
+   [data-v] 祖先链断裂导致 :deep 永不命中（U133 实测一直在渲染 antd 默认样式）。
+   面板化规则已挪到文件尾 unscoped 块。 */
 
 :deep(.top_user_setting .ant-btn-circle) {
   margin-right: 0;
 }
 
-/* ==================== 主题色板菜单 ==================== */
+/* ==================== 主题色板菜单（U133 面板化同族） ==================== */
 .theme-palette-menu {
-  background: var(--bg-elevated) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: var(--radius-lg) !important;
-  box-shadow: var(--shadow-lg) !important;
+  background: #fff !important;
+  border: 1px solid #e2eaf3 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 20px rgba(26, 99, 168, 0.16) !important;
   padding: 6px !important;
   min-width: 180px !important;
 }
@@ -959,5 +949,31 @@ onMounted(() => {
   font-size: 11px;
   color: var(--text-tertiary);
   margin-left: auto;
+}
+</style>
+
+<style>
+/* U133 齿轮下拉菜单面板化——overlay 被 teleport 到 body，scoped/:deep 永不命中
+   （此前一直渲染 antd 默认样式＝用户观感「丑」的来源），必须 unscoped 全局规则；
+   选择器三段式压过 antd 的 .ant-dropdown .ant-dropdown-menu（条目类名是
+   ant-dropdown-menu-item，dropdown 语境下 a-menu 不渲染 ant-menu-item） */
+.ant-dropdown .ant-dropdown-menu.user-dropdown-menu {
+  background: #fff;
+  border: 1px solid #e2eaf3;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(26, 99, 168, 0.16);
+  padding: 6px;
+}
+
+.ant-dropdown .ant-dropdown-menu.user-dropdown-menu .ant-dropdown-menu-item {
+  margin: 2px 4px;
+  border-radius: 8px;
+  color: #4d5361;
+  transition: all 0.15s;
+}
+
+.ant-dropdown .ant-dropdown-menu.user-dropdown-menu .ant-dropdown-menu-item:hover {
+  background: rgba(26, 99, 168, 0.08);
+  color: #1a63a8;
 }
 </style>
