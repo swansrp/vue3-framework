@@ -113,11 +113,14 @@
       <!-- U129 模块切换器贴底（2026-11-28 用户征询「放上边还是贴底像 Windows 菜单」，
            AI 拍板贴底：logo 区/切换器同为「头部块」上下相叠是重叠感根源——贴底后顶部
            只剩 logo 一个身份块，切换器成为左下角常驻锚点，收起态恰好只剩瓦片钮＝开始
-           按钮形态；下拉改向上弹出。外链顶级不显示（U125 口径）沿用。 -->
+           按钮形态；下拉改向上弹出。外链顶级不显示（U125 口径）沿用。
+           U130：弹出层弃 a-menu 改自绘面板（ProjectSwitcher 面板同族——面板头＋图标
+           条目＋当前项勾选），antd 裸菜单观感用户不收。 -->
       <a-dropdown
         v-if="activeTopNode"
         :trigger="['click']"
         placement="topLeft"
+        overlay-class-name="ln-switcher-dropdown"
       >
         <div
           class="ln-switcher"
@@ -144,17 +147,30 @@
           </span>
         </div>
         <template #overlay>
-          <a-menu
-            :selected-keys="[activeTopNode.path]"
-            @click="onSwitchModule"
-          >
-            <a-menu-item
-              v-for="node in visibleTops"
-              :key="node.path"
-            >
-              {{ topTitle(node) }}
-            </a-menu-item>
-          </a-menu>
+          <div class="ln-switcher-panel">
+            <div class="ln-switcher-panel__head">切换功能模块</div>
+            <div class="ln-switcher-panel__list">
+              <div
+                v-for="node in visibleTops"
+                :key="node.path"
+                class="ln-switcher-panel__item"
+                :class="{ 'is-current': node.path === activeTopNode.path }"
+                @click="onPickModule(node)"
+              >
+                <span class="ln-switcher-panel__item-icon">
+                  <Icon
+                    v-if="iconOf(node)"
+                    :icon="iconOf(node)"
+                  />
+                </span>
+                <span class="ln-switcher-panel__item-label">{{ topTitle(node) }}</span>
+                <CheckOutlined
+                  v-if="node.path === activeTopNode.path"
+                  class="ln-switcher-panel__item-check"
+                />
+              </div>
+            </div>
+          </div>
         </template>
       </a-dropdown>
     </template>
@@ -236,7 +252,7 @@
 </template>
 
 <script lang="ts" setup>
-import { DownOutlined, SwapOutlined } from '@ant-design/icons-vue'
+import { CheckOutlined, DownOutlined, SwapOutlined } from '@ant-design/icons-vue'
 import { LocationQueryRaw, useRouter } from 'vue-router'
 
 
@@ -320,12 +336,13 @@ const firstLeafOf = (node: any): any => {
   return cursor
 }
 
-/** 切换模块：下钻首个叶子后走统一 navigateTo（全路径＋外链开新窗） */
-const onSwitchModule = ({ key }: { key: string | number }) => {
-  const node: any = visibleTops.value.find((n: any) => n.path === key)
+/** 切换模块（U130 弹出面板自绘列表直取节点）：下钻首个叶子后走统一 navigateTo */
+const onPickModule = (node: any) => {
   if (!node) return
   navigateTo(node, firstLeafOf(node))
 }
+
+const iconOf = (n: any) => n?.icon || n?.meta?.icon || ''
 
 /** 从顶级节点向下找目标叶子，返回 root→…→leaf 链（找不到返回 null） */
 const findChainByKey = (root: any, targetKey: any): any[] | null => {
@@ -1029,6 +1046,74 @@ onMounted(() => {
   letter-spacing: 0.4px;
 }
 
+/* ====== 切换器弹出面板（U130：ProjectSwitcher 面板同族——面板头＋图标条目＋当前项勾选，
+     弃 antd 裸菜单；overlay 经 portal 渲染，面板自身带全量观感） ====== */
+.ln-switcher-panel {
+  min-width: 230px;
+  background: #fff;
+  border: 1px solid #e2eaf3;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(26, 99, 168, 0.16);
+  padding: 6px;
+  overflow: hidden;
+}
+
+.ln-switcher-panel__head {
+  margin-bottom: 4px;
+  padding: 8px 10px 9px;
+  font-size: 12px;
+  font-weight: 550;
+  color: #1a63a8;
+  border-bottom: 1px solid #eef1f5;
+}
+
+.ln-switcher-panel__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 2px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--ln-text, #4d5361);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ln-switcher-panel__item:hover {
+  background: rgba(26, 99, 168, 0.08);
+  color: #1a63a8;
+}
+
+.ln-switcher-panel__item.is-current {
+  background: rgba(26, 99, 168, 0.1);
+  color: #1a63a8;
+  font-weight: 550;
+}
+
+.ln-switcher-panel__item-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  font-size: 15px;
+}
+
+.ln-switcher-panel__item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ln-switcher-panel__item-check {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #1a63a8;
+}
+
 /* 父级组标签：小节标签语言（可点击＝下钻该顶级首个叶子） */
 .ln-group {
   display: block;
@@ -1262,5 +1347,16 @@ onMounted(() => {
 
 .toggle-button:active {
   transform: translateY(-50%) scale(0.95);
+}
+</style>
+
+<style>
+/* U130 切换器弹层去 antd 底壳（overlay 走 portal，scoped 不达——overlayClassName 定向剥离，
+   观感全由 .ln-switcher-panel 自带） */
+.ant-dropdown.ln-switcher-dropdown {
+  background: transparent;
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 0;
 }
 </style>
