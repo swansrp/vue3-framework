@@ -42,99 +42,70 @@
         </template>
       </a-dropdown>
     </div>
-    <!-- U124 统一侧栏（非嵌入态，2026-11-28 用户拍板「app 品牌白色样式做成 topheader ＋
-         喜欢演示壳父级/子级的显示方式，甚至可以不用 antd 组件」）：自绘导航弃 antd menu——
-         父级＝小节标签（顶级模块，点击下钻首个叶子）、子级＝条目（icon＋文字，选中海蓝 pill），
-         全部顶级模块一次全展示；横向 topnav 由 TopHeader hide-topnav 撤除（壳装配层下发）。
-         品牌区不做进侧栏：TopHeader 的 top_title 已与左列同宽对齐、按演示壳瓦片样式重做，
-         两段拼成一条连续品牌柱。嵌入态（墨枢 iframe）零变化：仍走 left-switcher＋a-menu
-         逐级展开（U119/U117 口径），本分支不渲染。 -->
+    <!-- U124 统一侧栏（非嵌入态）→ U136 重构（2026-11-28 用户「折叠不要整个 topnav 级别，
+         是子菜单级别能开闭；不显示当前的 topNav，显示的话也在 leftNav 底部」）：
+         侧栏只渲染**当前顶级模块的子树**——顶级组标签全部不再出现（当前模块身份由底部
+         贴底切换器唯一承载），子菜单级可折叠（chevron 开合，含当前条目的链自动展开），
+         叶子＝条目（选中海蓝 pill）；模块切换职能全部归底部切换器（U125 外链过滤沿用）。
+         嵌入态（墨枢 iframe）零变化：仍走 left-switcher＋a-menu（U119/U117 口径）。 -->
     <template v-if="!isEmbedded">
       <nav
         class="ln-nav"
         :class="{ 'is-collapsed': collapsed }"
       >
         <template
-          v-for="top in visibleTops"
-          :key="top.path"
+          v-for="child in navList"
+          :key="child.key || child.path"
         >
-          <!-- 无子级的顶级直接当条目（点按直达，不再渲染空折叠节） -->
-          <a
-            v-if="!top.children || top.children.length === 0"
-            class="ln-item"
-            :class="{ 'is-active': isActive(top, top) }"
-            href="javascript:;"
-            :title="topTitle(top)"
-            @click="navigateTo(top, top)"
-          >
-            <Icon
-              v-if="iconOf(top)"
-              :icon="iconOf(top)"
-              class="ln-item__icon"
-            />
-            <span class="ln-item__label">{{ topTitle(top) }}</span>
-          </a>
-          <template v-else>
-            <!-- U131 折叠组：顶级组标签＝展开/收起节（chevron 朝向随开合），多开允许，
-                 导航/切模块自动展开当前顶级（watch activeTopNavPath）；当前组常驻主色定位 -->
+          <!-- 有下级 → 子菜单级折叠节（U136） -->
+          <template v-if="child.children && child.children.length > 0">
             <button
               type="button"
               class="ln-group"
-              :class="{ 'is-open': isOpen(top), 'is-current': isCurrentTop(top) }"
-              :title="isOpen(top) ? '收起该模块' : '展开该模块'"
-              @click="toggleGroup(top)"
+              :class="{ 'is-open': isSubOpen(child) }"
+              :title="isSubOpen(child) ? '收起' : '展开'"
+              @click="toggleSub(child)"
             >
-              <span class="ln-group__text">{{ topTitle(top) }}</span>
+              <span class="ln-group__text">{{ topTitle(child) }}</span>
               <DownOutlined class="ln-group__chevron" />
             </button>
             <div
-              v-show="isOpen(top)"
+              v-show="isSubOpen(child)"
               class="ln-group__body"
             >
-              <template
-                v-for="child in top.children || []"
-                :key="child.key || child.path"
+              <a
+                v-for="gc in child.children"
+                :key="gc.key || gc.path"
+                class="ln-item ln-item--sub"
+                :class="{ 'is-active': isActive(gc) }"
+                href="javascript:;"
+                :title="topTitle(gc)"
+                @click="navigateTo(activeTopNode, gc)"
               >
-                <!-- 有下级的子节点降级为二级组标签（演示壳无此层，取小节标签同款弱化态） -->
-                <template v-if="child.children && child.children.length > 0">
-                  <div class="ln-group ln-group--sub">
-                    {{ topTitle(child) }}
-                  </div>
-                  <a
-                    v-for="gc in child.children"
-                    :key="gc.key || gc.path"
-                    class="ln-item ln-item--sub"
-                    :class="{ 'is-active': isActive(gc, top) }"
-                    href="javascript:;"
-                    :title="topTitle(gc)"
-                    @click="navigateTo(top, gc)"
-                  >
-                    <Icon
-                      v-if="gc.icon"
-                      :icon="gc.icon"
-                      class="ln-item__icon"
-                    />
-                    <span class="ln-item__label">{{ topTitle(gc) }}</span>
-                  </a>
-                </template>
-                <a
-                  v-else
-                  class="ln-item"
-                  :class="{ 'is-active': isActive(child, top) }"
-                  href="javascript:;"
-                  :title="topTitle(child)"
-                  @click="navigateTo(top, child)"
-                >
-                  <Icon
-                    v-if="child.icon"
-                    :icon="child.icon"
-                    class="ln-item__icon"
-                  />
-                  <span class="ln-item__label">{{ topTitle(child) }}</span>
-                </a>
-              </template>
+                <Icon
+                  v-if="iconOf(gc)"
+                  :icon="iconOf(gc)"
+                  class="ln-item__icon"
+                />
+                <span class="ln-item__label">{{ topTitle(gc) }}</span>
+              </a>
             </div>
           </template>
+          <a
+            v-else
+            class="ln-item"
+            :class="{ 'is-active': isActive(child) }"
+            href="javascript:;"
+            :title="topTitle(child)"
+            @click="navigateTo(activeTopNode, child)"
+          >
+            <Icon
+              v-if="iconOf(child)"
+              :icon="iconOf(child)"
+              class="ln-item__icon"
+            />
+            <span class="ln-item__label">{{ topTitle(child) }}</span>
+          </a>
         </template>
       </nav>
       <!-- U129 模块切换器贴底（2026-11-28 用户征询「放上边还是贴底像 Windows 菜单」，
@@ -371,28 +342,18 @@ const onPickModule = (node: any) => {
 
 const iconOf = (n: any) => n?.icon || n?.meta?.icon || ''
 
-// ── U131 折叠组：顶级组标签＝展开/收起节 ────────────────
-// 多开允许（成熟系统模块多，用户自控）；导航/切模块自动展开当前顶级——保证选中 pill 始终可见
-const expandedTops = ref<Set<string>>(new Set())
-watch(
-  () => navigationStore.activeTopNavPath,
-  (p) => {
-    if (p && !expandedTops.value.has(String(p))) {
-      const next = new Set(expandedTops.value)
-      next.add(String(p))
-      expandedTops.value = next
-    }
-  },
-  { immediate: true }
-)
-const isOpen = (top: any) => expandedTops.value.has(String(top.path))
-const toggleGroup = (top: any) => {
-  const next = new Set(expandedTops.value)
-  if (next.has(String(top.path))) next.delete(String(top.path))
-  else next.add(String(top.path))
-  expandedTops.value = next
+// ── U136 子菜单级折叠（侧栏只渲染当前顶级子树，顶级组标签不再出现）──
+// 多开允许；含当前选中条目的子菜单自动展开（保证 pill 可见）；收起态强制全开（图标列不丢功能）
+const expandedSubs = ref<Set<string>>(new Set())
+const subKeyOf = (n: any) => String(n.key ?? n.path)
+const isSubOpen = (child: any) => collapsed.value || expandedSubs.value.has(subKeyOf(child))
+const toggleSub = (child: any) => {
+  const k = subKeyOf(child)
+  const next = new Set(expandedSubs.value)
+  if (next.has(k)) next.delete(k)
+  else next.add(k)
+  expandedSubs.value = next
 }
-const isCurrentTop = (top: any) => navigationStore.activeTopNavPath === top.path
 
 /** 从顶级节点向下找目标叶子，返回 root→…→leaf 链（找不到返回 null；
     key 缺省的节点按 path 兜底匹配——无子级顶级直接当条目时走这条腿） */
@@ -435,10 +396,26 @@ const navigateTo = (top: any, leaf: any) => {
   }
 }
 
-/** 选中判定：顶级＋叶子键双对齐（跨顶级同 key 不会串；key 缺省按 path 兜底） */
-const isActive = (node: any, top: any) =>
-  navigationStore.activeTopNavPath === top.path &&
+/** 选中判定（U136：侧栏只渲染当前顶级子树，无需跨顶级比对） */
+const isActive = (node: any) =>
+  !!navigationStore.activeTopNavPath &&
   String(node.key ?? node.path) === String(navigationStore.activeLeftNavKey)
+
+/** 当前选中链上的子菜单自动展开（放在 findChainByKey 定义之后，immediate 回调不能踩 TDZ） */
+watch(
+  [() => navigationStore.activeTopNavPath, () => navigationStore.activeLeftNavKey],
+  () => {
+    if (!activeTopNode.value || !navigationStore.activeLeftNavKey) return
+    const chain = findChainByKey(activeTopNode.value, navigationStore.activeLeftNavKey)
+    if (!chain) return
+    const next = new Set(expandedSubs.value)
+    for (const n of chain) {
+      if (n.children?.length) next.add(subKeyOf(n))
+    }
+    expandedSubs.value = next
+  },
+  { immediate: true }
+)
 
 // 响应式计算选中状态
 const selectedKeys = computed(() => 
@@ -1095,8 +1072,8 @@ onMounted(() => {
      弃 antd 裸菜单；overlay 经 portal 渲染，面板自身带全量观感） ====== */
 .ln-switcher-panel {
   min-width: 230px;
-  background: #fff;
-  border: 1px solid #e2eaf3;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #e2eaf3);
   border-radius: 10px;
   box-shadow: 0 6px 20px rgba(26, 99, 168, 0.16);
   padding: 6px;
@@ -1212,18 +1189,6 @@ onMounted(() => {
 
 .ln-group__body {
   /* 展开体：仅承载，无额外观感 */
-}
-
-/* 二级组标签（有下级的子节点降级展示）：弱化＋不可点 */
-.ln-group--sub {
-  padding: 8px 10px 4px 12px;
-  cursor: default;
-  font-size: 11px;
-  opacity: 0.85;
-}
-
-.ln-group--sub:hover {
-  color: var(--ln-text-muted);
 }
 
 /* 子级条目：演示壳同款（9px 竖距、8px 圆角、悬停蓝纱、选中海蓝渐变 pill＋白短线） */

@@ -19,7 +19,7 @@ export const LIGHT_THEMES: { id: ThemeId; label: string; desc: string; swatch: s
 
 const DARK_THEME_IDS = new Set<ThemeId>(['dark', 'plsintecDark', 'oceanBlueDark'])
 
-const VALID_THEME_IDS = new Set<string>([...LIGHT_THEMES.map(t => t.id), 'dark', 'plsintecDark'])
+const VALID_THEME_IDS = new Set<string>([...LIGHT_THEMES.map(t => t.id), ...DARK_THEME_IDS])
 
 // ============================================================
 // 全局主题配置（可在 main.ts 中调用修改）
@@ -82,6 +82,9 @@ export const useThemeStore = defineStore('theme', {
   actions: {
     setTheme(id: ThemeId) {
       this.themeId = id
+      // U136 补持久化：resolveThemeId 一直读 app-theme，但写侧缺失——toggle 刷新即回默认
+      // （用户「怎么看不到深色主题」根因之一）。仅 switchEnabled 时有意义。
+      localStorageMethods.setLocalStorage(THEME_STORAGE_KEY, id)
       this.applyTheme()
     },
     toggleTheme() {
