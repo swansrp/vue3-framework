@@ -3,11 +3,10 @@
     <div class="tab-scroll-wrap">
       <div class="tab-list">
         <div
-          v-for="(item, index) in tabs"
+          v-for="item in tabs"
           :key="getTabKey(item)"
           class="tab-item"
           :class="{ 'tab-active': getTabKey(item) === activeKey }"
-          :style="getTabStyle(index) as any"
           @click="changeActivateKey(getTabKey(item))"
         >
           <span class="tab-title">{{ item.title }}</span>
@@ -49,45 +48,6 @@ const getTabKey = (item: { key?: any; id?: any }): string => {
   return String(item.key ?? item.id)
 }
 
-// 计算单个tab的内联样式
-const getTabStyle = (index: number): Partial<CSSStyleDeclaration> => {
-  const isFirst = index === 0
-  const isLast = index === tabs.value.length - 1
-
-  // 单tab：|--->
-  if (tabs.value.length === 1) {
-    return {
-      clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)'
-    } as any
-  }
-
-  // 首tab：|--->  左平直 + 右箭头
-  if (isFirst) {
-    return {
-      marginLeft: '0',
-      paddingLeft: '12px',
-      clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)'
-    } as any
-  }
-
-  // 末tab：>----|  左凹槽(右向) + 右平直
-  if (isLast) {
-    return {
-      marginLeft: '-10px',
-      paddingLeft: '22px',
-      paddingRight: '12px',
-      clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%, 10px 50%)'
-    } as any
-  }
-
-  // 中间tab：>--->  左凹槽(右向) + 右箭头
-  return {
-    marginLeft: '-10px',
-    paddingLeft: '22px',
-    clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)'
-  } as any
-}
-
 // 删除tab
 const removeTab = (targetKey: string | number) => {
   const stringKey = String(targetKey)
@@ -114,36 +74,20 @@ const changeActivateKey = (key: string | number) => {
 </script>
 
 <style>
-/* ---- 容器 ---- */
+/* ---- 容器（U125：融入海蓝工作台——透明底＋细分隔线，页签从箭头异形改胶囊族，
+     与统一侧栏条目/日历选中格同一「选中＝海蓝实底(渐变)」语言） ---- */
 .history-tags {
-  height: 30px;
-  padding: 0 var(--space-xl);
+  height: 34px;
+  padding: 0 16px;
   box-sizing: border-box;
-  background: var(--history-tab-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: transparent;
   border-bottom: 1px solid var(--border-subtle);
   user-select: none;
   display: flex;
   align-items: center;
   margin: 0;
-  border-radius: 0;
-  box-shadow: var(--shadow-tab);
-  overflow: visible;
   position: relative;
   z-index: 5;
-}
-
-/* 分隔线 */
-.history-tags::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--border-subtle);
-  z-index: 0;
 }
 
 /* ---- 滚动容器 ---- */
@@ -164,56 +108,32 @@ const changeActivateKey = (key: string | number) => {
   display: flex;
   align-items: center;
   height: 100%;
-  gap: 0;
+  gap: 6px;
 }
 
-/* ---- 单个Tab（基础: 右箭头 |---> 或 >-->） ---- */
+/* ---- 单个页签（胶囊） ---- */
 .tab-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   height: 24px;
-  padding: 0 24px 0 12px;
+  padding: 0 10px;
+  border-radius: 999px;
   background: transparent;
-  opacity: 0.55;
+  border: 1px solid transparent;
   cursor: pointer;
   flex-shrink: 0;
-  position: relative;
-  transition: opacity var(--transition-fast), background var(--transition-fast);
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-/* 非首个Tab: >---> 左凹槽(右向)+右箭头，左移10px */
-.tab-item:not(:first-of-type) {
-  margin-left: -10px;
-  padding-left: 22px;
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%);
-}
-
-/* 末位Tab: >----| 左凹槽(右向)+右平直 */
-.tab-item:last-of-type {
-  padding-right: 12px;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 10px 50%);
-}
-
-/* 首个Tab: |---> 左平直+右箭头（放在最后，确保单tab时胜出） */
-.tab-item:first-of-type {
-  margin-left: 0;
-  padding-left: 12px;
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
-}
-
-/* 悬停 */
+/* 悬停：海蓝薄纱（与侧栏条目 hover 同款） */
 .tab-item:hover {
-  background: var(--bg-hover);
-  opacity: 0.85;
+  background: var(--nav-bg-hover, rgba(26, 99, 168, 0.08));
 }
 
-/* 激活 */
+/* 激活：海蓝渐变 pill（与侧栏选中同语言） */
 .tab-item.tab-active {
-  background: var(--accent-soft);
-  opacity: 1;
-  z-index: 10;
+  background: var(--nav-selected-bg, linear-gradient(112deg, #1e6cb4, #114d83));
+  box-shadow: var(--nav-selected-shadow, 0 2px 8px rgba(26, 99, 168, 0.35));
 }
 
 /* ---- 标题 ---- */
@@ -223,17 +143,16 @@ const changeActivateKey = (key: string | number) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
-  padding: 0 2px;
+  max-width: 140px;
   line-height: 1.3;
   transition: color var(--transition-fast);
 }
-.tab-item.tab-active .tab-title {
-  color: var(--text-primary);
-  font-weight: 500;
-}
 .tab-item:hover .tab-title {
   color: var(--text-primary);
+}
+.tab-item.tab-active .tab-title {
+  color: var(--nav-selected-color, #fff);
+  font-weight: 550;
 }
 
 /* ---- 关闭按钮 ---- */
@@ -259,12 +178,20 @@ const changeActivateKey = (key: string | number) => {
   color: var(--danger);
   background: var(--danger-soft);
 }
+/* 激活页签上的关闭钮：白系 */
+.tab-item.tab-active .tab-remove {
+  color: rgba(255, 255, 255, 0.85);
+}
+.tab-item.tab-active .tab-remove:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+}
 
 /* ---- 响应式 ---- */
 @media (max-width: 768px) {
   .history-tags {
-    height: 28px;
-    padding: 0 4px;
+    height: 32px;
+    padding: 0 8px;
   }
   .tab-item {
     height: 22px;

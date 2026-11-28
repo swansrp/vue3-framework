@@ -50,12 +50,59 @@
          两段拼成一条连续品牌柱。嵌入态（墨枢 iframe）零变化：仍走 left-switcher＋a-menu
          逐级展开（U119/U117 口径），本分支不渲染。 -->
     <template v-if="!isEmbedded">
+      <!-- U125 模块切换器（2026-11-28 用户拍板「logo 区不变，这个入口放 leftnav 顶部；
+           外链勾选的顶级不显示，不让人知道还有别的模块」）：瓦片＝当前顶级模块图标
+           （缺省回落公司 logo 白剪影）＋名称＋N 个功能入口＋下拉箭头，点开列全部
+           非外链顶级（visibleTops，与侧栏组标签同口径），选中下钻首个叶子。
+           收起态／无激活模块时不渲染。 -->
+      <a-dropdown
+        v-if="!collapsed && activeTopNode"
+        :trigger="['click']"
+        placement="bottomLeft"
+      >
+        <div
+          class="ln-switcher"
+          title="点击切换功能模块"
+        >
+          <span class="ln-switcher__tile">
+            <Icon
+              v-if="activeTopIcon"
+              :icon="activeTopIcon"
+            />
+            <img
+              v-else
+              alt="公司标志"
+              src="../../../../../../public/icon.png"
+            />
+          </span>
+          <span class="ln-switcher__text">
+            <span class="ln-switcher__name">
+              <span class="ln-switcher__label">{{ topTitle(activeTopNode) }}</span>
+              <DownOutlined class="ln-switcher__arrow" />
+            </span>
+            <span class="ln-switcher__sub">{{ switcherCount }} 个功能入口</span>
+          </span>
+        </div>
+        <template #overlay>
+          <a-menu
+            :selected-keys="[activeTopNode.path]"
+            @click="onSwitchModule"
+          >
+            <a-menu-item
+              v-for="node in visibleTops"
+              :key="node.path"
+            >
+              {{ topTitle(node) }}
+            </a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
       <nav
         class="ln-nav"
         :class="{ 'is-collapsed': collapsed }"
       >
         <template
-          v-for="top in routeStore.dynamicRoute"
+          v-for="top in visibleTops"
           :key="top.path"
         >
           <button
@@ -256,6 +303,37 @@ const navList = computed(() => {
 // ── U124 统一侧栏（非嵌入态）────────────────────────────
 const topTitle = (n: any) => n?.meta?.title || n?.title || n?.name || ''
 
+/** 可见顶级＝过滤外链勾选（isFrame）模块——切换器下拉与侧栏组标签同一口径，不暴露外链模块存在 */
+const visibleTops = computed(() =>
+  routeStore.dynamicRoute.filter((n: any) => !routeStore.routePathIsFrameMap[n.path])
+)
+
+// U125 模块切换器（左栏顶部）：当前顶级展示＋下拉切换
+const activeTopNode = computed(() =>
+  routeStore.dynamicRoute.find((n: any) => n.path === navigationStore.activeTopNavPath)
+)
+const activeTopIcon = computed(() => activeTopNode.value?.icon || activeTopNode.value?.meta?.icon || '')
+/** 当前顶级叶子功能数（递归，分组不计数）——切换器副行 */
+const switcherCount = computed(() => {
+  const walk = (nodes: any[]): number =>
+    (nodes || []).reduce((s, n) => s + (n.children?.length ? walk(n.children) : 1), 0)
+  return activeTopNode.value ? walk(activeTopNode.value.children) : 0
+})
+
+/** 逐层下钻取该节点树第一个叶子 */
+const firstLeafOf = (node: any): any => {
+  let cursor: any = node
+  while (cursor.children && cursor.children.length > 0) cursor = cursor.children[0]
+  return cursor
+}
+
+/** 切换模块：下钻首个叶子后走统一 navigateTo（全路径＋外链开新窗） */
+const onSwitchModule = ({ key }: { key: string | number }) => {
+  const node: any = visibleTops.value.find((n: any) => n.path === key)
+  if (!node) return
+  navigateTo(node, firstLeafOf(node))
+}
+
 /** 从顶级节点向下找目标叶子，返回 root→…→leaf 链（找不到返回 null） */
 const findChainByKey = (root: any, targetKey: any): any[] | null => {
   const walk = (cur: any, chain: any[]): any[] | null => {
@@ -307,11 +385,11 @@ const isActive = (node: any, top: any) =>
   node.key != null &&
   String(navigationStore.activeLeftNavKey) === String(node.key)
 
-/** 叶子功能数（分组不计数，递归下钻，全顶级合计）——底部收尾同口径 */
+/** 叶子功能数（分组不计数，递归下钻，可见顶级合计）——底部收尾同口径 */
 const leafCount = computed(() => {
   const walk = (nodes: any[]): number =>
     (nodes || []).reduce((s, n) => s + (n.children?.length ? walk(n.children) : 1), 0)
-  return walk(routeStore.dynamicRoute)
+  return walk(visibleTops.value)
 })
 
 // 响应式计算选中状态
@@ -866,6 +944,80 @@ onMounted(() => {
 
 .ln-nav::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* ====== 模块切换器（U125：左栏顶部，当前顶级＋下拉切换，外链模块隐藏） ====== */
+.ln-switcher {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 12px 4px;
+  padding: 4px 2px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+
+.ln-switcher:hover {
+  background: rgba(26, 99, 168, 0.06);
+}
+
+.ln-switcher__tile {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #1e6cb4, #114d83);
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(26, 99, 168, 0.35);
+}
+
+.ln-switcher__tile .anticon {
+  font-size: 18px;
+  color: #fff;
+}
+
+.ln-switcher__tile img {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.ln-switcher__text {
+  min-width: 0;
+}
+
+.ln-switcher__name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ln-switcher__label {
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--text-primary, #20242c);
+  letter-spacing: 0.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ln-switcher__arrow {
+  flex-shrink: 0;
+  margin-left: 5px;
+  font-size: 10px;
+  color: var(--text-tertiary, #878e9c);
+}
+
+.ln-switcher__sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-tertiary, #878e9c);
+  letter-spacing: 0.4px;
 }
 
 /* 父级组标签：小节标签语言（可点击＝下钻该顶级首个叶子） */

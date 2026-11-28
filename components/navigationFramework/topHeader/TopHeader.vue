@@ -6,15 +6,15 @@
       :class="[tabStore.isNeedLeftNav ? 'show-left-nav' : 'hide-left-nav', { 'title-inline': leftNavAutoHidden }]"
       :style="{
         width: leftNavAutoHidden ? 'auto' : (tabStore.isNeedLeftNav ? (tabStore.leftNavCollapsed ? '50px' : `${tabStore.leftNavWidth}px`) : '250px'),
-        padding: leftNavAutoHidden ? '0 16px' : (tabStore.leftNavCollapsed ? '0' : '0 20px')
+        padding: leftNavAutoHidden ? '0 16px' : (tabStore.leftNavCollapsed ? '0' : '0 14px')
       }"
       class="top_title"
       title="点击返回工作台"
       @click="goHome"
     >
-      <!-- U124 品牌区重做（2026-11-28 用户「白色 app 品牌样式做成演示壳样式」）：
-           渐变瓦片压白 logo＋名称＋环境副行，与左列同宽对齐、其下紧接统一侧栏，
-           拼成一条连续品牌柱；收起态只留瓦片。 -->
+      <!-- U124 品牌区（2026-11-28 用户拍板后 U125 追加「logo 区不变，切换器挪左栏顶部」）：
+           渐变瓦片压白 logo＋名称＋环境副行，与左列同宽对齐；收起态只留瓦片。
+           模块切换器不在品牌区——见 LeftNav 顶部 ln-switcher（U125）。 -->
       <span class="top_title__tile">
         <img
           alt="公司标志"
