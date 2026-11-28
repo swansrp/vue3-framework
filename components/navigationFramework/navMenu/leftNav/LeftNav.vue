@@ -653,6 +653,19 @@ onMounted(() => {
   transition: width var(--transition-normal);
   box-shadow: var(--shadow-nav-divider);
   z-index: 10;
+
+  /* U127 质感修正（2026-11-28 用户「比照演示壳的字体深浅大小颜色，现在看着很廉价」）：
+     ln-* 此前吃 var(--text-secondary/tertiary/primary)，在框架壳被 design-tokens 劫持成
+     rgba(0,0,0,.48/.28/.85) 半透明黑（演示页 .workbench-theme 里才是 #4d5361/#878e9c/#20242c
+     实色蓝灰）——整栏发灰发飘。改容器级局部调色板（--ln-*）硬指向海蓝族实色，绕开全局
+     同名劫持；抗锯齿同步开启（演示壳观感的另一半）。 */
+  --ln-text-strong: #20242c;
+  --ln-text: #4d5361;
+  --ln-text-muted: #878e9c;
+  --ln-accent: #1a63a8;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 :deep(.ant-menu) {
@@ -1000,7 +1013,7 @@ onMounted(() => {
   overflow: hidden;
   font-size: 14.5px;
   font-weight: 650;
-  color: var(--text-primary, #20242c);
+  color: var(--ln-text-strong);
   letter-spacing: 0.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1010,13 +1023,13 @@ onMounted(() => {
   flex-shrink: 0;
   margin-left: 5px;
   font-size: 10px;
-  color: var(--text-tertiary, #878e9c);
+  color: var(--ln-text-muted);
 }
 
 .ln-switcher__sub {
   margin-top: 2px;
   font-size: 11px;
-  color: var(--text-tertiary, #878e9c);
+  color: var(--ln-text-muted);
   letter-spacing: 0.4px;
 }
 
@@ -1030,13 +1043,13 @@ onMounted(() => {
   text-align: left;
   cursor: pointer;
   font-size: 11.5px;
-  color: var(--text-tertiary, #878e9c);
+  color: var(--ln-text-muted);
   letter-spacing: 1px;
   transition: color 0.15s;
 }
 
 .ln-group:hover {
-  color: var(--accent, #1a63a8);
+  color: var(--ln-accent);
 }
 
 /* 二级组标签（有下级的子节点降级展示）：弱化＋不可点 */
@@ -1048,7 +1061,7 @@ onMounted(() => {
 }
 
 .ln-group--sub:hover {
-  color: var(--text-tertiary, #878e9c);
+  color: var(--ln-text-muted);
 }
 
 /* 子级条目：演示壳同款（9px 竖距、8px 圆角、悬停蓝纱、选中海蓝渐变 pill＋白短线） */
@@ -1061,7 +1074,7 @@ onMounted(() => {
   padding: 9px 12px;
   border-radius: 8px;
   font-size: 13.5px;
-  color: var(--text-secondary, #4d5361);
+  color: var(--ln-text);
   text-decoration: none;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -1069,7 +1082,7 @@ onMounted(() => {
 
 .ln-item:hover {
   background: var(--nav-bg-hover, rgba(26, 99, 168, 0.08));
-  color: var(--accent, #1a63a8);
+  color: var(--ln-accent);
 }
 
 .ln-item.is-active {
@@ -1141,13 +1154,13 @@ onMounted(() => {
 
 .left-foot__main {
   font-size: 12px;
-  color: var(--text-tertiary, #878e9c);
+  color: var(--ln-text-muted);
 }
 
 .left-foot__sub {
   margin-top: 3px;
   font-size: 11px;
-  color: var(--text-tertiary, #878e9c);
+  color: var(--ln-text-muted);
   opacity: 0.8;
 }
 

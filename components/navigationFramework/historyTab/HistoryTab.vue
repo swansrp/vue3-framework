@@ -88,6 +88,12 @@ const changeActivateKey = (key: string | number) => {
   margin: 0;
   position: relative;
   z-index: 5;
+  /* U127：同左栏——文字色硬指向海蓝族实色，绕开 design-tokens 半透明黑劫持；开抗锯齿 */
+  --ln-text-strong: #20242c;
+  --ln-text: #4d5361;
+  --ln-text-muted: #878e9c;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ---- 滚动容器 ---- */
@@ -138,7 +144,7 @@ const changeActivateKey = (key: string | number) => {
 
 /* ---- 标题 ---- */
 .tab-title {
-  color: var(--text-secondary);
+  color: var(--ln-text);
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -148,7 +154,7 @@ const changeActivateKey = (key: string | number) => {
   transition: color var(--transition-fast);
 }
 .tab-item:hover .tab-title {
-  color: var(--text-primary);
+  color: var(--ln-text-strong);
 }
 .tab-item.tab-active .tab-title {
   color: var(--nav-selected-color, #fff);
@@ -158,7 +164,7 @@ const changeActivateKey = (key: string | number) => {
 /* ---- 关闭按钮 ---- */
 .tab-remove {
   margin-left: 4px;
-  color: var(--text-tertiary);
+  color: var(--ln-text-muted);
   transition: all var(--transition-fast);
   border-radius: 50%;
   width: 14px;
