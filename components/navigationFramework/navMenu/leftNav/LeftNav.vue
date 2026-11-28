@@ -50,53 +50,6 @@
          两段拼成一条连续品牌柱。嵌入态（墨枢 iframe）零变化：仍走 left-switcher＋a-menu
          逐级展开（U119/U117 口径），本分支不渲染。 -->
     <template v-if="!isEmbedded">
-      <!-- U125 模块切换器（2026-11-28 用户拍板「logo 区不变，这个入口放 leftnav 顶部；
-           外链勾选的顶级不显示，不让人知道还有别的模块」）：瓦片＝当前顶级模块图标
-           （缺省回落公司 logo 白剪影）＋名称＋N 个功能入口＋下拉箭头，点开列全部
-           非外链顶级（visibleTops，与侧栏组标签同口径），选中下钻首个叶子。
-           收起态／无激活模块时不渲染。 -->
-      <a-dropdown
-        v-if="!collapsed && activeTopNode"
-        :trigger="['click']"
-        placement="bottomLeft"
-      >
-        <div
-          class="ln-switcher"
-          title="点击切换功能模块"
-        >
-          <span class="ln-switcher__tile">
-            <Icon
-              v-if="activeTopIcon"
-              :icon="activeTopIcon"
-            />
-            <img
-              v-else
-              alt="公司标志"
-              src="../../../../../../public/icon.png"
-            />
-          </span>
-          <span class="ln-switcher__text">
-            <span class="ln-switcher__name">
-              <span class="ln-switcher__label">{{ topTitle(activeTopNode) }}</span>
-              <DownOutlined class="ln-switcher__arrow" />
-            </span>
-            <span class="ln-switcher__sub">{{ switcherCount }} 个功能入口</span>
-          </span>
-        </div>
-        <template #overlay>
-          <a-menu
-            :selected-keys="[activeTopNode.path]"
-            @click="onSwitchModule"
-          >
-            <a-menu-item
-              v-for="node in visibleTops"
-              :key="node.path"
-            >
-              {{ topTitle(node) }}
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
       <nav
         class="ln-nav"
         :class="{ 'is-collapsed': collapsed }"
@@ -157,13 +110,53 @@
           </template>
         </template>
       </nav>
-      <div
-        v-if="!collapsed"
-        class="left-foot"
+      <!-- U129 模块切换器贴底（2026-11-28 用户征询「放上边还是贴底像 Windows 菜单」，
+           AI 拍板贴底：logo 区/切换器同为「头部块」上下相叠是重叠感根源——贴底后顶部
+           只剩 logo 一个身份块，切换器成为左下角常驻锚点，收起态恰好只剩瓦片钮＝开始
+           按钮形态；下拉改向上弹出。外链顶级不显示（U125 口径）沿用。 -->
+      <a-dropdown
+        v-if="activeTopNode"
+        :trigger="['click']"
+        placement="topLeft"
       >
-        <div class="left-foot__main">共 {{ leafCount }} 个功能</div>
-        <div class="left-foot__sub">拖拽右缘可调宽度</div>
-      </div>
+        <div
+          class="ln-switcher"
+          :class="{ 'is-collapsed': collapsed }"
+          title="点击切换功能模块"
+        >
+          <span class="ln-switcher__tile">
+            <Icon
+              v-if="activeTopIcon"
+              :icon="activeTopIcon"
+            />
+            <img
+              v-else
+              alt="公司标志"
+              src="../../../../../../public/icon.png"
+            />
+          </span>
+          <span class="ln-switcher__text">
+            <span class="ln-switcher__name">
+              <span class="ln-switcher__label">{{ topTitle(activeTopNode) }}</span>
+              <DownOutlined class="ln-switcher__arrow" />
+            </span>
+            <span class="ln-switcher__sub">{{ switcherCount }} 个功能入口</span>
+          </span>
+        </div>
+        <template #overlay>
+          <a-menu
+            :selected-keys="[activeTopNode.path]"
+            @click="onSwitchModule"
+          >
+            <a-menu-item
+              v-for="node in visibleTops"
+              :key="node.path"
+            >
+              {{ topTitle(node) }}
+            </a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
     </template>
     <a-menu
       v-else-if="tabStore.isNeedLeftNav"
@@ -384,13 +377,6 @@ const isActive = (node: any, top: any) =>
   navigationStore.activeTopNavPath === top.path &&
   node.key != null &&
   String(navigationStore.activeLeftNavKey) === String(node.key)
-
-/** 叶子功能数（分组不计数，递归下钻，可见顶级合计）——底部收尾同口径 */
-const leafCount = computed(() => {
-  const walk = (nodes: any[]): number =>
-    (nodes || []).reduce((s, n) => s + (n.children?.length ? walk(n.children) : 1), 0)
-  return walk(visibleTops.value)
-})
 
 // 响应式计算选中状态
 const selectedKeys = computed(() => 
@@ -959,21 +945,31 @@ onMounted(() => {
   background: transparent;
 }
 
-/* ====== 模块切换器（U125：左栏顶部，当前顶级＋下拉切换，外链模块隐藏） ====== */
+/* ====== 模块切换器（U129 贴底：Windows 开始菜单锚点感——顶部只剩 logo 身份块，
+     切换器成为左下角常驻控制；外链模块隐藏口径沿用 U125） ====== */
 .ln-switcher {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   gap: 10px;
-  margin: 12px 12px 4px;
-  padding: 4px 2px;
+  padding: 10px 14px;
   cursor: pointer;
-  border-radius: 10px;
+  border-top: 1px solid var(--nav-line, #d5e0ee);
   transition: background 0.15s;
 }
 
 .ln-switcher:hover {
   background: rgba(26, 99, 168, 0.06);
+}
+
+/* 收起态：只留瓦片钮（开始按钮形态） */
+.ln-switcher.is-collapsed {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.ln-switcher.is-collapsed .ln-switcher__text {
+  display: none;
 }
 
 .ln-switcher__tile {
@@ -1144,25 +1140,6 @@ onMounted(() => {
   margin-left: 0;
 }
 
-/* ====== 底部收尾（U123：功能计数＋宽度提示，演示壳侧栏 foot 同构） ====== */
-.left-foot {
-  flex-shrink: 0;
-  margin: 0 12px;
-  padding: 10px 12px;
-  border-top: 1px solid var(--nav-line, #d5e0ee);
-}
-
-.left-foot__main {
-  font-size: 12px;
-  color: var(--ln-text-muted);
-}
-
-.left-foot__sub {
-  margin-top: 3px;
-  font-size: 11px;
-  color: var(--ln-text-muted);
-  opacity: 0.8;
-}
 
 /* 菜单区细滚动条（灰蓝族，与演示壳侧栏一致） */
 :deep(.left-menu::-webkit-scrollbar) {

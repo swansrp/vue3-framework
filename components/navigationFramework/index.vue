@@ -32,7 +32,7 @@
     <left-nav
       v-if="leftNavVisible"
       class="left-nav"
-      :style="{display: isNeedNav ? 'block' : 'none'}"
+      :style="{display: isNeedNav ? 'flex' : 'none'}"
     />
     <div
       class="content-body"
