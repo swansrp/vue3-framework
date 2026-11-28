@@ -343,16 +343,17 @@ const onPickModule = (node: any) => {
 const iconOf = (n: any) => n?.icon || n?.meta?.icon || ''
 
 // ── U136 子菜单级折叠（侧栏只渲染当前顶级子树，顶级组标签不再出现）──
-// 多开允许；含当前选中条目的子菜单自动展开（保证 pill 可见）；收起态强制全开（图标列不丢功能）
-const expandedSubs = ref<Set<string>>(new Set())
+// U136-c（用户「左侧的树要默认都展开」）：语义反转——collapsedSubs 记手动收起的节，
+// 默认全开；收起态强制全开（图标列不丢功能）；跨模块切换后新模块子树同样默认全开
+const collapsedSubs = ref<Set<string>>(new Set())
 const subKeyOf = (n: any) => String(n.key ?? n.path)
-const isSubOpen = (child: any) => collapsed.value || expandedSubs.value.has(subKeyOf(child))
+const isSubOpen = (child: any) => collapsed.value || !collapsedSubs.value.has(subKeyOf(child))
 const toggleSub = (child: any) => {
   const k = subKeyOf(child)
-  const next = new Set(expandedSubs.value)
+  const next = new Set(collapsedSubs.value)
   if (next.has(k)) next.delete(k)
   else next.add(k)
-  expandedSubs.value = next
+  collapsedSubs.value = next
 }
 
 /** 从顶级节点向下找目标叶子，返回 root→…→leaf 链（找不到返回 null；
@@ -400,22 +401,6 @@ const navigateTo = (top: any, leaf: any) => {
 const isActive = (node: any) =>
   !!navigationStore.activeTopNavPath &&
   String(node.key ?? node.path) === String(navigationStore.activeLeftNavKey)
-
-/** 当前选中链上的子菜单自动展开（放在 findChainByKey 定义之后，immediate 回调不能踩 TDZ） */
-watch(
-  [() => navigationStore.activeTopNavPath, () => navigationStore.activeLeftNavKey],
-  () => {
-    if (!activeTopNode.value || !navigationStore.activeLeftNavKey) return
-    const chain = findChainByKey(activeTopNode.value, navigationStore.activeLeftNavKey)
-    if (!chain) return
-    const next = new Set(expandedSubs.value)
-    for (const n of chain) {
-      if (n.children?.length) next.add(subKeyOf(n))
-    }
-    expandedSubs.value = next
-  },
-  { immediate: true }
-)
 
 // 响应式计算选中状态
 const selectedKeys = computed(() => 
