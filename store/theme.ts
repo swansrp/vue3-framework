@@ -4,9 +4,10 @@ import { localStorageMethods } from '@/framework/utils/common'
 
 const THEME_STORAGE_KEY = 'app-theme'
 
-export type ThemeId = 'mokShu' | 'indigo' | 'ocean' | 'navy' | 'amber' | 'classic' | 'dark' | 'plsintec' | 'plsintecDark'
+export type ThemeId = 'mokShu' | 'indigo' | 'ocean' | 'navy' | 'amber' | 'classic' | 'dark' | 'plsintec' | 'plsintecDark' | 'oceanBlue'
 
 export const LIGHT_THEMES: { id: ThemeId; label: string; desc: string; swatch: string }[] = [
+  { id: 'oceanBlue', label: '海蓝·净灰', desc: '工作台主题同源（U134）', swatch: '#1a63a8' },
   { id: 'mokShu', label: '墨枢', desc: 'Confluence 复刻风', swatch: '#0049b0' },
   { id: 'indigo', label: '靛蓝现代', desc: '科技现代风', swatch: '#4f6cf7' },
   { id: 'ocean', label: '企业蓝', desc: '经典专业风', swatch: '#2563eb' },

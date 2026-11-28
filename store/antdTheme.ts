@@ -1,9 +1,9 @@
 /**
  * antd ThemeConfig 构建器 —— 按 data-theme 返回 ConfigProvider 的 theme 映射。
  *
- * 【范围纪律】只有 plsintec / plsintecDark 两个主题带完整 token 映射
- * （正源＝docs/plsintec-ui-tokens.md）；其余主题（mokShu/indigo/…/共享 dark）
- * 一律保持历史行为＝仅配 algorithm，不动观感。
+ * 【范围纪律】plsintec / plsintecDark 带完整 token 映射（正源＝docs/plsintec-ui-tokens.md）；
+ * oceanBlue（U134）带主色 token（海蓝系统主色，epc 默认主题）；其余主题
+ * （mokShu/indigo/…/共享 dark）一律保持历史行为＝仅配 algorithm，不动观感。
  *
  * 【4.2.6 版本约束】（落码前对照 node_modules 类型核实过）
  * - 基础文字 token 名是 colorText / colorTextHeading，没有 colorTextPrimary；
@@ -71,6 +71,20 @@ const PLSINTEC_DARK_TOKEN = {
 }
 
 export function buildAntdTheme(themeId: ThemeId): ThemeConfig {
+  // oceanBlue（U134）：海蓝系统主色——与工作台/统一侧栏/页签（#1a63a8 族）同源；
+  // 仅推主色三件套＋focus 描边，文字/边框等保持 antd 默认
+  if (themeId === 'oceanBlue') {
+    return {
+      algorithm: antdTheme.defaultAlgorithm,
+      token: {
+        colorPrimary: '#1a63a8',
+        colorInfo: '#1a63a8',
+        colorLink: '#1a63a8',
+        controlOutline: 'rgba(26, 99, 168, 0.2)'
+      }
+    }
+  }
+
   // 非 plsintec 系主题：保持历史行为（仅明暗算法），不影响既有项目观感
   if (themeId !== 'plsintec' && themeId !== 'plsintecDark') {
     return { algorithm: themeId === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm }

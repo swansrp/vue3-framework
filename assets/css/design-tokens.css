@@ -1068,3 +1068,105 @@ pre .hljs-regexp { color: var(--hljs-regexp); }
 pre .hljs-deletion { color: var(--hljs-string); background: var(--hljs-deletion-bg); }
 pre .hljs-emphasis { font-style: italic; }
 pre .hljs-strong { font-weight: bold; }
+[data-theme="oceanBlue"] {
+  --bg-base: #f0f2f5;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f5f7fa;
+  --bg-active: #eef5fb;
+  --bg-overlay: rgba(0, 0, 0, 0.45);
+  --border-subtle: #e8e8e8;
+  --border-hover: #d9d9d9;
+  --border-active: rgba(26, 99, 168, 0.4);
+  --text-primary: rgba(0, 0, 0, 0.85);
+  --text-secondary: rgba(0, 0, 0, 0.45);
+  --text-tertiary: rgba(0, 0, 0, 0.25);
+  --accent: #1a63a8;
+  --accent-subtle: rgba(26, 99, 168, 0.03);
+  --accent-soft: rgba(26, 99, 168, 0.06);
+  --accent-mid: rgba(26, 99, 168, 0.15);
+  --accent-glow: rgba(26, 99, 168, 0.2);
+  --accent-light: #4a90e2;
+  --success: #52c41a;
+  --success-soft: rgba(82, 196, 26, 0.1);
+  --danger: #ff4d4f;
+  --danger-soft: rgba(255, 77, 79, 0.1);
+  --warning: #faad14;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 20px rgba(26, 99, 168, 0.08);
+  --shadow-elevated: 0 2px 4px rgba(0, 0, 0, 0.06), 0 6px 16px rgba(0, 0, 0, 0.06);
+  --shadow-tab: 0 -1px 0 rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-nav-divider: 1px 0 6px rgba(0, 0, 0, 0.06);
+  --card-gradient: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent-soft));
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(26, 99, 168, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(26, 99, 168, 0.05);
+  --left-nav-bg: linear-gradient(135deg, #1a2332, #1a1f36);
+  --left-nav-blur: none;
+  --left-nav-border: none;
+  --top-header-bg: #ffffff;
+  --top-header-blur: none;
+  --top-header-border: none;
+  --header-title-bg: linear-gradient(135deg, #1a2332 0%, #252f42 25%, #2d3a52 50%, #252f42 75%, #1a2332 100%);
+  --history-tab-bg: #f0f2f5;
+  --history-tab-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
+  --history-tab-active-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06);
+  --header-title-color: #ffffff;
+  --header-user-text: #1a1f36;
+  --header-user-text-secondary: rgba(0, 0, 0, 0.45);
+  --header-icon-color: rgba(0, 0, 0, 0.65);
+  --header-hover-bg: rgba(0, 0, 0, 0.04);
+  --header-btn-hover-bg: rgba(26, 99, 168, 0.10);  /* 可见的蓝色微染背景 */
+  --header-btn-hover-color: #1a63a8;                  /* 使用品牌蓝，白色顶栏上清晰可见 */
+  --nav-text: rgba(255, 255, 255, 0.65);
+  --nav-text-hover: #ffffff;
+  --nav-text-tertiary: rgba(255, 255, 255, 0.35);
+  --nav-bg-hover: rgba(255, 255, 255, 0.08);
+  --nav-selected-bg: linear-gradient(135deg, rgba(17,77,131,0.5), rgba(26,99,168,0.4), rgba(17,77,131,0.5));
+  --nav-selected-color: #ffffff;
+  --nav-selected-indicator: #ffffff;
+  --nav-selected-glow: rgba(26, 99, 168, 0.5);
+  --nav-selected-border: 2px solid rgba(26,99,168,0.7);
+  --nav-selected-shadow: inset 0 4px 12px rgba(0,0,0,0.5), inset 0 2px 6px rgba(0,0,0,0.4), inset 0 -2px 8px rgba(0,0,0,0.3), inset 0 0 30px rgba(0,0,0,0.2), 0 0 30px rgba(26,99,168,0.6), 0 0 15px rgba(26,99,168,0.4);
+  --nav-selected-transform: translateY(1px) scale(0.98);
+  --nav-selected-font-weight: 700;
+  --nav-selected-text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  --nav-selected-indicator-width: 6px;
+  --nav-indicator-animation: nav-indicator-pulse 2s ease-in-out infinite;
+  --nav-line: rgba(255, 255, 255, 0.08);
+  --nav-toggle-bg: rgba(255, 255, 255, 0.06);
+  --nav-toggle-bg-hover: rgba(26, 99, 168, 0.25);
+  --nav-toggle-arrow: rgba(255, 255, 255, 0.35);
+  --nav-toggle-arrow-hover: #ffffff;
+  --nav-item-separator: rgba(255, 255, 255, 0.06); /* 菜单项间微弱的水平分隔线 */
+  --topnav-item-bg: rgba(26, 99, 168, 0.04);     /* 菜单项默认淡淡底色 */
+  --topnav-selected-shadow: 0 2px 8px rgba(26,99,168,0.25);
+  --topnav-dropdown-selected-indicator: #1a63a8;
+  --topnav-text: #303133;
+  --header-avatar-border: rgba(26,99,168,0.3);
+  --header-avatar-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  --header-avatar-hover-shadow: 0 4px 12px rgba(26,99,168,0.2);
+  --header-avatar-hover-transform: translateY(-1px);
+  --header-role-bg: linear-gradient(90deg, rgba(26,99,168,0.08), rgba(26,99,168,0.04));
+  --header-role-border: 1px solid rgba(26,99,168,0.15);
+  --header-role-radius: 10px;
+  --header-role-padding: 2px 8px;
+  --header-user-name-size: 14px;
+  --header-user-name-weight: 600;
+  --header-status-bg: linear-gradient(45deg, #52c41a, #73d13d);
+  --header-status-animation: header-status-pulse 2s infinite;
+  --header-setting-bg: #f5f7fa;
+  --header-setting-border: 1px solid rgba(0,0,0,0.08);
+  --header-setting-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  --header-setting-hover-shadow: 0 4px 8px rgba(26,99,168,0.15);
+  --header-setting-hover-transform: translateY(-1px);
+  --header-setting-active-transform: translateY(0);
+}
+
+/* ==================== ⑧ oceanBlue — 海蓝·净灰（U134 新增，epc 默认主题） ====================
+   工作台/统一侧栏/页签（U123-U131）同源主色 #1a63a8；蓝值族自 classic 块整体平移，
+   底色系沿用 classic（bg-base #f0f2f5）。epc main.ts configureTheme 项目级 opting-in，
+   其他宿主不受影响。antd 侧 token 见 store/antdTheme.ts oceanBlue 分支。
+   ==================================================================== */
