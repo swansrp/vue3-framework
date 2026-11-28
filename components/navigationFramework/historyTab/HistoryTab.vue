@@ -114,32 +114,54 @@ const changeActivateKey = (key: string | number) => {
   display: flex;
   align-items: center;
   height: 100%;
-  gap: 6px;
+  gap: 0;
 }
 
-/* ---- 单个页签（胶囊） ---- */
+/* ---- 单个页签（U128：鱼骨形状回归＋海蓝配色——右箭头 |---> 基础形；
+     相邻页签以 -10px 咬合、左凹槽透出前一枚箭尾，淡蓝底勾出连续鱼骨链） ---- */
 .tab-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: transparent;
-  border: 1px solid transparent;
+  height: 26px;
+  padding: 0 26px 0 14px;
+  background: rgba(26, 99, 168, 0.06);
   cursor: pointer;
   flex-shrink: 0;
+  position: relative;
   transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
 }
 
-/* 悬停：海蓝薄纱（与侧栏条目 hover 同款） */
+/* 非首个页签: >---> 左凹槽(右向)＋右箭头，左移 10px 咬合 */
+.tab-item:not(:first-of-type) {
+  margin-left: -10px;
+  padding-left: 24px;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%);
+}
+
+/* 末位页签: >----| 左凹槽＋右平直 */
+.tab-item:last-of-type {
+  padding-right: 14px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 10px 50%);
+}
+
+/* 首个页签: |---> 左平直＋右箭头（放最后确保单页签时胜出） */
+.tab-item:first-of-type {
+  margin-left: 0;
+  padding-left: 14px;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+}
+
+/* 悬停：海蓝纱加深（鱼骨形状显形） */
 .tab-item:hover {
-  background: var(--nav-bg-hover, rgba(26, 99, 168, 0.08));
+  background: rgba(26, 99, 168, 0.12);
 }
 
-/* 激活：海蓝渐变 pill（与侧栏选中同语言） */
+/* 激活：海蓝渐变实底（鱼骨主刺），白字 */
 .tab-item.tab-active {
   background: var(--nav-selected-bg, linear-gradient(112deg, #1e6cb4, #114d83));
   box-shadow: var(--nav-selected-shadow, 0 2px 8px rgba(26, 99, 168, 0.35));
+  z-index: 10;
 }
 
 /* ---- 标题 ---- */
