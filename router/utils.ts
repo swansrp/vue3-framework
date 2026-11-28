@@ -52,17 +52,3 @@ export const enterFirstDynamicRoute = () => {
   
   return [topNavPath, leftNavPath.substring(1, leftNavPath.length)].join('/')
 }
-
-/**
- * U136-d 外链顶级过滤语义细化：仅「外链勾选（isFrame=1）且无内部子级」的裸外链模块
- * 才判定为可隐藏——目录型顶级（勾了外链但子级是内部页面，墨枢新建目录常见默认）
- * 不算裸外链：它的子级都是真实页面，整树隐藏会让用户「菜单拿不到」。
- */
-export function isBareExternalTop(routeStore: any, node: any): boolean {
-  if (!routeStore?.routePathIsFrameMap?.[node?.path]) return false
-  const hasInternalKid = (nodes: any[]): boolean =>
-    (nodes || []).some((k: any) =>
-      !routeStore.routePathIsFrameMap?.[k.path] || hasInternalKid(k.children || [])
-    )
-  return !(node.children?.length && hasInternalKid(node.children))
-}
