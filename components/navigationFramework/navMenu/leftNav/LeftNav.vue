@@ -67,7 +67,6 @@
               @click="toggleSub(child)"
             >
               <span class="ln-group__text">{{ topTitle(child) }}</span>
-              <DownOutlined class="ln-group__chevron" />
             </button>
             <div
               v-show="isSubOpen(child)"
@@ -1045,7 +1044,7 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
+
 
 .ln-switcher__sub {
   margin-top: 2px;
@@ -1148,23 +1147,6 @@ onMounted(() => {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.ln-group__chevron {
-  flex-shrink: 0;
-  margin-left: 6px;
-  font-size: 9px;
-  color: var(--ln-text-muted);
-  transition: transform 0.15s;
-  transform: rotate(-90deg);
-}
-
-.ln-group.is-open .ln-group__chevron {
-  transform: rotate(0);
-}
-
-.ln-group:hover .ln-group__chevron {
-  color: var(--ln-accent);
 }
 
 /* 当前组（无论开合）主色常驻＝「我在哪个模块」定位 */
