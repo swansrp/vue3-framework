@@ -26,6 +26,31 @@ export const getComponent = (component: string) => {
   // 兼容两类菜单 component 值: 以 /index 结尾的值直接拼 .vue(如 Portal/index → Portal/index.vue), 其余拼 /index.vue(如 Portal/dict → dict/index.vue)
   return modules[`/src${component}.vue`] || modules[`/src${component}/index.vue`]
 }
+
+/**
+ * U136-f 幽灵页过滤（原后端 MenuDeclaration ∩ 闸摘除后防护下沉，2026-11-28 用户拍板 B）：
+ * 叶子节点（无 children）的 component 在本地解析不到＝墨枢配了前端不存在的页面＝死路由，
+ * 剪除＋告警；目录节点无 component 无死路由风险不参与——健康叶子不再被「父目录不在声明」
+ * 连坐剪除（旧闸的病灶）。剪后变空的目录连带剪除（空目录无落点）。menuType=3 按钮节点
+ * 不参与（buttonMap 数据源，无页面）。
+ */
+const pruneGhostNodes = (nodes: any[]): any[] => {
+  const kept: any[] = []
+  for (const node of nodes || []) {
+    if (node.menuType === 3) {
+      kept.push(node)
+      continue
+    }
+    const children = pruneGhostNodes(node.children || [])
+    if (children.length === 0 && (!node.component || !getComponent(node.component))) {
+      console.warn(`菜单幽灵页剪除(组件不可解析): title=${node.title} path=${node.path} component=${node.component || '(空)'}`)
+      continue
+    }
+    node.children = children
+    kept.push(node)
+  }
+  return kept
+}
 export const useRouteStore = defineStore('routeStore', {
   state: () => {
     return {
@@ -43,7 +68,8 @@ export const useRouteStore = defineStore('routeStore', {
   }, actions: {
     async getDynamicRouteAction() {
       return getRouteTree().then((res) => {
-        const routeTree = res.payload
+        // U136-f：幽灵页剪除先行（剪后的树供导航面/路由注册/buttonMap 全链一致）
+        const routeTree = pruneGhostNodes(res.payload)
         // 🔴 嵌入态（墨枢 iframe：embedded=nav/none）不暴露「系统管理」顶级（2026-11-27 U117）：
         // 该树是子系统本地的参数/字典/Agent 管理页，嵌入态既无自家 topnav（11-25 拍板撤）
         // 也无齿轮入口——首屏 auto 落地一旦命中它（rootPathMode=auto 取第一棵可见顶级），
