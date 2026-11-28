@@ -111,11 +111,14 @@
       <!-- U129 模块切换器贴底（2026-11-28 用户征询「放上边还是贴底像 Windows 菜单」，
            AI 拍板贴底：logo 区/切换器同为「头部块」上下相叠是重叠感根源——贴底后顶部
            只剩 logo 一个身份块，切换器成为左下角常驻锚点，收起态恰好只剩瓦片钮＝开始
-           按钮形态；下拉改向上弹出。外链顶级不显示（U125 口径）沿用。
+           按钮形态；下拉改向上弹出。
            U130：弹出层弃 a-menu 改自绘面板（ProjectSwitcher 面板同族——面板头＋图标
-           条目＋当前项勾选），antd 裸菜单观感用户不收。 -->
+           条目＋当前项勾选），antd 裸菜单观感用户不收。
+           U136-g（2026-11-28 用户定稿外链语义）：当前顶级为外链（isFrame=1）⇒ 贴底切换器
+           整条不渲染（外链模块不露内部导航）；非外链态显示，下拉列全部顶级（含外链——
+           切过去允许，落地后切换器随之消失）。 -->
       <a-dropdown
-        v-if="activeTopNode"
+        v-if="activeTopNode && !currentTopIsExternal"
         :trigger="['click']"
         placement="topLeft"
         overlay-class-name="ln-switcher-dropdown"
@@ -310,10 +313,13 @@ const navList = computed(() => {
 // ── U124 统一侧栏（非嵌入态）────────────────────────────
 const topTitle = (n: any) => n?.meta?.title || n?.title || n?.name || ''
 
-/** 可见顶级＝过滤全部外链勾选（isFrame=1）模块（U136-d 用户澄清最终语义：只在底部
-    切换面板隐藏，「让别人不知道还有别的 topnav」；侧栏跟当前模块走不在此列） */
-const visibleTops = computed(() =>
-  routeStore.dynamicRoute.filter((n: any) => !routeStore.routePathIsFrameMap[n.path])
+/** 切换面板可选顶级＝全部（U136-g 用户定稿：非外链态下拉列所有 topNav，含外链——
+    切过去允许，落地后切换器随外链语义隐藏） */
+const visibleTops = computed(() => routeStore.dynamicRoute)
+
+/** 当前顶级是否外链勾选（isFrame=1）——是 ⇒ 贴底切换器整条不渲染（U136-g） */
+const currentTopIsExternal = computed(() =>
+  !!routeStore.routePathIsFrameMap[String(navigationStore.activeTopNavPath || '')]
 )
 
 // U125 模块切换器（左栏顶部）：当前顶级展示＋下拉切换
