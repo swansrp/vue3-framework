@@ -4,7 +4,7 @@ import { localStorageMethods } from '@/framework/utils/common'
 
 const THEME_STORAGE_KEY = 'app-theme'
 
-export type ThemeId = 'mokShu' | 'indigo' | 'ocean' | 'navy' | 'amber' | 'classic' | 'dark' | 'plsintec' | 'plsintecDark' | 'oceanBlue'
+export type ThemeId = 'mokShu' | 'indigo' | 'ocean' | 'navy' | 'amber' | 'classic' | 'dark' | 'plsintec' | 'plsintecDark' | 'oceanBlue' | 'oceanBlueDark'
 
 export const LIGHT_THEMES: { id: ThemeId; label: string; desc: string; swatch: string }[] = [
   { id: 'oceanBlue', label: '海蓝·净灰', desc: '工作台主题同源（U134）', swatch: '#1a63a8' },
@@ -17,7 +17,7 @@ export const LIGHT_THEMES: { id: ThemeId; label: string; desc: string; swatch: s
   { id: 'plsintec', label: 'PLSINTEC', desc: '2026 基础UI视觉规范', swatch: '#1e4bff' }
 ]
 
-const DARK_THEME_IDS = new Set<ThemeId>(['dark', 'plsintecDark'])
+const DARK_THEME_IDS = new Set<ThemeId>(['dark', 'plsintecDark', 'oceanBlueDark'])
 
 const VALID_THEME_IDS = new Set<string>([...LIGHT_THEMES.map(t => t.id), 'dark', 'plsintecDark'])
 

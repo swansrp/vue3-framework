@@ -85,6 +85,20 @@ export function buildAntdTheme(themeId: ThemeId): ThemeConfig {
     }
   }
 
+  // oceanBlueDark（U135）：海蓝夜航暗色——darkAlgorithm 自动派生暗色族，
+  // 主色提亮为 #4a90e2（暗底对比），配对关系见 theme.ts configureTheme
+  if (themeId === 'oceanBlueDark') {
+    return {
+      algorithm: antdTheme.darkAlgorithm,
+      token: {
+        colorPrimary: '#4a90e2',
+        colorInfo: '#4a90e2',
+        colorLink: '#4a90e2',
+        controlOutline: 'rgba(74, 144, 226, 0.4)'
+      }
+    }
+  }
+
   // 非 plsintec 系主题：保持历史行为（仅明暗算法），不影响既有项目观感
   if (themeId !== 'plsintec' && themeId !== 'plsintecDark') {
     return { algorithm: themeId === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm }

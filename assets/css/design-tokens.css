@@ -1170,3 +1170,97 @@ pre .hljs-strong { font-weight: bold; }
    底色系沿用 classic（bg-base #f0f2f5）。epc main.ts configureTheme 项目级 opting-in，
    其他宿主不受影响。antd 侧 token 见 store/antdTheme.ts oceanBlue 分支。
    ==================================================================== */
+
+/* ==================== ⑩ oceanBlueDark — 海蓝·夜航（U135，oceanBlue 的暗色配对） ====================
+   海军夜航底（#0d1a29 族）＋主色暗底提亮 #4a90e2；亮暗 toggle 经
+   configureTheme({ darkTheme: 'oceanBlueDark' }) 配对。组件局部变量（--ln-*）定义在
+   元素自身，暗色覆盖须 html[data-theme] 高特异性命中（见块后规则）。
+   ==================================================================== */
+[data-theme="oceanBlueDark"] {
+  --bg-base: #0d1a29;
+  --bg-elevated: #13223a;
+  --bg-hover: #1a2d45;
+  --bg-active: #22385a;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --border-active: rgba(74, 144, 226, 0.45);
+  --text-primary: rgba(230, 240, 252, 0.92);
+  --text-secondary: rgba(186, 201, 222, 0.62);
+  --text-tertiary: rgba(140, 162, 190, 0.42);
+  --accent: #4a90e2;
+  --accent-subtle: rgba(74, 144, 226, 0.06);
+  --accent-soft: rgba(74, 144, 226, 0.14);
+  --accent-mid: rgba(74, 144, 226, 0.28);
+  --accent-glow: rgba(74, 144, 226, 0.35);
+  --accent-light: #7ab5f0;
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --warning: #fbbf24;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 20px rgba(74, 144, 226, 0.18);
+  --shadow-elevated: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-tab: 0 -1px 0 rgba(255, 255, 255, 0.03), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-nav-divider: 1px 0 6px rgba(0, 0, 0, 0.35);
+  --card-gradient: linear-gradient(135deg, #13223a 0%, #16283f 100%);
+  --card-gradient-header: linear-gradient(135deg, var(--accent-subtle) 0%, var(--bg-hover) 100%);
+  --card-accent-top: linear-gradient(90deg, var(--accent), var(--accent-light), rgba(74, 144, 226, 0.2));
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(74, 144, 226, 0.06);
+  --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(74, 144, 226, 0.1);
+  --left-nav-bg: linear-gradient(180deg, #0e1f33, #0a1626);
+  --left-nav-blur: none;
+  --left-nav-border: 1px solid rgba(255, 255, 255, 0.06);
+  --top-header-bg: #0e1f33;
+  --top-header-blur: none;
+  --top-header-border: 1px solid rgba(255, 255, 255, 0.06);
+  --history-tab-bg: transparent;
+  --loading-mask: rgba(4, 12, 22, 0.55);
+  --header-title-color: var(--text-primary);
+  --header-user-text: var(--text-primary);
+  --header-user-text-secondary: var(--text-tertiary);
+  --header-icon-color: var(--text-secondary);
+  --header-hover-bg: rgba(255, 255, 255, 0.05);
+  --header-btn-hover-bg: var(--accent-soft);
+  --header-btn-hover-color: var(--accent);
+  --header-setting-bg: transparent;
+  --nav-text: var(--text-secondary);
+  --nav-text-hover: var(--text-primary);
+  --nav-text-tertiary: var(--text-tertiary);
+  --nav-bg-hover: rgba(74, 144, 226, 0.14);
+  --nav-selected-bg: linear-gradient(112deg, #2e7cc0, #164a7c);
+  --nav-selected-color: #ffffff;
+  --nav-selected-indicator: rgba(255, 255, 255, 0.85);
+  --nav-selected-glow: rgba(74, 144, 226, 0.5);
+  --nav-selected-border: none;
+  --nav-line: rgba(255, 255, 255, 0.1);
+  --nav-item-separator: transparent;
+  --nav-toggle-bg: rgba(255, 255, 255, 0.08);
+  --nav-toggle-bg-hover: rgba(255, 255, 255, 0.16);
+  --nav-toggle-arrow: var(--text-tertiary);
+  --nav-toggle-arrow-hover: var(--text-primary);
+}
+
+/* U135 深色下组件局部变量覆盖：--ln-* 定义在元素自身（特异性 0,1,0），
+   html[data-theme] 前缀（0,2,1）才能命中；同时压过 nav-theme.css 对侧栏的浅色强制 */
+html[data-theme="oceanBlueDark"] .left-nav-container {
+  --ln-text-strong: #e6eef8;
+  --ln-text: #b9c8dc;
+  --ln-text-muted: #8296ad;
+  --ln-accent: #5aa2e8;
+  --left-nav-bg: linear-gradient(180deg, #0e1f33, #0a1626);
+  --left-nav-border: 1px solid rgba(255, 255, 255, 0.06);
+  --nav-line: rgba(255, 255, 255, 0.1);
+  --nav-bg-hover: rgba(74, 144, 226, 0.14);
+  --nav-selected-bg: linear-gradient(112deg, #2e7cc0, #164a7c);
+  --nav-selected-shadow: 0 2px 8px rgba(4, 16, 32, 0.5);
+}
+
+html[data-theme="oceanBlueDark"] .history-tags {
+  --ln-text-strong: #e6eef8;
+  --ln-text: #b9c8dc;
+  --ln-text-muted: #8296ad;
+}
