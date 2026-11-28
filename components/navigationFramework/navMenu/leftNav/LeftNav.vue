@@ -964,7 +964,8 @@ onMounted(() => {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 10px 10px;
+  /* U136-b：顶部呼吸感对齐演示壳侧栏（logo 条→首条目原仅 3px 紧贴，demo 有 43px 气口） */
+  padding: 20px 10px 10px;
 }
 
 .ln-nav::-webkit-scrollbar {
