@@ -1214,9 +1214,9 @@ pre .hljs-strong { font-weight: bold; }
   --left-nav-bg: linear-gradient(180deg, #0e1f33, #0a1626);
   --left-nav-blur: none;
   --left-nav-border: 1px solid rgba(255, 255, 255, 0.06);
-  --top-header-bg: #0e1f33;
+  --top-header-bg: #0a1929;
   --top-header-blur: none;
-  --top-header-border: 1px solid rgba(255, 255, 255, 0.06);
+  --top-header-border: 1px solid rgba(255, 255, 255, 0.08);
   --history-tab-bg: transparent;
   --loading-mask: rgba(4, 12, 22, 0.55);
   --header-title-color: var(--text-primary);
@@ -1263,4 +1263,52 @@ html[data-theme="oceanBlueDark"] .history-tags {
   --ln-text-strong: #e6eef8;
   --ln-text: #b9c8dc;
   --ln-text-muted: #8296ad;
+}
+
+/* U135-b workbench 页面深色适配（监理日志/旁站记录）：html[data-theme] 高特异性穿透
+   .workbench-theme 页面级变量（页面自绘 hero/横幅/卡片为浅色硬编码，同步压深） */
+html[data-theme="oceanBlueDark"] .workbench-theme {
+  --text-primary: #e6eef8;
+  --text-secondary: #b9c8dc;
+  --text-tertiary: #8296ad;
+  --text-faint: #5d7089;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-base: rgba(255, 255, 255, 0.16);
+  --divider: rgba(255, 255, 255, 0.06);
+  --fill-soft: #16283f;
+  --accent: #4a90e2;
+  --accent-strong: #2e7cc0;
+  --accent-light: #7ab5f0;
+  --accent-subtle: rgba(74, 144, 226, 0.06);
+  --accent-soft: rgba(74, 144, 226, 0.14);
+  --accent-tint: rgba(74, 144, 226, 0.14);
+  --accent-mid: rgba(74, 144, 226, 0.3);
+  --accent-glow: rgba(74, 144, 226, 0.35);
+  --accent-border: rgba(74, 144, 226, 0.4);
+  --accent-edge: #4a90e2;
+  --accent-ring: rgba(74, 144, 226, 0.4);
+  --success-bg: rgba(74, 222, 128, 0.1);
+  --success-border: rgba(74, 222, 128, 0.35);
+  --panel-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 1px 2px -1px rgba(0, 0, 0, 0.4),
+    0 2px 4px 0 rgba(0, 0, 0, 0.3);
+  --wb-ambient:
+    radial-gradient(900px 480px at 6% -8%, rgba(74, 144, 226, 0.12), transparent 62%),
+    radial-gradient(760px 420px at 98% 2%, rgba(74, 144, 226, 0.06), transparent 60%),
+    radial-gradient(1100px 620px at 50% 110%, rgba(74, 144, 226, 0.08), transparent 62%),
+    #0d1a29;
+}
+
+html[data-theme="oceanBlueDark"] .sl-hero,
+html[data-theme="oceanBlueDark"] .sl-stat-banner,
+html[data-theme="oceanBlueDark"] .wr-hero,
+html[data-theme="oceanBlueDark"] .wr-stat-banner {
+  background: linear-gradient(120deg, #13223a, #16283f);
+}
+
+html[data-theme="oceanBlueDark"] .sl-card,
+html[data-theme="oceanBlueDark"] .wr-card,
+html[data-theme="oceanBlueDark"] .wr-cal-card {
+  background: var(--bg-elevated, #13223a);
 }

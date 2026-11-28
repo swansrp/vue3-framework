@@ -86,7 +86,8 @@ export function buildAntdTheme(themeId: ThemeId): ThemeConfig {
   }
 
   // oceanBlueDark（U135）：海蓝夜航暗色——darkAlgorithm 自动派生暗色族，
-  // 主色提亮为 #4a90e2（暗底对比），配对关系见 theme.ts configureTheme
+  // 主色提亮为 #4a90e2（暗底对比），容器底统一夜航族（防 antd 中性黑与海军底打架），
+  // 配对关系见 theme.ts configureTheme
   if (themeId === 'oceanBlueDark') {
     return {
       algorithm: antdTheme.darkAlgorithm,
@@ -94,7 +95,10 @@ export function buildAntdTheme(themeId: ThemeId): ThemeConfig {
         colorPrimary: '#4a90e2',
         colorInfo: '#4a90e2',
         colorLink: '#4a90e2',
-        controlOutline: 'rgba(74, 144, 226, 0.4)'
+        controlOutline: 'rgba(74, 144, 226, 0.4)',
+        colorBgContainer: '#13223a',
+        colorBgElevated: '#16283f',
+        colorBgLayout: '#0d1a29'
       }
     }
   }
