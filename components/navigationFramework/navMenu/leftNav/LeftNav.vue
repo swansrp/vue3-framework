@@ -42,31 +42,84 @@
         </template>
       </a-dropdown>
     </div>
-    <!-- 分区品牌头（U123 侧栏观感试验，2026-11-28 用户「左栏改成演示壳侧栏的样子试试看」）：
-         当前顶级模块的图标瓦片＋标题＋功能数，给左列一个视觉锚点，与演示壳（/supervision-board）
-         侧栏品牌块同构。仅非嵌入态＋未收起＋有顶级模块时渲染——嵌入态顶部已有 left-switcher
-         （防双头），收起态空间不足；左列整体隐藏（U101）时随壳消失。 -->
-    <div
-      v-if="!isEmbedded && !collapsed && tabStore.isNeedLeftNav && activeTopNode"
-      class="left-brand"
-    >
-      <div class="left-brand__tile">
-        <Icon
-          v-if="activeTopIcon"
-          :icon="activeTopIcon"
-        />
-        <span v-else>{{ (activeTopTitle || '·').slice(0, 1) }}</span>
+    <!-- U124 统一侧栏（非嵌入态，2026-11-28 用户拍板「app 品牌白色样式做成 topheader ＋
+         喜欢演示壳父级/子级的显示方式，甚至可以不用 antd 组件」）：自绘导航弃 antd menu——
+         父级＝小节标签（顶级模块，点击下钻首个叶子）、子级＝条目（icon＋文字，选中海蓝 pill），
+         全部顶级模块一次全展示；横向 topnav 由 TopHeader hide-topnav 撤除（壳装配层下发）。
+         品牌区不做进侧栏：TopHeader 的 top_title 已与左列同宽对齐、按演示壳瓦片样式重做，
+         两段拼成一条连续品牌柱。嵌入态（墨枢 iframe）零变化：仍走 left-switcher＋a-menu
+         逐级展开（U119/U117 口径），本分支不渲染。 -->
+    <template v-if="!isEmbedded">
+      <nav
+        class="ln-nav"
+        :class="{ 'is-collapsed': collapsed }"
+      >
+        <template
+          v-for="top in routeStore.dynamicRoute"
+          :key="top.path"
+        >
+          <button
+            type="button"
+            class="ln-group"
+            :title="`进入 ${topTitle(top)}`"
+            @click="onGroupClick(top)"
+          >
+            {{ topTitle(top) }}
+          </button>
+          <template
+            v-for="child in top.children || []"
+            :key="child.key || child.path"
+          >
+            <!-- 有下级的子节点降级为二级组标签（演示壳无此层，取小节标签同款弱化态） -->
+            <template v-if="child.children && child.children.length > 0">
+              <div class="ln-group ln-group--sub">
+                {{ topTitle(child) }}
+              </div>
+              <a
+                v-for="gc in child.children"
+                :key="gc.key || gc.path"
+                class="ln-item ln-item--sub"
+                :class="{ 'is-active': isActive(gc, top) }"
+                href="javascript:;"
+                :title="topTitle(gc)"
+                @click="navigateTo(top, gc)"
+              >
+                <Icon
+                  v-if="gc.icon"
+                  :icon="gc.icon"
+                  class="ln-item__icon"
+                />
+                <span class="ln-item__label">{{ topTitle(gc) }}</span>
+              </a>
+            </template>
+            <a
+              v-else
+              class="ln-item"
+              :class="{ 'is-active': isActive(child, top) }"
+              href="javascript:;"
+              :title="topTitle(child)"
+              @click="navigateTo(top, child)"
+            >
+              <Icon
+                v-if="child.icon"
+                :icon="child.icon"
+                class="ln-item__icon"
+              />
+              <span class="ln-item__label">{{ topTitle(child) }}</span>
+            </a>
+          </template>
+        </template>
+      </nav>
+      <div
+        v-if="!collapsed"
+        class="left-foot"
+      >
+        <div class="left-foot__main">共 {{ leafCount }} 个功能</div>
+        <div class="left-foot__sub">拖拽右缘可调宽度</div>
       </div>
-      <div class="left-brand__text">
-        <div
-          class="left-brand__name"
-          :title="activeTopTitle"
-        >{{ activeTopTitle }}</div>
-        <div class="left-brand__sub">{{ leafCount }} 个功能入口</div>
-      </div>
-    </div>
+    </template>
     <a-menu
-      v-if="tabStore.isNeedLeftNav"
+      v-else-if="tabStore.isNeedLeftNav"
       v-model:open-keys="keys.openKeys"
       v-model:selected-keys="keys.selectedKeys"
       :inline-collapsed="collapsed"
@@ -100,16 +153,6 @@
         </template>
       </template>
     </a-menu>
-
-    <!-- 底部收尾（U123 侧栏观感试验）：功能计数＋宽度提示，通用文案不绑业务；
-         收起态不渲染。 -->
-    <div
-      v-if="!collapsed && tabStore.isNeedLeftNav"
-      class="left-foot"
-    >
-      <div class="left-foot__main">共 {{ leafCount }} 个功能</div>
-      <div class="left-foot__sub">拖拽右缘可调宽度</div>
-    </div>
 
     <!-- 拖拽调整宽度的控制条 -->
     <div 
@@ -210,21 +253,65 @@ const navList = computed(() => {
   return topNode?.children || []
 })
 
-// 分区品牌头（U123 侧栏观感试验）：当前顶级模块节点/标题/图标＋叶子功能数
-const activeTopNode = computed(() =>
-  routeStore.dynamicRoute.find((n: any) => n.path === navigationStore.activeTopNavPath)
-)
-const activeTopTitle = computed(() =>
-  activeTopNode.value?.meta?.title || activeTopNode.value?.title || activeTopNode.value?.name || ''
-)
-const activeTopIcon = computed(() =>
-  activeTopNode.value?.icon || activeTopNode.value?.meta?.icon || ''
-)
-/** 叶子功能数（分组不计数，递归下钻）——品牌头副行与底部收尾同口径 */
+// ── U124 统一侧栏（非嵌入态）────────────────────────────
+const topTitle = (n: any) => n?.meta?.title || n?.title || n?.name || ''
+
+/** 从顶级节点向下找目标叶子，返回 root→…→leaf 链（找不到返回 null） */
+const findChainByKey = (root: any, targetKey: any): any[] | null => {
+  const walk = (cur: any, chain: any[]): any[] | null => {
+    const next = [...chain, cur]
+    if (cur.key != null && String(cur.key) === String(targetKey)) return next
+    for (const c of cur.children || []) {
+      const hit = walk(c, next)
+      if (hit) return hit
+    }
+    return null
+  }
+  return walk(root, [])
+}
+
+/** 统一侧栏条目点击：任意顶级模块直达其下任意叶子（与 selectLeftNav 的全路径拼接
+    同构，但不限于当前激活顶级）；外链叶子（isFrame）保持 selectLeftNav 的开新窗口径 */
+const navigateTo = (top: any, leaf: any) => {
+  const chain = findChainByKey(top, leaf.key ?? leaf.path)
+  if (!chain) return
+  navigationStore.setActiveTopNav(top.path)
+  navigationStore.activeLeftNavKey = String(chain[chain.length - 1].key)
+  const fullPath = `/${chain.map((n) => n.path).join('/')}`
+  const queryStr = leaf.query || ''
+  const query = (queryStr ? getQueryObject(queryStr) : {}) as LocationQueryRaw
+  const fullForFrame = fullPath.startsWith('/') ? fullPath.substring(1) : fullPath
+  const isFrame = routeStore.routePathIsFrameMap[fullForFrame] || routeStore.routePathIsFrameMap[leaf.path]
+  if (isFrame) {
+    const urlArray = fullPath.split('http')
+    if (urlArray.length > 1) {
+      window.open(fullPath.substring(urlArray[0].length), '_blank')
+    } else {
+      window.open(router.resolve({ path: fullPath, query }).href, '_blank')
+    }
+  } else {
+    router.push({ path: fullPath, query })
+  }
+}
+
+/** 父级组标签点击＝下钻到该顶级第一个叶子（与嵌入态 onSwitchTop 同构） */
+const onGroupClick = (top: any) => {
+  let cursor: any = top
+  while (cursor.children && cursor.children.length > 0) cursor = cursor.children[0]
+  navigateTo(top, cursor)
+}
+
+/** 选中判定：顶级＋叶子键双对齐（跨顶级同 key 不会串） */
+const isActive = (node: any, top: any) =>
+  navigationStore.activeTopNavPath === top.path &&
+  node.key != null &&
+  String(navigationStore.activeLeftNavKey) === String(node.key)
+
+/** 叶子功能数（分组不计数，递归下钻，全顶级合计）——底部收尾同口径 */
 const leafCount = computed(() => {
   const walk = (nodes: any[]): number =>
     (nodes || []).reduce((s, n) => s + (n.children?.length ? walk(n.children) : 1), 0)
-  return walk(navList.value)
+  return walk(routeStore.dynamicRoute)
 })
 
 // 响应式计算选中状态
@@ -755,54 +842,141 @@ onMounted(() => {
   animation: var(--nav-indicator-animation);
 }
 
-/* ====== 分区品牌头（U123 侧栏观感试验：图标瓦片＋标题＋功能数，演示壳侧栏同构） ====== */
-.left-brand {
+/* ====== 统一侧栏·导航（U124：父级=小节标签、子级=条目，弃 antd menu，演示壳同款观感） ====== */
+.ln-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 10px 10px;
+}
+
+.ln-nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ln-nav::-webkit-scrollbar-thumb {
+  background: rgba(26, 99, 168, 0.22);
+  border-radius: 3px;
+}
+
+.ln-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(26, 99, 168, 0.4);
+}
+
+.ln-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 父级组标签：小节标签语言（可点击＝下钻该顶级首个叶子） */
+.ln-group {
+  display: block;
+  width: 100%;
+  padding: 12px 10px 6px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 11.5px;
+  color: var(--text-tertiary, #878e9c);
+  letter-spacing: 1px;
+  transition: color 0.15s;
+}
+
+.ln-group:hover {
+  color: var(--accent, #1a63a8);
+}
+
+/* 二级组标签（有下级的子节点降级展示）：弱化＋不可点 */
+.ln-group--sub {
+  padding: 8px 10px 4px 12px;
+  cursor: default;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.ln-group--sub:hover {
+  color: var(--text-tertiary, #878e9c);
+}
+
+/* 子级条目：演示壳同款（9px 竖距、8px 圆角、悬停蓝纱、选中海蓝渐变 pill＋白短线） */
+.ln-item {
+  position: relative;
   display: flex;
-  flex-shrink: 0;
   align-items: center;
   gap: 10px;
-  margin: 12px 12px 6px;
-  padding: 4px 2px;
+  margin: 2px 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--text-secondary, #4d5361);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 
-.left-brand__tile {
-  display: flex;
+.ln-item:hover {
+  background: var(--nav-bg-hover, rgba(26, 99, 168, 0.08));
+  color: var(--accent, #1a63a8);
+}
+
+.ln-item.is-active {
+  background: var(--nav-selected-bg, linear-gradient(112deg, #1e6cb4, #114d83));
+  color: var(--nav-selected-color, #fff);
+  font-weight: 550;
+  box-shadow: var(--nav-selected-shadow, 0 2px 8px rgba(26, 99, 168, 0.35));
+}
+
+.ln-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 0 3px 3px 0;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.ln-item__icon {
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-  color: #fff;
-  background: linear-gradient(135deg, #1e6cb4, #114d83);
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(26, 99, 168, 0.35);
+  font-size: 15px;
 }
 
-.left-brand__tile .anticon {
-  font-size: 18px;
-  color: #fff;
+.ln-item.is-active .ln-item__icon {
+  color: #fff !important;
 }
 
-.left-brand__text {
-  min-width: 0;
-}
-
-.left-brand__name {
+.ln-item__label {
   overflow: hidden;
-  font-size: 14.5px;
-  font-weight: 650;
-  color: var(--text-primary, #20242c);
-  letter-spacing: 0.5px;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.left-brand__sub {
-  margin-top: 2px;
-  font-size: 11px;
-  color: var(--text-tertiary, #878e9c);
-  letter-spacing: 0.4px;
+.ln-item--sub {
+  margin-left: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* 收起态：只留图标列（组标签/文字隐藏） */
+.ln-nav.is-collapsed {
+  padding: 0 6px;
+}
+
+.ln-nav.is-collapsed .ln-group,
+.ln-nav.is-collapsed .ln-item__label {
+  display: none;
+}
+
+.ln-nav.is-collapsed .ln-item {
+  justify-content: center;
+  padding: 9px 0;
+}
+
+.ln-nav.is-collapsed .ln-item--sub {
+  margin-left: 0;
 }
 
 /* ====== 底部收尾（U123：功能计数＋宽度提示，演示壳侧栏 foot 同构） ====== */

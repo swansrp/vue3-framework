@@ -7,6 +7,7 @@
     :left-nav-auto-hidden="!leftNavVisible"
     :minimal="isSubSystem"
     :chrome="chrome"
+    :hide-topnav="fullUnifiedSidebar"
   >
     <!-- 透传 header-extra 插槽，让业务层可以注入自定义内容 -->
     <template
@@ -75,12 +76,13 @@ import { useTabStore } from '@/framework/store/nav'
 import { useNavigationStore } from '@/framework/store/navigation'
 import { useRouteStore } from '@/framework/store/route'
 import { useWindowStore } from '@/framework/store/window'
+import { isEmbeddedChrome } from '@/framework/utils/embed'
 
 const route = useRoute()
 
 // chrome: 框架壳变体，缺省 full=完整壳、未传时行为零变化；
 // nav=嵌入态（墨枢 iframe）：无顶栏无页签、保留左栏，菜单权威源＝墨枢中央管控
-withDefaults(defineProps<{ chrome?: 'full' | 'nav' }>(), { chrome: 'full' })
+const props = withDefaults(defineProps<{ chrome?: 'full' | 'nav' }>(), { chrome: 'full' })
 
 
 const slots = useSlots()
@@ -96,11 +98,19 @@ const { isNeedNav } = toRefs(tabStore)
 const navigationStore = useNavigationStore(pinia)
 const routeStore = useRouteStore(pinia)
 
+// U124 统一侧栏（2026-11-28 用户拍板）：full 壳非嵌入态＝左栏自绘「父级组标签＋子级条目」
+// 承载全部顶级模块（LeftNav.vue），横向 topnav 随之冗余 → hide-topnav 撤除；嵌入态
+// （chrome=nav / 墨枢 iframe）零变化，仍走 left-switcher＋a-menu。
+const fullUnifiedSidebar = computed(() => props.chrome === 'full' && !isEmbeddedChrome())
+
 // 左侧整列自动隐藏：当前顶级导航下只剩一个叶子入口时，整列只挂一个与顶部导航重复的入口
 // （点顶部导航即可直达），没有保留价值；唯一子项自身还有下级时保留整列——左侧才是它逐级
 // 展开的层级。菜单未加载／尚未进入业务路由时按原样展示，避免首屏一缩一展的抖动。
 // （2026-11-22 重放：U101 首版实现随 11-20 的 git stash 搁置未随版，iframe/full 两形态都缺）
+// U124：统一侧栏语义下（full 非嵌入）整列恒显——侧栏自身就是全部模块的切换器，
+// U101 的「与顶部导航重复」前提已随 topnav 撤除而消失；U101 语义收窄为嵌入态专用。
 const leftNavVisible = computed(() => {
+  if (fullUnifiedSidebar.value) return true
   if (routeStore.dynamicRoute.length === 0) return true
   if (!navigationStore.activeTopNavPath) return true
   const topNode = routeStore.dynamicRoute.find(

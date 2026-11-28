@@ -12,19 +12,32 @@
       title="点击返回工作台"
       @click="goHome"
     >
-      <img
-        v-if="leftNavAutoHidden || (tabStore.isNeedLeftNav && !tabStore.leftNavCollapsed)"
-        alt="公司标志"
-        src="../../../../../public/icon.png"
-        style="margin-right: 5px"
-      />
-      <span v-if="leftNavAutoHidden || !tabStore.leftNavCollapsed">{{ minimal ? subSystemTitle : projectName }}</span>
+      <!-- U124 品牌区重做（2026-11-28 用户「白色 app 品牌样式做成演示壳样式」）：
+           渐变瓦片压白 logo＋名称＋环境副行，与左列同宽对齐、其下紧接统一侧栏，
+           拼成一条连续品牌柱；收起态只留瓦片。 -->
+      <span class="top_title__tile">
+        <img
+          alt="公司标志"
+          src="../../../../../public/icon.png"
+        />
+      </span>
+      <span
+        v-if="leftNavAutoHidden || !tabStore.leftNavCollapsed"
+        class="top_title__text"
+      >
+        <span class="top_title__name">{{ minimal ? subSystemTitle : projectName }}</span>
+        <span
+          v-if="!leftNavAutoHidden && !minimal"
+          class="top_title__sub"
+        >{{ envSubLabel }}</span>
+      </span>
     </div>
     <top-nav
-      v-if="!minimal"
+      v-if="!minimal && !hideTopnav"
       class="top_nav"
     />
-    <!-- 子系统形态无顶部菜单，用占位撑开，将用户区推到最右 -->
+    <!-- 子系统形态 / 统一侧栏（hide-topnav，U124：顶级模块已全部进左栏父级组标签）
+         无顶部菜单，用占位撑开，将用户区推到最右 -->
     <div
       v-else
       class="top_nav_placeholder"
@@ -447,9 +460,17 @@ import { validatePassword } from '@/framework/utils/passwordValidator'
 // header-extra 插槽（epc 项目切换器经此注入）等导航件，正源 plan-local-debug-subsystem 3.2b
 // leftNavAutoHidden: 左侧整列因「只有一个叶子入口」自动隐藏——品牌区随之内联进顶栏，
 // 不再撑出与左列对齐的深色方块（否则左列消失后剩一条无依无靠的深色竖条）
-const props = withDefaults(defineProps<{ minimal?: boolean, chrome?: 'full' | 'nav', leftNavAutoHidden?: boolean }>(), { chrome: 'full' })
+const props = withDefaults(defineProps<{ minimal?: boolean, chrome?: 'full' | 'nav', leftNavAutoHidden?: boolean, hideTopnav?: boolean }>(), { chrome: 'full' })
 // chrome=nav 变体判定：本地调试子系统形态（去身份件保留导航），正源 plan-local-debug-subsystem 3.2b
 const isNavChrome = computed(() => props.chrome === 'nav')
+
+// U124 品牌区副行：环境标识（与 index.vue document.title 的 测试--/预生产-- 前缀同口径）
+const envSubLabel = computed(() => {
+  const { MODE } = import.meta.env
+  if (MODE === 'development') return '测试环境'
+  if (MODE === 'pre') return '预生产环境'
+  return '业务工作台'
+})
 
 const userStore = useUserStore(pinia)
 const tabStore = useTabStore(pinia)
@@ -596,26 +617,63 @@ onMounted(() => {
 
 .top_title {
   height: 100%;
-  font-size: 16px;
-  padding: 0 20px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
   box-sizing: border-box;
-  color: var(--header-title-color);
-  background: var(--header-title-bg);
+  color: var(--text-primary);
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
   position: relative;
   z-index: 999;
   transition: all var(--transition-fast);
   cursor: pointer;
   user-select: none;
+}
 
-  &:hover {
-    filter: brightness(1.15);
-  }
+/* U124：品牌区改演示壳瓦片样式（渐变瓦片＋名称＋环境副行），弃「白色方块」底 */
+.top_title__tile {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, #1e6cb4, #114d83);
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(26, 99, 168, 0.35);
+  overflow: hidden;
+}
+
+.top_title__tile img {
+  width: 20px;
+  height: 20px;
+  /* 公司 logo 深浅不可控：压成白色剪影贴渐变瓦片（演示壳观感） */
+  filter: brightness(0) invert(1);
+}
+
+.top_title__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.top_title__name {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.top_title__sub {
+  margin-top: 1px;
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary, #878e9c);
+  white-space: nowrap;
 }
 
 /* 左列自动隐藏（单入口顶级导航）：品牌区并入顶栏——透明底、内容宽，与顶部菜单连成一条。
@@ -653,20 +711,7 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* Logo区域底部柔和光晕 */
-.top_title::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(to bottom,
-    rgba(255, 255, 255, 0.04) 0%,
-    transparent 100%);
-  pointer-events: none;
-  border-radius: 0;
-}
+/* Logo区域底部柔和光晕（U124 品牌块改透明底后已无意义，摘除） */
 
 
 .top_title img {
