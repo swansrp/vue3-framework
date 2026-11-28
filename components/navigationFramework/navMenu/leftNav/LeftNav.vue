@@ -42,6 +42,29 @@
         </template>
       </a-dropdown>
     </div>
+    <!-- 分区品牌头（U123 侧栏观感试验，2026-11-28 用户「左栏改成演示壳侧栏的样子试试看」）：
+         当前顶级模块的图标瓦片＋标题＋功能数，给左列一个视觉锚点，与演示壳（/supervision-board）
+         侧栏品牌块同构。仅非嵌入态＋未收起＋有顶级模块时渲染——嵌入态顶部已有 left-switcher
+         （防双头），收起态空间不足；左列整体隐藏（U101）时随壳消失。 -->
+    <div
+      v-if="!isEmbedded && !collapsed && tabStore.isNeedLeftNav && activeTopNode"
+      class="left-brand"
+    >
+      <div class="left-brand__tile">
+        <Icon
+          v-if="activeTopIcon"
+          :icon="activeTopIcon"
+        />
+        <span v-else>{{ (activeTopTitle || '·').slice(0, 1) }}</span>
+      </div>
+      <div class="left-brand__text">
+        <div
+          class="left-brand__name"
+          :title="activeTopTitle"
+        >{{ activeTopTitle }}</div>
+        <div class="left-brand__sub">{{ leafCount }} 个功能入口</div>
+      </div>
+    </div>
     <a-menu
       v-if="tabStore.isNeedLeftNav"
       v-model:open-keys="keys.openKeys"
@@ -77,7 +100,17 @@
         </template>
       </template>
     </a-menu>
-    
+
+    <!-- 底部收尾（U123 侧栏观感试验）：功能计数＋宽度提示，通用文案不绑业务；
+         收起态不渲染。 -->
+    <div
+      v-if="!collapsed && tabStore.isNeedLeftNav"
+      class="left-foot"
+    >
+      <div class="left-foot__main">共 {{ leafCount }} 个功能</div>
+      <div class="left-foot__sub">拖拽右缘可调宽度</div>
+    </div>
+
     <!-- 拖拽调整宽度的控制条 -->
     <div 
       v-if="!collapsed"
@@ -170,11 +203,28 @@ const onSwitchTop = ({ key }: { key: string | number }) => {
 // 响应式计算菜单列表 - 替代 initLeftNavList
 const navList = computed(() => {
   if (!navigationStore.activeTopNavPath) return []
-  
+
   const topNode = routeStore.dynamicRoute.find(
     node => node.path === navigationStore.activeTopNavPath
   )
   return topNode?.children || []
+})
+
+// 分区品牌头（U123 侧栏观感试验）：当前顶级模块节点/标题/图标＋叶子功能数
+const activeTopNode = computed(() =>
+  routeStore.dynamicRoute.find((n: any) => n.path === navigationStore.activeTopNavPath)
+)
+const activeTopTitle = computed(() =>
+  activeTopNode.value?.meta?.title || activeTopNode.value?.title || activeTopNode.value?.name || ''
+)
+const activeTopIcon = computed(() =>
+  activeTopNode.value?.icon || activeTopNode.value?.meta?.icon || ''
+)
+/** 叶子功能数（分组不计数，递归下钻）——品牌头副行与底部收尾同口径 */
+const leafCount = computed(() => {
+  const walk = (nodes: any[]): number =>
+    (nodes || []).reduce((s, n) => s + (n.children?.length ? walk(n.children) : 1), 0)
+  return walk(navList.value)
 })
 
 // 响应式计算选中状态
@@ -515,12 +565,12 @@ onMounted(() => {
 
 /* ====== 菜单项基础样式 ====== */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
-  margin: 4px 10px;
-  border-radius: var(--radius-md);
+  margin: 2px 10px;
+  border-radius: 8px;
   transition: all var(--transition-fast);
   padding: 0 12px;
-  height: 34px;
-  line-height: 34px;
+  height: 36px;
+  line-height: 36px;
   color: var(--nav-text);
   position: relative;
   /* 每项底部添加微弱的水平分隔线，提升视觉层次感 */
@@ -532,11 +582,10 @@ onMounted(() => {
   border-bottom: none;
 }
 
-/* 未选中菜单项悬停 */
+/* 未选中菜单项悬停（U123：纯色提亮，去掉 translateX 弹跳——演示壳同款手感） */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item:not(.ant-menu-item-selected):hover) {
   background: var(--nav-bg-hover) !important;
   color: var(--nav-text-hover) !important;
-  transform: translateX(2px);
 }
 
 /* ====== 选中菜单项 ====== */
@@ -551,13 +600,15 @@ onMounted(() => {
   text-shadow: var(--nav-selected-text-shadow);
 }
 
-/* 选中态左侧指示线 + 发光 */
+/* 选中态左侧指示线（U123：通高线改 16px 短线垂直居中收边，演示壳同款） */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected::before) {
   content: '';
   position: absolute;
   left: 0;
-  top: -2px;
-  bottom: -2px;
+  top: 50%;
+  bottom: auto;
+  height: 16px;
+  transform: translateY(-50%);
   width: var(--nav-selected-indicator-width);
   background: var(--nav-selected-indicator-bg, linear-gradient(180deg, rgba(64, 169, 255, 1) 0%, rgba(24, 144, 255, 1) 20%, rgba(64, 169, 255, 1) 50%, rgba(24, 144, 255, 1) 80%, rgba(64, 169, 255, 1) 100%));
   border-radius: 0 3px 3px 0;
@@ -578,7 +629,7 @@ onMounted(() => {
   color: var(--nav-text);
   transition: all var(--transition-fast);
   margin-right: 10px;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 /* 悬停图标颜色 */
@@ -589,12 +640,12 @@ onMounted(() => {
 
 /* ====== 子菜单标题 ====== */
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title) {
-  margin: 4px 10px;
-  border-radius: var(--radius-md);
+  margin: 2px 10px;
+  border-radius: 8px;
   transition: all var(--transition-fast);
   padding: 0 12px;
-  height: 34px;
-  line-height: 34px;
+  height: 36px;
+  line-height: 36px;
   color: var(--nav-text);
   border-bottom: 1px solid var(--nav-item-separator);
 }
@@ -621,8 +672,8 @@ onMounted(() => {
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-item),
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title) {
   font-weight: 400;
-  font-size: 14px;
-  letter-spacing: 0.2px;
+  font-size: 13.5px;
+  letter-spacing: 0.3px;
 }
 
 /* ====== 收起状态 ====== */
@@ -658,13 +709,13 @@ onMounted(() => {
 }
 
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item) {
-  height: 34px;
-  line-height: 34px;
+  height: 32px;
+  line-height: 32px;
   font-size: 13px;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   padding: 0 12px 0 28px;
   color: var(--nav-text);
-  margin: 4px 8px 4px 12px;
+  margin: 2px 8px 2px 12px;
   border-bottom: 1px solid var(--nav-item-separator);
 }
 
@@ -675,7 +726,6 @@ onMounted(() => {
 :deep(.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item:not(.ant-menu-item-selected):hover) {
   background: var(--nav-bg-hover) !important;
   color: var(--nav-text-hover) !important;
-  transform: translateX(2px);
 }
 
 /* ====== 子菜单选中项 ====== */
@@ -694,13 +744,103 @@ onMounted(() => {
   content: '';
   position: absolute;
   left: 0;
-  top: -2px;
-  bottom: -2px;
+  top: 50%;
+  bottom: auto;
+  height: 16px;
+  transform: translateY(-50%);
   width: var(--nav-selected-indicator-width);
   background: var(--nav-selected-indicator-bg, linear-gradient(180deg, rgba(64, 169, 255, 1) 0%, rgba(24, 144, 255, 1) 20%, rgba(64, 169, 255, 1) 50%, rgba(24, 144, 255, 1) 80%, rgba(64, 169, 255, 1) 100%));
   border-radius: 0 3px 3px 0;
   pointer-events: none;
   animation: var(--nav-indicator-animation);
+}
+
+/* ====== 分区品牌头（U123 侧栏观感试验：图标瓦片＋标题＋功能数，演示壳侧栏同构） ====== */
+.left-brand {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 12px 6px;
+  padding: 4px 2px;
+}
+
+.left-brand__tile {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #1e6cb4, #114d83);
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(26, 99, 168, 0.35);
+}
+
+.left-brand__tile .anticon {
+  font-size: 18px;
+  color: #fff;
+}
+
+.left-brand__text {
+  min-width: 0;
+}
+
+.left-brand__name {
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--text-primary, #20242c);
+  letter-spacing: 0.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left-brand__sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-tertiary, #878e9c);
+  letter-spacing: 0.4px;
+}
+
+/* ====== 底部收尾（U123：功能计数＋宽度提示，演示壳侧栏 foot 同构） ====== */
+.left-foot {
+  flex-shrink: 0;
+  margin: 0 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--nav-line, #d5e0ee);
+}
+
+.left-foot__main {
+  font-size: 12px;
+  color: var(--text-tertiary, #878e9c);
+}
+
+.left-foot__sub {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-tertiary, #878e9c);
+  opacity: 0.8;
+}
+
+/* 菜单区细滚动条（灰蓝族，与演示壳侧栏一致） */
+:deep(.left-menu::-webkit-scrollbar) {
+  width: 5px;
+}
+
+:deep(.left-menu::-webkit-scrollbar-thumb) {
+  background: rgba(26, 99, 168, 0.22);
+  border-radius: 3px;
+}
+
+:deep(.left-menu::-webkit-scrollbar-thumb:hover) {
+  background: rgba(26, 99, 168, 0.4);
+}
+
+:deep(.left-menu::-webkit-scrollbar-track) {
+  background: transparent;
 }
 
 /* ====== 拖拽控制条 ====== */
