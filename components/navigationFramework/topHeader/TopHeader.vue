@@ -902,8 +902,8 @@ onMounted(() => {
 
 /* ==================== 主题色板菜单（U133 面板化同族） ==================== */
 .theme-palette-menu {
-  background: #fff !important;
-  border: 1px solid #e2eaf3 !important;
+  background: var(--bg-elevated, #fff) !important;
+  border: 1px solid var(--border-subtle, #e2eaf3) !important;
   border-radius: 10px !important;
   box-shadow: 0 6px 20px rgba(26, 99, 168, 0.16) !important;
   padding: 6px !important;
@@ -958,8 +958,8 @@ onMounted(() => {
    选择器三段式压过 antd 的 .ant-dropdown .ant-dropdown-menu（条目类名是
    ant-dropdown-menu-item，dropdown 语境下 a-menu 不渲染 ant-menu-item） */
 .ant-dropdown .ant-dropdown-menu.user-dropdown-menu {
-  background: #fff;
-  border: 1px solid #e2eaf3;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-subtle, #e2eaf3);
   border-radius: 10px;
   box-shadow: 0 6px 20px rgba(26, 99, 168, 0.16);
   padding: 6px;
